@@ -117,26 +117,25 @@ int main()
 {
 #if defined(WIN32)
     // Switch Windows command line to UTF-8 because BqLog outputs all final text in UTF-8 encoding to avoid display issues
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
 #endif
-	// This string is the log configuration. Here it configures a logger with one appender (output target) named appender_0, which outputs to the console.
+    // This string is the log configuration. Here it configures a logger with one appender (output target) named appender_0, which outputs to the console.
     std::string config = R"(
-						# This appender's output target is the console
-                        appenders_config.appender_0.type=console           
-                        # This appender uses local time for timestamps
-                        appenders_config.appender_0.time_zone=default local time   
-                        # This appender outputs logs of these 6 levels (no spaces in between)
-                        appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-
+            # This appender's output target is the console
+            appenders_config.appender_0.type=console           
+            # This appender uses local time for timestamps
+            appenders_config.appender_0.time_zone=default local time   
+            # This appender outputs logs of these 6 levels (no spaces in between)
+            appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
         )";
-	bq::log log = bq::log::create_log("my_first_log", config);   // Create a log object using the config
-	for(int i = 0; i < 1024; ++i)
-	{
-		log.info("This is an info test log, the format string is UTF-8, param int:{}, param bool :{}, param string8:{}, param string16:{}, param string32:{}, param float:{}", i, true, "utf8-string", u"utf16-string", U"utf32-string", 4.3464f);  
-	}
-	log.error(U"This is an error test log, the format string is UTF-32");  
-	bq::log::force_flush_all_logs();   // BqLog defaults to asynchronous output. To ensure logs are visible before program exit, force flush to sync output once.
+    bq::log log = bq::log::create_log("my_first_log", config);   // Create a log object using the config
+    for(int i = 0; i < 1024; ++i)
+    {
+        log.info("This is an info test log, the format string is UTF-8, param int:{}, param bool :{}, param string8:{}, param string16:{}, param string32:{}, param float:{}", i, true, "utf8-string", u"utf16-string", U"utf32-string", 4.3464f);  
+    }
+    log.error(U"This is an error test log, the format string is UTF-32");  
+    bq::log::force_flush_all_logs();   // BqLog defaults to asynchronous output. To ensure logs are visible before program exit, force flush to sync output once.
     return 0;
 }
 ```
@@ -148,17 +147,17 @@ using System;
 
 public class demo_main {
 
-	public static void Main(string[] args) {
+    public static void Main(string[] args) {
         Console.OutputEncoding = Encoding.UTF8;
         Console.InputEncoding = Encoding.UTF8;
         string config = @"
-						# This appender's output target is the console
-                        appenders_config.appender_0.type=console           
-                        # This appender uses local time for timestamps
-                        appenders_config.appender_0.time_zone=default local time   
-                        # This appender outputs logs of these 6 levels (no spaces in between)
-                        appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-			";
+            # This appender's output target is the console
+            appenders_config.appender_0.type=console           
+            # This appender uses local time for timestamps
+            ppenders_config.appender_0.time_zone=default local time   
+            # This appender outputs logs of these 6 levels (no spaces in between)
+            appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
+        ";
         bq.log log = bq.log.create_log("my_first_log", config);   // Create a log object using the config
         for (int i = 0; i < 1024; ++i)
         {
@@ -168,7 +167,7 @@ public class demo_main {
 
         bq.log.force_flush_all_logs();
         Console.ReadKey();
-	}
+    }
 
 }
 ```
@@ -177,23 +176,23 @@ public class demo_main {
 ```java
 public class demo_main {
 
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		String config = """
-				# This appender's output target is the console
-                appenders_config.appender_0.type=console           
-                # This appender uses local time for timestamps
-                appenders_config.appender_0.time_zone=default local time   
-                # This appender outputs logs of these 6 levels (no spaces in between)
-                appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-		""";
-		bq.log log = bq.log.create_log("my_first_log", config);   // Create a log object using the config
-		for (int i = 0; i < 1024; ++i)
-		{
-		    log.info("This is an info test log, the format string is UTF-16, param int:{}, param bool :{}, param string:{}, param float:{}", i, true, "String Text", 4.3464f);
-		}
-		bq.log.force_flush_all_logs();
-	}
+    public static void main(String[] args) {
+        // TODO Auto-generated method stub
+        String config = """
+            # This appender's output target is the console
+            appenders_config.appender_0.type=console           
+            # This appender uses local time for timestamps
+            appenders_config.appender_0.time_zone=default local time   
+            # This appender outputs logs of these 6 levels (no spaces in between)
+            appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
+        """;
+        bq.log log = bq.log.create_log("my_first_log", config);   // Create a log object using the config
+        for (int i = 0; i < 1024; ++i)
+        {
+            log.info("This is an info test log, the format string is UTF-16, param int:{}, param bool :{}, param string:{}, param float:{}", i, true, "String Text", 4.3464f);
+        }
+        bq.log.force_flush_all_logs();
+    }
 }
 
 ```
@@ -225,13 +224,13 @@ A log object can be created using the create_log static function. Its declaratio
 
 ```cpp
 //C++ API
-		/// <summary>
-		/// Create a log object
-		/// </summary>
-		/// <param name="log_name">If the log name is an empty string, bqLog will automatically assign you a unique log name. If the log name already exists, it will return the previously existing log object and overwrite the previous configuration with the new config.</param>
-		/// <param name="config_content">Log config string</param>
-		/// <returns>A log object, if create failed, the is_valid() method of it will return false</returns>
-		static log create_log(const bq::string& log_name, const bq::string& config_content);
+    /// <summary>
+    /// Create a log object
+    /// </summary>
+    /// <param name="log_name">If the log name is an empty string, bqLog will automatically assign you a unique log name. If the log name already exists, it will return the previously existing log object and overwrite the previous configuration with the new config.</param>
+    /// <param name="config_content">Log config string</param>
+    /// <returns>A log object, if create failed, the is_valid() method of it will return false</returns>
+    static log create_log(const bq::string& log_name, const bq::string& config_content);
 ```
 
 The code creates a log object by passing in the name of the log object and a configuration string. The log configuration can be referenced in the [Configuration Instructions](#configuration-instructions).
@@ -246,44 +245,44 @@ Here are a few key points to note:
 If a log object has already been created elsewhere, you can obtain the created log object directly using the get_log_by_name function.
 ```cpp
 //C++ API
-		/// <summary>
-		/// Get a log object by it's name
-		/// </summary>
-		/// <param name="log_name">Name of the log object you want to find</param>
-		/// <returns>A log object, if the log object with specific name was not found, the is_valid() method of it will return false</returns>
-		static log get_log_by_name(const bq::string& log_name);
+    /// <summary>
+    /// Get a log object by it's name
+    /// </summary>
+    /// <param name="log_name">Name of the log object you want to find</param>
+    /// <returns>A log object, if the log object with specific name was not found, the is_valid() method of it will return false</returns>
+    static log get_log_by_name(const bq::string& log_name);
 ```
 You can also use this function to initialize a log object in global variables or static functions. However, note that you must ensure the log object with the specified name already exists. Otherwise, the returned log object will be unusable, and its is_valid() method will return false.
 
 
 ### 3. Logging Messages
 ```cpp
-		///Core log functions, there are 6 log levels:
-		///verbose, debug, info, warning, error, fatal
-		template<typename STR>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_content) const;
-		template<typename STR, typename...Args>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_format_content, const Args&... args) const;
-		template<typename STR>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_content) const;
-		template<typename STR, typename...Args>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_format_content, const Args&... args) const;
-		template<typename STR>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_content) const;
-		template<typename STR, typename...Args>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_format_content, const Args&... args) const;
-		template<typename STR>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_content) const;
-		template<typename STR, typename...Args>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_format_content, const Args&... args) const;
-		template<typename STR>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_content) const;
-		template<typename STR, typename...Args>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_format_content, const Args&... args) const;
-		template<typename STR>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_content) const;
-		template<typename STR, typename...Args>
-		bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_format_content, const Args&... args) const;
+    ///Core log functions, there are 6 log levels:
+    ///verbose, debug, info, warning, error, fatal
+    template<typename STR>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_content) const;
+    template<typename STR, typename...Args>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_format_content, const Args&... args) const;
+    template<typename STR>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_content) const;
+    template<typename STR, typename...Args>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_format_content, const Args&... args) const;
+    template<typename STR>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_content) const;
+    template<typename STR, typename...Args>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_format_content, const Args&... args) const;
+    template<typename STR>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_content) const;
+    template<typename STR, typename...Args>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_format_content, const Args&... args) const;
+    template<typename STR>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_content) const;
+    template<typename STR, typename...Args>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_format_content, const Args&... args) const;
+    template<typename STR>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_content) const;
+    template<typename STR, typename...Args>
+    bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_format_content, const Args&... args) const;
 ```
 When logging messages, pay attention to three key points:
 #### 1. Log Levels  
@@ -325,85 +324,85 @@ There are additional commonly used APIs that can accomplish specific tasks. For 
   
 #### Crash Protection
 ```cpp
-		/// <summary>
-		/// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
-		/// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
-		/// this functionality does not guarantee success, and only support POSIX systems.
-		/// </summary>
-		static void enable_auto_crash_handle();
+    /// <summary>
+    /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
+    /// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
+    /// this functionality does not guarantee success, and only support POSIX systems.
+    /// </summary>
+    static void enable_auto_crash_handle();
 ```
 For a detailed introduction, see[Data Protection on Program Abnormal Exit](#3-data-protection-on-program-abnormal-exit)  
   
 #### Force Flush Asynchronous Buffer Synchronously
 ```cpp
-		/// <summary>
-		/// Synchronously flush the buffer of all log objects
-		/// to ensure that all data in the buffer is processed after the call.
-		/// </summary>
-		static void force_flush_all_logs();
-		/// <summary>
-		/// Synchronously flush the buffer of this log object
-		/// to ensure that all data in the buffer is processed after the call.
-		/// </summary>
-		void force_flush();
+    /// <summary>
+    /// Synchronously flush the buffer of all log objects
+    /// to ensure that all data in the buffer is processed after the call.
+    /// </summary>
+    static void force_flush_all_logs();
+    /// <summary>
+    /// Synchronously flush the buffer of this log object
+    /// to ensure that all data in the buffer is processed after the call.
+    /// </summary>
+    void force_flush();
 ```
 Since bqLog uses asynchronous logging by default, there are times when you might want to immediately synchronize and output all logs. In such cases, you need to forcefully call force_flush().
   
 #### Intercepting Console Output
 ```cpp
-		/// <summary>
-		/// Register a callback that will be invoked whenever a console log message is output. 
-		/// This can be used for an external system to monitor console log output.
-		/// </summary>
-		/// <param name="callback"></param>
-		static void register_console_callback(bq::type_func_ptr_console_callback callback);
+    /// <summary>
+    /// Register a callback that will be invoked whenever a console log message is output. 
+    /// This can be used for an external system to monitor console log output.
+    /// </summary>
+    /// <param name="callback"></param>
+    static void register_console_callback(bq::type_func_ptr_console_callback callback);
 
-		/// <summary>
-		/// Unregister a console callback.
-		/// </summary>
-		/// <param name="callback"></param>
-		static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
+    /// <summary>
+    /// Unregister a console callback.
+    /// </summary>
+    /// <param name="callback"></param>
+    static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
 ```
 The output of[ConsoleAppender](#consoleappender) goes to the console or ADB Logcat logs on Android, but this may not cover all situations. For instance, in custom game engines or custom IDEs, a mechanism is provided to call a callback function for each console log output. This allows you to reprocess and output the console log anywhere in your program.
   
 #### Modifying Log Configuration
 ```cpp
-		/// <summary>
-		/// Modify the log configuration, but some fields, such as buffer_size, cannot be modified.
-		/// </summary>
-		/// <param name="config_content"></param>
-		/// <returns></returns>
-		bool reset_config(const bq::string& config_content);
+    /// <summary>
+    /// Modify the log configuration, but some fields, such as buffer_size, cannot be modified.
+    /// </summary>
+    /// <param name="config_content"></param>
+    /// <returns></returns>
+    bool reset_config(const bq::string& config_content);
 ```
 Sometimes you may want to modify the configuration of a log within your program. In addition to recreating the log object to overwrite the configuration(See[Creating a Log Object](#1-creating-a-log-object))，you can also use the reset interface. However, note that not all configuration items can be modified this way. For details, refer to the [Configuration Instructions](#configuration-instructions)
   
 #### Temporarily Disabling and Enabling Certain Appenders
 ```cpp
-        /// <summary>
-        /// Temporarily disable or enable a specific Appender.
-        /// </summary>
-        /// <param name="appender_name"></param>
-        /// <param name="enable"></param>
-        void set_appenders_enable(const bq::string& appender_name, bool enable);
+    /// <summary>
+    /// Temporarily disable or enable a specific Appender.
+    /// </summary>
+    /// <param name="appender_name"></param>
+    /// <param name="enable"></param>
+    void set_appenders_enable(const bq::string& appender_name, bool enable);
 ```
 By default, the Appenders in the configuration are active, but a mechanism is provided here to temporarily disable and re-enable them. 
   
 #### Snapshot Output
 ```cpp
-		/// <summary>
-		/// Enable snapshot capability. Once enabled, the log object will continuously retain a copy of the buffer data, 
-		/// containing the latest buffer data. This is used for generating a log snapshot string with the take_snapshot() function.
-		/// </summary>
-		/// <param name="snapshot_buffer_size">size of snapshot buffer</param>
-		void enable_snapshot(uint32_t snapshot_buffer_size) const;
+    /// <summary>
+    /// Enable snapshot capability. Once enabled, the log object will continuously retain a copy of the buffer data, 
+    /// containing the latest buffer data. This is used for generating a log snapshot string with the take_snapshot() function.
+    /// </summary>
+    /// <param name="snapshot_buffer_size">size of snapshot buffer</param>
+    void enable_snapshot(uint32_t snapshot_buffer_size) const;
 
-		/// <summary>
-		/// Works only when enable_snapshot(true) is called.
-		/// It will decode the snapshot buffer to text.
-		/// </summary>
-		/// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
-		/// <returns>the decoded snapshot buffer</returns>
-		bq::string take_snapshot(bool use_gmt_time) const;
+    /// <summary>
+    /// Works only when enable_snapshot(true) is called.
+    /// It will decode the snapshot buffer to text.
+    /// </summary>
+    /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
+    /// <returns>the decoded snapshot buffer</returns>
+    bq::string take_snapshot(bool use_gmt_time) const;
 ```
 Sometimes, certain special features require outputting the last part of the logs, which can be done using the snapshot feature.
 To enable this feature, you need to call the enable_snapshot() method on the log object and set the maximum buffer size in bytes.
@@ -412,13 +411,13 @@ When a snapshot is needed, calling take_snapshot() will return the formatted str
 #### Decoding Binary Log Files
 ```cpp
 namespace bq{
-	namespace tools {
-		//This is a utility class for decoding binary log formats. 
-		//To use it, first create a log_decoder object, 
-		//then call its decode function to decode. 
-		//After each successful call, 
-		//you can use get_last_decoded_log_entry() to retrieve the decoded result. 
-		//Each call decodes one log entry.
+    namespace tools {
+        //This is a utility class for decoding binary log formats. 
+        //To use it, first create a log_decoder object, 
+        //then call its decode function to decode. 
+        //After each successful call, 
+        //you can use get_last_decoded_log_entry() to retrieve the decoded result. 
+        //Each call decodes one log entry.
         struct log_decoder
         {
         private:
@@ -822,12 +821,12 @@ If BqLog is used for asynchronous logging, there may be cases where the program 
 
 #### Abnormal Signal Handling Mechanism
 ```cpp
-		/// <summary>
-		/// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
-		/// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
-		/// this functionality does not guarantee success, and only support POSIX systems.
-		/// </summary>
-		static void enable_auto_crash_handle();
+    /// <summary>
+    /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
+    /// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
+    /// this functionality does not guarantee success, and only support POSIX systems.
+    /// </summary>
+    static void enable_auto_crash_handle();
 ```
 Calling this API of `bq::Log` enables the mechanism. However, this mechanism is only supported on non-Windows platforms. When the program encounters abnormal signals such as SIGABORT, SIGSEGV, or SIGBUS, this API forces the log buffer data to be flushed before the program exits.
 
@@ -1078,181 +1077,181 @@ The test case involves writing logs simultaneously using 1 to 10 threads, with e
 
 void test_compress_multi_param(int32_t thread_count)
 {
-	std::cout << "============================================================" << std::endl;
-	std::cout << "=========Begin Compressed File Log Test 1, 4 params=========" << std::endl;
-	bq::log log_obj = bq::log::get_log_by_name("compress");
-	std::vector<std::thread*> threads;
-	threads.resize(thread_count);
-	uint64_t start_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		std::thread* st = new std::thread([idx, &log_obj]() {
-			for (int i = 0; i < 2000000; ++i)
-			{
-				log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
-					, i
-					, 2.4232f
-					, true);
-			}
-			});
-		threads[idx] = st;
-	}
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		threads[idx]->join();
-		delete threads[idx];
-	}
-	bq::log::force_flush_all_logs();
-	uint64_t flush_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
-	std::cout << "============================================================" << std::endl << std::endl;
+    std::cout << "============================================================" << std::endl;
+    std::cout << "=========Begin Compressed File Log Test 1, 4 params=========" << std::endl;
+    bq::log log_obj = bq::log::get_log_by_name("compress");
+    std::vector<std::thread*> threads;
+    threads.resize(thread_count);
+    uint64_t start_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        std::thread* st = new std::thread([idx, &log_obj]() {
+            for (int i = 0; i < 2000000; ++i)
+            {
+                log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
+                    , i
+                    , 2.4232f
+                    , true);
+            }
+            });
+        threads[idx] = st;
+    }
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        threads[idx]->join();
+        delete threads[idx];
+    }
+    bq::log::force_flush_all_logs();
+    uint64_t flush_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+    std::cout << "============================================================" << std::endl << std::endl;
 }
 
 void test_text_multi_param(int32_t thread_count)
 {
-	std::cout << "============================================================" << std::endl;
-	std::cout << "============Begin Text File Log Test 2, 4 params============" << std::endl;
-	bq::log log_obj = bq::log::get_log_by_name("text");
-	std::vector<std::thread*> threads;
-	threads.resize(thread_count);
-	uint64_t start_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		std::thread* st = new std::thread([idx, &log_obj]() {
-			for (int i = 0; i < 2000000; ++i)
-			{
-				log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
-					, i
-					, 2.4232f
-					, true);
-			}
-			});
-		threads[idx] = st;
-	}
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		threads[idx]->join();
-		delete threads[idx];
-	}
-	bq::log::force_flush_all_logs();
-	uint64_t flush_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
-	std::cout << "============================================================" << std::endl << std::endl;
+    std::cout << "============================================================" << std::endl;
+    std::cout << "============Begin Text File Log Test 2, 4 params============" << std::endl;
+    bq::log log_obj = bq::log::get_log_by_name("text");
+    std::vector<std::thread*> threads;
+    threads.resize(thread_count);
+    uint64_t start_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        std::thread* st = new std::thread([idx, &log_obj]() {
+            for (int i = 0; i < 2000000; ++i)
+            {
+                log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
+                    , i
+                    , 2.4232f
+                    , true);
+            }
+            });
+        threads[idx] = st;
+    }
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        threads[idx]->join();
+        delete threads[idx];
+    }
+    bq::log::force_flush_all_logs();
+    uint64_t flush_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+    std::cout << "============================================================" << std::endl << std::endl;
 }
 
 void test_compress_no_param(int32_t thread_count)
 {
-	std::cout << "============================================================" << std::endl;
-	std::cout << "=========Begin Compressed File Log Test 3, no param=========" << std::endl;
-	bq::log log_obj = bq::log::get_log_by_name("compress");
-	std::vector<std::thread*> threads;
-	threads.resize(thread_count);
-	bq::platform::atomic<int32_t> count(thread_count);
-	uint64_t start_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		std::thread* st = new std::thread([idx, &log_obj]() {
-			for (int i = 0; i < 2000000; ++i)
-			{
-				log_obj.info("Empty Log, No Param");
-			}
-			});
-		threads[idx] = st;
-	}
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		threads[idx]->join();
-		delete threads[idx];
-	}
-	bq::log::force_flush_all_logs();
-	uint64_t flush_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
-	std::cout << "============================================================" << std::endl << std::endl;
+    std::cout << "============================================================" << std::endl;
+    std::cout << "=========Begin Compressed File Log Test 3, no param=========" << std::endl;
+    bq::log log_obj = bq::log::get_log_by_name("compress");
+    std::vector<std::thread*> threads;
+    threads.resize(thread_count);
+    bq::platform::atomic<int32_t> count(thread_count);
+    uint64_t start_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        std::thread* st = new std::thread([idx, &log_obj]() {
+            for (int i = 0; i < 2000000; ++i)
+            {
+                log_obj.info("Empty Log, No Param");
+            }
+            });
+        threads[idx] = st;
+    }
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        threads[idx]->join();
+        delete threads[idx];
+    }
+    bq::log::force_flush_all_logs();
+    uint64_t flush_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+    std::cout << "============================================================" << std::endl << std::endl;
 }
 
 void test_text_no_param(int32_t thread_count)
 {
-	std::cout << "============================================================" << std::endl;
-	std::cout << "============Begin Text File Log Test 4, no param============" << std::endl;
-	bq::log log_obj = bq::log::get_log_by_name("text");
-	std::vector<std::thread*> threads;
-	threads.resize(thread_count);
-	bq::platform::atomic<int32_t> count(thread_count);
-	uint64_t start_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		std::thread* st = new std::thread([idx, &log_obj]() {
-			for (int i = 0; i < 2000000; ++i)
-			{
-				log_obj.info("Empty Log, No Param");
-			}
-			});
-		threads[idx] = st;
-	}
-	for (int32_t idx = 0; idx < thread_count; ++idx)
-	{
-		threads[idx]->join();
-		delete threads[idx];
-	}
-	bq::log::force_flush_all_logs();
-	uint64_t flush_time =
-		std::chrono::system_clock::now().time_since_epoch() /
-		std::chrono::milliseconds(1);
-	std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
-	std::cout << "============================================================" << std::endl << std::endl;
+    std::cout << "============================================================" << std::endl;
+    std::cout << "============Begin Text File Log Test 4, no param============" << std::endl;
+    bq::log log_obj = bq::log::get_log_by_name("text");
+    std::vector<std::thread*> threads;
+    threads.resize(thread_count);
+    bq::platform::atomic<int32_t> count(thread_count);
+    uint64_t start_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        std::thread* st = new std::thread([idx, &log_obj]() {
+            for (int i = 0; i < 2000000; ++i)
+            {
+                log_obj.info("Empty Log, No Param");
+            }
+            });
+        threads[idx] = st;
+    }
+    for (int32_t idx = 0; idx < thread_count; ++idx)
+    {
+        threads[idx]->join();
+        delete threads[idx];
+    }
+    bq::log::force_flush_all_logs();
+    uint64_t flush_time =
+        std::chrono::system_clock::now().time_since_epoch() /
+        std::chrono::milliseconds(1);
+    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+    std::cout << "============================================================" << std::endl << std::endl;
 }
 
 
 int main()
 {
 #ifdef BQ_WIN
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
 #endif
-	bq::log compressed_log = bq::log::create_log("compress", R"(
-		appenders_config.appender_3.type=compressed_file
-		appenders_config.appender_3.levels=[all]
-		appenders_config.appender_3.file_name= benchmark_output/compress_
-		appenders_config.appender_3.capacity_limit= 1
-	)");
-	bq::log text_log = bq::log::create_log("text", R"(
-		appenders_config.appender_3.type=text_file
-		appenders_config.appender_3.levels=[all]
-		appenders_config.appender_3.file_name= benchmark_output/text_
-		appenders_config.appender_3.capacity_limit= 1
-	)");
-	std::cout << "Please input the number of threads which will write log simultaneously:" << std::endl;
-	int32_t thread_count;
-	std::cin >> thread_count;
+    bq::log compressed_log = bq::log::create_log("compress", R"(
+        appenders_config.appender_3.type=compressed_file
+        appenders_config.appender_3.levels=[all]
+        appenders_config.appender_3.file_name= benchmark_output/compress_
+        appenders_config.appender_3.capacity_limit= 1
+    )");
+    bq::log text_log = bq::log::create_log("text", R"(
+        appenders_config.appender_3.type=text_file
+        appenders_config.appender_3.levels=[all]
+        appenders_config.appender_3.file_name= benchmark_output/text_
+        appenders_config.appender_3.capacity_limit= 1
+    )");
+    std::cout << "Please input the number of threads which will write log simultaneously:" << std::endl;
+    int32_t thread_count;
+    std::cin >> thread_count;
 
-	compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
-	text_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
-	bq::log::force_flush_all_logs();
-	
-	test_compress_multi_param(thread_count);
-	test_text_multi_param(thread_count);
-	test_compress_no_param(thread_count);
-	test_text_no_param(thread_count);
+    compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
+    text_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
+    bq::log::force_flush_all_logs();
+    
+    test_compress_multi_param(thread_count);
+    test_text_multi_param(thread_count);
+    test_compress_no_param(thread_count);
+    test_text_no_param(thread_count);
 
-	return 0;
+    return 0;
 }
 
 ```
@@ -1265,207 +1264,207 @@ import java.util.*;
 /**
  * @author pippocao
  *
- *	Please copy dynamic native library to your classpath before you run this benchmark.
+ *    Please copy dynamic native library to your classpath before you run this benchmark.
  *  Or set the Native Library Location to the directory of the dynamic libraries for the current platform under `(ProjectRoot)/dist`. 
  *  Otherwise, you may encounter an `UnsatisfiedLinkError`.
  */
 public class benchmark_main {
-	
-	static abstract class benchmark_thread implements Runnable
-	{
-		protected int idx;
-		public benchmark_thread(int idx)
-		{
-			this.idx = idx;
-		}
-	}
-	
-	private static void test_compress_multi_param(int thread_count) throws Exception
-	{
-		System.out.println("============================================================");
-		System.out.println("=========Begin Compressed File Log Test 1, 4 params=========");
-		bq.log log_obj = bq.log.get_log_by_name("compress");
-		Thread[] threads = new Thread[thread_count];
+    
+    static abstract class benchmark_thread implements Runnable
+    {
+        protected int idx;
+        public benchmark_thread(int idx)
+        {
+            this.idx = idx;
+        }
+    }
+    
+    private static void test_compress_multi_param(int thread_count) throws Exception
+    {
+        System.out.println("============================================================");
+        System.out.println("=========Begin Compressed File Log Test 1, 4 params=========");
+        bq.log log_obj = bq.log.get_log_by_name("compress");
+        Thread[] threads = new Thread[thread_count];
 
-		long start_time = System.currentTimeMillis();
-		System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			Runnable r = new benchmark_thread(idx) {
-				@Override
-				public void run()
-				{
-					for (int i = 0; i < 2000000; ++i)
-					{
-						log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
-							, bq.utils.param.no_boxing(i)
-							, bq.utils.param.no_boxing(2.4232f)
-							, bq.utils.param.no_boxing(true));
-					}
-				}
-			};
-			threads[idx] = new Thread(r);
-			threads[idx].start();
-		}
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			threads[idx].join();
-		}
-		bq.log.force_flush_all_logs();
-		long flush_time = System.currentTimeMillis();
-		System.out.println("\"Time Cost:" + (flush_time - start_time));
-		System.out.println("============================================================");
-		System.out.println("");
-	}
+        long start_time = System.currentTimeMillis();
+        System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            Runnable r = new benchmark_thread(idx) {
+                @Override
+                public void run()
+                {
+                    for (int i = 0; i < 2000000; ++i)
+                    {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
+                            , bq.utils.param.no_boxing(i)
+                            , bq.utils.param.no_boxing(2.4232f)
+                            , bq.utils.param.no_boxing(true));
+                    }
+                }
+            };
+            threads[idx] = new Thread(r);
+            threads[idx].start();
+        }
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            threads[idx].join();
+        }
+        bq.log.force_flush_all_logs();
+        long flush_time = System.currentTimeMillis();
+        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("============================================================");
+        System.out.println("");
+    }
 
-	private static void test_text_multi_param(int thread_count) throws Exception
-	{
-		System.out.println("============================================================");
-		System.out.println("============Begin Text File Log Test 2, 4 params============");
-		bq.log log_obj = bq.log.get_log_by_name("text");
-		Thread[] threads = new Thread[thread_count];
+    private static void test_text_multi_param(int thread_count) throws Exception
+    {
+        System.out.println("============================================================");
+        System.out.println("============Begin Text File Log Test 2, 4 params============");
+        bq.log log_obj = bq.log.get_log_by_name("text");
+        Thread[] threads = new Thread[thread_count];
 
-		long start_time = System.currentTimeMillis();
-		System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			Runnable r = new benchmark_thread(idx) {
-				@Override
-				public void run()
-				{
-					for (int i = 0; i < 2000000; ++i)
-					{
-						log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
-							, bq.utils.param.no_boxing(i)
-							, bq.utils.param.no_boxing(2.4232f)
-							, bq.utils.param.no_boxing(true));
-					}
-				}
-			};
-			threads[idx] = new Thread(r);
-			threads[idx].start();
-		}
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			threads[idx].join();
-		}
-		bq.log.force_flush_all_logs();
-		long flush_time = System.currentTimeMillis();
-		System.out.println("\"Time Cost:" + (flush_time - start_time));
-		System.out.println("============================================================");
-		System.out.println("");
-	}
+        long start_time = System.currentTimeMillis();
+        System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            Runnable r = new benchmark_thread(idx) {
+                @Override
+                public void run()
+                {
+                    for (int i = 0; i < 2000000; ++i)
+                    {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
+                            , bq.utils.param.no_boxing(i)
+                            , bq.utils.param.no_boxing(2.4232f)
+                            , bq.utils.param.no_boxing(true));
+                    }
+                }
+            };
+            threads[idx] = new Thread(r);
+            threads[idx].start();
+        }
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            threads[idx].join();
+        }
+        bq.log.force_flush_all_logs();
+        long flush_time = System.currentTimeMillis();
+        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("============================================================");
+        System.out.println("");
+    }
 
-	private static void test_compress_no_param(int thread_count) throws Exception
-	{
-		System.out.println("============================================================");
-		System.out.println("=========Begin Compressed File Log Test 3, no param=========");
-		bq.log log_obj = bq.log.get_log_by_name("compress");
-		Thread[] threads = new Thread[thread_count];
+    private static void test_compress_no_param(int thread_count) throws Exception
+    {
+        System.out.println("============================================================");
+        System.out.println("=========Begin Compressed File Log Test 3, no param=========");
+        bq.log log_obj = bq.log.get_log_by_name("compress");
+        Thread[] threads = new Thread[thread_count];
 
-		long start_time = System.currentTimeMillis();
-		System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			Runnable r = new benchmark_thread(idx) {
-				@Override
-				public void run()
-				{
-					for (int i = 0; i < 2000000; ++i)
-					{
-						log_obj.info("Empty Log, No Param");
-					}
-				}
-			};
-			threads[idx] = new Thread(r);
-			threads[idx].start();
-		}
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			threads[idx].join();
-		}
-		bq.log.force_flush_all_logs();
-		long flush_time = System.currentTimeMillis();
-		System.out.println("\"Time Cost:" + (flush_time - start_time));
-		System.out.println("============================================================");
-		System.out.println("");
-	}
+        long start_time = System.currentTimeMillis();
+        System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            Runnable r = new benchmark_thread(idx) {
+                @Override
+                public void run()
+                {
+                    for (int i = 0; i < 2000000; ++i)
+                    {
+                        log_obj.info("Empty Log, No Param");
+                    }
+                }
+            };
+            threads[idx] = new Thread(r);
+            threads[idx].start();
+        }
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            threads[idx].join();
+        }
+        bq.log.force_flush_all_logs();
+        long flush_time = System.currentTimeMillis();
+        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("============================================================");
+        System.out.println("");
+    }
 
-	private static void test_text_no_param(int thread_count) throws Exception
-	{
-		System.out.println("============================================================");
-		System.out.println("============Begin Text File Log Test 4, no param============");
-		bq.log log_obj = bq.log.get_log_by_name("text");
-		Thread[] threads = new Thread[thread_count];
+    private static void test_text_no_param(int thread_count) throws Exception
+    {
+        System.out.println("============================================================");
+        System.out.println("============Begin Text File Log Test 4, no param============");
+        bq.log log_obj = bq.log.get_log_by_name("text");
+        Thread[] threads = new Thread[thread_count];
 
-		long start_time = System.currentTimeMillis();
-		System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			Runnable r = new benchmark_thread(idx) {
-				@Override
-				public void run()
-				{
-					for (int i = 0; i < 2000000; ++i)
-					{
-						log_obj.info("Empty Log, No Param");
-					}
-				}
-			};
-			threads[idx] = new Thread(r);
-			threads[idx].start();
-		}
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			threads[idx].join();
-		}
-		bq.log.force_flush_all_logs();
-		long flush_time = System.currentTimeMillis();
-		System.out.println("\"Time Cost:" + (flush_time - start_time));
-		System.out.println("============================================================");
-		System.out.println("");
-	}
-	
+        long start_time = System.currentTimeMillis();
+        System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            Runnable r = new benchmark_thread(idx) {
+                @Override
+                public void run()
+                {
+                    for (int i = 0; i < 2000000; ++i)
+                    {
+                        log_obj.info("Empty Log, No Param");
+                    }
+                }
+            };
+            threads[idx] = new Thread(r);
+            threads[idx].start();
+        }
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            threads[idx].join();
+        }
+        bq.log.force_flush_all_logs();
+        long flush_time = System.currentTimeMillis();
+        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("============================================================");
+        System.out.println("");
+    }
+    
 
-	public static void main(String[] args) throws Exception {
-		// TODO Auto-generated method stub
-		bq.log compressed_log =  bq.log.create_log("compress", """
-				appenders_config.appender_3.type=compressed_file
-				appenders_config.appender_3.levels=[all]
-				appenders_config.appender_3.file_name= benchmark_output/compress_
-				appenders_config.appender_3.capacity_limit= 1
-			""");
+    public static void main(String[] args) throws Exception {
+        // TODO Auto-generated method stub
+        bq.log compressed_log =  bq.log.create_log("compress", """
+                appenders_config.appender_3.type=compressed_file
+                appenders_config.appender_3.levels=[all]
+                appenders_config.appender_3.file_name= benchmark_output/compress_
+                appenders_config.appender_3.capacity_limit= 1
+            """);
 
-		bq.log text_log =  bq.log.create_log("text", """
-				appenders_config.appender_3.type=text_file
-				appenders_config.appender_3.levels=[all]
-				appenders_config.appender_3.file_name= benchmark_output/text_
-				appenders_config.appender_3.capacity_limit= 1
-			""");
-		
+        bq.log text_log =  bq.log.create_log("text", """
+                appenders_config.appender_3.type=text_file
+                appenders_config.appender_3.levels=[all]
+                appenders_config.appender_3.file_name= benchmark_output/text_
+                appenders_config.appender_3.capacity_limit= 1
+            """);
+        
 
-		System.out.println("Please input the number of threads which will write log simultaneously:");
-		int thread_count = 0;
-		Scanner scanner = new Scanner(System.in);
-		try {
-			thread_count = scanner.nextInt();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return;
-		}finally {
-			scanner.close();
-		}
+        System.out.println("Please input the number of threads which will write log simultaneously:");
+        int thread_count = 0;
+        Scanner scanner = new Scanner(System.in);
+        try {
+            thread_count = scanner.nextInt();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return;
+        }finally {
+            scanner.close();
+        }
 
-		compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
-		text_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
-		bq.log.force_flush_all_logs();
+        compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
+        text_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
+        bq.log.force_flush_all_logs();
 
-		test_compress_multi_param(thread_count);
-		test_text_multi_param(thread_count);
-		test_compress_no_param(thread_count);
-		test_text_no_param(thread_count);
-	}
+        test_compress_multi_param(thread_count);
+        test_text_multi_param(thread_count);
+        test_compress_no_param(thread_count);
+        test_text_no_param(thread_count);
+    }
 
 }
 ```
@@ -1489,9 +1488,9 @@ Here is the relevant Log4j2 configuration:
     <version>2.23.1</version>
   </dependency>
   <dependency>
-	<groupId>com.lmax</groupId>
-	<artifactId>disruptor</artifactId>
-	<version>3.4.2</version>
+    <groupId>com.lmax</groupId>
+    <artifactId>disruptor</artifactId>
+    <version>3.4.2</version>
   </dependency>
 ```
 
@@ -1505,7 +1504,7 @@ log4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSel
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Appenders>
-		<Console name="Console" target="SYSTEM_OUT">
+        <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
         <!-- RollingFile Appender for gzip compressed files -->
@@ -1547,113 +1546,113 @@ import org.apache.logging.log4j.LogManager;
 import static org.apache.logging.log4j.util.Unbox.box;
 
 public class main {
-	public static final Logger log_obj = LogManager.getLogger(main.class);
-	
-	static abstract class benchmark_thread implements Runnable
-	{
-		protected int idx;
-		protected Logger log_obj;
-		public benchmark_thread(int idx, Logger log_obj)
-		{
-			this.idx = idx;
-			this.log_obj = log_obj;
-		}
-	}
+    public static final Logger log_obj = LogManager.getLogger(main.class);
+    
+    static abstract class benchmark_thread implements Runnable
+    {
+        protected int idx;
+        protected Logger log_obj;
+        public benchmark_thread(int idx, Logger log_obj)
+        {
+            this.idx = idx;
+            this.log_obj = log_obj;
+        }
+    }
 
-	private static void test_text_multi_param(int thread_count) throws Exception
-	{
-		System.out.println("============================================================");
-		System.out.println("============Begin Text File Log Test 1, 4 params============");
-		Thread[] threads = new Thread[thread_count];
+    private static void test_text_multi_param(int thread_count) throws Exception
+    {
+        System.out.println("============================================================");
+        System.out.println("============Begin Text File Log Test 1, 4 params============");
+        Thread[] threads = new Thread[thread_count];
 
-		long start_time = System.currentTimeMillis();
-		System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			Runnable r = new benchmark_thread(idx, log_obj) {
-				@Override
-				public void run()
-				{
-					for (int i = 0; i < 2000000; ++i)
-					{
-						log_obj.info("idx:{}, num:{}, This test, {}, {}", box(idx)
-							, box(i)
-							, box(2.4232f)
-							, box(true));
-					}
-				}
-			};
-			threads[idx] = new Thread(r);
-			threads[idx].start();
-		}
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			threads[idx].join();
-		}
-		org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+        long start_time = System.currentTimeMillis();
+        System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            Runnable r = new benchmark_thread(idx, log_obj) {
+                @Override
+                public void run()
+                {
+                    for (int i = 0; i < 2000000; ++i)
+                    {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}", box(idx)
+                            , box(i)
+                            , box(2.4232f)
+                            , box(true));
+                    }
+                }
+            };
+            threads[idx] = new Thread(r);
+            threads[idx].start();
+        }
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            threads[idx].join();
+        }
+        org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
         context.stop();
         LogManager.shutdown();
-		long flush_time = System.currentTimeMillis();
-		System.out.println("Time Cost:" + (flush_time - start_time));
-		System.out.println("============================================================");
-		System.out.println("");
-	}
+        long flush_time = System.currentTimeMillis();
+        System.out.println("Time Cost:" + (flush_time - start_time));
+        System.out.println("============================================================");
+        System.out.println("");
+    }
 
-	private static void test_text_no_param(int thread_count) throws Exception
-	{
-		System.out.println("============================================================");
-		System.out.println("============Begin Text File Log Test 1, no param============");
-		Thread[] threads = new Thread[thread_count];
+    private static void test_text_no_param(int thread_count) throws Exception
+    {
+        System.out.println("============================================================");
+        System.out.println("============Begin Text File Log Test 1, no param============");
+        Thread[] threads = new Thread[thread_count];
 
-		long start_time = System.currentTimeMillis();
-		System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			Runnable r = new benchmark_thread(idx, log_obj) {
-				@Override
-				public void run()
-				{
-					for (int i = 0; i < 2000000; ++i)
-					{
-						log_obj.info("Empty Log, No Param");
-					}
-				}
-			};
-			threads[idx] = new Thread(r);
-			threads[idx].start();
-		}
-		for (int idx = 0; idx < thread_count; ++idx)
-		{
-			threads[idx].join();
-		}
-		org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+        long start_time = System.currentTimeMillis();
+        System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            Runnable r = new benchmark_thread(idx, log_obj) {
+                @Override
+                public void run()
+                {
+                    for (int i = 0; i < 2000000; ++i)
+                    {
+                        log_obj.info("Empty Log, No Param");
+                    }
+                }
+            };
+            threads[idx] = new Thread(r);
+            threads[idx].start();
+        }
+        for (int idx = 0; idx < thread_count; ++idx)
+        {
+            threads[idx].join();
+        }
+        org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
         context.stop();
         LogManager.shutdown();
-		long flush_time = System.currentTimeMillis();
-		System.out.println("Time Cost:" + (flush_time - start_time));
-		System.out.println("============================================================");
-		System.out.println("");
-	}
+        long flush_time = System.currentTimeMillis();
+        System.out.println("Time Cost:" + (flush_time - start_time));
+        System.out.println("============================================================");
+        System.out.println("");
+    }
 
-	public static void main(String[] args) throws Exception {
-		System.out.println("Please input the number of threads which will write log simultaneously:");
-		int thread_count = 0;
-		Scanner scanner = new Scanner(System.in);
-		try {
-			thread_count = scanner.nextInt();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return;
-		}finally {
-			scanner.close();
-		}
-		System.out.println("Is Aysnc:" + AsyncLoggerContextSelector.isSelected());
+    public static void main(String[] args) throws Exception {
+        System.out.println("Please input the number of threads which will write log simultaneously:");
+        int thread_count = 0;
+        Scanner scanner = new Scanner(System.in);
+        try {
+            thread_count = scanner.nextInt();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return;
+        }finally {
+            scanner.close();
+        }
+        System.out.println("Is Aysnc:" + AsyncLoggerContextSelector.isSelected());
 
-		//这两个函数只能分别测试,因为Log4j2的强制刷新之后，整个日志对象就失效了。要测试一个的时候，就注释掉另外一个
-		test_text_multi_param(thread_count);
-		//test_text_no_param(thread_count);
-	}
+        //这两个函数只能分别测试,因为Log4j2的强制刷新之后，整个日志对象就失效了。要测试一个的时候，就注释掉另外一个
+        test_text_multi_param(thread_count);
+        //test_text_no_param(thread_count);
+    }
 
 }
 
