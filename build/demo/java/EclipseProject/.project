@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>BqLogWrapper_Java_Demo</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.jdt.core.javabuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.jdt.core.javanature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>wrapper</name>
+			<type>2</type>
+			<locationURI>BQ_LOG_WRAPPER_SRC</locationURI>
+		</link>
+		<link>
+			<name>demo</name>
+			<type>2</type>
+			<locationURI>BQ_LOG_JAVA_DEMO_SRC</locationURI>
+		</link>
+	</linkedResources>
+	<variableList>
+		<variable>
+			<name>BQ_LOG_WRAPPER_SRC</name>
+			<value>$%7BPARENT-4-PROJECT_LOC%7D/wrapper/java/src</value>
+		</variable>
+		<variable>
+			<name>BQ_LOG_JAVA_DEMO_SRC</name>
+			<value>$%7BPARENT-4-PROJECT_LOC%7D/demo/java/src</value>
+		</variable>
+	</variableList>
+</projectDescription>

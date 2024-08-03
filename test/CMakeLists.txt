@@ -1,0 +1,126 @@
+cmake_minimum_required(VERSION 3.22)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
+endif()
+project(BqLogUnitTest)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+OPTION(JAVA_SUPPORT "Support Java" OFF)
+
+#make __cplusplus correct in Visual Studio
+if (MSVC)
+    string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /utf-8 /bigobj")
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -pedantic -Werror)
+endif()
+
+#log test use template to generate millions test case, that makes object files become bigger
+if (MSVC)
+    string(APPEND CMAKE_CXX_FLAGS " /bigobj")
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+	include(CheckCXXCompilerFlag)
+	check_cxx_compiler_flag("-Wa,-mbig-obj" GNU_BIG_OBJ_FLAG_ENABLE)
+	if (${GNU_BIG_OBJ_FLAG_ENABLE})
+    string(APPEND CMAKE_CXX_FLAGS " -Wa,-mbig-obj")
+	endif()
+endif()
+
+############################################################
+# Config Source Files
+############################################################
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/src)
+set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/include)
+set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/thirdparty)
+
+############################################################
+# Search Include Dirs
+############################################################
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${SRC_DIR}")
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${PUB_INC_DIR}")
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${THIRD_PARTY_DIR}")
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${TEST_DIR}")
+
+############################################################
+# Search Source Files
+############################################################
+COLLECT_SRC_FILES(SRC_LIST "${SRC_DIR}")
+COLLECT_SRC_FILES(INC_LIST "${PUB_INC_DIR}")
+COLLECT_SRC_FILES(THIRD_PARTY_LIST "${THIRD_PARTY_DIR}")
+COLLECT_SRC_FILES(TEST_LIST "${TEST_DIR}")
+
+add_compile_definitions(BQ_UNIT_TEST)
+
+############################################################
+# IDE Sources Group
+############################################################
+
+GROUP_FOR_IDE("${SRC_LIST}" "src")
+GROUP_FOR_IDE("${TEST_LIST}" "test")
+GROUP_FOR_IDE("${THIRD_PARTY_LIST}" "thirdparty")
+GROUP_FOR_IDE("${INC_LIST}" "include")
+
+
+include_directories(
+    ${ALL_INC_DIRS}
+)
+
+
+if(TARGET_PLATFORM STREQUAL "android" OR TARGET_PLATFORM STREQUAL "ios")
+    # build shared library
+    add_library(BqLogUnitTest
+            SHARED
+            ${SRC_LIST}
+            ${TEST_LIST}
+            ${THIRD_PARTY_LIST}
+            ${INC_LIST})
+else()
+    # build executable
+    add_executable(BqLogUnitTest
+            ${SRC_LIST}
+            ${TEST_LIST}
+            ${THIRD_PARTY_LIST}
+            ${INC_LIST}
+            )
+endif()
+
+
+
+if(TARGET_PLATFORM STREQUAL "android")
+    find_library(log-lib log)
+    target_link_libraries(BqLogUnitTest ${log-lib} )
+    find_library(android-lib android)
+    target_link_libraries(BqLogUnitTest ${android-lib} )
+elseif(TARGET_PLATFORM STREQUAL "linux")
+    target_link_libraries(BqLogUnitTest pthread dl)
+	if(JAVA_SUPPORT)
+		if(DEFINED ENV{JAVA_HOME})
+			message("JAVA_HOME: $ENV{JAVA_HOME}")
+		else()
+			message(FATAL_ERROR "can not find environment variable JAVA_HOME")
+		endif()
+		add_compile_definitions(BQ_JAVA)
+		include_directories($ENV{JAVA_HOME}/include)
+		include_directories($ENV{JAVA_HOME}/include/linux)
+	endif()
+elseif(TARGET_PLATFORM STREQUAL "win64")
+    # set VS startup project
+    # todo : how to set XCode startup project(schema)?
+	if(JAVA_SUPPORT)
+		if(DEFINED ENV{JAVA_HOME})
+			message("JAVA_HOME: $ENV{JAVA_HOME}")
+		else()
+			message(FATAL_ERROR "can not find environment variable JAVA_HOME")
+		endif()
+		add_compile_definitions(BQ_JAVA)
+		include_directories($ENV{JAVA_HOME}/include)
+		include_directories($ENV{JAVA_HOME}/include/win32)
+	endif()
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogUnitTest)
+endif()
+
+

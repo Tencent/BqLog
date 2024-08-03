@@ -1,0 +1,5 @@
+﻿BasedOnStyle:               WebKit
+NamespaceIndentation:       All
+SortIncludes:               false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false

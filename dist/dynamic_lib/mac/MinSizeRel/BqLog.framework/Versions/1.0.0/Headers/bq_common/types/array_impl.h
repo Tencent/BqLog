@@ -1,0 +1,750 @@
+﻿/*
+ * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+/*!
+ * \file array_impl.h
+ * IMPORTANT: Do Not Include This Header File In Your Project!!!
+ *
+ * \author pippocao
+ * \date 2022/08/10
+ *
+ */
+#include <string.h>
+#include <stdlib.h>
+#include "bq_common/misc/assert.h"
+#include "bq_common/types/type_tools.h"
+#include "bq_common/types/array_def.h"
+
+namespace bq {
+    /*===========================================================BQ_ARRAY_ITER_CLS_NAME==============================================================*/
+    template <typename T, typename ARRAY>
+    template <typename V>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::BQ_ARRAY_ITER_CLS_NAME(V* ptr, const ARRAY* array_ptr /*= nullptr*/)
+    {
+        data_ = ptr;
+        array_data_ptr_ = array_ptr ? array_ptr->data_ : nullptr;
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::BQ_ARRAY_ITER_CLS_NAME(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs)
+    {
+        data_ = rhs.data_;
+        array_data_ptr_ = rhs.array_data_ptr_;
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs)
+    {
+        data_ = rhs.data_;
+        array_data_ptr_ = rhs.array_data_ptr_;
+        return *this;
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator==(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const
+    {
+        assert((array_data_ptr_ == rhs.array_data_ptr_) && "you can not compare two BQ_ARRAY_ITER_CLS_NAME generated from different BQ_ARRAY_CLS_NAME");
+        return data_ == rhs.operator->();
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator!=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const
+    {
+        assert((array_data_ptr_ == rhs.array_data_ptr_) && "you can not compare two BQ_ARRAY_ITER_CLS_NAME generated from different BQ_ARRAY_CLS_NAME");
+        return data_ != rhs.operator->();
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator<(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const
+    {
+        assert((array_data_ptr_ == rhs.array_data_ptr_) && "you can not compare two BQ_ARRAY_ITER_CLS_NAME generated from different BQ_ARRAY_CLS_NAME");
+        return data_ < rhs.operator->();
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator<=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const
+    {
+        assert((array_data_ptr_ == rhs.array_data_ptr_) && "you can not compare two BQ_ARRAY_ITER_CLS_NAME generated from different BQ_ARRAY_CLS_NAME");
+        return data_ <= rhs.operator->();
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator>(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const
+    {
+        assert((array_data_ptr_ == rhs.array_data_ptr_) && "you can not compare two BQ_ARRAY_ITER_CLS_NAME generated from different BQ_ARRAY_CLS_NAME");
+        return data_ > rhs.operator->();
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator>=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const
+    {
+        assert((array_data_ptr_ == rhs.array_data_ptr_) && "you can not compare two BQ_ARRAY_ITER_CLS_NAME generated from different BQ_ARRAY_CLS_NAME");
+        return data_ >= rhs.operator->();
+    }
+
+    template <typename T, typename ARRAY>
+    template <typename V, typename V_ARRAY>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::diff_type BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const
+    {
+        assert((array_data_ptr_ == rhs.array_data_ptr_) && "you can not sub two BQ_ARRAY_ITER_CLS_NAME generated from different BQ_ARRAY_CLS_NAME");
+        return data_ - rhs.operator->();
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator++()
+    {
+        data_ += 1;
+        return *this;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator++(int32_t)
+    {
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> tmp = *this;
+        operator++();
+        return tmp;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator--()
+    {
+        data_ -= 1;
+        return *this;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator--(int32_t)
+    {
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> tmp = *this;
+        operator--();
+        return tmp;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+=(int32_t value)
+    {
+        data_ += value;
+        return *this;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+=(size_type value)
+    {
+        data_ += (int32_t)value;
+        return *this;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+(int32_t value)
+    {
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
+        result += value;
+        return result;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+(size_type value)
+    {
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
+        result += (int32_t)value;
+        return result;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-=(int32_t value)
+    {
+        data_ -= value;
+        return *this;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-=(size_type value)
+    {
+        data_ -= (int32_t)value;
+        return *this;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(int32_t value)
+    {
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
+        result -= value;
+        return result;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(size_type value)
+    {
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
+        result -= (int32_t)value;
+        return result;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::value_type& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator*() const
+    {
+        return *data_;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::value_type* BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator->() const
+    {
+        return data_;
+    }
+
+    template <typename T, typename ARRAY>
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::value_type *() const
+    {
+        return data_;
+    }
+
+    /*===========================================================BQ_ARRAY_CLS_NAME==============================================================*/
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::BQ_ARRAY_CLS_NAME()
+        : data_(nullptr)
+        , size_(0)
+        , capacity_(0)
+    {
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::~BQ_ARRAY_CLS_NAME()
+    {
+        reset();
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename First, typename Second, typename... Rest>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::BQ_ARRAY_CLS_NAME(First&& first, Second&& second, Rest&&... rest)
+        : data_(nullptr)
+        , size_(0)
+        , capacity_(sizeof...(rest) + 2)
+    {
+        set_capacity(capacity_, true);
+        inner_args_insert(bq::forward<First>(first), bq::forward<Second>(second), bq::forward<Rest>(rest)...);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::BQ_ARRAY_CLS_NAME(const T& rhs)
+        : data_(nullptr)
+        , size_(0)
+        , capacity_(0)
+    {
+        insert(end(), rhs);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::BQ_ARRAY_CLS_NAME(T&& rhs) noexcept
+        : data_(nullptr)
+        , size_(0)
+        , capacity_(0)
+    {
+        insert(end(), bq::move(rhs));
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::BQ_ARRAY_CLS_NAME(const BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& rhs)
+        : data_(nullptr)
+        , size_(0)
+        , capacity_(rhs.size())
+    {
+        set_capacity(capacity_, true);
+        insert_batch(begin(), rhs.begin(), rhs.size_);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::BQ_ARRAY_CLS_NAME(BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>&& rhs) noexcept
+        : size_(rhs.size_)
+        , capacity_(rhs.capacity())
+    {
+        data_ = rhs.data_;
+        rhs.data_ = nullptr;
+        rhs.size_ = 0;
+        rhs.capacity_ = 0;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::size_type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::size() const
+    {
+        return size_;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::size_type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::capacity() const
+    {
+        return capacity_;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::is_empty() const
+    {
+        return size_ == 0;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator[](size_type idx)
+    {
+#ifndef NDEBUG
+        assert(idx < size_);
+#endif
+        return data_[idx];
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE const typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator[](size_type idx) const
+    {
+#ifndef NDEBUG
+        assert(idx < size_);
+#endif
+        return data_[idx];
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename V, size_t CB>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator==(const BQ_ARRAY_CLS_NAME<V, CB>& rhs)
+    {
+        if (size_ != rhs.size_) {
+            return false;
+        }
+        for (size_type i = 0; i < size_; ++i) {
+            if (this->operator[](i) != rhs[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename V, size_t CB>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator!=(const BQ_ARRAY_CLS_NAME<V, CB>& rhs)
+    {
+        return !operator==(rhs);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator=(const BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& rhs)
+    {
+        clear();
+        insert_batch(begin(), rhs.begin(), rhs.size_);
+        return *this;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator=(BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>&& rhs) noexcept
+    {
+        reset();
+        data_ = rhs.data_;
+        size_ = rhs.size_;
+        capacity_ = rhs.capacity_;
+        rhs.data_ = nullptr;
+        rhs.size_ = 0;
+        rhs.capacity_ = 0;
+        return *this;
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<bq::is_trivially_copy_constructible<T>::value && bq::is_trivially_move_constructible<T>::value, void>::type
+    BQ_ARRAY_INLINE_MACRO(_inner_mem_copy)(T* dest, T* src, size_t count)
+    {
+        constexpr size_t item_size = sizeof(T);
+        // simply copy memory for non-trivial constructible type to optimize performance.
+        memcpy((void*)dest, (void*)src, item_size * count);
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<!(bq::is_trivially_copy_constructible<T>::value && bq::is_trivially_move_constructible<T>::value), void>::type
+    BQ_ARRAY_INLINE_MACRO(_inner_mem_copy)(T* dest, T* src, size_t count)
+    {
+        for (size_t i = 0; i < count; ++i) {
+            new ((void*)(&dest[i]), bq::enum_new_dummy::dummy) T(bq::move(src[i]));
+            bq::object_destructor<T>::destruct(src + i);
+        }
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<bq::is_trivially_copy_constructible<T>::value && bq::is_trivially_move_constructible<T>::value, void>::type
+    BQ_ARRAY_INLINE_MACRO(_inner_forward_move)(T* dest, T* src, size_t move_count)
+    {
+        // simply copy memory for non-trivial constructible type to optimize performance.
+        memmove(dest, src, move_count * sizeof(T));
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<!(bq::is_trivially_copy_constructible<T>::value && bq::is_trivially_move_constructible<T>::value), void>::type
+    BQ_ARRAY_INLINE_MACRO(_inner_forward_move)(T* dest, T* src, size_t move_count)
+    {
+        size_t diff = dest - src;
+        for (size_t i = move_count; i > 0; --i) {
+            size_t index = i - 1;
+            if (index + diff < move_count) {
+                *(dest + index) = bq::forward<T>(*(src + index));
+            } else {
+                auto ptr = (dest + index);
+                new ((void*)ptr, bq::enum_new_dummy::dummy) T(bq::forward<T>(*(src + index)));
+            }
+        }
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<bq::is_trivially_copy_constructible<T>::value && bq::is_trivially_copy_assignable<T>::value, void>::type
+    BQ_ARRAY_INLINE_MACRO(_inner_backward_copy)(T* dest, const T* src, size_t count, size_t constructed_count)
+    {
+        (void)constructed_count;
+        // simply copy memory for non-trivial constructible type to optimize performance.
+#if defined(BQ_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow" // GCC warning check
+#pragma GCC diagnostic ignored "-Warray-bounds" // GCC warning check
+#endif
+        memcpy(dest, src, count * sizeof(T));
+#if defined(BQ_GCC)
+#pragma GCC diagnostic pop
+#endif
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<!(bq::is_trivially_copy_constructible<T>::value && bq::is_trivially_copy_assignable<T>::value), void>::type
+    BQ_ARRAY_INLINE_MACRO(_inner_backward_copy)(T* dest, const T* src, size_t count, size_t constructed_count)
+    {
+        for (size_t i = 0; i < count; ++i) {
+            if (i < constructed_count) {
+                *(dest + i) = *(src + i);
+            } else {
+                new ((void*)(dest + i), bq::enum_new_dummy::dummy) T(*(src + i));
+            }
+        }
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename... V>
+    void bq::BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::insert(iterator dest_it, V&&... args)
+    {
+        assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
+        constexpr size_type count = 1;
+        size_type move_count = (end() - dest_it);
+        size_type new_size = size_ + count;
+        size_type diff = dest_it - begin();
+        set_capacity(new_size);
+        dest_it = begin() + diff;
+        memmove((void*)(end() + count), (void*)(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        BQ_ARRAY_INLINE_MACRO(_inner_forward_move)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(dest_it + count, dest_it, move_count);
+        if (move_count > 0) {
+            destruct(dest_it);
+        }
+        construct(dest_it, bq::forward<V>(args)...);
+        size_ = new_size;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::insert_batch(iterator dest_it, const_iterator src_it, size_type count)
+    {
+        if (count == 0) {
+            return;
+        }
+        assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
+        size_type move_count = (end() - dest_it);
+        size_type new_size = size_ + count;
+        size_type diff = dest_it - begin();
+        set_capacity(new_size);
+        dest_it = begin() + diff;
+        memmove((void*)(end() + count), (void*)(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        BQ_ARRAY_INLINE_MACRO(_inner_forward_move)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(dest_it + count, dest_it, move_count);
+        BQ_ARRAY_INLINE_MACRO(_inner_backward_copy)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(dest_it, src_it, count, move_count);
+        size_ = new_size;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename... V>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::size_type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::push_back(V&&... args)
+    {
+        insert(end(), bq::forward<V>(args)...);
+        return size_;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename... V>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::size_type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::emplace(iterator where_it, V&&... args)
+    {
+        return insert(where_it, bq::move(args)...);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename... V>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::size_type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::emplace_back(V&&... args)
+    {
+        return push_back(bq::move(args)...);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename U>
+    BQ_ARRAY_INLINE typename bq::enable_if<bq::is_pod<U>::value>::type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::fill_uninitialized(typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::size_type count)
+    {
+        if (size() + count + TAIL_BUFFER_SIZE > capacity()) {
+            set_capacity(size() + count);
+        }
+        size_ += count;
+        if (data_ && TAIL_BUFFER_SIZE > 0) {
+            memset(data_ + size_, 0, TAIL_BUFFER_SIZE * sizeof(value_type));
+        }
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::pop_back()
+    {
+        if (size_ <= 0) {
+            return;
+        }
+        destruct(end() - 1);
+        --size_;
+    }
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::pop_back(size_type count)
+    {
+        assert(size_ >= count && "BQ_ARRAY_CLS_NAME size less than pop count");
+        size_ -= count;
+        bq::object_array_destructor<T>::destruct(data_ + size_, count);
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<bq::is_trivially_move_assignable<T>::value && bq::is_trivially_copy_assignable<T>::value, void>::type BQ_ARRAY_INLINE_MACRO(_inner_backward_move)(T* _dest, T* _src, size_t count)
+    {
+        memmove(_dest, _src, sizeof(T) * count);
+    }
+
+    template <typename T>
+    BQ_ARRAY_INLINE typename bq::enable_if<!(bq::is_trivially_move_assignable<T>::value && bq::is_trivially_copy_assignable<T>::value), void>::type BQ_ARRAY_INLINE_MACRO(_inner_backward_move)(T* _dest, T* _src, size_t count)
+    {
+        for (size_t i = 0; i < count; ++i) {
+            _dest[i] = bq::move(_src[i]);
+        }
+    }
+
+    // We adopt the mode of move assignment first, which is different from the C++11 standard documentation,
+    // but is same with the MSVC STL behavior. The element that may be destructed is not necessarily the one being deleted,
+    // but is always the element at the end of the BQ_ARRAY_CLS_NAME.
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::erase(iterator where_it, size_type count /* = 1 */)
+    {
+        if (count == 0) {
+            return;
+        }
+        assert(where_it >= begin() && where_it < end() && "erase param where_it must between begin() and end() iterator!");
+        size_type left_count_from_where_to_tail = (size_type)(end() - where_it);
+        size_type real_remove_count = bq::min_ref(left_count_from_where_to_tail, count);
+        if (real_remove_count == 0) {
+            return;
+        }
+        BQ_ARRAY_INLINE_MACRO(_inner_backward_move)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(where_it, where_it + real_remove_count, end() - (where_it + real_remove_count));
+        bq::object_array_destructor<T>::destruct(data_ + size_ - real_remove_count, real_remove_count);
+        memmove((void*)(end().operator->() - real_remove_count), (void*)(end().operator->()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        size_ -= real_remove_count;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::erase_replace(iterator where_it)
+    {
+        assert(where_it >= begin() && where_it < end() && "erase_replace param where_it must between begin() and end() iterator!");
+        constexpr size_type real_remove_count = 1;
+        BQ_ARRAY_INLINE_MACRO(_inner_backward_move)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(where_it, end() - 1, real_remove_count);
+        destruct(end() - 1);
+        memmove((void*)(end().operator->() - real_remove_count), (void*)(end().operator->()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        --size_;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::begin()
+    {
+        return iterator(data_, this);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::const_iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::begin() const
+    {
+        return const_iterator(data_, this);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::end()
+    {
+        return iterator(data_ + size_, this);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::const_iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::end() const
+    {
+        return const_iterator(data_ + size_, this);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE bool BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::set_capacity(size_type new_capacity, bool force_reset /* = false*/)
+    {
+        if (new_capacity < size_) {
+            return false;
+        }
+        if (new_capacity > 0) {
+            new_capacity += TAIL_BUFFER_SIZE;
+        }
+        if (!force_reset) {
+            if (new_capacity <= capacity_) {
+                return false;
+            }
+            capacity_ = bq::max_value(bq::roundup_pow_of_two(new_capacity), (size_type)2);
+        } else {
+            capacity_ = new_capacity;
+        }
+        value_type* new_data = nullptr;
+        if (capacity_ > 0) {
+            size_type item_size = sizeof(value_type);
+            new_data = static_cast<value_type*>(malloc(item_size * capacity_));
+            if (!new_data) {
+                assert(false && "malloc memory failed, size:");
+                return false;
+            }
+            if (data_) {
+                BQ_ARRAY_INLINE_MACRO(_inner_mem_copy)
+                (new_data, data_, size_);
+                memcpy((void*)(new_data + size_), (void*)(data_ + size_), item_size * TAIL_BUFFER_SIZE);
+            } else {
+                memset((void*)new_data, 0, TAIL_BUFFER_SIZE * sizeof(value_type));
+            }
+        }
+        if (data_) {
+            free(data_);
+        }
+        data_ = new_data;
+        return true;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::find(const typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& value, bool reverse_find /* = false*/)
+    {
+        if (reverse_find) {
+            for (size_type i = size(); i >= 1; --i) {
+                if (data_[i - i] == value) {
+                    return begin() + i - 1;
+                }
+            }
+        } else {
+            for (size_type i = 0; i < size(); ++i) {
+                if (data_[i] == value) {
+                    return begin() + i;
+                }
+            }
+        }
+        return end();
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::const_iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::find(const typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& value, bool reverse_find /* = false*/) const
+    {
+        if (reverse_find) {
+            for (size_type i = size(); i >= 1; --i) {
+                if (data_[i - i] == value) {
+                    return begin() + i - 1;
+                }
+            }
+        } else {
+            for (size_type i = 0; i < size(); ++i) {
+                if (data_[i] == value) {
+                    return begin() + i;
+                }
+            }
+        }
+        return end();
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename... V>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::construct(iterator iter, V&&... args)
+    {
+        auto ptr = iter.operator->();
+        new ((void*)ptr, bq::enum_new_dummy::dummy) value_type(bq::forward<V>(args)...);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::destruct(iterator iter)
+    {
+        /*
+                //may cause compiling error even on some C++17 compiler, for example MSVC V142
+                if constexpr (!is_basic_types<T>::value)
+                {
+                        iter->~value_type();
+                }
+        */
+        bq::object_destructor<T>::destruct(iter.operator->());
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::shrink()
+    {
+        set_capacity(size_, true);
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    BQ_ARRAY_INLINE void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::clear()
+    {
+        if (size_ > 0) {
+            bq::object_array_destructor<T>::destruct(data_, size_);
+        }
+        size_ = 0;
+        if (data_) {
+            memset((void*)data_, 0, TAIL_BUFFER_SIZE * sizeof(value_type));
+        }
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename U>
+    BQ_ARRAY_INLINE typename bq::enable_if<bq::is_pod<U>::value>::type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::reset()
+    {
+        if (capacity_ > 0) {
+            free(data_);
+            data_ = nullptr;
+        }
+        size_ = 0;
+        capacity_ = 0;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename U>
+    BQ_ARRAY_INLINE typename bq::enable_if<!bq::is_pod<U>::value>::type BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::reset()
+    {
+        if (capacity_ > 0) {
+            bq::object_array_destructor<T>::destruct(data_, size_);
+            free(data_);
+            data_ = nullptr;
+        }
+        size_ = 0;
+        capacity_ = 0;
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename First>
+    void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::inner_args_insert(First&& first)
+    {
+        insert(end(), bq::forward<First>(first));
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename First, typename... Rest>
+    void BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::inner_args_insert(First&& first, Rest&&... rest)
+    {
+        insert(end(), bq::forward<First>(first));
+        inner_args_insert(bq::forward<Rest>(rest)...);
+    }
+}

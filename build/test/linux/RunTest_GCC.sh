@@ -1,0 +1,6 @@
+mkdir CMakeFiles;
+cd CMakeFiles;
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo ../../../../test;
+make;
+./BqLogUnitTest
+cd ..;

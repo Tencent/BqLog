@@ -1,0 +1,32 @@
+﻿#pragma once
+/*
+ * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#include "bq_common/bq_common.h"
+#include "bq_log/bq_log.h"
+namespace bq {
+    class log_level_bitmap {
+    public:
+        log_level_bitmap();
+        log_level_bitmap(uint32_t init_bitmap_value);
+
+    public:
+        void clear();
+        bool have_level(bq::log_level level);
+        void add_level(bq::log_level level);
+        void add_level(const bq::string& level_string);
+        void del_level(bq::log_level level);
+        uint32_t* get_bitmap_ptr();
+
+    private:
+        uint32_t bitmap;
+    };
+}

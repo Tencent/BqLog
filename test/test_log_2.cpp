@@ -1,0 +1,102 @@
+﻿/*
+ * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#include "test_log.h"
+#include "bq_common/platform/thread/thread.h"
+
+namespace bq {
+    namespace test {
+        static bq::string multi_thread_string_test_str = "1234567890";
+
+        class multi_thread_string_test_modifier : public bq::platform::thread {
+        protected:
+            virtual void run() override
+            {
+                while (!is_cancelled()) {
+                    multi_thread_string_test_str = "1234567890";
+                    multi_thread_string_test_str = "#";
+                }
+            }
+        };
+
+        void test_log::test_2(test_result& result, const test_category_log& log_inst)
+        {
+            result.add_result(log_inst.get_name() == "test_log", "log name test");
+
+            {
+                bq::string empty_str;
+                bq::string full_str = "123";
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "Empty Str Test {}, {}", empty_str, full_str);
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA.ClassA]\tEmpty Str Test , 123"), "log update 1");
+            }
+
+            {
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, "connect {}:{}");
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA.ClassA]\tEmpty Str Test , 123"), "log update 2");
+            }
+
+            {
+                bq::string empty_str;
+                bq::string full_str = "123";
+                log_inst.warning(log_inst.cat.ModuleA.SystemA.ClassA, "Empty Str Test {}, {}", empty_str.c_str(), full_str.c_str());
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA.ClassA]\tEmpty Str Test , 123"), "log update 3");
+            }
+
+            {
+                bq::string ip = "9.134.131.77";
+                uint16_t port = 18900;
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "connect {{}:{}}", ip, port);
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA.ClassA]\tconnect {9.134.131.77:18900}"), "brace test 1");
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "connect {{}:{}}");
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA.ClassA]\tconnect {{}:{}}"), "brace test 2");
+            }
+
+            {
+                int32_t* pointer = NULL;
+                log_inst.error(log_inst.cat.ModuleB, "NULL Pointer Str Test {}, {}", pointer, pointer);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\tNULL Pointer Str Test null, null"), "log update 4");
+            }
+
+            {
+                test_output_dynamic(bq::log_level::info, "testing multithread string log. wait for 10 seconds please...\n if error exist, an assert will be triggered\n");
+
+                multi_thread_string_test_modifier modifier_thread;
+                modifier_thread.start();
+
+                uint64_t start_time = bq::platform::high_performance_epoch_ms();
+                while (true) {
+                    bq::string test_str = "123456789";
+                    for (uint32_t i = 0; i < 512; ++i) {
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:0>+10d}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:0^+10d}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:0<+10d}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:<>10d}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:<^10d}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:<<10d}|", multi_thread_string_test_str, test_str, i);
+
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:0>+10.3f}|", multi_thread_string_test_str, test_str, i * 3.1415);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<+10b}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<+#10b}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<+#10x}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<#10e}|", multi_thread_string_test_str, test_str, i);
+                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:0>10.2f}|", multi_thread_string_test_str, test_str, i * 3.1415);
+                    }
+                    if (bq::platform::high_performance_epoch_ms() - start_time >= 10 * 1000) {
+                        break;
+                    }
+                }
+                modifier_thread.cancel();
+                modifier_thread.join();
+                test_output_dynamic(bq::log_level::info, "multithread string log testing is finished!\n");
+            }
+        }
+    }
+}

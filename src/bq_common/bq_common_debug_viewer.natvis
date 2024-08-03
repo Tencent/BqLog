@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="bq::string_base&lt;char&gt;">
+    <DisplayString Condition="size_==0">Empty</DisplayString>
+    <DisplayString Condition="size_>0">{{ size={size_} : {data_}}}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="bq::string_base&lt;char16_t&gt;">
+    <DisplayString Condition="size_==0">Empty</DisplayString>
+    <DisplayString Condition="size_>0">{{ size={size_} : {(wchar_t*)data_,su}}}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="bq::array&lt;*&gt;">
+    <DisplayString>{{ size={size_} }}</DisplayString>
+    <Expand>
+        <Item Name="[size]" ExcludeView="simple">size_</Item>
+        <Item Name="[capacity]" ExcludeView="simple">capacity_</Item>
+        <ArrayItems>
+            <Size>size_</Size>
+            <ValuePointer>data_</ValuePointer>
+        </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="bq::array_inline&lt;*&gt;">
+    <DisplayString>{{ size={size_} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]" ExcludeView="simple">size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple">capacity_</Item>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="bq::kv_pair&lt;*,*&gt;">
+    <Expand>
+      <Item Name="key">key_</Item>
+      <Item Name="value">value_</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="bq::hash_map&lt;*,*&gt;::value_node_buffer_head&lt;*&gt;">
+    <DisplayString>{{ size={size_} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="bq::hash_map&lt;*,*&gt;">
+    <DisplayString>{{ sizes={size_} }}</DisplayString>
+    <Expand>
+      <Item Name="[buckets_size]">buckets_.size_</Item>
+      <Item Name="[nodes_size]">nodes_.size_</Item>
+
+      <CustomListItems MaxItemsPerView="5000" ExcludeView="Test">
+        <Variable Name="index" InitialValue="0" />
+        <If Condition="size_ != 0">
+          <Exec>index = head_</Exec>
+          <Loop>
+            <Item Name="item">nodes_.data_[index].entry</Item>
+            <Exec>index = nodes_.data_[index].next</Exec>
+            <Break Condition="index >= 4294967295"/>
+          </Loop>
+        </If>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="bq::hash_map_iterator&lt;*,*,*&gt;">
+    <DisplayString Condition="node_index_ == 18446744073709551615UL || node_index_ == 4294967295U">Invalid</DisplayString>
+    <Expand>
+      <Item Name="[key]" Condition="node_index_ != 18446744073709551615UL &amp;&amp; node_index_ != 4294967295U">parent_->nodes_[node_index_].entry.key_</Item>
+      <Item Name="[value]" Condition="node_index_ != 18446744073709551615UL &amp;&amp; node_index_ != 4294967295U">parent_->nodes_[node_index_].entry.value_</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="bq::hash_map_inline&lt;*,*&gt;::value_node_buffer_head&lt;*&gt;">
+    <DisplayString>{{ size={size_} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="bq::hash_map_inline&lt;*,*&gt;">
+    <DisplayString>{{ sizes={size_} }}</DisplayString>
+    <Expand>
+      <Item Name="[buckets_size]">buckets_.size_</Item>
+      <Item Name="[nodes_size]">nodes_.size_</Item>
+
+      <CustomListItems MaxItemsPerView="5000" ExcludeView="Test">
+        <Variable Name="index" InitialValue="0" />
+        <If Condition="size_ != 0">
+          <Exec>index = head_</Exec>
+          <Loop>
+            <Item Name="item">nodes_.data_[index].entry</Item>
+            <Exec>index = nodes_.data_[index].next</Exec>
+            <Break Condition="index >= 4294967295"/>
+          </Loop>
+        </If>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="bq::hash_map_iterator_inline&lt;*,*,*&gt;">
+    <DisplayString Condition="node_index_ == 18446744073709551615UL || node_index_ == 4294967295U">Invalid</DisplayString>
+    <Expand>
+      <Item Name="[key]" Condition="node_index_ != 18446744073709551615UL &amp;&amp; node_index_ != 4294967295U">parent_->nodes_[node_index_].entry.key_</Item>
+      <Item Name="[value]" Condition="node_index_ != 18446744073709551615UL &amp;&amp; node_index_ != 4294967295U">parent_->nodes_[node_index_].entry.value_</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>
