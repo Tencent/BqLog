@@ -1647,7 +1647,7 @@ public class main {
 | Log4J2 Text             | 1065  | 2583  | 4249  | 4843  | 5068  | 6195  | 6424  | 7943  | 8794  | 9254   |
 
 
-<img src="docs/benchmark_4_params.png" alt="4个参数的结果" style="width: 75%;">
+<img src="docs/benchmark_4_params.png" alt="4个参数的结果" style="width: 100%;">
 
 #### 不带参数的总耗时（单位毫秒）
 评测结果奇怪的是，不带参数的性能消耗上，Log4j表现得比带参数还要低不少。
@@ -1660,4 +1660,4 @@ public class main {
 | BqLog Text(Java)        | 247   | 422   | 544   | 794   | 933   | 1104  | 1297  | 1686  | 1843  | 2082   |
 | Log4J2 Text             | 3204  | 6489  | 7702  | 8485  | 9640  | 10458 | 11483 | 12853 | 13995 | 14633  |
 
-<img src="docs/benchmark_no_param.png" alt="不带参数的结果" style="width: 75%;">
+<img src="docs/benchmark_no_param.png" alt="不带参数的结果" style="width: 100%;">

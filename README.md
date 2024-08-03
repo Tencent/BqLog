@@ -1672,7 +1672,7 @@ Values are in milliseconds; the lower the value, the less time taken, indicating
 | BqLog Text (Java)       | 706      | 993       | 1165      | 1582      | 1912      | 2572      | 2779      | 3275      | 4249      | 4591       |
 | Log4J2 Text             | 1065     | 2583      | 4249      | 4843      | 5068      | 6195      | 6424      | 7943      | 8794      | 9254       |
 
-<img src="docs/benchmark_4_params.png" alt="4 Parameters Results" style="width: 75%;">
+<img src="docs/benchmark_4_params.png" alt="4 Parameters Results" style="width: 100%;">
 
 #### Total Time Cost without Parameters (in milliseconds)
 
@@ -1686,4 +1686,4 @@ Interestingly, in the case of no parameters, Log4j shows lower performance overh
 | BqLog Text (Java)       | 247      | 422       | 544       | 794       | 933       | 1104      | 1297      | 1686      | 1843      | 2082       |
 | Log4J2 Text             | 3204     | 6489      | 7702      | 8485      | 9640      | 10458     | 11483     | 12853     | 13995     | 14633      |
 
-<img src="docs/benchmark_no_param.png" alt="No Parameters Results" style="width: 75%;">
+<img src="docs/benchmark_no_param.png" alt="No Parameters Results" style="width: 100%;">
