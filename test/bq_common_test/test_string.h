@@ -208,9 +208,18 @@ namespace bq {
                     result.add_result(!test_str.end_with(u"BBBB"), "string end_with test 2");
                 }
                 
-                
+#if BQ_CPP_17
                 //test std::string and std::string_view
                 {
+                    std::string std_str_src = "Part1";
+                    std::string_view str_view_src(std_str_src);
+                    std_str_src += "Part2";
+                    bq::string bq_str_for_std_str = std_str_src;
+                    bq::string bq_str_for_std_str_view = str_view_src;
+                    
+                    result.add_result(bq_str_for_std_str == "Part1Part2", "string trans 1");
+                    result.add_result(bq_str_for_std_str_view == "Part1", "string trans 2");
+                    
                     bq::string bq_str1 = "This is Bq Str 1 utf16";
                     std::string std_str1 = bq_str1;
                     std::string_view std_str_view1 = bq_str1;
@@ -258,6 +267,7 @@ namespace bq {
                     result.add_result(bq_str1 == bq_str1_from_std_str, "std::string, bq::string cast test: utf32 equal");
                     result.add_result(bq_str1 == bq_str2_from_std_str_view, "std::string_view, bq::string cast test: utf32 equal");
                 }
+#endif
                 return result;
             }
         };
