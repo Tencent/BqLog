@@ -10,11 +10,5 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-/*!
- * \file build_type.h
- *
- * \author pippocao
- *
- * This is a placeholder header file. When the target dynamic library is built,
- * it will be replaced with build_type_dynamic_lib_import.h in the final output header file.
- */
+
+#define BQ_DYNAMIC_LIB_IMPORT
