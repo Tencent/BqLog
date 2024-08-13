@@ -41,6 +41,8 @@
 [&nbsp;&nbsp;&nbsp;&nbsp;2-Retrieving a Log Object](#2-retrieving-a-log-object)  
 [&nbsp;&nbsp;&nbsp;&nbsp;3-Logging Messages](#3-logging-messages)  
 [&nbsp;&nbsp;&nbsp;&nbsp;4-Other APIs](#4-other-apis)  
+**[Synchronous and Asynchronous Logging](#synchronous-and-asynchronous-logging)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. Thread safety of asynchronous logging](#thread-safety-of-asynchronous-logging)  
 **[Introduction to Appenders](#introduction-to-appenders)**  
 [&nbsp;&nbsp;&nbsp;&nbsp;1. ConsoleAppender](#consoleappender)  
 [&nbsp;&nbsp;&nbsp;&nbsp;2. TextFileAppender](#textfileappender)  
@@ -454,6 +456,47 @@ This is a utility class that can decode log files output by binary-type Appender
 To use it, first create a log_decoder object. Then, each time you call the decode() function, it decodes one log entry in sequence. If the result returned is bq::appender_decode_result::success, you can call get_last_decoded_log_entry() to get the formatted text content of the last decoded log entry.
 If the result is bq::appender_decode_result::eof, it means all logs have been read completely.
   
+<br><br>
+
+## Synchronous and Asynchronous Logging
+
+BqLog allows you to configure whether a log object is synchronous or asynchronous through the [thread_mode](#logthread_mode) setting. The key differences between these two modes are as follows:
+
+|                 | Synchronous Logging                                                | Asynchronous Logging                                              |
+|-----------------|--------------------------------------------------------------------|-------------------------------------------------------------------|
+|     Behavior    | After calling the logging function, the log is immediately written to the corresponding appender. | After calling the logging function, the log is not immediately written; instead, it is handed off to a worker thread for periodic processing. |
+|     Performance | Low, as the thread writing the log needs to block and wait for the log to be written to the corresponding appender before returning from the logging function. | High, as the thread writing the log does not need to wait for the actual output and can return immediately after logging. |
+| Thread Safety   | High, but it requires that the log parameters are not modified during the execution of the logging function. | High, but it requires that the log parameters are not modified during the execution of the logging function. |
+
+### Thread Safety of Asynchronous Logging
+
+A common misconception about asynchronous logging is that it is less thread-safe, with users concerned that the parameters may be reclaimed by the time the worker thread processes the log. For example:
+
+```cpp
+{
+    const char str_array[5] = {'T', 'E', 'S', 'T', '\0'};
+    const char* str_ptr = str_array;
+    log_obj.info("This is test param: {}, {}", str_array, str_ptr);
+}
+```
+
+In the above example, `str_array` is stored on the stack, and once the scope is exited, its memory is no longer valid. Users might worry that if asynchronous logging is used, by the time the worker thread processes the log, `str_array` and `str_ptr` will be invalid variables.
+
+However, such a situation will not occur because BqLog copies all parameter contents into its internal `ring_buffer` during the execution of the `info` function. Once the `info` function returns, the external variables like `str_array` or `str_ptr` are no longer needed. Moreover, the `ring_buffer` will not store a `const char*` pointer address but will always store the entire string.
+
+The real potential issue arises in the following scenario:
+
+```cpp
+static std::string global_str = "hello world";   // This is a global variable modified by multiple threads.
+
+void thread_a()
+{
+    log_obj.info("This is test param: {}", global_str);
+}
+```
+
+If the content of `global_str` changes during the execution of the `info` function, it may lead to undefined behavior. BqLog will do its best to prevent a crash, but the correctness of the final output cannot be guaranteed.
+
 <br><br>
 
 ## Introduction to Appenders

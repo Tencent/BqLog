@@ -39,7 +39,9 @@
 [&nbsp;&nbsp;&nbsp;&nbsp;1-创建log对象](#1-创建log对象)  
 [&nbsp;&nbsp;&nbsp;&nbsp;2-获取log对象](#2-获取log对象)  
 [&nbsp;&nbsp;&nbsp;&nbsp;3-写日志](#3-写日志)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4-其他api](#4-其他api)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4-其他api](#4-其他api)   
+**[同步日志和异步日志](#同步日志和异步日志)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. 异步日志的线程安全性说明](#异步日志的线程安全性说明)  
 **[Appender介绍](#appender介绍)**  
 [&nbsp;&nbsp;&nbsp;&nbsp;1. ConsoleAppender](#consoleappender)  
 [&nbsp;&nbsp;&nbsp;&nbsp;2. TextFileAppender](#textfileappender)  
@@ -455,7 +457,38 @@ namespace bq{
 使用方式是先创建一个log_decoder对象，然后每调用一次decode()函数可以按顺序解码一条日志，如果返回结果是bq::appender_decode_result::success，则可以继续调用get_last_decoded_log_entry()返回最后解码的那条日志格式化后的文本内容。  
 如果返回是bq::appender_decode_result::eof，则代表日志已经全部读取完成  
   
+<br><br>
 
+## 同步日志和异步日志
+BqLog可以通过配置的方式来确定一个日志对象是同步日志还是异步日志，具体配置方式参考[thread_mode](#logthread_mode)。两者主要区别如下：  
+|                 | 同步日志                                                        | 异步日志                                                  |
+|-----------------|----------------------------------------------------------------|----------------------------------------------------------|
+|     行为        |  调用日志函数之后，日志马上会保证输出到对应Appender                   | 调用对应日志函数之后，日志不会立刻输出，而是交给worker线程定期处理 |
+|     性能        | 低，输出日志的线程需要阻塞等待日志输出到对应Appender之后才会从日志函数返回 | 高，输出日志的线程不用等待日志实际输出就会返回                  |
+|   线程安全性     | 较高，但是要保证日志的参数在调用日志函数期间不会被修改                   | 较高，但是要保证日志的参数在调用日志函数期间不会被修改            ｜
+
+### 异步日志的线程安全性说明
+异步日志给人最大的误解是认为其线程安全性较差，使用者担心实际worker进行处理的时候，对应的参数已经被回收了。比如下面的情况：
+```cpp
+{
+    const char str_array[5] = {'T', 'E', 'S', 'T', '\0'};
+    const char* str_ptr = str_array;
+    log_obj.info("This is test param :{}, {}", str_array, str_ptr);
+}
+```
+上面用例`str_array`是保存在栈上的，当从作用域中退出的时候，其内存就已经变得没有意义了。所以用户会担心如果是异步日志，等worker线程实际处理的时候，`str_array`和`str_ptr`实际上已经是一个无效变量了。  
+其实这样的情况是不会发生的，因为BqLog会在`info`函数被调用的过程中，就将所有的参数内容全部拷贝到内部的`ring_buffer`中，只要从`info`函数返回，就再也不需要`str_array`或者`str_ptr`这样的外部变量了。而且`ring_buffer`上保存的也不会是一个`const char*`的指针地址，而总是会将整个字符串保存在`ring_buffer`中。  
+
+实际上可能出现问题的是这样的情况。
+```cpp
+static std::string global_str = "hello world";   //这是一个全局变量，有多个线程在同时修改它。
+
+void thread_a()
+{
+    log_obj.info("This is test param :{}", global_str);
+}
+```
+如果在调用info函数的过程中，global_str的内容发生了改变，那么最后可能会出现未定义的情况。BqLog已经尽可能保证了不会发生程序崩溃，但是最后输出的内容正确性却无法保证。
 
 <br><br>
 
