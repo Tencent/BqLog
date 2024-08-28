@@ -399,14 +399,24 @@ namespace bq {
             return appender_decoder_helper::decode(in_file_path, out_file_path);
         }
 
-        BQ_API void __register_console_callbacks(bq::type_func_ptr_console_callback on_console_callback)
+        BQ_API void __api_register_console_callbacks(bq::type_func_ptr_console_callback on_console_callback)
         {
             appender_console::register_console_callback(on_console_callback);
         }
 
-        BQ_API void __unregister_console_callbacks(bq::type_func_ptr_console_callback on_console_callback)
+        BQ_API void __api_unregister_console_callbacks(bq::type_func_ptr_console_callback on_console_callback)
         {
             appender_console::unregister_console_callback(on_console_callback);
+        }
+
+        BQ_API void __api_set_console_buffer_enable(bool enable)
+        {
+            appender_console::set_console_buffer_enable(enable);
+        }
+
+        BQ_API bool __api_fetch_and_remoev_console_buffer(bq::type_func_ptr_console_callback on_console_callback)
+        {
+            return appender_console::fetch_and_remove_from_console_buffer(on_console_callback);
         }
 
         BQ_API void __api_enable_snapshot(uint64_t log_id, uint32_t snapshot_buffer_size)

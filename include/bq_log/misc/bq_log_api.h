@@ -198,14 +198,30 @@ namespace bq {
         /// </summary>
         /// <param name="on_console_callback"></param>
         /// <returns></returns>
-        BQ_API void __register_console_callbacks(bq::type_func_ptr_console_callback on_console_callback);
+        BQ_API void __api_register_console_callbacks(bq::type_func_ptr_console_callback on_console_callback);
 
         /// <summary>
         /// Unregister a console callback
         /// </summary>
         /// <param name="on_console_callback"></param>
         /// <returns></returns>
-        BQ_API void __unregister_console_callbacks(bq::type_func_ptr_console_callback on_console_callback);
+		BQ_API void __api_unregister_console_callbacks(bq::type_func_ptr_console_callback on_console_callback);
+
+		/// <summary>
+		/// set console appender buffer enable or not
+		/// </summary>
+		/// <param name="enable"></param>
+		/// <returns></returns>
+		BQ_API void __api_set_console_buffer_enable(bool enable);
+
+		/// <summary>
+		/// Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
+        /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
+        /// Please ensure not to output synchronized BQ logs within the callback function.
+        /// </summary>
+		/// <param name="on_console_callback"></param>
+		/// <returns>True if the console appender buffer is not empty, otherwise False is returned.</returns>
+		BQ_API bool __api_fetch_and_remoev_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
 
         /// <summary>
         /// The snapshot feature is disabled by default, as it consumes some performance overhead.

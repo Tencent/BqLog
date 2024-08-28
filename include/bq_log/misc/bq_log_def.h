@@ -166,6 +166,9 @@ namespace bq {
         failed_io_error
     };
 
+    /// <summary>
+    /// `content` is a C-style string and end with '\0';
+    /// </summary>
     typedef void(BQ_STDCALL* type_func_ptr_console_callback)(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
 
 }

@@ -155,22 +155,32 @@ namespace bq {
 
     inline void log::register_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        bq::api::__register_console_callbacks(callback);
+        bq::api::__api_register_console_callbacks(callback);
     }
 
     inline void log::unregister_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        bq::api::__unregister_console_callbacks(callback);
+        bq::api::__api_unregister_console_callbacks(callback);
+    }
+
+    inline void log::set_console_buffer_enable(bool enable)
+    {
+        bq::api::__api_set_console_buffer_enable(enable);
+    }
+
+    inline bool log::fetch_and_remoev_console_buffer(bq::type_func_ptr_console_callback on_console_callback)
+    {
+        return bq::api::__api_fetch_and_remoev_console_buffer(on_console_callback);
     }
 
     template <typename STR>
-    inline bq::enable_if_t<bq::is_same<bq::decay_t<bq::remove_cv_t<STR>>, char*>::value> log::console(bq::log_level level, const STR& str)
+    inline bq::enable_if_t<bq::is_same<bq::decay_t<bq::remove_cv_t<STR>>, char*>::value || bq::is_same<bq::decay_t<bq::remove_cv_t<STR>>, const char*>::value> log::console(bq::log_level level, const STR& str)
     {
         bq::api::__api_log_device_console(level, str);
     }
 
     template <typename STR>
-    inline bq::enable_if_t<!bq::is_same<bq::decay_t<bq::remove_cv_t<STR>>, char*>::value> log::console(bq::log_level level, const STR& str)
+    inline bq::enable_if_t<!(bq::is_same<bq::decay_t<bq::remove_cv_t<STR>>, char*>::value || bq::is_same<bq::decay_t<bq::remove_cv_t<STR>>, const char*>::value)> log::console(bq::log_level level, const STR& str)
     {
         bq::api::__api_log_device_console(level, str.c_str());
     }
