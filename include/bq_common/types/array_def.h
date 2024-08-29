@@ -48,26 +48,20 @@ namespace bq {
         template <typename V, typename V_ARRAY>
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs);
 
-        template <typename V, typename V_ARRAY>
-        bool operator==(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const;
-
-        template <typename V, typename V_ARRAY>
-        bool operator!=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const;
-
-        template <typename V, typename V_ARRAY>
-        bool operator<(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const;
-
-        template <typename V, typename V_ARRAY>
-        bool operator<=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const;
-
-        template <typename V, typename V_ARRAY>
-        bool operator>(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const;
-
-        template <typename V, typename V_ARRAY>
-        bool operator>=(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const;
-
-        template <typename V, typename V_ARRAY>
-        diff_type operator-(const BQ_ARRAY_ITER_CLS_NAME<V, V_ARRAY>& rhs) const;
+		template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
+        friend bool operator==(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+		template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
+        friend bool operator!=(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+		template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
+        friend bool operator<(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+		template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
+        friend bool operator<=(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+		template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
+        friend bool operator>(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+		template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
+        friend bool operator>=(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+		template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
+		friend typename BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>::diff_type operator-(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
 
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator++();
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator++(int32_t);
@@ -133,11 +127,11 @@ namespace bq {
 
         const value_type& operator[](size_type idx) const;
 
-        template <typename V, size_t CB>
-        bool operator==(const BQ_ARRAY_CLS_NAME<V, CB>& rhs);
+		template <typename T1, typename T2, size_t S1, size_t S2>
+		friend bool operator==(const BQ_ARRAY_CLS_NAME<T1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, S2>& array2);
 
-        template <typename V, size_t CB>
-        bool operator!=(const BQ_ARRAY_CLS_NAME<V, CB>& rhs);
+		template <typename T1, typename T2, size_t S1, size_t S2>
+		friend bool operator!=(const BQ_ARRAY_CLS_NAME<T1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, S2>& array2);
 
         BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& operator=(const BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& rhs);
 

@@ -168,9 +168,15 @@ namespace bq {
         bq::api::__api_set_console_buffer_enable(enable);
     }
 
-    inline bool log::fetch_and_remoev_console_buffer(bq::type_func_ptr_console_callback on_console_callback)
+    inline void BQ_STDCALL fetch_and_remove_console_buffer_callback_wrapper(void* pass_through_param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
     {
-        return bq::api::__api_fetch_and_remoev_console_buffer(on_console_callback);
+        bq::type_func_ptr_console_callback real_callback = (bq::type_func_ptr_console_callback)pass_through_param;
+        real_callback(log_id, category_idx, log_level, content, length);
+    }
+
+    inline bool log::fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback)
+    {
+        return bq::api::__api_fetch_and_remove_console_buffer(fetch_and_remove_console_buffer_callback_wrapper, (const void*)on_console_callback);
     }
 
     template <typename STR>

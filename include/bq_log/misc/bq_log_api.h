@@ -220,8 +220,9 @@ namespace bq {
         /// Please ensure not to output synchronized BQ logs within the callback function.
         /// </summary>
 		/// <param name="on_console_callback"></param>
+        /// <param name="pass_through_param">path through parameter that will pass to on_console_callback</param>
 		/// <returns>True if the console appender buffer is not empty, otherwise False is returned.</returns>
-		BQ_API bool __api_fetch_and_remoev_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
+		BQ_API bool __api_fetch_and_remove_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback on_console_callback, const void* pass_through_param);
 
         /// <summary>
         /// The snapshot feature is disabled by default, as it consumes some performance overhead.

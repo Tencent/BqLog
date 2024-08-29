@@ -170,7 +170,8 @@ namespace bq {
 
             void test_1(test_result& result, const test_category_log& log);
             void test_2(test_result& result, const test_category_log& log);
-            void test_3(test_result& result, const test_category_log& log);
+			void test_3(test_result& result, const test_category_log& log);
+			void test_4(test_result& result, const test_category_log& log);
 
         public:
             virtual test_result test() override
@@ -210,6 +211,8 @@ namespace bq {
                 test_3(result, log_inst);
                 snapeshot.cancel();
                 snapeshot.join();
+
+				test_4(result, log_inst);
                 return result;
             }
         };

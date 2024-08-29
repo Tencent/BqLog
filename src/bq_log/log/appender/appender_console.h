@@ -41,7 +41,7 @@ namespace bq {
             console_ring_buffer();
             ~console_ring_buffer();
             void insert(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
-            bool fetch_and_remove(bq::type_func_ptr_console_callback callback);
+            bool fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param);
             void set_enable(bool enalbe);
             bq_forceinline bool is_enable() const {return enable_;}
 		};
@@ -63,7 +63,7 @@ namespace bq {
         static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
 
         static void set_console_buffer_enable(bool enable);
-        static bool fetch_and_remove_from_console_buffer(bq::type_func_ptr_console_callback callback);
+        static bool fetch_and_remove_from_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param);
 
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;

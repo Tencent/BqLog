@@ -76,7 +76,8 @@ namespace bq {
         typedef const pair_type* const_pair_type_ptr;
         typedef const pair_type& const_pair_type_ref;
 
-    private:
+	private:
+		constexpr static size_type BQ_HASH_MAP_INVALID_INDEX = (size_type)-1;
         container_type_ptr parent_;
         size_type node_index_;
         size_type bucket_idx_;
@@ -103,11 +104,10 @@ namespace bq {
         template <bool C_>
         BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>& operator=(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs);
 
-        template <bool C_>
-        bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs) const;
-
-        template <bool C_>
-        bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs) const;
+		template <typename K_, typename V_, bool C1, bool C2>
+		friend bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2);
+		template <typename K_, typename V_, bool C1, bool C2>
+		friend bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2);
 
         BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>& operator++();
 
@@ -181,7 +181,7 @@ namespace bq {
         // we need manually control the destructive behaviour of every node item. bq::array didn't meets our needs because it has its own destructive logic.
         value_node_buffer_head<node_type> nodes_;
 
-        constexpr static size_type BQ_BQ_HASH_MAP_INVALID_INDEX = (size_type)-1;
+        constexpr static size_type BQ_HASH_MAP_INVALID_INDEX = (size_type)-1;
         size_type size_;
         size_type head_;
         size_type tail_;

@@ -133,11 +133,11 @@ namespace bq {
 		/// </summary>
 		/// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
 		/// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
-        static bool fetch_and_remoev_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
+        static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
 
         /// <summary>
         /// Output to console with log_level.
-        /// Important: This is not log entry, and can not be caught by console callback with was registered by register_console_callback
+        /// Important: This is not log entry, and can not be caught by console callback which was registered by register_console_callback or fetch_and_remove_console_buffer.
         /// </summary>
         /// <typeparam name="STR">c style char*(Only utf-8 string supported)</typeparam>
         /// <param name="level"></param>
@@ -148,7 +148,7 @@ namespace bq {
 
         /// <summary>
         /// Output to console with log_level.
-        /// Important: This is not log entry, and can not be caught by console callback with was registered by register_console_callback
+        /// Important: This is not log entry, and can not be caught by console callback which was registered by register_console_callback or fetch_and_remove_console_buffer
         /// </summary>
         /// <typeparam name="STR">std::string or bq::string(Only utf-8 string supported)</typeparam>
         /// <param name="level"></param>

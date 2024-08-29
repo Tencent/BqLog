@@ -64,7 +64,7 @@ namespace bq {
 
         BQ_API const char* __api_get_log_version()
         {
-            return "1.4.0";
+            return "1.4.1";
         }
 
 #if BQ_POSIX
@@ -414,9 +414,9 @@ namespace bq {
             appender_console::set_console_buffer_enable(enable);
         }
 
-        BQ_API bool __api_fetch_and_remoev_console_buffer(bq::type_func_ptr_console_callback on_console_callback)
+        BQ_API bool __api_fetch_and_remove_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback on_console_callback, const void* pass_through_param)
         {
-            return appender_console::fetch_and_remove_from_console_buffer(on_console_callback);
+            return appender_console::fetch_and_remove_from_console_buffer(on_console_callback, pass_through_param);
         }
 
         BQ_API void __api_enable_snapshot(uint64_t log_id, uint32_t snapshot_buffer_size)

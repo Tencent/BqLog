@@ -188,7 +188,7 @@ namespace bq {
 	}
 
 
-	bool appender_console::console_ring_buffer::fetch_and_remove(bq::type_func_ptr_console_callback callback)
+	bool appender_console::console_ring_buffer::fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
 	{
 		if (!is_enable())
 		{
@@ -210,7 +210,7 @@ namespace bq {
 			int32_t length = *(int32_t*)data;
 			data += sizeof(int32_t);
 			char* content = (char*)data;
-			callback(log_id, category_idx, log_level, content, length);
+			callback(const_cast<void*>(pass_through_param), log_id, category_idx, log_level, content, length);
 		}else if (read_handle.result == enum_buffer_result_code::err_empty_ring_buffer)
 		{
 			//do nothing
@@ -249,9 +249,9 @@ namespace bq {
 	}
 
 
-	bool appender_console::fetch_and_remove_from_console_buffer(bq::type_func_ptr_console_callback callback)
+	bool appender_console::fetch_and_remove_from_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
 	{
-        return get_console_misc().buffer().fetch_and_remove(callback);
+        return get_console_misc().buffer().fetch_and_remove(callback, pass_through_param);
 	}
 
 	bool appender_console::init_impl(const bq::property_value& config_obj)
