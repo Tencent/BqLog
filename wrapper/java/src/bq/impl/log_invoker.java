@@ -66,4 +66,8 @@ public class log_invoker {
 	public static native String __api_take_snapshot_string(long log_id, boolean use_gmt_time);
 
 	public static native void __api_set_console_callback(boolean enable);
+	
+	public static native void __api_set_console_buffer_enable(boolean enable);
+	
+	public static native boolean __api_fetch_and_remove_console_buffer(Object callback);
 }

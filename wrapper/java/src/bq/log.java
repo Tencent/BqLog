@@ -12,8 +12,10 @@ package bq;
  */
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.*;
-
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import bq.def.*;
 import bq.impl.*;
 
@@ -41,7 +43,8 @@ public class log {
 		@SuppressWarnings("unused")
 		protected long index = 0L;
 	};
-    private static console_callbck_delegate console_callbck_delegate_;
+    private static ConcurrentLinkedQueue<console_callbck_delegate> console_callbck_delegates_ = new ConcurrentLinkedQueue<console_callbck_delegate>();
+	private static java.util.concurrent.locks.ReentrantLock console_callback_lock_ = new java.util.concurrent.locks.ReentrantLock();
 	
 	private long log_id_ = 0;
     private String name_ = "";
@@ -85,7 +88,15 @@ public class log {
     @SuppressWarnings("unused")
 	private static void native_console_callbck(long log_id, int category_idx, int log_level, String content)
     {
-        console_callbck_delegate_.callback(log_id, category_idx, log_level, content);
+    	for(console_callbck_delegate callback_obj : console_callbck_delegates_)
+    	{
+    		callback_obj.callback(log_id, category_idx, log_level, content);
+    	}
+    }
+    @SuppressWarnings("unused")
+	private static void native_console_buffer_fetch_and_remove_callbck(console_callbck_delegate callback_obj, long log_id, int category_idx, int log_level, String content)
+    {
+		callback_obj.callback(log_id, category_idx, log_level, content);
     }
     private boolean is_enable_for(log_category_base category, log_level level)
     {
@@ -226,22 +237,57 @@ public class log {
      */
     public static void register_console_callback(console_callbck_delegate callback)
     {
-        console_callbck_delegate_ = callback;
-        log_invoker.__api_set_console_callback(true);
+    	console_callback_lock_.lock();
+        console_callbck_delegates_.offer(callback);
+        if(console_callbck_delegates_.size() == 1)
+        {
+            log_invoker.__api_set_console_callback(true);
+        }
+        console_callback_lock_.unlock();
     }
 
     /**
      * @param Unregister console callback.
      */
-    public static void unregister_console_callback()
+    public static void unregister_console_callback(console_callbck_delegate callback)
     {
-        console_callbck_delegate_ = null;
-        log_invoker.__api_set_console_callback(false);
+    	console_callback_lock_.lock();
+        console_callbck_delegates_.remove(callback);
+        if(console_callbck_delegates_.size() == 0)
+        {
+            log_invoker.__api_set_console_callback(false);
+        }
+        console_callback_lock_.unlock();
+    }
+    
+    /**
+     * Enable or disable the console appender buffer. 
+     * Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread, 
+     * we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
+     * @param enable
+     */
+    public static void set_console_buffer_enable(boolean enable)
+    {
+    	log_invoker.__api_set_console_buffer_enable(enable);
+    }
+    
+    /**
+     * Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
+     * If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
+     * Please ensure not to output synchronized BQ logs within the callback function.
+     * @param on_console_callback
+     *        A callback function to be invoked for the fetched log entry if the console appender buffer is not empty
+     * @return
+     *        True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.
+     */
+    public static boolean fetch_and_remove_console_buffer(console_callbck_delegate on_console_callback)
+    {
+    	return log_invoker.__api_fetch_and_remove_console_buffer(on_console_callback);
     }
     
     /**
      * Output to console with log_level.
-     * Important: This is not log entry, and can not be caught by console callback with was registered by register_console_callback 
+     * Important: This is not log entry, and can not be caught by console callback which was registered by register_console_callback or fetch_and_remove_console_buffer
      * @param level
      * @param str
      */
