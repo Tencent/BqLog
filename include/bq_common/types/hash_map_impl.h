@@ -34,19 +34,19 @@ namespace bq {
         return *this;
     }
 
-	template <typename K_, typename V_, bool C1, bool C2>
+    template <typename K_, typename V_, bool C1, bool C2>
     BQ_HASH_MAP_INLINE bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2)
-	{
-		if (map1.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX
-			&& map2.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX) {
-			return true;
-		}
-		return (map1.node_index_ == map2.node_index_)
-			&& (map1.parent_ == map2.parent_)
-			&& (map1.bucket_idx_ == map2.bucket_idx_);
+    {
+        if (map1.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX
+            && map2.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX) {
+            return true;
+        }
+        return (map1.node_index_ == map2.node_index_)
+            && (map1.parent_ == map2.parent_)
+            && (map1.bucket_idx_ == map2.bucket_idx_);
     }
 
-	template <typename K_, typename V_, bool C1, bool C2>
+    template <typename K_, typename V_, bool C1, bool C2>
     BQ_HASH_MAP_INLINE bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2)
     {
         return !(map1 == map2);

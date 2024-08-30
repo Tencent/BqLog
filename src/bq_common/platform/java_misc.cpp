@@ -82,26 +82,26 @@ namespace bq {
         }
 
 #ifdef __cplusplus
-		extern "C" {
+        extern "C" {
 #endif
-			JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
-			{
-				(void)reserved;
-				java_vm = vm;
+        JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
+        {
+            (void)reserved;
+            java_vm = vm;
 #if BQ_ANDROID
-				__android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
+            __android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
 #elif BQ_IOS
-				bq::platform::ios_print("Bq JNI_Onload is called");
+            bq::platform::ios_print("Bq JNI_Onload is called");
 #else
-				printf("Bq JNI_Onload is called");
+            printf("Bq JNI_Onload is called");
 #endif
-				for (auto callback : get_jni_onload_callbacks()) {
-					callback();
-				}
-				return JNI_VERSION_1_6;
-			}
+            for (auto callback : get_jni_onload_callbacks()) {
+                callback();
+            }
+            return JNI_VERSION_1_6;
+        }
 #ifdef __cplusplus
-		}
+        }
 #endif
     }
 }

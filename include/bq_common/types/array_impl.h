@@ -52,7 +52,7 @@ namespace bq {
 
     template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
     BQ_ARRAY_INLINE bool operator==(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2)
-	{
+    {
         assert((array1.array_data_ptr_ == array2.array_data_ptr_) && "you can not compare two bq::array_iterator generated from different bq::array");
         return array1.data_ == array2.data_;
     }
@@ -308,21 +308,21 @@ namespace bq {
         return data_[idx];
     }
 
-	template <typename T1, typename T2, size_t S1, size_t S2>
+    template <typename T1, typename T2, size_t S1, size_t S2>
     BQ_ARRAY_INLINE bool operator==(const BQ_ARRAY_CLS_NAME<T1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, S2>& array2)
-	{
-		if (array1.size() != array2.size()) {
-			return false;
-		}
-		for (typename BQ_ARRAY_CLS_NAME<T1, S1>::size_type i = 0; i < array1.size(); ++i) {
-			if (array1[i] != array2[i]) {
-				return false;
-			}
-		}
-		return true;
+    {
+        if (array1.size() != array2.size()) {
+            return false;
+        }
+        for (typename BQ_ARRAY_CLS_NAME<T1, S1>::size_type i = 0; i < array1.size(); ++i) {
+            if (array1[i] != array2[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
-	template <typename T1, typename T2, size_t S1, size_t S2>
+    template <typename T1, typename T2, size_t S1, size_t S2>
     BQ_ARRAY_INLINE bool operator!=(const BQ_ARRAY_CLS_NAME<T1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, S2>& array2)
     {
         return !(array1 == array2);

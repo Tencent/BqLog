@@ -117,22 +117,22 @@ namespace bq {
         /// <param name="callback"></param>
         static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
 
-		/// <summary>
-		/// Enable or disable the console appender buffer. 
-        /// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread, 
+        /// <summary>
+        /// Enable or disable the console appender buffer.
+        /// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread,
         /// we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
-		/// </summary>
-		/// <param name="enable"></param>
-		/// <returns></returns>
+        /// </summary>
+        /// <param name="enable"></param>
+        /// <returns></returns>
         static void set_console_buffer_enable(bool enable);
 
-		/// <summary>
-		/// Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
-		/// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
-		/// Please ensure not to output synchronized BQ logs within the callback function.
-		/// </summary>
-		/// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
-		/// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
+        /// <summary>
+        /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
+        /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry.
+        /// Please ensure not to output synchronized BQ logs within the callback function.
+        /// </summary>
+        /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
+        /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
         static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
 
         /// <summary>

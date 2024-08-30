@@ -18,43 +18,44 @@
 
 namespace bq {
     class appender_console : public appender_base {
-	private:
-		class console_callbacks
-		{
-		private:
-			bq::platform::mutex mutex_;
-			bq::hash_map<bq::type_func_ptr_console_callback, bool> callbacks_;
+    private:
+        class console_callbacks {
+        private:
+            bq::platform::mutex mutex_;
+            bq::hash_map<bq::type_func_ptr_console_callback, bool> callbacks_;
+
         public:
             void register_callback(bq::type_func_ptr_console_callback callback);
             void erase_callback(bq::type_func_ptr_console_callback callback);
             void call(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
-		};
+        };
 
-		class console_ring_buffer
-		{
+        class console_ring_buffer {
         private:
             bool enable_;
             class ring_buffer* buffer_;
-			bq::platform::mutex fetch_lock_;
-			bq::platform::spin_lock_rw_crazy insert_lock_;
+            bq::platform::mutex fetch_lock_;
+            bq::platform::spin_lock_rw_crazy insert_lock_;
+
         public:
             console_ring_buffer();
             ~console_ring_buffer();
             void insert(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
             bool fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param);
             void set_enable(bool enalbe);
-            bq_forceinline bool is_enable() const {return enable_;}
-		};
+            bq_forceinline bool is_enable() const { return enable_; }
+        };
 
-        class console_static_misc
-        {
+        class console_static_misc {
         private:
             console_callbacks callbacks_;
-			console_ring_buffer buffer_;
+            console_ring_buffer buffer_;
+
         public:
-			bq_forceinline console_callbacks& callback() { return callbacks_; }
-			bq_forceinline console_ring_buffer& buffer() { return buffer_; }
+            bq_forceinline console_callbacks& callback() { return callbacks_; }
+            bq_forceinline console_ring_buffer& buffer() { return buffer_; }
         };
+
     public:
         appender_console();
 
@@ -71,6 +72,7 @@ namespace bq {
 
     private:
         static console_static_misc& get_console_misc();
+
     private:
         bq::string log_name_prefix_;
         bq::string log_entry_cache_;

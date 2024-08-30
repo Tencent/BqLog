@@ -425,8 +425,7 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1callback
  * Method:    __api_set_console_buffer_enable
  * Signature: (Z)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1enable
-(JNIEnv*, jclass, jboolean enable)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1enable(JNIEnv*, jclass, jboolean enable)
 {
     bq::log::set_console_buffer_enable(enable);
 }
@@ -434,27 +433,26 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1
 static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
 {
     jobject callback_obj = (jobject)pass_through_param;
-	(void)length;
-	bq::platform::jni_env env_holder;
-	JNIEnv* env = env_holder.env;
-	static jclass cls = env->FindClass("bq/log");
-	if (!cls) {
-		return;
-	}
-	static jmethodID mid = env->GetStaticMethodID(cls, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
-	if (!mid) {
-		return;
-	}
-	jstring message = env->NewStringUTF(content);
-	env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int)log_level, message);
+    (void)length;
+    bq::platform::jni_env env_holder;
+    JNIEnv* env = env_holder.env;
+    static jclass cls = env->FindClass("bq/log");
+    if (!cls) {
+        return;
+    }
+    static jmethodID mid = env->GetStaticMethodID(cls, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
+    if (!mid) {
+        return;
+    }
+    jstring message = env->NewStringUTF(content);
+    env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int)log_level, message);
 }
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_fetch_and_remove_console_buffer
  * Signature: (Ljava/lang/Object;)Z
  */
-JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove_1console_1buffer
-(JNIEnv*, jclass, jobject callback_obj)
+JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove_1console_1buffer(JNIEnv*, jclass, jobject callback_obj)
 {
     return bq::api::__api_fetch_and_remove_console_buffer(jni_console_buffer_fetch_callback, callback_obj);
 }
