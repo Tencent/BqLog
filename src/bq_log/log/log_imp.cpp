@@ -125,16 +125,18 @@ namespace bq {
         // init print_stack_levels
         {
             const auto& print_stack_levels_array = log_config["print_stack_levels"];
-            if (!print_stack_levels_array.is_array()) {
-                util::log_device_console(bq::log_level::info, "bq log info: invalid [print_stack_levels] config");
-            } else {
-                for (typename property_value::array_type::size_type i = 0; i < print_stack_levels_array.array_size(); ++i) {
-                    const auto& level_obj = print_stack_levels_array[i];
-                    if (!level_obj.is_string()) {
-                        util::log_device_console(bq::log_level::warning, "bq log info: invalid [print_stack_levels] item");
-                        continue;
+            if (!print_stack_levels_array.is_null()) {
+                if (!print_stack_levels_array.is_array()) {
+                    util::log_device_console(bq::log_level::info, "bq log info: invalid [print_stack_levels] config");
+                } else {
+                    for (typename property_value::array_type::size_type i = 0; i < print_stack_levels_array.array_size(); ++i) {
+                        const auto& level_obj = print_stack_levels_array[i];
+                        if (!level_obj.is_string()) {
+                            util::log_device_console(bq::log_level::warning, "bq log info: invalid [print_stack_levels] item");
+                            continue;
+                        }
+                        print_stack_level_bitmap_.add_level(((string)level_obj).trim());
                     }
-                    print_stack_level_bitmap_.add_level(((string)level_obj).trim());
                 }
             }
         }
@@ -203,16 +205,18 @@ namespace bq {
         {
             print_stack_level_bitmap_.clear();
             const auto& print_stack_levels_array = log_config["print_stack_levels"];
-            if (!print_stack_levels_array.is_array()) {
-                util::log_device_console(bq::log_level::info, "bq log info: invalid [print_stack_levels] config");
-            } else {
-                for (typename property_value::array_type::size_type i = 0; i < print_stack_levels_array.array_size(); ++i) {
-                    const auto& level_obj = print_stack_levels_array[i];
-                    if (!level_obj.is_string()) {
-                        util::log_device_console(bq::log_level::warning, "bq log info: invalid [print_stack_levels] item");
-                        continue;
+            if (!print_stack_levels_array.is_null()) {
+                if (!print_stack_levels_array.is_array()) {
+                    util::log_device_console(bq::log_level::info, "bq log info: invalid [print_stack_levels] config");
+                } else {
+                    for (typename property_value::array_type::size_type i = 0; i < print_stack_levels_array.array_size(); ++i) {
+                        const auto& level_obj = print_stack_levels_array[i];
+                        if (!level_obj.is_string()) {
+                            util::log_device_console(bq::log_level::warning, "bq log info: invalid [print_stack_levels] item");
+                            continue;
+                        }
+                        print_stack_level_bitmap_.add_level(((string)level_obj).trim());
                     }
-                    print_stack_level_bitmap_.add_level(((string)level_obj).trim());
                 }
             }
         }

@@ -90,10 +90,16 @@ namespace bq.impl
         public unsafe static extern bool __api_log_decode(char* in_file, char* out_file);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern void __register_console_callbacks(type_func_ptr_console_callback on_console_callback);
+        public static unsafe extern void __api_register_console_callbacks(type_func_ptr_console_callback on_console_callback);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern void __unregister_console_callbacks(type_func_ptr_console_callback on_console_callback);
+        public static unsafe extern void __api_unregister_console_callbacks(type_func_ptr_console_callback on_console_callback);
+
+        [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
+        public static unsafe extern void __api_set_console_buffer_enable(bool enable);
+
+        [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
+        public static unsafe extern bool __api_fetch_and_remove_console_buffer(type_func_ptr_console_buffer_fetch_callback on_console_callback, IntPtr pass_through_param);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public unsafe static extern void __api_enable_snapshot(ulong log_id, uint snapshot_buffer_size);

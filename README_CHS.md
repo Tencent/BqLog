@@ -1,6 +1,6 @@
-# BqLog(扁鹊日志)(V 1.4.0)  
+# BqLog(扁鹊日志)(V 1.4.1)  
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](https://github.com/Tencent/BqLog/blob/main/LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-1.4.0-red.svg)](https://github.com/Tencent/BqLog/releases)  
+[![Release Version](https://img.shields.io/badge/release-1.4.1-red.svg)](https://github.com/Tencent/BqLog/releases)  
 > BqLog是一个轻量级，高性能日志系统，应用于《Honor Of Kings》等项目，已经上线并良好运行
 
 ## 支持平台
@@ -369,6 +369,32 @@ STR参数类似于printf的第一个参数，其类型是各种常用类型的�
     static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
 ```
 [ConsoleAppender](#consoleappender)的输出是控制台，在android是ADB Logcat日志，但是这些无法涵盖所有的情况。比如自研游戏引擎，自研IDE等，这里提供了一种机制，可以让每一条console日志输出都调用一次参数里的回调，你可以在自己的程序里任意地方重新处理和输出这个控制台日志。  
+***注意:*** 不要在console callback中再去输出任何同步的扁鹊日志，不然很容易造成死锁 
+
+#### 主动获取console的输出
+```cpp
+    /// <summary>
+    /// Enable or disable the console appender buffer.
+    /// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread,
+    /// we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
+    /// </summary>
+    /// <param name="enable"></param>
+    /// <returns></returns>
+    static void set_console_buffer_enable(bool enable);
+
+    /// <summary>
+    /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
+    /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry.
+    /// Please ensure not to output synchronized BQ logs within the callback function.
+    /// </summary>
+    /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
+    /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
+    static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
+```
+除了用console callback去拦截console的输出之外，还可以通过主动调用去获取日志的console输出。有的时候，我们并不希望这个console的日志输出是通过callback调用过来的，因为你并不知道callback会通过什么线程过来（比如在C#的一些虚拟机，或者JVM中，console callback调用过来的时候，VM正在做GC，可能会发生卡死或者crash）。  
+这里采用的方法是通过`set_console_buffer_enable`先启用console的缓冲功能，每一条console日志输出都会被留在内存中，直到我们主动调用`fetch_and_remove_console_buffer`将它取出来。所以如果使用这种方法，请一定记得及时去获取和清理日志，不然内存会无法释放。  
+***注意:*** 不要在console callback中再去输出任何同步的扁鹊日志，不然很容易造成死锁 
+
   
 #### 修改log的配置
 ```cpp

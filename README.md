@@ -1,6 +1,6 @@
-# BqLog(扁鹊日志)(V 1.4.0)  
+# BqLog(扁鹊日志)(V 1.4.1)  
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](https://github.com/Tencent/BqLog/blob/main/LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-1.4.0-red.svg)](https://github.com/Tencent/BqLog/releases)  
+[![Release Version](https://img.shields.io/badge/release-1.4.1-red.svg)](https://github.com/Tencent/BqLog/releases)  
 > [中文文档](./README_CHS.md)  
 > BqLog is a lightweight, high-performance logging system used in projects such as "Honor of Kings," and it has been successfully deployed and is running smoothly.
 
@@ -367,7 +367,35 @@ Since bqLog uses asynchronous logging by default, there are times when you might
     /// <param name="callback"></param>
     static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
 ```
-The output of[ConsoleAppender](#consoleappender) goes to the console or ADB Logcat logs on Android, but this may not cover all situations. For instance, in custom game engines or custom IDEs, a mechanism is provided to call a callback function for each console log output. This allows you to reprocess and output the console log anywhere in your program.
+The output of[ConsoleAppender](#consoleappender) goes to the console or ADB Logcat logs on Android, but this may not cover all situations. For instance, in custom game engines or custom IDEs, a mechanism is provided to call a callback function for each console log output. This allows you to reprocess and output the console log anywhere in your program.  
+**Additional Caution:** Do not output any synchronized BQ logs within the console callback as it may easily lead to deadlocks.  
+
+
+#### Actively Fetching Console Output
+```cpp
+    /// <summary>
+    /// Enable or disable the console appender buffer.
+    /// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread,
+    /// we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
+    /// </summary>
+    /// <param name="enable"></param>
+    /// <returns></returns>
+    static void set_console_buffer_enable(bool enable);
+
+    /// <summary>
+    /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
+    /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry.
+    /// Please ensure not to output synchronized BQ logs within the callback function.
+    /// </summary>
+    /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
+    /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
+    static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
+```
+In addition to intercepting console output through a console callback, you can actively fetch console log outputs. Sometimes, we may not want the console log output to come through a callback because you do not know which thread the callback will come from (for example, in some C# virtual machines, or JVMs, the VM might be performing garbage collection when the console callback is called, which could potentially lead to hangs or crashes).
+
+The method used here involves enabling the console buffer through `set_console_buffer_enable`. This causes every console log output to be stored in memory until we actively call `fetch_and_remove_console_buffer` to retrieve it. Therefore, if you choose to use this method, remember to promptly fetch and clear logs to avoid unreleased memory.  
+**Additional Caution:** Do not output any synchronized BQ logs within the console callback as it may easily lead to deadlocks.  
+
   
 #### Modifying Log Configuration
 ```cpp

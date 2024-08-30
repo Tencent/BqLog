@@ -81,7 +81,10 @@ namespace bq {
             return java_vm;
         }
 
-        extern "C" jint JNI_OnLoad(JavaVM* vm, void* reserved)
+#ifdef __cplusplus
+        extern "C" {
+#endif
+        JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
         {
             (void)reserved;
             java_vm = vm;
@@ -97,6 +100,9 @@ namespace bq {
             }
             return JNI_VERSION_1_6;
         }
+#ifdef __cplusplus
+        }
+#endif
     }
 }
 #endif

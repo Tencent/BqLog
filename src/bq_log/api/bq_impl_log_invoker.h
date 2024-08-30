@@ -196,6 +196,20 @@ JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1str
  */
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1callback(JNIEnv*, jclass, jboolean);
 
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_set_console_buffer_enable
+ * Signature: (Z)V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1enable(JNIEnv*, jclass, jboolean);
+
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_fetch_and_remove_console_buffer
+ * Signature: (Ljava/lang/Object;)Z
+ */
+JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove_1console_1buffer(JNIEnv*, jclass, jobject);
+
 #ifdef __cplusplus
 }
 #endif

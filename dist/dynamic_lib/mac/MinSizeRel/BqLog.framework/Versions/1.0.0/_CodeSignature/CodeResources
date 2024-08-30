@@ -57,14 +57,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			/QzuVBc1sW385rw6zwz+FR1sgMXFA16qZ2udNj3Q1Qw=
+			NxeDAoFrBQuLDnL1TC4kNUgkbK38W6rtqaak5bJipqk=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/array_impl.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			x2wMHsHC7UysADx6R9tZ+cShynTHYgNiaZoJc8nQNWI=
+			CUXJ7fgCvclaodHbm/p+BPus8pTi+epVHVK2XLnd38U=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/basic_types.h</key>
@@ -85,14 +85,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			zt3vNEm99ehzfRlD0ZaNKkHYmo6mRWiJSGmQ4mLLwvw=
+			srQQWqHVmRuu4rV03Yxmfg+LzomlWNG2YLGNbyuVzhY=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/hash_map_impl.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			z6x6dtjZWjHKJPdBcZOQAd4RlHrE5lclFS+TumdLOzs=
+			ZuntT6tkS2N2LP27YiciQ3Y7QKT9r+iu6k7wLB0ERac=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/optional.h</key>
@@ -106,14 +106,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			kU4dsk3lOdzf3X9iTTMhykM8OiHBR1+0XunrAE6iy9w=
+			Ji1DDfG8qr4dZQ8iTN7BZKTymCtZrfOBAwGvHAWw8Qc=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/string_impl.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			WuyX9aI+UOoSOIPzawF8TX0/NSsAwxoC2zrP8/NP1co=
+			Uv0hQ16v7jzj9CRqzgzJgNZIVcA7zUTvULyJ24gWJh4=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/type_tools.h</key>
@@ -148,28 +148,28 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ONj3oS3g793vMiqr4FlsNe4IPMCLv4XFfwnjnbdpUFA=
+			B+IhgWKtC91IrLCq72TVevlq36z/cdVfuRqD+mq/wL8=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_api.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			MdncWEJytGhqCdIbPw1JzWWsb2312mZxntqgxNAdGLA=
+			WJyLCoLU0HcOL32CCDF21ZRy0899fWcrypj5fkWS3+g=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_def.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			WNR5a+m+efx2hJPcXXTL/oAk/NmMlVLPNWYL6g2hSbg=
+			TSyrbQNsnFrzSOi5AyviokTasT7M/IrlgiYh1kwdwkI=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_impl.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			erP8ajj0AZWUYD1XbAJ8CsnfA8ZL7NDMMJcKYHuLC6I=
+			+32c5+ajYkjFSjrJZPcjNCTvcMdXhW7OCQgr5zZpaIU=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_wrapper_tools.h</key>

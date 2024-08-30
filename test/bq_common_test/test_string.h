@@ -207,31 +207,31 @@ namespace bq {
                     result.add_result(!test_str.end_with(u"BBBBBBBBBBBBBBB"), "string end_with test 1");
                     result.add_result(!test_str.end_with(u"BBBB"), "string end_with test 2");
                 }
-                
+
 #if BQ_CPP_17
-                //test std::string and std::string_view
+                // test std::string and std::string_view
                 {
                     std::string std_str_src = "Part1";
                     std::string_view str_view_src(std_str_src);
                     std_str_src += "Part2";
                     bq::string bq_str_for_std_str = std_str_src;
                     bq::string bq_str_for_std_str_view = str_view_src;
-                    
+
                     result.add_result(bq_str_for_std_str == "Part1Part2", "string trans 1");
                     result.add_result(bq_str_for_std_str_view == "Part1", "string trans 2");
-                    
+
                     bq::string bq_str1 = "This is Bq Str 1 utf16";
                     std::string std_str1 = bq_str1;
                     std::string_view std_str_view1 = bq_str1;
                     size_t str1_len = bq_str1.size();
                     result.add_result(str1_len == std_str1.size() && str1_len == std_str_view1.size(), "bq::string, std::string, std::string_view cast test: utf8 size");
-                    
+
                     result.add_result(memcmp(&bq_str1[0], &std_str1[0], str1_len) == 0, "bq::string, std::string cast test: utf8 equal");
                     result.add_result(memcmp(&bq_str1[0], &std_str_view1[0], str1_len) == 0, "bq::string, std::string_view cast test: utf8 equal");
-                    
+
                     bq::string bq_str1_from_std_str = std_str1;
                     bq::string bq_str2_from_std_str_view = std_str_view1;
-                    
+
                     result.add_result(bq_str1 == bq_str1_from_std_str, "std::string, bq::string cast test: utf8 equal");
                     result.add_result(bq_str1 == bq_str2_from_std_str_view, "std::string_view, bq::string cast test: utf8 equal");
                 }
@@ -241,13 +241,13 @@ namespace bq {
                     std::u16string_view std_str_view1 = bq_str1;
                     size_t str1_len = bq_str1.size();
                     result.add_result(str1_len == std_str1.size() && str1_len == std_str_view1.size(), "bq::string, std::string, std::string_view cast test: utf16 size");
-                    
+
                     result.add_result(memcmp(&bq_str1[0], &std_str1[0], str1_len * sizeof(char16_t)) == 0, "bq::string, std::string cast test: utf16 equal");
                     result.add_result(memcmp(&bq_str1[0], &std_str_view1[0], str1_len * sizeof(char16_t)) == 0, "bq::string, std::string_view cast test: utf16 equal");
-                    
+
                     bq::u16string bq_str1_from_std_str = std_str1;
                     bq::u16string bq_str2_from_std_str_view = std_str_view1;
-                    
+
                     result.add_result(bq_str1 == bq_str1_from_std_str, "std::string, bq::string cast test: utf16 equal");
                     result.add_result(bq_str1 == bq_str2_from_std_str_view, "std::string_view, bq::string cast test: utf16 equal");
                 }
@@ -257,13 +257,13 @@ namespace bq {
                     std::u32string_view std_str_view1 = bq_str1;
                     size_t str1_len = bq_str1.size();
                     result.add_result(str1_len == std_str1.size() && str1_len == std_str_view1.size(), "bq::string, std::string, std::string_view cast test: utf32 size");
-                    
+
                     result.add_result(memcmp(&bq_str1[0], &std_str1[0], str1_len * sizeof(char32_t)) == 0, "bq::string, std::string cast test: utf32 equal");
                     result.add_result(memcmp(&bq_str1[0], &std_str_view1[0], str1_len * sizeof(char32_t)) == 0, "bq::string, std::string_view cast test: utf32 equal");
-                    
+
                     bq::u32string bq_str1_from_std_str = std_str1;
                     bq::u32string bq_str2_from_std_str_view = std_str_view1;
-                    
+
                     result.add_result(bq_str1 == bq_str1_from_std_str, "std::string, bq::string cast test: utf32 equal");
                     result.add_result(bq_str1 == bq_str2_from_std_str_view, "std::string_view, bq::string cast test: utf32 equal");
                 }

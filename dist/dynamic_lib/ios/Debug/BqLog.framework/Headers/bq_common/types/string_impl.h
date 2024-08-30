@@ -158,7 +158,6 @@ namespace bq {
         insert_batch(begin(), const_iterator(str, nullptr), char_count);
     }
 
-
     template <typename CHAR_TYPE>
     template <typename S, typename>
     inline bq::string_base<CHAR_TYPE>::string_base(const S& rhs)

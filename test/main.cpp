@@ -46,7 +46,7 @@ int32_t main()
     TEST_GROUP(Bq_Log_Test, bq::test, test_utils);
     TEST_GROUP(Bq_Log_Test, bq::test, test_file_manager);
     TEST_GROUP(Bq_Log_Test, bq::test, test_thread_atomic);
-    
+
     TEST_GROUP(Bq_Log_Test, bq::test, test_log);
     TEST_GROUP(Bq_Log_Test, bq::test, test_ring_buffer);
     TEST_GROUP_END(Bq_Log_Test);

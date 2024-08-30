@@ -11,6 +11,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using bq.def;
 using bq.impl;
 
@@ -212,7 +213,8 @@ namespace bq
         }
 
         public delegate void type_console_callback(ulong log_id, int category_idx, bq.def.log_level log_level, string content);
-        private static type_console_callback console_callback = null;
+        private static List<type_console_callback> console_callbacks_ = new List<type_console_callback>();
+        private static System.Threading.ReaderWriterLockSlim console_callbacks_lock_ = new System.Threading.ReaderWriterLockSlim();
         /// <summary>
         /// Register a callback that will be invoked whenever a console log message is output. 
         /// This can be used for an external system to monitor console log output.
@@ -220,25 +222,34 @@ namespace bq
         /// <param name="callback"></param>
         public static void register_console_callback(type_console_callback callback)
         {
-            console_callback = callback;
+            console_callbacks_lock_.EnterWriteLock();
+            console_callbacks_.Add(callback);
             unsafe
             {
-                log_invoker.__register_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                if(console_callbacks_.Count == 1)
+                {
+                    log_invoker.__api_register_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                }
             }
-
+            console_callbacks_lock_.ExitWriteLock();
         }
 
         /// <summary>
         /// Unregister console callback.
         /// </summary>
         /// <param name="callback"></param>
-        public static void unregister_console_callback()
+        public static void unregister_console_callback(type_console_callback callback)
         {
-            console_callback = null;
+            console_callbacks_lock_.EnterWriteLock();
+            console_callbacks_.Remove(callback);
             unsafe
             {
-                log_invoker.__unregister_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                if (console_callbacks_.Count == 0)
+                {
+                    log_invoker.__api_unregister_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                }
             }
+            console_callbacks_lock_.ExitWriteLock();
         }
 #if ENABLE_IL2CPP
         [MonoPInvokeCallback(typeof(type_console_callback))]
@@ -246,15 +257,50 @@ namespace bq
         private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, int log_level, sbyte* content, int length)
         {
             string value = new string(content, 0, length, System.Text.Encoding.UTF8);
-            if (console_callback != null)
+            console_callbacks_lock_.EnterReadLock();
+            for(int i = 0; i < console_callbacks_.Count; ++i)
             {
-                console_callback(log_id, category_idx, (bq.def.log_level)log_level, value);
+                console_callbacks_[i](log_id, category_idx, (bq.def.log_level)log_level, value);
             }
+            console_callbacks_lock_.ExitReadLock();
+        }
+
+        /// <summary>
+        /// Enable or disable the console appender buffer. 
+        /// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread, 
+        /// we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
+		/// </summary>
+		/// <param name="enable"></param>
+        public static void set_console_buffer_enable(bool enable)
+        {
+            log_invoker.__api_set_console_buffer_enable(enable);
+        }
+
+        /// <summary>
+        /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
+        /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
+        /// Please ensure not to output synchronized BQ logs within the callback function.
+        /// </summary>
+        /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
+        /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
+        public static unsafe bool fetch_and_remove_console_buffer(type_console_callback on_console_callback)
+        {
+            IntPtr delegate_ptr = Marshal.GetFunctionPointerForDelegate(on_console_callback);
+            return log_invoker.__api_fetch_and_remove_console_buffer(new type_func_ptr_console_buffer_fetch_callback(_native_console_buffer_fetch_callback_wrapper), delegate_ptr);
+        }
+#if ENABLE_IL2CPP
+        [MonoPInvokeCallback(typeof(type_console_callback))]
+#endif
+        private unsafe static void _native_console_buffer_fetch_callback_wrapper(IntPtr pass_through_param, ulong log_id, int category_idx, int log_level, sbyte* content, int length)
+        {
+            string value = new string(content, 0, length, System.Text.Encoding.UTF8);
+            type_console_callback recover_callback = (type_console_callback)Marshal.GetDelegateForFunctionPointer(pass_through_param, typeof(type_console_callback));
+            recover_callback(log_id, category_idx, (bq.def.log_level)log_level, value);
         }
 
         /// <summary>
         /// Output to console with log_level.
-        /// Important: This is not log entry, and can not be caught by console callback with was registered by register_console_callback 
+        /// Important: This is not log entry, and can not be caught by console callback which was registered by register_console_callback or fetch_and_remove_console_buffer
         /// </summary>
         /// <param name="level"></param>
         /// <param name="content"></param>
