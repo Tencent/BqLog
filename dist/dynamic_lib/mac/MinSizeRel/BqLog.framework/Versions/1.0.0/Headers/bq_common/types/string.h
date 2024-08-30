@@ -121,7 +121,7 @@ namespace bq {
         string_base(string_base<CHAR_TYPE>&& rhs) noexcept;
 
         string_base(const char_type* str);
-        
+
         string_base(const char_type* str, size_t char_count);
 
         template <typename S, typename = bq::enable_if_t<(is_std_string_compatible<S>::value || is_std_string_view_compatible<S>::value) && !bq::is_same<S, string_base<CHAR_TYPE>>::value, void>>

@@ -34,31 +34,29 @@ namespace bq {
         return *this;
     }
 
-    template <typename K, typename V, bool C>
-    template <bool C_>
-    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs) const
+    template <typename K_, typename V_, bool C1, bool C2>
+    BQ_HASH_MAP_INLINE bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2)
     {
-        if (rhs.node_index_ == BQ_HASH_MAP_CLS_NAME<K, V>::BQ_BQ_HASH_MAP_INVALID_INDEX
-            && node_index_ == BQ_HASH_MAP_CLS_NAME<K, V>::BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (map1.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX
+            && map2.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX) {
             return true;
         }
-        return (node_index_ == rhs.node_index_)
-            && (parent_ == rhs.parent_)
-            && (bucket_idx_ == rhs.bucket_idx_);
+        return (map1.node_index_ == map2.node_index_)
+            && (map1.parent_ == map2.parent_)
+            && (map1.bucket_idx_ == map2.bucket_idx_);
     }
 
-    template <typename K, typename V, bool C>
-    template <bool C_>
-    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs) const
+    template <typename K_, typename V_, bool C1, bool C2>
+    BQ_HASH_MAP_INLINE bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2)
     {
-        return !(*this == rhs);
+        return !(map1 == map2);
     }
 
     template <typename K, typename V, bool C>
     BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>& BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator++()
     {
         node_index_ = parent_->get_next_node_index(node_index_);
-        bucket_idx_ = (node_index_ == BQ_HASH_MAP_CLS_NAME<K, V>::BQ_BQ_HASH_MAP_INVALID_INDEX) ? node_index_ : parent_->nodes_[node_index_].bucket_idx;
+        bucket_idx_ = (node_index_ == BQ_HASH_MAP_CLS_NAME<K, V>::BQ_HASH_MAP_INVALID_INDEX) ? node_index_ : parent_->nodes_[node_index_].bucket_idx;
         return *this;
     }
 
@@ -105,9 +103,9 @@ namespace bq {
     BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V>::BQ_HASH_MAP_CLS_NAME(size_type init_bucket_size /* = 0 */)
     {
         size_ = 0;
-        head_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        tail_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        free_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+        head_ = BQ_HASH_MAP_INVALID_INDEX;
+        tail_ = BQ_HASH_MAP_INVALID_INDEX;
+        free_ = BQ_HASH_MAP_INVALID_INDEX;
         expand_buckets(init_bucket_size);
         expand_nodes(buckets_size());
     }
@@ -124,9 +122,9 @@ namespace bq {
         , nodes_(decltype(nodes_)())
     {
         size_ = 0;
-        head_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        tail_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        free_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+        head_ = BQ_HASH_MAP_INVALID_INDEX;
+        tail_ = BQ_HASH_MAP_INVALID_INDEX;
+        free_ = BQ_HASH_MAP_INVALID_INDEX;
         expand_buckets(rhs.buckets_size());
         expand_nodes(rhs.nodes_size());
         for (BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter) {
@@ -147,9 +145,9 @@ namespace bq {
         nodes_.size_ = rhs.nodes_.size_;
 
         rhs.size_ = 0;
-        rhs.head_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        rhs.tail_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        rhs.free_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+        rhs.head_ = BQ_HASH_MAP_INVALID_INDEX;
+        rhs.tail_ = BQ_HASH_MAP_INVALID_INDEX;
+        rhs.free_ = BQ_HASH_MAP_INVALID_INDEX;
         rhs.buckets_.data_ = nullptr;
         rhs.buckets_.size_ = 0;
         rhs.nodes_.data_ = nullptr;
@@ -250,9 +248,9 @@ namespace bq {
         nodes_.size_ = rhs.nodes_.size_;
 
         rhs.size_ = 0;
-        rhs.head_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        rhs.tail_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        rhs.free_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+        rhs.head_ = BQ_HASH_MAP_INVALID_INDEX;
+        rhs.tail_ = BQ_HASH_MAP_INVALID_INDEX;
+        rhs.free_ = BQ_HASH_MAP_INVALID_INDEX;
         rhs.buckets_.data_ = nullptr;
         rhs.buckets_.size_ = 0;
         rhs.nodes_.data_ = nullptr;
@@ -272,12 +270,12 @@ namespace bq {
         auto& cur_node = nodes_[where_it.node_index_];
         size_type prev_index = cur_node.prev;
         size_type next_index = cur_node.next;
-        if (prev_index != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (prev_index != BQ_HASH_MAP_INVALID_INDEX) {
             nodes_[prev_index].next = cur_node.next;
         } else {
             head_ = cur_node.next;
         }
-        if (next_index != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (next_index != BQ_HASH_MAP_INVALID_INDEX) {
             nodes_[next_index].prev = cur_node.prev;
         } else {
             tail_ = cur_node.prev;
@@ -286,11 +284,11 @@ namespace bq {
         // buckets
         size_type bucket_index = where_it.bucket_idx_;
         if (where_it.node_index_ == buckets_[bucket_index]) {
-            if (next_index != BQ_BQ_HASH_MAP_INVALID_INDEX
+            if (next_index != BQ_HASH_MAP_INVALID_INDEX
                 && nodes_[next_index].bucket_idx == bucket_index) {
                 buckets_[bucket_index] = next_index;
             } else {
-                buckets_[bucket_index] = BQ_BQ_HASH_MAP_INVALID_INDEX;
+                buckets_[bucket_index] = BQ_HASH_MAP_INVALID_INDEX;
             }
         }
 
@@ -316,7 +314,7 @@ namespace bq {
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::begin()
     {
-        if (head_ != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (head_ != BQ_HASH_MAP_INVALID_INDEX) {
             return iterator(this, head_, nodes_[head_].bucket_idx);
         }
         return end();
@@ -325,7 +323,7 @@ namespace bq {
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V>::begin() const
     {
-        if (head_ != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (head_ != BQ_HASH_MAP_INVALID_INDEX) {
             return const_iterator(this, head_, nodes_[head_].bucket_idx);
         }
         return end();
@@ -334,19 +332,19 @@ namespace bq {
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::end()
     {
-        return iterator(this, BQ_BQ_HASH_MAP_INVALID_INDEX, BQ_BQ_HASH_MAP_INVALID_INDEX);
+        return iterator(this, BQ_HASH_MAP_INVALID_INDEX, BQ_HASH_MAP_INVALID_INDEX);
     }
 
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V>::end() const
     {
-        return const_iterator(this, BQ_BQ_HASH_MAP_INVALID_INDEX, BQ_BQ_HASH_MAP_INVALID_INDEX);
+        return const_iterator(this, BQ_HASH_MAP_INVALID_INDEX, BQ_HASH_MAP_INVALID_INDEX);
     }
 
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V>::iterator_legal_check(const const_iterator& iter) const
     {
-        if (iter.node_index_ == BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (iter.node_index_ == BQ_HASH_MAP_INVALID_INDEX) {
             return false;
         }
         if (iter.parent_ != this) {
@@ -385,16 +383,16 @@ namespace bq {
         if (nodes_size() > 0) {
             free_ = 0;
             for (typename decltype(nodes_)::size_type i = 0; i < nodes_.size(); ++i) {
-                nodes_[i].prev = BQ_BQ_HASH_MAP_INVALID_INDEX;
+                nodes_[i].prev = BQ_HASH_MAP_INVALID_INDEX;
                 nodes_[i].next = static_cast<size_type>(i) + 1;
             }
-            nodes_[nodes_.size() - 1].next = BQ_BQ_HASH_MAP_INVALID_INDEX;
+            nodes_[nodes_.size() - 1].next = BQ_HASH_MAP_INVALID_INDEX;
         } else {
-            free_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+            free_ = BQ_HASH_MAP_INVALID_INDEX;
         }
         size_ = 0;
-        tail_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        head_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+        tail_ = BQ_HASH_MAP_INVALID_INDEX;
+        head_ = BQ_HASH_MAP_INVALID_INDEX;
     }
 
     template <typename K, typename V>
@@ -414,9 +412,9 @@ namespace bq {
             nodes_.size_ = 0;
         }
         size_ = 0;
-        head_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        tail_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        free_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+        head_ = BQ_HASH_MAP_INVALID_INDEX;
+        tail_ = BQ_HASH_MAP_INVALID_INDEX;
+        free_ = BQ_HASH_MAP_INVALID_INDEX;
     }
 
     template <typename K, typename V>
@@ -474,8 +472,8 @@ namespace bq {
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::get_prev_node_index(typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type node_index) const
     {
-        if (node_index == BQ_BQ_HASH_MAP_INVALID_INDEX) {
-            return BQ_BQ_HASH_MAP_INVALID_INDEX;
+        if (node_index == BQ_HASH_MAP_INVALID_INDEX) {
+            return BQ_HASH_MAP_INVALID_INDEX;
         }
         return nodes_[node_index].prev;
     }
@@ -483,8 +481,8 @@ namespace bq {
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::get_next_node_index(typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type node_index) const
     {
-        if (node_index == BQ_BQ_HASH_MAP_INVALID_INDEX) {
-            return BQ_BQ_HASH_MAP_INVALID_INDEX;
+        if (node_index == BQ_HASH_MAP_INVALID_INDEX) {
+            return BQ_HASH_MAP_INVALID_INDEX;
         }
         return nodes_[node_index].next;
     }
@@ -508,7 +506,7 @@ namespace bq {
             size_type cnt = 0;
 #endif
             size_type index = head_;
-            while (index != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+            while (index != BQ_HASH_MAP_INVALID_INDEX) {
 #ifndef NDEBUG
                 cnt++;
 #endif
@@ -519,7 +517,7 @@ namespace bq {
                 size_type bucket_idx = get_bucket_index_by_key(cur_node.entry.key());
                 cur_node.bucket_idx = bucket_idx;
                 size_type& bucket_value_ref = buckets_[bucket_idx];
-                if (bucket_value_ref == BQ_BQ_HASH_MAP_INVALID_INDEX) {
+                if (bucket_value_ref == BQ_HASH_MAP_INVALID_INDEX) {
                     bucket_value_ref = cur_index;
                 } else if (cur_node.prev != bucket_value_ref) {
                     size_type old_prev = cur_node.prev;
@@ -528,34 +526,34 @@ namespace bq {
                     size_type new_prev = bucket_value_ref;
                     size_type new_next = nodes_[new_prev].next;
 
-                    if (old_prev != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+                    if (old_prev != BQ_HASH_MAP_INVALID_INDEX) {
                         nodes_[old_prev].next = old_next;
                     }
-                    if (old_next != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+                    if (old_next != BQ_HASH_MAP_INVALID_INDEX) {
                         nodes_[old_next].prev = old_prev;
                     }
                     cur_node.prev = new_prev;
                     cur_node.next = new_next;
                     nodes_[new_prev].next = cur_index;
-                    if (new_next != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+                    if (new_next != BQ_HASH_MAP_INVALID_INDEX) {
                         nodes_[new_next].prev = cur_index;
                     }
                     if (tail_ == cur_index) {
                         tail_ = old_prev;
                     }
                     if (cur_node.prev == cur_node.next) {
-                        tail_ = BQ_BQ_HASH_MAP_INVALID_INDEX;
+                        tail_ = BQ_HASH_MAP_INVALID_INDEX;
                     }
                 }
             }
 #ifndef NDEBUG
             assert(buckets_size() == capacity);
             assert(cnt == this->size());
-            if (head_ != BQ_BQ_HASH_MAP_INVALID_INDEX) {
-                assert(nodes_[head_].prev == BQ_BQ_HASH_MAP_INVALID_INDEX);
+            if (head_ != BQ_HASH_MAP_INVALID_INDEX) {
+                assert(nodes_[head_].prev == BQ_HASH_MAP_INVALID_INDEX);
             }
-            if (tail_ != BQ_BQ_HASH_MAP_INVALID_INDEX) {
-                assert(nodes_[tail_].next == BQ_BQ_HASH_MAP_INVALID_INDEX);
+            if (tail_ != BQ_HASH_MAP_INVALID_INDEX) {
+                assert(nodes_[tail_].next == BQ_HASH_MAP_INVALID_INDEX);
             }
 #endif
         }
@@ -577,7 +575,7 @@ namespace bq {
             new_data[i].next = nodes_[i].next;
         }
         for (size_type i = new_space; i > old_space; --i) {
-            new_data[i - 1].prev = BQ_BQ_HASH_MAP_INVALID_INDEX;
+            new_data[i - 1].prev = BQ_HASH_MAP_INVALID_INDEX;
             new_data[i - 1].next = free_;
             free_ = i - 1;
         }
@@ -596,15 +594,15 @@ namespace bq {
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE BQ_HASH_MAP_KV_CLS_NAME<typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type, typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type> BQ_HASH_MAP_CLS_NAME<K, V>::find_index_and_bucket_idx_by_key(const_key_type_ref key) const
     {
-        size_type index = BQ_BQ_HASH_MAP_INVALID_INDEX;
-        size_type bucket_idx = BQ_BQ_HASH_MAP_INVALID_INDEX;
+        size_type index = BQ_HASH_MAP_INVALID_INDEX;
+        size_type bucket_idx = BQ_HASH_MAP_INVALID_INDEX;
         if (buckets_size() > 0) {
             bucket_idx = get_bucket_index_by_key(key);
             size_type valid_index = buckets_[bucket_idx];
-            while (valid_index != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+            while (valid_index != BQ_HASH_MAP_INVALID_INDEX) {
                 auto& node = nodes_[valid_index];
                 if (node.bucket_idx != bucket_idx) {
-                    valid_index = BQ_BQ_HASH_MAP_INVALID_INDEX;
+                    valid_index = BQ_HASH_MAP_INVALID_INDEX;
                     break;
                 }
                 if (node.entry.key() == key) {
@@ -626,16 +624,16 @@ namespace bq {
         }
         // This must be called after expand_buckets because it will reform the buckets and nodes.
         auto node_bucket_indices_pair = find_index_and_bucket_idx_by_key(key);
-        assert(node_bucket_indices_pair.key() == BQ_BQ_HASH_MAP_INVALID_INDEX && "key already exist");
+        assert(node_bucket_indices_pair.key() == BQ_HASH_MAP_INVALID_INDEX && "key already exist");
         auto bucket_idx = node_bucket_indices_pair.value();
-        if (free_ == BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (free_ == BQ_HASH_MAP_INVALID_INDEX) {
             expand_nodes(nodes_size() + 1);
         }
 
         size_type& target_bucket_value = buckets_[bucket_idx];
         size_type next_node_index = target_bucket_value;
-        size_type prev_node_index = (target_bucket_value == BQ_BQ_HASH_MAP_INVALID_INDEX) ? tail_ : nodes_[target_bucket_value].prev;
-        assert(free_ != BQ_BQ_HASH_MAP_INVALID_INDEX);
+        size_type prev_node_index = (target_bucket_value == BQ_HASH_MAP_INVALID_INDEX) ? tail_ : nodes_[target_bucket_value].prev;
+        assert(free_ != BQ_HASH_MAP_INVALID_INDEX);
 
         size_type new_index = free_;
         free_ = nodes_[new_index].next;
@@ -644,13 +642,13 @@ namespace bq {
         new_node.next = next_node_index;
         new_node.prev = prev_node_index;
         new_node.bucket_idx = bucket_idx;
-        if (prev_node_index != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (prev_node_index != BQ_HASH_MAP_INVALID_INDEX) {
             auto& prev_node = nodes_[prev_node_index];
             prev_node.next = new_index;
         } else {
             head_ = new_index;
         }
-        if (next_node_index != BQ_BQ_HASH_MAP_INVALID_INDEX) {
+        if (next_node_index != BQ_HASH_MAP_INVALID_INDEX) {
             auto& next_node = nodes_[next_node_index];
             next_node.prev = new_index;
         } else {
