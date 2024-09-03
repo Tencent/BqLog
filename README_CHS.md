@@ -393,7 +393,8 @@ STR参数类似于printf的第一个参数，其类型是各种常用类型的�
 ```
 除了用console callback去拦截console的输出之外，还可以通过主动调用去获取日志的console输出。有的时候，我们并不希望这个console的日志输出是通过callback调用过来的，因为你并不知道callback会通过什么线程过来（比如在C#的一些虚拟机，或者JVM中，console callback调用过来的时候，VM正在做GC，可能会发生卡死或者crash）。  
 这里采用的方法是通过`set_console_buffer_enable`先启用console的缓冲功能，每一条console日志输出都会被留在内存中，直到我们主动调用`fetch_and_remove_console_buffer`将它取出来。所以如果使用这种方法，请一定记得及时去获取和清理日志，不然内存会无法释放。  
-***注意:*** 不要在console callback中再去输出任何同步的扁鹊日志，不然很容易造成死锁 
+***注意:*** 不要在console callback中再去输出任何同步的扁鹊日志，不然很容易造成死锁  
+***注意:*** 如果您是在IL2CPP的环境中使用这个代码，请保证on_console_callback 是static unsafe的，并且加上了[MonoPInvokeCallback(typeof(type_console_callback))]这样的Attribute。   
 
   
 #### 修改log的配置

@@ -395,6 +395,8 @@ In addition to intercepting console output through a console callback, you can a
 
 The method used here involves enabling the console buffer through `set_console_buffer_enable`. This causes every console log output to be stored in memory until we actively call `fetch_and_remove_console_buffer` to retrieve it. Therefore, if you choose to use this method, remember to promptly fetch and clear logs to avoid unreleased memory.  
 **Additional Caution:** Do not output any synchronized BQ logs within the console callback as it may easily lead to deadlocks.  
+**Additional Caution:** If you are using this code in an IL2CPP environment, please make sure that the on_console_callback is marked as static unsafe and is decorated with the [MonoPInvokeCallback(typeof(type_console_callback))] attribute.  
+
 
   
 #### Modifying Log Configuration

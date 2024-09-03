@@ -280,6 +280,7 @@ namespace bq
         /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
         /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
         /// Please ensure not to output synchronized BQ logs within the callback function.
+        /// IMPORTANT: If you are using this code in an IL2CPP environment, please make sure that the on_console_callback is marked as static unsafe and is decorated with the [MonoPInvokeCallback(typeof(type_console_callback))] attribute.
         /// </summary>
         /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
         /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
