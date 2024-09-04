@@ -204,6 +204,7 @@ public class benchmark_main {
 		test_text_multi_param(thread_count);
 		test_compress_no_param(thread_count);
 		test_text_no_param(thread_count);
+		bq.log.uninit();
 	}
 
 }
