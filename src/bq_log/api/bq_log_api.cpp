@@ -467,5 +467,10 @@ namespace bq {
             out_name_ptr->str = str;
             out_name_ptr->len = len;
         }
+
+        BQ_API void __api_uninit()
+        {
+            bq::log_manager::instance().uninit();
+        }
     }
 }

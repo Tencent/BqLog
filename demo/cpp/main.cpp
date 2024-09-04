@@ -50,5 +50,6 @@ int main()
     my_category_log.info("content"); // this is for empty category
     my_category_log.info(my_category_log.cat.node_4.node_7, "content");
     bq::demo_category_log::force_flush_all_logs();
+	bq::log::uninit();
     return 0;
 }

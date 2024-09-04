@@ -21,12 +21,14 @@ namespace bq {
 
     log_manager::log_manager()
     {
+        phase_ = phase::invalid;
         automatic_log_name_seq_ = 0;
         assert(bq::util::is_little_endian() && "Only Little-Endian is Supported!");
         // make sure file_manager's lifecycle can wrap that of log_manager.
         bq::file_manager::instance();
         public_worker_.init(log_thread_mode::async, nullptr);
         public_worker_.start();
+        phase_ = phase::working;
         bq::util::log_device_console(log_level::info, "log_manager is constructed");
     }
 
@@ -46,21 +48,7 @@ namespace bq {
 
     log_manager::~log_manager()
     {
-        public_worker_.cancel();
-        public_worker_.awake();
-        public_worker_.join();
-        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
-        for (auto& log_imp : log_imp_list_) {
-            if (log_imp->get_thread_mode() == log_thread_mode::independent) {
-                log_imp->worker_.cancel();
-                log_imp->worker_.awake();
-            }
-        }
-        for (auto& log_imp : log_imp_list_) {
-            if (log_imp->get_thread_mode() == log_thread_mode::independent) {
-                log_imp->worker_.join();
-            }
-        }
+        uninit();
         bq::util::log_device_console(log_level::info, "log_manager is destructed");
     }
 
@@ -73,6 +61,22 @@ namespace bq {
         }
 
         bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        auto current_phase = phase_.load();
+
+        switch (current_phase) {
+        case phase::invalid:
+            util::log_device_console(bq::log_level::error, "you can not create log before BqLog initing!");
+            return 0;
+            break;
+        case phase::working:
+            break;
+        case phase::uninited:
+            util::log_device_console(bq::log_level::error, "you can not create log after BqLog is uninited!");
+            return 0;
+            break;
+        default:
+            break;
+        }
 
         if (!log_name.is_empty()) {
             decltype(log_imp_list_)::iterator exist_iter = log_imp_list_.end();
@@ -143,6 +147,22 @@ namespace bq {
         }
 
         bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        auto current_phase = phase_.load();
+
+        switch (current_phase) {
+        case phase::invalid:
+            util::log_device_console(bq::log_level::error, "you can not reset log config before BqLog initing!");
+            return 0;
+            break;
+        case phase::working:
+            break;
+        case phase::uninited:
+            util::log_device_console(bq::log_level::error, "you can not reset log config after BqLog is uninited!");
+            return 0;
+            break;
+        default:
+            break;
+        }
         for (decltype(log_imp_list_)::iterator it = log_imp_list_.begin(); it != log_imp_list_.end(); ++it) {
             if ((*it) && (*it)->get_name() == log_name) {
                 if ((*it)->reset_config(config_obj)) {
@@ -157,6 +177,9 @@ namespace bq {
     void log_manager::process_by_worker(log_imp* target_log, bool is_force_flush)
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        if (phase::working != phase_.load(bq::platform::memory_order::relaxed)) {
+            return;
+        }
         if (target_log) {
             target_log->process(is_force_flush);
         } else {
@@ -205,6 +228,7 @@ namespace bq {
         case log_thread_mode::independent:
             log->worker_.awake_and_wait_begin();
             log->worker_.awake_and_wait_join();
+            break;
         default:
             break;
         }
@@ -213,6 +237,30 @@ namespace bq {
     void log_manager::awake_worker()
     {
         public_worker_.awake();
+    }
+
+    void log_manager::uninit()
+    {
+        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        phase expected_phase = phase::working;
+        if (!phase_.compare_exchange_strong(expected_phase, phase::uninited)) {
+            return;
+        }
+        public_worker_.cancel();
+        public_worker_.awake();
+        public_worker_.join();
+        for (auto& log_imp : log_imp_list_) {
+            if (log_imp->get_thread_mode() == log_thread_mode::independent) {
+                log_imp->worker_.cancel();
+                log_imp->worker_.awake();
+            }
+        }
+        for (auto& log_imp : log_imp_list_) {
+            if (log_imp->get_thread_mode() == log_thread_mode::independent) {
+                log_imp->worker_.join();
+            }
+        }
+        bq::util::log_device_console(log_level::info, "BqLog is uninited!");
     }
 
     bq::layout& log_manager::get_public_layout()
