@@ -148,14 +148,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			B+IhgWKtC91IrLCq72TVevlq36z/cdVfuRqD+mq/wL8=
+			B6coP38K624oyH1nGVPTnhwwW6OTrzDlXtXrDOJFdCo=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_api.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			WJyLCoLU0HcOL32CCDF21ZRy0899fWcrypj5fkWS3+g=
+			fjCPOXkxl8j8h0wmQUUkMpTW1xtfG6OqBXT9VkfKTwU=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_def.h</key>
@@ -169,7 +169,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			+32c5+ajYkjFSjrJZPcjNCTvcMdXhW7OCQgr5zZpaIU=
+			6kRWtw2Hq93H/wBhrVpo0D63b5E8swiP2OXOzkijHQc=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_wrapper_tools.h</key>

@@ -153,6 +153,11 @@ namespace bq {
         api::__api_force_flush(0);
     }
 
+    inline void log::uninit()
+    {
+        api::__api_uninit();
+    }
+
     inline void log::register_console_callback(bq::type_func_ptr_console_callback callback)
     {
         bq::api::__api_register_console_callbacks(callback);

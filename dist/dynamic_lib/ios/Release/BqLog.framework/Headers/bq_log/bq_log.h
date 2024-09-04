@@ -105,6 +105,12 @@ namespace bq {
         static void force_flush_all_logs();
 
         /// <summary>
+        /// Synchronously flush the buffer of all log objects
+        /// to ensure that all data in the buffer is processed after the call.
+        /// </summary>
+        static void uninit();
+
+        /// <summary>
         /// Register a callback that will be invoked whenever a console log message is output.
         /// This can be used for an external system to monitor console log output.
         /// </summary>
