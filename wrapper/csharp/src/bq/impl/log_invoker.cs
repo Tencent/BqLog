@@ -109,5 +109,8 @@ namespace bq.impl
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public unsafe static extern void __api_release_snapshot_string(ulong log_id, bq.def._api_string_def* snapshot_string);
+
+        [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
+        public unsafe static extern void __api_uninit();
     }
 }

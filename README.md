@@ -324,8 +324,17 @@ Currently supported parameter types include:
 - Custom parameter types, as detailed in Custom Parameter Types
 
 ### 4. Other APIs  
-There are additional commonly used APIs that can accomplish specific tasks. For detailed API descriptions, refer to bq_log/bq_log.h, as well as the bq.log class in Java and C#. Here are some key APIs that need to be highlighted:
-  
+There are additional commonly used APIs that can accomplish specific tasks. For detailed API descriptions, refer to bq_log/bq_log.h, as well as the bq.log class in Java and C#. Here are some key APIs that need to be highlighted:  
+
+#### Uninitialize BqLog
+```cpp
+    /// <summary>
+    /// Uninitialize BqLog, please invoke this function before your program exist.
+    /// </summary>
+    static void uninit();
+```
+It is recommended to execute `uninit()` before exiting the program or uninstalling the self-implemented dynamic library that uses BqLog, otherwise the program may get stuck when exiting under certain specific circumstances.
+
 #### Crash Protection
 ```cpp
     /// <summary>

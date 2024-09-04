@@ -229,6 +229,15 @@ public class log {
     {
         log_invoker.__api_force_flush(0);
     }
+    
+    
+    /**
+     * Uninitialize BqLog, please invoke this function before your program exist.
+     */
+    public static void uninit()
+    {
+    	log_invoker.__api_uninit();
+    }
 
     /**
      * Register a callback that will be invoked whenever a console log message is output. 

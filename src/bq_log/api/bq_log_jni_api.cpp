@@ -456,6 +456,15 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove
 {
     return bq::api::__api_fetch_and_remove_console_buffer(jni_console_buffer_fetch_callback, callback_obj);
 }
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_uninit
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1uninit(JNIEnv*, jclass)
+{
+    bq::api::__api_uninit();
+}
 
 #ifdef __cplusplus
 }

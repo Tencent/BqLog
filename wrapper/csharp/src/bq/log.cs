@@ -212,6 +212,14 @@ namespace bq
             log_invoker.__api_force_flush(0);
         }
 
+        /// <summary>
+        /// Uninitialize BqLog, please invoke this function before your program exist.
+        /// </summary>
+        public static void uninit()
+        { 
+            log_invoker.__api_uninit(); 
+        }
+
         public delegate void type_console_callback(ulong log_id, int category_idx, bq.def.log_level log_level, string content);
         private static List<type_console_callback> console_callbacks_ = new List<type_console_callback>();
         private static System.Threading.ReaderWriterLockSlim console_callbacks_lock_ = new System.Threading.ReaderWriterLockSlim();

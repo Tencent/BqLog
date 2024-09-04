@@ -326,7 +326,16 @@ STR参数类似于printf的第一个参数，其类型是各种常用类型的�
 ### 4. 其他API  
 还有一些常用API，可以完成一些特殊的作用，具体可以参考bq_log/bq_log.h，以及Java和C#的bq.log类，里面都有详细的API说明。  
 这里对一些重点需要介绍的API做一个说明  
-  
+
+#### 反初始化BqLog
+```cpp
+    /// <summary>
+    /// Uninitialize BqLog, please invoke this function before your program exist.
+    /// </summary>
+    static void uninit();
+```
+在退出程序或者卸载用了BqLog的自实现动态库之前，最好执行一下`uninit()`，不然在有的特定情况下，可能会在程序退出的时候卡死
+
 #### 异常退出保护
 ```cpp
     /// <summary>

@@ -111,6 +111,9 @@ namespace bq {
                 return;
             }
             DWORD wait_result = WaitForSingleObjectEx(platform_data_->thread_handle, INFINITE, true);
+            if (wait_result == WAIT_OBJECT_0) {
+                CloseHandle(platform_data_->thread_handle);
+            }
             if (wait_result == WAIT_FAILED) {
                 bq::util::log_device_console(log_level::error, "join thread \"%s\" failed, thread_id:%" PRIu64 ", error code : %d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), GetLastError());
             }
@@ -283,8 +286,8 @@ namespace bq {
             run();
             status_.store(enum_thread_status::finished);
             on_finished();
-            CloseHandle(platform_data_->thread_handle);
-            platform_data_->thread_handle = NULL;
+            // CloseHandle(platform_data_->thread_handle);
+            // platform_data_->thread_handle = NULL;
             thread_id_ = 0;
 
             bq::util::log_device_console(log_level::info, "thread cancel success");

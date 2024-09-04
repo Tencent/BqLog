@@ -19,6 +19,13 @@
 namespace bq {
     class log_manager {
     private:
+        enum class phase {
+            invalid,
+            working,
+            uninited
+        };
+
+    private:
         log_manager();
         static log_manager& scoped_static_instance();
 
@@ -52,6 +59,8 @@ namespace bq {
 
         void awake_worker();
 
+        void uninit();
+
         /// <summary>
         /// get the public layout which can only be used in public_worker
         /// </summary>
@@ -60,6 +69,7 @@ namespace bq {
 
     private:
         static log_manager* static_inst_cache_;
+        bq::platform::atomic<phase> phase_;
         bq::array_inline<bq::unique_ptr<log_imp>> log_imp_list_;
         bq::log_worker public_worker_;
         bq::layout public_layout_;
