@@ -1,6 +1,6 @@
 # BqLog(扁鹊日志)(V 1.4.1)  
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](https://github.com/Tencent/BqLog/blob/main/LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-1.4.1-red.svg)](https://github.com/Tencent/BqLog/releases)  
+[![Release Version](https://img.shields.io/badge/release-1.4.2-red.svg)](https://github.com/Tencent/BqLog/releases)  
 > BqLog是一个轻量级，高性能日志系统，应用于《Honor Of Kings》等项目，已经上线并良好运行
 
 ## 支持平台
