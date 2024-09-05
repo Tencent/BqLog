@@ -12,12 +12,26 @@
 #include "bq_common/bq_common.h"
 #ifdef BQ_POSIX
 #include <pthread.h>
+
+// Modern BSDs need these to compile properly
+#if !defined(BQ_APPLE) && !defined(BQ_PS) && defined(BQ_UNIX)
+#include <pthread_np.h>
+#ifndef pthread_setname_np
+#define pthread_setname_np pthread_set_name_np
+#define PR_SET_NAME pthread_self()
+#endif
+#ifndef pthread_getname_np
+#define pthread_getname_np pthread_get_name_np
+#define PR_GET_NAME pthread_self()
+#endif
+#endif
+
 #include <sched.h>
 #include <sys/select.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#if !defined(BQ_APPLE) && !defined(BQ_PS)
+#if !defined(BQ_APPLE) && !defined(BQ_PS) && !defined(BQ_UNIX)
 #include <sys/prctl.h>
 #endif
 #if BQ_JAVA
@@ -160,6 +174,8 @@ namespace bq {
             }
 #elif BQ_PS
             // TODO
+#elif BQ_UNIX
+            pthread_getname_np(PR_GET_NAME, name_temp, sizeof(name_temp));
 #else
             prctl(PR_GET_NAME, name_temp);
 #endif
@@ -192,6 +208,8 @@ namespace bq {
             pthread_setname_np(thread_name_.c_str());
 #elif BQ_PS
             // TODO
+#elif BQ_UNIX
+            pthread_setname_np(PR_SET_NAME, thread_name_.c_str());
 #else
             prctl(PR_SET_NAME, thread_name_.c_str());
 #endif

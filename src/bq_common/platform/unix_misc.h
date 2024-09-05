@@ -10,23 +10,13 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-
-//
-//  assert.h
-//  ensure assert take place even in release version
-
-//  Created by Yu Cao on 2022/9/17.
-//
-
-#ifdef NDEBUG
-#undef NDEBUG
-#include <assert.h>
-#define NDEBUG
-#else
-#include <assert.h>
-#endif
-
-// The BSDs and some other platforms predefine this, causing build conflicts
-#ifdef _assert
-#undef _assert
+#if BQ_UNIX
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <pwd.h>
+#include "bq_common/platform/macros.h"
+#include "bq_common/types/array.h"
+#include "bq_common/types/string.h"
 #endif
