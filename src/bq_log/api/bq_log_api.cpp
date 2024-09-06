@@ -33,6 +33,17 @@
 #include <sys/syscall.h>
 #include <pthread.h>
 
+// The BSDs don't define these so define them as their equivalents
+#if !defined(BQ_APPLE) && !defined(BQ_PS) && defined(BQ_UNIX)
+#ifndef __NR_tgkill
+#define __NR_tgkill SYS_thr_kill
+#endif
+
+#ifndef __NR_gettid
+#define __NR_gettid SYS_getgid
+#endif
+#endif
+
 #if BQ_APPLE
 pid_t bq_gettid()
 {
