@@ -30,6 +30,9 @@
 #if defined(BQ_LINUX)
 #include "bq_common/platform/linux_misc.h"
 #endif
+#if defined(BQ_UNIX)
+#include "bq_common/platform/unix_misc.h"
+#endif
 #if defined(BQ_MAC)
 #include "bq_common/platform/mac_misc.h"
 #endif
