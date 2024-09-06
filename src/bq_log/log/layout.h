@@ -34,6 +34,17 @@ namespace bq {
             uint32_t width = 0; // total width
             uint32_t precision = 0xFFFFFFFF; // float width
             char type = 'd'; // b d x f e
+            void reset()
+            {
+                fill = ' ';
+                align = '<'; // <>^=
+                sign = '-'; //+ - default(-)
+                prefix = ' ';
+                offset = 0;
+                width = 0; // total width
+                precision = 0xFFFFFFFF; // float width
+                type = 'd'; // b d x f e
+            }
         };
 
     public:

@@ -355,6 +355,7 @@ namespace bq {
             if (c == '{') {
                 last_left_brace_index = format_content_cursor;
                 is_arg = true;
+                format_info_.reset();
             } else if (c == '}') {
                 bool temp_arg = is_arg;
                 is_arg = false;
@@ -541,6 +542,7 @@ namespace bq {
                 } else if (c == ('{')) {
                     last_left_brace_index = format_content_cursor;
                     is_arg = true;
+                    format_info_.reset();
                 } else if (c == '}') {
                     bool temp_arg = is_arg;
                     is_arg = false;
