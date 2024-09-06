@@ -75,7 +75,7 @@ namespace bq {
 
         BQ_API const char* __api_get_log_version()
         {
-            return "1.4.2";
+            return "1.4.3";
         }
 
 #if BQ_POSIX

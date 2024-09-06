@@ -10,3 +10,7 @@
 
 ## [v1.4.2] - 2023-09-04
 - **Uninit API**: An `uninit()` API has been added for calling before the program exits, to avoid issues where the program cannot exit normally in some cases. For details, see the API documentation.
+
+## [v1.4.3] - 2023-09-06
+- **Bug fix**: Fix compiling error on FreeBSD. Thanks to the contribution from [bedwardly-down](https://github.com/bedwardly-down), [see commit](https://github.com/Tencent/BqLog/commit/77cfbc68fc38cceeb25ef75b6ccce3798e9c12e1)
+- **Bug fix**: Fix a bug in the layout, which would cause data residue after using `format specifications`, leading to incorrect formatting of subsequent logs.
