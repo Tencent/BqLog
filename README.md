@@ -760,9 +760,9 @@ All build scripts for BqLog are located in the /build directory and are categori
 
 ### 1. Library Build
 The scripts for building libraries on different platforms are located here. Before running them, set the following environment variables (depending on your build environment, these may be necessary):
-- ANDROID_NDK_ROOT: Path to the Android NDK, required for building Android libraries.
-- VS_PATH: Path to Visual Studio, which must include the "devenv.com" executable (needed for Windows libraries).
-- JAVA_HOME: Path to the JDK, required for almost all platforms (if you do not need the Java Wrapper, you can remove the -DJAVA_SUPPORT=ON configuration from the relevant scripts).
+- `ANDROID_NDK_ROOT`: Path to the Android NDK, required for building Android libraries.
+- `VS_PATH`: Path to Visual Studio, which must include the "devenv.com" executable (needed for Windows libraries).
+- `JAVA_HOME`: Path to the JDK, required for almost all platforms (if you do not need the Java Wrapper, you can remove the -DJAVA_SUPPORT=ON configuration from the relevant scripts).
 
 ### 2. Demo Build and Run
 For C# and Java demos, you need to place the relevant platform's dynamic libraries in a path that the program can load.

@@ -35,7 +35,8 @@ namespace bq {
             uint32_t width = 0; // total width
             uint32_t precision = 0xFFFFFFFF; // float width
             char type = 'd'; // b d x f e
-            void reset(){
+            void reset()
+            {
                 used = false;
                 fill = ' ';
                 align = '<'; // <>^=

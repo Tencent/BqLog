@@ -734,9 +734,9 @@ BqLog所有的构建脚本都在/build目录下，分为
   
 ### 1. 库构建
 里面有不同平台构件库的脚本，要注意一下，运行之前设置一下环境变量（对应你构建的环境可能需要）：
-- ANDROID_NDK_ROOT ： Android NDK的路径，编译Android库需要
-- VS_PATH  ： Visual Studio的路径，要包含“devenv.com”这个可执行文件的路径（Windows库才需要）
-- JAVA_HOME : JDK的路径，基本上所有的平台都需要（如果你确认你不用Java Wrapper，可以自己在相关脚本中删除-DJAVA_SUPPORT=ON 这个配置
+- `ANDROID_NDK_ROOT` ： Android NDK的路径，编译Android库需要
+- `VS_PATH`  ： Visual Studio的路径，要包含“devenv.com”这个可执行文件的路径（Windows库才需要）
+- `JAVA_HOME` : JDK的路径，基本上所有的平台都需要（如果你确认你不用Java Wrapper，可以自己在相关脚本中删除-DJAVA_SUPPORT=ON 这个配置
 
 ### 2. Demo构建和运行
 这里要注意的是C#和Java的Demo，需要自己把相关平台的动态库放到可以被程序加载的路径去
