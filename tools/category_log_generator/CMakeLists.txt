@@ -55,7 +55,7 @@ include_directories(
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../bin/tools/${TARGET_PLATFORM})
 
-# 生成可执行文件
+# generate executable
 add_executable(BqLog_CategoryLogGenerator
 	${TOOLS_LIST}
 	${SRC_LIST}
@@ -67,5 +67,12 @@ add_executable(BqLog_CategoryLogGenerator
 # set start up project
 if(TARGET_PLATFORM STREQUAL "win64")
    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLog_CategoryLogGenerator)
+elseif(TARGET_PLATFORM STREQUAL "linux")
+    target_link_libraries(BqLog_CategoryLogGenerator PRIVATE pthread)
+elseif(TARGET_PLATFORM STREQUAL "unix")
+    target_link_libraries(BqLog_CategoryLogGenerator PRIVATE pthread)
+    find_library(EXECINFO_LIBRARY execinfo)
+    if(EXECINFO_LIBRARY)
+        target_link_libraries(BqLog_CategoryLogGenerator PRIVATE ${EXECINFO_LIBRARY})
+    endif()
 endif()
-

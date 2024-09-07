@@ -42,11 +42,13 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-if(TARGET_PLATFORM STREQUAL "linux")
+set(BUILD_TYPE "static_lib")
+
+if(TARGET_PLATFORM STREQUAL "linux" OR TARGET_PLATFORM STREQUAL "unix")
 		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/demo/${TARGET_PLATFORM}/${CMAKE_BUILD_TYPE}")
 		set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/demo/${TARGET_PLATFORM}/${CMAKE_BUILD_TYPE}")
 		set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/demo/${TARGET_PLATFORM}/${CMAKE_BUILD_TYPE}")
-	else()
+else()
 		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/demo/${TARGET_PLATFORM}")
 		set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/demo/${TARGET_PLATFORM}")
 		set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/demo/${TARGET_PLATFORM}")
@@ -74,6 +76,12 @@ if(TARGET_PLATFORM STREQUAL "android")
     target_link_libraries(BqLogDemo ${log-lib} "BqLog")
 elseif(TARGET_PLATFORM STREQUAL "linux")
     target_link_libraries(BqLogDemo PRIVATE pthread dl "BqLog")
+elseif(TARGET_PLATFORM STREQUAL "unix")
+    target_link_libraries(BqLogDemo PRIVATE pthread dl "BqLog")
+    find_library(EXECINFO_LIBRARY execinfo)
+    if(EXECINFO_LIBRARY)
+        target_link_libraries(BqLogDemo PRIVATE ${EXECINFO_LIBRARY})
+    endif()
 elseif(TARGET_PLATFORM STREQUAL "win64")
     # 设置启动工程
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogDemo)

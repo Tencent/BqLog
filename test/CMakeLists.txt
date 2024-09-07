@@ -69,7 +69,6 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-
 if(TARGET_PLATFORM STREQUAL "android" OR TARGET_PLATFORM STREQUAL "ios")
     # build shared library
     add_library(BqLogUnitTest
@@ -79,6 +78,21 @@ if(TARGET_PLATFORM STREQUAL "android" OR TARGET_PLATFORM STREQUAL "ios")
             ${THIRD_PARTY_LIST}
             ${INC_LIST})
 else()
+    if(JAVA_SUPPORT)
+		if(DEFINED ENV{JAVA_HOME})
+			message("JAVA_HOME: $ENV{JAVA_HOME}")
+		else()
+			message(FATAL_ERROR "can not find environment variable JAVA_HOME")
+		endif()
+		add_compile_definitions(BQ_JAVA)
+		include_directories($ENV{JAVA_HOME}/include)
+        file(GLOB JNI_SUBDIRS "$ENV{JAVA_HOME}/include/*")
+        foreach(DIR IN LISTS JNI_SUBDIRS)
+            if(IS_DIRECTORY ${DIR})
+                include_directories(${DIR})
+            endif()
+        endforeach()
+	endif()
     # build executable
     add_executable(BqLogUnitTest
             ${SRC_LIST}
@@ -97,29 +111,15 @@ if(TARGET_PLATFORM STREQUAL "android")
     target_link_libraries(BqLogUnitTest ${android-lib} )
 elseif(TARGET_PLATFORM STREQUAL "linux")
     target_link_libraries(BqLogUnitTest pthread dl)
-	if(JAVA_SUPPORT)
-		if(DEFINED ENV{JAVA_HOME})
-			message("JAVA_HOME: $ENV{JAVA_HOME}")
-		else()
-			message(FATAL_ERROR "can not find environment variable JAVA_HOME")
-		endif()
-		add_compile_definitions(BQ_JAVA)
-		include_directories($ENV{JAVA_HOME}/include)
-		include_directories($ENV{JAVA_HOME}/include/linux)
-	endif()
+elseif(TARGET_PLATFORM STREQUAL "unix")
+    target_link_libraries(BqLogUnitTest PRIVATE pthread)
+    find_library(EXECINFO_LIBRARY execinfo)
+    if(EXECINFO_LIBRARY)
+        target_link_libraries(BqLogUnitTest PRIVATE ${EXECINFO_LIBRARY})
+    endif()
 elseif(TARGET_PLATFORM STREQUAL "win64")
     # set VS startup project
     # todo : how to set XCode startup project(schema)?
-	if(JAVA_SUPPORT)
-		if(DEFINED ENV{JAVA_HOME})
-			message("JAVA_HOME: $ENV{JAVA_HOME}")
-		else()
-			message(FATAL_ERROR "can not find environment variable JAVA_HOME")
-		endif()
-		add_compile_definitions(BQ_JAVA)
-		include_directories($ENV{JAVA_HOME}/include)
-		include_directories($ENV{JAVA_HOME}/include/win32)
-	endif()
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogUnitTest)
 endif()
 
