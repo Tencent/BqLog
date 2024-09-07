@@ -19,8 +19,8 @@
 namespace bq {
     class util {
     public:
-        static void _assert(bool cond, bq::string msg);
-        static void _record(bq::string msg, string file_name = "bqLog/__bq_assert.log");
+        static void bq_assert(bool cond, bq::string msg);
+        static void bq_record(bq::string msg, string file_name = "__bq_assert.log");
 
         static string format(const char* fmt, ...);
 

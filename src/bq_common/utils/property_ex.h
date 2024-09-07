@@ -15,7 +15,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <stddef.h>
-#include "bq_common/bq_common_public_include.h"
+#include "bq_common/bq_common.h"
 
 namespace bq {
     enum class enum_property_value_type {

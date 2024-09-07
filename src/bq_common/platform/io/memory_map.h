@@ -18,7 +18,7 @@
  *
  *
  */
-#include "bq_common/bq_common_public_include.h"
+#include "bq_common/bq_common.h"
 #include "bq_common/utils/file_manager.h"
 namespace bq {
     struct file_handle;

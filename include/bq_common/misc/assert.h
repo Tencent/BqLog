@@ -18,15 +18,6 @@
 //  Created by Yu Cao on 2022/9/17.
 //
 
-#ifdef NDEBUG
-#undef NDEBUG
+#ifndef BQ_SRC
 #include <assert.h>
-#define NDEBUG
-#else
-#include <assert.h>
-#endif
-
-// The BSDs and some other platforms predefine this, causing build conflicts
-#ifdef _assert
-#undef _assert
 #endif

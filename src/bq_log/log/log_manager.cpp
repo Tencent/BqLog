@@ -11,7 +11,7 @@
  */
 #include <stdlib.h>
 #include <inttypes.h>
-#include "bq_common/utils/file_manager.h"
+#include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/log_worker.h"

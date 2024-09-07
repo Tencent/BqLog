@@ -16,6 +16,14 @@
 //  Created by Yu Cao on 2022/8/31.
 //
 
+#ifdef NDEBUG
+#undef NDEBUG
+#include <assert.h>
+#define NDEBUG
+#else
+#include <assert.h>
+#endif
+#define BQ_SRC
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
 #include "bq_common/platform/no_lib_cpp_impl.h"

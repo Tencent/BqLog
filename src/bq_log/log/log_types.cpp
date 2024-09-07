@@ -12,7 +12,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-#include "bq_common/bq_common_public_include.h"
+#include "bq_common/bq_common.h"
 #include "bq_log/log/log_types.h"
 
 namespace bq {

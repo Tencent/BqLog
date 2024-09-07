@@ -13,33 +13,25 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <sys/stat.h>
-#include "bq_common/utils/util.h"
-#include "bq_common/types/string.h"
-#include "bq_common/platform/platform_misc.h"
-#include "bq_common/platform/thread/mutex.h"
-#include "bq_common/platform/atomic/atomic.h"
+#include "bq_common/bq_common.h"
 #if BQ_ANDROID
 #include <android/log.h>
 #endif
-#if BQ_IOS
-#include "bq_common/platform/ios_misc.h"
-#endif
 #include <time.h>
-#include <bq_common/utils/file_manager.h>
 
 namespace bq {
     static bq::platform::mutex _assert_mutex_;
     static const size_t SIGNAL_SAFETY_LOG_BUFFER_SIZE = 1024;
     static uint32_t rand_seed = 0;
 
-    void util::_assert(bool cond, bq::string msg)
+    void util::bq_assert(bool cond, bq::string msg)
     {
         if (!cond)
-            _record(msg);
+            bq_record(msg);
         assert(cond && msg.c_str());
     }
 
-    void util::_record(bq::string msg, string file_name)
+    void util::bq_record(bq::string msg, string file_name)
     {
         bq::platform::scoped_mutex lock(_assert_mutex_);
         string path = TO_ABSOLUTE_PATH(file_name, true);
