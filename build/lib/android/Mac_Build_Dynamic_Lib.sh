@@ -35,6 +35,12 @@ do
 		 -DANDROID_STL=none
 		 
         $ANDROID_NDK_ROOT/prebuilt/darwin-x86_64/bin/make VERBOSE=1 -j$(sysctl -n hw.logicalcpu)
+        if [ $? -eq 0 ]; then
+            echo "Build succeeded."
+        else
+            echo "Build failed."
+            exit 1
+        fi
         $ANDROID_NDK_ROOT/prebuilt/darwin-x86_64/bin/make install
         mv -f ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog.so ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog_Symbol.so
         $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip -s ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog_Symbol.so -o ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog.so

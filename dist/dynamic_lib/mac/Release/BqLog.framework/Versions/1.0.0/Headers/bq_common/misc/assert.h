@@ -18,10 +18,6 @@
 //  Created by Yu Cao on 2022/9/17.
 //
 
-#ifdef NDEBUG
-#undef NDEBUG
-#include <assert.h>
-#define NDEBUG
-#else
+#ifndef BQ_SRC
 #include <assert.h>
 #endif

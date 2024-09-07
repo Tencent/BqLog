@@ -15,6 +15,12 @@ do
 	-DCMAKE_BUILD_TYPE=$config_type \
 	-DBUILD_TYPE=$BUILD_TYPE
 	make;
+    if [ $? -eq 0 ]; then
+        echo "Build succeeded."
+    else
+        echo "Build failed."
+        exit 1
+    fi
 	make install;
     cd ../..
 done

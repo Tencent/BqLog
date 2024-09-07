@@ -14,6 +14,12 @@ BUILD_TYPE=(Debug MinSizeRel Release RelWithDebInfo)
 for build_type in ${BUILD_TYPE[@]}
 do
     cmake --build . --config $build_type
+    if [ $? -eq 0 ]; then
+        echo "Build succeeded."
+    else
+        echo "Build failed."
+        exit 1
+    fi
     cmake --install . --config $build_type
 
     if [ -d "../../../../artifacts/dynamic_lib/ios/${build_type}/BqLog.framework.dSYM" ]; then

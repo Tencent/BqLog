@@ -10,6 +10,12 @@ do
 
     cmake -DTARGET_PLATFORM:STRING=mac -DJAVA_SUPPORT=ON -DBUILD_TYPE:STRING=$BUILD_TYPE -DAPPLE_LIB_FORMAT:STRING=$APPLE_FORMAT ../../../../src -G "Xcode"
     xcodebuild -project BqLog.xcodeproj -scheme ALL_BUILD -configuration $config_type
+    if [ $? -eq 0 ]; then
+        echo "Build succeeded."
+    else
+        echo "Build failed."
+        exit 1
+    fi
     cmake --install . --config $config_type
     cd ..
 done

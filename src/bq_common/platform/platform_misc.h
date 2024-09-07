@@ -36,6 +36,9 @@
 #if defined(BQ_MAC)
 #include "bq_common/platform/mac_misc.h"
 #endif
+#if defined(BQ_IOS)
+#include "bq_common/platform/ios_misc.h"
+#endif
 #if defined(BQ_PS)
 #include "bq_common/platform/ps_misc.h"
 #endif
