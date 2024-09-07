@@ -9,6 +9,7 @@
 - Linux
 - iOS
 - Android(X86_64, arm64-v8a、armeabi-v7a)
+- Unix(在FreeBSD上通过测试)
 
 ## 支持编程语言
  - C++
@@ -711,6 +712,7 @@ log配置是针对整个log对象的。有以下配置：
 | mac                | /bin/tools/mac     |   BqLog_LogDecoder  |
 | windows            | /bin/tools/win64   | BqLog_LogDecoder.exe|
 | linux              | /bin/tools/linux   |   BqLog_LogDecoder  |
+| unix               | /build/tools       | 需要手动构建二进制文件|
 
 用法是
 ```cpp
@@ -846,6 +848,7 @@ Transport.Trains
 | mac                | /bin/tools/mac     |   BqLog_CategoryLogGenerator  |
 | windows            | /bin/tools/win64   | BqLog_CategoryLogGenerator.exe|
 | linux              | /bin/tools/linux   |   BqLog_CategoryLogGenerator  |
+| unix               | /build/tools       | 需要手动构建二进制文件          |
 
 使用方式为
 ```cpp

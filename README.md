@@ -10,6 +10,7 @@
 - Linux
 - iOS
 - Android(X86_64, arm64-v8a、armeabi-v7a)
+- Unix(Pass the test on FreeBSD)
 
 ## Supported Languages
  - C++
@@ -728,11 +729,12 @@ The configuration method is the same as in [appenders_config.levels](#appenders_
 ## Offline Decoding of Binary Format Appenders
 Outside of program execution, bqLog also provides precompiled binary file decoding command-line tools. The directory paths are as follows:
 
-| Platform | Path              | Executable Name         |
-|----------|-------------------|-------------------------|
-| mac      | /bin/tools/mac    | BqLog_LogDecoder        |
-| windows  | /bin/tools/win64  | BqLog_LogDecoder.exe    |
-| linux    | /bin/tools/linux  | BqLog_LogDecoder        |
+| Platform | Path              | Executable Name                 |
+|----------|-------------------|---------------------------------|
+| mac      | /bin/tools/mac    | BqLog_LogDecoder                |
+| windows  | /bin/tools/win64  | BqLog_LogDecoder.exe            |
+| linux    | /bin/tools/linux  | BqLog_LogDecoder                |
+| unix     | /build/tools      | Need to manually build binaries |
 
 Usage:
 ```bash
@@ -870,11 +872,12 @@ Transport.Trains
 ```
 
 Next, use the BqLog command-line tool to generate the corresponding category-supported log class. The tool can be found at:
-| Platform | Path            | Executable Name               |
-|----------|-----------------|-------------------------------|
-| mac      | /bin/tools/mac  | BqLog_CategoryLogGenerator    |
-| windows  | /bin/tools/win64| BqLog_CategoryLogGenerator.exe|
-| linux    | /bin/tools/linux| BqLog_CategoryLogGenerator    |
+| Platform | Path            | Executable Name                |
+|----------|-----------------|--------------------------------|
+| mac      | /bin/tools/mac  | BqLog_CategoryLogGenerator     |
+| windows  | /bin/tools/win64| BqLog_CategoryLogGenerator.exe |
+| linux    | /bin/tools/linux| BqLog_CategoryLogGenerator     |
+| unix like| /build/tools    | Need to manually build binaries|
 
 Usage:
 ```bash
