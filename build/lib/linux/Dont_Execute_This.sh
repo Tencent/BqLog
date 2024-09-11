@@ -1,3 +1,5 @@
+#!/bin/bash
+
 BUILD_TYPE=$1
 COMPILER_TYPE_C=$2
 COMPILER_TYPE_CXX=$3

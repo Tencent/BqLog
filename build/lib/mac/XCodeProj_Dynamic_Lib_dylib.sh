@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 mkdir XCodeProj_Dynamic_dylib
 cd XCodeProj_Dynamic_dylib
 

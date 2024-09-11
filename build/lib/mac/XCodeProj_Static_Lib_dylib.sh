@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 mkdir XCodeProj_Static_dylib
 cd XCodeProj_Static_dylib
 

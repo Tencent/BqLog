@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 BUILD_TYPE=$1
 APPLE_FORMAT=$2
 

@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 if ! [ "$ANDROID_NDK_ROOT" ]; then
     echo "Environment Variable ANDROID_NDK_ROOT Is Not Found! Build Cancelled!!"
     exit 1

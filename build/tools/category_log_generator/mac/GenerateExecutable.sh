@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 rm -rf XCodeProj
 mkdir XCodeProj
 cd XCodeProj

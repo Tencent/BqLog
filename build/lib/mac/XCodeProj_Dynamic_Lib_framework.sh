@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 mkdir XCodeProj_Dynamic_framework
 cd XCodeProj_Dynamic_framework
 

@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 cd "$(dirname "$0")"
 mkdir XCodeProj
 cd XCodeProj

@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 mkdir XCodeProj_Static_framework
 cd XCodeProj_Static_framework
 
