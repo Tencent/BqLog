@@ -27,17 +27,19 @@ namespace bq {
     class layout {
         struct format_info {
             bool used = false;
+            bool upper = true;
             char fill = ' ';
-            char align = '<'; // <>^=
+            char align = '>'; // <>^=
             char sign = '-'; //+ - default(-)
             char prefix = ' ';
             uint32_t offset = 0;
             uint32_t width = 0; // total width
             uint32_t precision = 0xFFFFFFFF; // float width
-            char type = 'd'; // b d x f e
+            char type = ' '; // b d x f e
             void reset()
             {
                 used = false;
+                upper = true;
                 fill = ' ';
                 align = '<'; // <>^=
                 sign = '-'; //+ - default(-)
@@ -45,7 +47,7 @@ namespace bq {
                 offset = 0;
                 width = 0; // total width
                 precision = 0xFFFFFFFF; // float width
-                type = 'd'; // b d x f e
+                type = ' '; // b d x f e
             }
         };
 
@@ -98,6 +100,8 @@ namespace bq {
 
         void fill_and_alignment(uint32_t wirte_begin_pos);
 
+        void fill_e_style(uint32_t eCount, uint32_t begin_cursor);
+
         bq_forceinline void expand_format_content_buff_size(uint32_t new_size);
 
         //------------------------- insert functions begin ----------------------//
@@ -115,15 +119,15 @@ namespace bq {
 
         void insert_char32(char32_t value);
 
-        void insert_integral_unsigned(uint64_t value, int32_t base = 10);
+        uint32_t insert_integral_unsigned(uint64_t value, int32_t base = 10);
 
-        void insert_integral_signed(int64_t value, int32_t base = 10);
+        uint32_t insert_integral_signed(int64_t value, int32_t base = 10);
 
         void insert_decimal(float value);
 
         void insert_decimal(double value);
 
-        void revert(uint32_t begin_cursor, uint32_t end_cursor);
+        void reverse(uint32_t begin_cursor, uint32_t end_cursor);
         //------------------------- insert functions end ----------------------//
     private:
         bool is_gmt_time_;
