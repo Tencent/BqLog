@@ -88,9 +88,8 @@ namespace bq {
                         log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<+#10x}|", multi_thread_string_test_str, test_str, i);
                         log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<#10e}|", multi_thread_string_test_str, test_str, i);
                         log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:0>10.2f}|", multi_thread_string_test_str, test_str, i * 3.1415);
-
                     }
-                    int64_t i {12};
+                    int64_t i { 12 };
                     log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       +12|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:10b}|", i);
@@ -196,7 +195,7 @@ namespace bq {
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000E+13|"), "layout format");
-                    
+
                     if (bq::platform::high_performance_epoch_ms() - start_time >= 10 * 1000) {
                         break;
                     }

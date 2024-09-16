@@ -215,8 +215,7 @@ namespace bq {
                 fi.offset = 0;
                 fi.width = 0;
                 break;
-            } 
-            else if (c == '}') {
+            } else if (c == '}') {
                 fi.offset = index;
                 break;
             }
@@ -323,13 +322,13 @@ namespace bq {
                     uint32_t opt_index = wirte_begin_pos + format_info_.width - i;
                     uint32_t move_index = wirte_begin_pos + (dis - i);
 
-                    //keep the sign in front
+                    // keep the sign in front
                     if ((format_content[move_index] == '+' || format_content[move_index] == '-') && format_info_.fill != ' ') {
                         format_content[opt_index] = format_info_.fill;
                         ignore = 1;
                         continue;
                     }
-                    if (format_info_.fill == '0' && format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x' )) {
+                    if (format_info_.fill == '0' && format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x')) {
                         if (format_content[move_index] == 'b' || format_content[move_index] == 'B' || format_content[move_index] == 'x' || format_content[move_index] == 'X') {
                             format_content[opt_index] = format_info_.fill;
                             ignore_index = move_index - 1;
@@ -337,8 +336,7 @@ namespace bq {
                             continue;
                         }
                     }
-                    if (ignore == 2 && ignore_index == move_index)
-                    {
+                    if (ignore == 2 && ignore_index == move_index) {
                         format_content[opt_index] = format_info_.fill;
                         continue;
                     }
@@ -359,7 +357,7 @@ namespace bq {
                 }
             }
             // alignment middle
-            else if (format_info_.align == '^') {                
+            else if (format_info_.align == '^') {
                 uint32_t end = fill_count / 2;
                 uint32_t front = fill_count - end;
                 // move
@@ -392,9 +390,9 @@ namespace bq {
             temp /= 10;
             bitcount++;
         } while (temp != 0);
-        expand_format_content_buff_size(format_content_cursor + bitcount + 3);//3->e+0
+        expand_format_content_buff_size(format_content_cursor + bitcount + 3); // 3->e+0
         // 1.000000 -> 1.0000
-        int32_t jump = format_content_cursor - (begin_cursor +  format_info_.width - bitcount - 2);//2->e+
+        int32_t jump = format_content_cursor - (begin_cursor + format_info_.width - bitcount - 2); // 2->e+
         if (jump > 0) {
             format_content_cursor -= jump;
             if (format_content_cursor == begin_cursor)
@@ -938,7 +936,7 @@ namespace bq {
             base = 2;
         } else if (format_info_.type == 'x') {
             base = 16;
-        }else if (format_info_.type == 'o') {
+        } else if (format_info_.type == 'o') {
             base = 8;
         }
         // uint64_t max = 18,446,744,073,709,551,615
@@ -999,8 +997,7 @@ namespace bq {
             reverse(begin_cursor, format_content_cursor - 1);
 
             fill_e_style(eCount, begin_cursor);
-        }
-        else
+        } else
             reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
     }
@@ -1068,11 +1065,10 @@ namespace bq {
             }
             value /= base;
             if (value > base)
-                eCount++;// Counting
+                eCount++; // Counting
             ++format_content_cursor;
         } while (value != 0);
-        if (format_info_.type == 'e')
-        {
+        if (format_info_.type == 'e') {
             // 0000001 -> 000000.1
             format_content[format_content_cursor] = format_content[format_content_cursor - 1];
             format_content[format_content_cursor - 1] = '.';
@@ -1082,8 +1078,7 @@ namespace bq {
             reverse(begin_cursor, format_content_cursor - 1);
 
             fill_e_style(eCount, begin_cursor);
-        }
-        else
+        } else
             reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
     }
@@ -1104,13 +1099,12 @@ namespace bq {
             int_width = insert_integral_signed(i_part, 10);
             value -= static_cast<float>(i_part);
         }
-        if (format_info_.width > 0 && format_info_.width < (uint32_t)precision + 1 + int_width)
-        {
+        if (format_info_.width > 0 && format_info_.width < (uint32_t)precision + 1 + int_width) {
             precision = (format_info_.width - int_width - 1);
         }
 
         value = fabsf(value);
-        expand_format_content_buff_size(format_content_cursor + precision + 5);//more 5 maybe use in e style
+        expand_format_content_buff_size(format_content_cursor + precision + 5); // more 5 maybe use in e style
         uint32_t point_index = 0;
         if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
             point_index = format_content_cursor;
@@ -1130,7 +1124,7 @@ namespace bq {
             if (point_index != 0) {
                 while (moves > 0) {
                     auto temp = format_content[point_index];
-                    format_content[point_index] = format_content[point_index-1];
+                    format_content[point_index] = format_content[point_index - 1];
                     format_content[point_index - 1] = temp;
                     --point_index;
                     --moves;
@@ -1167,7 +1161,7 @@ namespace bq {
         }
 
         value = fabs(value);
-        expand_format_content_buff_size(format_content_cursor + precision + 5);//more 5 maybe use for e-style
+        expand_format_content_buff_size(format_content_cursor + precision + 5); // more 5 maybe use for e-style
         uint32_t point_index = 0;
         if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
             point_index = format_content_cursor;
