@@ -34,6 +34,9 @@
 - Supports custom parameter types
 - Very friendly to code suggestions
 
+## Tech Articles
+ - **[Why is BqLog so fast - High Performance Realtime Compressed Log Format](/docs/Article%201_Why%20is%20BqLog%20so%20fast%20-%20High%20Performance%20Realtime%20Compressed%20Log%20Format.MD)**
+ - **[Why is BqLog so fast - Wait-Free Ring Buffer](/docs/Article%202_Why%20is%20BqLog%20so%20fast%20-%20Wait-Free%20Ring%20Buffer.MD)**
 
 ## Menu
 **[Integrating BqLog into Your Project](#integrating-bqlog-into-your-project)**  

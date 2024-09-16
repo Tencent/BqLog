@@ -1,7 +1,3 @@
-Here is the full translation of your article with "张三" translated as "John" and "李四" as "Mike":
-
----
-
 ## 1. Why Use a Compressed Format
 
 Many logging systems, such as [Log4j2](https://github.com/apache/logging-log4j2), offer compressed logs, but their approach is to compress the logs after writing them using traditional compression algorithms. This method is very unfriendly to performance. BqLog introduces a compressed logging algorithm that compresses the logs in real-time, without any post-processing. Not only does this provide much better performance than text format logs, but the storage space required is also very similar to traditional compression algorithms. This format has already been patented.
@@ -226,7 +222,3 @@ _**Figure 11: Log File Parsing Process**_
 In theory, this section should include an evaluation of the compression ratio. However, after understanding how this format works, you can see that the compression ratio varies significantly depending on the log content. In scenarios with highly repetitive logs, such as server or network logs, the file size is usually around 10% of the original text log size. Based on HOK's external network experience, game client logs are typically around 20% of the size of the original text logs.
 
 For write performance, you can refer to the benchmarks on GitHub. Its performance is about 3-4 times better than text log formats.
-
---- 
-
-Let me know if you need any changes!
