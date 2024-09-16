@@ -211,19 +211,23 @@ namespace bq {
                 break;
             }
             char c = (char)style[index];
-            // Dynamic width not currently supported
             if (c == '{') {
                 fi.offset = 0;
                 fi.width = 0;
                 break;
-            } else if (c == '}') {
+            } 
+            else if (c == '}') {
                 fi.offset = index;
                 break;
             }
-
-            if (c == '#') {
+            // Dynamic width not currently supported
+            switch (c) {
+            case '#':
                 fi.prefix = c;
-            } else if (c == '>' || c == '<' || c == '^') {
+                break;
+            case '>':
+            case '<':
+            case '^':
                 if (!align) {
                     fi.align = c;
                     align = true;
@@ -232,30 +236,63 @@ namespace bq {
                     if (fi.align == '^' || fi.align == '<')
                         fi.fill = ' ';
                 }
-            } else if (c == '+' || c == '-') {
+                break;
+            case '+':
+            case '-':
                 fi.sign = c;
-            } else if (c == 'b' || c == 'x' || c == 'd' || c == 'f' || c == 'e' || c == 'X') {
-                fi.type = c;
+                break;
+            case 'b':
+            case 'B':
+            case 'e':
+            case 'E':
+            case 'f':
+            case 'F':
+            case 'x':
+            case 'X':
+            case 'o':
+            case 'd':
+                // only one type
+                if (fi.type == ' ') {
+                    fi.type = c;
+                    // check use uppercase
+                    if (fi.type == 'E') {
+                        fi.type = 'e';
+                        fi.upper = true;
+                    } else if (fi.type == 'X') {
+                        fi.type = 'x';
+                        fi.upper = true;
+                    } else if (fi.type == 'B') {
+                        fi.type = 'b';
+                        fi.upper = true;
+                    } else
+                        fi.upper = false;
+                }
+                // Fill space when use x-style and right aligned
                 if ((c == 'x' || c == 'X') && fi.align != '>') {
                     fi.fill = ' ';
                 }
-            } else if (c == '.') {
+                break;
+            case '.':
                 precision = true;
                 fi.width = atoi(width);
                 width[0] = '0';
                 width[1] = 0;
-            } else if (!fill && (c < '1' || c > '9')) {
-                fi.fill = c;
-                if (fi.align == '^' || fi.align == '<')
-                    fi.fill = ' ';
-            } else {
-                if (isdigit((int32_t)(uint8_t)c)) {
-                    fill = true;
-                    if (width[0] == '0')
-                        width[0] = c;
-                    else if (width[1] == 0)
-                        width[1] = c;
+                break;
+            default:
+                if (!fill && (c < '1' || c > '9')) {
+                    fi.fill = c;
+                    if (fi.align == '^' || fi.align == '<')
+                        fi.fill = ' ';
+                } else {
+                    if (isdigit((int32_t)(uint8_t)c)) {
+                        fill = true;
+                        if (width[0] == '0')
+                            width[0] = c;
+                        else if (width[1] == 0)
+                            width[1] = c;
+                    }
                 }
+                break;
             }
         }
         if (precision) {
@@ -263,6 +300,8 @@ namespace bq {
         } else {
             fi.width = atoi(width);
         }
+        if (fi.type == ' ')
+            fi.type = 'd';
         return fi;
     }
 
@@ -290,8 +329,8 @@ namespace bq {
                         ignore = 1;
                         continue;
                     }
-                    if (format_info_.fill == '0' && format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x' || format_info_.type == 'X')) {
-                        if (format_content[move_index] == 'b' || format_content[move_index] == 'x' || format_content[move_index] == 'X') {
+                    if (format_info_.fill == '0' && format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x' )) {
+                        if (format_content[move_index] == 'b' || format_content[move_index] == 'B' || format_content[move_index] == 'x' || format_content[move_index] == 'X') {
                             format_content[opt_index] = format_info_.fill;
                             ignore_index = move_index - 1;
                             ignore = 2;
@@ -362,7 +401,10 @@ namespace bq {
                 format_content_cursor++;
         }
         // 1.0000 -> 1.0000e+
-        format_content[format_content_cursor++] = 'e';
+        if (format_info_.upper)
+            format_content[format_content_cursor++] = 'E';
+        else
+            format_content[format_content_cursor++] = 'e';
         format_content[format_content_cursor++] = '+';
         begin_cursor = format_content_cursor;
         temp = eCount;
@@ -894,8 +936,10 @@ namespace bq {
         assert(base <= 32 && base >= 0 && "base is a number belongs to [2, 32]");
         if (format_info_.type == 'b') {
             base = 2;
-        } else if (format_info_.type == 'x' || format_info_.type == 'X') {
+        } else if (format_info_.type == 'x') {
             base = 16;
+        }else if (format_info_.type == 'o') {
+            base = 8;
         }
         // uint64_t max = 18,446,744,073,709,551,615
         if (base >= 16) {
@@ -914,13 +958,16 @@ namespace bq {
         if (format_info_.prefix == '#') {
             if (format_info_.type == 'b') {
                 format_content[format_content_cursor++] = '0';
-                format_content[format_content_cursor++] = 'b';
+                if (format_info_.upper)
+                    format_content[format_content_cursor++] = 'B';
+                else
+                    format_content[format_content_cursor++] = 'b';
             } else if (format_info_.type == 'x') {
                 format_content[format_content_cursor++] = '0';
-                format_content[format_content_cursor++] = 'x';
-            } else if (format_info_.type == 'X') {
-                format_content[format_content_cursor++] = '0';
-                format_content[format_content_cursor++] = 'X';
+                if (format_info_.upper)
+                    format_content[format_content_cursor++] = 'X';
+                else
+                    format_content[format_content_cursor++] = 'x';
             }
         }
 
@@ -931,7 +978,10 @@ namespace bq {
             if (digit < 0xA) {
                 format_content[format_content_cursor] = '0' + (char)digit;
             } else {
-                format_content[format_content_cursor] = 'A' + (char)digit - (char)0xA;
+                if (format_info_.upper)
+                    format_content[format_content_cursor] = 'A' + (char)digit - (char)0xA;
+                else
+                    format_content[format_content_cursor] = 'a' + (char)digit - (char)0xA;
             }
             value /= base;
             ++format_content_cursor;
@@ -962,8 +1012,10 @@ namespace bq {
         // Hex check
         if (format_info_.type == 'b') {
             base = 2;
-        } else if (format_info_.type == 'x' || format_info_.type == 'X') {
+        } else if (format_info_.type == 'x') {
             base = 16;
+        } else if (format_info_.type == 'o') {
+            base = 8;
         }
 
         // Length expansion
@@ -988,13 +1040,16 @@ namespace bq {
         if (format_info_.prefix == '#') {
             if (format_info_.type == 'b') {
                 format_content[format_content_cursor++] = '0';
-                format_content[format_content_cursor++] = 'b';
+                if (format_info_.upper)
+                    format_content[format_content_cursor++] = 'B';
+                else
+                    format_content[format_content_cursor++] = 'b';
             } else if (format_info_.type == 'x') {
                 format_content[format_content_cursor++] = '0';
-                format_content[format_content_cursor++] = 'x';
-            } else if (format_info_.type == 'X') {
-                format_content[format_content_cursor++] = '0';
-                format_content[format_content_cursor++] = 'X';
+                if (format_info_.upper)
+                    format_content[format_content_cursor++] = 'X';
+                else
+                    format_content[format_content_cursor++] = 'x';
             }
         }
 
@@ -1006,7 +1061,10 @@ namespace bq {
             if (digit < 0xA) {
                 format_content[format_content_cursor] = '0' + digit;
             } else {
-                format_content[format_content_cursor] = 'A' + digit - 0xA;
+                if (format_info_.upper)
+                    format_content[format_content_cursor] = 'A' + digit - 0xA;
+                else
+                    format_content[format_content_cursor] = 'a' + digit - 0xA;
             }
             value /= base;
             if (value > base)

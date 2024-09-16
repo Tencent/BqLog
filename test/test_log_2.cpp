@@ -97,6 +97,8 @@ namespace bq {
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|      1100|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:#10b}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    0b1100|"), "layout format");
+                    log_inst.error(log_inst.cat.ModuleB, "|{:#10B}|", i);
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    0B1100|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:10X}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         C|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:#10X}|", i);
@@ -108,11 +110,11 @@ namespace bq {
                     log_inst.error(log_inst.cat.ModuleB, "|{:<010d}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|12        |"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000C|"), "layout format");
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000c|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:<#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0xC       |"), "layout format");
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0xc       |"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:>#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000C|"), "layout format");
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000c|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:06d}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|000012|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:^06d}|", i);
@@ -140,8 +142,8 @@ namespace bq {
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", 10000000000000);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", (uint64_t)10000000000000);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
+                    log_inst.error(log_inst.cat.ModuleB, "|{:12E}|", (uint64_t)10000000000000);
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+11|"), "layout format");
 
                     i = 15841548461;
                     log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
@@ -161,11 +163,11 @@ namespace bq {
                     log_inst.error(log_inst.cat.ModuleB, "|{:<010d}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3B03AD8AD|"), "layout format");
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:<#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3B03AD8AD|"), "layout format");
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:>#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3B03AD8AD|"), "layout format");
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:06d}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:^06d}|", i);
@@ -192,6 +194,8 @@ namespace bq {
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
                     log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 10000000000000.0);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
+                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);
+                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000E+13|"), "layout format");
                     
                     if (bq::platform::high_performance_epoch_ms() - start_time >= 10 * 1000) {
                         break;
