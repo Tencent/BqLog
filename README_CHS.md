@@ -207,7 +207,7 @@ public class demo_main {
 
 ## 架构介绍
 
-![基础结构](docs/log_structure.png)  
+![基础结构](docs/img/log_structure.png)  
   
 
 上图能够清晰为您介绍BqLog的基本结构。图中右边部分是BqLog库内部实现，左边是您的程序和代码。您的程序可以通过BqLog提供的wrapper（可以理解成给不同语言用的面向对象的API）来调用BqLog。
@@ -292,7 +292,7 @@ log对象可以通过create_log这个静态函数进行创建。其声明如下�
 写日志要注意三个个关键点。
 #### 1. 日志等级  
 可以看到，我们的日志成分成了verbose，debug，info，warning，error和fatal总共六个等级，和安卓一致。其重要程度依次递增。同时如果在console中输出，会表现为不同的颜色。  
-![日志等级](docs/log_level.png)  
+![日志等级](docs/img/log_level.png)  
 #### 2. format字符串（STR参数） 
 STR参数类似于printf的第一个参数，其类型是各种常用类型的字符串。包含：
 - Java中的java.lang.String 
@@ -300,7 +300,7 @@ STR参数类似于printf的第一个参数，其类型是各种常用类型的�
 - C++中的c style string和`std::string`的各种编码（`char*`, `char16_t*`, `char32_t*`, `wchar_t*`, `std::string`, `std::u8string`, `std::u16string`, `std::u32string`, `std::wstring`, `std::string_view`, `std::u16string_view`, `std::u32string_view`, `std::wstring_view`甚至是你自定义的字符串类型，自定义的字符串类型参考[自定义参数类型](#5-自定义参数类型) )
 
 #### 3. format参数  
-可以在STR后面接各种参数，这些参数会被格式化到STR中指定的地方，其规则基本上和C++ 20的std::format一致（除了不支持排序序号之外）。如只用一个{}就代表一个参数的默认格式化方式，{.2f}代表浮点数的格式化精度等。  
+可以在STR后面接各种参数，这些参数会被格式化到STR中指定的地方，其规则基本上和C++ 20的std::format一致（除了不支持排序序号和时间格式化等）。如只用一个{}就代表一个参数的默认格式化方式，{.2f}代表浮点数的格式化精度等。  
 **请尽量用format参数的形式去输出日志，而不要自己去拼接字符串，这样对于性能和压缩格式存储是最优解**  
 目前支持的参数类型包含  
 - 空指针（输出null)
@@ -1721,7 +1721,7 @@ public class main {
 | Log4J2 Text             | 1065  | 2583  | 4249  | 4843  | 5068  | 6195  | 6424  | 7943  | 8794  | 9254   |
 
 
-<img src="docs/benchmark_4_params.png" alt="4个参数的结果" style="width: 100%;">
+<img src="docs/img/benchmark_4_params.png" alt="4个参数的结果" style="width: 100%;">
 
 #### 不带参数的总耗时（单位毫秒）
 评测结果奇怪的是，不带参数的性能消耗上，Log4j表现得比带参数还要低不少。
@@ -1734,4 +1734,4 @@ public class main {
 | BqLog Text(Java)        | 247   | 422   | 544   | 794   | 933   | 1104  | 1297  | 1686  | 1843  | 2082   |
 | Log4J2 Text             | 3204  | 6489  | 7702  | 8485  | 9640  | 10458 | 11483 | 12853 | 13995 | 14633  |
 
-<img src="docs/benchmark_no_param.png" alt="不带参数的结果" style="width: 100%;">
+<img src="docs/img/benchmark_no_param.png" alt="不带参数的结果" style="width: 100%;">

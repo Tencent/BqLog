@@ -207,7 +207,7 @@ public class demo_main {
 
 ## Architecture Overview
 
-![Basic Structure](docs/log_structure.png)  
+![Basic Structure](docs/img/log_structure.png)  
   
 
 The diagram above clearly illustrates the basic structure of BqLog. On the right side of the diagram is the internal implementation of the BqLog library, while on the left side is your program and code. Your program can call BqLog using the provided wrappers (object-oriented APIs for different languages).
@@ -292,7 +292,7 @@ You can also use this function to initialize a log object in global variables or
 When logging messages, pay attention to three key points:
 #### 1. Log Levels  
 As you can see, our logs are divided into six levels: verbose, debug, info, warning, error, and fatal, consistent with Android. Their importance increases sequentially. When output to the console, they will appear in different colors.
-![Log Levels](docs/log_level.png)  
+![Log Levels](docs/img/log_level.png)  
 #### 2. Format String (STR Parameter)
 The STR parameter is similar to the first parameter of printf and can be various common string types, including:
 - Java's java.lang.String
@@ -300,7 +300,7 @@ The STR parameter is similar to the first parameter of printf and can be various
 - Various encodings of C++'s C-style strings and `std::string` (`char*`, `char16_t*`, `char32_t*`, `wchar_t*`, `std::string`, `std::u8string`, `std::u16string`, `std::u32string`, `std::wstring`, `std::string_view`, `std::u16string_view`, `std::u32string_view`, `std::wstring_view` and even custom string types, which you can refer to in[Custom Parameter Types](#5-custom-parameter-types) )
 
 #### 3. format parameters 
-You can add various parameters after the STR parameter. These parameters will be formatted into the specified places in the STR, following rules similar to C++20's std::format (except for the lack of support for positional arguments). For example, using a single {} represents a default formatting of a parameter, and {:.2f} specifies the precision for formatting a floating-point number.
+You can add various parameters after the STR parameter. These parameters will be formatted into the specified places in the STR, following rules similar to C++20's std::format (except for the lack of support for positional arguments and date time format). For example, using a single {} represents a default formatting of a parameter, and {:.2f} specifies the precision for formatting a floating-point number.
 **Try to use formatted parameters to output logs rather than concatenating strings manually. This approach is optimal for performance and compressed format storage.**  
 Currently supported parameter types include:
 - Null pointers (output as null)
@@ -1759,7 +1759,7 @@ Values are in milliseconds; the lower the value, the less time taken, indicating
 | BqLog Text (Java)       | 706      | 993       | 1165      | 1582      | 1912      | 2572      | 2779      | 3275      | 4249      | 4591       |
 | Log4J2 Text             | 1065     | 2583      | 4249      | 4843      | 5068      | 6195      | 6424      | 7943      | 8794      | 9254       |
 
-<img src="docs/benchmark_4_params.png" alt="4 Parameters Results" style="width: 100%;">
+<img src="docs/img/benchmark_4_params.png" alt="4 Parameters Results" style="width: 100%;">
 
 #### Total Time Cost without Parameters (in milliseconds)
 
@@ -1773,4 +1773,4 @@ Interestingly, in the case of no parameters, Log4j shows lower performance overh
 | BqLog Text (Java)       | 247      | 422       | 544       | 794       | 933       | 1104      | 1297      | 1686      | 1843      | 2082       |
 | Log4J2 Text             | 3204     | 6489      | 7702      | 8485      | 9640      | 10458     | 11483     | 12853     | 13995     | 14633      |
 
-<img src="docs/benchmark_no_param.png" alt="No Parameters Results" style="width: 100%;">
+<img src="docs/img/benchmark_no_param.png" alt="No Parameters Results" style="width: 100%;">
