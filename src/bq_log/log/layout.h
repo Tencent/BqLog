@@ -119,9 +119,9 @@ namespace bq {
 
         void insert_char32(char32_t value);
 
-        uint32_t insert_integral_unsigned(uint64_t value, int32_t base = 10);
+        uint32_t insert_integral_unsigned(uint64_t value, uint32_t base = 10);
 
-        uint32_t insert_integral_signed(int64_t value, int32_t base = 10);
+        uint32_t insert_integral_signed(int64_t value, uint32_t base = 10);
 
         void insert_decimal(float value);
 
