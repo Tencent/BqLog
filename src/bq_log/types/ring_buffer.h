@@ -16,7 +16,7 @@
  * This high-performance ring buffer supports multi-threaded writes and single-threaded reads simultaneously.
  * The buffer size is determined during initialization and cannot be changed.
  * Data in the ring buffer chunks are stored contiguously.
- * The implementation is wait-free in most cases and designed to be CPU cache friendly.
+ * The implementation is designed for extremely high concurrent performance and is optimized to be CPU cache friendly.
  *
  * V2 performance improvements:
  *   1. Reorganize the data structure by dividing the ring buffer into blocks,

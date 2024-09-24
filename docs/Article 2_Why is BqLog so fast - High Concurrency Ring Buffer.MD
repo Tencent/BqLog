@@ -1,4 +1,4 @@
-# Why is  BqLog So Fast - Part 2: Innovative Wait-Free Concurrent Queue
+# Why is  BqLog So Fast - Part 2: High Concurrency Ring Buffer
 
 In systems that pursue extreme performance, reducing any unnecessary computation is key to optimization. In the case of mobile games, frame rate and smoothness are the foundation of the basic experience, but the release version of a game is often caught in an "impossible triangle":
 
@@ -54,7 +54,7 @@ So, what are the key factors behind the performance improvement of `BqLog`?
 
 
 The performance optimization of `BqLog` has reached a temporary limit, with most of the overhead now concentrated on the operating system's IO operations. Even whether container functions are inlined can have a significant impact on the final performance.  
-To detail each of the performance optimization points would likely require many articles. For seasoned experts, these technical details might not offer anything new, and for beginners, there are plenty of resources available online. Even by directly reading the `BqLog` source code, there are many comments and explanations. So, there’s no need to waste space here. This article focuses on the innovations of `BqLog`'s self-implemented high-concurrency queue, exploring how it discards the traditional `CAS (Compare And Swap)` operation found in conventional concurrent queues and evolves from `Lock-Free` to `Wait-Free` to achieve more efficient concurrent processing. This approach has been patented before `BqLog` was open-sourced.
+To detail each of the performance optimization points would likely require many articles. For seasoned experts, these technical details might not offer anything new, and for beginners, there are plenty of resources available online. Even by directly reading the `BqLog` source code, there are many comments and explanations. So, there’s no need to waste space here. This article focuses on the innovations of `BqLog`'s self-implemented high-concurrency queue, exploring how it discards the traditional `CAS (Compare And Swap)` operation found in conventional concurrent queues to achieve more efficient concurrent processing. This approach has been patented before `BqLog` was open-sourced.
 
 
 ## Prerequisite Knowledge: Message Queue
@@ -146,16 +146,16 @@ unsigned int kfifo_in(struct kfifo *fifo, const void *buf, unsigned int len)
 #### Why is `Disruptor` so good?
 
 In scenarios where millions of messages need to be processed, `Disruptor` shows extremely low latency and high throughput. Traditional queues in multi-producer, multi-consumer environments usually suffer from performance drops due to lock contention, memory allocation, and synchronization mechanisms. `Disruptor` solves these issues with a lock-free concurrency model, greatly improving performance.  
-In concurrent environments, `Disruptor` uses two main mechanisms to achieve efficient multi-producer concurrency: the `CAS (Compare-And-Swap)` operation and a memory marking mechanism. These two features work together to make it `Lock-Free`, ensuring data correctness and safety in high-concurrency scenarios.
+In concurrent environments, `Disruptor` uses two main mechanisms to achieve efficient multi-producer concurrency: the `CAS (Compare-And-Swap)` operation and a memory marking mechanism. These two features work together to make it high-performance, ensuring data correctness and safety in high-concurrency scenarios.
 
 #### A. CAS (Compare-And-Swap) for Concurrent Writes
-`CAS` is a lock-free synchronization method used to solve shared data update problems in concurrent programming. It ensures that only one thread can successfully update a variable by comparing and swapping, preventing multiple threads from modifying the same data at the same time.
+`CAS` is a synchronization method used to solve shared data update problems in concurrent programming without locks. It ensures that only one thread can successfully update a variable by comparing and swapping, preventing multiple threads from modifying the same data at the same time.
 
 The basic operation of `CAS` is as follows:
 1. **Compare**: Check if the current value at a memory address matches the expected value.
 2. **Swap**: If they match, update the value at this address; if not, it means another thread has modified the value, so the current thread fails and must retry.
 
-`CAS` is atomic, meaning the operation either fully succeeds or fully fails, with no partial states. This lock-free method is ideal for updating variables in multi-threaded environments, especially for avoiding "race conditions" (where multiple threads compete to modify the same data).
+`CAS` is atomic, meaning the operation either fully succeeds or fully fails, with no partial states. This method is ideal for updating variables in multi-threaded environments, especially for avoiding "race conditions" (where multiple threads compete to modify the same data).
 
 Now, let's go back to the earlier `kFifo` example. We'll try to modify the `kfifo_in` function to support concurrent writing.
 
@@ -217,38 +217,32 @@ To solve this problem, `Disruptor` introduces a new memory section to mark wheth
 
 ### 3. BqLog Ring Buffer
 
-The `CAS` operation in `Disruptor` has become a standard for concurrent programming, especially in high-concurrency scenarios where many people seek lock-free (`Lock-Free`) implementations. While `Lock-Free` brings performance improvements, it’s not a perfect solution and has problems in certain situations.
+The `CAS` operation in `Disruptor` has become a standard for concurrent programming, especially in high-concurrency scenarios. While `CAS` brings performance improvements, it’s not a perfect solution and has problems in certain situations.
 
-#### Why isn’t `Lock-Free` as good as it seems?
+#### Why isn’t `CAS` as good as it seems?
 
-The core idea of `Lock-Free` design is to avoid threads being blocked by locks. By using atomic operations like `CAS`, multiple threads can compete to update shared data without waiting for a lock. This approach reduces context switching and lock contention, which makes it perform well in high-concurrency environments.
+The core idea of `High-Concurrency` design is to avoid threads being blocked by locks. By using atomic operations like `CAS`, multiple threads can compete to update shared data without waiting for a lock. This approach reduces context switching and lock contention, which makes it perform well in high-concurrency environments.
 
-However, `Lock-Free` doesn't guarantee that all threads can operate efficiently. Since `CAS` depends on competition, threads that fail the `CAS` operation must retry, which causes delays and unpredictability. In high-competition situations, threads may keep failing `CAS` and the system’s overall performance can drop. Also, `Lock-Free` doesn’t ensure that every thread will complete its task in a specific amount of time.
+"While `CAS` operations eliminate the need for locks, they do not guarantee efficient execution across all threads. `CAS` inherently involves competitive access, requiring threads that fail in their `CAS` attempts to retry. This process can introduce delays and variability in performance. In scenarios with high contention, frequent `CAS` failures can lead to significant inefficiencies, preventing threads from completing their tasks within predictable or optimal time frames and thus impacting the overall performance of the system." 
 
 For example, in a highly concurrent environment, one thread might keep failing and never update its data. While the system doesn’t deadlock, some threads will experience significant delays, leading to poor overall throughput and latency.
 
-#### Why is `Wait-Free` the best solution?
+#### BqLog’s Optimized Implementation
 
-Compared to `Lock-Free`, `Wait-Free` is a step ahead because it ensures that every thread can complete its task within a fixed number of steps, without needing competition or retries. In a `Wait-Free` model, threads don’t wait for each other, and all threads can complete their tasks in a set time. This makes `Wait-Free` much better in terms of performance and response time, especially in high-realtime, high-concurrency cases.
-
-The core of `Wait-Free` is that it eliminates both locks and waiting. Each thread uses a strategy to ensure that its task always finishes in a certain number of steps, avoiding the uncertainty of competition. While `Wait-Free` algorithms are more complex, they provide more stable and efficient performance.
-
-#### BqLog’s `Wait-Free` Implementation
-
-The message queue in `BqLog`, called `bq::ring_buffer`, uses a custom algorithm to achieve `Wait-Free`. This algorithm uses `fetch_add` instead of `CAS` and includes a rollback mechanism for when space runs out. This ensures that in high-concurrency situations, both producers and consumers can finish their operations within a fixed number of steps. You can check out the code at:  
+The message queue `bq::ring_buffer` in `BqLog` implements memory allocation with fixed overhead using a proprietary algorithm that replaces `CAS` with `fetch_add`. It also features a rollback mechanism for scenarios where there is insufficient space, ensuring that both producers and consumers can complete logging write and read operations within a fixed number of steps under high concurrency. The code implementation can be referenced.
 [https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.h](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.h)  
 [https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.cpp](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.cpp)  
 
 #### What is `fetch_add` and why is it better?
 
-`fetch_add` is another lock-free atomic operation that’s important in concurrent programming. It works in two steps:
+`fetch_add` is another atomic operation that’s important in concurrent programming. It works in two steps:
 
 1. **Get the current value**: Read the current value of a variable.
 2. **Add and update**: Add a specified number to the value and update it.
 
 `fetch_add` guarantees that the operation will always succeed, so even when multiple threads operate at the same time, each thread can safely update the variable without needing to retry or wait.
 
-Unlike `CAS`, `fetch_add` doesn’t require retries because it can’t fail. Each thread gets a unique value and performs the addition, updating the variable in one step. This means every thread can complete its operation without being blocked by competition, fulfilling the requirements for `Wait-Free` operation.
+Unlike `CAS`, `fetch_add` doesn’t require retries because it can’t fail. Each thread gets a unique value and performs the addition, updating the variable in one step. This means every thread can complete its operation without being blocked by competition.
 
 Let’s see an example where we modify the `kfifo_in_concurrent` function to use `fetch_add`:
 
@@ -292,14 +286,14 @@ See the diagram below:
 
 In this way, the three threads each get their own memory segment without any lock or waiting.
 
-By using `fetch_add`, each thread can claim its own space atomically, making the process truly `Wait-Free`.
+By using `fetch_add`, each thread can claim its own space atomically, without check whether memory allocating is successed or not.
 
 #### The limitations of `fetch_add` and the rollback mechanism
-If `fetch_add` makes `Wait-Free` so easy, why do most message queues still use `CAS`? The problem with `fetch_add` is that it has one critical flaw. Let’s go back to the previous example. Imagine the buffer has a maximum size of 25, and threads A, B, and C all execute `kfifo_in_concurrent` at the same time. They each check the remaining space and see 25, which seems enough for their writes. But when they all perform `fetch_add`, each thread believes it successfully claimed memory, but in reality, the last thread's claim is invalid.
+If `fetch_add` makes better performance so easy, why do most message queues still use `CAS`? The problem with `fetch_add` is that it has one critical flaw. Let’s go back to the previous example. Imagine the buffer has a maximum size of 25, and threads A, B, and C all execute `kfifo_in_concurrent` at the same time. They each check the remaining space and see 25, which seems enough for their writes. But when they all perform `fetch_add`, each thread believes it successfully claimed memory, but in reality, the last thread's claim is invalid.
 
 In contrast, `CAS` avoids this problem because the final claim only succeeds if no other thread has changed the memory, and `in` matches what was checked earlier.
 
-To solve this problem and still achieve both `Wait-Free` and correctness, `bq::ring_buffer` invented a rollback mechanism. When space runs out, it can perform a rollback and return an "insufficient space" error. The pseudocode for memory allocation looks like this:
+To solve this problem, ensuring both a fixed number of steps for memory allocation and accurate results, `bq::ring_buffer` has developed a rollback mechanism. This mechanism performs a rollback when there is insufficient space, and then returns an error indicating insufficient space. The pseudocode for memory allocation is as follows:
 
 ```c
 void* bq::ring_buffer::alloc(size_t len)
@@ -331,7 +325,7 @@ void* bq::ring_buffer::alloc(size_t len)
 }
 ```
 
-This code shows how `bq::ring_buffer` achieves `Wait-Free` operation and demonstrates the rollback mechanism when space is insufficient. Some might worry that the rollback algorithm reduces performance, making it no longer `Wait-Free`. However, when rollback logic occurs, it means the message queue is almost full, and the system bottleneck shifts to either expanding the queue or waiting for consumers to free up space. At this point, the performance cost of `CAS` is negligible.
+This code not only demonstrates how `bq::ring_buffer` allocates memory using `fetch_add`, but also shows the rollback algorithm when there is insufficient space. Some might question the performance of this rollback algorithm, but it’s important to understand that when a rollback occurs, it indicates that the message queue is running out of space. At this point, the system's performance bottleneck becomes the need to expand the message queue or block until consumer threads retrieve data and free up space. Under such circumstances, the performance cost of the `CAS` operation becomes negligible.
 
 Now, let’s explain why the rollback algorithm needs to use `CAS` rather than simply doing `fetch_add(this->in_, -len)` to subtract the claimed length. The challenge with rollback is that after `in` exceeds the limit, each producer doesn’t know how much to roll back without causing issues.
 
@@ -355,7 +349,7 @@ As shown, data allocated to threads B and C overlaps.
 The core principle of the `CAS` rollback algorithm is to have `in` roll back step by step, with each thread responsible for rolling back its own allocation. If space is freed during rollback, it can stop rolling back.
 
 #### Solution Summary
-The combination of `fetch_add` and rollback in `BqLog` has created a `Wait-Free` queue model. Based on the final benchmark results, in terms of throughput and latency, this approach has outperformed `LMAX Disruptor` in multi-concurrent scenarios. While this optimization doesn’t have much impact on client applications, it shows significant value in server-side or other high-concurrency environments.
+The combination of `fetch_add` and rollback in `BqLog` has created a optimized "High-Concurrency" queue model. Based on the final benchmark results, in terms of throughput and latency, this approach has outperformed `LMAX Disruptor` in multi-concurrent scenarios. While this optimization doesn’t have much impact on client applications, it shows significant value in server-side or other high-concurrency environments.
 
 
 
