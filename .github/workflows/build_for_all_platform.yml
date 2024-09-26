@@ -175,7 +175,7 @@ jobs:
   build-freebsd-clang:
     runs-on: ubuntu-latest
     container: 
-      image: kwiat/freebsd:latest
+      image: kwiat/freebsd:13.0-RELEASE
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -201,7 +201,7 @@ jobs:
   build-freebsd-gcc:
     runs-on: ubuntu-latest
     container: 
-      image: kwiat/freebsd:latest
+      image: kwiat/freebsd:12.3-RELEASE
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -239,12 +239,12 @@ jobs:
 
           apt-get install -y software-properties-common
           apt-get update
-          apt-get install -y openjdk-11-jdk
+          apt-get install -y openjdk-17-jdk
 
       - name: Set up Java
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> $GITHUB_ENV
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
       - name: Build for Debian
         run: |
@@ -268,12 +268,12 @@ jobs:
 
           apt-get install -y software-properties-common
           apt-get update
-          apt-get install -y openjdk-11-jdk
+          apt-get install -y openjdk-17-jdk
 
       - name: Set up Java
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> $GITHUB_ENV
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
       - name: Build for Debian
         run: |
