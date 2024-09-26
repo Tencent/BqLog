@@ -174,28 +174,18 @@ jobs:
 
   build-freebsd-clang:
     runs-on: ubuntu-latest
-    container: 
-      image: toxchat/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Check FreeBSD Version
-        run: uname -a
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          sudo /usr/sbin/pkg bootstrap -f
-          sudo pkg update
-          sudo pkg install -y gcc cmake bash openjdk11
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
         with:
-          java-version: '11'
-          distribution: 'adopt'
+          usesh: true
+          prepare: |
+          pkg install -y gcc cmake bash openjdk11
 
-      - name: Build for FreeBSD
         run: |
           cd build/lib/unix_like
           chmod +x *.sh
@@ -204,28 +194,18 @@ jobs:
 
   build-freebsd-gcc:
     runs-on: ubuntu-latest
-    container: 
-      image: toxchat/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Check FreeBSD Version
-        run: uname -a
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          sudo /usr/sbin/pkg bootstrap -f
-          sudo pkg update
-          sudo pkg install -y gcc cmake bash openjdk11
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
         with:
-          java-version: '11'
-          distribution: 'adopt'
+          usesh: true
+          prepare: |
+          pkg install -y gcc cmake bash openjdk11
 
-      - name: Build for FreeBSD
         run: |
           cd build/lib/unix_like
           chmod +x *.sh
