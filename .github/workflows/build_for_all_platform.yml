@@ -60,7 +60,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r27
+          ndk-version: r25
           local-cache: true
 
       - name: Build for Windows Android
@@ -161,7 +161,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r27
+          ndk-version: r25
           local-cache: true
 
       - name: Build for Mac Android
@@ -175,7 +175,7 @@ jobs:
   build-freebsd-clang:
     runs-on: ubuntu-latest
     container: 
-      image: toxchat/freebsd:latest
+      image: kwiat/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -201,7 +201,7 @@ jobs:
   build-freebsd-gcc:
     runs-on: ubuntu-latest
     container: 
-      image: toxchat/freebsd:latest
+      image: kwiat/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -235,7 +235,11 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make openjdk-11-jdk
+          apt-get install -y gcc clang g++ make
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-11-jdk
 
       - name: Set up Java
         run: |
@@ -260,7 +264,11 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make openjdk-11-jdk
+          apt-get install -y gcc clang g++ make
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-11-jdk
 
       - name: Set up Java
         run: |
