@@ -223,7 +223,7 @@ jobs:
           ./GenerateDynamicLib_GCC.sh 
           ./GenerateStaticLib_GCC.sh 
 
-  build-freebsd-clang:
+  build-debian-clang:
     runs-on: ubuntu-latest
     container: 
       image: debian:latest
