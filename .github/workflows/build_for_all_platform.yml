@@ -180,10 +180,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Check FreeBSD Version
+        run: uname -a
+
       - name: Install necessary tools (gcc and clang)
         run: |
-          pkg update
-          pkg install -y gcc cmake bash openjdk11
+          sudo /usr/sbin/pkg bootstrap -f
+          sudo pkg update
+          sudo pkg install -y gcc cmake bash openjdk11
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -206,10 +210,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Check FreeBSD Version
+        run: uname -a
+
       - name: Install necessary tools (gcc and clang)
         run: |
-          pkg update
-          pkg install -y gcc cmake bash openjdk11
+          sudo /usr/sbin/pkg bootstrap -f
+          sudo pkg update
+          sudo pkg install -y gcc cmake bash openjdk11
 
       - name: Set up Java
         uses: actions/setup-java@v3
