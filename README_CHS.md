@@ -9,7 +9,7 @@
 - Linux
 - iOS
 - Android(X86_64, arm64-v8a、armeabi-v7a)
-- Unix(在FreeBSD上通过测试)
+- Unix(在FreeBSD和Debian上通过测试)
 
 ## 支持编程语言
  - C++

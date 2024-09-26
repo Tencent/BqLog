@@ -6,5 +6,12 @@ cd XCodeProj
 cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -G "Xcode"
 xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration RelWithDebInfo
 ./RelWithDebInfo/BqLogUnitTest
-cd .. 
+exit_code=$?
+cd ..;
+if [ $exit_code -eq 0 ]; then
+    echo "Test succeeded."
+else
+    echo "Test failed."
+    exit 1
+fi
 

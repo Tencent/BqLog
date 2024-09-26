@@ -94,3 +94,5 @@ namespace bq {
     } else {                                                                                                                                                                                                                                             \
         test_output_param(bq::log_level::fatal, "----------------------------------TEST CASES IS FAILED!------------------------------\n-----------------------------Test %s End----------------------------------", #group_name);                       \
     }
+
+#define TEST_GROUP_RESULT(group_name) __test_result_##group_name

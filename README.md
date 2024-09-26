@@ -10,7 +10,7 @@
 - Linux
 - iOS
 - Android(X86_64, arm64-v8a、armeabi-v7a)
-- Unix(Pass the test on FreeBSD)
+- Unix(Pass the test on FreeBSD and Debian)
 
 ## Supported Languages
  - C++
