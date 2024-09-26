@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/sh
 
 mkdir CMakeFiles;
 cd CMakeFiles;
