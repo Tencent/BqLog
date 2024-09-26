@@ -184,7 +184,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-          pkg install -y gcc cmake bash openjdk11
+            pkg install -y gcc cmake bash openjdk11
 
         run: |
           cd build/lib/unix_like
@@ -204,7 +204,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-          pkg install -y gcc cmake bash openjdk11
+            pkg install -y gcc cmake bash openjdk11
 
         run: |
           cd build/lib/unix_like
