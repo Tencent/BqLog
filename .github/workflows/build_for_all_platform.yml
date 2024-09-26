@@ -198,25 +198,26 @@ jobs:
           ./GenerateDynamicLib_Clang.sh 
           ./GenerateStaticLib_Clang.sh 
 
-  build-debian-gcc:
+  build-freebsd-gcc:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: toxchat/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Install necessary tools (gcc and clang)
         run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make openjdk-11-jdk
+          pkg update
+          pkg install -y gcc cmake bash openjdk11
 
       - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> $GITHUB_ENV
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
 
-      - name: Build for Debian
+      - name: Build for FreeBSD
         run: |
           cd build/lib/unix_like
           chmod +x *.sh
@@ -247,27 +248,26 @@ jobs:
           chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
           ./GenerateStaticLib_Clang.sh 
-
+  
   build-debian-gcc:
     runs-on: ubuntu-latest
     container: 
-      image: toxchat/freebsd:latest
+      image: debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Install necessary tools (gcc and clang)
         run: |
-          pkg update
-          pkg install -y gcc cmake bash openjdk11
+          apt-get update
+          apt-get install -y gcc clang g++ make openjdk-11-jdk
 
       - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'adopt'
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> $GITHUB_ENV
 
-      - name: Build for FreeBSD
+      - name: Build for Debian
         run: |
           cd build/lib/unix_like
           chmod +x *.sh
