@@ -1,0 +1,149 @@
+name: Cross-Platform Build and Deploy
+
+on:
+  workflow_dispatch:  # manually trigger
+
+jobs:
+  build-windows-base:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\Build_Dynamic_Lib_MSVC.bat 
+          .\Build_Static_Lib_MSVC.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  build-windows-android:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27
+          local-cache: tru
+
+      - name: Build for Windows Android
+        run: |
+          cd build\lib\android  
+          .\Build_Dynamic_Lib_MSVC.bat 
+          .\Win_Build_Dynamic_Lib.bat 
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build\lib\linux  
+          .\GenerateDynamicLib_Clang.sh 
+          .\GenerateStaticLib_Clang.sh 
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Set up XCode
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for macOS
+        run: |
+          cd build\lib\mac  
+          .\GenerateDynamicLib_AllFormat.sh 
+          .\GenerateStaticLib_AllFormat.sh 
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up XCode for iOS
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for iOS
+        run: |
+          cd build\lib\ios  
+          .\MacGenerator.sh
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    container: 
+      image: frolvlad/alpine-freebsd
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for FreeBSD
+        run: |
+          cd build\lib\unix_like  
+          .\GenerateDynamicLib_Clang.sh 
+          .\GenerateStaticLib_Clang.sh 
+
+  deploy:
+    needs:
+      - build-windows-base
+      - build-windows-android
+      - build-linux
+      - build-macos
+      - build-ios
+      - build-freebsd
+    runs-on: ubuntu-latest
+    if: success()  # 确保所有平台成功后执行
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Add build artifacts for all platforms"
+          git push origin HEAD:build-output
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
