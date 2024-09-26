@@ -175,7 +175,7 @@ jobs:
   build-freebsd-clang:
     runs-on: ubuntu-latest
     container: 
-      image: auchida/freebsd:latest
+      image: knast/freebsd:13-STABLE
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -201,7 +201,7 @@ jobs:
   build-freebsd-gcc:
     runs-on: ubuntu-latest
     container: 
-      image: auchida/freebsd:latest
+      image: knast/freebsd
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

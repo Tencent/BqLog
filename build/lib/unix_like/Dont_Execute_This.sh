@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/sh
 
 BUILD_TYPE=$1
 COMPILER_TYPE_C=$2
