@@ -4,11 +4,31 @@ on:
   workflow_dispatch:  # manually trigger
 
 jobs:
-  build-windows-MSVC:
+  #Windows
+  build_windows_static_lib_MSVC:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\Build_Static_Lib_MSVC.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+  
+  build_windows_dynamic_lib_MSVC:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -20,15 +40,33 @@ jobs:
         run: |
           cd build\lib\win64  
           .\Build_Dynamic_Lib_MSVC.bat 
-          .\Build_Static_Lib_MSVC.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build-windows-Clang:
+  build_windows_static_lib_Clang:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\Build_Static_Lib_Clang.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+  
+  build_windows_dynamic_lib_Clang:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -40,15 +78,54 @@ jobs:
         run: |
           cd build\lib\win64  
           .\Build_Dynamic_Lib_Clang.bat 
-          .\Build_Static_Lib_Clang.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build-windows-android:
+  build_windows_tools_decoder:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\tools\log_decoder\win64  
+          .\GenerateExecutable.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  build_windows_tools_category_log_generator:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\tools\category_log_generator\win64  
+          .\GenerateExecutable.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+
+  #Android
+  build_windows_android:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -70,86 +147,11 @@ jobs:
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
-  build-linux-Clang:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Linux
-        run: |
-          cd build/lib/linux  
-          chmod +x *.sh
-          ./GenerateDynamicLib_Clang.sh 
-          ./GenerateStaticLib_Clang.sh 
-
-  build-linux-GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Linux
-        run: |
-          cd build/lib/linux  
-          chmod +x *.sh
-          ./GenerateDynamicLib_GCC.sh 
-          ./GenerateStaticLib_GCC.sh 
-
-  build-macos:
+  build_mac_android:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
-      - name: Build for macOS
-        run: |
-          cd build/lib/mac  
-          chmod +x *.sh
-          ./GenerateDynamicLib_AllFormat.sh 
-          ./GenerateStaticLib_AllFormat.sh 
-
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up XCode for iOS
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
-      - name: Build for iOS
-        run: |
-          cd build/lib/ios  
-          chmod +x *.sh
-          ./MacGenerator.sh
-
-  build-mac-android:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -172,11 +174,284 @@ jobs:
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
-  build-freebsd-clang:
+
+
+  #Linux
+  build_linux_static_lib_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./GenerateStaticLib_Clang.sh 
+  
+  build_linux_dynamic_lib_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./GenerateDynamicLib_Clang.sh 
+
+  build_linux_static_lib_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./GenerateStaticLib_GCC.sh 
+  
+  build_linux_dynamic_lib_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./GenerateDynamicLib_GCC.sh 
+
+  build_linux_tools_decoder_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/tools/log_decoder/linux  
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh
+
+  build_linux_tools_decoder_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/tools/log_decoder/linux  
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh
+
+  build_linux_tools_category_log_generator_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/tools/category_log_generator/linux  
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh
+
+  build_linux_tools_category_log_generator_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/tools/category_log_generator/linux  
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh
+
+  #Mac
+  build_macos_all_static_libs:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Set up XCode
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for macOS
+        run: |
+          cd build/lib/mac  
+          chmod +x *.sh
+          ./GenerateStaticLib_AllFormat.sh 
+
+  build_macos_all_dynamic_libs:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Set up XCode
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for macOS
+        run: |
+          cd build/lib/mac  
+          chmod +x *.sh
+          ./GenerateDynamicLib_AllFormat.sh 
+
+  build_macos_tools_decoder:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Set up XCode
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for macOS
+        run: |
+          cd build/tools/log_decoder/mac  
+          chmod +x *.sh
+          ./GenerateExecutable.sh 
+
+  build_macos_tools_category_log_generator:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Set up XCode
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for macOS
+        run: |
+          cd build/tools/category_log_generator/mac  
+          chmod +x *.sh
+          ./GenerateExecutable.sh 
+
+  #iOS
+  build_ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up XCode for iOS
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for iOS
+        run: |
+          cd build/lib/ios  
+          chmod +x *.sh
+          ./MacGenerator.sh
+
+  #FreeBSD
+  build_freeBSD_static_lib_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ./GenerateStaticLib_Clang.sh 
+  
+  build_freeBSD_dynamic_lib_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
@@ -195,13 +470,36 @@ jobs:
             cd build/lib/unix_like
             chmod +x *.sh
             ./GenerateDynamicLib_Clang.sh 
-            ./GenerateStaticLib_Clang.sh 
 
-  build-freebsd-gcc:
+  build_freeBSD_static_lib_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ./GenerateStaticLib_GCC.sh 
+  
+  build_freeBSD_dynamic_lib_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
@@ -220,15 +518,141 @@ jobs:
             cd build/lib/unix_like
             chmod +x *.sh
             ./GenerateDynamicLib_GCC.sh 
-            ./GenerateStaticLib_GCC.sh 
 
-  build-debian-clang:
+  build_freeBSD_tools_decoder_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/log_decoder/unix_like
+            chmod +x *.sh
+            ./GenerateExecutable_Clang.sh 
+
+  build_freeBSD_tools_decoder_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/log_decoder/unix_like
+            chmod +x *.sh
+            ./GenerateExecutable_GCC.sh 
+
+  build_freeBSD_tools_category_log_generator_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/category_log_generator/unix_like
+            chmod +x *.sh
+            ./GenerateExecutable_Clang.sh 
+
+  build_freeBSD_tools_category_log_generator_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/category_log_generator/unix_like
+            chmod +x *.sh
+            ./GenerateExecutable_GCC.sh 
+  
+
+  #debian
+  build_debian_static_lib_Clang:
     runs-on: ubuntu-latest
     container: 
       image: debian:latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/unix_like
+          ls
+          chmod +x *.sh
+          ./GenerateStaticLib_Clang.sh 
+  
+  build_debian_dynamic_lib_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install necessary tools (gcc and clang)
         run: |
@@ -250,15 +674,43 @@ jobs:
           ls
           chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
-          ./GenerateStaticLib_Clang.sh 
-  
-  build-debian-gcc:
+
+  build_debian_static_lib_GCC:
     runs-on: ubuntu-latest
     container: 
       image: debian:latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/unix_like
+          ls
+          chmod +x *.sh
+          ./GenerateStaticLib_GCC.sh 
+  
+  build_debian_dynamic_lib_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install necessary tools (gcc and clang)
         run: |
@@ -280,4 +732,119 @@ jobs:
           ls
           chmod +x *.sh
           ./GenerateDynamicLib_GCC.sh 
-          ./GenerateStaticLib_GCC.sh 
+
+  build_debian_tools_decoder_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/tools/log_decoder/unix_like
+          ls
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh 
+
+  build_debian_tools_decoder_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/tools/log_decoder/unix_like
+          ls
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh 
+
+  build_debian_tools_category_log_generator_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/tools/category_log_generator/unix_like
+          ls
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh 
+
+  build_debian_tools_category_log_generator_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/tools/category_log_generator/unix_like
+          ls
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh 
