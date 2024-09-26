@@ -863,12 +863,12 @@ namespace bq {
 
                 if (current_tested_num % snapshot_idx_mode == 0) {
                     bq::string snapshot = log_inst_ptr->take_snapshot(false);
-                    result_ptr->add_result(snapshot_test_str.end_with(snapshot) || snapshot.end_with(snapshot_test_str), "snapshot test: %d", current_tested_num);
+                    result_ptr->add_result(snapshot_test_str.end_with(snapshot) || snapshot.end_with(snapshot_test_str), "standard: %s,  snapshot: %s", output_str_ptr->c_str(), snapshot.substr(snapshot.size() > output_str_ptr->size() ? snapshot.size() - output_str_ptr->size() : 0, snapshot.size() > output_str_ptr->size() ? output_str_ptr->size() : snapshot.size());
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }
 
                 size_t new_percent = (size_t)(current_tested_num * 100 / total_test_num);
-                if (new_percent != current_tested_num) {
+                if (new_percent != current_tested_percent) {
                     current_tested_percent = new_percent;
                     test_output_dynamic_param(bq::log_level::info, "full log test percent %d/100              \r", (int32_t)current_tested_percent);
                 }

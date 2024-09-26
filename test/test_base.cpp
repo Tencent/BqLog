@@ -34,14 +34,18 @@ namespace bq {
             if (success) {
                 ++success_count;
             } else {
-                va_list args;
-                va_start(args, info);
-                static char tmp[1024 * 16];
-                vsnprintf(tmp, sizeof(tmp), info, args);
-                va_end(args);
-                const char* error_info_p = tmp;
                 lock_.lock();
-                failed_infos.emplace_back(error_info_p);
+                if (failed_infos.size() < 128) {
+                    va_list args;
+                    va_start(args, info);
+                    static char tmp[1024 * 16];
+                    vsnprintf(tmp, sizeof(tmp), info, args);
+                    va_end(args);
+                    const char* error_info_p = tmp;
+                    failed_infos.emplace_back(error_info_p);
+                } else if (failed_infos.size() == 128) {
+                    failed_infos.emplace_back("... Too many test case errors. A maximum of 128 can be displayed, and the rest are omitted. ....");
+                }
                 lock_.unlock();
             }
         }
