@@ -61,7 +61,7 @@ jobs:
         id: setup-ndk
         with:
           ndk-version: r26
-          local-cache: true
+          local-cache: false
 
       - name: Build for Windows Android
         run: |
@@ -162,7 +162,7 @@ jobs:
         id: setup-ndk
         with:
           ndk-version: r26
-          local-cache: true
+          local-cache: false
 
       - name: Build for Mac Android
         run: |
@@ -175,7 +175,7 @@ jobs:
   build-freebsd-clang:
     runs-on: ubuntu-latest
     container: 
-      image: knast/freebsd:13-STABLE
+      image: toxchat/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -201,7 +201,7 @@ jobs:
   build-freebsd-gcc:
     runs-on: ubuntu-latest
     container: 
-      image: knast/freebsd
+      image: toxchat/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -235,7 +235,7 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make
+          apt-get install -y gcc clang g++ make cmake
 
           apt-get install -y software-properties-common
           apt-get update
@@ -265,7 +265,7 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make
+          apt-get install -y gcc clang g++ make cmake
 
           apt-get install -y software-properties-common
           apt-get update
