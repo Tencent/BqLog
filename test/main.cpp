@@ -53,7 +53,7 @@ int32_t main()
     TEST_GROUP(Bq_Log_Test, bq::test, test_ring_buffer);
     TEST_GROUP_END(Bq_Log_Test);
 
-    if (TEST_GROUP_RESULT(Bq_Common_Test) 
+    if (TEST_GROUP_RESULT(Bq_Common_Test)
         && TEST_GROUP_RESULT(Bq_Log_Test)) {
         return 0;
     } else {

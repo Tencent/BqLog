@@ -761,7 +761,7 @@ jobs:
 
   #debian
   build_debian_test_and_run_GCC:
-runs-on: ubuntu-latest
+  runs-on: ubuntu-latest
     container: 
       image: debian:latest
     steps:
@@ -789,7 +789,7 @@ runs-on: ubuntu-latest
             ./RunTest_GCC.sh 
   
   build_debian_test_and_run_Clang:
-runs-on: ubuntu-latest
+  runs-on: ubuntu-latest
     container: 
       image: debian:latest
     steps:
