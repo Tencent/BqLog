@@ -60,7 +60,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r25
+          ndk-version: r26
           local-cache: true
 
       - name: Build for Windows Android
@@ -161,7 +161,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r25
+          ndk-version: r26
           local-cache: true
 
       - name: Build for Mac Android
@@ -175,7 +175,7 @@ jobs:
   build-freebsd-clang:
     runs-on: ubuntu-latest
     container: 
-      image: kwiat/freebsd:13.0-RELEASE
+      image: auchida/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -201,7 +201,7 @@ jobs:
   build-freebsd-gcc:
     runs-on: ubuntu-latest
     container: 
-      image: kwiat/freebsd:12.3-RELEASE
+      image: auchida/freebsd:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -249,6 +249,7 @@ jobs:
       - name: Build for Debian
         run: |
           cd build/lib/unix_like
+          ls
           chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
           ./GenerateStaticLib_Clang.sh 
@@ -278,6 +279,7 @@ jobs:
       - name: Build for Debian
         run: |
           cd build/lib/unix_like
+          ls
           chmod +x *.sh
           ./GenerateDynamicLib_GCC.sh 
           ./GenerateStaticLib_GCC.sh 
