@@ -41,7 +41,7 @@ jobs:
         id: setup-ndk
         with:
           ndk-version: r27
-          local-cache: tru
+          local-cache: true
 
       - name: Build for Windows Android
         run: |
@@ -65,9 +65,9 @@ jobs:
 
       - name: Build for Linux
         run: |
-          cd build\lib\linux  
-          .\GenerateDynamicLib_Clang.sh 
-          .\GenerateStaticLib_Clang.sh 
+          cd build/lib/linux  
+          ./GenerateDynamicLib_Clang.sh 
+          ./GenerateStaticLib_Clang.sh 
 
   build-macos:
     runs-on: macos-latest
@@ -86,9 +86,9 @@ jobs:
 
       - name: Build for macOS
         run: |
-          cd build\lib\mac  
-          .\GenerateDynamicLib_AllFormat.sh 
-          .\GenerateStaticLib_AllFormat.sh 
+          cd build/lib/mac  
+          ./GenerateDynamicLib_AllFormat.sh 
+          ./GenerateStaticLib_AllFormat.sh 
 
   build-ios:
     runs-on: macos-latest
@@ -101,8 +101,8 @@ jobs:
 
       - name: Build for iOS
         run: |
-          cd build\lib\ios  
-          .\MacGenerator.sh
+          cd build/lib/ios  
+          ./MacGenerator.sh
 
   build-freebsd:
     runs-on: ubuntu-latest
@@ -120,30 +120,6 @@ jobs:
 
       - name: Build for FreeBSD
         run: |
-          cd build\lib\unix_like  
-          .\GenerateDynamicLib_Clang.sh 
-          .\GenerateStaticLib_Clang.sh 
-
-  deploy:
-    needs:
-      - build-windows-base
-      - build-windows-android
-      - build-linux
-      - build-macos
-      - build-ios
-      - build-freebsd
-    runs-on: ubuntu-latest
-    if: success()  # 确保所有平台成功后执行
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Commit and Push changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Add build artifacts for all platforms"
-          git push origin HEAD:build-output
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          cd build/lib/unix_like  
+          ./GenerateDynamicLib_Clang.sh 
+          ./GenerateStaticLib_Clang.sh 
