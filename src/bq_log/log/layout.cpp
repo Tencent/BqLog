@@ -931,7 +931,7 @@ namespace bq {
     uint32_t layout::insert_integral_unsigned(uint64_t value, uint32_t base /* = 10 */)
     {
         uint32_t width = format_content_cursor;
-        assert(base <= 32 && base >= 0 && "base is a number belongs to [2, 32]");
+        assert(base <= 32 && "base is a number belongs to [2, 32]");
         if (format_info_.type == 'b') {
             base = 2;
         } else if (format_info_.type == 'x') {
@@ -1005,7 +1005,7 @@ namespace bq {
     uint32_t layout::insert_integral_signed(int64_t value, uint32_t base /* = 10 */)
     {
         uint32_t width = format_content_cursor;
-        assert(base <= 32 && base >= 0 && "base is a number belongs to [2, 32]");
+        assert(base <= 32 && "base is a number belongs to [2, 32]");
         // Hex check
         if (format_info_.type == 'b') {
             base = 2;
