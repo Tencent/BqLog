@@ -184,9 +184,10 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg install -y gcc cmake bash openjdk11
+            pkg install -y gcc cmake openjdk11
 
           run: |
+            echo "AAAAAAAA"
             cd build/lib/unix_like
             chmod +x *.sh
             ./GenerateDynamicLib_Clang.sh 
@@ -204,7 +205,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg install -y gcc cmake bash openjdk11
+            pkg install -y gcc cmake openjdk11
 
           run: |
             cd build/lib/unix_like
