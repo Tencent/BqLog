@@ -4,7 +4,7 @@ on:
   workflow_dispatch:  # manually trigger
 
 jobs:
-  build-windows-base:
+  build-windows-MSVC:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -21,6 +21,26 @@ jobs:
           cd build\lib\win64  
           .\Build_Dynamic_Lib_MSVC.bat 
           .\Build_Static_Lib_MSVC.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  build-windows-Clang:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\Build_Dynamic_Lib_Clang.bat 
+          .\Build_Static_Lib_Clang.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
@@ -45,13 +65,12 @@ jobs:
 
       - name: Build for Windows Android
         run: |
-          cd build\lib\android  
-          .\Build_Dynamic_Lib_MSVC.bat 
+          cd build\lib\android
           .\Win_Build_Dynamic_Lib.bat 
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
-  build-linux:
+  build-linux-Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -66,8 +85,28 @@ jobs:
       - name: Build for Linux
         run: |
           cd build/lib/linux  
+          chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
           ./GenerateStaticLib_Clang.sh 
+
+  build-linux-GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./GenerateDynamicLib_GCC.sh 
+          ./GenerateStaticLib_GCC.sh 
 
   build-macos:
     runs-on: macos-latest
@@ -87,6 +126,7 @@ jobs:
       - name: Build for macOS
         run: |
           cd build/lib/mac  
+          chmod +x *.sh
           ./GenerateDynamicLib_AllFormat.sh 
           ./GenerateStaticLib_AllFormat.sh 
 
@@ -102,12 +142,11 @@ jobs:
       - name: Build for iOS
         run: |
           cd build/lib/ios  
+          chmod +x *.sh
           ./MacGenerator.sh
 
-  build-freebsd:
-    runs-on: ubuntu-latest
-    container: 
-      image: frolvlad/alpine-freebsd
+  build-mac-android:
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -117,9 +156,70 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+          
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27
+          local-cache: true
+
+      - name: Build for Mac Android
+        run: |
+          cd build\lib\android
+          chmod +x *.sh
+          .\Mac_Build_Dynamic_Lib.sh 
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+  build-freebsd-clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: freebsd:12.2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          pkg update
+          pkg install -y gcc cmake bash openjdk11
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
 
       - name: Build for FreeBSD
         run: |
-          cd build/lib/unix_like  
+          cd build/lib/unix_like
+          chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
           ./GenerateStaticLib_Clang.sh 
+
+  build-freebsd-gcc:
+    runs-on: ubuntu-latest
+    container: 
+      image: freebsd:12.2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          pkg update
+          pkg install -y gcc cmake bash openjdk11
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for FreeBSD
+        run: |
+          cd build/lib/unix_like
+          chmod +x *.sh
+          ./GenerateDynamicLib_GCC.sh 
+          ./GenerateStaticLib_GCC.sh 
