@@ -994,7 +994,7 @@ jobs:
 
   
 
-  deploy:
+  push_to_repo:
     runs-on: ubuntu-latest
     needs: 
       #- build_windows_test_and_run_MSVC
@@ -1054,6 +1054,17 @@ jobs:
           ls -R artifacts/
           mkdir -p bin/tools/
           mkdir -p dist/
+          mkdir -p dist/static_lib/
+          mkdir -p dist/dynamic_lib/
+          mkdir -p bin/tools/win64/
+          mkdir -p dist/dynamic_lib/android/
+          mkdir -p dist/static_lib/linux/
+          mkdir -p dist/dynamic_lib/linux/
+          mkdir -p bin/tools/linux/
+          mkdir -p dist/static_lib/mac/
+          mkdir -p dist/dynamic_lib/mac/
+          mkdir -p bin/tools/mac/
+          mkdir -p dist/dynamic_lib/ios/
           cp -r artifacts/win64_static_artifact/* dist/static_lib/
           cp -r artifacts/win64_dynamic_artifact/* dist/dynamic_lib/
           cp -r artifacts/win64_tools_artifact/* bin/tools/win64/
