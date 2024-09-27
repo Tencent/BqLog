@@ -719,6 +719,31 @@ namespace bq {
             auto new_tuple_element = std::tuple<decltype(new_param_obj)&>(new_param_obj);
             auto new_param_tuple = std::tuple_cat(param_tuple, new_tuple_element);
             log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple);
+            return 0;
+        }
+
+        template <size_t LEFT_PARAM_COUNT, size_t TYPE_INDEX, typename PARAM_TUPLE, size_t... OBJ_INDICES>
+        void log_param_test_level2_unpack(const PARAM_TUPLE& param_tuple, const std::index_sequence<OBJ_INDICES...>& seq)
+        {
+            (void)seq;
+            parameter_expand_tools(log_param_test_level3<LEFT_PARAM_COUNT, TYPE_INDEX, OBJ_INDICES>(param_tuple)...);
+        }
+
+        template <size_t LEFT_PARAM_COUNT, size_t TYPE_INDEX, typename PARAM_TUPLE>
+        int32_t log_param_test_level2(const PARAM_TUPLE& param_tuple)
+        {
+            auto seq = std::make_index_sequence<std::get<TYPE_INDEX>(data_tuple).size()>();
+            log_param_test_level2_unpack<LEFT_PARAM_COUNT, TYPE_INDEX>(param_tuple, seq);
+            return 0;
+        }
+
+        template <size_t LEFT_PARAM_COUNT, typename PARAM_TUPLE, size_t... TYPE_INDICES>
+        void log_param_test_level1_unpack(const PARAM_TUPLE& param_tuple, const std::index_sequence<TYPE_INDICES...>& seq)
+        {
+            (void)seq;
+            parameter_expand_tools(log_param_test_level2<LEFT_PARAM_COUNT, TYPE_INDICES>(param_tuple)...);
+
+            // left params which can not list in constexpr
 
             // void* can not add to constexpr array, so what I only can do is that add it to param tuple mannualy
             auto new_param_tuple_with_ptr1 = std::tuple_cat(param_tuple, std::make_tuple((void*)nullptr));
@@ -749,29 +774,6 @@ namespace bq {
 #endif
             CUSTOM_TYPE1_ADDITIONAL_TEST();
             CUSTOM_TYPE2_ADDITIONAL_TEST();
-            return 0;
-        }
-
-        template <size_t LEFT_PARAM_COUNT, size_t TYPE_INDEX, typename PARAM_TUPLE, size_t... OBJ_INDICES>
-        void log_param_test_level2_unpack(const PARAM_TUPLE& param_tuple, const std::index_sequence<OBJ_INDICES...>& seq)
-        {
-            (void)seq;
-            parameter_expand_tools(log_param_test_level3<LEFT_PARAM_COUNT, TYPE_INDEX, OBJ_INDICES>(param_tuple)...);
-        }
-
-        template <size_t LEFT_PARAM_COUNT, size_t TYPE_INDEX, typename PARAM_TUPLE>
-        int32_t log_param_test_level2(const PARAM_TUPLE& param_tuple)
-        {
-            auto seq = std::make_index_sequence<std::get<TYPE_INDEX>(data_tuple).size()>();
-            log_param_test_level2_unpack<LEFT_PARAM_COUNT, TYPE_INDEX>(param_tuple, seq);
-            return 0;
-        }
-
-        template <size_t LEFT_PARAM_COUNT, typename PARAM_TUPLE, size_t... TYPE_INDICES>
-        void log_param_test_level1_unpack(const PARAM_TUPLE& param_tuple, const std::index_sequence<TYPE_INDICES...>& seq)
-        {
-            (void)seq;
-            parameter_expand_tools(log_param_test_level2<LEFT_PARAM_COUNT, TYPE_INDICES>(param_tuple)...);
         }
 
         template <size_t LEFT_PARAM_COUNT>
