@@ -1051,19 +1051,20 @@ jobs:
 
       - name: Unzip Artifacts
         run: |
+          ls -R artifacts/
           mkdir -p bin/tools/
           mkdir -p dist/
-          unzip artifacts/win64_static_artifact.zip -d dist/static_lib/
-          unzip artifacts/win64_dynamic_artifact.zip -d dist/dynamic_lib/
-          unzip artifacts/win64_tools_artifact.zip -d bin/tools/win64/
-          unzip artifacts/win64_android_artifact.zip -d dist/dynamic_lib/android/
-          unzip artifacts/linux_static_artifact.zip -d dist/static_lib/linux/
-          unzip artifacts/linux_dynamic_artifact.zip -d dist/dynamic_lib/linux/
-          unzip artifacts/linux_tools_artifact.zip -d bin/tools/linux/
-          unzip artifacts/mac_static_artifact.zip -d dist/static_lib/mac/
-          unzip artifacts/mac_dynamic_artifact.zip -d dist/dynamic_lib/mac/
-          unzip artifacts/mac_tools_artifact.zip -d bin/tools/mac/
-          unzip artifacts/ios_dynamic_artifact.zip -d dist/dynamic_lib/ios/
+          unzip artifacts/win64_static_artifact/win64_static_artifact.zip -d dist/static_lib/
+          unzip artifacts/win64_dynamic_artifact/win64_dynamic_artifact.zip -d dist/dynamic_lib/
+          unzip artifacts/win64_tools_artifact/win64_tools_artifact.zip -d bin/tools/win64/
+          unzip artifacts/win64_android_artifact/win64_android_artifact.zip -d dist/dynamic_lib/android/
+          unzip artifacts/linux_static_artifact/linux_static_artifact.zip -d dist/static_lib/linux/
+          unzip artifacts/linux_dynamic_artifact/linux_dynamic_artifact.zip -d dist/dynamic_lib/linux/
+          unzip artifacts/linux_tools_artifact/linux_tools_artifact.zip -d bin/tools/linux/
+          unzip artifacts/mac_static_artifact/mac_static_artifact.zip -d dist/static_lib/mac/
+          unzip artifacts/mac_dynamic_artifact/mac_dynamic_artifact.zip -d dist/dynamic_lib/mac/
+          unzip artifacts/mac_tools_artifact/mac_tools_artifact.zip -d bin/tools/mac/
+          unzip artifacts/ios_dynamic_artifact/ios_dynamic_artifact.zip -d dist/dynamic_lib/ios/
           
       - name: Combine and Commit Build Artifacts
         run: |
