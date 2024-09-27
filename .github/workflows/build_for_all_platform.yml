@@ -230,8 +230,8 @@ jobs:
 
 
 
-  #Linux
-  build_linux_test_and_run_GCC:
+  #Linux-ubuntu
+  build_ubuntu_test_and_run_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -249,7 +249,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_GCC.sh 
   
-  build_linux_test_and_run_Clang:
+  build_ubuntu_test_and_run_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -267,7 +267,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_Clang.sh 
 
-  build_linux_static_lib_Clang:
+  build_ubuntu_static_lib_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -291,7 +291,7 @@ jobs:
           name: linux_static_artifact
           path: dist/static_lib/linux/
   
-  build_linux_dynamic_lib_Clang:
+  build_ubuntu_dynamic_lib_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -315,7 +315,7 @@ jobs:
           name: linux_dynamic_artifact
           path: dist/dynamic_lib/linux/
 
-  build_linux_static_lib_GCC:
+  build_ubuntu_static_lib_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -333,7 +333,7 @@ jobs:
           chmod +x *.sh
           ./GenerateStaticLib_GCC.sh 
   
-  build_linux_dynamic_lib_GCC:
+  build_ubuntu_dynamic_lib_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -351,7 +351,7 @@ jobs:
           chmod +x *.sh
           ./GenerateDynamicLib_GCC.sh 
 
-  build_linux_tools_Clang:
+  build_ubuntu_tools_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -381,7 +381,7 @@ jobs:
           name: linux_tools_artifact
           path: bin\tools\linux
 
-  build_linux_tools_GCC:
+  build_ubuntu_tools_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -404,6 +404,253 @@ jobs:
           cd build/tools/category_log_generator/linux  
           chmod +x *.sh
           ./GenerateExecutable_GCC.sh
+
+
+
+  #linux-debian
+  build_debian_test_and_run_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+            while :; do echo "Still compiling..."; sleep 60; done &  
+            PERIODIC_OUTPUT_PID=$! 
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_GCC.sh 
+            kill $PERIODIC_OUTPUT_PID
+  
+  build_debian_test_and_run_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+            while :; do echo "Still compiling..."; sleep 60; done & 
+            PERIODIC_OUTPUT_PID=$! 
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_Clang.sh 
+            kill $PERIODIC_OUTPUT_PID
+
+
+  build_debian_static_lib_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateStaticLib_GCC.sh 
+  
+  build_debian_dynamic_lib_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateDynamicLib_GCC.sh 
+
+  build_debian_static_lib_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateStaticLib_Clang.sh 
+  
+  build_debian_dynamic_lib_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateDynamicLib_Clang.sh 
+
+  build_debian_tools_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build log_decoder for Debian
+        run: |
+          cd build/tools/log_decoder/linux
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh 
+
+      - name: Build category_log_generator for Debian
+        run: |
+          cd build/tools/category_log_generator/linux
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh 
+
+  build_debian_tools_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build log_decoder for Debian
+        run: |
+          cd build/tools/log_decoder/linux
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh 
+
+      - name: Build category_log_generator for Debian
+        run: |
+          cd build/tools/category_log_generator/linux
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh 
+
 
   #Mac
   build_mac_test_and_run:
@@ -537,7 +784,7 @@ jobs:
           name: ios_artifact
           path: dist/static_lib/ios/
 
-  #FreeBSD
+  #Unix-FreeBSD
   build_freeBSD_test_and_run_GCC:
     runs-on: ubuntu-latest
     steps:
@@ -743,250 +990,6 @@ jobs:
             ./GenerateExecutable_GCC.sh 
 
 
-  #debian
-  build_debian_test_and_run_GCC:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-            while :; do echo "Still compiling..."; sleep 60; done &  
-            PERIODIC_OUTPUT_PID=$! 
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ./RunTest_GCC.sh 
-            kill $PERIODIC_OUTPUT_PID
-  
-  build_debian_test_and_run_Clang:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-            while :; do echo "Still compiling..."; sleep 60; done & 
-            PERIODIC_OUTPUT_PID=$! 
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ./RunTest_Clang.sh 
-            kill $PERIODIC_OUTPUT_PID
-
-
-  build_debian_static_lib_GCC:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-          cd build/lib/unix_like
-          chmod +x *.sh
-          ./GenerateStaticLib_GCC.sh 
-  
-  build_debian_dynamic_lib_GCC:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-          cd build/lib/unix_like
-          chmod +x *.sh
-          ./GenerateDynamicLib_GCC.sh 
-
-  build_debian_static_lib_Clang:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-          cd build/lib/unix_like
-          chmod +x *.sh
-          ./GenerateStaticLib_Clang.sh 
-  
-  build_debian_dynamic_lib_Clang:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-          cd build/lib/unix_like
-          chmod +x *.sh
-          ./GenerateDynamicLib_Clang.sh 
-
-  build_debian_tools_Clang:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build log_decoder for Debian
-        run: |
-          cd build/tools/log_decoder/unix_like
-          chmod +x *.sh
-          ./GenerateExecutable_Clang.sh 
-
-      - name: Build category_log_generator for Debian
-        run: |
-          cd build/tools/category_log_generator/unix_like
-          chmod +x *.sh
-          ./GenerateExecutable_Clang.sh 
-
-  build_debian_tools_GCC:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build log_decoder for Debian
-        run: |
-          cd build/tools/log_decoder/unix_like
-          chmod +x *.sh
-          ./GenerateExecutable_GCC.sh 
-
-      - name: Build category_log_generator for Debian
-        run: |
-          cd build/tools/category_log_generator/unix_like
-          chmod +x *.sh
-          ./GenerateExecutable_GCC.sh 
-
   
 
   deploy:
@@ -1001,14 +1004,22 @@ jobs:
       - build_windows_tools
       - build_windows_android
       - build_mac_android
-      #- build_linux_test_and_run_GCC
-      #- build_linux_test_and_run_Clang
-      - build_linux_static_lib_Clang
-      - build_linux_dynamic_lib_Clang
-      - build_linux_static_lib_GCC
-      - build_linux_dynamic_lib_GCC
-      - build_linux_tools_Clang
-      - build_linux_tools_GCC
+      #- build_ubuntu_test_and_run_GCC
+      #- build_ubuntu_test_and_run_Clang
+      - build_ubuntu_static_lib_Clang
+      - build_ubuntu_dynamic_lib_Clang
+      - build_ubuntu_static_lib_GCC
+      - build_ubuntu_dynamic_lib_GCC
+      - build_ubuntu_tools_Clang
+      - build_ubuntu_tools_GCC
+      #- build_debian_test_and_run_GCC
+      #- build_debian_test_and_run_Clang
+      - build_debian_static_lib_GCC
+      - build_debian_dynamic_lib_GCC
+      - build_debian_static_lib_Clang
+      - build_debian_dynamic_lib_Clang
+      - build_debian_tools_Clang
+      - build_debian_tools_GCC
       #- build_mac_test_and_run
       - build_macos_all_static_libs
       - build_macos_all_dynamic_libs
@@ -1022,14 +1033,6 @@ jobs:
       - build_freeBSD_dynamic_lib_GCC
       - build_freeBSD_tools_Clang
       - build_freeBSD_tools_GCC
-      #- build_debian_test_and_run_GCC
-      #- build_debian_test_and_run_Clang
-      - build_debian_static_lib_GCC
-      - build_debian_dynamic_lib_GCC
-      - build_debian_static_lib_Clang
-      - build_debian_dynamic_lib_Clang
-      - build_debian_tools_Clang
-      - build_debian_tools_GCC
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1041,11 +1044,6 @@ jobs:
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
-        with:
-          name: Download
-          path: |
-            dist/
-            bin/tools/
 
 
       - name: Combine and Commit Build Artifacts
