@@ -2,7 +2,7 @@ name: Cross-Platform Build and Deploy
 
 on:
   workflow_dispatch:  # manually trigger
-  
+
 permissions:
   contents: write
 
@@ -998,7 +998,7 @@ jobs:
   
 
   push_to_repo:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     needs: 
       #- build_windows_test_and_run_MSVC
       #- build_windows_test_and_run_Clang
@@ -1044,8 +1044,19 @@ jobs:
 
       - name: Clear Output Folders
         run: |
-          rm -rf bin/tools/
-          rm -rf dist/
+          rm -rf bin/tools/win64
+          rm -rf bin/tools/linux
+          rm -rf bin/tools/mac
+          rm -rf dist/dynamic_lib/include
+          rm -rf dist/dynamic_lib/android
+          rm -rf dist/dynamic_lib/ios
+          rm -rf dist/dynamic_lib/linux
+          rm -rf dist/dynamic_lib/mac
+          rm -rf dist/dynamic_lib/win64
+          rm -rf dist/static_lib/include
+          rm -rf dist/static_lib/linux
+          rm -rf dist/static_lib/mac
+          rm -rf dist/static_lib/win64
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -1055,8 +1066,6 @@ jobs:
       - name: Unzip Artifacts
         run: |
           ls -R artifacts/
-          mkdir -p bin/tools/
-          mkdir -p dist/
           mkdir -p dist/static_lib/win64
           mkdir -p dist/dynamic_lib/win64
           mkdir -p bin/tools/win64/
