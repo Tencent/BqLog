@@ -560,7 +560,10 @@ jobs:
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/test/unix_like  
             chmod +x *.sh
+            while :; do echo "Still compiling..."; sleep 60; done &  
+            PERIODIC_OUTPUT_PID=$! 
             ./RunTest_GCC.sh 
+            kill $PERIODIC_OUTPUT_PID
   
   build_freeBSD_test_and_run_Clang:
     runs-on: ubuntu-latest
@@ -584,7 +587,10 @@ jobs:
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/test/unix_like  
             chmod +x *.sh
+            while :; do echo "Still compiling..."; sleep 60; done &  
+            PERIODIC_OUTPUT_PID=$! 
             ./RunTest_Clang.sh 
+            kill $PERIODIC_OUTPUT_PID
 
   build_freeBSD_static_lib_Clang:
     runs-on: ubuntu-latest
@@ -741,7 +747,7 @@ jobs:
   build_debian_test_and_run_GCC:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -762,7 +768,7 @@ jobs:
 
       - name: Build for Debian
         run: |
-            while :; do echo "Still compiling..."; sleep 60; done &  # 启动后台进程
+            while :; do echo "Still compiling..."; sleep 60; done &  
             PERIODIC_OUTPUT_PID=$! 
             cd build/test/unix_like  
             chmod +x *.sh
@@ -772,7 +778,7 @@ jobs:
   build_debian_test_and_run_Clang:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -793,7 +799,7 @@ jobs:
 
       - name: Build for Debian
         run: |
-            while :; do echo "Still compiling..."; sleep 60; done &  # 启动后台进程
+            while :; do echo "Still compiling..."; sleep 60; done & 
             PERIODIC_OUTPUT_PID=$! 
             cd build/test/unix_like  
             chmod +x *.sh
@@ -804,7 +810,7 @@ jobs:
   build_debian_static_lib_GCC:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -832,7 +838,7 @@ jobs:
   build_debian_dynamic_lib_GCC:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -860,7 +866,7 @@ jobs:
   build_debian_static_lib_Clang:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -888,7 +894,7 @@ jobs:
   build_debian_dynamic_lib_Clang:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -916,7 +922,7 @@ jobs:
   build_debian_tools_Clang:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -950,7 +956,7 @@ jobs:
   build_debian_tools_GCC:
     runs-on: ubuntu-latest
     container: 
-      image: debian:latest
+      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
