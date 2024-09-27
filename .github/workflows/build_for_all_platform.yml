@@ -61,7 +61,14 @@ jobs:
           .\Build_Static_Lib_MSVC.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-  
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            dist\static_lib\win64\
+            dist\static_lib\include\
+
   build_windows_dynamic_lib_MSVC:
     runs-on: windows-latest
     steps:
@@ -80,6 +87,13 @@ jobs:
           .\Build_Dynamic_Lib_MSVC.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            dist\dynamic_lib\win64\
+            dist\dynamic_lib\include\
 
   build_windows_static_lib_Clang:
     runs-on: windows-latest
@@ -119,7 +133,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_tools_decoder:
+  build_windows_tools:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -131,31 +145,24 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Build for Windows
+      - name: Build decoder for Windows
         run: |
           cd build\tools\log_decoder\win64  
           .\GenerateExecutable.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_tools_category_log_generator:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
+      - name: Build category_log_generator for Windows
         run: |
           cd build\tools\category_log_generator\win64  
           .\GenerateExecutable.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: bin\tools\win64
 
 
   #Android
@@ -184,6 +191,11 @@ jobs:
           .\Win_Build_Dynamic_Lib.bat 
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist\dynamic_lib\android\
 
   build_mac_android:
     runs-on: macos-latest
@@ -268,6 +280,11 @@ jobs:
           cd build/lib/linux  
           chmod +x *.sh
           ./GenerateStaticLib_Clang.sh 
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist/static_lib/linux/
   
   build_linux_dynamic_lib_Clang:
     runs-on: ubuntu-latest
@@ -286,6 +303,11 @@ jobs:
           cd build/lib/linux  
           chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist/dynamic_lib/linux/
 
   build_linux_static_lib_GCC:
     runs-on: ubuntu-latest
@@ -323,7 +345,7 @@ jobs:
           chmod +x *.sh
           ./GenerateDynamicLib_GCC.sh 
 
-  build_linux_tools_decoder_Clang:
+  build_linux_tools_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -335,49 +357,24 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Build for Linux
+      - name: Build decoder for Linux
         run: |
           cd build/tools/log_decoder/linux  
           chmod +x *.sh
           ./GenerateExecutable_Clang.sh
 
-  build_linux_tools_decoder_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Linux
-        run: |
-          cd build/tools/log_decoder/linux  
-          chmod +x *.sh
-          ./GenerateExecutable_GCC.sh
-
-  build_linux_tools_category_log_generator_Clang:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Linux
+      - name: Build category_log_generator for Linux
         run: |
           cd build/tools/category_log_generator/linux  
           chmod +x *.sh
           ./GenerateExecutable_Clang.sh
 
-  build_linux_tools_category_log_generator_GCC:
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: bin\tools\linux
+
+  build_linux_tools_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -389,7 +386,13 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Build for Linux
+      - name: Build decoder for Linux
+        run: |
+          cd build/tools/log_decoder/linux  
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh
+
+      - name: Build category_log_generator for Linux
         run: |
           cd build/tools/category_log_generator/linux  
           chmod +x *.sh
@@ -438,6 +441,11 @@ jobs:
           chmod +x *.sh
           ./GenerateStaticLib_AllFormat.sh 
 
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist/static_lib/mac/
+
   build_macos_all_dynamic_libs:
     runs-on: macos-latest
     steps:
@@ -459,7 +467,12 @@ jobs:
           chmod +x *.sh
           ./GenerateDynamicLib_AllFormat.sh 
 
-  build_macos_tools_decoder:
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist/dynamic_lib/mac/
+
+  build_macos_tools:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -474,32 +487,23 @@ jobs:
       - name: Set up XCode
         run: sudo xcode-select --switch /Applications/Xcode.app
 
-      - name: Build for macOS
+      - name: Build decoder for macOS
         run: |
           cd build/tools/log_decoder/mac  
           chmod +x *.sh
           ./GenerateExecutable.sh 
 
-  build_macos_tools_category_log_generator:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
-      - name: Build for macOS
+      - name: Build category_log_generator for macOS
         run: |
           cd build/tools/category_log_generator/mac  
           chmod +x *.sh
           ./GenerateExecutable.sh 
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: bin\tools\linux
+
 
   #iOS
   build_ios:
@@ -516,6 +520,11 @@ jobs:
           cd build/lib/ios  
           chmod +x *.sh
           ./MacGenerator.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist/static_lib/ios/
 
   #FreeBSD
   build_freeBSD_test_and_run_GCC:
@@ -662,7 +671,7 @@ jobs:
             chmod +x *.sh
             ./GenerateDynamicLib_GCC.sh 
 
-  build_freeBSD_tools_decoder_Clang:
+  build_freeBSD_tools_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -685,8 +694,11 @@ jobs:
             cd build/tools/log_decoder/unix_like
             chmod +x *.sh
             ./GenerateExecutable_Clang.sh 
+            cd ../../category_log_generator/unix_like
+            chmod +x *.sh
+            ./GenerateExecutable_Clang.sh 
 
-  build_freeBSD_tools_decoder_GCC:
+  build_freeBSD_tools_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -709,55 +721,10 @@ jobs:
             cd build/tools/log_decoder/unix_like
             chmod +x *.sh
             ./GenerateExecutable_GCC.sh 
-
-  build_freeBSD_tools_category_log_generator_Clang:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -y gcc cmake bash openjdk11
-
-          run: |
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/tools/category_log_generator/unix_like
-            chmod +x *.sh
-            ./GenerateExecutable_Clang.sh 
-
-  build_freeBSD_tools_category_log_generator_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -y gcc cmake bash openjdk11
-
-          run: |
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/tools/category_log_generator/unix_like
+            cd ../../category_log_generator/unix_like
             chmod +x *.sh
             ./GenerateExecutable_GCC.sh 
-  
+
 
   #debian
   build_debian_test_and_run_GCC:
@@ -879,7 +846,7 @@ jobs:
           chmod +x *.sh
           ./GenerateDynamicLib_GCC.sh 
 
-  build_debian_tools_decoder_Clang:
+  build_debian_static_lib_Clang:
     runs-on: ubuntu-latest
     container: 
       image: debian:latest
@@ -902,68 +869,74 @@ jobs:
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
       - name: Build for Debian
+        run: |
+          cd build/lib/unix_like
+          chmod +x *.sh
+          ./GenerateStaticLib_Clang.sh 
+  
+  build_debian_dynamic_lib_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/unix_like
+          chmod +x *.sh
+          ./GenerateDynamicLib_Clang.sh 
+
+  build_debian_tools_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build log_decoder for Debian
         run: |
           cd build/tools/log_decoder/unix_like
           chmod +x *.sh
           ./GenerateExecutable_Clang.sh 
 
-  build_debian_tools_decoder_GCC:
-    runs-on: ubuntu-latest
-    container: 
-      image: debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-          cd build/tools/log_decoder/unix_like
-          chmod +x *.sh
-          ./GenerateExecutable_GCC.sh 
-
-  build_debian_tools_category_log_generator_Clang:
-    runs-on: ubuntu-latest
-    container: 
-      image: debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
+      - name: Build category_log_generator for Debian
         run: |
           cd build/tools/category_log_generator/unix_like
           chmod +x *.sh
           ./GenerateExecutable_Clang.sh 
 
-  build_debian_tools_category_log_generator_GCC:
+  build_debian_tools_GCC:
     runs-on: ubuntu-latest
     container: 
       image: debian:latest
@@ -985,8 +958,85 @@ jobs:
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
-      - name: Build for Debian
+      - name: Build log_decoder for Debian
+        run: |
+          cd build/tools/log_decoder/unix_like
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh 
+
+      - name: Build category_log_generator for Debian
         run: |
           cd build/tools/category_log_generator/unix_like
           chmod +x *.sh
           ./GenerateExecutable_GCC.sh 
+
+  
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: 
+      #- build_windows_test_and_run_MSVC
+      #- build_windows_test_and_run_Clang
+      - build_windows_static_lib_MSVC
+      - build_windows_dynamic_lib_MSVC
+      - build_windows_static_lib_Clang
+      - build_windows_dynamic_lib_Clang
+      - build_windows_tools
+      - build_windows_android
+      - build_mac_android
+      #- build_linux_test_and_run_GCC
+      #- build_linux_test_and_run_Clang
+      - build_linux_static_lib_Clang
+      - build_linux_dynamic_lib_Clang
+      - build_linux_static_lib_GCC
+      - build_linux_dynamic_lib_GCC
+      - build_linux_tools_Clang
+      - build_linux_tools_GCC
+      #- build_mac_test_and_run
+      - build_macos_all_static_libs
+      - build_macos_all_dynamic_libs
+      - build_macos_tools
+      - build_ios
+      #- build_freeBSD_test_and_run_GCC
+      #- build_freeBSD_test_and_run_Clang
+      - build_freeBSD_static_lib_Clang
+      - build_freeBSD_dynamic_lib_Clang
+      - build_freeBSD_static_lib_GCC
+      - build_freeBSD_dynamic_lib_GCC
+      - build_freeBSD_tools_Clang
+      - build_freeBSD_tools_GCC
+      #- build_debian_test_and_run_GCC
+      #- build_debian_test_and_run_Clang
+      - build_debian_static_lib_GCC
+      - build_debian_dynamic_lib_GCC
+      - build_debian_static_lib_Clang
+      - build_debian_dynamic_lib_Clang
+      - build_debian_tools_Clang
+      - build_debian_tools_GCC
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clear Output Folders
+        run: |
+          rm -rf bin/tools/
+          rm -rf dist/
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Download
+          path: |
+            dist/
+            bin/tools/
+
+
+      - name: Combine and Commit Build Artifacts
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add bin/tools/
+          git add dist/
+          git commit -m "Github Auto CI"
+          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+          git push origin HEAD:$BRANCH_NAME
