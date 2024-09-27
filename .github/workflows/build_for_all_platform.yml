@@ -946,6 +946,7 @@ jobs:
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
+          mem: 16384
           prepare: |
             pkg install -y gcc cmake bash openjdk11
 
@@ -973,6 +974,7 @@ jobs:
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
+          mem: 16384
           prepare: |
             pkg install -y gcc cmake bash openjdk11
 
@@ -1044,22 +1046,24 @@ jobs:
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
 
       - name: Unzip Artifacts
         run: |
           mkdir -p bin/tools/
           mkdir -p dist/
-          unzip win64_static_artifact.zip -d dist/static_lib/
-          unzip win64_dynamic_artifact.zip -d dist/dynamic_lib/
-          unzip win64_tools_artifact.zip -d bin/tools/win64/
-          unzip win64_android_artifact.zip -d dist/dynamic_lib/android/
-          unzip linux_static_artifact.zip -d dist/static_lib/linux/
-          unzip linux_dynamic_artifact.zip -d dist/dynamic_lib/linux/
-          unzip linux_tools_artifact.zip -d bin/tools/linux/
-          unzip mac_static_artifact.zip -d dist/static_lib/mac/
-          unzip mac_dynamic_artifact.zip -d dist/dynamic_lib/mac/
-          unzip mac_tools_artifact.zip -d bin/tools/mac/
-          unzip ios_dynamic_artifact.zip -d dist/dynamic_lib/ios/
+          unzip artifacts/win64_static_artifact.zip -d dist/static_lib/
+          unzip artifacts/win64_dynamic_artifact.zip -d dist/dynamic_lib/
+          unzip artifacts/win64_tools_artifact.zip -d bin/tools/win64/
+          unzip artifacts/win64_android_artifact.zip -d dist/dynamic_lib/android/
+          unzip artifacts/linux_static_artifact.zip -d dist/static_lib/linux/
+          unzip artifacts/linux_dynamic_artifact.zip -d dist/dynamic_lib/linux/
+          unzip artifacts/linux_tools_artifact.zip -d bin/tools/linux/
+          unzip artifacts/mac_static_artifact.zip -d dist/static_lib/mac/
+          unzip artifacts/mac_dynamic_artifact.zip -d dist/dynamic_lib/mac/
+          unzip artifacts/mac_tools_artifact.zip -d bin/tools/mac/
+          unzip artifacts/ios_dynamic_artifact.zip -d dist/dynamic_lib/ios/
           
       - name: Combine and Commit Build Artifacts
         run: |
