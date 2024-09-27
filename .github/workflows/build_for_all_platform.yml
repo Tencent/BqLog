@@ -784,9 +784,12 @@ jobs:
 
       - name: Build for Debian
         run: |
+            while :; do echo "Still compiling..."; sleep 60; done &  # 启动后台进程
+            PERIODIC_OUTPUT_PID=$! 
             cd build/test/unix_like  
             chmod +x *.sh
             ./RunTest_GCC.sh 
+            kill $PERIODIC_OUTPUT_PID
   
   build_debian_test_and_run_Clang:
     runs-on: ubuntu-latest
@@ -812,9 +815,12 @@ jobs:
 
       - name: Build for Debian
         run: |
+            while :; do echo "Still compiling..."; sleep 60; done &  # 启动后台进程
+            PERIODIC_OUTPUT_PID=$! 
             cd build/test/unix_like  
             chmod +x *.sh
             ./RunTest_Clang.sh 
+            kill $PERIODIC_OUTPUT_PID
 
 
   build_debian_static_lib_GCC:
