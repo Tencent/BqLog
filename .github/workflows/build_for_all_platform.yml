@@ -2,6 +2,9 @@ name: Cross-Platform Build and Deploy
 
 on:
   workflow_dispatch:  # manually trigger
+  
+permissions:
+  contents: write
 
 jobs:
   #Windows
@@ -66,9 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: win64_static_artifact
-          path: |
-            dist\static_lib\win64\
-            dist\static_lib\include\
+          path: dist\static_lib\win64\
 
   build_windows_dynamic_lib_MSVC:
     runs-on: windows-latest
@@ -93,9 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: win64_dynamic_artifact
-          path: |
-            dist\dynamic_lib\win64\
-            dist\dynamic_lib\include\
+          path: dist\dynamic_lib\win64\
 
   build_windows_static_lib_Clang:
     runs-on: windows-latest
@@ -289,7 +288,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux_static_artifact
-          path: dist/static_lib/linux/
+          path: |
+            dist/static_lib/linux/
+            dist/static_lib/include/   
   
   build_ubuntu_dynamic_lib_Clang:
     runs-on: ubuntu-latest
@@ -313,7 +314,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux_dynamic_artifact
-          path: dist/dynamic_lib/linux/
+          path: |
+            dist/dynamic_lib/linux/
+            dist/dynamic_lib/include/  
 
   build_ubuntu_static_lib_GCC:
     runs-on: ubuntu-latest
@@ -1054,8 +1057,8 @@ jobs:
           ls -R artifacts/
           mkdir -p bin/tools/
           mkdir -p dist/
-          mkdir -p dist/static_lib/
-          mkdir -p dist/dynamic_lib/
+          mkdir -p dist/static_lib/win64
+          mkdir -p dist/dynamic_lib/win64
           mkdir -p bin/tools/win64/
           mkdir -p dist/dynamic_lib/android/
           mkdir -p dist/static_lib/linux/
@@ -1065,12 +1068,12 @@ jobs:
           mkdir -p dist/dynamic_lib/mac/
           mkdir -p bin/tools/mac/
           mkdir -p dist/dynamic_lib/ios/
-          cp -r artifacts/win64_static_artifact/* dist/static_lib/
-          cp -r artifacts/win64_dynamic_artifact/* dist/dynamic_lib/
+          cp -r artifacts/win64_static_artifact/* dist/static_lib/win64
+          cp -r artifacts/win64_dynamic_artifact/* dist/dynamic_lib/win64
           cp -r artifacts/win64_tools_artifact/* bin/tools/win64/
           cp -r artifacts/win64_android_artifact/* dist/dynamic_lib/android/
-          cp -r artifacts/linux_static_artifact/* dist/static_lib/linux/
-          cp -r artifacts/linux_dynamic_artifact/* dist/dynamic_lib/linux/
+          cp -r artifacts/linux_static_artifact/* dist/static_lib/
+          cp -r artifacts/linux_dynamic_artifact/* dist/dynamic_lib/
           cp -r artifacts/linux_tools_artifact/* bin/tools/linux/
           cp -r artifacts/mac_static_artifact/* dist/static_lib/mac/
           cp -r artifacts/mac_dynamic_artifact/* dist/dynamic_lib/mac/
