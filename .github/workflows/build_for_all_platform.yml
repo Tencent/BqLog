@@ -280,6 +280,7 @@ jobs:
 
       - name: Build for Linux
         run: |
+          rm -rf dist/static_lib/include/
           cd build/lib/linux  
           chmod +x *.sh
           ./GenerateStaticLib_Clang.sh 
@@ -306,6 +307,7 @@ jobs:
 
       - name: Build for Linux
         run: |
+          rm -rf dist/dynamic_lib/include/
           cd build/lib/linux  
           chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
@@ -694,6 +696,7 @@ jobs:
 
       - name: Build for macOS
         run: |
+          rm -rf dist/static_lib/mac/
           cd build/lib/mac  
           chmod +x *.sh
           ./GenerateStaticLib_AllFormat.sh 
@@ -721,6 +724,7 @@ jobs:
 
       - name: Build for macOS
         run: |
+          rm -rf dist/dynamic_lib/mac/
           cd build/lib/mac  
           chmod +x *.sh
           ./GenerateDynamicLib_AllFormat.sh 
@@ -748,6 +752,7 @@ jobs:
 
       - name: Build decoder for macOS
         run: |
+          rm -rf bin/tools/mac/
           cd build/tools/log_decoder/mac  
           chmod +x *.sh
           ./GenerateExecutable.sh 
@@ -777,6 +782,7 @@ jobs:
 
       - name: Build for iOS
         run: |
+          rm -rf dist/dynamic_lib/ios/
           cd build/lib/ios  
           chmod +x *.sh
           ./MacGenerator.sh

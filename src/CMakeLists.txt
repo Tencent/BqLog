@@ -13,8 +13,8 @@ set(BUILD_TYPE "static_lib" CACHE STRING "Choose the build type")
 set_property(CACHE BUILD_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib")
 
 if(TARGET_PLATFORM STREQUAL "mac" OR TARGET_PLATFORM STREQUAL "ios")
-set(APPLE_LIB_FORMAT "dylib" CACHE STRING "Apple build format")
-set_property(CACHE APPLE_LIB_FORMAT PROPERTY STRINGS "dylib" "framework")
+set(APPLE_LIB_FORMAT "framework" CACHE STRING "Apple build format")
+set_property(CACHE APPLE_LIB_FORMAT PROPERTY STRINGS "framework" "dylib" "a")
 endif()
 
 OPTION(JAVA_SUPPORT "Support Java" OFF) 
