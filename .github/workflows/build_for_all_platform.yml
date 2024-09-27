@@ -1006,8 +1006,8 @@ jobs:
   push_to_repo:
     runs-on: macos-latest
     needs: 
-      #- build_windows_test_and_run_MSVC
-      #- build_windows_test_and_run_Clang
+      - build_windows_test_and_run_MSVC
+      - build_windows_test_and_run_Clang
       - build_windows_static_lib_MSVC
       - build_windows_dynamic_lib_MSVC
       - build_windows_static_lib_Clang
@@ -1015,29 +1015,29 @@ jobs:
       - build_windows_tools
       - build_windows_android
       - build_mac_android
-      #- build_ubuntu_test_and_run_GCC
-      #- build_ubuntu_test_and_run_Clang
+      - build_ubuntu_test_and_run_GCC
+      - build_ubuntu_test_and_run_Clang
       - build_ubuntu_static_lib_Clang
       - build_ubuntu_dynamic_lib_Clang
       - build_ubuntu_static_lib_GCC
       - build_ubuntu_dynamic_lib_GCC
       - build_ubuntu_tools_Clang
       - build_ubuntu_tools_GCC
-      #- build_debian_test_and_run_GCC
-      #- build_debian_test_and_run_Clang
+      - build_debian_test_and_run_GCC
+      - build_debian_test_and_run_Clang
       - build_debian_static_lib_GCC
       - build_debian_dynamic_lib_GCC
       - build_debian_static_lib_Clang
       - build_debian_dynamic_lib_Clang
       - build_debian_tools_Clang
       - build_debian_tools_GCC
-      #- build_mac_test_and_run
+      - build_mac_test_and_run
       - build_macos_all_static_libs
       - build_macos_all_dynamic_libs
       - build_macos_tools
       - build_ios
-      #- build_freeBSD_test_and_run_GCC
-      #- build_freeBSD_test_and_run_Clang
+      - build_freeBSD_test_and_run_GCC
+      - build_freeBSD_test_and_run_Clang
       - build_freeBSD_static_lib_Clang
       - build_freeBSD_dynamic_lib_Clang
       - build_freeBSD_static_lib_GCC
