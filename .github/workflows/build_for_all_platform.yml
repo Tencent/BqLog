@@ -1101,6 +1101,13 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add bin/tools/
           git add dist/
-          git commit -m "Github Auto CI"
+
+          ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          git commit -m "Github Auto CI - Action URL: $ACTION_URL"
+
+          echo "Git Log:"
+          git log -1 --stat
+
           BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Tencent/BqLog.git HEAD:$BRANCH_NAME
