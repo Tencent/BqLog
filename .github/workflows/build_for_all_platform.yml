@@ -746,9 +746,13 @@ jobs:
   #debian
   build_debian_test_and_run_GCC:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -777,9 +781,13 @@ jobs:
   
   build_debian_test_and_run_Clang:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -809,9 +817,13 @@ jobs:
 
   build_debian_static_lib_GCC:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+        
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -837,9 +849,13 @@ jobs:
   
   build_debian_dynamic_lib_GCC:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+        
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -865,9 +881,13 @@ jobs:
 
   build_debian_static_lib_Clang:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+        
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -893,9 +913,13 @@ jobs:
   
   build_debian_dynamic_lib_Clang:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+        
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -921,9 +945,13 @@ jobs:
 
   build_debian_tools_Clang:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+        
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -955,9 +983,13 @@ jobs:
 
   build_debian_tools_GCC:
     runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image from GitHub Packages
+        run: docker pull ghcr.io/pippocao/bqlog/debian:latest
+        
       - name: Checkout repository
         uses: actions/checkout@v4
 
