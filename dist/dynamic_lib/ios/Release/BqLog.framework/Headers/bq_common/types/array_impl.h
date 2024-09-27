@@ -402,7 +402,6 @@ namespace bq {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow" // GCC warning check
 #pragma GCC diagnostic ignored "-Warray-bounds" // GCC warning check
-#pragma GCC diagnostic ignored "-Wrestrict" // GCC error check
 #endif
         memcpy(dest, src, count * sizeof(T));
 #if defined(BQ_GCC)
