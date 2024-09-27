@@ -379,7 +379,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux_tools_artifact
-          path: bin\tools\linux
+          path: bin/tools/linux
 
   build_ubuntu_tools_GCC:
     runs-on: ubuntu-latest
@@ -759,7 +759,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mac_tools_artifact
-          path: bin\tools\linux
+          path: bin/tools/mac
 
 
   #iOS
@@ -781,8 +781,8 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ios_artifact
-          path: dist/static_lib/ios/
+          name: ios_dynamic_artifact
+          path: dist/dynamic_lib/ios/
 
   #Unix-FreeBSD
   build_freeBSD_test_and_run_GCC:
@@ -1045,7 +1045,22 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
 
-
+      - name: Unzip Artifacts
+        run: |
+          mkdir -p bin/tools/
+          mkdir -p dist/
+          unzip win64_static_artifact.zip -d dist/static_lib/
+          unzip win64_dynamic_artifact.zip -d dist/dynamic_lib/
+          unzip win64_tools_artifact.zip -d bin/tools/win64/
+          unzip win64_android_artifact.zip -d dist/dynamic_lib/android/
+          unzip linux_static_artifact.zip -d dist/static_lib/linux/
+          unzip linux_dynamic_artifact.zip -d dist/dynamic_lib/linux/
+          unzip linux_tools_artifact.zip -d bin/tools/linux/
+          unzip mac_static_artifact.zip -d dist/static_lib/mac/
+          unzip mac_dynamic_artifact.zip -d dist/dynamic_lib/mac/
+          unzip mac_tools_artifact.zip -d bin/tools/mac/
+          unzip ios_dynamic_artifact.zip -d dist/dynamic_lib/ios/
+          
       - name: Combine and Commit Build Artifacts
         run: |
           git config --global user.name "github-actions[bot]"
@@ -1054,4 +1069,4 @@ jobs:
           git add dist/
           git commit -m "Github Auto CI"
           BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-          git push origin HEAD:$BRANCH_NAME
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Tencent/BqLog.git HEAD:$BRANCH_NAME
