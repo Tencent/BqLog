@@ -65,6 +65,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: win64_static_artifact
           path: |
             dist\static_lib\win64\
             dist\static_lib\include\
@@ -91,6 +92,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: win64_dynamic_artifact
           path: |
             dist\dynamic_lib\win64\
             dist\dynamic_lib\include\
@@ -162,6 +164,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: win64_tools_artifact
           path: bin\tools\win64
 
 
@@ -195,6 +198,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: win64_android_artifact
           path: dist\dynamic_lib\android\
 
   build_mac_android:
@@ -284,6 +288,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: linux_static_artifact
           path: dist/static_lib/linux/
   
   build_linux_dynamic_lib_Clang:
@@ -307,6 +312,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: linux_dynamic_artifact
           path: dist/dynamic_lib/linux/
 
   build_linux_static_lib_GCC:
@@ -372,6 +378,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: linux_tools_artifact
           path: bin\tools\linux
 
   build_linux_tools_GCC:
@@ -444,6 +451,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: mac_static_artifact
           path: dist/static_lib/mac/
 
   build_macos_all_dynamic_libs:
@@ -470,6 +478,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: mac_dynamic_artifact
           path: dist/dynamic_lib/mac/
 
   build_macos_tools:
@@ -502,6 +511,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: mac_tools_artifact
           path: bin\tools\linux
 
 
@@ -524,6 +534,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: ios_artifact
           path: dist/static_lib/ios/
 
   #FreeBSD
