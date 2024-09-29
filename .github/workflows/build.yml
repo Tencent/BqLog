@@ -1,51 +1,14 @@
 name: Cross-Platform Build and Deploy
 
-on:
+on:  
   workflow_dispatch:  # manually trigger
+  workflow_call:
 
 permissions:
   contents: write
 
 jobs:
   #Windows
-  build_windows_test_and_run_MSVC:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_MSVC.bat 
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-  
-  build_windows_test_and_run_Clang:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_Clang.bat 
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
   build_windows_static_lib_MSVC:
     runs-on: windows-latest
     steps:
@@ -230,42 +193,6 @@ jobs:
 
 
   #Linux-ubuntu
-  build_ubuntu_test_and_run_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./RunTest_GCC.sh 
-  
-  build_ubuntu_test_and_run_Clang:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./RunTest_Clang.sh 
-
   build_ubuntu_static_lib_Clang:
     runs-on: ubuntu-latest
     steps:
@@ -413,69 +340,6 @@ jobs:
 
 
   #linux-debian
-  build_debian_test_and_run_GCC:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-            while :; do echo "Still compiling..."; sleep 60; done &  
-            PERIODIC_OUTPUT_PID=$! 
-            cd build/test/linux  
-            chmod +x *.sh
-            ./RunTest_GCC.sh 
-            kill $PERIODIC_OUTPUT_PID
-  
-  build_debian_test_and_run_Clang:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-            while :; do echo "Still compiling..."; sleep 60; done & 
-            PERIODIC_OUTPUT_PID=$! 
-            cd build/test/linux  
-            chmod +x *.sh
-            ./RunTest_Clang.sh 
-            kill $PERIODIC_OUTPUT_PID
-
-
   build_debian_static_lib_GCC:
     runs-on: ubuntu-latest
     container: 
@@ -658,27 +522,6 @@ jobs:
 
 
   #Mac
-  build_mac_test_and_run:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
-      - name: Build for macOS
-        run: |
-          cd build/test/mac  
-          chmod +x *.sh
-          ./RunTest.sh 
-
   build_macos_all_static_libs:
     runs-on: macos-latest
     steps:
@@ -794,60 +637,6 @@ jobs:
           path: dist/dynamic_lib/ios/
 
   #Unix-FreeBSD
-  build_freeBSD_test_and_run_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -y gcc cmake bash openjdk11
-
-          run: |
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/test/unix_like  
-            chmod +x *.sh
-            while :; do echo "Still compiling..."; sleep 60; done &  
-            PERIODIC_OUTPUT_PID=$! 
-            ./RunTest_GCC.sh 
-            kill $PERIODIC_OUTPUT_PID
-  
-  build_freeBSD_test_and_run_Clang:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -y gcc cmake bash openjdk11
-
-          run: |
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/test/unix_like  
-            chmod +x *.sh
-            while :; do echo "Still compiling..."; sleep 60; done &  
-            PERIODIC_OUTPUT_PID=$! 
-            ./RunTest_Clang.sh 
-            kill $PERIODIC_OUTPUT_PID
-
   build_freeBSD_static_lib_Clang:
     runs-on: ubuntu-latest
     steps:
@@ -999,115 +788,3 @@ jobs:
             cd ../../category_log_generator/unix_like
             chmod +x *.sh
             ./GenerateExecutable_GCC.sh 
-
-
-  
-
-  push_to_repo:
-    runs-on: macos-latest
-    needs: 
-      - build_windows_test_and_run_MSVC
-      - build_windows_test_and_run_Clang
-      - build_windows_static_lib_MSVC
-      - build_windows_dynamic_lib_MSVC
-      - build_windows_static_lib_Clang
-      - build_windows_dynamic_lib_Clang
-      - build_windows_tools
-      - build_windows_android
-      - build_mac_android
-      - build_ubuntu_test_and_run_GCC
-      - build_ubuntu_test_and_run_Clang
-      - build_ubuntu_static_lib_Clang
-      - build_ubuntu_dynamic_lib_Clang
-      - build_ubuntu_static_lib_GCC
-      - build_ubuntu_dynamic_lib_GCC
-      - build_ubuntu_tools_Clang
-      - build_ubuntu_tools_GCC
-      - build_debian_test_and_run_GCC
-      - build_debian_test_and_run_Clang
-      - build_debian_static_lib_GCC
-      - build_debian_dynamic_lib_GCC
-      - build_debian_static_lib_Clang
-      - build_debian_dynamic_lib_Clang
-      - build_debian_tools_Clang
-      - build_debian_tools_GCC
-      - build_mac_test_and_run
-      - build_macos_all_static_libs
-      - build_macos_all_dynamic_libs
-      - build_macos_tools
-      - build_ios
-      - build_freeBSD_test_and_run_GCC
-      - build_freeBSD_test_and_run_Clang
-      - build_freeBSD_static_lib_Clang
-      - build_freeBSD_dynamic_lib_Clang
-      - build_freeBSD_static_lib_GCC
-      - build_freeBSD_dynamic_lib_GCC
-      - build_freeBSD_tools_Clang
-      - build_freeBSD_tools_GCC
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Clear Output Folders
-        run: |
-          rm -rf bin/tools/win64
-          rm -rf bin/tools/linux
-          rm -rf bin/tools/mac
-          rm -rf dist/dynamic_lib/include
-          rm -rf dist/dynamic_lib/android
-          rm -rf dist/dynamic_lib/ios
-          rm -rf dist/dynamic_lib/linux
-          rm -rf dist/dynamic_lib/mac
-          rm -rf dist/dynamic_lib/win64
-          rm -rf dist/static_lib/include
-          rm -rf dist/static_lib/linux
-          rm -rf dist/static_lib/mac
-          rm -rf dist/static_lib/win64
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-
-      - name: Unzip Artifacts
-        run: |
-          ls -R artifacts/
-          mkdir -p dist/static_lib/win64
-          mkdir -p dist/dynamic_lib/win64
-          mkdir -p bin/tools/win64/
-          mkdir -p dist/dynamic_lib/android/
-          mkdir -p dist/static_lib/linux/
-          mkdir -p dist/dynamic_lib/linux/
-          mkdir -p bin/tools/linux/
-          mkdir -p dist/static_lib/mac/
-          mkdir -p dist/dynamic_lib/mac/
-          mkdir -p bin/tools/mac/
-          mkdir -p dist/dynamic_lib/ios/
-          cp -r artifacts/win64_static_artifact/* dist/static_lib/win64
-          cp -r artifacts/win64_dynamic_artifact/* dist/dynamic_lib/win64
-          cp -r artifacts/win64_tools_artifact/* bin/tools/win64/
-          cp -r artifacts/win64_android_artifact/* dist/dynamic_lib/android/
-          cp -r artifacts/linux_static_artifact/* dist/static_lib/
-          cp -r artifacts/linux_dynamic_artifact/* dist/dynamic_lib/
-          cp -r artifacts/linux_tools_artifact/* bin/tools/linux/
-          cp -r artifacts/mac_static_artifact/* dist/static_lib/mac/
-          cp -r artifacts/mac_dynamic_artifact/* dist/dynamic_lib/mac/
-          cp -r artifacts/mac_tools_artifact/* bin/tools/mac/
-          cp -r artifacts/ios_dynamic_artifact/* dist/dynamic_lib/ios/
-          
-      - name: Combine and Commit Build Artifacts
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add bin/tools/
-          git add dist/
-
-          ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          git commit -m "Github Auto CI - Action URL: $ACTION_URL"
-
-          echo "Git Log:"
-          git log -1 --stat
-
-          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Tencent/BqLog.git HEAD:$BRANCH_NAME

@@ -1,0 +1,226 @@
+name: Cross-Platform Build and Deploy
+
+on:
+  workflow_dispatch:  # manually trigger
+  workflow_call:
+jobs:
+  #Windows
+  build_windows_test_and_run_MSVC:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MSVC.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+  
+  build_windows_test_and_run_Clang:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_Clang.bat 
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  
+  #Linux-ubuntu
+  build_ubuntu_test_and_run_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 
+  
+  build_ubuntu_test_and_run_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 
+
+
+
+
+  #linux-debian
+  build_debian_test_and_run_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+            while :; do echo "Still compiling..."; sleep 60; done &  
+            PERIODIC_OUTPUT_PID=$! 
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_GCC.sh 
+            kill $PERIODIC_OUTPUT_PID
+  
+  build_debian_test_and_run_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+            while :; do echo "Still compiling..."; sleep 60; done & 
+            PERIODIC_OUTPUT_PID=$! 
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_Clang.sh 
+            kill $PERIODIC_OUTPUT_PID
+
+
+  #Mac
+  build_mac_test_and_run:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Set up XCode
+        run: sudo xcode-select --switch /Applications/Xcode.app
+
+      - name: Build for macOS
+        run: |
+          cd build/test/mac  
+          chmod +x *.sh
+          ./RunTest.sh 
+
+  #Unix-FreeBSD
+  build_freeBSD_test_and_run_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/unix_like  
+            chmod +x *.sh
+            while :; do echo "Still compiling..."; sleep 60; done &  
+            PERIODIC_OUTPUT_PID=$! 
+            ./RunTest_GCC.sh 
+            kill $PERIODIC_OUTPUT_PID
+  
+  build_freeBSD_test_and_run_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/unix_like  
+            chmod +x *.sh
+            while :; do echo "Still compiling..."; sleep 60; done &  
+            PERIODIC_OUTPUT_PID=$! 
+            ./RunTest_Clang.sh 
+            kill $PERIODIC_OUTPUT_PID
