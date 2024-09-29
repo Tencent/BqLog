@@ -32,7 +32,6 @@ namespace bq {
         bool reset_config(const property_value& config);
         void log(const log_entry_handle& handle);
 
-        void enable_snapshot(uint32_t snapshot_buffer_size);
         const bq::string& take_snapshot_string(bool use_gmt_time);
         void release_snapshot_string();
 
@@ -99,7 +98,6 @@ namespace bq {
         uint64_t last_flush_io_epoch_ms_;
         bq::array_inline<appender_base*> appenders_list_;
         bq::array<bq::string> categories_name_array_;
-        bq::array<bq::string> categories_mask_config_;
         bq::array_inline<uint8_t> categories_mask_array_;
 
         bq::string last_config_;

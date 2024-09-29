@@ -225,15 +225,6 @@ namespace bq {
         BQ_API bool __api_fetch_and_remove_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback on_console_callback, const void* pass_through_param);
 
         /// <summary>
-        /// The snapshot feature is disabled by default, as it consumes some performance overhead.
-        /// Note: Once enabled, calling the function again will only modify the buffer size and cannot disable the feature.
-        /// </summary>
-        /// <param name="log_id"></param>
-        /// <param name="snapshot_buffer_size"></param>
-        /// <returns></returns>
-        BQ_API void __api_enable_snapshot(uint64_t log_id, uint32_t snapshot_buffer_size);
-
-        /// <summary>
         /// Note: if snapshot is not enabled, this API will return empty snapshot string.
         /// </summary>
         /// <param name="log_id"></param>

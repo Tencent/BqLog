@@ -14,29 +14,42 @@
 
 namespace bq {
     log_level_bitmap::log_level_bitmap()
-        : bitmap(0)
+        : bitmap_(0)
     {
     }
 
     log_level_bitmap::log_level_bitmap(uint32_t init_bitmap_value)
-        : bitmap(init_bitmap_value)
+        : bitmap_(init_bitmap_value)
     {
+    }
+
+
+    log_level_bitmap::log_level_bitmap(const log_level_bitmap& rhs)
+        : bitmap_(rhs.bitmap_)
+    {
+    }
+
+
+    bq::log_level_bitmap& log_level_bitmap::operator=(const log_level_bitmap& rhs)
+    {
+        bitmap_ = rhs.bitmap_;
+        return *this;
     }
 
     void log_level_bitmap::clear()
     {
-        bitmap = 0;
+        bitmap_ = 0;
     }
 
     void log_level_bitmap::add_level(bq::log_level level)
     {
-        bitmap |= (1 << (int32_t)level);
+        bitmap_ |= (1 << (int32_t)level);
     }
 
     void log_level_bitmap::add_level(const bq::string& level_string)
     {
         if (level_string.equals_ignore_case("all")) {
-            bitmap = 0xFFFFFFFF;
+            bitmap_ = 0xFFFFFFFF;
             return;
         }
         if (level_string.equals_ignore_case("verbose")) {
@@ -58,16 +71,16 @@ namespace bq {
 
     void log_level_bitmap::del_level(bq::log_level level)
     {
-        bitmap &= ~(1 << (int32_t)level);
+        bitmap_ &= ~(1 << (int32_t)level);
     }
 
     bool log_level_bitmap::have_level(bq::log_level level)
     {
-        return (bitmap & (1 << (int32_t)level)) != 0;
+        return (bitmap_ & (1 << (int32_t)level)) != 0;
     }
 
     uint32_t* log_level_bitmap::get_bitmap_ptr()
     {
-        return &bitmap;
+        return &bitmap_;
     }
 }

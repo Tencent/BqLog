@@ -375,11 +375,6 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv
     return re;
 }
 
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1enable_1snapshot(JNIEnv*, jclass, jlong log_id, jlong snapshot_buffer_size)
-{
-    bq::api::__api_enable_snapshot((uint64_t)log_id, (uint32_t)snapshot_buffer_size);
-}
-
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jboolean use_gmt_time)
 {
     bq::_api_string_def snapshot_str_def;

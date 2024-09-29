@@ -17,8 +17,9 @@ namespace bq {
     public:
         log_level_bitmap();
         log_level_bitmap(uint32_t init_bitmap_value);
-
+        log_level_bitmap(const log_level_bitmap& rhs);
     public:
+        log_level_bitmap& operator=(const log_level_bitmap& rhs);
         void clear();
         bool have_level(bq::log_level level);
         void add_level(bq::log_level level);
@@ -27,6 +28,6 @@ namespace bq {
         uint32_t* get_bitmap_ptr();
 
     private:
-        uint32_t bitmap;
+        uint32_t bitmap_;
     };
 }

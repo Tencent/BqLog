@@ -11,69 +11,92 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/bq_common.h"
-#include <time.h>
+#include "bq_log/log/log_level_bitmap.h"
 
 namespace bq {
-
-    template <typename T>
-    struct make_unsinged {
+    class log_utils {
     public:
-        using type = typename bq::condition_type<
-            sizeof(T) == 1, uint8_t,
-            typename bq::condition_type<
-                sizeof(T) == 2, uint16_t,
-                typename bq::condition_type<
-                    sizeof(T) == 4, uint32_t,
-                    typename bq::condition_type<
-                        sizeof(T) == 8, uint64_t, void>::type>::type>::type>::type;
-    };
-
-    class vlq {
-    private:
-        template <uint32_t LENGTH>
-        class prefix {
-        public:
-            static constexpr uint8_t value = 1 << (8 - LENGTH); // 0b00000001
-        };
-
-        template <uint32_t LENGTH>
-        class min_value_of_length {
-        public:
-            static constexpr uint64_t value = min_value_of_length<LENGTH - 1>::value + ((uint64_t)1 << ((LENGTH - 1) * 7));
-        };
-
-        bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR uint32_t get_vlq_decode_length(uint8_t prefix_byte);
-
-    public:
-        static constexpr size_t invalid_decode_length = (size_t)-1;
-
         template <typename T>
-        bq_forceinline static constexpr size_t vlq_max_bytes_count()
+        struct make_unsinged {
+        public:
+            using type = typename bq::condition_type<
+                sizeof(T) == 1, uint8_t,
+                typename bq::condition_type<
+                    sizeof(T) == 2, uint16_t,
+                    typename bq::condition_type<
+                        sizeof(T) == 4, uint32_t,
+                        typename bq::condition_type<
+                            sizeof(T) == 8, uint64_t, void>::type>::type>::type>::type;
+        };
+
+        class vlq {
+        private:
+            template <uint32_t LENGTH>
+            class prefix {
+            public:
+                static constexpr uint8_t value = 1 << (8 - LENGTH); // 0b00000001
+            };
+
+            template <uint32_t LENGTH>
+            class min_value_of_length {
+            public:
+                static constexpr uint64_t value = min_value_of_length<LENGTH - 1>::value + ((uint64_t)1 << ((LENGTH - 1) * 7));
+            };
+
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR uint32_t get_vlq_decode_length(uint8_t prefix_byte);
+
+        public:
+            static constexpr size_t invalid_decode_length = (size_t)-1;
+
+            template <typename T>
+            bq_forceinline static constexpr size_t vlq_max_bytes_count()
+            {
+                return sizeof(T) + 1;
+            }
+
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR uint32_t get_vlq_encode_length(uint64_t value);
+
+            template <typename T>
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR size_t vlq_encode(T value, void* target_data, size_t data_len);
+
+            template <typename T>
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR size_t vlq_decode(T& value, const void* src_data);
+        };
+
+        // Recursive function to return gcd of a and b
+        template <typename T>
+        T gcd(T a, T b)
         {
-            return sizeof(T) + 1;
+            if (b == 0)
+                return a;
+            return gcd(b, a % b);
         }
 
-        bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR uint32_t get_vlq_encode_length(uint64_t value);
-
+        // Function to return LCM of two numbers
         template <typename T>
-        bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR size_t vlq_encode(T value, void* target_data, size_t data_len);
+        T lcm(T a, T b)
+        {
+            return (a / gcd(a, b)) * b;
+        }
 
-        template <typename T>
-        bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR size_t vlq_decode(T& value, const void* src_data);
+        static bq::array_inline<uint8_t> get_categories_mask_by_config(const bq::array<bq::string> categories_name, const bq::property_value& categories_mask_config);
+
+        static bq::log_level_bitmap get_log_level_bitmap_by_config(const bq::property_value& log_level_bitmap_config);
     };
 
     template <>
-    class vlq::prefix<9> {
+    class log_utils::vlq::prefix<9> {
     public:
         static constexpr uint8_t value = 0;
     };
     template <>
-    class vlq::min_value_of_length<1> {
+    class log_utils::vlq::min_value_of_length<1> {
     public:
         static constexpr uint64_t value = 0;
     };
 
-    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t vlq::get_vlq_encode_length(uint64_t value)
+
+    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_encode_length(uint64_t value)
     {
         if (value < min_value_of_length<2>::value) {
             return 1;
@@ -95,7 +118,7 @@ namespace bq {
         return 9;
     }
 
-    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t vlq::get_vlq_decode_length(uint8_t prefix_byte)
+    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_decode_length(uint8_t prefix_byte)
     {
         if (prefix_byte >= prefix<1>::value) {
             return 1;
@@ -118,7 +141,7 @@ namespace bq {
     }
 
     template <typename T>
-    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR size_t vlq::vlq_encode(T value, void* target_data, size_t data_len)
+    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR size_t log_utils::vlq::vlq_encode(T value, void* target_data, size_t data_len)
     {
         using PURE_T = typename bq::remove_cv<typename bq::remove_reference<T>::type>::type;
         static_assert(bq::is_same<PURE_T, uint8_t>::value
@@ -218,7 +241,7 @@ namespace bq {
     }
 
     template <typename T>
-    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR size_t vlq::vlq_decode(T& value, const void* src_data)
+    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR size_t log_utils::vlq::vlq_decode(T& value, const void* src_data)
     {
         using PURE_T = typename bq::remove_cv<typename bq::remove_reference<T>::type>::type;
         static_assert(bq::is_same<PURE_T, uint8_t>::value
@@ -322,21 +345,5 @@ namespace bq {
         }
         value = (PURE_T)target_value;
         return length;
-    }
-
-    // Recursive function to return gcd of a and b
-    template <typename T>
-    T gcd(T a, T b)
-    {
-        if (b == 0)
-            return a;
-        return gcd(b, a % b);
-    }
-
-    // Function to return LCM of two numbers
-    template <typename T>
-    T lcm(T a, T b)
-    {
-        return (a / gcd(a, b)) * b;
     }
 }

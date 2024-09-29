@@ -399,18 +399,7 @@ public class log {
     }
 
 	/**
-	 * Enable snapshot capability. Once enabled, the log object will continuously retain a copy of the buffer data, 
-	 * containing the latest buffer data. This is used for generating a log snapshot string with the take_snapshot() function.
-	 * @param snapshot_buffer_size
-	 * 			Size of snapshot buffer
-	 */
-	public void enable_snapshot(long snapshot_buffer_size)
-	{
-		bq.impl.log_invoker.__api_enable_snapshot(log_id_, snapshot_buffer_size);
-	}
-
-	/**
-	 * Works only when enable_snapshot(true) is called.
+	 * Works only when snapshot is configured.
 	 * It will decode the snapshot buffer to text.
 	 * @param use_gmt_time
 	 * 			Whether the timestamp of each log is GMT time or local time

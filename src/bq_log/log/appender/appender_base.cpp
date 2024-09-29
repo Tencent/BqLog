@@ -12,6 +12,7 @@
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/appender/appender_base.h"
 #include "bq_log/log/log_imp.h"
+#include "bq_log/utils/log_utils.h"
 
 namespace bq {
     appender_base::appender_base()
@@ -55,18 +56,13 @@ namespace bq {
     {
         clear();
         name_ = name;
+
         const auto& levels_array = config_obj["levels"];
         if (!levels_array.is_array()) {
             util::log_device_console(bq::log_level::info, "bq log info: no levels config was found in appender type %s, use default level \"all\"", ((string)config_obj["type"]).c_str());
+            log_level_bitmap_.add_level("all");
         } else {
-            for (typename property_value::array_type::size_type i = 0; i < levels_array.array_size(); ++i) {
-                const auto& level_obj = levels_array[i];
-                if (!level_obj.is_string()) {
-                    util::log_device_console(bq::log_level::warning, "bq log info: invalid level config was found in appender type %s, use default level \"all\"", ((string)config_obj["type"]).c_str());
-                    continue;
-                }
-                log_level_bitmap_.add_level(((string)level_obj).trim());
-            }
+            log_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(levels_array);
         }
         is_gmt_time_ = false;
         if (config_obj["time_zone"].is_string()) {

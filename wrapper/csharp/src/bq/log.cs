@@ -433,18 +433,7 @@ namespace bq
         }
 
         /// <summary>
-        /// Enable snapshot capability. Once enabled, the log object will continuously retain a copy of the buffer data, 
-        /// containing the latest buffer data. This is used for generating a log snapshot string with the take_snapshot() function.
-        /// </summary>
-        /// <param name="snapshot_buffer_size">Size of snapshot buffer</param>
-        /// <param name="use_gmt_time"></param>
-        public void enable_snapshot(uint snapshot_buffer_size, bool use_gmt_time)
-        {
-            bq.impl.log_invoker.__api_enable_snapshot(log_id_, snapshot_buffer_size);
-        }
-
-        /// <summary>
-        /// Works only when enable_snapshot(true) is called.
+        /// Works only when snapshot is configured.
         /// It will decode the snapshot buffer to text.
         /// </summary>
         /// <param name="use_gmt_time">Whether the timestamp of each log is GMT time or local time</param>

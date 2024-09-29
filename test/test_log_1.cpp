@@ -39,52 +39,52 @@ namespace bq {
                 {
                     {
                         uint64_t i = 0xFFFFFFFFFFFFFFFF;
-                        auto len = bq::vlq::vlq_encode(i, target_data, 16);
+                        auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
                         decltype(i) i_decode;
-                        auto len_decode = bq::vlq::vlq_decode(i_decode, target_data);
+                        auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                     }
                     {
                         uint64_t i = 0xFF326943FFFFFF;
-                        auto len = bq::vlq::vlq_encode(i, target_data, 16);
+                        auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
                         decltype(i) i_decode;
-                        auto len_decode = bq::vlq::vlq_decode(i_decode, target_data);
+                        auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                     }
                     {
                         uint64_t i = 0x326943FFFFFF;
-                        auto len = bq::vlq::vlq_encode(i, target_data, 16);
+                        auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
                         decltype(i) i_decode;
-                        auto len_decode = bq::vlq::vlq_decode(i_decode, target_data);
+                        auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                     }
                     {
                         uint64_t i = 0x6943FFFFFF;
-                        auto len = bq::vlq::vlq_encode(i, target_data, 16);
+                        auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
                         decltype(i) i_decode;
-                        auto len_decode = bq::vlq::vlq_decode(i_decode, target_data);
+                        auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                     }
                 }
                 for (uint64_t add = 0; add <= UINT8_MAX; ++add) {
                     uint8_t i = (uint8_t)add;
-                    auto len = bq::vlq::vlq_encode(i, target_data, 16);
+                    auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
                     decltype(i) i_decode;
-                    auto len_decode = bq::vlq::vlq_decode(i_decode, target_data);
+                    auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                     result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                 }
                 for (uint64_t add = 0; add <= UINT16_MAX; ++add) {
                     uint16_t i = (uint16_t)add;
-                    auto len = bq::vlq::vlq_encode(i, target_data, 16);
+                    auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
                     decltype(i) i_decode;
-                    auto len_decode = bq::vlq::vlq_decode(i_decode, target_data);
+                    auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                     result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                 }
                 for (uint64_t add = 0; add <= UINT32_MAX; add += 77) {
                     uint32_t i = (uint32_t)add;
-                    auto len = bq::vlq::vlq_encode(i, target_data, 16);
+                    auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
                     decltype(i) i_decode;
-                    auto len_decode = bq::vlq::vlq_decode(i_decode, target_data);
+                    auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                     result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                 }
             }
@@ -212,6 +212,23 @@ namespace bq {
                 log_inst.verbose(log_inst.cat.ModuleA.SystemA, fmt_str, size);
 
                 result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\tformat:\"50\""), "Log Test bq::string 1");
+            }
+
+            {
+                //snapshot test
+                create_test_log1(R"(
+                    snapshot.buffer_size=100000
+                    snapshot.levels=[info,error]
+                    snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
+                )");
+                auto snapshot = log_inst.take_snapshot(true);
+                log_inst.verbose("AAAA");
+                result.add_result(log_inst.take_snapshot(true) == snapshot, "snapshot test 1");
+                log_inst.info(log_inst.cat.ModuleA.SystemA, "AAAA");
+                result.add_result(log_inst.take_snapshot(true) == snapshot, "snapshot test 2");
+                log_inst.info(log_inst.cat.ModuleA.SystemA.ClassA, "AAAA");
+                auto new_snapshot = log_inst.take_snapshot(true);
+                result.add_result(new_snapshot != snapshot && new_snapshot.end_with("AAAA\n"), "snapshot test 3");
             }
 
 #undef TEST_STR

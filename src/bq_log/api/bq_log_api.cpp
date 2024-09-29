@@ -430,14 +430,6 @@ namespace bq {
             return appender_console::fetch_and_remove_from_console_buffer(on_console_callback, pass_through_param);
         }
 
-        BQ_API void __api_enable_snapshot(uint64_t log_id, uint32_t snapshot_buffer_size)
-        {
-            bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-            if (log) {
-                log->enable_snapshot(snapshot_buffer_size);
-            }
-        }
-
         BQ_API void __api_take_snapshot_string(uint64_t log_id, bool use_gmt_time, bq::_api_string_def* out_snapshot_string)
         {
             bq::log_manager::instance().force_flush(log_id);

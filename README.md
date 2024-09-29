@@ -437,14 +437,7 @@ By default, the Appenders in the configuration are active, but a mechanism is pr
 #### Snapshot Output
 ```cpp
     /// <summary>
-    /// Enable snapshot capability. Once enabled, the log object will continuously retain a copy of the buffer data, 
-    /// containing the latest buffer data. This is used for generating a log snapshot string with the take_snapshot() function.
-    /// </summary>
-    /// <param name="snapshot_buffer_size">size of snapshot buffer</param>
-    void enable_snapshot(uint32_t snapshot_buffer_size) const;
-
-    /// <summary>
-    /// Works only when enable_snapshot(true) is called.
+    /// Works only when snapshot is configured.
     /// It will decode the snapshot buffer to text.
     /// </summary>
     /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
@@ -452,7 +445,7 @@ By default, the Appenders in the configuration are active, but a mechanism is pr
     bq::string take_snapshot(bool use_gmt_time) const;
 ```
 Sometimes, certain special features require outputting the last part of the logs, which can be done using the snapshot feature.
-To enable this feature, you need to call the enable_snapshot() method on the log object and set the maximum buffer size in bytes.
+To enable this feature, you first need to activate the snapshot in the log configuration and set the maximum buffer size, in bytes. Additionally, you need to specify the log levels and categories to be filtered for the snapshot (optional). For detailed configuration, please refer to [Snapshot Configuration](#snapshot).
 When a snapshot is needed, calling take_snapshot() will return the formatted string containing the most recent log entries stored in the snapshot buffer. In C++, the type is `bq::string`, which can be implicitly converted to `std::string`.
 
 #### Decoding Binary Log Files
@@ -637,6 +630,13 @@ log.categories_mask=[*default,ModuleA,ModuleB.SystemC]
 log.thread_mode=async
 # If the log level is error or fatal, include call stack information with each log entry
 log.print_stack_levels=[error,fatal]
+
+# Enable snapshot functionality, snapshot cache size is 64K
+snapshot.buffer_size=65536
+# Only logs with info and error levels will be recorded in the snapshot
+snapshot.levels=[info,error]
+# Only logs whose category starts with ModuleA, ModuleB.SystemC will be recorded in the snapshot, otherwise they will be ignored
+snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 ```
 
 
@@ -728,6 +728,27 @@ The logic is the same as the [appenders_config.xxx.categories_mask](#appenders_c
 #### log.print_stack_levels
 The configuration method is the same as in [appenders_config.levels](#appenders_configxxxlevels). For each log entry that matches the level, the call stack information will be appended. However, please note that this feature should ideally only be used in a Debug environment. In a production environment, enable it only for error and fatal logs because it will significantly degrade performance and cause garbage collection (GC) in Java and C#. Currently, stack information is clearly and friendly displayed on `Java`, `C#`, and `Win64`. On other platforms, it is relatively difficult to read, providing only address information without symbol tables.
 <br><br>
+
+### Snapshot
+The snapshot configuration is for setting up log snapshots. In some special scenarios, such as when an exception is detected, it may be necessary to capture the last portion of a log object for reporting. This is where the snapshot feature comes in handy.
+
+The following configurations are available:
+| Name               | Required | Configurable Values             | Default Value | Modifiable in reset_config |
+|--------------------|---------|----------------------------------|---------------|----------------------------|
+| buffer_size        | No      | 32-bit positive integer          | 0             | Yes                        |
+| levels             | No      | Array of log levels              | all           | Yes                        |
+| categories_mask    | No      | Array of strings enclosed in []  | Empty         | Yes                        |
+
+#### snapshot.buffer_size
+The size of the snapshot cache. If set to 0 or not configured, the snapshot functionality will be disabled.
+
+#### snapshot.levels
+Only logs with log levels configured in this array will be recorded in the snapshot. If not configured, the default is "all", which differs from the previous behavior.
+
+#### snapshot.categories_mask
+The logic is the same as [appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask). Only logs with matching categories will have a chance to be captured in the snapshot. If this option is not configured, logs from all categories will be recorded.
+<br><br>
+
 
 ## Offline Decoding of Binary Format Appenders
 Outside of program execution, bqLog also provides precompiled binary file decoding command-line tools. The directory paths are as follows:

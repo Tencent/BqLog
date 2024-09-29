@@ -896,7 +896,6 @@ namespace bq {
             test_output(bq::log_level::info, "full log test begin, this will take minutes, and need about 500M free disk space.\n");
             clear_test_output_folder();
             init_fmt_strings<MAX_PARAM>();
-            log_inst.enable_snapshot(snapshot_buffer_size);
 
             log_head = "[" + log_inst.get_name() + "]\t";
 

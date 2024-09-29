@@ -436,14 +436,7 @@ STR参数类似于printf的第一个参数，其类型是各种常用类型的�
 #### 输出快照
 ```cpp
     /// <summary>
-    /// Enable snapshot capability. Once enabled, the log object will continuously retain a copy of the buffer data, 
-    /// containing the latest buffer data. This is used for generating a log snapshot string with the take_snapshot() function.
-    /// </summary>
-    /// <param name="snapshot_buffer_size">size of snapshot buffer</param>
-    void enable_snapshot(uint32_t snapshot_buffer_size) const;
-
-    /// <summary>
-    /// Works only when enable_snapshot(true) is called.
+    /// Works only when snapshot is configured.
     /// It will decode the snapshot buffer to text.
     /// </summary>
     /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
@@ -451,7 +444,7 @@ STR参数类似于printf的第一个参数，其类型是各种常用类型的�
     bq::string take_snapshot(bool use_gmt_time) const;
 ```
 有时候有些特殊的功能，需要输出最后的一部分日志，就可以用到这个快照功能  
-要启用这个功能，需要先调用log对象的enable_snapshot()，并且设置最大的缓冲大小，单位字节。  
+要启用这个功能，首先需要在日志的配置中启用snapshot，并且设置最大的缓冲大小，单位字节。 还有快照需要筛选的日志等级和category（可选） ，具体配置请参考[snapshot配置](#snapshot)。
 当需要快照的时候，调用一下take_snapshot()，就会返回格式化好的快照缓冲区里存储的最后的日志内容字符串。C++里的类型是`bq::string`，可以被隐式转换为`std::string`。  
 
 #### 解码二进制日志文件
@@ -629,6 +622,13 @@ Appender代表日志的输出目标，这里Appender的概念和Log4j的Appender
     log.thread_mode=async
     #如果日志等级是error和fatal的话，在每一条日志后面带上调用栈信息
     log.print_stack_levels=[error,fatal]
+
+    #启用快照功能，快照缓存64K
+    snapshot.buffer_size=65536
+    #只有info和error等级的日志才会被快照记录
+    snapshot.levels=[info,error]
+    #只有当日志的category是ModuleA,ModuleB.SystemC开头的时候，才会被快照记录，否则全部忽略
+    snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 ```
 
 ### 2. 详细解释
@@ -690,7 +690,6 @@ log配置是针对整个log对象的。有以下配置：
 | categories_mask    | ✘      | []包围的字符串数组         | 空   | ✔                          |
 | print_stack_levels | ✘      | 日志等级的任意组合数组     | 空   | ✔                          |
 
-这样看起来更整齐，易于阅读。
 #### log.thread_mode  
 日志的线程模式，用户调用日志接口写入的日志会先写到日志缓存中，这里的配置代表这些缓存中的数据将在哪个线程被处理。
 - `sync`，这些数据就会在当前写日志的线程被同步处理，也就是说，当您调用info一类的函数，当函数返回的时候，日志数据已经被处理完成了。
@@ -707,6 +706,23 @@ log配置是针对整个log对象的。有以下配置：
 逻辑和Appender上的[appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask)一致，不过是作用于整个log对象的。如果您的日志是异步模式的（参考[log.thread_mode](#logthread_mode)），这个选项生效会有一点点延迟性。
 #### log.print_stack_levels
 配置方式跟[appenders_config.levels](#appenders_configxxxlevels) 里的一样，匹配等级的每一条日志都会在后面带上调用栈的信息，但是请一定注意，最好只在Debug环境使用这个功能，正式环境最多是针对`error`和`fatal`这样的错误日志开启，因为它不仅会带来性能的明显下降，还会给Java和C#带来GC。目前`Java`, `C#`, `Win64`的栈信息显示比较清晰友好，其他平台相对较难以阅读，在没有符号表的情况下，只有地址信息。
+<br><br>
+
+### snapshot
+snapshot配置是针对整个log的快照设置，有时候有些特殊的场景，比如检测到异常的时候，需要截取一个log对象最后的一部分日志进行上报，就可以用到这个快照功能。
+有以下配置：
+| 名称               | 是否必须 | 可配置值                  | 默认值 | 是否可以在reset_config中修改 |
+|--------------------|---------|---------------------------|-------|----------------------------|
+| buffer_size        | ✘      | 32位正整数                 | 0     | ✔                          |
+| levels             | ✘      | 日志等级的任意组合数组      | all   | ✔                          |
+| categories_mask    | ✘      | []包围的字符串数组          | 空    | ✔                          |
+
+#### snapshot.buffer_size  
+快照缓存的大小，如果为0或者没配置这一项，快照功能就会被关闭
+#### snapshot.levels
+只有被配置在里面的日志等级的日志才会被快照记录，如果不配置，则默认是all，这一点和前面的不一样
+#### snapshot.categories_mask
+逻辑和Appender上的[appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask)一致，只有匹配的category，才会被快照机会，如果没有配置该选项，则全部的category都会被记录。
 <br><br>
 
 ## 离线解码二进制格式的Appender

@@ -61,8 +61,6 @@ public class log_invoker {
 	
 	public static native boolean __api_log_decode(String in_file_path, String out_file_path);
 	
-	public static native void __api_enable_snapshot(long log_id, long snapshot_buffer_size);
-	
 	public static native String __api_take_snapshot_string(long log_id, boolean use_gmt_time);
 
 	public static native void __api_set_console_callback(boolean enable);

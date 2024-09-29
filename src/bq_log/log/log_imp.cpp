@@ -16,6 +16,7 @@
 #include "bq_log/log/appender/appender_file_raw.h"
 #include "bq_log/log/appender/appender_file_text.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
+#include "bq_log/utils/log_utils.h"
 
 namespace bq {
     log_imp::log_imp()
@@ -83,62 +84,15 @@ namespace bq {
             }
         }
 
+        categories_name_array_ = category_names;
         // init categories mask
         {
-            const auto& categories_mask_config = log_config["categories_mask"];
-            if (categories_mask_config.is_array()) {
-                for (typename property_value::array_type::size_type i = 0; i < categories_mask_config.array_size(); ++i) {
-                    if (categories_mask_config[i].is_string()) {
-                        bq::string mask = (string)categories_mask_config[i];
-                        categories_mask_config_.push_back(bq::move(mask));
-                    }
-                }
-            }
-        }
-        // init categories
-        {
-            categories_name_array_.set_capacity(category_names.size());
-            categories_mask_array_.set_capacity(category_names.size());
-            for (size_t i = 0; i < category_names.size(); ++i) {
-                const auto& category_name = category_names[i];
-                categories_name_array_.push_back(category_name);
-                uint8_t mask = 0;
-                if (categories_mask_config_.size() == 0) {
-                    mask = 1;
-                } else {
-                    for (const bq::string& mask_config : categories_mask_config_) {
-                        if (category_name.begin_with(mask_config)) {
-                            mask = 1;
-                            break;
-                        }
-                        if (i == 0 && mask_config == "*default") // default category mask
-                        {
-                            mask = 1;
-                            break;
-                        }
-                    }
-                }
-                categories_mask_array_.push_back(mask);
-            }
+            categories_mask_array_ = bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"]);
         }
 
         // init print_stack_levels
         {
-            const auto& print_stack_levels_array = log_config["print_stack_levels"];
-            if (!print_stack_levels_array.is_null()) {
-                if (!print_stack_levels_array.is_array()) {
-                    util::log_device_console(bq::log_level::info, "bq log info: invalid [print_stack_levels] config");
-                } else {
-                    for (typename property_value::array_type::size_type i = 0; i < print_stack_levels_array.array_size(); ++i) {
-                        const auto& level_obj = print_stack_levels_array[i];
-                        if (!level_obj.is_string()) {
-                            util::log_device_console(bq::log_level::warning, "bq log info: invalid [print_stack_levels] item");
-                            continue;
-                        }
-                        print_stack_level_bitmap_.add_level(((string)level_obj).trim());
-                    }
-                }
-            }
+            print_stack_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"]);
         }
 
         // init appenders
@@ -154,6 +108,15 @@ namespace bq {
                 add_appender(name_key, all_apenders_config[name_key]);
             }
         }
+
+        // init snapshot
+        {
+            const auto& snapshot_config = config["snapshot"];
+            if(snapshot_config.is_object()) {
+                snapshot_ = new log_snapshot(this, snapshot_config);
+            }
+        }
+
         refresh_merged_log_level_bitmap();
 
         if (get_reliable_level() <= log_reliable_level::normal) {
@@ -203,22 +166,7 @@ namespace bq {
 
         // init print_stack_levels
         {
-            print_stack_level_bitmap_.clear();
-            const auto& print_stack_levels_array = log_config["print_stack_levels"];
-            if (!print_stack_levels_array.is_null()) {
-                if (!print_stack_levels_array.is_array()) {
-                    util::log_device_console(bq::log_level::info, "bq log info: invalid [print_stack_levels] config");
-                } else {
-                    for (typename property_value::array_type::size_type i = 0; i < print_stack_levels_array.array_size(); ++i) {
-                        const auto& level_obj = print_stack_levels_array[i];
-                        if (!level_obj.is_string()) {
-                            util::log_device_console(bq::log_level::warning, "bq log info: invalid [print_stack_levels] item");
-                            continue;
-                        }
-                        print_stack_level_bitmap_.add_level(((string)level_obj).trim());
-                    }
-                }
-            }
+            print_stack_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"]);
         }
 
         // init appenders
@@ -241,37 +189,20 @@ namespace bq {
 
         // init categories mask
         {
-            categories_mask_config_.clear();
-            const auto& categories_mask_config = log_config["categories_mask"];
-            if (categories_mask_config.is_array()) {
-                for (typename property_value::array_type::size_type i = 0; i < categories_mask_config.array_size(); ++i) {
-                    if (categories_mask_config[i].is_string()) {
-                        bq::string mask = (string)categories_mask_config[i];
-                        categories_mask_config_.push_back(bq::move(mask));
-                    }
-                }
-            }
+            categories_mask_array_ = bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"]);
         }
 
-        for (size_t i = 0; i < categories_name_array_.size(); ++i) {
-            const auto& category_name = categories_name_array_[i];
-            uint8_t mask = 0;
-            if (categories_mask_config_.size() == 0) {
-                mask = 1;
-            } else {
-                for (const bq::string& mask_config : categories_mask_config_) {
-                    if (category_name.begin_with(mask_config)) {
-                        mask = 1;
-                        break;
-                    }
-                    if (i == 0 && mask_config == "*default") // default category mask
-                    {
-                        mask = 1;
-                        break;
-                    }
+        // init snapshot
+        {
+            const auto& snapshot_config = config["snapshot"];
+            bq::platform::scoped_mutex lock(mutex_);
+            if (!snapshot_) {
+                if(snapshot_config.is_object()) {
+                    snapshot_ = new log_snapshot(this, snapshot_config);
                 }
+            } else {
+                snapshot_->reset_config(snapshot_config);
             }
-            categories_mask_array_[i] = mask;
         }
         return true;
     }
@@ -333,7 +264,6 @@ namespace bq {
         }
         appenders_list_.clear();
         categories_name_array_.clear();
-        categories_mask_config_.clear();
         categories_name_array_.clear();
         name_.clear();
         merged_log_level_bitmap_.clear();
@@ -373,22 +303,14 @@ namespace bq {
             appenders_list_[i]->log(handle);
         }
         if (snapshot_) {
-            snapshot_->write_data(handle.data(), handle.data_size());
+            snapshot_->write_data(handle);
         }
-    }
-
-    void log_imp::enable_snapshot(uint32_t snapshot_buffer_size)
-    {
-        bq::platform::scoped_mutex lock(mutex_);
-        if (!snapshot_) {
-            snapshot_ = new log_snapshot(this);
-        }
-        snapshot_->reset_buffer_size(snapshot_buffer_size);
     }
 
     const static bq::string empty_snapshot;
     const bq::string& log_imp::take_snapshot_string(bool use_gmt_time)
     {
+        bq::platform::scoped_mutex lock(mutex_);
         if (snapshot_) {
             return snapshot_->take_snapshot_string(use_gmt_time);
         }
