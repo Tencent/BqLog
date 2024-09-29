@@ -2,7 +2,7 @@
 
 mkdir CMakeFiles;
 cd CMakeFiles;
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo ../../../../test;
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug ../../../../test;
 make;
 ./BqLogUnitTest
 exit_code=$?
