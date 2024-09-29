@@ -1,5 +1,4 @@
-name: Cross-Platform Build and Deploy
-
+name: Build
 on:  
   workflow_dispatch:  # manually trigger
   workflow_call:

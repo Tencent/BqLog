@@ -1,4 +1,4 @@
-name: Cross-Platform Build and Deploy
+name: AutoTest
 
 on:
   workflow_dispatch:  # manually trigger

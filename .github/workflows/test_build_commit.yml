@@ -1,4 +1,4 @@
-name: Cross-Platform Build and Deploy
+name: Test Build And Commit
 
 on:
   workflow_dispatch:  # manually trigger
