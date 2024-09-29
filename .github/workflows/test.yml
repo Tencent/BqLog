@@ -109,12 +109,9 @@ jobs:
 
       - name: Build for Debian
         run: |
-            while :; do echo "Still compiling..."; sleep 60; done &  
-            PERIODIC_OUTPUT_PID=$! 
             cd build/test/linux  
             chmod +x *.sh
             ./RunTest_GCC.sh 
-            kill $PERIODIC_OUTPUT_PID
   
   build_debian_test_and_run_Clang:
     runs-on: ubuntu-latest
@@ -140,12 +137,9 @@ jobs:
 
       - name: Build for Debian
         run: |
-            while :; do echo "Still compiling..."; sleep 60; done & 
-            PERIODIC_OUTPUT_PID=$! 
             cd build/test/linux  
             chmod +x *.sh
             ./RunTest_Clang.sh 
-            kill $PERIODIC_OUTPUT_PID
 
 
   #Mac
@@ -186,6 +180,7 @@ jobs:
             pkg install -y gcc cmake bash openjdk11
 
           run: |
+            set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
             export JAVA_HOME="/usr/local/openjdk11"
             export PATH="$JAVA_HOME/bin:$PATH"
@@ -193,10 +188,7 @@ jobs:
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/test/unix_like  
             chmod +x *.sh
-            while :; do echo "Still compiling..."; sleep 60; done &  
-            PERIODIC_OUTPUT_PID=$! 
             ./RunTest_GCC.sh 
-            kill $PERIODIC_OUTPUT_PID
   
   build_freeBSD_test_and_run_Clang:
     runs-on: ubuntu-latest
@@ -213,6 +205,7 @@ jobs:
             pkg install -y gcc cmake bash openjdk11
 
           run: |
+            set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
             export JAVA_HOME="/usr/local/openjdk11"
             export PATH="$JAVA_HOME/bin:$PATH"
@@ -220,7 +213,4 @@ jobs:
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/test/unix_like  
             chmod +x *.sh
-            while :; do echo "Still compiling..."; sleep 60; done &  
-            PERIODIC_OUTPUT_PID=$! 
             ./RunTest_Clang.sh 
-            kill $PERIODIC_OUTPUT_PID
