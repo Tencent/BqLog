@@ -169,8 +169,10 @@ namespace bq {
             print_stack_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"]);
         }
 
+
         // init appenders
         {
+            bq::platform::scoped_spin_lock_write_crazy lock(rw_lock_);
             const auto& all_apenders_config = config["appenders_config"];
             if (!all_apenders_config.is_object()) {
                 util::log_device_console(bq::log_level::error, "create_log parse property failed, invalid appenders_config");
@@ -189,13 +191,17 @@ namespace bq {
 
         // init categories mask
         {
-            categories_mask_array_ = bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"]);
+            //avoid lock
+            auto tmp = bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"]);
+            for (size_t i = 0; i < tmp.size(); ++i) {
+                categories_mask_array_[i] = tmp[i];
+            }
         }
 
         // init snapshot
         {
             const auto& snapshot_config = config["snapshot"];
-            bq::platform::scoped_mutex lock(mutex_);
+            bq::platform::scoped_spin_lock_write_crazy lock(rw_lock_);
             if (!snapshot_) {
                 if(snapshot_config.is_object()) {
                     snapshot_ = new log_snapshot(this, snapshot_config);
@@ -259,6 +265,7 @@ namespace bq {
 
     void log_imp::clear()
     {
+        bq::platform::scoped_spin_lock_write_crazy lock(rw_lock_);
         for (auto appender_ptr : appenders_list_) {
             delete appender_ptr;
         }
@@ -270,7 +277,6 @@ namespace bq {
         if (ring_buffer_) {
             delete ring_buffer_;
         }
-        bq::platform::scoped_mutex lock(mutex_);
         if (snapshot_) {
             delete snapshot_;
             snapshot_ = nullptr;
@@ -299,6 +305,7 @@ namespace bq {
         if (categories_mask_array_.size() <= category_idx || categories_mask_array_[category_idx] == 0) {
             return;
         }
+        bq::platform::scoped_spin_lock_read_crazy lock(rw_lock_);
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
             appenders_list_[i]->log(handle);
         }
@@ -310,7 +317,7 @@ namespace bq {
     const static bq::string empty_snapshot;
     const bq::string& log_imp::take_snapshot_string(bool use_gmt_time)
     {
-        bq::platform::scoped_mutex lock(mutex_);
+        bq::platform::scoped_spin_lock_read_crazy lock(rw_lock_);
         if (snapshot_) {
             return snapshot_->take_snapshot_string(use_gmt_time);
         }
@@ -333,6 +340,7 @@ namespace bq {
     {
         merged_log_level_bitmap_.clear();
         uint32_t& bitmap_value = *merged_log_level_bitmap_.get_bitmap_ptr();
+        bq::platform::scoped_spin_lock_read_crazy lock(rw_lock_);
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); ++i) {
             uint32_t bitmap = *(appenders_list_[i]->get_log_level_bitmap().get_bitmap_ptr());
             bitmap_value |= bitmap;
@@ -387,7 +395,7 @@ namespace bq {
 
     void log_imp::sync_process()
     {
-        bq::platform::scoped_mutex lock(mutex_);
+        bq::platform::scoped_spin_lock lock(sync_process_lock_);
         process(true);
     }
 
@@ -398,6 +406,7 @@ namespace bq {
 
     void log_imp::flush_appenders_cache()
     {
+        bq::platform::scoped_spin_lock_read_crazy lock(rw_lock_);
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); ++i) {
             switch (appenders_list_[i]->get_type()) {
             case appender_base::appender_type::raw_file:
@@ -413,6 +422,7 @@ namespace bq {
 
     void log_imp::flush_appenders_io()
     {
+        bq::platform::scoped_spin_lock_read_crazy lock(rw_lock_);
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); ++i) {
             switch (appenders_list_[i]->get_type()) {
             case appender_base::appender_type::raw_file:
@@ -443,6 +453,7 @@ namespace bq {
 
     const appender_base* log_imp::get_appender_by_name(const bq::string& name) const
     {
+        bq::platform::scoped_spin_lock_read_crazy lock(const_cast<bq::platform::spin_lock_rw_crazy&>(rw_lock_));
         for (auto iter = appenders_list_.begin(); iter != appenders_list_.end(); ++iter) {
             if ((*iter)->get_name() == name) {
                 return *iter;
@@ -451,11 +462,12 @@ namespace bq {
         return nullptr;
     }
 
-    array<appender_base*> log_imp::get_appender_by_vague_name(const bq::string& name)
+    array<appender_base*> log_imp::get_appender_by_vague_name(const bq::string& name) const
     {
         auto star_list = name.split("*");
         bool vague = (name.find("*") != string::npos);
         array<appender_base*> relist;
+        bq::platform::scoped_spin_lock_read_crazy lock(const_cast<bq::platform::spin_lock_rw_crazy&>(rw_lock_));
         for (auto iter = appenders_list_.begin(); iter != appenders_list_.end(); ++iter) {
             if (vague) {
                 bool find = true;

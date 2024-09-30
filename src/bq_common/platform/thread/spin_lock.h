@@ -77,15 +77,15 @@ namespace bq {
 
         /// <summary>
         /// This is an crazy optimized read-write spin lock,
-        /// betting that you won't have more than INT32_MAX threads waiting to acquire the read lock.
+        /// betting that you won't have more than INT32_MAX(32 bit) or INT64_MAX(64 bit) threads waiting to acquire the read lock.
         /// This version is designed for extreme performance of read locks when there is no write lock contention.
         /// by pippocao
         /// 2024/7/8
         /// </summary>
         class spin_lock_rw_crazy {
         private:
-            typedef int32_t counter_type;
-            static constexpr counter_type write_lock_mark_value = INT32_MIN;
+            typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, INT32_MIN, INT64_MIN>::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 #ifndef NDEBUG
             bq::platform::atomic<bq::platform::thread::thread_id> write_lock_thread_id_;

@@ -41,7 +41,7 @@ namespace bq {
         const bq::array<bq::string>& get_categories_name() const;
 
         const appender_base* get_appender_by_name(const bq::string& name) const;
-        array<appender_base*> get_appender_by_vague_name(const bq::string& name);
+        array<appender_base*> get_appender_by_vague_name(const bq::string& name) const;
 
         inline ring_buffer& get_ring_buffer() const
         {
@@ -88,7 +88,8 @@ namespace bq {
         log_worker worker_;
         layout layout_;
         bq::string name_;
-        bq::platform::mutex mutex_;
+        bq::platform::spin_lock_rw_crazy rw_lock_;
+        bq::platform::spin_lock sync_process_lock_;
         log_level_bitmap merged_log_level_bitmap_;
         log_level_bitmap print_stack_level_bitmap_;
         bq::log_reliable_level reliable_level_;
