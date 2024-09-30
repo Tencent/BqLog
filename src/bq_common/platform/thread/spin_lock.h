@@ -85,7 +85,7 @@ namespace bq {
         class spin_lock_rw_crazy {
         private:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
-            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, INT32_MIN, INT64_MIN>::value;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 #ifndef NDEBUG
             bq::platform::atomic<bq::platform::thread::thread_id> write_lock_thread_id_;
