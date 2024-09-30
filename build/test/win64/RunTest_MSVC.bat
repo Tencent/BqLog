@@ -14,9 +14,9 @@ cd VSProj
 cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DCMAKE_GENERATOR_PLATFORM=x64 -DJAVA_SUPPORT=ON
 
 echo "%VS_PATH%\devenv.com"
-call "%VS_PATH%\devenv.com" ./BqLogUnitTest.sln /Rebuild "Debug" /Project "./BqLogUnitTest.vcxproj" /Out Build.log
+call "%VS_PATH%\devenv.com" ./BqLogUnitTest.sln /Rebuild "RelWithDebInfo" /Project "./BqLogUnitTest.vcxproj" /Out Build.log
 
-.\Debug\BqLogUnitTest.exe
+.\RelWithDebInfo\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
 cd ..
 

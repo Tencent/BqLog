@@ -4,8 +4,8 @@ mkdir XCodeProj
 cd XCodeProj
 
 cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -G "Xcode"
-xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration Debug
-./Debug/BqLogUnitTest
+xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration RelWithDebInfo
+./RelWithDebInfo/BqLogUnitTest
 exit_code=$?
 cd ..;
 if [ $exit_code -eq 0 ]; then
