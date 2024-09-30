@@ -141,6 +141,63 @@ jobs:
             chmod +x *.sh
             ./RunTest_Clang.sh 
 
+  build_debian_test_and_run_GCC_32:
+    runs-on: ubuntu-latest
+    container:
+      image: i386/debian:stretch  
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          dpkg --add-architecture i386  
+          apt-get update
+          apt-get install -y gcc clang g++-multilib make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk:i386  
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32-bit
+        run: |
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_GCC.sh
+
+  build_debian_test_and_run_Clang_32:
+    runs-on: ubuntu-latest
+    container:
+      image: i386/debian:stretch  
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          dpkg --add-architecture i386  
+          apt-get update
+          apt-get install -y gcc clang g++-multilib make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk:i386  
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32-bit
+        run: |
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_Clang.sh
 
   #Mac
   build_mac_test_and_run:
