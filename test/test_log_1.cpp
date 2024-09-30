@@ -214,30 +214,6 @@ namespace bq {
                 result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\tformat:\"50\""), "Log Test bq::string 1");
             }
 
-            {
-                //snapshot test
-                auto snapshot_log = test_category_log::create_log("snapshot_log", R"(
-						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
-						appenders_config.ConsoleAppender.levels=[error,fatal]
-					
-						log.thread_mode=sync
-						log.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
-                        snapshot.buffer_size=100000
-                        snapshot.levels=[info,error]
-                        snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
-			        )");
-
-                auto snapshot = snapshot_log.take_snapshot(true);
-                snapshot_log.verbose("AAAA");
-                result.add_result(snapshot_log.take_snapshot(true) == snapshot, "snapshot test 1");
-                snapshot_log.info(snapshot_log.cat.ModuleA.SystemA, "AAAA");
-                result.add_result(snapshot_log.take_snapshot(true) == snapshot, "snapshot test 2");
-                snapshot_log.info(snapshot_log.cat.ModuleA.SystemA.ClassA, "AAAA");
-                auto new_snapshot = snapshot_log.take_snapshot(true);
-                result.add_result(new_snapshot != snapshot && new_snapshot.end_with("AAAA\n"), "snapshot test 3");
-            }
-
 #undef TEST_STR
 #define TEST_STR(STR) UTF16_STR(STR)
 #undef TEST_CHAR

@@ -79,9 +79,9 @@ namespace bq {
             return (a / gcd(a, b)) * b;
         }
 
-        static bq::array_inline<uint8_t> get_categories_mask_by_config(const bq::array<bq::string> categories_name, const bq::property_value& categories_mask_config);
+        static bool get_categories_mask_by_config(const bq::array<bq::string> categories_name, const bq::property_value& categories_mask_config, bq::array_inline<uint8_t>& out_categories_mask);
 
-        static bq::log_level_bitmap get_log_level_bitmap_by_config(const bq::property_value& log_level_bitmap_config);
+        static bool get_log_level_bitmap_by_config(const bq::property_value& log_level_bitmap_config, bq::log_level_bitmap& out_level_bitmap);
     };
 
     template <>

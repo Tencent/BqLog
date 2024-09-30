@@ -204,6 +204,47 @@ namespace bq {
                 modifier_thread.join();
                 test_output_dynamic(bq::log_level::info, "multithread string log testing is finished!\n");
             }
+
+            {
+                // snapshot test
+                auto snapshot_log = test_category_log::create_log("snapshot_log", R"(
+						appenders_config.ConsoleAppender.type=console
+						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.levels=[error,fatal]
+					
+						log.thread_mode=sync
+						log.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
+                        snapshot.buffer_size=100000
+                        snapshot.levels=[info,error]
+                        snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
+			        )");
+
+                auto snapshot = snapshot_log.take_snapshot(true);
+                snapshot_log.verbose("AAAA");
+                result.add_result(snapshot_log.take_snapshot(true) == snapshot, "snapshot test 1");
+                snapshot_log.info(snapshot_log.cat.ModuleA.SystemA, "AAAA");
+                result.add_result(snapshot_log.take_snapshot(true) == snapshot, "snapshot test 2");
+                snapshot_log.error(snapshot_log.cat.ModuleA.SystemA.ClassA, "AAAA");
+                auto new_snapshot1 = snapshot_log.take_snapshot(true);
+                result.add_result(new_snapshot1 != snapshot && new_snapshot1.end_with("AAAA\n"), "snapshot test 3");
+                snapshot_log.error(snapshot_log.cat.ModuleA.SystemA.ClassA, "BBBB");
+                auto snapshot_log2 = test_category_log::create_log("snapshot_log", R"(
+						appenders_config.ConsoleAppender.type=console
+						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.levels=[error,fatal]
+					
+						log.thread_mode=sync
+						log.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
+                        snapshot.buffer_size=1000000       //more memory
+                        snapshot.levels=[info,error]
+                        snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
+			        )");
+                snapshot_log2.error(snapshot_log2.cat.ModuleA.SystemA.ClassA, "CCCC");
+                auto new_snapshot2 = snapshot_log2.take_snapshot(true);
+                result.add_result(new_snapshot2.begin_with(new_snapshot1), "snapshot test 4");
+                result.add_result(new_snapshot2.find("BBBB") != bq::string::npos, "snapshot test 5");
+                result.add_result(new_snapshot2.find("CCCC") > new_snapshot2.find("BBBB"), "snapshot test 6");
+            }
         }
     }
 }

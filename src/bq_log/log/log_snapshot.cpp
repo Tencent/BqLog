@@ -37,14 +37,14 @@ namespace bq {
     void log_snapshot::reset_config(const bq::property_value& snapshot_config)
     {
         bq::platform::scoped_spin_lock scoped_lock(lock_);
-        uint32_t buffer_size = 0;
+        buffer_size_ = 0;
         if (snapshot_config["buffer_size"].is_integral()) {
-            buffer_size = (uint32_t)(int64_t)snapshot_config["buffer_size"];
+            buffer_size_ = (uint32_t)(int64_t)snapshot_config["buffer_size"];
         }
-        if (buffer_size != 0) {
-            if (snapshot_buffer_ && ((uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count()) != buffer_size)) {
+        if (buffer_size_ != 0) {
+            if (snapshot_buffer_ && ((uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count()) != buffer_size_)) {
                 //create a new snapshot_buffer_ and backup log data.
-                ring_buffer* new_buffer = new ring_buffer(buffer_size);
+                ring_buffer* new_buffer = new ring_buffer(buffer_size_);
                 new_buffer->set_thread_check_enable(false);
                 snapshot_buffer_->begin_read();
                 while (true) {
@@ -59,14 +59,17 @@ namespace bq {
                             // chunk is too big for new buffer, discard and renew new buffer;
                             memcpy(write_handle.data_addr, backup_read_handle.data_addr, (size_t)backup_read_handle.data_size);
                             write_success = true;
+                            new_buffer->commit_write_chunk(write_handle);
                         }
                         else if (write_handle.result == enum_buffer_result_code::err_alloc_size_invalid) {
+                            new_buffer->commit_write_chunk(write_handle);
                             // chunk is too big for new buffer, discard and renew new buffer;
                             delete new_buffer;
-                            new_buffer = new ring_buffer(buffer_size);
+                            new_buffer = new ring_buffer(buffer_size_);
                             new_buffer->set_thread_check_enable(false);
                             write_success = true;
                         } else {
+                            new_buffer->commit_write_chunk(write_handle);
                             new_buffer->begin_read();
                             new_buffer->read();
                             new_buffer->end_read();
@@ -78,7 +81,7 @@ namespace bq {
                 delete snapshot_buffer_;
                 snapshot_buffer_ = new_buffer;
             } else {
-                snapshot_buffer_ = new ring_buffer(buffer_size);
+                snapshot_buffer_ = new ring_buffer(buffer_size_);
                 snapshot_buffer_->set_thread_check_enable(false);
             }
         } else {
@@ -93,13 +96,15 @@ namespace bq {
         }
 
         const auto& levels_array = snapshot_config["levels"];
-        if (!levels_array.is_array()) {
+        if (!bq::log_utils::get_log_level_bitmap_by_config(levels_array, log_level_bitmap_)) {
+            util::log_device_console(bq::log_level::info, "bq log info: no levels config was found in snapshot, use default level \"all\"");
             log_level_bitmap_.add_level("all");
-        } else {
-            log_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(levels_array);
         }
         
-        categories_mask_array_ = bq::log_utils::get_categories_mask_by_config(parent_log_->get_categories_name(), snapshot_config["categories_mask"]);
+        if (categories_mask_array_.is_empty()) {
+            categories_mask_array_.fill_uninitialized(parent_log_->get_categories_name().size());
+        }
+        bq::log_utils::get_categories_mask_by_config(parent_log_->get_categories_name(), snapshot_config["categories_mask"], categories_mask_array_);
     }
 
     void log_snapshot::write_data(const bq::log_entry_handle& log_entry)

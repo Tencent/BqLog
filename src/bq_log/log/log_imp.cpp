@@ -87,12 +87,13 @@ namespace bq {
         categories_name_array_ = category_names;
         // init categories mask
         {
-            categories_mask_array_ = bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"]);
+            categories_mask_array_.fill_uninitialized(categories_name_array_.size());
+            bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"], categories_mask_array_);
         }
 
         // init print_stack_levels
         {
-            print_stack_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"]);
+            bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
         }
 
         // init appenders
@@ -166,7 +167,7 @@ namespace bq {
 
         // init print_stack_levels
         {
-            print_stack_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"]);
+            bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
         }
 
         // init appenders
@@ -189,7 +190,7 @@ namespace bq {
 
         // init categories mask
         {
-            categories_mask_array_ = bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"]);
+            bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"], categories_mask_array_);
         }
 
         // init snapshot

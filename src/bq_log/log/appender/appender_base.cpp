@@ -58,12 +58,11 @@ namespace bq {
         name_ = name;
 
         const auto& levels_array = config_obj["levels"];
-        if (!levels_array.is_array()) {
+        if (!bq::log_utils::get_log_level_bitmap_by_config(levels_array, log_level_bitmap_)) {
             util::log_device_console(bq::log_level::info, "bq log info: no levels config was found in appender type %s, use default level \"all\"", ((string)config_obj["type"]).c_str());
             log_level_bitmap_.add_level("all");
-        } else {
-            log_level_bitmap_ = bq::log_utils::get_log_level_bitmap_by_config(levels_array);
         }
+
         is_gmt_time_ = false;
         if (config_obj["time_zone"].is_string()) {
             bq::string time_zone_str = ((string)config_obj["time_zone"]).trim();

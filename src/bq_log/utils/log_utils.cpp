@@ -14,10 +14,10 @@
 namespace bq {
 
 
-    bq::array_inline<uint8_t> log_utils::get_categories_mask_by_config(const bq::array<bq::string> categories_name, const bq::property_value& categories_mask_config)
+    bool log_utils::get_categories_mask_by_config(const bq::array<bq::string> categories_name, const bq::property_value& categories_mask_config, bq::array_inline<uint8_t>& out_categories_mask)
     {
+        assert(categories_name.size() == out_categories_mask.size() && "categories mask size must be equal to categories name size");
         bq::array<bq::string> tmp;
-        bq::array_inline<uint8_t> result;
         {
             if (categories_mask_config.is_array()) {
                 for (typename property_value::array_type::size_type i = 0; i < categories_mask_config.array_size(); ++i) {
@@ -51,30 +51,27 @@ namespace bq {
                         }
                     }
                 }
-                result.push_back(mask);
+                out_categories_mask[i] = mask;
             }
         }
-        return result;
+        return true;
     }
 
-    bq::log_level_bitmap log_utils::get_log_level_bitmap_by_config(const bq::property_value& log_level_bitmap_config)
+    bool log_utils::get_log_level_bitmap_by_config(const bq::property_value& log_level_bitmap_config, bq::log_level_bitmap& out_level_bitmap)
     {
-        bq::log_level_bitmap result;
-        if (!log_level_bitmap_config.is_null()) {
-            if (!log_level_bitmap_config.is_array()) {
-                util::log_device_console(bq::log_level::info, "bq log info: invalid [log_level] config: %s", log_level_bitmap_config.serialize().c_str());
-            } else {
-                for (typename property_value::array_type::size_type i = 0; i < log_level_bitmap_config.array_size(); ++i) {
-                    const auto& level_obj = log_level_bitmap_config[i];
-                    if (!level_obj.is_string()) {
-                        util::log_device_console(bq::log_level::warning, "bq log info: invalid [log_level] item: %s", level_obj.serialize().c_str());
-                        continue;
-                    }
-                    result.add_level(((bq::string)level_obj).trim());
-                }
-            }
+        out_level_bitmap.clear();
+        if (!log_level_bitmap_config.is_array()) {
+            return false;
         }
-        return result;
+        for (typename property_value::array_type::size_type i = 0; i < log_level_bitmap_config.array_size(); ++i) {
+            const auto& level_obj = log_level_bitmap_config[i];
+            if (!level_obj.is_string()) {
+                util::log_device_console(bq::log_level::warning, "bq log info: invalid [log_level] item: %s", level_obj.serialize().c_str());
+                continue;
+            }
+            out_level_bitmap.add_level(((bq::string)level_obj).trim());
+        }
+        return true;
     }
 
 }
