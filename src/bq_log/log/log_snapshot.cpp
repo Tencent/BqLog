@@ -158,10 +158,23 @@ namespace bq {
 
         if (snapshot_text_continuous_) {
             if (text.size() < buffer_size_) {
-                uint32_t left_size = buffer_size_ - (uint32_t)text.size();
+                size_t left_size = buffer_size_ - text.size();
                 bq::string& last_text = snapshot_text_[(snapshot_text_index_ + 1) & 0x01];
-                left_size = bq::min_value(left_size, (uint32_t)last_text.size());
-                text.insert_batch(text.begin(), last_text.end() - (size_t)left_size, left_size);
+                left_size = bq::min_value(left_size, last_text.size());
+                size_t offset = 0;
+                size_t start_pos = last_text.size() - left_size;
+                for (offset = 0; offset < 4 && offset < left_size; ++offset) {
+                    //find the start of multi-bytes character.
+                    char c = last_text[start_pos + offset];
+                    if ((c & 0x80) == 0) {
+                        // Single-byte character (ASCII), boundary found.
+                        break;
+                    } else if ((c & 0xC0) == 0xC0) {
+                        // Multi-byte character start found.
+                        break;
+                    }
+                }
+                text.insert_batch(text.begin(), last_text.begin() + start_pos + offset, left_size - offset);
             }
         }
         snapshot_text_continuous_ = true;

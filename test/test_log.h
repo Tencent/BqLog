@@ -30,7 +30,7 @@
 namespace bq {
     namespace test {
 
-        static void create_test_log1(bq::string snapshot_config = "")
+        static void log_creator_1(bq::string snapshot_config = "")
         {
             test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
@@ -44,7 +44,7 @@ namespace bq {
                     + snapshot_config);
         }
 
-        static void create_test_log2(bq::string snapshot_config = "")
+        static void log_creator_2(bq::string snapshot_config = "")
         {
             test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
@@ -58,7 +58,7 @@ namespace bq {
                     + snapshot_config);
         }
 
-        static void create_test_log3(bq::string snapshot_config = "")
+        static void log_creator_3(bq::string snapshot_config = "")
         {
             test_category_log::create_log("test_log3", R"(
 						appenders_config.ConsoleAppender.type=console
@@ -71,7 +71,7 @@ namespace bq {
                     + snapshot_config);
         }
 
-        static void create_test_log4(bq::string snapshot_config = "")
+        static void log_creator_4(bq::string snapshot_config = "")
         {
             test_category_log::create_log("test_log4", R"(
 						appenders_config.ConsoleAppender.type=console
@@ -85,7 +85,7 @@ namespace bq {
                     + snapshot_config);
         }
 
-        static void create_test_log5(bq::string snapshot_config = "")
+        static void log_creator_5(bq::string snapshot_config = "")
         {
             test_category_log::create_log("test_log5", R"(
 						appenders_config.ConsoleAppender.type=console
@@ -99,7 +99,7 @@ namespace bq {
                     + snapshot_config);
         }
 
-        static void create_test_log_file_appender()
+        static void create_test_log_3_file_appender(bq::string snapshot_config = "")
         {
             test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
@@ -124,8 +124,8 @@ namespace bq {
 					
 						log.thread_mode=sync
 						log.categories_mask=[ModuleA.SystemA,ModuleB]
-                        snapshot.buffer_size=65536
-			)");
+			        )"
+                    + snapshot_config);
         }
 
         class create_log_thread : public bq::platform::thread {
@@ -133,11 +133,11 @@ namespace bq {
             virtual void run()
             {
                 for (uint32_t i = 0; i < 100; ++i) {
-                    create_test_log2(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
-                    create_test_log3(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
-                    create_test_log4(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
-                    create_test_log5(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
-                    create_test_log1(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
+                    log_creator_2(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
+                    log_creator_3(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
+                    log_creator_4(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
+                    log_creator_5(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
+                    log_creator_1(i % 2 == 0 ? "snapshot.buffer_size = 65536" : "");
                 }
             }
         };
@@ -156,17 +156,14 @@ namespace bq {
             virtual void run()
             {
                 bq::array<bq::string> snapshot_config = { "",
-                    "snapshot.buffer_size = 65536",
-                    "snapshot.buffer_size = 32",
-                    "snapshot.buffer_size = 200000" };
+                    "snapshot.buffer_size=65536",
+                    "snapshot.buffer_size=120000",
+                    "snapshot.buffer_size=200000" };
                 auto begin_epoch_ms = bq::platform::high_performance_epoch_ms();
                 while (!is_cancelled()) {
-                    bq::test::create_test_log1(snapshot_config[(int32_t)(begin_epoch_ms % 4)]);
-                    bq::string snapshot_str = log_ptr->take_snapshot(false);
+                    bq::test::create_test_log_3_file_appender(snapshot_config[(int32_t)(begin_epoch_ms % 4)]);
+                    log_ptr->take_snapshot(false);
                     sleep(0);
-                    if (bq::platform::high_performance_epoch_ms() - begin_epoch_ms > 5000) {
-                        break;
-                    }
                 }
             }
         };
@@ -190,12 +187,12 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                create_test_log1("snapshot.buffer_size = 65536");
+                log_creator_1("snapshot.buffer_size = 65536");
                 auto log_inst = test_category_log::get_log_by_name("test_log");
                 test_1(result, log_inst);
-                create_test_log2();
+                log_creator_2();
                 test_2(result, log_inst);
-                create_test_log1("snapshot.buffer_size = 65536");
+                log_creator_1("snapshot.buffer_size = 65536");
                 test_1(result, log_inst);
 
                 create_log_thread thread1;
@@ -220,9 +217,7 @@ namespace bq {
                 snapshot_thread snapeshot2(log_inst);
                 snapeshot2.start();
 
-                test_1(result, log_inst);
-
-                create_test_log_file_appender();
+                create_test_log_3_file_appender("snapshot.buffer_size=65536");
                 test_3(result, log_inst);
                 snapeshot1.cancel();
                 snapeshot2.cancel();

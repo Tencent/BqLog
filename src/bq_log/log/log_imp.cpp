@@ -37,7 +37,6 @@ namespace bq {
 
     bool log_imp::init(const bq::string& name, const property_value& config, const bq::array<bq::string>& category_names)
     {
-        clear();
         id_ = (uint64_t) reinterpret_cast<uintptr_t>(this);
         id_ ^= log_id_magic_number;
         const auto& log_config = config["log"];
@@ -113,9 +112,7 @@ namespace bq {
         // init snapshot
         {
             const auto& snapshot_config = config["snapshot"];
-            if(snapshot_config.is_object()) {
-                snapshot_ = new log_snapshot(this, snapshot_config);
-            }
+            snapshot_ = new log_snapshot(this, snapshot_config);
         }
 
         refresh_merged_log_level_bitmap();
@@ -172,6 +169,7 @@ namespace bq {
 
         // init appenders
         {
+            bq::platform::scoped_spin_lock lock(spin_lock_);
             const auto& all_apenders_config = config["appenders_config"];
             if (!all_apenders_config.is_object()) {
                 util::log_device_console(bq::log_level::error, "create_log parse property failed, invalid appenders_config");
@@ -196,14 +194,7 @@ namespace bq {
         // init snapshot
         {
             const auto& snapshot_config = config["snapshot"];
-            bq::platform::scoped_mutex lock(mutex_);
-            if (!snapshot_) {
-                if(snapshot_config.is_object()) {
-                    snapshot_ = new log_snapshot(this, snapshot_config);
-                }
-            } else {
-                snapshot_->reset_config(snapshot_config);
-            }
+            snapshot_->reset_config(snapshot_config);
         }
         return true;
     }
@@ -271,11 +262,8 @@ namespace bq {
         if (ring_buffer_) {
             delete ring_buffer_;
         }
-        bq::platform::scoped_mutex lock(mutex_);
-        if (snapshot_) {
-            delete snapshot_;
-            snapshot_ = nullptr;
-        }
+        delete snapshot_;
+        snapshot_ = nullptr;
         id_ = 0;
     }
 
@@ -303,26 +291,19 @@ namespace bq {
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
             appenders_list_[i]->log(handle);
         }
-        if (snapshot_) {
-            snapshot_->write_data(handle);
-        }
+        snapshot_->write_data(handle);
     }
 
     const static bq::string empty_snapshot;
     const bq::string& log_imp::take_snapshot_string(bool use_gmt_time)
     {
-        bq::platform::scoped_mutex lock(mutex_);
-        if (snapshot_) {
-            return snapshot_->take_snapshot_string(use_gmt_time);
-        }
-        return empty_snapshot;
+        return snapshot_->take_snapshot_string(use_gmt_time);
+        ;
     }
 
     void log_imp::release_snapshot_string()
     {
-        if (snapshot_) {
-            snapshot_->release_snapshot_string();
-        }
+        snapshot_->release_snapshot_string();
     }
 
     const bq::string& log_imp::get_name() const
@@ -388,7 +369,7 @@ namespace bq {
 
     void log_imp::sync_process()
     {
-        bq::platform::scoped_mutex lock(mutex_);
+        bq::platform::scoped_spin_lock lock(spin_lock_);
         process(true);
     }
 
