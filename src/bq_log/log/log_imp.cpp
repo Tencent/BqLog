@@ -160,7 +160,10 @@ namespace bq {
                 }
             }
         }
-
+        if (config["aaa"].is_integral())
+        {
+            return true;
+        }
         // init print_stack_levels
         {
             bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
