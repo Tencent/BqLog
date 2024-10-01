@@ -649,7 +649,7 @@ The `appenders_config` is a set of configurations for Appenders. The first param
 |--------------------|----------|-------------------------------------------------------------|---------------|------------------------------|-------------------------------|-------------------------------------|------------------------------|
 | type               | ✔        | console, text_file, compressed_file, raw_file               |               | ✔                            | ✔                             | ✔                                   | ✔                            |
 | enable             | ✘        | Whether the Appender is enabled by default                  | true          | ✔                            | ✔                             | ✔                                   | ✔                            |
-| levels             | ✔        | Array of log levels                                         |               | ✔                            | ✔                             | ✔                                   | ✔                            |
+| levels             | ✘        | Array of log levels                                         | [all]         | ✔                            | ✔                             | ✔                                   | ✔                            |
 | time_zone          | ✘        | gmt or any other string                                     | Local time    | ✔                            | ✔                             | ✔                                   | ✔                            |
 | file_name          | ✔        | Relative or absolute path                                   |               | ✘                            | ✔                             | ✔                                   | ✔                            |
 | is_in_sandbox      | ✘        | true, false                                                 | false         | ✘                            | ✔                             | ✔                                   | ✔                            |
@@ -1798,3 +1798,7 @@ Interestingly, in the case of no parameters, Log4j shows lower performance overh
 | Log4J2 Text             | 3204     | 6489      | 7702      | 8485      | 9640      | 10458     | 11483     | 12853     | 13995     | 14633      |
 
 <img src="docs/img/benchmark_no_param.png" alt="No Parameters Results" style="width: 100%;">
+
+
+## Become a Contributor
+If you want to contribute your code to this repository, please make sure your code can pass the `AutoTest` and `Build` workflows in `Github Action`.
