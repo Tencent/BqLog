@@ -167,7 +167,6 @@ namespace bq {
         
 
         // init appenders
-        if (!config["aaa"].is_integral())
         {
             bq::platform::scoped_spin_lock lock(spin_lock_);
             const auto& all_apenders_config = config["appenders_config"];
