@@ -164,11 +164,10 @@ namespace bq {
         {
             bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
         }
+        
 
-        if (config["aaa"].is_integral()) {
-            return true;
-        }
         // init appenders
+        if (!config["aaa"].is_integral())
         {
             bq::platform::scoped_spin_lock lock(spin_lock_);
             const auto& all_apenders_config = config["appenders_config"];
