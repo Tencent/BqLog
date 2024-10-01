@@ -191,6 +191,7 @@ namespace bq {
         }
 
         // init snapshot
+        if (!config["aaa"].is_integral())
         {
             const auto& snapshot_config = config["snapshot"];
             snapshot_->reset_config(snapshot_config);
