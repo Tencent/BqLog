@@ -28,7 +28,7 @@ namespace bq {
         class spin_lock {
         private:
             bq::cache_friendly_type<bq::platform::atomic<bool>> value_;
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
             bq::platform::atomic<bq::platform::thread::thread_id> thread_id_;
 #endif
         private:
@@ -37,7 +37,7 @@ namespace bq {
         public:
             spin_lock()
                 : value_(false)
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 , thread_id_(0)
 #endif
             {
@@ -52,12 +52,12 @@ namespace bq {
             {
                 while (true) {
                     if (!value_.get().exchange(true, bq::platform::memory_order::release)) {
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                         thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
 #endif
                         break;
                     }
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                     assert(bq::platform::thread::get_current_thread_id() != thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
 #endif
                     while (value_.get().load(bq::platform::memory_order::relaxed)) {
@@ -68,7 +68,8 @@ namespace bq {
 
             inline void unlock()
             {
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                assert(bq::platform::thread::get_current_thread_id() == thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock can only be unlock by thread who holds lock");
                 thread_id_.store(0, bq::platform::memory_order::seq_cst);
 #endif
                 value_.get().store(false, bq::platform::memory_order::release);
@@ -88,7 +89,7 @@ namespace bq {
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
             static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
             bq::platform::atomic<bq::platform::thread::thread_id> write_lock_thread_id_;
 #endif
         private:
@@ -97,7 +98,7 @@ namespace bq {
         public:
             spin_lock_rw_crazy()
                 : counter_(0)
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 , write_lock_thread_id_(0)
 #endif
             {
@@ -129,7 +130,7 @@ namespace bq {
             inline void read_unlock()
             {
                 counter_type previous_counter = counter_.get().fetch_add(-1, bq::platform::memory_order::release);
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
 #else
                 (void)previous_counter;
@@ -138,7 +139,7 @@ namespace bq {
 
             inline void write_lock()
             {
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 assert(bq::platform::thread::get_current_thread_id() != write_lock_thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
                 write_lock_thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
 #endif
@@ -153,7 +154,8 @@ namespace bq {
 
             inline void write_unlock()
             {
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                assert(bq::platform::thread::get_current_thread_id() == write_lock_thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock_rw_crazy can only be write_unlock by thread who holds write_lock");
                 write_lock_thread_id_.store(0, bq::platform::memory_order::seq_cst);
 #endif
                 counter_.get().store(0, bq::platform::memory_order::release);
