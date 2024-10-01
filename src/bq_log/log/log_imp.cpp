@@ -165,6 +165,9 @@ namespace bq {
             bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
         }
 
+        if (config["aaa"].is_integral()) {
+            return true;
+        }
         // init appenders
         {
             bq::platform::scoped_spin_lock lock(spin_lock_);
@@ -182,10 +185,6 @@ namespace bq {
                 add_appender(name_key, all_apenders_config[name_key]);
             }
             refresh_merged_log_level_bitmap();
-        }
-
-        if (config["aaa"].is_integral()) {
-            return true;
         }
         // init categories mask
         {
