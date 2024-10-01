@@ -422,21 +422,11 @@ namespace bq {
         return categories_name_array_;
     }
 
-    const appender_base* log_imp::get_appender_by_name(const bq::string& name) const
+    void log_imp::set_appenders_enable(const bq::string& appender_name, bool enable)
     {
-        for (auto iter = appenders_list_.begin(); iter != appenders_list_.end(); ++iter) {
-            if ((*iter)->get_name() == name) {
-                return *iter;
-            }
-        }
-        return nullptr;
-    }
-
-    array<appender_base*> log_imp::get_appender_by_vague_name(const bq::string& name) const
-    {
-        auto star_list = name.split("*");
-        bool vague = (name.find("*") != string::npos);
-        array<appender_base*> relist;
+        bq::platform::scoped_spin_lock lock(spin_lock_);
+        auto star_list = appender_name.split("*");
+        bool vague = (appender_name.find("*") != string::npos);
         for (auto iter = appenders_list_.begin(); iter != appenders_list_.end(); ++iter) {
             if (vague) {
                 bool find = true;
@@ -455,11 +445,13 @@ namespace bq {
                     }
                 }
                 if (find)
-                    relist.push_back(*iter);
-            } else if ((*iter)->get_name() == name) {
-                relist.push_back(*iter);
+                {
+                    (*iter)->set_enable(enable);
+                }
+            } else if ((*iter)->get_name() == appender_name) {
+                (*iter)->set_enable(enable);
             }
         }
-        return relist;
     }
+
 }
