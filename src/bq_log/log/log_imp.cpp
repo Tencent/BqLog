@@ -107,6 +107,7 @@ namespace bq {
             for (const auto& name_key : appender_names) {
                 add_appender(name_key, all_apenders_config[name_key]);
             }
+            refresh_merged_log_level_bitmap();
         }
 
         // init snapshot
@@ -114,8 +115,6 @@ namespace bq {
             const auto& snapshot_config = config["snapshot"];
             snapshot_ = new log_snapshot(this, snapshot_config);
         }
-
-        refresh_merged_log_level_bitmap();
 
         if (get_reliable_level() <= log_reliable_level::normal) {
             ring_buffer_ = new ring_buffer(buffer_size);
@@ -183,8 +182,8 @@ namespace bq {
             for (const auto& name_key : appender_names) {
                 add_appender(name_key, all_apenders_config[name_key]);
             }
+            refresh_merged_log_level_bitmap();
         }
-        refresh_merged_log_level_bitmap();
 
         // init categories mask
         {
