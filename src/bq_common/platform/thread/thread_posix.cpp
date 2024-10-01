@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
@@ -52,10 +52,7 @@ namespace bq {
             {
                 thread* thread_ptr = (thread*)data;
                 // double setting 1
-                thread_ptr->thread_id_ = (thread::thread_id)(thread_ptr->platform_data_->thread_handle);
-#ifndef NDEBUG
-                assert(thread_ptr->thread_id_ == thread::get_current_thread_id() && "error get thread id in new created thread");
-#endif
+                thread_ptr->thread_id_ = thread::get_current_thread_id();
                 thread_ptr->internal_run();
                 return nullptr;
             }
