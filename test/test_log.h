@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 /*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -155,10 +155,10 @@ namespace bq {
         protected:
             virtual void run()
             {
-                bq::array<bq::string> snapshot_config = { "\naaa=20",
-                    "snapshot.buffer_size=65536\naaa=20",
-                    "snapshot.buffer_size=120000\naaa=20",
-                    "snapshot.buffer_size=200000\naaa=20" };
+                bq::array<bq::string> snapshot_config = { "",
+                    "snapshot.buffer_size=65536",
+                    "snapshot.buffer_size=120000",
+                    "snapshot.buffer_size=200000" };
                 auto begin_epoch_ms = bq::platform::high_performance_epoch_ms();
                 while (!is_cancelled()) {
                     bq::test::create_test_log_3_file_appender(snapshot_config[(int32_t)(begin_epoch_ms % 4)]);
