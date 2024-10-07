@@ -587,7 +587,7 @@ namespace bq {
                 decoder.pick_new_log_file();
                 result = decoder.get().decode();
             }
-            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed");
+            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed, error code:%d", (int32_t)result);
             return decoder.get().get_last_decoded_log_entry();
         }
 
@@ -599,7 +599,7 @@ namespace bq {
                 decoder.pick_new_log_file();
                 result = decoder.get().decode();
             }
-            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed");
+            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed, error code:%d", (int32_t)result);
             return decoder.get().get_last_decoded_log_entry();
         }
 

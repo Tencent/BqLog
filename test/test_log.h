@@ -123,7 +123,6 @@ namespace bq {
 						appenders_config.RawAppender.expire_time_days=2
 					
 						log.thread_mode=sync
-                        log.reliable_level=high
 						log.categories_mask=[ModuleA.SystemA,ModuleB]
 			        )"
                     + snapshot_config);

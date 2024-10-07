@@ -174,6 +174,8 @@ namespace bq {
                 util::log_device_console(bq::log_level::error, "create_log parse property failed, invalid appenders_config");
                 return false;
             }
+            flush_appenders_cache();
+            flush_appenders_io();
             for (auto appender_ptr : appenders_list_) {
                 delete appender_ptr;
             }
