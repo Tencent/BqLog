@@ -95,7 +95,7 @@ namespace bq {
     }
 
 #if BQ_TOOLS || BQ_UNIT_TEST
-    static bq::log_level log_device_min_level = bq::log_level::error;
+    static bq::log_level log_device_min_level = bq::log_level::warning;
     void util::set_log_device_console_min_level(bq::log_level level)
     {
         log_device_min_level = level;

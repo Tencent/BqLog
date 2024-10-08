@@ -49,16 +49,16 @@ namespace bq {
                 cache_write_.shrink();
             }
             if (real_write_size != need_write_size) {
-                int32_t errid = file_manager::instance().get_and_clear_last_file_error();
+                int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
 
-                if (errid != 0 && errid != 28) {
+                if (err_code != 0 && err_code != 28) {
                     char error_text[256] = { 0 };
                     auto epoch = bq::platform::high_performance_epoch_ms();
                     const struct tm* timeptr = is_gmt_time_ ? bq::util::get_gmt_time_by_epoch_unsafe(epoch) : bq::util::get_local_time_by_epoch_unsafe(epoch);
                     snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file ecode:%d, trying open new file real_write_size:%d,need_write_size:%d\n",
                         is_gmt_time_ ? "UTC0" : "LOCAL",
                         timeptr->tm_year + 1900, timeptr->tm_mon + 1, timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
-                        errid, (int32_t)real_write_size, (int32_t)need_write_size);
+                        err_code, (int32_t)real_write_size, (int32_t)need_write_size);
                     string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
                     bq::file_manager::append_all_text(path, error_text);
                     bq::util::log_device_console_plain_text(log_level::warning, error_text);
@@ -72,12 +72,13 @@ namespace bq {
     {
         if (file_) {
             if (!file_manager::instance().flush_file(file_)) {
-                int32_t errid = file_manager::instance().get_and_clear_last_file_error();
-                if (errid != 0) {
+                int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
+                if (err_code != 0) {
                     char ids[32] = { 0 };
-                    snprintf(ids, 32, "%d", errid);
+                    snprintf(ids, 32, "%d", err_code);
                     string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", true);
                     bq::file_manager::write_all_text(path, ids);
+                    bq::util::log_device_console(log_level::warning, "appender_file_base::flush_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
                 }
             }
         }
