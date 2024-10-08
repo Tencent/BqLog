@@ -28,11 +28,9 @@ namespace bq {
 
         static string get_current_local_time_string();
 
-        // not thread safe, the result is valid till next call of this function
-        static const struct tm* get_local_time_by_epoch_unsafe(uint64_t epoch);
+        static bool get_local_time_by_epoch(uint64_t epoch, struct tm& result);
 
-        // not thread safe, the result is valid till next call of this function
-        static const struct tm* get_gmt_time_by_epoch_unsafe(uint64_t epoch);
+        static bool get_gmt_time_by_epoch(uint64_t epoch, struct tm& result);
 
 #if BQ_TOOLS || BQ_UNIT_TEST
         static void set_log_device_console_min_level(bq::log_level level);

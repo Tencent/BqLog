@@ -52,9 +52,10 @@ namespace bq {
     {
         char error_text[256] = { 0 };
         auto epoch = bq::platform::high_performance_epoch_ms();
-        const struct tm* timeptr = get_gmt_time_by_epoch_unsafe(epoch);
+        struct tm result;
+        get_gmt_time_by_epoch(epoch, result);
         snprintf(error_text, sizeof(error_text), "%04d-%02d-%02d %02d:%02d:%02d",
-            timeptr->tm_year + 1900, timeptr->tm_mon + 1, timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec);
+            result.tm_year + 1900, result.tm_mon + 1, result.tm_mday, result.tm_hour, result.tm_min, result.tm_sec);
         return error_text;
     }
 
@@ -62,35 +63,30 @@ namespace bq {
     {
         char error_text[256] = { 0 };
         auto epoch = bq::platform::high_performance_epoch_ms();
-        const struct tm* timeptr = get_local_time_by_epoch_unsafe(epoch);
+        struct tm result;
+        get_local_time_by_epoch(epoch, result);
         snprintf(error_text, sizeof(error_text), "%04d-%02d-%02d %02d:%02d:%02d",
-            timeptr->tm_year + 1900, timeptr->tm_mon + 1, timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec);
+            result.tm_year + 1900, result.tm_mon + 1, result.tm_mday, result.tm_hour, result.tm_min, result.tm_sec);
         return error_text;
     }
 
-#if defined(_MSC_VER)
-    static struct tm local_time_cache_;
-    static struct tm utc0_time_cache_;
-#endif
-    const struct tm* util::get_local_time_by_epoch_unsafe(uint64_t epoch)
+    bool util::get_local_time_by_epoch(uint64_t epoch, struct tm& result)
     {
         time_t epoch_sec = (time_t)(epoch / 1000);
 #if defined(_MSC_VER)
-        localtime_s(&local_time_cache_, &epoch_sec);
-        return &local_time_cache_;
+        return localtime_s(&result, &epoch_sec) == 0;
 #else
-        return localtime(&epoch_sec);
+        return localtime_r(&epoch_sec， &result) != NULL;
 #endif
     }
 
-    const struct tm* util::get_gmt_time_by_epoch_unsafe(uint64_t epoch)
+    bool util::get_gmt_time_by_epoch(uint64_t epoch, struct tm& result)
     {
         time_t epoch_sec = (time_t)(epoch / 1000);
 #if defined(_MSC_VER)
-        gmtime_s(&utc0_time_cache_, &epoch_sec);
-        return &utc0_time_cache_;
+        return gmtime_s(&result, &epoch_sec) == 0;
 #else
-        return gmtime(&epoch_sec);
+        return gmtime_r(&epoch_sec， & result) != NULL;
 #endif
     }
 

@@ -54,10 +54,15 @@ namespace bq {
                 if (err_code != 0 && err_code != 28) {
                     char error_text[256] = { 0 };
                     auto epoch = bq::platform::high_performance_epoch_ms();
-                    const struct tm* timeptr = is_gmt_time_ ? bq::util::get_gmt_time_by_epoch_unsafe(epoch) : bq::util::get_local_time_by_epoch_unsafe(epoch);
+                    struct tm time_st;
+                    if(is_gmt_time_){
+                        bq::util::get_gmt_time_by_epoch(epoch, time_st);
+                    }else{
+                        bq::util::get_local_time_by_epoch(epoch, time_st);
+                    }
                     snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file ecode:%d, trying open new file real_write_size:%d,need_write_size:%d\n",
                         is_gmt_time_ ? "UTC0" : "LOCAL",
-                        timeptr->tm_year + 1900, timeptr->tm_mon + 1, timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
+                        time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
                         err_code, (int32_t)real_write_size, (int32_t)need_write_size);
                     string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
                     bq::file_manager::append_all_text(path, error_text);
@@ -117,10 +122,11 @@ namespace bq {
         // Calculate time difference from UTC time to local time.
         if (!is_gmt_time_) {
             uint64_t epoch = bq::platform::high_performance_epoch_ms();
-            const struct tm* local = bq::util::get_local_time_by_epoch_unsafe(epoch);
-            time_t local_time = mktime(const_cast<struct tm*>(local));
-            const struct tm* utc0 = bq::util::get_gmt_time_by_epoch_unsafe(epoch);
-            time_t utc_time = mktime(const_cast<struct tm*>(utc0));
+            struct tm local_st, utc0_st;
+            bq::util::get_local_time_by_epoch(epoch, local_st);
+            time_t local_time = mktime(const_cast<struct tm*>(&local_st));
+            bq::util::get_gmt_time_by_epoch(epoch, utc0_st);
+            time_t utc_time = mktime(const_cast<struct tm*>(&utc0_st));
             double timezone_offset = difftime(local_time, utc_time);
             time_zone_diff_to_gmt_ms_ = (int64_t)(timezone_offset) * 1000;
         } else {
@@ -282,8 +288,13 @@ namespace bq {
 
         char time_str_buf[128];
         auto epoch = bq::platform::high_performance_epoch_ms();
-        const struct tm* timeptr = is_gmt_time_ ? bq::util::get_gmt_time_by_epoch_unsafe(epoch) : bq::util::get_local_time_by_epoch_unsafe(epoch);
-        strftime(time_str_buf, sizeof(time_str_buf), "_%Y%m%d_", timeptr);
+        struct tm time_st;
+        if (is_gmt_time_) {
+            bq::util::get_gmt_time_by_epoch(epoch, time_st);
+        } else {
+            bq::util::get_local_time_by_epoch(epoch, time_st);
+        }
+        strftime(time_str_buf, sizeof(time_str_buf), "_%Y%m%d_", &time_st);
 
         int32_t max_index = 0;
 

@@ -66,7 +66,8 @@ namespace bq {
             }
 
             {
-                test_output_dynamic(bq::log_level::info, "testing multithread string log. wait for 10 seconds please...\n if error exist, an assert will be triggered\n");
+                const uint64_t seconds = 10;
+                test_output_dynamic_param(bq::log_level::info, "testing multithread string log. wait for %" PRIu64 " seconds please...\n if error exist, an assert will be triggered\n", seconds);
 
                 multi_thread_string_test_modifier modifier_thread;
                 modifier_thread.start();
@@ -196,7 +197,7 @@ namespace bq {
                     log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000E+13|"), "layout format");
 
-                    if (bq::platform::high_performance_epoch_ms() - start_time >= 10 * 1000) {
+                    if (bq::platform::high_performance_epoch_ms() - start_time >= seconds * 1000) {
                         break;
                     }
                 }

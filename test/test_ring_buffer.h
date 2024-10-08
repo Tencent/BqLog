@@ -103,7 +103,6 @@ namespace bq {
                     auto handle = ring_buffer.read();
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_ring_buffer;
                     if (write_finished && read_empty) {
-                        ring_buffer.end_read();
                         break;
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {

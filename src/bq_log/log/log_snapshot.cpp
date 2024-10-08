@@ -97,7 +97,7 @@ namespace bq {
 
         const auto& levels_array = snapshot_config["levels"];
         if (!bq::log_utils::get_log_level_bitmap_by_config(levels_array, log_level_bitmap_)) {
-            util::log_device_console(bq::log_level::info, "bq log info: no levels config was found in snapshot, use default level \"all\"");
+            util::log_device_console(bq::log_level::info, "log [%s]: no levels config was found in snapshot, use default level \"all\"", parent_log_->get_name().c_str());
             log_level_bitmap_.add_level("all");
         }
         
