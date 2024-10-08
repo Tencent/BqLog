@@ -73,7 +73,7 @@ namespace bq {
         bq::array_inline<bq::unique_ptr<log_imp>> log_imp_list_;
         bq::log_worker public_worker_;
         bq::layout public_layout_;
-        bq::platform::mutex logs_lock_;
+        bq::platform::spin_lock_rw_crazy logs_lock_;
         bq::platform::atomic<int32_t> automatic_log_name_seq_;
     };
 
