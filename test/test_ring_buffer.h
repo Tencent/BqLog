@@ -26,7 +26,7 @@ private:
     bq::platform::atomic<int32_t>& counter_ref;
 
 public:
-    const static int32_t min_chunk_size = 8;
+    const static int32_t min_chunk_size = 12;
     const static int32_t max_chunk_size = 1024;
     write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
         : counter_ref(counter)
@@ -52,8 +52,9 @@ public:
             --left_write_count;
             assert(handle.result == bq::enum_buffer_result_code::success);
             *(int32_t*)(handle.data_addr) = id;
+            *((int32_t*)(handle.data_addr) + 1) = left_write_count;
             int32_t count = (int32_t)alloc_size / sizeof(int32_t);
-            int32_t* begin = (int32_t*)(handle.data_addr) + 1;
+            int32_t* begin = (int32_t*)(handle.data_addr) + 2;
             int32_t* end = (int32_t*)(handle.data_addr) + count;
             std::fill(begin, end, (int32_t)alloc_size);
             ring_buffer_ptr->commit_write_chunk(handle);
@@ -117,6 +118,7 @@ namespace bq {
                     }
 
                     int32_t id = *(int32_t*)handle.data_addr;
+                    int32_t left_count = *((int32_t*)handle.data_addr + 1);
                     if (id < 0 || id >= total_task) {
                         std::string error_msg = "invalid task id:";
                         error_msg += std::to_string(id);
@@ -125,8 +127,12 @@ namespace bq {
                     }
 
                     task_check_vector[id]++;
+                    if (task_check_vector[id] + left_count != chunk_count_per_task) {
+                        result.add_result(false, "chunk left task check error, real: %d, expected:%d", left_count, chunk_count_per_task - task_check_vector[id]);
+                        task_check_vector[id] = chunk_count_per_task - left_count;
+                    }
                     bool content_check = true;
-                    for (size_t i = 1; i < size / sizeof(int32_t); ++i) {
+                    for (size_t i = 2; i < size / sizeof(int32_t); ++i) {
                         if (*((int32_t*)handle.data_addr + i) != size) {
                             content_check = false;
                             continue;
