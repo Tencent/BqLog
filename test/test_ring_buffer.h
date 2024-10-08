@@ -18,53 +18,56 @@
 #include "test_base.h"
 #include "bq_log/types/ring_buffer.h"
 
-class write_task {
-private:
-    int32_t id;
-    bq::ring_buffer* ring_buffer_ptr;
-    int32_t left_write_count;
-    bq::platform::atomic<int32_t>& counter_ref;
-
-public:
-    const static int32_t min_chunk_size = 12;
-    const static int32_t max_chunk_size = 1024;
-    write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
-        : counter_ref(counter)
-    {
-        this->id = id;
-        this->left_write_count = left_write_count;
-        this->ring_buffer_ptr = ring_buffer_ptr;
-    }
-
-    void operator()()
-    {
-        std::random_device sd;
-        std::minstd_rand linear_ran(sd());
-        std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
-        while (left_write_count > 0) {
-            uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
-            auto handle = ring_buffer_ptr->alloc_write_chunk(alloc_size);
-            if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
-                || handle.result == bq::enum_buffer_result_code::err_alloc_failed_by_race_condition
-                || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited) {
-                continue;
-            }
-            --left_write_count;
-            assert(handle.result == bq::enum_buffer_result_code::success);
-            *(int32_t*)(handle.data_addr) = id;
-            *((int32_t*)(handle.data_addr) + 1) = left_write_count;
-            int32_t count = (int32_t)alloc_size / sizeof(int32_t);
-            int32_t* begin = (int32_t*)(handle.data_addr) + 2;
-            int32_t* end = (int32_t*)(handle.data_addr) + count;
-            std::fill(begin, end, (int32_t)alloc_size);
-            ring_buffer_ptr->commit_write_chunk(handle);
-        }
-        counter_ref.fetch_add(-1, bq::platform::memory_order::release);
-    }
-};
-
 namespace bq {
     namespace test {
+        static bq::platform::atomic<int32_t> ring_buffer_test_total_write_count_ = 0;
+
+        class write_task {
+        private:
+            int32_t id;
+            bq::ring_buffer* ring_buffer_ptr;
+            int32_t left_write_count;
+            bq::platform::atomic<int32_t>& counter_ref;
+
+        public:
+            const static int32_t min_chunk_size = 12;
+            const static int32_t max_chunk_size = 1024;
+            write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
+                : counter_ref(counter)
+            {
+                this->id = id;
+                this->left_write_count = left_write_count;
+                this->ring_buffer_ptr = ring_buffer_ptr;
+            }
+
+            void operator()()
+            {
+                std::random_device sd;
+                std::minstd_rand linear_ran(sd());
+                std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
+                while (left_write_count > 0) {
+                    uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
+                    auto handle = ring_buffer_ptr->alloc_write_chunk(alloc_size);
+                    if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
+                        || handle.result == bq::enum_buffer_result_code::err_alloc_failed_by_race_condition
+                        || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited) {
+                        continue;
+                    }
+                    --left_write_count;
+                    assert(handle.result == bq::enum_buffer_result_code::success);
+                    *(int32_t*)(handle.data_addr) = id;
+                    *((int32_t*)(handle.data_addr) + 1) = left_write_count;
+                    int32_t count = (int32_t)alloc_size / sizeof(int32_t);
+                    int32_t* begin = (int32_t*)(handle.data_addr) + 2;
+                    int32_t* end = (int32_t*)(handle.data_addr) + count;
+                    std::fill(begin, end, (int32_t)alloc_size);
+                    ring_buffer_ptr->commit_write_chunk(handle);
+                }
+                ++ring_buffer_test_total_write_count_;
+                counter_ref.fetch_add(-1, bq::platform::memory_order::release);
+            }
+        };
+
 
         class test_ring_buffer : public test_base {
         public:
@@ -127,10 +130,8 @@ namespace bq {
                     }
 
                     task_check_vector[id]++;
-                    if (task_check_vector[id] + left_count != chunk_count_per_task) {
-                        result.add_result(false, "chunk left task check error, real: %d, expected:%d", left_count, chunk_count_per_task - task_check_vector[id]);
-                        task_check_vector[id] = chunk_count_per_task - left_count;
-                    }
+                    result.add_result(task_check_vector[id] + left_count == chunk_count_per_task, "chunk left task check error, real: %d, expected:%d", left_count, chunk_count_per_task - task_check_vector[id]);    
+                    task_check_vector[id] = chunk_count_per_task - left_count;  //error adjust
                     bool content_check = true;
                     for (size_t i = 2; i < size / sizeof(int32_t); ++i) {
                         if (*((int32_t*)handle.data_addr + i) != size) {
@@ -144,6 +145,7 @@ namespace bq {
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
                     result.add_result(task_check_vector[i] == chunk_count_per_task, "chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
+                result.add_result(total_chunk == ring_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", ring_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
                 return result;
             }
