@@ -136,7 +136,7 @@ namespace bq {
                 }
                 ring_buffer.end_read();
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
-                    result.add_result(task_check_vector[i] == chunk_count_per_task, "chunk count check error");
+                    result.add_result(task_check_vector[i] == chunk_count_per_task, "chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
 
                 return result;
