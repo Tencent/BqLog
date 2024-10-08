@@ -62,8 +62,8 @@ namespace bq {
                     int32_t* end = (int32_t*)(handle.data_addr) + count;
                     std::fill(begin, end, (int32_t)alloc_size);
                     ring_buffer_ptr->commit_write_chunk(handle);
+                    ++ring_buffer_test_total_write_count_;
                 }
-                ++ring_buffer_test_total_write_count_;
                 counter_ref.fetch_add(-1, bq::platform::memory_order::release);
             }
         };
