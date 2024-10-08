@@ -23,6 +23,7 @@ bq::appender_decode_result bq::appender_decoder_raw::decode_private()
     decoded_text_.clear();
     auto read_handle = read_with_cache(sizeof(uint32_t));
     if (read_handle.len() == 0) {
+        bq::util::log_device_console(log_level::error, "EOF 1");
         return appender_decode_result::eof;
     }
     if (read_handle.len() != sizeof(uint32_t)) {
