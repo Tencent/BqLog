@@ -97,11 +97,15 @@ namespace bq {
                 int32_t percent = 0;
                 auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
                 test_output_dynamic_param(bq::log_level::info, "ring buffer test progress:%d%%, time cost:%dms\r", percent, 0);
-                bool read_empty = false;
                 ring_buffer.begin_read();
-                while (counter.load(bq::platform::memory_order::acquire) > 0 || !read_empty) {
+                while (true) {
+                    bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     auto handle = ring_buffer.read();
-                    read_empty = handle.result == bq::enum_buffer_result_code::err_empty_ring_buffer;
+                    bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_ring_buffer;
+                    if (write_finished && read_empty) {
+                        ring_buffer.end_read();
+                        break;
+                    }
                     if (handle.result != bq::enum_buffer_result_code::success) {
                         ring_buffer.end_read();
                         ring_buffer.begin_read();
