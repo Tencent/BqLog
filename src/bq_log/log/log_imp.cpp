@@ -167,7 +167,7 @@ namespace bq {
 
         // init appenders
         {
-            bq::platform::scoped_spin_lock lock(spin_lock_);
+            bq::platform::scoped_mutex lock(spin_lock_);
             const auto& all_apenders_config = config["appenders_config"];
             if (!all_apenders_config.is_object()) {
                 util::log_device_console(bq::log_level::error, "create_log parse property failed, invalid appenders_config");
@@ -369,7 +369,7 @@ namespace bq {
 
     void log_imp::sync_process()
     {
-        bq::platform::scoped_spin_lock lock(spin_lock_);
+        bq::platform::scoped_mutex lock(spin_lock_);
         process(true);
     }
 
@@ -425,7 +425,7 @@ namespace bq {
 
     void log_imp::set_appenders_enable(const bq::string& appender_name, bool enable)
     {
-        bq::platform::scoped_spin_lock lock(spin_lock_);
+        bq::platform::scoped_mutex lock(spin_lock_);
         auto star_list = appender_name.split("*");
         bool vague = (appender_name.find("*") != string::npos);
         for (auto iter = appenders_list_.begin(); iter != appenders_list_.end(); ++iter) {

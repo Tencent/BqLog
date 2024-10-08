@@ -23,12 +23,12 @@ private:
     int32_t id;
     bq::ring_buffer* ring_buffer_ptr;
     int32_t left_write_count;
-    std::atomic<int32_t>& counter_ref;
+    bq::platform::atomic<int32_t>& counter_ref;
 
 public:
     const static int32_t min_chunk_size = 8;
     const static int32_t max_chunk_size = 1024;
-    write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, std::atomic<int32_t>& counter)
+    write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
         : counter_ref(counter)
     {
         this->id = id;
@@ -58,7 +58,7 @@ public:
             std::fill(begin, end, (int32_t)alloc_size);
             ring_buffer_ptr->commit_write_chunk(handle);
         }
-        --counter_ref;
+        counter_ref.fetch_add(-1, bq::platform::memory_order::release);
     }
 };
 
@@ -79,7 +79,7 @@ namespace bq {
                 bq::ring_buffer ring_buffer(1000 * 40);
                 int32_t chunk_count_per_task = 1024000;
                 int32_t total_task = 13;
-                std::atomic<int32_t> counter(total_task);
+                bq::platform::atomic<int32_t> counter(total_task);
                 std::vector<int32_t> task_check_vector;
                 for (int32_t i = 0; i < total_task; ++i) {
                     task_check_vector.push_back(0);
@@ -95,7 +95,7 @@ namespace bq {
                 test_output_dynamic_param(bq::log_level::info, "ring buffer test progress:%d%%, time cost:%dms\r", percent, 0);
                 bool read_empty = false;
                 ring_buffer.begin_read();
-                while (counter.load(std::memory_order_acquire) > 0 || !read_empty) {
+                while (counter.load(bq::platform::memory_order::acquire) > 0 || !read_empty) {
                     auto handle = ring_buffer.read();
                     read_empty = handle.result == bq::enum_buffer_result_code::err_empty_ring_buffer;
                     if (handle.result != bq::enum_buffer_result_code::success) {

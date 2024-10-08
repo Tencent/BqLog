@@ -60,7 +60,7 @@ namespace bq {
             return 0;
         }
 
-        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_mutex scoped_lock(logs_lock_);
         auto current_phase = phase_.load();
 
         switch (current_phase) {
@@ -146,7 +146,7 @@ namespace bq {
             return 0;
         }
 
-        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_mutex scoped_lock(logs_lock_);
         auto current_phase = phase_.load();
 
         switch (current_phase) {
@@ -176,7 +176,7 @@ namespace bq {
 
     void log_manager::process_by_worker(log_imp* target_log, bool is_force_flush)
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_mutex scoped_lock(logs_lock_);
         if (phase::working != phase_.load(bq::platform::memory_order::relaxed)) {
             return;
         }
@@ -194,7 +194,7 @@ namespace bq {
 
     void log_manager::force_flush_all()
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_mutex scoped_lock(logs_lock_);
         public_worker_.awake_and_wait_begin();
         for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
             auto& log_impl = log_imp_list_[i];
@@ -213,7 +213,7 @@ namespace bq {
 
     void log_manager::force_flush(uint64_t log_id)
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_mutex scoped_lock(logs_lock_);
         log_imp* log = get_log_by_id(log_id);
         if (!log) {
             return;
@@ -241,7 +241,7 @@ namespace bq {
 
     void log_manager::uninit()
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_mutex scoped_lock(logs_lock_);
         phase expected_phase = phase::working;
         if (!phase_.compare_exchange_strong(expected_phase, phase::uninited)) {
             return;
@@ -275,7 +275,7 @@ namespace bq {
 
     log_imp* log_manager::get_log_by_index(uint32_t index)
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_mutex scoped_lock(logs_lock_);
         if (index < (uint32_t)log_imp_list_.size()) {
             return log_imp_list_[index].get();
         }
