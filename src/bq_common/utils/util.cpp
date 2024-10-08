@@ -106,7 +106,7 @@ namespace bq {
     {
 #if BQ_TOOLS || BQ_UNIT_TEST
         if (level < log_device_min_level) {
-            log_device_min_level = level;
+            return;
         }
 #endif
         char SIGNAL_SAFETY_LOG_BUFFER[SIGNAL_SAFETY_LOG_BUFFER_SIZE];
@@ -121,7 +121,7 @@ namespace bq {
     {
 #if BQ_TOOLS || BQ_UNIT_TEST
         if (level < log_device_min_level) {
-            log_device_min_level = level;
+            return;
         }
 #endif
 #if BQ_ANDROID

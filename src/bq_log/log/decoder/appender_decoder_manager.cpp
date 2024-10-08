@@ -40,6 +40,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
     string path_tmp = TO_ABSOLUTE_PATH(path, false);
     auto handle = bq::file_manager::instance().open_file(path_tmp, file_open_mode_enum::read);
     if (!handle.is_valid()) {
+        bq::util::log_device_console(log_level::error, "decode log file :%s open failed, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
         return appender_decode_result::failed_io_error;
     }
     bq::appender_file_binary::_binary_appender_head_def head;

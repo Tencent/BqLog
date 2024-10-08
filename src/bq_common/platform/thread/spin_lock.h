@@ -51,7 +51,7 @@ namespace bq {
             inline void lock()
             {
                 while (true) {
-                    if (!value_.get().exchange(true, bq::platform::memory_order::release)) {
+                    if (!value_.get().exchange(true, bq::platform::memory_order::acquire)) {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                         thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
 #endif

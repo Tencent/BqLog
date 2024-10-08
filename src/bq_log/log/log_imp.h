@@ -87,7 +87,7 @@ namespace bq {
         log_worker worker_;
         layout layout_;
         bq::string name_;
-        bq::platform::mutex spin_lock_;
+        bq::platform::spin_lock spin_lock_;
         log_level_bitmap merged_log_level_bitmap_;
         log_level_bitmap print_stack_level_bitmap_;
         bq::log_reliable_level reliable_level_;
