@@ -864,7 +864,9 @@ namespace bq {
                 if (current_tested_num % snapshot_idx_mode == 0) {
                     bq::string snapshot = log_inst_ptr->take_snapshot(false);
                     if (!snapshot.is_empty()) {
-                        result_ptr->add_result(snapshot.size() >= output_str_ptr->size() && (snapshot.end_with(snapshot_test_str) || snapshot_test_str.end_with(snapshot)), "snapshot test failed, index:%zu, \nstandard: %s,  \nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), snapshot.substr(snapshot.size() - output_str_ptr->size(), output_str_ptr->size()).c_str());     
+                        assert(snapshot.size() >= output_str_ptr->size());
+                        bq::string last_snapshot = snapshot.substr(snapshot.size() - output_str_ptr->size(), output_str_ptr->size()).c_str();
+                        result_ptr->add_result(snapshot.end_with(snapshot_test_str) || snapshot_test_str.end_with(snapshot), "snapshot test failed, index:%zu, \nstandard: %s,  \nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), output_str_ptr->size(), last_snapshot.size(), last_snapshot.c_str());     
                     }
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }

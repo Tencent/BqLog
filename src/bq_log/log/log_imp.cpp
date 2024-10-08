@@ -297,7 +297,6 @@ namespace bq {
     const bq::string& log_imp::take_snapshot_string(bool use_gmt_time)
     {
         return snapshot_->take_snapshot_string(use_gmt_time);
-        ;
     }
 
     void log_imp::release_snapshot_string()
