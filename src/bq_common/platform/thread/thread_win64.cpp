@@ -210,10 +210,14 @@ namespace bq {
             DWORD exitCode = 0;
 
             if (GetExitCodeThread(platform_data_->thread_handle, &exitCode)) {
-                assert(exitCode != STILL_ACTIVE && "thread instance is destructed but thread is not exist");
+                const char* stack_trace_addr = nullptr;
+                uint32_t stack_trace_len = 0;
+                bq::platform::get_stack_trace(0, stack_trace_addr, stack_trace_len);
+                bq::util::log_device_console(bq::log_level::fatal, "thread instance is destructed but thread is still exist, stack trace:\n%s", stack_trace_addr);
+                assert(exitCode != STILL_ACTIVE && "thread instance is destructed but thread is still running");
             }
             // auto current_status = status_.load();
-            // assert(current_status != enum_thread_status::running && "thread instance is destructed but thread is not exist");
+            // assert(current_status != enum_thread_status::running && "thread instance is destructed but thread is still running");
             platform_data_->~thread_platform_def();
             free(platform_data_);
             platform_data_ = nullptr;

@@ -50,7 +50,6 @@ namespace bq {
                 thread_mode_ = log_thread_mode::sync;
             } else if ("async" == (bq::string)thread_mode_config) {
                 thread_mode_ = log_thread_mode::async;
-
             } else if ("independent" == (bq::string)thread_mode_config) {
                 thread_mode_ = log_thread_mode::independent;
             } else {

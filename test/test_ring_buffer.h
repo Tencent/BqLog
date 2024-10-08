@@ -138,7 +138,7 @@ namespace bq {
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
                     result.add_result(task_check_vector[i] == chunk_count_per_task, "chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
-
+                result.add_result(total_chunk == readed_chunk, "total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
                 return result;
             }
         };
