@@ -46,38 +46,38 @@ namespace bq {
                 //create a new snapshot_buffer_ and backup log data.
                 ring_buffer* new_buffer = new ring_buffer(buffer_size_);
                 new_buffer->set_thread_check_enable(false);
-                //snapshot_buffer_->begin_read();
-                //while (true) {
-                //    auto backup_read_handle = snapshot_buffer_->read();
-                //    if (backup_read_handle.result != enum_buffer_result_code::success) {
-                //        break;
-                //    }
-                //    bool write_success = false;
-                //    while (!write_success) {
-                //        auto write_handle = new_buffer->alloc_write_chunk(backup_read_handle.data_size);
-                //        if (write_handle.result == enum_buffer_result_code::success) {
-                //            // chunk is too big for new buffer, discard and renew new buffer;
-                //            memcpy(write_handle.data_addr, backup_read_handle.data_addr, (size_t)backup_read_handle.data_size);
-                //            write_success = true;
-                //            new_buffer->commit_write_chunk(write_handle);
-                //        }
-                //        else if (write_handle.result == enum_buffer_result_code::err_alloc_size_invalid) {
-                //            new_buffer->commit_write_chunk(write_handle);
-                //            // chunk is too big for new buffer, discard and renew new buffer;
-                //            delete new_buffer;
-                //            new_buffer = new ring_buffer(buffer_size_);
-                //            new_buffer->set_thread_check_enable(false);
-                //            write_success = true;
-                //        } else {
-                //            new_buffer->commit_write_chunk(write_handle);
-                //            new_buffer->begin_read();
-                //            new_buffer->read();
-                //            new_buffer->end_read();
-                //        }
-                //    }
+                snapshot_buffer_->begin_read();
+                while (true) {
+                    auto backup_read_handle = snapshot_buffer_->read();
+                    if (backup_read_handle.result != enum_buffer_result_code::success) {
+                        break;
+                    }
+                    bool write_success = false;
+                    while (!write_success) {
+                        auto write_handle = new_buffer->alloc_write_chunk(backup_read_handle.data_size);
+                        if (write_handle.result == enum_buffer_result_code::success) {
+                            // chunk is too big for new buffer, discard and renew new buffer;
+                            memcpy(write_handle.data_addr, backup_read_handle.data_addr, (size_t)backup_read_handle.data_size);
+                            write_success = true;
+                            new_buffer->commit_write_chunk(write_handle);
+                        }
+                        else if (write_handle.result == enum_buffer_result_code::err_alloc_size_invalid) {
+                            new_buffer->commit_write_chunk(write_handle);
+                            // chunk is too big for new buffer, discard and renew new buffer;
+                            delete new_buffer;
+                            new_buffer = new ring_buffer(buffer_size_);
+                            new_buffer->set_thread_check_enable(false);
+                            write_success = true;
+                        } else {
+                            new_buffer->commit_write_chunk(write_handle);
+                            new_buffer->begin_read();
+                            new_buffer->read();
+                            new_buffer->end_read();
+                        }
+                    }
 
-                //}
-                //snapshot_buffer_->end_read();
+                }
+                snapshot_buffer_->end_read();
                 delete snapshot_buffer_;
                 snapshot_buffer_ = new_buffer;
             } else {
@@ -127,6 +127,8 @@ namespace bq {
                         break;
                     }
                 }
+            } else {
+                snapshot_text_continuous_ = false;
             }
         }
     }
