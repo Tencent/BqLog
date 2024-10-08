@@ -68,11 +68,13 @@ namespace bq {
                             new_buffer = new ring_buffer(buffer_size_);
                             new_buffer->set_thread_check_enable(false);
                             write_success = true;
+                            snapshot_text_continuous_ = false;
                         } else {
                             new_buffer->commit_write_chunk(write_handle);
                             new_buffer->begin_read();
                             new_buffer->read();
                             new_buffer->end_read();
+                            snapshot_text_continuous_ = false;
                         }
                     }
 
