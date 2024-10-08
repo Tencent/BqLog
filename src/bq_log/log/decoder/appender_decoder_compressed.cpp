@@ -76,7 +76,6 @@ bq::tuple<bq::appender_decode_result, bq::appender_file_compressed::item_type, b
     constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
     auto read_handle = read_with_cache(VLQ_MAX_SIZE + 1);
     if (read_handle.len() == 0) {
-        bq::util::log_device_console(log_level::error, "EOF 2");
         return bq::make_tuple(bq::appender_decode_result::eof, appender_file_compressed::item_type::log_template, read_handle);
     }
     if (read_handle.len() < 2) {

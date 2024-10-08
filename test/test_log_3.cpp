@@ -584,7 +584,6 @@ namespace bq {
             static decoder_test decoder(".lograw");
             auto result = decoder.get().decode();
             if (result == bq::appender_decode_result::eof) {
-                bq::util::log_device_console(log_level::error, "eof");
                 decoder.pick_new_log_file();
                 result = decoder.get().decode();
             }
@@ -597,7 +596,6 @@ namespace bq {
             static decoder_test decoder(".logcompr");
             auto result = decoder.get().decode();
             if (result == bq::appender_decode_result::eof) {
-                bq::util::log_device_console(log_level::error, "eof");
                 decoder.pick_new_log_file();
                 result = decoder.get().decode();
             }
