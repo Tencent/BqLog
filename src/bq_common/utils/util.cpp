@@ -76,7 +76,7 @@ namespace bq {
 #if defined(_MSC_VER)
         return localtime_s(&result, &epoch_sec) == 0;
 #else
-        return localtime_r(&epoch_sec， &result) != NULL;
+        return localtime_r(&epoch_sec, &result) != NULL;
 #endif
     }
 
@@ -86,7 +86,7 @@ namespace bq {
 #if defined(_MSC_VER)
         return gmtime_s(&result, &epoch_sec) == 0;
 #else
-        return gmtime_r(&epoch_sec， & result) != NULL;
+        return gmtime_r(&epoch_sec, & result) != NULL;
 #endif
     }
 
