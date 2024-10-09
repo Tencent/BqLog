@@ -38,7 +38,7 @@ namespace bq {
                 if (failed_infos.size() < 128) {
                     va_list args;
                     va_start(args, info);
-                    static char tmp[1024 * 16];
+                    static char tmp[1024 * 128];
                     vsnprintf(tmp, sizeof(tmp), info, args);
                     va_end(args);
                     const char* error_info_p = tmp;
