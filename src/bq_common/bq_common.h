@@ -46,4 +46,8 @@ extern bq::platform::atomic<int32_t> cccc3;
 extern bq::platform::atomic<int32_t> cccc4;
 extern bq::platform::atomic<int32_t> cccc5;
 extern bq::platform::atomic<int32_t> cccc6;
+
+extern bq::platform::atomic<bool> ccc_continue;
 extern bq::platform::atomic<int32_t> cccc7;
+extern bq::platform::atomic<int32_t> cccc8;
+extern bq::platform::atomic<int32_t> cccc9;

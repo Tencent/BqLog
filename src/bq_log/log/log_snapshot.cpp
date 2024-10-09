@@ -69,12 +69,18 @@ namespace bq {
                             new_buffer->set_thread_check_enable(false);
                             write_success = true;
                             snapshot_text_continuous_ = false;
+                            if (cccc.load()) {
+                                cccc8.fetch_add(1);
+                            }
                         } else {
                             new_buffer->commit_write_chunk(write_handle);
                             new_buffer->begin_read();
                             new_buffer->read();
                             new_buffer->end_read();
                             snapshot_text_continuous_ = false;
+                            if (cccc.load()) {
+                                cccc9.fetch_add(1);
+                            }
                         }
                     }
 
@@ -87,6 +93,9 @@ namespace bq {
                 snapshot_buffer_->set_thread_check_enable(false);
             }
         } else {
+            if (cccc.load()) {
+                cccc7.fetch_add(1);
+            }
             if (snapshot_buffer_) {
                 delete snapshot_buffer_;
                 snapshot_buffer_ = nullptr;
@@ -150,6 +159,9 @@ namespace bq {
         snapshot_text_index_ = (snapshot_text_index_ + 1) & 0x01;
         bq::string& text = snapshot_text_[snapshot_text_index_];
         text.clear();
+        if (cccc.load()) {
+            ccc_continue.store(snapshot_text_continuous_);
+        }
         if (!snapshot_buffer_) {
             bq::util::log_device_console_plain_text(log_level::warning, "calling take_snapshot without enable snapshot");
             if (cccc.load()) {

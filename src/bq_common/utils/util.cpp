@@ -341,4 +341,9 @@ bq::platform::atomic<int32_t> cccc3 = 0;
 bq::platform::atomic<int32_t> cccc4 = 0;
 bq::platform::atomic<int32_t> cccc5 = 0;
 bq::platform::atomic<int32_t> cccc6 = 0;
+
+
+bq::platform::atomic<bool> ccc_continue = false;
 bq::platform::atomic<int32_t> cccc7 = 0;
+bq::platform::atomic<int32_t> cccc8 = 0;
+bq::platform::atomic<int32_t> cccc9 = 0;

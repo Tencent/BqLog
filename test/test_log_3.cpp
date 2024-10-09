@@ -891,7 +891,7 @@ namespace bq {
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }
 
-                bq::util::log_device_console(bq::log_level::fatal, "%d, %d, %d, %d, %d, %d", cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load(), cccc6.load());
+                bq::util::log_device_console(bq::log_level::fatal, "%s, 一:%d, 二:%d, 三:%d, 四:%d, 五:%d, 六:%d, 七:%d, 八:%d, 九:%d", ccc_continue.load() ? "Y" : "X", cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load(), cccc6.load(), cccc7.load(), cccc8.load(), cccc9.load());
 
                 size_t new_percent = (size_t)(current_tested_num * 100 / total_test_num);
                 if (new_percent != current_tested_percent) {
