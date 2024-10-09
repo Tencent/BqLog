@@ -892,8 +892,8 @@ namespace bq {
                 }
                 if (cccc1.load() != cccc2.load()
                     || cccc1.load() != cccc3.load()
-                    || cccc1.load() != cccc4.load()
-                    || cccc1.load() != cccc5.load()
+                    || cccc4.load() != cccc5.load()
+                    || cccc3.load() < cccc4.load()
                 ) {
                     bq::util::log_device_console(bq::log_level::fatal, "%d, %d, %d, %d, %d", cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load());
                 }
