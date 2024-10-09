@@ -864,6 +864,7 @@ namespace bq {
                     generate_log_str_standard_utf16(std::get<INDICES>(param_tuple)...);
                     log_inst_ptr->error(log_inst_ptr->cat.ModuleA.SystemA.ClassA, log_str_templates_fmt_utf16[fmt_idx], std::get<INDICES>(param_tuple)...);
                 }
+                ++cccc1;
                 *output_str_ptr = output_str_ptr->substr(log_head.size(), output_str_ptr->size() - log_head.size());
                 test_log_3_all_console_outputs.push_back(*output_str_ptr);
                 result_ptr->add_result(output_str_ptr->end_with(log_str_standard), "test idx:%zu, %s \n != %s", current_tested_num, output_str_ptr->c_str(), log_str_standard.c_str());
@@ -888,6 +889,13 @@ namespace bq {
                         }
                     }
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
+                }
+                if (cccc1.load() != cccc2.load()
+                    || cccc1.load() != cccc3.load()
+                    || cccc1.load() != cccc4.load()
+                    || cccc1.load() != cccc5.load()
+                ) {
+                    bq::util::log_device_console(bq::log_level::fatal, "%d, %d, %d, %d, %d", cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load());
                 }
 
                 size_t new_percent = (size_t)(current_tested_num * 100 / total_test_num);
@@ -914,6 +922,7 @@ namespace bq {
 
         void test_log::test_3(test_result& result, const test_category_log& log_inst)
         {
+            cccc = true;
             test_output(bq::log_level::info, "full log test begin, this will take minutes, and need about 50M free disk space.\n");
             clear_test_output_folder();
             init_fmt_strings<MAX_PARAM>();
@@ -927,7 +936,7 @@ namespace bq {
             log_param_test<MAX_PARAM>();
             test_3_phase = test_log_3_phase::do_test;
             log_param_test<MAX_PARAM>();
-
+            cccc = false;
 
             //decode test
             for (size_t i = 0; i < test_log_3_all_console_outputs.size(); ++i) {

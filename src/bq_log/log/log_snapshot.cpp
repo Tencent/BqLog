@@ -111,7 +111,13 @@ namespace bq {
 
     void log_snapshot::write_data(const bq::log_entry_handle& log_entry)
     {
+        if (cccc.load()) {
+            cccc2.fetch_add(1);
+        }
         if (log_level_bitmap_.have_level(log_entry.get_level()) && categories_mask_array_[log_entry.get_category_idx()]) {
+            if (cccc.load()) {
+                cccc3.fetch_add(1);
+            }
             bq::platform::scoped_spin_lock scoped_lock(lock_);
             if (snapshot_buffer_) {
                 while (true) {
@@ -119,6 +125,9 @@ namespace bq {
                     if (snapshot_write_handle.result == enum_buffer_result_code::success) {
                         memcpy(snapshot_write_handle.data_addr, log_entry.data(), log_entry.data_size());
                         snapshot_buffer_->commit_write_chunk(snapshot_write_handle);
+                        if (cccc.load()) {
+                            cccc4.fetch_add(1);
+                        }
                         break;
                     } else if (snapshot_write_handle.result == enum_buffer_result_code::err_not_enough_space) {
                         snapshot_buffer_->begin_read();
@@ -150,6 +159,9 @@ namespace bq {
             auto snapshot_read_handle = snapshot_buffer_->read();
             if (snapshot_read_handle.result != enum_buffer_result_code::success) {
                 break;
+            }
+            if (cccc.load()) {
+                cccc5.fetch_add(1);
             }
             bq::log_entry_handle item(snapshot_read_handle.data_addr, snapshot_read_handle.data_size);
             snapshot_layout_.do_layout(item, use_gmt_time, &parent_log_->get_categories_name());

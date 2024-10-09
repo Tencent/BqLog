@@ -333,3 +333,12 @@ namespace bq {
         return result_len;
     }
 }
+
+bq::platform::atomic<bool> cccc = false;
+bq::platform::atomic<int32_t> cccc1 = 0;
+bq::platform::atomic<int32_t> cccc2 = 0;
+bq::platform::atomic<int32_t> cccc3 = 0;
+bq::platform::atomic<int32_t> cccc4 = 0;
+bq::platform::atomic<int32_t> cccc5 = 0;
+bq::platform::atomic<int32_t> cccc6 = 0;
+bq::platform::atomic<int32_t> cccc7 = 0;

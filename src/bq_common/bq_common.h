@@ -37,3 +37,13 @@
 #include "bq_common/utils/property.h"
 #include "bq_common/utils/property_ex.h"
 #include "bq_common/utils/file_manager.h"
+
+
+extern bq::platform::atomic<bool> cccc;
+extern bq::platform::atomic<int32_t> cccc1;
+extern bq::platform::atomic<int32_t> cccc2;
+extern bq::platform::atomic<int32_t> cccc3;
+extern bq::platform::atomic<int32_t> cccc4;
+extern bq::platform::atomic<int32_t> cccc5;
+extern bq::platform::atomic<int32_t> cccc6;
+extern bq::platform::atomic<int32_t> cccc7;
