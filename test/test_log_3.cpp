@@ -890,13 +890,8 @@ namespace bq {
                     }
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }
-                if (cccc1.load() != cccc2.load()
-                    || cccc1.load() != cccc3.load()
-                    || cccc4.load() != cccc5.load()
-                    || cccc3.load() < cccc4.load()
-                ) {
-                    bq::util::log_device_console(bq::log_level::fatal, "%d, %d, %d, %d, %d", cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load());
-                }
+
+                bq::util::log_device_console(bq::log_level::fatal, "%d, %d, %d, %d, %d, %d", cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load(), cccc6.load());
 
                 size_t new_percent = (size_t)(current_tested_num * 100 / total_test_num);
                 if (new_percent != current_tested_percent) {

@@ -152,6 +152,9 @@ namespace bq {
         text.clear();
         if (!snapshot_buffer_) {
             bq::util::log_device_console_plain_text(log_level::warning, "calling take_snapshot without enable snapshot");
+            if (cccc.load()) {
+                cccc5.fetch_add(1);
+            }
             return snapshot_text_[snapshot_text_index_];
         }
         snapshot_buffer_->begin_read();
@@ -161,7 +164,7 @@ namespace bq {
                 break;
             }
             if (cccc.load()) {
-                cccc5.fetch_add(1);
+                cccc6.fetch_add(1);
             }
             bq::log_entry_handle item(snapshot_read_handle.data_addr, snapshot_read_handle.data_size);
             snapshot_layout_.do_layout(item, use_gmt_time, &parent_log_->get_categories_name());
