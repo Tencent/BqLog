@@ -21,8 +21,8 @@
 
 namespace bq {
     static bq::platform::mutex _assert_mutex_;
-    static const size_t SIGNAL_SAFETY_LOG_BUFFER_SIZE = 1024;
     static uint32_t rand_seed = 0;
+    static bq::string device_console_buffer_((bq::string::size_type)1024);
 
     void util::bq_assert(bool cond, bq::string msg)
     {
@@ -105,12 +105,17 @@ namespace bq {
             return;
         }
 #endif
-        char SIGNAL_SAFETY_LOG_BUFFER[SIGNAL_SAFETY_LOG_BUFFER_SIZE];
+        bq::platform::scoped_mutex lock(_assert_mutex_);
         va_list args;
         va_start(args, format);
-        vsnprintf(SIGNAL_SAFETY_LOG_BUFFER, SIGNAL_SAFETY_LOG_BUFFER_SIZE, format, args);
+        size_t print_size = 0;
+        while ((print_size = (bq::array<char>::size_type) vsnprintf(device_console_buffer_.begin().operator->(), device_console_buffer_.capacity(), format, args)) >= device_console_buffer_.capacity()) {
+            device_console_buffer_.set_capacity(2 * device_console_buffer_.capacity());
+        }
         va_end(args);
-        log_device_console_plain_text(level, SIGNAL_SAFETY_LOG_BUFFER);
+        if (print_size > 0) {
+            log_device_console_plain_text(level, device_console_buffer_.begin().operator->());
+        }
     }
 
     void util::log_device_console_plain_text(bq::log_level level, const char* text)

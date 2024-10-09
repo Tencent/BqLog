@@ -874,15 +874,18 @@ namespace bq {
                 if (snapshot_test_str.size() > (snapshot_buffer_size << 1)) {
                     size_t erase_count = snapshot_test_str.size() - (snapshot_buffer_size << 1);
                     snapshot_test_str.erase(snapshot_test_str.begin(), erase_count);
-                }
+                }    
+                        
                 if ((current_tested_num % snapshot_idx_mode == 0) || true) {
                     bq::string snapshot = log_inst_ptr->take_snapshot(false);
                     if (!snapshot.is_empty()) {
-                        assert(snapshot.size() >= output_str_ptr->size());
-                        bq::string last_snapshot = snapshot.substr(snapshot.size() - output_str_ptr->size(), output_str_ptr->size());
                         bq::string hex_standard = to_hex(*output_str_ptr);
-                        bq::string hex_last_snapshot = to_hex(last_snapshot);
-                        result_ptr->add_result(snapshot.end_with(snapshot_test_str) || snapshot_test_str.end_with(snapshot), "snapshot test failed, index:%zu, \nstandard: %s,  \nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, hex_standard.c_str(), output_str_ptr->size(), last_snapshot.size(), hex_last_snapshot.c_str());     
+                        result_ptr->add_result(snapshot.size() >= output_str_ptr->size(), "snapshot size test failed, index:%zu, \nstandard: %s,  \nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, hex_standard.c_str(), output_str_ptr->size(), snapshot.size(), to_hex(snapshot).c_str());     
+                        if (snapshot.size() >= output_str_ptr->size()) {
+                            bq::string last_snapshot = snapshot.substr(snapshot.size() - output_str_ptr->size(), output_str_ptr->size());
+                            bq::string hex_last_snapshot = to_hex(last_snapshot);
+                            result_ptr->add_result(snapshot.end_with(snapshot_test_str) || snapshot_test_str.end_with(snapshot), "snapshot test failed, index:%zu, \nstandard: %s,  \nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, hex_standard.c_str(), output_str_ptr->size(), last_snapshot.size(), hex_last_snapshot.c_str());       
+                        }
                     }
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }
