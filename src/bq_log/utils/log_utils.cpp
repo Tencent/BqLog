@@ -59,8 +59,9 @@ namespace bq {
 
     bool log_utils::get_log_level_bitmap_by_config(const bq::property_value& log_level_bitmap_config, bq::log_level_bitmap& out_level_bitmap)
     {
-        out_level_bitmap.clear();
+        log_level_bitmap tmp;
         if (!log_level_bitmap_config.is_array()) {
+            out_level_bitmap.clear();
             return false;
         }
         for (typename property_value::array_type::size_type i = 0; i < log_level_bitmap_config.array_size(); ++i) {
@@ -69,8 +70,10 @@ namespace bq {
                 util::log_device_console(bq::log_level::warning, "bq log info: invalid [log_level] item: %s", level_obj.serialize().c_str());
                 continue;
             }
-            out_level_bitmap.add_level(((bq::string)level_obj).trim());
+            tmp.add_level(((bq::string)level_obj).trim());
         }
+        // make sure atomic
+        out_level_bitmap = tmp;
         return true;
     }
 

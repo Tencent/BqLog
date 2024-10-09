@@ -311,12 +311,14 @@ namespace bq {
 
     void log_imp::refresh_merged_log_level_bitmap()
     {
-        merged_log_level_bitmap_.clear();
-        uint32_t& bitmap_value = *merged_log_level_bitmap_.get_bitmap_ptr();
+        log_level_bitmap tmp;
+        uint32_t& bitmap_value = *tmp.get_bitmap_ptr();
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); ++i) {
             uint32_t bitmap = *(appenders_list_[i]->get_log_level_bitmap().get_bitmap_ptr());
             bitmap_value |= bitmap;
         }
+        //make sure atomic
+        merged_log_level_bitmap_ = tmp;
     }
 
     void log_imp::process(bool is_force_flush)
