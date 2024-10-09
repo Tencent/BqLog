@@ -861,7 +861,7 @@ namespace bq {
                     snapshot_test_str.erase(snapshot_test_str.begin(), erase_count);
                 }
 
-                if (current_tested_num % snapshot_idx_mode == 0) {
+                if ((current_tested_num % snapshot_idx_mode == 0) || true) {
                     bq::string snapshot = log_inst_ptr->take_snapshot(false);
                     if (!snapshot.is_empty()) {
                         assert(snapshot.size() >= output_str_ptr->size());
