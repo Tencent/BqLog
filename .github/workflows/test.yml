@@ -141,7 +141,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_Clang.sh 
 
-build_debian_32bits_test_and_run_GCC:
+  build_debian_32bits_test_and_run_GCC:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
@@ -159,7 +159,7 @@ build_debian_32bits_test_and_run_GCC:
             cd build/test/linux  
             chmod +x *.sh
             ./RunTest_GCC.sh 
-  
+
   build_debian_32bits_test_and_run_Clang:
     runs-on: ubuntu-latest
     container: 
