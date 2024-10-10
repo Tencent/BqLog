@@ -16,6 +16,15 @@
 
 //  Created by Yu Cao on 2022/8/31.
 //
+
+#if defined(BQ_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow" // GCC warning check
+#pragma GCC diagnostic ignored "-Warray-bounds" // GCC warning check
+#pragma GCC diagnostic ignored "-Wrestrict" // GCC error check
+#pragma GCC diagnostic ignored "-Wuse-after-free" // GCC warning check
+#endif
+
 #include "bq_common/misc/assert.h"
 #include "bq_common/platform/macros.h"
 #include "bq_common/types/type_traits.h"
@@ -25,3 +34,7 @@
 #include "bq_common/types/hash_map.h"
 #include "bq_common/types/optional.h"
 #include "bq_common/types/basic_types.h"
+
+#if defined(BQ_GCC)
+#pragma GCC diagnostic pop
+#endif

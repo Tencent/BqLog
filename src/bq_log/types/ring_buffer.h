@@ -77,9 +77,9 @@ namespace bq {
         static constexpr size_t cache_line_size_log2 = 6;
         static_assert(cache_line_size >> cache_line_size_log2 == 1, "invalid cache line size information");
         union cursor_type {
-            bq::platform::atomic<uint32_t> atomic_value;
-            volatile uint32_t volatile_value;
-            uint32_t odinary_value;
+            alignas(8) bq::platform::atomic<uint32_t> atomic_value;
+            alignas(8) volatile uint32_t volatile_value;
+            alignas(8) uint32_t odinary_value;
             cursor_type()
             {
                 atomic_value.store(0);
@@ -89,7 +89,7 @@ namespace bq {
             {
             }
         };
-        static_assert(sizeof(cursor_type) == sizeof(cursor_type::odinary_value), "invalid cursor_type size");
+        static_assert((void*)&(*(cursor_type*)NULL).atomic_value == (void*)&(*(cursor_type*)NULL).odinary_value, "invalid cursor_type size");
         enum block_status {
             unused, // data section begin from this block is unused, can not be read
             used, // data section begin from this block has already finished writing, and can be read.

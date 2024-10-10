@@ -92,7 +92,7 @@ namespace bq {
             static_assert(N == 1 || N == 2 || N == 4 || N == 8, "please don't use bq::platform::_atomic_base, use bq::platform::atomic instead.");
             typedef typename bq::decay<T>::type value_type;
             typedef typename _atomic_gnu_c_standard_type<sizeof(T)>::value_type api_type;
-            value_type value_;
+            alignas(8) value_type value_;
             _atomic_base()
                 : value_()
             {
