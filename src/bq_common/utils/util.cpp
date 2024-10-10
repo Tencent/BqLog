@@ -356,6 +356,8 @@ bq::platform::atomic<int32_t> cccc7 = 0;
 bq::platform::atomic<int32_t> cccc8 = 0;
 bq::platform::atomic<int32_t> cccc9 = 0;
 bq::platform::atomic<int32_t> cccc10 = 0;
+bq::platform::atomic<int32_t> cccc11 = 0;
+bq::platform::atomic<int32_t> cccc12 = 0;
 
 
 bq::platform::atomic<void*> ccc_snapshot_obj = nullptr;

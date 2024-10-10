@@ -88,7 +88,13 @@ namespace bq {
                 snapshot_buffer_->end_read();
                 delete snapshot_buffer_;
                 snapshot_buffer_ = new_buffer;
+                if (cccc.load()) {
+                    cccc11.fetch_add(1);
+                }
             } else {
+                if (cccc.load()) {
+                    cccc12.fetch_add(1);
+                }
                 snapshot_buffer_ = new ring_buffer(buffer_size_);
                 snapshot_buffer_->set_thread_check_enable(false);
             }
@@ -170,7 +176,7 @@ namespace bq {
             }
             return snapshot_text_[snapshot_text_index_];
         }
-        ccc_snapshot_obj = this;
+        ccc_snapshot_obj = snapshot_buffer_;
         snapshot_buffer_->begin_read();
         bool read_success = false;
         while (true) {

@@ -52,5 +52,7 @@ extern bq::platform::atomic<int32_t> cccc7;
 extern bq::platform::atomic<int32_t> cccc8;
 extern bq::platform::atomic<int32_t> cccc9;
 extern bq::platform::atomic<int32_t> cccc10;
+extern bq::platform::atomic<int32_t> cccc11;
+extern bq::platform::atomic<int32_t> cccc12;
 
 extern bq::platform::atomic<void*> ccc_snapshot_obj;
