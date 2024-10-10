@@ -1,6 +1,7 @@
 # Changelog
 ## [v1.4.5] - 2023-09-29
 - **Improvement**: The configuration for the snapshot feature has been migrated from the API to the configuration file, supporting configurations for buffer size, category mask, and levels. For details, refer to [Snapshot Configuration](./README.md#snapshot).
+- **Improvement**: The Linux and Unix binaries will be automatically placed in the 32-bit and 64-bit directories based on the hardware architecture.
 - **Bug fix**: Here, we found that in cases of high-concurrency `reset_config` operations, some thread safety issues may arise. We have fixed these issues and added corresponding checks for this scenario in the automated test cases.
 
 ## [v1.4.4] - 2023-09-06
