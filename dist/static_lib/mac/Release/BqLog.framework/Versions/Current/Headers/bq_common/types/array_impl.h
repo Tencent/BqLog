@@ -398,16 +398,7 @@ namespace bq {
     {
         (void)constructed_count;
         // simply copy memory for non-trivial constructible type to optimize performance.
-#if defined(BQ_GCC)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow" // GCC warning check
-#pragma GCC diagnostic ignored "-Warray-bounds" // GCC warning check
-#pragma GCC diagnostic ignored "-Wrestrict" // GCC error check
-#endif
         memcpy(dest, src, count * sizeof(T));
-#if defined(BQ_GCC)
-#pragma GCC diagnostic pop
-#endif
     }
 
     template <typename T>

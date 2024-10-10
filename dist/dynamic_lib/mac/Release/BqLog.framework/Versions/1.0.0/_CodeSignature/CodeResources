@@ -6,7 +6,7 @@
 	<dict>
 		<key>Resources/Info.plist</key>
 		<data>
-		flWPkLwESPd8+Jgj3WXMXY9ezns=
+		b00LyK/85ocUJlpRPoXH/Bl8Jo0=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -15,7 +15,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			qC/tc2VtcBuFftxZ28fcF4Z5rKmSt/B68fhIp6oauQg=
+			QxKLUrJiV7eLepyIkkNe/DcdwzCKHAluqUYC9/SJwV8=
 			</data>
 		</dict>
 		<key>Headers/bq_common/misc/assert.h</key>
@@ -64,7 +64,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			4wxOfScvuuFHV9yj9IAaNtYmT+MvdL4OrGHgzk6JTks=
+			aEB9UqOGxDgbM/rJl4Dmt0cqD5363MS7rHy+dC3RLn0=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/basic_types.h</key>
@@ -148,14 +148,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			B6coP38K624oyH1nGVPTnhwwW6OTrzDlXtXrDOJFdCo=
+			BT4I7u97NweWdjSp5vsxvjvAi4dbjIK2iKw+oEWzpYA=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_api.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			fjCPOXkxl8j8h0wmQUUkMpTW1xtfG6OqBXT9VkfKTwU=
+			zE8Cbnvlc0LdXJ3BxAsFyEbJEGWvS1uCKcPlpT3kPU4=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_def.h</key>
@@ -169,7 +169,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			6kRWtw2Hq93H/wBhrVpo0D63b5E8swiP2OXOzkijHQc=
+			awqwAHRHc89qMcbepno+vnhdhw3/i9ezRirwOhlFysE=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_wrapper_tools.h</key>
@@ -183,7 +183,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			rnCa/QpkGlwoUN5UE7HN0XoRi17hBq+waCcra7GDysQ=
+			gTI34ZLLwI5fv/BwcXFGGRIQ78RX7oJJagSjt1QjM9o=
 			</data>
 		</dict>
 	</dict>

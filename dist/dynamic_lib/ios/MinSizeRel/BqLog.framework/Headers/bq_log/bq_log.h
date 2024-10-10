@@ -224,14 +224,7 @@ namespace bq {
         }
 
         /// <summary>
-        /// Enable snapshot capability. Once enabled, the log object will continuously retain a copy of the buffer data,
-        /// containing the latest buffer data. This is used for generating a log snapshot string with the take_snapshot() function.
-        /// </summary>
-        /// <param name="snapshot_buffer_size">size of snapshot buffer</param>
-        void enable_snapshot(uint32_t snapshot_buffer_size) const;
-
-        /// <summary>
-        /// Works only when enable_snapshot(true) is called.
+        /// Works only when snapshot is configured.
         /// It will decode the snapshot buffer to text.
         /// </summary>
         /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>

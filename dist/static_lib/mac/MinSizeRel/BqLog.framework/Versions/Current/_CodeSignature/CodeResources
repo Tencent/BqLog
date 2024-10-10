@@ -6,7 +6,7 @@
 	<dict>
 		<key>Resources/Info.plist</key>
 		<data>
-		flWPkLwESPd8+Jgj3WXMXY9ezns=
+		b00LyK/85ocUJlpRPoXH/Bl8Jo0=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -15,11 +15,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			HQ3CzCoo2Dt2RW3rigv8rqnfbpE=
+			ElZiDDoIZGR6V6L3Sg1+WXug8eY=
 			</data>
 			<key>hash2</key>
 			<data>
-			qC/tc2VtcBuFftxZ28fcF4Z5rKmSt/B68fhIp6oauQg=
+			QxKLUrJiV7eLepyIkkNe/DcdwzCKHAluqUYC9/SJwV8=
 			</data>
 		</dict>
 		<key>Headers/bq_common/misc/assert.h</key>
@@ -92,11 +92,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			rqKBihqDjkFvNZdiSx2dX2JLAYo=
+			RqQ52Hhof9A96skO3MXZXYHcAFU=
 			</data>
 			<key>hash2</key>
 			<data>
-			4wxOfScvuuFHV9yj9IAaNtYmT+MvdL4OrGHgzk6JTks=
+			aEB9UqOGxDgbM/rJl4Dmt0cqD5363MS7rHy+dC3RLn0=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/basic_types.h</key>
@@ -224,22 +224,22 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			IKDlyrEe+i3bHK4ZKGCL3YIhTjQ=
+			q/AD2x5i96GOPKoddwLzrg46ONs=
 			</data>
 			<key>hash2</key>
 			<data>
-			B6coP38K624oyH1nGVPTnhwwW6OTrzDlXtXrDOJFdCo=
+			BT4I7u97NweWdjSp5vsxvjvAi4dbjIK2iKw+oEWzpYA=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_api.h</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			4gICjNrnHyDjfULxwnb5ZA2/yoI=
+			Ifv3EE/LdkHty6aKCt7343Rbkec=
 			</data>
 			<key>hash2</key>
 			<data>
-			fjCPOXkxl8j8h0wmQUUkMpTW1xtfG6OqBXT9VkfKTwU=
+			zE8Cbnvlc0LdXJ3BxAsFyEbJEGWvS1uCKcPlpT3kPU4=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_def.h</key>
@@ -257,11 +257,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			yAJZZTiotQ6MnMeTsNdmclZpn8E=
+			K8W/5wC1TOo5zm7GdaeyP0yDfXQ=
 			</data>
 			<key>hash2</key>
 			<data>
-			6kRWtw2Hq93H/wBhrVpo0D63b5E8swiP2OXOzkijHQc=
+			awqwAHRHc89qMcbepno+vnhdhw3/i9ezRirwOhlFysE=
 			</data>
 		</dict>
 		<key>Headers/bq_log/misc/bq_log_wrapper_tools.h</key>
@@ -279,11 +279,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			flWPkLwESPd8+Jgj3WXMXY9ezns=
+			b00LyK/85ocUJlpRPoXH/Bl8Jo0=
 			</data>
 			<key>hash2</key>
 			<data>
-			rnCa/QpkGlwoUN5UE7HN0XoRi17hBq+waCcra7GDysQ=
+			gTI34ZLLwI5fv/BwcXFGGRIQ78RX7oJJagSjt1QjM9o=
 			</data>
 		</dict>
 	</dict>

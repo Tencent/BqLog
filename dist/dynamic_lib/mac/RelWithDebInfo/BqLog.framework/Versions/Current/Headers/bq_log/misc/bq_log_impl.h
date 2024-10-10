@@ -201,11 +201,6 @@ namespace bq {
         return ((*merged_log_level_bitmap_ & (1U << (int32_t)level)) != 0) && categories_mask_array_[category_index];
     }
 
-    inline void log::enable_snapshot(uint32_t snapshot_buffer_size) const
-    {
-        bq::api::__api_enable_snapshot(log_id_, snapshot_buffer_size);
-    }
-
     inline bq::string log::take_snapshot(bool use_gmt_time) const
     {
         bq::_api_string_def snapshot_def;
