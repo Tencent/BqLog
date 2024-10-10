@@ -22,7 +22,7 @@
 namespace bq {
     static bq::platform::mutex _assert_mutex_;
     static uint32_t rand_seed = 0;
-    static bq::string device_console_buffer_((bq::string::size_type)1024);
+    static bq::array<char> device_console_buffer_({'\0'});
 
     void util::bq_assert(bool cond, bq::string msg)
     {
@@ -108,14 +108,11 @@ namespace bq {
         bq::platform::scoped_mutex lock(_assert_mutex_);
         va_list args;
         va_start(args, format);
-        size_t print_size = 0;
-        while ((print_size = (bq::array<char>::size_type) vsnprintf(device_console_buffer_.begin().operator->(), device_console_buffer_.capacity(), format, args)) >= device_console_buffer_.capacity()) {
-            device_console_buffer_.set_capacity(2 * device_console_buffer_.capacity());
+        while (((bq::array<char>::size_type)vsnprintf(&device_console_buffer_[0], device_console_buffer_.size(), format, args) + 1) >= device_console_buffer_.size()) {
+            device_console_buffer_.fill_uninitialized(device_console_buffer_.size());
         }
         va_end(args);
-        if (print_size > 0) {
-            log_device_console_plain_text(level, device_console_buffer_.begin().operator->());
-        }
+        log_device_console_plain_text(level, device_console_buffer_.begin().operator->());
     }
 
     void util::log_device_console_plain_text(bq::log_level level, const char* text)
@@ -347,3 +344,7 @@ bq::platform::atomic<bool> ccc_continue = false;
 bq::platform::atomic<int32_t> cccc7 = 0;
 bq::platform::atomic<int32_t> cccc8 = 0;
 bq::platform::atomic<int32_t> cccc9 = 0;
+bq::platform::atomic<int32_t> cccc10 = 0;
+
+
+bq::platform::atomic<void*> ccc_snapshot_obj = nullptr;

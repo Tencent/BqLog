@@ -828,21 +828,6 @@ namespace bq {
                 generate_log_str_standard_utf16(args...);
             }
 
-            bq::string to_hex(const bq::string& output)
-            {
-                bq::string result;
-                result.set_capacity(output.size() * 3);
-                for (size_t i = 0; i < output.size(); ++i) {
-                    char c = output[i];
-                    uint8_t u = (uint8_t)c;
-                    char tmptt[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E','F'};
-                    result.push_back(tmptt[u >> 4]);
-                    result.push_back(tmptt[u & 0x0F]);
-                    result.push_back(' ');
-                }
-                return result;
-            }
-
             template <typename PARAM_TUPLE, size_t... INDICES>
             void final_test(const PARAM_TUPLE& param_tuple, const std::index_sequence<INDICES...>& seq)
             {
@@ -880,18 +865,16 @@ namespace bq {
                 if ((current_tested_num % snapshot_idx_mode == 0) || true) {
                     bq::string snapshot = log_inst_ptr->take_snapshot(false);
                     if (!snapshot.is_empty()) {
-                        bq::string hex_standard = to_hex(*output_str_ptr);
-                        result_ptr->add_result(snapshot.size() >= output_str_ptr->size(), "snapshot size test failed, index:%zu, \nstandard: %s\nstandard: %s\nstandard size:%zu, snapshot size:%zu \nsnapshot: %s\nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), hex_standard.c_str(), output_str_ptr->size(), snapshot.size(), snapshot.c_str(), to_hex(snapshot).c_str());     
+                        result_ptr->add_result(snapshot.size() >= output_str_ptr->size(), "snapshot size test failed, index:%zu, \nstandard: %s\nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), output_str_ptr->size(), snapshot.size(), snapshot.c_str());     
                         if (snapshot.size() >= output_str_ptr->size()) {
                             bq::string last_snapshot = snapshot.substr(snapshot.size() - output_str_ptr->size(), output_str_ptr->size());
-                            bq::string hex_last_snapshot = to_hex(last_snapshot);
-                            result_ptr->add_result(snapshot.end_with(snapshot_test_str) || snapshot_test_str.end_with(snapshot), "snapshot test failed, index:%zu, \nstandard: %s\nstandard: %s\nstandard size:%zu, snapshot size:%zu \nsnapshot: %s\nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), hex_standard.c_str(), output_str_ptr->size(), last_snapshot.size(), last_snapshot.c_str(), hex_last_snapshot.c_str());       
+                            result_ptr->add_result(snapshot.end_with(snapshot_test_str) || snapshot_test_str.end_with(snapshot), "snapshot test failed, index:%zu, \nstandard: %s\nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), output_str_ptr->size(), last_snapshot.size(), last_snapshot.c_str());       
                         }
                     }
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }
 
-                bq::util::log_device_console(bq::log_level::fatal, "%s, 一:%d, 二:%d, 三:%d, 四:%d, 五:%d, 六:%d, 七:%d, 八:%d, 九:%d", ccc_continue.load() ? "Y" : "X", cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load(), cccc6.load(), cccc7.load(), cccc8.load(), cccc9.load());
+                bq::util::log_device_console(bq::log_level::fatal, "%s, %p, 一:%d, 二:%d, 三:%d, 四:%d, 五:%d, 六:%d, 七:%d, 八:%d, 九:%d, 十:%d", ccc_continue.load() ? "Y" : "X", ccc_snapshot_obj.load(), cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load(), cccc6.load(), cccc7.load(), cccc8.load(), cccc9.load(), cccc10.load());
 
                 size_t new_percent = (size_t)(current_tested_num * 100 / total_test_num);
                 if (new_percent != current_tested_percent) {

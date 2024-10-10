@@ -162,6 +162,7 @@ namespace bq {
         if (cccc.load()) {
             ccc_continue.store(snapshot_text_continuous_);
         }
+        cccc10.store(0);
         if (!snapshot_buffer_) {
             bq::util::log_device_console_plain_text(log_level::warning, "calling take_snapshot without enable snapshot");
             if (cccc.load()) {
@@ -169,15 +170,21 @@ namespace bq {
             }
             return snapshot_text_[snapshot_text_index_];
         }
+        ccc_snapshot_obj = this;
         snapshot_buffer_->begin_read();
+        bool read_success = false;
         while (true) {
             auto snapshot_read_handle = snapshot_buffer_->read();
             if (snapshot_read_handle.result != enum_buffer_result_code::success) {
+                if (cccc.load() && !read_success && cccc6.load() < cccc4.load()) {
+                    cccc10.store((int32_t)snapshot_read_handle.result);
+                }
                 break;
             }
             if (cccc.load()) {
                 cccc6.fetch_add(1);
             }
+            read_success = true;
             bq::log_entry_handle item(snapshot_read_handle.data_addr, snapshot_read_handle.data_size);
             snapshot_layout_.do_layout(item, use_gmt_time, &parent_log_->get_categories_name());
             text.insert_batch(text.end(), snapshot_layout_.get_formated_str(), snapshot_layout_.get_formated_str_len());
