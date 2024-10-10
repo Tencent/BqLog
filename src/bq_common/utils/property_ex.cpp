@@ -15,9 +15,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
-#include "bq_common/utils/property_ex.h"
-#include "bq_common/utils/util.h"
-#include "bq_common/utils/property.h"
+#include "bq_common/bq_common.h"
 
 namespace bq {
     static bool parse_boolean_value(bool& out, const char* str)

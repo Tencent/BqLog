@@ -89,7 +89,7 @@ namespace bq {
             {
             }
         };
-        static_assert((void*)&(*(cursor_type*)NULL).atomic_value == (void*)&(*(cursor_type*)NULL).odinary_value, "invalid cursor_type size");
+        static_assert(offsetof(cursor_type, atomic_value) == offsetof(cursor_type, odinary_value), "invalid cursor_type size");
         enum block_status {
             unused, // data section begin from this block is unused, can not be read
             used, // data section begin from this block has already finished writing, and can be read.

@@ -17,8 +17,7 @@
  *
  *
  */
-#include "bq_common/platform/thread/spin_lock.h"
-#include "bq_common/platform/thread/thread.h"
+#include "bq_common/bq_common.h"
 
 namespace bq {
     namespace platform {

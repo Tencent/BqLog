@@ -14,7 +14,7 @@
 #include "bq_log/log/appender/appender_base.h"
 #include "bq_log/log/layout.h"
 #include "bq_log/types/ring_buffer.h"
-#include "bq_common/platform/atomic/atomic.h"
+#include "bq_common/bq_common.h"
 
 namespace bq {
     class appender_console : public appender_base {

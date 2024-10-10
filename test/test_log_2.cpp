@@ -10,7 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "test_log.h"
-#include "bq_common/platform/thread/thread.h"
+#include "bq_common/bq_common.h"
 
 namespace bq {
     namespace test {

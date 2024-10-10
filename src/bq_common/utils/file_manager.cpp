@@ -11,9 +11,7 @@
  */
 #include <sys/stat.h>
 #include <inttypes.h>
-#include "bq_common/platform/platform_misc.h"
-#include "bq_common/utils/file_manager.h"
-#include "bq_common/utils/util.h"
+#include "bq_common/bq_common.h"
 
 // todo use read-write lock to improve the concurrency performance
 
