@@ -70,10 +70,10 @@ jobs:
           cp -r artifacts/win64_android_artifact/* dist/dynamic_lib/android/
           cp -r artifacts/linux32_static_artifact/* dist/static_lib/
           cp -r artifacts/linux32_dynamic_artifact/* dist/dynamic_lib/
-          cp -r artifacts/linux32_tools_artifact/* bin/tools/linux/
+          cp -r artifacts/linux32_tools_artifact/* bin/tools/linux32/
           cp -r artifacts/linux64_static_artifact/* dist/static_lib/
           cp -r artifacts/linux64_dynamic_artifact/* dist/dynamic_lib/
-          cp -r artifacts/linux64_tools_artifact/* bin/tools/linux/
+          cp -r artifacts/linux64_tools_artifact/* bin/tools/linux64/
           cp -r artifacts/mac_static_artifact/* dist/static_lib/mac/
           cp -r artifacts/mac_dynamic_artifact/* dist/dynamic_lib/mac/
           cp -r artifacts/mac_tools_artifact/* bin/tools/mac/
