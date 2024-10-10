@@ -16,14 +16,9 @@
 
 //  Created by Yu Cao on 2022/8/31.
 //
-#ifdef __clang__
-#pragma message("###################Message __clang")
-#elif defined(_MSC_VER)
-#pragma message("###################Message _MSC_VER")
-#elif defined(__GNUC__)
-#pragma message("###################Message GCC")
-#endif
 
+#include "bq_common/misc/assert.h"
+#include "bq_common/platform/macros.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow" // GCC warning check
@@ -31,9 +26,6 @@
 #pragma GCC diagnostic ignored "-Wrestrict" // GCC error check
 #pragma GCC diagnostic ignored "-Wuse-after-free" // GCC warning check
 #endif
-
-#include "bq_common/misc/assert.h"
-#include "bq_common/platform/macros.h"
 #include "bq_common/types/type_traits.h"
 #include "bq_common/types/type_tools.h"
 #include "bq_common/types/array.h"
@@ -41,7 +33,6 @@
 #include "bq_common/types/hash_map.h"
 #include "bq_common/types/optional.h"
 #include "bq_common/types/basic_types.h"
-
 #if defined(BQ_GCC)
 #pragma GCC diagnostic pop
 #endif
