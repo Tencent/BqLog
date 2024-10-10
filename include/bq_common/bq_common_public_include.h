@@ -16,6 +16,13 @@
 
 //  Created by Yu Cao on 2022/8/31.
 //
+#ifdef __clang__
+#pragma message("###################Message __clang")
+#elif defined(_MSC_VER)
+#pragma message("###################Message _MSC_VER")
+#elif defined(__GNUC__)
+#pragma message("###################Message GCC")
+#endif
 
 #if defined(BQ_GCC)
 #pragma GCC diagnostic push
