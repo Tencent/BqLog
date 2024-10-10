@@ -108,8 +108,19 @@ namespace bq {
         bq::platform::scoped_mutex lock(_assert_mutex_);
         va_list args;
         va_start(args, format);
-        while (((bq::array<char>::size_type)vsnprintf(&device_console_buffer_[0], device_console_buffer_.size(), format, args) + 1) >= device_console_buffer_.size()) {
-            device_console_buffer_.fill_uninitialized(device_console_buffer_.size());
+        if (format) {
+            while (true) {
+                va_start(args, format);
+                bool failed = ((bq::array<char>::size_type)vsnprintf(&device_console_buffer_[0], device_console_buffer_.size(), format, args) + 1) >= device_console_buffer_.size();
+                va_end(args);
+                if (failed) {
+                    device_console_buffer_.fill_uninitialized(device_console_buffer_.size());
+                } else {
+                    break;
+                }
+            }
+        } else {
+            device_console_buffer_[0] = '\0';
         }
         va_end(args);
         log_device_console_plain_text(level, device_console_buffer_.begin().operator->());
