@@ -26,16 +26,19 @@ jobs:
       - name: Clear Output Folders
         run: |
           rm -rf bin/tools/win64
-          rm -rf bin/tools/linux
+          rm -rf bin/tools/linux32
+          rm -rf bin/tools/linux64
           rm -rf bin/tools/mac
           rm -rf dist/dynamic_lib/include
           rm -rf dist/dynamic_lib/android
           rm -rf dist/dynamic_lib/ios
-          rm -rf dist/dynamic_lib/linux
+          rm -rf dist/dynamic_lib/linux32
+          rm -rf dist/dynamic_lib/linux64
           rm -rf dist/dynamic_lib/mac
           rm -rf dist/dynamic_lib/win64
           rm -rf dist/static_lib/include
-          rm -rf dist/static_lib/linux
+          rm -rf dist/static_lib/linux32
+          rm -rf dist/static_lib/linux64
           rm -rf dist/static_lib/mac
           rm -rf dist/static_lib/win64
 
@@ -51,9 +54,12 @@ jobs:
           mkdir -p dist/dynamic_lib/win64
           mkdir -p bin/tools/win64/
           mkdir -p dist/dynamic_lib/android/
-          mkdir -p dist/static_lib/linux/
-          mkdir -p dist/dynamic_lib/linux/
-          mkdir -p bin/tools/linux/
+          mkdir -p dist/static_lib/linux32/
+          mkdir -p dist/dynamic_lib/linux32/
+          mkdir -p bin/tools/linux32/
+          mkdir -p dist/static_lib/linux64/
+          mkdir -p dist/dynamic_lib/linux64/
+          mkdir -p bin/tools/linux64/
           mkdir -p dist/static_lib/mac/
           mkdir -p dist/dynamic_lib/mac/
           mkdir -p bin/tools/mac/
@@ -62,9 +68,12 @@ jobs:
           cp -r artifacts/win64_dynamic_artifact/* dist/dynamic_lib/win64
           cp -r artifacts/win64_tools_artifact/* bin/tools/win64/
           cp -r artifacts/win64_android_artifact/* dist/dynamic_lib/android/
-          cp -r artifacts/linux_static_artifact/* dist/static_lib/
-          cp -r artifacts/linux_dynamic_artifact/* dist/dynamic_lib/
-          cp -r artifacts/linux_tools_artifact/* bin/tools/linux/
+          cp -r artifacts/linux32_static_artifact/* dist/static_lib/
+          cp -r artifacts/linux32_dynamic_artifact/* dist/dynamic_lib/
+          cp -r artifacts/linux32_tools_artifact/* bin/tools/linux/
+          cp -r artifacts/linux64_static_artifact/* dist/static_lib/
+          cp -r artifacts/linux64_dynamic_artifact/* dist/dynamic_lib/
+          cp -r artifacts/linux64_tools_artifact/* bin/tools/linux/
           cp -r artifacts/mac_static_artifact/* dist/static_lib/mac/
           cp -r artifacts/mac_dynamic_artifact/* dist/dynamic_lib/mac/
           cp -r artifacts/mac_tools_artifact/* bin/tools/mac/

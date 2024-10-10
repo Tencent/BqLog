@@ -214,9 +214,9 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_static_artifact
+          name: linux64_static_artifact
           path: |
-            dist/static_lib/linux/
+            dist/static_lib/linux64/
             dist/static_lib/include/   
   
   build_ubuntu_dynamic_lib_Clang:
@@ -241,9 +241,9 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_dynamic_artifact
+          name: linux64_dynamic_artifact
           path: |
-            dist/dynamic_lib/linux/
+            dist/dynamic_lib/linux64/
             dist/dynamic_lib/include/  
 
   build_ubuntu_static_lib_GCC:
@@ -309,8 +309,8 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_tools_artifact
-          path: bin/tools/linux
+          name: linux64_tools_artifact
+          path: bin/tools/linux64
 
   build_ubuntu_tools_GCC:
     runs-on: ubuntu-latest
@@ -506,6 +506,155 @@ jobs:
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+      - name: Build log_decoder for Debian
+        run: |
+          cd build/tools/log_decoder/linux
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh 
+
+      - name: Build category_log_generator for Debian
+        run: |
+          cd build/tools/category_log_generator/linux
+          chmod +x *.sh
+          ./GenerateExecutable_GCC.sh 
+
+  #linux-debian i386
+  build_debian_i386_static_lib_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateStaticLib_GCC.sh 
+          
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux32_static_artifact
+          path: |
+            dist/static_lib/linux32/
+            dist/static_lib/include/   
+  
+  build_debian_i386_dynamic_lib_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateDynamicLib_GCC.sh 
+        
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux32_dynamic_artifact
+          path: |
+            dist/static_lib/linux32/
+            dist/static_lib/include/   
+
+  build_debian_i386_static_lib_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateStaticLib_Clang.sh 
+  
+  build_debian_i386_dynamic_lib_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian
+        run: |
+          cd build/lib/linux
+          chmod +x *.sh
+          ./GenerateDynamicLib_Clang.sh 
+
+  build_debian_i386_tools_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build log_decoder for Debian
+        run: |
+          cd build/tools/log_decoder/linux
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh 
+
+      - name: Build category_log_generator for Debian
+        run: |
+          cd build/tools/category_log_generator/linux
+          chmod +x *.sh
+          ./GenerateExecutable_Clang.sh 
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux32_tools_artifact
+          path: bin/tools/linux32
+
+  build_debian_i386_tools_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
 
       - name: Build log_decoder for Debian
         run: |

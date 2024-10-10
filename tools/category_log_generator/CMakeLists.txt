@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
+
+project(BqLog_CategoryLogGenerator)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/BqCommon/CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/BqCommon/CMake_utils.txt)
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt)
 endif()
-
-project(BqLog_CategoryLogGenerator)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -53,7 +53,7 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../bin/tools/${TARGET_PLATFORM})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../bin/tools/${TARGET_PLATFORM}${BITS_SUFFIX})
 
 # generate executable
 add_executable(BqLog_CategoryLogGenerator
