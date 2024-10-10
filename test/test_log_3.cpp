@@ -874,7 +874,7 @@ namespace bq {
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }
 
-                bq::util::log_device_console(bq::log_level::fatal, "%s\t, %p\t, 一:%d\t, 二:%d\t, 开始w:%d\t, w成功:%d\t, 读没b:%d\t, 读成功:%d\t, 删:%d\t, 换-分配失败:%d\t, 换-读:%d\t, 读失败原因:%d\t 换:%d\t 创:%d", ccc_continue.load() ? "Y" : "X", ccc_snapshot_obj.load(), cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load(), cccc6.load(), cccc7.load(), cccc8.load(), cccc9.load(), cccc10.load(), cccc11.load(), cccc12.load());
+                bq::util::log_device_console(bq::log_level::fatal, "%s\t, %p\t, 一:%d\t, 二:%d\t, 三开始w:%d\t, 四w成功:%d\t, 五读没b:%d\t, 六读成功:%d\t, 七删:%d\t, 八换-分配失败:%d\t, 九换-读:%d\t, 十读失败原因:%d\t 十一换:%d\t 十二创:%d", ccc_continue.load() ? "Y" : "X", ccc_snapshot_obj.load(), cccc1.load(), cccc2.load(), cccc3.load(), cccc4.load(), cccc5.load(), cccc6.load(), cccc7.load(), cccc8.load(), cccc9.load(), cccc10.load(), cccc11.load(), cccc12.load());
 
                 size_t new_percent = (size_t)(current_tested_num * 100 / total_test_num);
                 if (new_percent != current_tested_percent) {

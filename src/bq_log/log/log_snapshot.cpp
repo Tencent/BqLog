@@ -91,7 +91,7 @@ namespace bq {
                 if (cccc.load()) {
                     cccc11.fetch_add(1);
                 }
-            } else {
+            } else if(!snapshot_buffer_){
                 if (cccc.load()) {
                     cccc12.fetch_add(1);
                 }
