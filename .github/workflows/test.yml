@@ -141,6 +141,44 @@ jobs:
             chmod +x *.sh
             ./RunTest_Clang.sh 
 
+build_debian_32bits_test_and_run_GCC:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_GCC.sh 
+  
+  build_debian_32bits_test_and_run_Clang:
+    runs-on: ubuntu-latest
+    container: 
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+            cd build/test/linux  
+            chmod +x *.sh
+            ./RunTest_Clang.sh 
+
   #Mac
   build_mac_test_and_run:
     runs-on: macos-latest
