@@ -603,14 +603,14 @@ jobs:
           cd build/lib/linux
           chmod +x *.sh
           ./GenerateDynamicLib_Clang.sh 
-          
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux32_dynamic_artifact
           path: |
-            dist/static_lib/linux32/
-            dist/static_lib/include/   
+            dist/dynamic_lib/linux32/
+            dist/dynamic_lib/include/   
 
   build_debian_i386_tools_Clang:
     runs-on: ubuntu-latest

@@ -64,20 +64,20 @@ jobs:
           mkdir -p dist/dynamic_lib/mac/
           mkdir -p bin/tools/mac/
           mkdir -p dist/dynamic_lib/ios/
-          cp -r artifacts/win64_static_artifact/* dist/static_lib/win64
-          cp -r artifacts/win64_dynamic_artifact/* dist/dynamic_lib/win64
-          cp -r artifacts/win64_tools_artifact/* bin/tools/win64/
-          cp -r artifacts/win64_android_artifact/* dist/dynamic_lib/android/
-          cp -r artifacts/linux32_static_artifact/* dist/static_lib/
-          cp -r artifacts/linux32_dynamic_artifact/* dist/dynamic_lib/
-          cp -r artifacts/linux32_tools_artifact/* bin/tools/linux32/
-          cp -r artifacts/linux64_static_artifact/* dist/static_lib/
-          cp -r artifacts/linux64_dynamic_artifact/* dist/dynamic_lib/
-          cp -r artifacts/linux64_tools_artifact/* bin/tools/linux64/
-          cp -r artifacts/mac_static_artifact/* dist/static_lib/mac/
-          cp -r artifacts/mac_dynamic_artifact/* dist/dynamic_lib/mac/
-          cp -r artifacts/mac_tools_artifact/* bin/tools/mac/
-          cp -r artifacts/ios_dynamic_artifact/* dist/dynamic_lib/ios/
+          cp -vr artifacts/win64_static_artifact/* dist/static_lib/win64
+          cp -vr artifacts/win64_dynamic_artifact/* dist/dynamic_lib/win64
+          cp -vr artifacts/win64_tools_artifact/* bin/tools/win64/
+          cp -vr artifacts/win64_android_artifact/* dist/dynamic_lib/android/
+          cp -vr artifacts/linux32_static_artifact/* dist/static_lib/
+          cp -vr artifacts/linux32_dynamic_artifact/* dist/dynamic_lib/
+          cp -vr artifacts/linux32_tools_artifact/* bin/tools/linux32/
+          cp -vr artifacts/linux64_static_artifact/* dist/static_lib/
+          cp -vr artifacts/linux64_dynamic_artifact/* dist/dynamic_lib/
+          cp -vr artifacts/linux64_tools_artifact/* bin/tools/linux64/
+          cp -vr artifacts/mac_static_artifact/* dist/static_lib/mac/
+          cp -vr artifacts/mac_dynamic_artifact/* dist/dynamic_lib/mac/
+          cp -vr artifacts/mac_tools_artifact/* bin/tools/mac/
+          cp -vr artifacts/ios_dynamic_artifact/* dist/dynamic_lib/ios/
           
       - name: Combine and Commit Build Artifacts
         run: |
