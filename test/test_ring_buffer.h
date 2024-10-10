@@ -18,52 +18,55 @@
 #include "test_base.h"
 #include "bq_log/types/ring_buffer.h"
 
-class write_task {
-private:
-    int32_t id;
-    bq::ring_buffer* ring_buffer_ptr;
-    int32_t left_write_count;
-    std::atomic<int32_t>& counter_ref;
-
-public:
-    const static int32_t min_chunk_size = 8;
-    const static int32_t max_chunk_size = 1024;
-    write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, std::atomic<int32_t>& counter)
-        : counter_ref(counter)
-    {
-        this->id = id;
-        this->left_write_count = left_write_count;
-        this->ring_buffer_ptr = ring_buffer_ptr;
-    }
-
-    void operator()()
-    {
-        std::random_device sd;
-        std::minstd_rand linear_ran(sd());
-        std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
-        while (left_write_count > 0) {
-            uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
-            auto handle = ring_buffer_ptr->alloc_write_chunk(alloc_size);
-            if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
-                || handle.result == bq::enum_buffer_result_code::err_alloc_failed_by_race_condition
-                || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited) {
-                continue;
-            }
-            --left_write_count;
-            assert(handle.result == bq::enum_buffer_result_code::success);
-            *(int32_t*)(handle.data_addr) = id;
-            int32_t count = (int32_t)alloc_size / sizeof(int32_t);
-            int32_t* begin = (int32_t*)(handle.data_addr) + 1;
-            int32_t* end = (int32_t*)(handle.data_addr) + count;
-            std::fill(begin, end, (int32_t)alloc_size);
-            ring_buffer_ptr->commit_write_chunk(handle);
-        }
-        --counter_ref;
-    }
-};
-
 namespace bq {
     namespace test {
+        static bq::platform::atomic<int32_t> ring_buffer_test_total_write_count_ = 0;
+
+        class write_task {
+        private:
+            int32_t id;
+            bq::ring_buffer* ring_buffer_ptr;
+            int32_t left_write_count;
+            bq::platform::atomic<int32_t>& counter_ref;
+
+        public:
+            const static int32_t min_chunk_size = 12;
+            const static int32_t max_chunk_size = 1024;
+            write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
+                : counter_ref(counter)
+            {
+                this->id = id;
+                this->left_write_count = left_write_count;
+                this->ring_buffer_ptr = ring_buffer_ptr;
+            }
+
+            void operator()()
+            {
+                std::random_device sd;
+                std::minstd_rand linear_ran(sd());
+                std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
+                while (left_write_count > 0) {
+                    uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
+                    auto handle = ring_buffer_ptr->alloc_write_chunk(alloc_size);
+                    if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
+                        || handle.result == bq::enum_buffer_result_code::err_alloc_failed_by_race_condition
+                        || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited) {
+                        continue;
+                    }
+                    --left_write_count;
+                    assert(handle.result == bq::enum_buffer_result_code::success);
+                    *(int32_t*)(handle.data_addr) = id;
+                    *((int32_t*)(handle.data_addr) + 1) = left_write_count;
+                    int32_t count = (int32_t)alloc_size / sizeof(int32_t);
+                    int32_t* begin = (int32_t*)(handle.data_addr) + 2;
+                    int32_t* end = (int32_t*)(handle.data_addr) + count;
+                    std::fill(begin, end, (int32_t)alloc_size);
+                    ring_buffer_ptr->commit_write_chunk(handle);
+                    ++ring_buffer_test_total_write_count_;
+                }
+                counter_ref.fetch_add(-1, bq::platform::memory_order::release);
+            }
+        };
 
         class test_ring_buffer : public test_base {
         public:
@@ -79,7 +82,7 @@ namespace bq {
                 bq::ring_buffer ring_buffer(1000 * 40);
                 int32_t chunk_count_per_task = 1024000;
                 int32_t total_task = 13;
-                std::atomic<int32_t> counter(total_task);
+                bq::platform::atomic<int32_t> counter(total_task);
                 std::vector<int32_t> task_check_vector;
                 for (int32_t i = 0; i < total_task; ++i) {
                     task_check_vector.push_back(0);
@@ -93,11 +96,14 @@ namespace bq {
                 int32_t percent = 0;
                 auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
                 test_output_dynamic_param(bq::log_level::info, "ring buffer test progress:%d%%, time cost:%dms\r", percent, 0);
-                bool read_empty = false;
                 ring_buffer.begin_read();
-                while (counter.load(std::memory_order_acquire) > 0 || !read_empty) {
+                while (true) {
+                    bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     auto handle = ring_buffer.read();
-                    read_empty = handle.result == bq::enum_buffer_result_code::err_empty_ring_buffer;
+                    bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_ring_buffer;
+                    if (write_finished && read_empty) {
+                        break;
+                    }
                     if (handle.result != bq::enum_buffer_result_code::success) {
                         ring_buffer.end_read();
                         ring_buffer.begin_read();
@@ -117,6 +123,7 @@ namespace bq {
                     }
 
                     int32_t id = *(int32_t*)handle.data_addr;
+                    int32_t left_count = *((int32_t*)handle.data_addr + 1);
                     if (id < 0 || id >= total_task) {
                         std::string error_msg = "invalid task id:";
                         error_msg += std::to_string(id);
@@ -125,8 +132,10 @@ namespace bq {
                     }
 
                     task_check_vector[id]++;
+                    result.add_result(task_check_vector[id] + left_count == chunk_count_per_task, "chunk left task check error, real: %d, expected:%d", left_count, chunk_count_per_task - task_check_vector[id]);
+                    task_check_vector[id] = chunk_count_per_task - left_count; // error adjust
                     bool content_check = true;
-                    for (size_t i = 1; i < size / sizeof(int32_t); ++i) {
+                    for (size_t i = 2; i < size / sizeof(int32_t); ++i) {
                         if (*((int32_t*)handle.data_addr + i) != size) {
                             content_check = false;
                             continue;
@@ -136,9 +145,10 @@ namespace bq {
                 }
                 ring_buffer.end_read();
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
-                    result.add_result(task_check_vector[i] == chunk_count_per_task, "chunk count check error");
+                    result.add_result(task_check_vector[i] == chunk_count_per_task, "chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
-
+                result.add_result(total_chunk == ring_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", ring_buffer_test_total_write_count_.load(), total_chunk);
+                result.add_result(total_chunk == readed_chunk, "total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
                 return result;
             }
         };

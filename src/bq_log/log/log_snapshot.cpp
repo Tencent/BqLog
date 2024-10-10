@@ -43,7 +43,7 @@ namespace bq {
         }
         if (buffer_size_ != 0) {
             if (snapshot_buffer_ && ((uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count()) != buffer_size_)) {
-                //create a new snapshot_buffer_ and backup log data.
+                // create a new snapshot_buffer_ and backup log data.
                 ring_buffer* new_buffer = new ring_buffer(buffer_size_);
                 new_buffer->set_thread_check_enable(false);
                 snapshot_buffer_->begin_read();
@@ -60,27 +60,27 @@ namespace bq {
                             memcpy(write_handle.data_addr, backup_read_handle.data_addr, (size_t)backup_read_handle.data_size);
                             write_success = true;
                             new_buffer->commit_write_chunk(write_handle);
-                        }
-                        else if (write_handle.result == enum_buffer_result_code::err_alloc_size_invalid) {
+                        } else if (write_handle.result == enum_buffer_result_code::err_alloc_size_invalid) {
                             new_buffer->commit_write_chunk(write_handle);
                             // chunk is too big for new buffer, discard and renew new buffer;
                             delete new_buffer;
                             new_buffer = new ring_buffer(buffer_size_);
                             new_buffer->set_thread_check_enable(false);
                             write_success = true;
+                            snapshot_text_continuous_ = false;
                         } else {
                             new_buffer->commit_write_chunk(write_handle);
                             new_buffer->begin_read();
                             new_buffer->read();
                             new_buffer->end_read();
+                            snapshot_text_continuous_ = false;
                         }
                     }
-
                 }
                 snapshot_buffer_->end_read();
                 delete snapshot_buffer_;
                 snapshot_buffer_ = new_buffer;
-            } else {
+            } else if (!snapshot_buffer_) {
                 snapshot_buffer_ = new ring_buffer(buffer_size_);
                 snapshot_buffer_->set_thread_check_enable(false);
             }
@@ -97,10 +97,10 @@ namespace bq {
 
         const auto& levels_array = snapshot_config["levels"];
         if (!bq::log_utils::get_log_level_bitmap_by_config(levels_array, log_level_bitmap_)) {
-            util::log_device_console(bq::log_level::info, "bq log info: no levels config was found in snapshot, use default level \"all\"");
+            util::log_device_console(bq::log_level::info, "log [%s]: no levels config was found in snapshot, use default level \"all\"", parent_log_->get_name().c_str());
             log_level_bitmap_.add_level("all");
         }
-        
+
         if (categories_mask_array_.is_empty()) {
             categories_mask_array_.fill_uninitialized(parent_log_->get_categories_name().size());
         }
@@ -111,24 +111,24 @@ namespace bq {
     {
         if (log_level_bitmap_.have_level(log_entry.get_level()) && categories_mask_array_[log_entry.get_category_idx()]) {
             bq::platform::scoped_spin_lock scoped_lock(lock_);
-            volatile ring_buffer* volatile_ptr = (volatile ring_buffer*)(snapshot_buffer_);
-            ring_buffer* buffer = const_cast<ring_buffer*>(volatile_ptr);
-            if (buffer) {
+            if (snapshot_buffer_) {
                 while (true) {
-                    bq::ring_buffer_write_handle snapshot_write_handle = buffer->alloc_write_chunk(log_entry.data_size());
+                    bq::ring_buffer_write_handle snapshot_write_handle = snapshot_buffer_->alloc_write_chunk(log_entry.data_size());
                     if (snapshot_write_handle.result == enum_buffer_result_code::success) {
                         memcpy(snapshot_write_handle.data_addr, log_entry.data(), log_entry.data_size());
-                        buffer->commit_write_chunk(snapshot_write_handle);
+                        snapshot_buffer_->commit_write_chunk(snapshot_write_handle);
                         break;
                     } else if (snapshot_write_handle.result == enum_buffer_result_code::err_not_enough_space) {
-                        buffer->begin_read();
-                        buffer->read();
-                        buffer->end_read();
+                        snapshot_buffer_->begin_read();
+                        snapshot_buffer_->read();
+                        snapshot_buffer_->end_read();
                         snapshot_text_continuous_ = false;
                     } else {
                         break;
                     }
                 }
+            } else {
+                snapshot_text_continuous_ = false;
             }
         }
     }
@@ -164,7 +164,7 @@ namespace bq {
                 size_t offset = 0;
                 size_t start_pos = last_text.size() - left_size;
                 for (offset = 0; offset < 4 && offset < left_size; ++offset) {
-                    //find the start of multi-bytes character.
+                    // find the start of multi-bytes character.
                     char c = last_text[start_pos + offset];
                     if ((c & 0x80) == 0) {
                         // Single-byte character (ASCII), boundary found.

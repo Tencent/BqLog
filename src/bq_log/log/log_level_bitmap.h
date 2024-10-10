@@ -18,6 +18,7 @@ namespace bq {
         log_level_bitmap();
         log_level_bitmap(uint32_t init_bitmap_value);
         log_level_bitmap(const log_level_bitmap& rhs);
+
     public:
         log_level_bitmap& operator=(const log_level_bitmap& rhs);
         void clear();

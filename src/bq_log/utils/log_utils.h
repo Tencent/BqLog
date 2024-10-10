@@ -95,7 +95,6 @@ namespace bq {
         static constexpr uint64_t value = 0;
     };
 
-
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_encode_length(uint64_t value)
     {
         if (value < min_value_of_length<2>::value) {

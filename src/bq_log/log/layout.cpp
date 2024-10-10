@@ -39,29 +39,31 @@ namespace bq {
         _time_zone_str_initer()
         {
             uint64_t epoch = bq::platform::high_performance_epoch_ms();
-            const struct tm* local = bq::util::get_local_time_by_epoch_unsafe(epoch);
-            if (local == NULL) {
+            struct tm local;
+            if (!bq::util::get_local_time_by_epoch(epoch, local)) {
                 const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
                 return;
             }
-
-            time_t local_time = mktime(const_cast<struct tm*>(local));
+            time_t local_time = mktime(const_cast<struct tm*>(&local));
             if (local_time == (time_t)(-1)) {
                 const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
                 return;
             }
 
-            const struct tm* utc0 = bq::util::get_gmt_time_by_epoch_unsafe(epoch);
-            if (utc0 == NULL) {
+            struct tm utc0;
+            if (!bq::util::get_gmt_time_by_epoch(epoch, utc0)) {
                 const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
                 return;
             }
-            time_t utc_time = mktime(const_cast<struct tm*>(utc0));
+            time_t utc_time = mktime(const_cast<struct tm*>(&utc0));
+            if (utc_time == (time_t)(-1)) {
+                const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
+                return;
+            }
 
             double timezone_offset = difftime(local_time, utc_time);
             int32_t offset_hours = (int32_t)timezone_offset / 3600;
             const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "UTC%+03d", offset_hours);
-            ;
         }
     } _time_zone_str_initer_inst_;
 
@@ -144,9 +146,14 @@ namespace bq {
         uint64_t epoch = log_entry.get_log_head().timestamp_epoch;
 
         if (epoch != last_time_epoch_cache_) {
-            const struct tm* timeptr = is_gmt_time_ ? bq::util::get_gmt_time_by_epoch_unsafe(epoch) : bq::util::get_local_time_by_epoch_unsafe(epoch);
+            struct tm time_st;
+            if (is_gmt_time_) {
+                bq::util::get_gmt_time_by_epoch(epoch, time_st);
+            } else {
+                bq::util::get_local_time_by_epoch(epoch, time_st);
+            }
             time_cache_len_ = snprintf(time_cache_, sizeof(time_cache_),
-                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? _time_zone_str_initer_inst_.utc_time_zone_str_ : _time_zone_str_initer_inst_.time_zone_str_, timeptr->tm_year + 1900, timeptr->tm_mon + 1, timeptr->tm_mday, timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec);
+                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? _time_zone_str_initer_inst_.utc_time_zone_str_ : _time_zone_str_initer_inst_.time_zone_str_, time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec);
             last_time_epoch_cache_ = epoch;
         }
         memcpy(&format_content[format_content_cursor], time_cache_, time_cache_len_);

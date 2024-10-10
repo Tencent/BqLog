@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 /*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -163,7 +163,7 @@ namespace bq {
                 while (!is_cancelled()) {
                     bq::test::create_test_log_3_file_appender(snapshot_config[(int32_t)(begin_epoch_ms % 4)]);
                     log_ptr->take_snapshot(false);
-                    sleep(0);
+                    sleep(begin_epoch_ms % 2);
                 }
             }
         };

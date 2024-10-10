@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
@@ -50,7 +50,6 @@ namespace bq {
                 thread_mode_ = log_thread_mode::sync;
             } else if ("async" == (bq::string)thread_mode_config) {
                 thread_mode_ = log_thread_mode::async;
-
             } else if ("independent" == (bq::string)thread_mode_config) {
                 thread_mode_ = log_thread_mode::independent;
             } else {
@@ -160,7 +159,6 @@ namespace bq {
                 }
             }
         }
-
         // init print_stack_levels
         {
             bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
@@ -174,6 +172,8 @@ namespace bq {
                 util::log_device_console(bq::log_level::error, "create_log parse property failed, invalid appenders_config");
                 return false;
             }
+            flush_appenders_cache();
+            flush_appenders_io();
             for (auto appender_ptr : appenders_list_) {
                 delete appender_ptr;
             }
@@ -184,7 +184,6 @@ namespace bq {
             }
             refresh_merged_log_level_bitmap();
         }
-
         // init categories mask
         {
             bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"], categories_mask_array_);
@@ -297,7 +296,6 @@ namespace bq {
     const bq::string& log_imp::take_snapshot_string(bool use_gmt_time)
     {
         return snapshot_->take_snapshot_string(use_gmt_time);
-        ;
     }
 
     void log_imp::release_snapshot_string()
@@ -312,12 +310,14 @@ namespace bq {
 
     void log_imp::refresh_merged_log_level_bitmap()
     {
-        merged_log_level_bitmap_.clear();
-        uint32_t& bitmap_value = *merged_log_level_bitmap_.get_bitmap_ptr();
+        log_level_bitmap tmp;
+        uint32_t& bitmap_value = *tmp.get_bitmap_ptr();
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); ++i) {
             uint32_t bitmap = *(appenders_list_[i]->get_log_level_bitmap().get_bitmap_ptr());
             bitmap_value |= bitmap;
         }
+        // make sure atomic
+        merged_log_level_bitmap_ = tmp;
     }
 
     void log_imp::process(bool is_force_flush)
@@ -422,21 +422,11 @@ namespace bq {
         return categories_name_array_;
     }
 
-    const appender_base* log_imp::get_appender_by_name(const bq::string& name) const
+    void log_imp::set_appenders_enable(const bq::string& appender_name, bool enable)
     {
-        for (auto iter = appenders_list_.begin(); iter != appenders_list_.end(); ++iter) {
-            if ((*iter)->get_name() == name) {
-                return *iter;
-            }
-        }
-        return nullptr;
-    }
-
-    array<appender_base*> log_imp::get_appender_by_vague_name(const bq::string& name) const
-    {
-        auto star_list = name.split("*");
-        bool vague = (name.find("*") != string::npos);
-        array<appender_base*> relist;
+        bq::platform::scoped_spin_lock lock(spin_lock_);
+        auto star_list = appender_name.split("*");
+        bool vague = (appender_name.find("*") != string::npos);
         for (auto iter = appenders_list_.begin(); iter != appenders_list_.end(); ++iter) {
             if (vague) {
                 bool find = true;
@@ -454,12 +444,13 @@ namespace bq {
                             temp_cell = "";
                     }
                 }
-                if (find)
-                    relist.push_back(*iter);
-            } else if ((*iter)->get_name() == name) {
-                relist.push_back(*iter);
+                if (find) {
+                    (*iter)->set_enable(enable);
+                }
+            } else if ((*iter)->get_name() == appender_name) {
+                (*iter)->set_enable(enable);
             }
         }
-        return relist;
     }
+
 }

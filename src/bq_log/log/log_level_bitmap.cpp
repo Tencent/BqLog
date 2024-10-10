@@ -23,12 +23,10 @@ namespace bq {
     {
     }
 
-
     log_level_bitmap::log_level_bitmap(const log_level_bitmap& rhs)
         : bitmap_(rhs.bitmap_)
     {
     }
-
 
     bq::log_level_bitmap& log_level_bitmap::operator=(const log_level_bitmap& rhs)
     {

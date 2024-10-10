@@ -13,7 +13,6 @@
 
 namespace bq {
 
-
     bool log_utils::get_categories_mask_by_config(const bq::array<bq::string> categories_name, const bq::property_value& categories_mask_config, bq::array_inline<uint8_t>& out_categories_mask)
     {
         assert(categories_name.size() == out_categories_mask.size() && "categories mask size must be equal to categories name size");
@@ -39,8 +38,7 @@ namespace bq {
                 } else {
                     for (const bq::string& mask_config : tmp) {
                         if (category_name == mask_config
-                            || (category_name.size() > mask_config.size() && category_name.begin_with(mask_config) && category_name[mask_config.size()] == '.')
-                        ) {
+                            || (category_name.size() > mask_config.size() && category_name.begin_with(mask_config) && category_name[mask_config.size()] == '.')) {
                             mask = 1;
                             break;
                         }
@@ -59,8 +57,9 @@ namespace bq {
 
     bool log_utils::get_log_level_bitmap_by_config(const bq::property_value& log_level_bitmap_config, bq::log_level_bitmap& out_level_bitmap)
     {
-        out_level_bitmap.clear();
+        log_level_bitmap tmp;
         if (!log_level_bitmap_config.is_array()) {
+            out_level_bitmap.clear();
             return false;
         }
         for (typename property_value::array_type::size_type i = 0; i < log_level_bitmap_config.array_size(); ++i) {
@@ -69,8 +68,10 @@ namespace bq {
                 util::log_device_console(bq::log_level::warning, "bq log info: invalid [log_level] item: %s", level_obj.serialize().c_str());
                 continue;
             }
-            out_level_bitmap.add_level(((bq::string)level_obj).trim());
+            tmp.add_level(((bq::string)level_obj).trim());
         }
+        // make sure atomic
+        out_level_bitmap = tmp;
         return true;
     }
 

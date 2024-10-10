@@ -274,10 +274,7 @@ namespace bq {
         {
             bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
             if (log) {
-                auto appenders = log->get_appender_by_vague_name(appender_name);
-                for (auto appender : appenders) {
-                    const_cast<appender_base*>(appender)->set_enable(enable);
-                }
+                log->set_appenders_enable(appender_name, enable);
             }
         }
 

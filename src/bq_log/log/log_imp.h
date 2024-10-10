@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 /*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -40,8 +40,7 @@ namespace bq {
         const bq::string& get_category_name_by_index(uint32_t index) const;
         const bq::array<bq::string>& get_categories_name() const;
 
-        const appender_base* get_appender_by_name(const bq::string& name) const;
-        array<appender_base*> get_appender_by_vague_name(const bq::string& name) const;
+        void set_appenders_enable(const bq::string& appender_name, bool enable);
 
         inline ring_buffer& get_ring_buffer() const
         {

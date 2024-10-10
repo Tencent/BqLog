@@ -1,4 +1,4 @@
-# BqLog(扁鹊日志)(V 1.4.5)  
+# BqLog(扁鹊日志)(V 1.4.5)  ([ChangeLog](/CHANGELOG.md))
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](https://github.com/Tencent/BqLog/blob/main/LICENSE.txt)
 [![Release Version](https://img.shields.io/badge/release-1.4.5-red.svg)](https://github.com/Tencent/BqLog/releases)  
 > [中文文档](./README_CHS.md)  

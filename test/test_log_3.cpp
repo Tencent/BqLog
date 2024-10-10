@@ -47,6 +47,8 @@ namespace bq {
 
         static bq::string snapshot_test_str;
 
+        static bq::array<bq::string> test_log_3_all_console_outputs;
+
         // Larger parameter (eg. 3) will result in an exponential increase in test time overhead.
         constexpr int32_t MAX_PARAM = 2;
 
@@ -587,7 +589,7 @@ namespace bq {
                 decoder.pick_new_log_file();
                 result = decoder.get().decode();
             }
-            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed");
+            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed, error code:%d", (int32_t)result);
             return decoder.get().get_last_decoded_log_entry();
         }
 
@@ -599,7 +601,7 @@ namespace bq {
                 decoder.pick_new_log_file();
                 result = decoder.get().decode();
             }
-            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed");
+            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed, error code:%d", (int32_t)result);
             return decoder.get().get_last_decoded_log_entry();
         }
 
@@ -847,13 +849,9 @@ namespace bq {
                     generate_log_str_standard_utf16(std::get<INDICES>(param_tuple)...);
                     log_inst_ptr->error(log_inst_ptr->cat.ModuleA.SystemA.ClassA, log_str_templates_fmt_utf16[fmt_idx], std::get<INDICES>(param_tuple)...);
                 }
-
                 *output_str_ptr = output_str_ptr->substr(log_head.size(), output_str_ptr->size() - log_head.size());
+                test_log_3_all_console_outputs.push_back(*output_str_ptr);
                 result_ptr->add_result(output_str_ptr->end_with(log_str_standard), "test idx:%zu, %s \n != %s", current_tested_num, output_str_ptr->c_str(), log_str_standard.c_str());
-                const bq::string& raw_item = decode_raw_item();
-                result_ptr->add_result(output_str_ptr->end_with(raw_item), "test idx:%zu, raw test, decoded: %s, console text:%s", current_tested_num, raw_item.c_str(), output_str_ptr->c_str());
-                const bq::string& compressed_item = decode_compressed_item();
-                result_ptr->add_result(output_str_ptr->end_with(compressed_item), "test idx:%zu, compressed test, decoded: %s, console text:%s", current_tested_num, compressed_item.c_str(), output_str_ptr->c_str());
                 snapshot_test_str += *output_str_ptr;
                 snapshot_test_str += "\n";
 
@@ -863,14 +861,17 @@ namespace bq {
                     snapshot_test_str.erase(snapshot_test_str.begin(), erase_count);
                 }
 
-                if (current_tested_num % snapshot_idx_mode == 0) {
+                if ((current_tested_num % snapshot_idx_mode == 0) || true) {
                     bq::string snapshot = log_inst_ptr->take_snapshot(false);
                     if (!snapshot.is_empty()) {
-                        result_ptr->add_result(snapshot_test_str.end_with(snapshot) || snapshot.end_with(snapshot_test_str), "standard: %s,  snapshot: %s", output_str_ptr->c_str(), snapshot.substr(snapshot.size() > output_str_ptr->size() ? snapshot.size() - output_str_ptr->size() : 0, snapshot.size() > output_str_ptr->size() ? output_str_ptr->size() : snapshot.size()).c_str());
+                        result_ptr->add_result(snapshot.size() >= output_str_ptr->size(), "snapshot size test failed, index:%zu, \nstandard: %s\nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), output_str_ptr->size(), snapshot.size(), snapshot.c_str());
+                        if (snapshot.size() >= output_str_ptr->size()) {
+                            bq::string last_snapshot = snapshot.substr(snapshot.size() - output_str_ptr->size(), output_str_ptr->size());
+                            result_ptr->add_result(snapshot.end_with(snapshot_test_str) || snapshot_test_str.end_with(snapshot), "snapshot test failed, index:%zu, \nstandard: %s\nstandard size:%zu, snapshot size:%zu \nsnapshot: %s", current_tested_num, output_str_ptr->c_str(), output_str_ptr->size(), snapshot.size(), last_snapshot.c_str());
+                        }
                     }
                     snapshot_idx_mode = (snapshot_idx_mode % 1024) + 1;
                 }
-
                 size_t new_percent = (size_t)(current_tested_num * 100 / total_test_num);
                 if (new_percent != current_tested_percent) {
                     current_tested_percent = new_percent;
@@ -895,7 +896,7 @@ namespace bq {
 
         void test_log::test_3(test_result& result, const test_category_log& log_inst)
         {
-            test_output(bq::log_level::info, "full log test begin, this will take minutes, and need about 500M free disk space.\n");
+            test_output(bq::log_level::info, "full log test begin, this will take minutes, and need about 50M free disk space.\n");
             clear_test_output_folder();
             init_fmt_strings<MAX_PARAM>();
 
@@ -908,6 +909,15 @@ namespace bq {
             log_param_test<MAX_PARAM>();
             test_3_phase = test_log_3_phase::do_test;
             log_param_test<MAX_PARAM>();
+
+            // decode test
+            for (size_t i = 0; i < test_log_3_all_console_outputs.size(); ++i) {
+                const bq::string& raw_item = decode_raw_item();
+                result_ptr->add_result(test_log_3_all_console_outputs[i] == (raw_item), "test idx:%zu, raw test, \ndecoded: %s, \nconsole: %s", i, raw_item.c_str(), test_log_3_all_console_outputs[i].c_str());
+                const bq::string& compressed_item = decode_compressed_item();
+                result_ptr->add_result(test_log_3_all_console_outputs[i] == (compressed_item), "test idx:%zu, compressed test, \ndecoded: %s, \nconsole: %s", i, compressed_item.c_str(), test_log_3_all_console_outputs[i].c_str());
+            }
+
             test_output(bq::log_level::info, "full log test finished              \n");
         }
     }

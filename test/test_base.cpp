@@ -31,22 +31,32 @@ namespace bq {
         void test_result::add_result(bool success, const char* info, ...)
         {
             ++total_count;
+            static bq::array<char> tmp({ '\0' });
             if (success) {
                 ++success_count;
             } else {
-                lock_.lock();
+                bq::platform::scoped_spin_lock lock(lock_);
                 if (failed_infos.size() < 128) {
                     va_list args;
-                    va_start(args, info);
-                    static char tmp[1024 * 16];
-                    vsnprintf(tmp, sizeof(tmp), info, args);
-                    va_end(args);
-                    const char* error_info_p = tmp;
+                    if (info) {
+                        while (true) {
+                            va_start(args, info);
+                            bool failed = ((bq::array<char>::size_type)vsnprintf(&tmp[0], tmp.size(), info, args) + 1) >= tmp.size();
+                            va_end(args);
+                            if (failed) {
+                                tmp.fill_uninitialized(tmp.size());
+                            } else {
+                                break;
+                            }
+                        }
+                    } else {
+                        tmp[0] = '\0';
+                    }
+                    const char* error_info_p = tmp.begin();
                     failed_infos.emplace_back(error_info_p);
                 } else if (failed_infos.size() == 128) {
                     failed_infos.emplace_back("... Too many test case errors. A maximum of 128 can be displayed, and the rest are omitted. ....");
                 }
-                lock_.unlock();
             }
         }
 
@@ -62,21 +72,30 @@ namespace bq {
 
         static std::string test_output_str_static;
         static std::string test_output_str_dynamic;
-        static bq::array<char> test_output_str_cache;
+        static bq::array<char> test_output_str_cache({ '\0' });
         void add_to_test_output_str(bool is_dynamic, bq::log_level level, const char* format, ...)
         {
-            test_output_str_cache.set_capacity(1024);
+            bq::platform::scoped_spin_lock lock(lock_);
             (void)level;
             va_list args;
-            va_start(args, format);
-            while ((bq::array<char>::size_type)vsnprintf(test_output_str_cache.begin().operator->(), test_output_str_cache.capacity(), format, args) >= test_output_str_cache.capacity()) {
-                test_output_str_cache.set_capacity(2 * test_output_str_cache.capacity());
-            }
-            va_end(args);
-            if (is_dynamic) {
-                test_output_str_dynamic = test_output_str_cache.begin().operator->();
+            if (format) {
+                while (true) {
+                    va_start(args, format);
+                    bool failed = ((bq::array<char>::size_type)vsnprintf(&test_output_str_cache[0], test_output_str_cache.size(), format, args) + 1) >= test_output_str_cache.size();
+                    va_end(args);
+                    if (failed) {
+                        test_output_str_cache.fill_uninitialized(test_output_str_cache.size());
+                    } else {
+                        break;
+                    }
+                }
             } else {
-                test_output_str_static += test_output_str_cache.begin().operator->();
+                test_output_str_cache[0] = '\0';
+            }
+            if (is_dynamic) {
+                test_output_str_dynamic = test_output_str_cache.begin();
+            } else {
+                test_output_str_static += test_output_str_cache.begin();
                 test_output_str_static += "\n";
             }
         }

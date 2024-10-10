@@ -24,7 +24,7 @@
 namespace bq {
     namespace platform {
         struct thread_platform_def {
-            HANDLE thread_handle;
+            bq::platform::atomic<HANDLE> thread_handle = INVALID_HANDLE_VALUE;
 #if BQ_JAVA
             JavaVM* jvm = nullptr;
             JNIEnv* jenv = nullptr;
@@ -90,7 +90,7 @@ namespace bq {
                 return;
             }
             platform_data_->thread_handle = CreateThread(NULL, attr_.max_stack_size, &thread_platform_processor::thread_process, this, STACK_SIZE_PARAM_IS_A_RESERVATION, (DWORD*)&thread_id_);
-            if (!platform_data_->thread_handle) {
+            if (!platform_data_->thread_handle.load()) {
                 status_.store(enum_thread_status::error);
                 bq::util::log_device_console(log_level::fatal, "create thread \"%s\" failed, error code:%d", thread_name_.c_str(), GetLastError());
                 assert(false && "create thread failed, see the device log output for more information");
@@ -103,19 +103,13 @@ namespace bq {
         void thread::join()
         {
             auto current_status = status_.load();
-            if (current_status == enum_thread_status::released) {
-                return;
-            }
-            if (!platform_data_->thread_handle) {
+            if (!platform_data_->thread_handle.load()) {
                 bq::util::log_device_console(log_level::warning, "trying to join a thread \"%s\" which is not started or is ended, thread id :%" PRIu64 ", thread status : %d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), (int32_t)current_status);
                 return;
             }
-            DWORD wait_result = WaitForSingleObjectEx(platform_data_->thread_handle, INFINITE, true);
-            if (wait_result == WAIT_OBJECT_0) {
-                CloseHandle(platform_data_->thread_handle);
-            }
-            if (wait_result == WAIT_FAILED) {
-                bq::util::log_device_console(log_level::error, "join thread \"%s\" failed, thread_id:%" PRIu64 ", error code : %d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), GetLastError());
+            DWORD wait_result = WaitForSingleObjectEx(platform_data_->thread_handle.load(), INFINITE, true);
+            if (wait_result != WAIT_OBJECT_0) {
+                bq::util::log_device_console(log_level::error, "join thread \"%s\" failed, thread_id:%" PRIu64 ", error code : %d, return value : %d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), GetLastError(), wait_result);
             }
         }
 
@@ -209,11 +203,22 @@ namespace bq {
         {
             DWORD exitCode = 0;
 
-            if (GetExitCodeThread(platform_data_->thread_handle, &exitCode)) {
-                assert(exitCode != STILL_ACTIVE && "thread instance is destructed but thread is not exist");
+            if (platform_data_->thread_handle.load() != INVALID_HANDLE_VALUE) {
+                if (GetExitCodeThread(platform_data_->thread_handle.load(), &exitCode)) {
+                    const char* stack_trace_addr = nullptr;
+                    uint32_t stack_trace_len = 0;
+                    bq::platform::get_stack_trace(0, stack_trace_addr, stack_trace_len);
+                    if (exitCode == STILL_ACTIVE) {
+                        bq::util::log_device_console(bq::log_level::fatal, "thread instance is destructed but thread is still exist, stack trace:\n%s", stack_trace_addr);
+                        assert(false && "thread instance is destructed but thread is still running");
+                    }
+                } else {
+                    bq::util::log_device_console(bq::log_level::fatal, "GetExitCodeThread failed, GetLastError=%d", GetLastError());
+                }
+                if (!CloseHandle(platform_data_->thread_handle.load())) {
+                    bq::util::log_device_console(bq::log_level::error, "Win64 Thread CloseHandle failed, GetLastError=%d, thread name:%s, thread_id:%" PRIu64, GetLastError(), thread_name_.c_str(), thread_id_);
+                }
             }
-            // auto current_status = status_.load();
-            // assert(current_status != enum_thread_status::running && "thread instance is destructed but thread is not exist");
             platform_data_->~thread_platform_def();
             free(platform_data_);
             platform_data_ = nullptr;
@@ -286,10 +291,8 @@ namespace bq {
             run();
             status_.store(enum_thread_status::finished);
             on_finished();
-            // CloseHandle(platform_data_->thread_handle);
-            // platform_data_->thread_handle = NULL;
-            thread_id_ = 0;
 
+            thread_id_ = 0;
             bq::util::log_device_console(log_level::info, "thread cancel success");
 #if BQ_JAVA
             if (platform_data_->jvm) {
