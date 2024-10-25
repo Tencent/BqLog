@@ -718,9 +718,15 @@ The size of the log buffer in bytes.
 
 #### log.reliable_level
 Mainly for asynchronous log mode. Can be set to:
-- `low`: If the log buffer is full, log data in asynchronous mode is discarded immediately to avoid blocking the program.
-- `normal`: If the log buffer is full, the logging thread waits until there is enough space to write the log data before returning. (The worker thread periodically processes the buffer. If the buffer fills up quickly, the worker thread reduces its sleep time to process logs faster, so there is no need to worry about excessive waiting).
-- `high`: In addition to the `normal` mode, it also has the ability to recover unprocessed log data on program restart after an abnormal exit (crash, power outage, process kill, etc.). This feature is based on mmap-like capabilities and is supported on Windows, Linux, Android, macOS, iOS, etc. However, it can cause performance degradation under high concurrency and high load conditions.
+Here is the English translation for your GitHub README:
+
+---
+
+### Asynchronous Logging Modes:
+Mainly for asynchronous log mode. Can be set to:
+- **low**: If the log buffer is full, in asynchronous mode, the newly written log data will be discarded directly, ensuring the program is not blocked.
+- **normal**: If the log buffer is full, in asynchronous mode, the logging thread will block and wait until there is enough space in the buffer before writing the log and returning. (The worker thread will periodically process the buffer. If the buffer fills up quickly, the worker thread will reduce its sleep time and process the buffer faster, so there’s no need to worry about waiting too long.) This mode also has the ability to handle unfinished logs after an abnormal program exit (crash, power failure, process kill, etc.). Upon the next program restart, it will attempt to process the remaining log data. This feature relies on mechanisms similar to `mmap` and is supported on Windows, Linux, Android, macOS, iOS, etc., but its success rate may vary depending on the operating system's implementation.
+- **high**: In addition to the capabilities of the `normal` mode, this mode offers a higher chance of ensuring that data is written to disk in real-time. However, it comes with a significant performance cost, approaching that of synchronous logging.
 
 #### log.categories_mask
 The logic is the same as the [appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask) on the Appender, but it applies to the entire log object. If your log is in asynchronous mode (see [log.thread_mode](#logthread_mode)), this option will have a slight delay in effect.
