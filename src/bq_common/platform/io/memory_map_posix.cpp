@@ -64,7 +64,7 @@ namespace bq {
             }
         }
 
-        result.real_data_ = mmap(NULL, real_mapping_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, real_mapping_offset);
+        result.real_data_ = mmap(NULL, real_mapping_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, real_mapping_offset);
 
         if (MAP_FAILED == result.real_data_) {
             result.error_code_ = errno;
