@@ -20,9 +20,13 @@
 #include <time.h>
 
 namespace bq {
-    static bq::platform::mutex _assert_mutex_;
     static uint32_t rand_seed = 0;
-    static bq::array<char> device_console_buffer_({ '\0' });
+
+    static bq::array<char>& get_device_console_buffer()
+    {
+        static bq::array<char> device_console_buffer_({ '\0' });
+        return device_console_buffer_;
+    }
 
     void util::bq_assert(bool cond, bq::string msg)
     {
@@ -33,7 +37,8 @@ namespace bq {
 
     void util::bq_record(bq::string msg, string file_name)
     {
-        bq::platform::scoped_mutex lock(_assert_mutex_);
+        static bq::platform::mutex mutex_;
+        bq::platform::scoped_mutex lock(mutex_);
         string path = TO_ABSOLUTE_PATH(file_name, true);
         bq::file_manager::instance().append_all_text(path, msg);
     }
@@ -105,25 +110,27 @@ namespace bq {
             return;
         }
 #endif
-        bq::platform::scoped_mutex lock(_assert_mutex_);
+        auto& device_console_buffer = get_device_console_buffer();
+        static bq::platform::mutex mutex_;
+        bq::platform::scoped_mutex lock(mutex_);
         va_list args;
         va_start(args, format);
         if (format) {
             while (true) {
                 va_start(args, format);
-                bool failed = ((bq::array<char>::size_type)vsnprintf(&device_console_buffer_[0], device_console_buffer_.size(), format, args) + 1) >= device_console_buffer_.size();
+                bool failed = ((bq::array<char>::size_type)vsnprintf(&device_console_buffer[0], device_console_buffer.size(), format, args) + 1) >= device_console_buffer.size();
                 va_end(args);
                 if (failed) {
-                    device_console_buffer_.fill_uninitialized(device_console_buffer_.size());
+                    device_console_buffer.fill_uninitialized(device_console_buffer.size());
                 } else {
                     break;
                 }
             }
         } else {
-            device_console_buffer_[0] = '\0';
+            device_console_buffer[0] = '\0';
         }
         va_end(args);
-        log_device_console_plain_text(level, device_console_buffer_.begin().operator->());
+        log_device_console_plain_text(level, device_console_buffer.begin().operator->());
     }
 
     void util::log_device_console_plain_text(bq::log_level level, const char* text)
