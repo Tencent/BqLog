@@ -336,6 +336,7 @@ namespace bq {
         {
             if (ptr) {
                 delete ptr;
+                ptr = nullptr;
             }
         }
 
