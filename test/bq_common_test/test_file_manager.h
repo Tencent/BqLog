@@ -129,6 +129,38 @@ namespace bq {
                     result.add_result(group_handle_A_3 && !group_handle_A_4, "exclusive test 3");
                 }
 
+                {
+                    //memory map test
+                    constexpr size_t memory_map_file_size = 64 * 1024;
+                    auto mmf_handle_src = file_manager.open_file(TO_ABSOLUTE_PATH("cc/mm_map_src.mmp", true), file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+                    bq::file_manager::instance().truncate_file(mmf_handle_src, memory_map_file_size);
+                    auto mmp_handle_src = memory_map::create_memory_map(mmf_handle_src, 0, memory_map_file_size);
+                    result.add_result(mmp_handle_src.has_been_mapped(), "create memory map file");
+                    result.add_result(mmp_handle_src.get_error_code() == 0, "create memory map file error code");
+                    for (size_t i = 0; i < memory_map_file_size; ++i) {
+                        ((uint8_t*)mmp_handle_src.get_mapped_data())[i] = (uint8_t)(i % 255);
+                    }
+                    memory_map::flush_memory_map(mmp_handle_src);
+                    memory_map::release_memory_map(mmp_handle_src);
+                    file_manager.close_file(mmf_handle_src);
+
+                    auto mmf_handle_tar = file_manager.open_file(TO_ABSOLUTE_PATH("cc/mm_map_src.mmp", true), file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+                    auto mmp_handle_tar = memory_map::create_memory_map(mmf_handle_tar, 0, memory_map_file_size);
+                    result.add_result(mmp_handle_tar.has_been_mapped(), "open memory map file");
+                    result.add_result(mmp_handle_tar.get_error_code() == 0, "open memory map file error code");
+
+                    bool check_result = true;
+                    for (size_t i = 0; i < memory_map_file_size; ++i) {
+                        if (((uint8_t*)mmp_handle_tar.get_mapped_data())[i] != (uint8_t)(i % 255)) {
+                            check_result = false;
+                        }
+                    }
+                    result.add_result(check_result, "memory map check result");
+                    memory_map::flush_memory_map(mmp_handle_tar);
+                    memory_map::release_memory_map(mmp_handle_tar);
+                    file_manager.close_file(mmf_handle_tar);
+                }
+
                 result.add_result(file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc/../cc/bb/aa/dd/", in_sand_box)), "check remove directory 0");
                 result.add_result(!file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/dd", in_sand_box)), "check remove directory 1");
                 result.add_result(file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc", in_sand_box)), "check remove directory 2");

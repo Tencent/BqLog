@@ -115,7 +115,7 @@ namespace bq {
             snapshot_ = new log_snapshot(this, snapshot_config);
         }
 
-        if (get_reliable_level() <= log_reliable_level::normal) {
+        if (get_reliable_level() < log_reliable_level::normal) {
             ring_buffer_ = new ring_buffer(buffer_size);
         } else {
             bq::array<uint64_t> category_hashes;
