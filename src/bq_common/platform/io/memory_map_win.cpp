@@ -22,7 +22,6 @@ namespace bq {
         return (size_t)sysInfo.dwAllocationGranularity;
     }
 
-    static size_t __memory_map_size_unit = get_memory_map_size_unit();
 
     bool memory_map::is_platform_support()
     {
@@ -32,6 +31,7 @@ namespace bq {
 
     size_t memory_map::get_memory_map_alignedment()
     {
+        static size_t __memory_map_size_unit = get_memory_map_size_unit();
         return __memory_map_size_unit;
     }
 
@@ -59,6 +59,7 @@ namespace bq {
         }
 
         // alignment
+        static size_t __memory_map_size_unit = get_memory_map_size_unit();
         size_t alignment_offset = offset % __memory_map_size_unit;
 
         size_t real_mapping_offset = offset - alignment_offset;
