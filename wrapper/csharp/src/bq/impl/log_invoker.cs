@@ -18,7 +18,7 @@ namespace bq.impl
 {
     public class log_invoker
     {
-#if UNITY_IOS
+#if UNITY_IOS && !UNITY_EDITOR
         private const string LIB_NAME = "__Internal";
 #else
         private const string LIB_NAME = bq.lib_def.lib_log_name;
