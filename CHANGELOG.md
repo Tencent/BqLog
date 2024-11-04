@@ -1,5 +1,6 @@
 # Changelog
 ## [v1.4.6] - have not released yet
+- **Improvement**: BqLog originates from mobile platforms, where it imposes strict control over memory usage. However, when running in desktop and server environments, these limitations can be appropriately relaxed, bringing a significant performance boost. This feature is set to be released soon.
 - **Bug fix**: [mmap is not working on linux](https://github.com/Tencent/BqLog/issues/25)
 - **Bug fix**: [static initialization order fiasco](https://github.com/Tencent/BqLog/issues/26)
 
