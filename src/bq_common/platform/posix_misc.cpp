@@ -327,7 +327,7 @@ namespace bq {
                 return;
             }
             bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
+            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             posix_file_node_info node_info;
             node_info.ino = file_info.st_ino;
