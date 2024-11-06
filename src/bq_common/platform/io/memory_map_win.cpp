@@ -59,7 +59,7 @@ namespace bq {
         }
 
         // alignment
-        static size_t __memory_map_size_unit = get_memory_map_size_unit();
+        size_t __memory_map_size_unit = get_memory_map_size_unit();
         size_t alignment_offset = offset % __memory_map_size_unit;
 
         size_t real_mapping_offset = offset - alignment_offset;
