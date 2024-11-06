@@ -51,7 +51,7 @@ namespace bq {
         auto current_size = lseek(fd, 0, SEEK_END);
 
         // alignment
-        static size_t __memory_map_size_unit = get_memory_map_size_unit();
+        size_t __memory_map_size_unit = get_memory_map_size_unit();
         size_t alignment_offset = offset % __memory_map_size_unit;
 
         size_t real_mapping_offset = offset - alignment_offset;

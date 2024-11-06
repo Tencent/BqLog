@@ -258,8 +258,19 @@ namespace bq {
                 return volumn == rhs.volumn && idx_high == rhs.idx_high && idx_low == rhs.idx_low;
             }
         });
-        static bq::hash_map<windows_file_node_info, file_open_mode_enum> file_exclusive_cache;
-        static bq::platform::mutex file_exclusive_mutex;
+
+        static bq::hash_map<windows_file_node_info, file_open_mode_enum> &get_file_exclusive_cache()
+        {
+            static bq::hash_map<windows_file_node_info, file_open_mode_enum> file_exclusive_cache;
+            return file_exclusive_cache;
+        }
+
+        static bq::platform::mutex &get_file_exclusive_mutex()
+        {
+            static bq::platform::mutex file_exclusive_mutex;
+            return file_exclusive_mutex;
+        }
+
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
         {
             if (!(int32_t)(mode & (file_open_mode_enum::write | file_open_mode_enum::exclusive))) {
@@ -270,6 +281,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check GetFileInformationByHandle failed");
                 return false;
             }
+            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
+            bq::hash_map<windows_file_node_info, file_open_mode_enum> &file_exclusive_cache = get_file_exclusive_cache();
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             windows_file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;
@@ -293,6 +306,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check GetFileInformationByHandle failed");
                 return;
             }
+            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
+            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             windows_file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;

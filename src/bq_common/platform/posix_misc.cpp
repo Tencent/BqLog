@@ -280,8 +280,19 @@ namespace bq {
                 return ino == rhs.ino;
             }
         });
-        static bq::hash_map<posix_file_node_info, file_open_mode_enum> file_exclusive_cache;
-        static bq::platform::mutex file_exclusive_mutex;
+
+        static bq::hash_map<posix_file_node_info, file_open_mode_enum>& get_file_exclusive_cache()
+        {
+            static bq::hash_map<posix_file_node_info, file_open_mode_enum> file_exclusive_cache;
+            return file_exclusive_cache;
+        }
+
+        static bq::platform::mutex& get_file_exclusive_mutex()
+        {
+            static bq::platform::mutex file_exclusive_mutex;
+            return file_exclusive_mutex;
+        }
+
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
         {
             if (!(int32_t)(mode & (file_open_mode_enum::write | file_open_mode_enum::exclusive))) {
@@ -292,6 +303,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return false;
             }
+            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
+            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             posix_file_node_info node_info;
             node_info.ino = file_info.st_ino;
@@ -313,6 +326,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return;
             }
+            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
+            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             posix_file_node_info node_info;
             node_info.ino = file_info.st_ino;
