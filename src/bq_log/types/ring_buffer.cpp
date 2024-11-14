@@ -279,8 +279,8 @@ namespace bq {
         capacity = bq::roundup_pow_of_two(capacity);
         aligned_blocks_count_ = capacity >> cache_line_size_log2;
         size_t head_size = (sizeof(buffer_head) + cache_line_size - 1) & ~(cache_line_size - 1);
-        size_t file_size = (uint32_t)(capacity + head_size);
-
+        size_t map_size = (uint32_t)(capacity + head_size);
+        size_t file_size = bq::memory_map::get_min_size_of_memory_map_file(0, map_size);
         create_memory_map_result result = create_memory_map_result::failed;
         size_t current_file_size = bq::file_manager::instance().get_file_size(memory_map_file_);
         if (current_file_size != file_size) {
@@ -293,7 +293,7 @@ namespace bq {
             result = create_memory_map_result::use_existed;
         }
 
-        memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, file_size);
+        memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, map_size);
         if (!memory_map_handle_.has_been_mapped()) {
             bq::util::log_device_console(log_level::warning, "ring buffer create memory map failed from file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
             return create_memory_map_result::failed;
@@ -322,6 +322,7 @@ namespace bq {
     bool ring_buffer::try_recover_from_exist_memory_map()
     {
         // parse check
+        buffer_head_->read_cursor_consumer_cache_ = buffer_head_->read_cursor_consumer_cache_ & (aligned_blocks_count_ - 1);
         uint32_t current_cursor = buffer_head_->read_cursor_consumer_cache_;
         bool data_parse_finished = false;
         while (current_cursor - buffer_head_->read_cursor_consumer_cache_ < aligned_blocks_count_) {
@@ -366,7 +367,6 @@ namespace bq {
             write_cursor_.atomic_value.store(current_cursor, platform::memory_order::release);
         }
         read_cursor_.atomic_value.store(buffer_head_->read_cursor_consumer_cache_, platform::memory_order::release);
-        buffer_head_->read_cursor_consumer_cache_ = buffer_head_->read_cursor_consumer_cache_ & (aligned_blocks_count_ - 1);
         return true;
     }
 

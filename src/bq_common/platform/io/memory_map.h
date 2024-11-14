@@ -62,5 +62,27 @@ namespace bq {
         static void flush_memory_map(const memory_map_handle& handle);
 
         static void release_memory_map(memory_map_handle& handle);
+
+    private:
+        static size_t get_real_map_offset(size_t offset)
+        {
+            size_t alignment_offset = offset % get_memory_map_alignedment();
+            size_t real_mapping_offset = offset - alignment_offset;
+            return real_mapping_offset;
+        }
+        static size_t get_real_map_size(size_t offset, size_t size)
+        {
+            size_t alignment_offset = offset % get_memory_map_alignedment();
+            size_t real_mapping_size = size + alignment_offset;
+            real_mapping_size += (get_memory_map_alignedment() - 1);
+            real_mapping_size -= (real_mapping_size % get_memory_map_alignedment());
+            return real_mapping_size;
+        }
+
+    public:
+        static size_t get_min_size_of_memory_map_file(size_t offset, size_t size)
+        {
+            return get_real_map_offset(offset) + get_real_map_size(offset, size);
+        }
     };
 }

@@ -21,12 +21,11 @@ namespace bq {
         return (size_t)getpagesize();
     }
 
-
     bool memory_map::is_platform_support()
     {
         static_assert(sizeof(size_t) <= sizeof(memory_map_handle::platform_data_), "memory_map_handle::platform_data_ size not enough");
 #if BQ_ANDROID || BQ_APPLE || BQ_LINUX || BQ_UNIX
-        return true;
+        return false;
 #else
         return false;
 #endif
@@ -51,16 +50,13 @@ namespace bq {
         auto current_size = lseek(fd, 0, SEEK_END);
 
         // alignment
-        size_t __memory_map_size_unit = get_memory_map_size_unit();
-        size_t alignment_offset = offset % __memory_map_size_unit;
-
-        size_t real_mapping_offset = offset - alignment_offset;
-        size_t real_mapping_size = size + alignment_offset;
-        real_mapping_size += (__memory_map_size_unit - 1);
-        real_mapping_size -= (real_mapping_size % __memory_map_size_unit);
-
-        if ((size_t)current_size < real_mapping_offset + real_mapping_size) {
-            if (0 != ftruncate(fd, (off_t)(real_mapping_offset + real_mapping_size))) {
+        size_t real_mapping_offset = get_real_map_offset(offset);
+        size_t real_mapping_size = get_real_map_size(offset, size);
+        size_t alignment_offset = offset - get_real_map_offset(offset);
+        size_t real_min_file_size = get_min_size_of_memory_map_file(offset, size);
+        assert(real_min_file_size == real_mapping_offset + real_mapping_size);
+        if ((size_t)current_size < real_min_file_size) {
+            if (0 != ftruncate(fd, (off_t)(real_min_file_size))) {
                 bq::util::log_device_console(log_level::warning, "create_memory_map ftruncate() file failed, path:%s, error_code:%d", map_file.abs_file_path().c_str(), errno);
             }
         }
