@@ -39,21 +39,8 @@ namespace bq {
         return ((size_t)data & mask_8_bytes_align) == 0;
     }
 
-    template <bool is_aligned>
     inline uint64_t calculate_hash_64_for_compressed_appender(const void* data, size_t size)
     {
-#ifndef NDEBUG
-        if (is_aligned) {
-            assert(is_addr_8_aligned(data)
-                && "data of calculate_hash_64_when_logging should be 8 bytes aligned");
-        }
-#endif
-        if (!is_aligned) {
-            if (is_addr_8_aligned(data)) {
-                return calculate_hash_64_for_compressed_appender<true>(data, size);
-            }
-        }
-
         constexpr uint64_t fnv_offset_basis = 14695981039346656037ull;
         constexpr uint64_t fnv_prime = 1099511628211ull;
 
@@ -87,9 +74,9 @@ namespace bq {
     uint64_t appender_file_compressed::calculate_data_hash_test(bool is_8_aligned, const void* data, size_t size)
     {
         if (is_8_aligned) {
-            return calculate_hash_64_for_compressed_appender<true>(data, size);
+            return calculate_hash_64_for_compressed_appender(data, size);
         } else {
-            return calculate_hash_64_for_compressed_appender<false>(data, size);
+            return calculate_hash_64_for_compressed_appender(data, size);
         }
     }
 #endif
@@ -262,7 +249,7 @@ namespace bq {
             return false;
         }
         size_t fmt_str_len = data_handle.len() - current_data_cursor;
-        uint64_t utf8_hash = calculate_hash_64_for_compressed_appender<false>(data_handle.data() + current_data_cursor, fmt_str_len);
+        uint64_t utf8_hash = calculate_hash_64_for_compressed_appender(data_handle.data() + current_data_cursor, fmt_str_len);
         uint64_t format_template_hash_utf8 = get_format_template_hash(log_level, category_idx, utf8_hash);
         if (utf16_trans_cache_.size() < fmt_str_len) {
             // that's enough
@@ -270,7 +257,7 @@ namespace bq {
         }
         auto utf16_len = (fmt_str_len > 0) ? bq::util::utf8_to_utf16((const char*)(const uint8_t*)(data_handle.data() + current_data_cursor), (uint32_t)fmt_str_len, &utf16_trans_cache_[0], (uint32_t)utf16_trans_cache_.size())
                                            : 0;
-        uint64_t utf16_hash = calculate_hash_64_for_compressed_appender<false>(utf16_trans_cache_.begin(), (size_t)utf16_len * sizeof(decltype(utf16_trans_cache_)::value_type));
+        uint64_t utf16_hash = calculate_hash_64_for_compressed_appender(utf16_trans_cache_.begin(), (size_t)utf16_len * sizeof(decltype(utf16_trans_cache_)::value_type));
         uint64_t format_template_hash_utf16 = get_format_template_hash(log_level, category_idx, utf16_hash);
         format_templates_hash_cache_[format_template_hash_utf8] = current_format_template_max_index_;
         format_templates_hash_cache_[format_template_hash_utf16] = current_format_template_max_index_;
@@ -324,7 +311,7 @@ namespace bq {
         const char* format_data_ptr = handle.get_format_string_data();
         uint32_t format_data_len = *((uint32_t*)format_data_ptr);
         format_data_ptr += sizeof(uint32_t);
-        uint64_t fmt_hash = calculate_hash_64_for_compressed_appender<true>(format_data_ptr, (size_t)format_data_len);
+        uint64_t fmt_hash = calculate_hash_64_for_compressed_appender(format_data_ptr, (size_t)format_data_len);
         uint64_t format_template_hash = get_format_template_hash(handle.get_level(), handle.get_log_head().category_idx, fmt_hash);
 
         auto format_template_iter = format_templates_hash_cache_.find(format_template_hash);
