@@ -479,8 +479,6 @@ namespace bq {
             }
         }
 
-        static jni_onload_register android_jni_onload_callback(&android_jni_onload);
-
         static constexpr uint32_t max_stack_trace_char_count = 1024 * 16;
         // thread local is not valid when stl = none, T_T.
         static BQ_TLS char stack_trace_current_str_[max_stack_trace_char_count];

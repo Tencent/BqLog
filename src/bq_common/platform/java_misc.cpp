@@ -90,6 +90,7 @@ namespace bq {
             java_vm = vm;
 #if BQ_ANDROID
             __android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
+            bq::platform::android_jni_onload();
 #elif BQ_IOS
             bq::platform::ios_print("Bq JNI_Onload is called");
 #else
