@@ -46,6 +46,8 @@ namespace bq {
         if (!static_inst_cache_) {
             // Scoped static implementation introduces a small amount of overhead for atomic variable synchronization between threads,
             // so we implemented a cache optimization.
+            // make sure IO relative static variables can initialize before file_manager and destruct after file_manager
+            bq::platform::init_for_file_manager();
             static_inst_cache_ = &scoped_static_instance();
         }
         return *static_inst_cache_;

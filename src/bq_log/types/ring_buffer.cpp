@@ -82,6 +82,15 @@ namespace bq {
 
         uint32_t current_write_cursor = write_cursor_.volatile_value;
         uint32_t current_read_cursor = read_cursor_.atomic_value.load(bq::platform::memory_order::acquire);
+        if (memory_map_handle_.get_mapped_data()) {
+            //Due to the bidirectional synchronization feature of mmap memory, 
+            //it disrupts our delicate memory model. Sometimes, the read_cursor may advance past the write_cursor. 
+            //In such cases, we need to make an adjustment to it. 
+            //This is a tricky issue, and perhaps in the future, we can find a better and more intuitive way to correct it.
+            if (current_read_cursor - current_write_cursor <= aligned_blocks_count_) {
+                current_read_cursor = current_write_cursor;
+            }
+        }
         uint32_t used_blocks_count = current_write_cursor - current_read_cursor;
         handle.approximate_used_blocks_count = used_blocks_count;
         do {
@@ -191,10 +200,6 @@ namespace bq {
             block& block_ref = cursor_to_block(current_reading_cursor_tmp_);
             auto status = block_ref.data_section_head.status.load(bq::platform::memory_order::acquire);
             auto block_count = block_ref.data_section_head.block_num;
-            if (memory_map_handle_.get_mapped_data()
-                && write_cursor_.atomic_value.load(bq::platform::memory_order::relaxed) - (current_reading_cursor_tmp_ + block_count) > aligned_blocks_count_) {
-                status = block_status::unused;
-            }
             switch (status) {
             case block_status::invalid:
 #if BQ_RING_BUFFER_DEBUG
