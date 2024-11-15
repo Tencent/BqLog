@@ -78,7 +78,6 @@ namespace bq {
             real_mapping_size -= (real_mapping_size % get_memory_map_alignedment());
             return real_mapping_size;
         }
-
     public:
         static size_t get_min_size_of_memory_map_file(size_t offset, size_t size)
         {

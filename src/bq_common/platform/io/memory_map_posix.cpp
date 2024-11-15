@@ -21,11 +21,12 @@ namespace bq {
         return (size_t)getpagesize();
     }
 
+
     bool memory_map::is_platform_support()
     {
         static_assert(sizeof(size_t) <= sizeof(memory_map_handle::platform_data_), "memory_map_handle::platform_data_ size not enough");
 #if BQ_ANDROID || BQ_APPLE || BQ_LINUX || BQ_UNIX
-        return false;
+        return true;
 #else
         return false;
 #endif
