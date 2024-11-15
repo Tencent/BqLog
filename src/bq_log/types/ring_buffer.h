@@ -127,9 +127,10 @@ namespace bq {
         alignas(8) cursor_type write_cursor_;
         char cache_line_padding1_[cache_line_size - sizeof(write_cursor_)];
         alignas(8) cursor_type read_cursor_;
-        char cache_line_padding2_[cache_line_size - sizeof(write_cursor_)];
+        char cache_line_padding2_[cache_line_size - sizeof(read_cursor_)];
         uint32_t current_reading_cursor_;
-        char cache_line_padding3_[cache_line_size - sizeof(write_cursor_)];
+        uint32_t current_reading_cursor_tmp_;
+        char cache_line_padding3_[cache_line_size - sizeof(current_reading_cursor_) - sizeof(current_reading_cursor_tmp_)];
         uint8_t* real_buffer_;
         buffer_head* buffer_head_;
         block* aligned_blocks_;

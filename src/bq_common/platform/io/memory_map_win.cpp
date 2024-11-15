@@ -47,27 +47,25 @@ namespace bq {
 
         HANDLE& memory_map_handle = *(HANDLE*)(result.platform_data_);
 
+        // alignment
+        size_t real_mapping_offset = get_real_map_offset(offset);
+        size_t real_mapping_size = get_real_map_size(offset, size);
+        size_t alignment_offset = offset - get_real_map_offset(offset);
+        size_t real_min_file_size = get_min_size_of_memory_map_file(offset, size);
+
         DWORD file_size_high = 0;
         DWORD file_size_low = GetFileSize(file_handle, &file_size_high);
         size_t current_file_size = ((size_t)file_size_high << 32) | (size_t)file_size_low;
-        if (current_file_size < offset + size) {
-            size_t new_size = offset + size;
+        if (current_file_size < real_min_file_size) {
+            size_t new_size = real_min_file_size;
             LONG new_size_high = (LONG)(new_size >> 32);
             LONG new_size_low = (LONG)(new_size & 0xFFFFFFFF);
             SetFilePointer(file_handle, new_size_low, &new_size_high, FILE_BEGIN);
             SetEndOfFile(file_handle);
         }
 
-        // alignment
-        size_t __memory_map_size_unit = get_memory_map_size_unit();
-        size_t alignment_offset = offset % __memory_map_size_unit;
-
-        size_t real_mapping_offset = offset - alignment_offset;
-        size_t real_mapping_size = size + alignment_offset;
-
-        size_t max_mapping_size = offset + size;
-        DWORD new_size_high = (DWORD)(max_mapping_size >> 32);
-        DWORD new_size_low = (DWORD)(max_mapping_size & 0xFFFFFFFF);
+        DWORD new_size_high = (DWORD)(real_min_file_size >> 32);
+        DWORD new_size_low = (DWORD)(real_min_file_size & 0xFFFFFFFF);
 
         memory_map_handle = CreateFileMapping(file_handle, NULL, PAGE_READWRITE, new_size_high, new_size_low, NULL);
         if (!memory_map_handle) {

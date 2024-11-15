@@ -324,7 +324,7 @@ namespace bq {
         const char* format_data_ptr = handle.get_format_string_data();
         uint32_t format_data_len = *((uint32_t*)format_data_ptr);
         format_data_ptr += sizeof(uint32_t);
-        uint64_t fmt_hash = calculate_hash_64_for_compressed_appender<true>(format_data_ptr, (size_t)format_data_len);
+        uint64_t fmt_hash = calculate_hash_64_for_compressed_appender<false>(format_data_ptr, (size_t)format_data_len);
         uint64_t format_template_hash = get_format_template_hash(handle.get_level(), handle.get_log_head().category_idx, fmt_hash);
 
         auto format_template_iter = format_templates_hash_cache_.find(format_template_hash);

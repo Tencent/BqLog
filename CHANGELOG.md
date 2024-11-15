@@ -1,8 +1,8 @@
 # Changelog
-## [v1.4.6] - have not released yet
-- **Improvement**: BqLog originates from mobile platforms, where it imposes strict control over memory usage. However, when running in desktop and server environments, these limitations can be appropriately relaxed, bringing a significant performance boost. This feature is set to be released soon.
+## [v1.4.6] - 2024-11-15
 - **Bug fix**: [mmap is not working on linux](https://github.com/Tencent/BqLog/issues/25)
 - **Bug fix**: [static initialization order fiasco](https://github.com/Tencent/BqLog/issues/26)
+- **Bug fix**: [mmap leads to hang on Android](https://github.com/Tencent/BqLog/issues/32)
 
 ## [v1.4.5] - 2024-10-10
 - **Improvement**: The configuration for the snapshot feature has been migrated from the API to the configuration file, supporting configurations for buffer size, category mask, and levels. For details, refer to [Snapshot Configuration](./README.md#snapshot).

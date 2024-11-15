@@ -24,8 +24,6 @@ namespace bq {
         phase_ = phase::invalid;
         automatic_log_name_seq_ = 0;
         assert(bq::util::is_little_endian() && "Only Little-Endian is Supported!");
-        // make sure file_manager's lifecycle can wrap that of log_manager.
-        bq::file_manager::instance();
         public_worker_.init(log_thread_mode::async, nullptr);
         public_worker_.start();
         phase_ = phase::working;
@@ -41,6 +39,8 @@ namespace bq {
     log_manager& log_manager::instance()
     {
         if (!static_inst_cache_) {
+            // make sure file_manager's lifecycle can wrap that of log_manager.
+            bq::file_manager::instance();
             static_inst_cache_ = &scoped_static_instance();
         }
         return *static_inst_cache_;

@@ -614,6 +614,11 @@ namespace bq {
             out_str_ptr = stack_trace_current_str_u16_.begin();
             out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
         }
+
+        void init_for_file_manager()
+        {
+            get_file_exclusive_mutex();
+        }
     }
 }
 #endif
