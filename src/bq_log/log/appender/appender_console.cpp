@@ -11,7 +11,7 @@
  */
 #include <stdlib.h>
 #include "bq_common/bq_common.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/miso_ring_buffer.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/appender/appender_console.h"
 
@@ -44,7 +44,7 @@ namespace bq {
     }
 
     appender_console::console_ring_buffer::console_ring_buffer()
-        : buffer_(new ring_buffer(1024))
+        : buffer_(new miso_ring_buffer(1024))
         , fetch_lock_(false)
     {
         buffer_->set_thread_check_enable(false);
@@ -118,7 +118,7 @@ namespace bq {
         } while (0);
 
         uint32_t new_size = buffer_->get_total_blocks_count() * buffer_->get_block_size() + (uint32_t)write_length;
-        auto new_buffer = new ring_buffer(new_size);
+        auto new_buffer = new miso_ring_buffer(new_size);
         new_buffer->set_thread_check_enable(false);
         buffer_->begin_read();
         while (true) {

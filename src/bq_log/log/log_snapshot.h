@@ -15,7 +15,7 @@
 // write_data() and take_snapshot() can not be called in the same time
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_def.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/miso_ring_buffer.h"
 #include "bq_log/log/layout.h"
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_level_bitmap.h"
@@ -40,7 +40,7 @@ namespace bq {
 
     private:
         uint32_t buffer_size_;
-        ring_buffer* snapshot_buffer_;
+        miso_ring_buffer* snapshot_buffer_;
         bq::string snapshot_text_[2];
         uint32_t snapshot_text_index_;
         bool snapshot_text_continuous_;

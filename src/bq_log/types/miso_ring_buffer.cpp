@@ -12,11 +12,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/miso_ring_buffer.h"
 
 namespace bq {
 
-    ring_buffer::ring_buffer(uint32_t capacity, uint64_t serialize_id /* =0*/)
+    miso_ring_buffer::miso_ring_buffer(uint32_t capacity, uint64_t serialize_id /* =0*/)
         : write_cursor_(cursor_type())
         , read_cursor_(cursor_type())
         , current_reading_cursor_(cursor_type().atomic_value.load())
@@ -29,20 +29,20 @@ namespace bq {
         (void)cache_line_padding3_;
         (void)padding_;
         if (capacity < 16 * cache_line_size) {
-            bq::util::log_device_console(bq::log_level::warning, "invalid ring_buffer capacity {}, it should not be less than 16 * 64 bytes. it will be set to 16 * 64 automatically", capacity);
+            bq::util::log_device_console(bq::log_level::warning, "invalid miso_ring_buffer capacity {}, it should not be less than 16 * 64 bytes. it will be set to 16 * 64 automatically", capacity);
             capacity = 16 * cache_line_size;
         }
         auto mmap_result = create_memory_map(capacity, serialize_id);
         switch (mmap_result) {
-        case bq::ring_buffer::failed:
+        case bq::miso_ring_buffer::failed:
             init_with_memory(capacity);
             break;
-        case bq::ring_buffer::use_existed:
+        case bq::miso_ring_buffer::use_existed:
             if (!try_recover_from_exist_memory_map()) {
                 init_with_memory_map();
             }
             break;
-        case bq::ring_buffer::new_created:
+        case bq::miso_ring_buffer::new_created:
             init_with_memory_map();
             break;
         default:
@@ -58,14 +58,14 @@ namespace bq {
 #endif
     }
 
-    ring_buffer::~ring_buffer()
+    miso_ring_buffer::~miso_ring_buffer()
     {
         if (!uninit_memory_map()) {
             free(real_buffer_);
         }
     }
 
-    ring_buffer_write_handle ring_buffer::alloc_write_chunk(uint32_t size)
+    ring_buffer_write_handle miso_ring_buffer::alloc_write_chunk(uint32_t size)
     {
         ring_buffer_write_handle handle;
         int32_t max_try_count = 100;
@@ -143,7 +143,7 @@ namespace bq {
                 ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_data_not_contiguous];
 #endif
                 ++max_try_count;
-                new_block.data_section_head.status.store(bq::ring_buffer::block_status::invalid, platform::memory_order::release);
+                new_block.data_section_head.status.store(bq::miso_ring_buffer::block_status::invalid, platform::memory_order::release);
                 continue;
             }
             new_block.data_section_head.data_size = size;
@@ -158,19 +158,19 @@ namespace bq {
         return handle;
     }
 
-    void ring_buffer::commit_write_chunk(const ring_buffer_write_handle& handle)
+    void miso_ring_buffer::commit_write_chunk(const ring_buffer_write_handle& handle)
     {
         if (handle.result != enum_buffer_result_code::success) {
             return;
         }
         block* block_ptr = (block*)(handle.data_addr - data_block_offset);
-        block_ptr->data_section_head.status.store(bq::ring_buffer::block_status::used, bq::platform::memory_order::release);
+        block_ptr->data_section_head.status.store(bq::miso_ring_buffer::block_status::used, bq::platform::memory_order::release);
 #if BQ_RING_BUFFER_DEBUG
         total_write_bytes_ += block_ptr->data_section_head.block_num * sizeof(block);
 #endif
     }
 
-    void ring_buffer::begin_read()
+    void miso_ring_buffer::begin_read()
     {
 #if BQ_RING_BUFFER_DEBUG
         if (check_thread_) {
@@ -186,7 +186,7 @@ namespace bq {
         current_reading_cursor_tmp_ = current_reading_cursor_;
     }
 
-    ring_buffer_read_handle ring_buffer::read()
+    ring_buffer_read_handle miso_ring_buffer::read()
     {
 #if BQ_RING_BUFFER_DEBUG
         if (check_thread_) {
@@ -233,7 +233,7 @@ namespace bq {
         return handle;
     }
 
-    void ring_buffer::end_read()
+    void miso_ring_buffer::end_read()
     {
 #if BQ_RING_BUFFER_DEBUG
         if (check_thread_) {
@@ -259,7 +259,7 @@ namespace bq {
 #endif
     }
 
-    ring_buffer::create_memory_map_result ring_buffer::create_memory_map(uint32_t capacity, uint64_t serialize_id)
+    miso_ring_buffer::create_memory_map_result miso_ring_buffer::create_memory_map(uint32_t capacity, uint64_t serialize_id)
     {
         if (!bq::memory_map::is_platform_support() || serialize_id == 0) {
             return create_memory_map_result::failed;
@@ -301,14 +301,14 @@ namespace bq {
         }
         real_buffer_ = (uint8_t*)memory_map_handle_.get_mapped_data();
         buffer_head_ = (buffer_head*)real_buffer_;
-        aligned_blocks_ = (ring_buffer::block*)(real_buffer_ + head_size);
+        aligned_blocks_ = (miso_ring_buffer::block*)(real_buffer_ + head_size);
         return result;
     }
 
-    void ring_buffer::init_with_memory_map()
+    void miso_ring_buffer::init_with_memory_map()
     {
         for (uint32_t i = 0; i < aligned_blocks_count_; ++i) {
-            aligned_blocks_[i].data_section_head.status.store(bq::ring_buffer::block_status::unused, platform::memory_order::release);
+            aligned_blocks_[i].data_section_head.status.store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
         }
         current_reading_cursor_ = 0;
         current_reading_cursor_tmp_ = (uint32_t)-1;
@@ -317,7 +317,7 @@ namespace bq {
         read_cursor_.atomic_value.store(0, platform::memory_order::release);
     }
 
-    bool ring_buffer::try_recover_from_exist_memory_map()
+    bool miso_ring_buffer::try_recover_from_exist_memory_map()
     {
         // parse check
         buffer_head_->read_cursor_consumer_cache_ = buffer_head_->read_cursor_consumer_cache_ & (aligned_blocks_count_ - 1);
@@ -370,7 +370,7 @@ namespace bq {
         return true;
     }
 
-    void ring_buffer::init_with_memory(uint32_t capacity)
+    void miso_ring_buffer::init_with_memory(uint32_t capacity)
     {
         capacity = bq::roundup_pow_of_two(capacity);
         aligned_blocks_count_ = capacity >> cache_line_size_log2;
@@ -384,9 +384,9 @@ namespace bq {
         uintptr_t aligned_addr = (uintptr_t)real_buffer_;
         aligned_addr = (aligned_addr + align_unit - 1) & (~(align_unit - 1));
         buffer_head_ = (buffer_head*)aligned_addr;
-        aligned_blocks_ = (ring_buffer::block*)(aligned_addr + head_size);
+        aligned_blocks_ = (miso_ring_buffer::block*)(aligned_addr + head_size);
         for (uint32_t i = 0; i < aligned_blocks_count_; ++i) {
-            aligned_blocks_[i].data_section_head.status.store(bq::ring_buffer::block_status::unused, platform::memory_order::release);
+            aligned_blocks_[i].data_section_head.status.store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
         }
         current_reading_cursor_ = 0;
         current_reading_cursor_tmp_ = (uint32_t)-1;
@@ -395,7 +395,7 @@ namespace bq {
         read_cursor_.atomic_value.store(0, platform::memory_order::release);
     }
 
-    bool ring_buffer::uninit_memory_map()
+    bool miso_ring_buffer::uninit_memory_map()
     {
         if (memory_map_handle_.has_been_mapped()) {
             bq::memory_map::release_memory_map(memory_map_handle_);

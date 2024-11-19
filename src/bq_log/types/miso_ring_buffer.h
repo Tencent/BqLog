@@ -11,8 +11,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 /*!
- * \class bq::ring_buffer V3
+ * \class bq::miso_ring_buffer V3
  *
+ * `miso`("multi threads in and single thread out").
+ * 
  * This high-performance ring buffer supports multi-threaded writes and single-threaded reads simultaneously.
  * The buffer size is determined during initialization and cannot be changed.
  * Data in the ring buffer chunks are stored contiguously.
@@ -71,7 +73,7 @@ namespace bq {
         uint32_t data_size;
     };
 
-    class ring_buffer {
+    class miso_ring_buffer {
     private:
         static constexpr size_t cache_line_size = 64;
         static constexpr size_t cache_line_size_log2 = 6;
@@ -149,19 +151,19 @@ namespace bq {
 #endif
     public:
         /// <summary>
-        /// constructor and initializer of ring_buffer
+        /// constructor and initializer of miso_ring_buffer
         /// </summary>
-        /// <param name="capacity">desired max size of this ring_buffer(in bytes)</param>
+        /// <param name="capacity">desired max size of this miso_ring_buffer(in bytes)</param>
         /// <param name="serialize_id">ring buffer will try to serialize self to disk
         ///  if memory map is supported on running platform and serialize_id is not 0.
-        ///  so that if program is killed without process the left data in ring_buffer. it will not
+        ///  so that if program is killed without process the left data in miso_ring_buffer. it will not
         ///  be lost in most cases and can be recovered when program is relaunched.</param>
-        ring_buffer(uint32_t capacity, uint64_t serialize_id = 0);
+        miso_ring_buffer(uint32_t capacity, uint64_t serialize_id = 0);
 
-        ring_buffer(const ring_buffer& rhs) = delete;
+        miso_ring_buffer(const miso_ring_buffer& rhs) = delete;
 
         /// de-constuctor;
-        ~ring_buffer();
+        ~miso_ring_buffer();
 
         /// <summary>
         /// A producer can request a block of memory by calling alloc_write_chunk for writing data,

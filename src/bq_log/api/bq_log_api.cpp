@@ -20,7 +20,7 @@
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/log/decoder/appender_decoder_helper.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/miso_ring_buffer.h"
 #include "bq_log/log/appender/appender_console.h"
 
 #if BQ_POSIX

@@ -17,7 +17,7 @@
 #include "test_base.h"
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/miso_ring_buffer.h"
 #include "bq_log/log/log_manager.h"
 #include "test_category_log.h"
 

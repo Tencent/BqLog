@@ -229,9 +229,9 @@ For example, in a highly concurrent environment, one thread might keep failing a
 
 #### BqLog’s Optimized Implementation
 
-The message queue `bq::ring_buffer` in `BqLog` implements memory allocation with fixed overhead using a proprietary algorithm that replaces `CAS` with `fetch_add`. It also features a rollback mechanism for scenarios where there is insufficient space, ensuring that both producers and consumers can complete logging write and read operations within a fixed number of steps under high concurrency. The code implementation can be referenced.
-[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.h](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.h)  
-[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.cpp](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.cpp)  
+The message queue `bq::miso_ring_buffer` in `BqLog` implements memory allocation with fixed overhead using a proprietary algorithm that replaces `CAS` with `fetch_add`. It also features a rollback mechanism for scenarios where there is insufficient space, ensuring that both producers and consumers can complete logging write and read operations within a fixed number of steps under high concurrency. The code implementation can be referenced.
+[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.h](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.h)  
+[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.cpp](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.cpp)  
 
 #### What is `fetch_add` and why is it better?
 
@@ -293,10 +293,10 @@ If `fetch_add` makes better performance so easy, why do most message queues stil
 
 In contrast, `CAS` avoids this problem because the final claim only succeeds if no other thread has changed the memory, and `in` matches what was checked earlier.
 
-To solve this problem, ensuring both a fixed number of steps for memory allocation and accurate results, `bq::ring_buffer` has developed a rollback mechanism. This mechanism performs a rollback when there is insufficient space, and then returns an error indicating insufficient space. The pseudocode for memory allocation is as follows:
+To solve this problem, ensuring both a fixed number of steps for memory allocation and accurate results, `bq::miso_ring_buffer` has developed a rollback mechanism. This mechanism performs a rollback when there is insufficient space, and then returns an error indicating insufficient space. The pseudocode for memory allocation is as follows:
 
 ```c
-void* bq::ring_buffer::alloc(size_t len)
+void* bq::miso_ring_buffer::alloc(size_t len)
 {
     // 1. Calculate the remaining space in the ring buffer
     size_t free_space = this->size_ - (this->in_ - this->out_);
@@ -325,7 +325,7 @@ void* bq::ring_buffer::alloc(size_t len)
 }
 ```
 
-This code not only demonstrates how `bq::ring_buffer` allocates memory using `fetch_add`, but also shows the rollback algorithm when there is insufficient space. Some might question the performance of this rollback algorithm, but it’s important to understand that when a rollback occurs, it indicates that the message queue is running out of space. At this point, the system's performance bottleneck becomes the need to expand the message queue or block until consumer threads retrieve data and free up space. Under such circumstances, the performance cost of the `CAS` operation becomes negligible.
+This code not only demonstrates how `bq::miso_ring_buffer` allocates memory using `fetch_add`, but also shows the rollback algorithm when there is insufficient space. Some might question the performance of this rollback algorithm, but it’s important to understand that when a rollback occurs, it indicates that the message queue is running out of space. At this point, the system's performance bottleneck becomes the need to expand the message queue or block until consumer threads retrieve data and free up space. Under such circumstances, the performance cost of the `CAS` operation becomes negligible.
 
 Now, let’s explain why the rollback algorithm needs to use `CAS` rather than simply doing `fetch_add(this->in_, -len)` to subtract the claimed length. The challenge with rollback is that after `in` exceeds the limit, each producer doesn’t know how much to roll back without causing issues.
 

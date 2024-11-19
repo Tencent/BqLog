@@ -57,7 +57,7 @@ namespace bq {
             }
         }
 
-        // init ring_buffer
+        // init reliable level
         {
             reliable_level_ = bq::log_reliable_level::normal;
             if (log_config.is_object() && log_config["reliable_level"].is_string()) {
@@ -116,7 +116,7 @@ namespace bq {
         }
 
         if (get_reliable_level() < log_reliable_level::normal) {
-            ring_buffer_ = new ring_buffer(buffer_size);
+            ring_buffer_ = new miso_ring_buffer(buffer_size);
         } else {
             bq::array<uint64_t> category_hashes;
             for (const auto& cat_name : category_names) {
@@ -125,7 +125,7 @@ namespace bq {
             uint64_t categories_hash = bq::util::get_hash_64(category_hashes.begin(), category_hashes.size() * sizeof(bq::remove_reference_t<decltype(category_hashes)>::value_type));
             uint64_t name_hash = name.hash_code();
             uint64_t ring_buffer_serialize_key = name_hash ^ categories_hash;
-            ring_buffer_ = new ring_buffer(buffer_size, ring_buffer_serialize_key);
+            ring_buffer_ = new miso_ring_buffer(buffer_size, ring_buffer_serialize_key);
         }
         ring_buffer_->set_thread_check_enable(false);
         worker_.init(thread_mode_, this);

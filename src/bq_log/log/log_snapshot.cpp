@@ -44,7 +44,7 @@ namespace bq {
         if (buffer_size_ != 0) {
             if (snapshot_buffer_ && ((uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count()) != buffer_size_)) {
                 // create a new snapshot_buffer_ and backup log data.
-                ring_buffer* new_buffer = new ring_buffer(buffer_size_);
+                miso_ring_buffer* new_buffer = new miso_ring_buffer(buffer_size_);
                 new_buffer->set_thread_check_enable(false);
                 snapshot_buffer_->begin_read();
                 while (true) {
@@ -64,7 +64,7 @@ namespace bq {
                             new_buffer->commit_write_chunk(write_handle);
                             // chunk is too big for new buffer, discard and renew new buffer;
                             delete new_buffer;
-                            new_buffer = new ring_buffer(buffer_size_);
+                            new_buffer = new miso_ring_buffer(buffer_size_);
                             new_buffer->set_thread_check_enable(false);
                             write_success = true;
                             snapshot_text_continuous_ = false;
@@ -81,7 +81,7 @@ namespace bq {
                 delete snapshot_buffer_;
                 snapshot_buffer_ = new_buffer;
             } else if (!snapshot_buffer_) {
-                snapshot_buffer_ = new ring_buffer(buffer_size_);
+                snapshot_buffer_ = new miso_ring_buffer(buffer_size_);
                 snapshot_buffer_->set_thread_check_enable(false);
             }
         } else {

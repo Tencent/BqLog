@@ -15,7 +15,7 @@
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_level_bitmap.h"
 #include "bq_log/log/log_worker.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/miso_ring_buffer.h"
 
 namespace bq {
     constexpr uint64_t log_id_magic_number = 0x24FE284C23EA5821;
@@ -42,7 +42,7 @@ namespace bq {
 
         void set_appenders_enable(const bq::string& appender_name, bool enable);
 
-        inline ring_buffer& get_ring_buffer() const
+        inline miso_ring_buffer& get_ring_buffer() const
         {
             return *ring_buffer_;
         }
@@ -91,7 +91,7 @@ namespace bq {
         log_level_bitmap merged_log_level_bitmap_;
         log_level_bitmap print_stack_level_bitmap_;
         bq::log_reliable_level reliable_level_;
-        ring_buffer* ring_buffer_;
+        miso_ring_buffer* ring_buffer_;
         class log_snapshot* snapshot_;
         uint64_t last_log_entry_epoch_ms_;
         uint64_t last_flush_io_epoch_ms_;

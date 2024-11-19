@@ -16,7 +16,7 @@
 #include <vector>
 #include <thread>
 #include "test_base.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/miso_ring_buffer.h"
 
 namespace bq {
     namespace test {
@@ -25,14 +25,14 @@ namespace bq {
         class write_task {
         private:
             int32_t id;
-            bq::ring_buffer* ring_buffer_ptr;
+            bq::miso_ring_buffer* ring_buffer_ptr;
             int32_t left_write_count;
             bq::platform::atomic<int32_t>& counter_ref;
 
         public:
             const static int32_t min_chunk_size = 12;
             const static int32_t max_chunk_size = 1024;
-            write_task(int32_t id, int32_t left_write_count, bq::ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
+            write_task(int32_t id, int32_t left_write_count, bq::miso_ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
                 : counter_ref(counter)
             {
                 this->id = id;
@@ -73,7 +73,7 @@ namespace bq {
             void do_test(test_result& result, uint64_t serialize_id)
             {
                 ring_buffer_test_total_write_count_.store(0);
-                bq::ring_buffer ring_buffer(1000 * 40, serialize_id);
+                bq::miso_ring_buffer ring_buffer(1000 * 40, serialize_id);
                 int32_t chunk_count_per_task = 1024000;
                 int32_t total_task = 13;
                 bq::platform::atomic<int32_t> counter(total_task);

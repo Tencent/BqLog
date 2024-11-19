@@ -94,9 +94,9 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1reset_1config(JNI
 JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1ring_1buffer(JNIEnv* env, jclass, jlong log_id)
 {
     bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    uint8_t* log_ring_buffer_base_addr = const_cast<uint8_t*>(ring_buffer.get_buffer_addr());
-    jlong log_ring_buffer_size = (jlong)(ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count());
+    auto& miso_ring_buffer = log->get_ring_buffer();
+    uint8_t* log_ring_buffer_base_addr = const_cast<uint8_t*>(miso_ring_buffer.get_buffer_addr());
+    jlong log_ring_buffer_size = (jlong)(miso_ring_buffer.get_block_size() * miso_ring_buffer.get_total_blocks_count());
     jobject ring_buffer_java_obj = env->NewDirectByteBuffer(log_ring_buffer_base_addr, log_ring_buffer_size);
     return ring_buffer_java_obj;
 }
@@ -129,8 +129,8 @@ JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JN
     env->ReleaseStringCritical(format_content, (const jchar*)format_str);
 
     bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    return ((jlong)((uint8_t*)handle.data_addr - ring_buffer.get_buffer_addr()) << 32) | (jlong)head->log_args_offset;
+    bq::miso_ring_buffer& miso_ring_buffer = log->get_ring_buffer();
+    return ((jlong)((uint8_t*)handle.data_addr - miso_ring_buffer.get_buffer_addr()) << 32) | (jlong)head->log_args_offset;
 }
 
 /*
@@ -143,8 +143,8 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_
     bq::tools::size_seq<true, const char16_t*> seq;
     seq.get_element().value = sizeof(uint32_t) + sizeof(uint32_t) + (size_t)arg_utf16_bytes_len;
     bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    uint8_t* log_format_content_addr = const_cast<uint8_t*>(ring_buffer.get_buffer_addr()) + (ptrdiff_t)offset;
+    bq::miso_ring_buffer& miso_ring_buffer = log->get_ring_buffer();
+    uint8_t* log_format_content_addr = const_cast<uint8_t*>(miso_ring_buffer.get_buffer_addr()) + (ptrdiff_t)offset;
     jboolean is_cpy = false;
     const char16_t* str = (const char16_t*)env->GetStringCritical(arg_str, &is_cpy);
     bq::impl::_do_log_args_fill<true>(log_format_content_addr, seq, str);
@@ -161,8 +161,8 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit(JN
     bq::_api_ring_buffer_chunk_write_handle handle = {};
     handle.result = bq::enum_buffer_result_code::success;
     bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    handle.data_addr = const_cast<uint8_t*>(ring_buffer.get_buffer_addr()) + (ptrdiff_t)(offset >> 32);
+    bq::miso_ring_buffer& miso_ring_buffer = log->get_ring_buffer();
+    handle.data_addr = const_cast<uint8_t*>(miso_ring_buffer.get_buffer_addr()) + (ptrdiff_t)(offset >> 32);
     bq::api::__api_log_buffer_commit(log_id, handle);
 }
 
