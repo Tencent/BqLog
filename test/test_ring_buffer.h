@@ -69,17 +69,11 @@ namespace bq {
         };
 
         class test_ring_buffer : public test_base {
-        public:
-            virtual test_result test() override
+        private:
+            void do_test(test_result& result, uint64_t serialize_id)
             {
-                test_result result;
-
-                result.add_result(1U - 0xFFFFFFFFU == 2, "uint32 overflow test");
-                result.add_result(1024U - 1U + 0xFFFFFFFFU == 1022U, "ring buffer left space uint32 overflow test1");
-                result.add_result(1024U - 1025U + 1023 == 1022U, "ring buffer left space uint32 overflow test2");
-                result.add_result((uint32_t)1U - (uint32_t)0xFFFFFFFFU == 2, "ring buffer left space uint32 overflow test3");
-
-                bq::ring_buffer ring_buffer(1000 * 40);
+                ring_buffer_test_total_write_count_.store(0);
+                bq::ring_buffer ring_buffer(1000 * 40, serialize_id);
                 int32_t chunk_count_per_task = 1024000;
                 int32_t total_task = 13;
                 bq::platform::atomic<int32_t> counter(total_task);
@@ -95,6 +89,8 @@ namespace bq {
                 int32_t readed_chunk = 0;
                 int32_t percent = 0;
                 auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+
+                test_output_dynamic_param(bq::log_level::info, "ring buffer test %s\n", serialize_id != 0 ? "with mmap" : "without mmap");
                 test_output_dynamic_param(bq::log_level::info, "ring buffer test progress:%d%%, time cost:%dms\r", percent, 0);
                 ring_buffer.begin_read();
                 while (true) {
@@ -147,8 +143,25 @@ namespace bq {
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
                     result.add_result(task_check_vector[i] == chunk_count_per_task, "chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
-                result.add_result(total_chunk == ring_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", ring_buffer_test_total_write_count_.load(), total_chunk);
-                result.add_result(total_chunk == readed_chunk, "total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
+                test_output_dynamic_param(bq::log_level::info, "ring buffer test %s finished\n", serialize_id != 0 ? "with mmap" : "without mmap");
+                result.add_result(total_chunk == ring_buffer_test_total_write_count_.load(), "%s total write count error, real:%d , expected:%d", serialize_id != 0 ? "with mmap" : "without mmap", ring_buffer_test_total_write_count_.load(), total_chunk);
+                result.add_result(total_chunk == readed_chunk, "%s total chunk count check error, read:%d , expected:%d", serialize_id != 0 ? "with mmap" : "without mmap", readed_chunk, total_chunk);
+            }
+        public:
+            virtual test_result test() override
+            {
+                test_result result;
+
+                result.add_result(1U - 0xFFFFFFFFU == 2, "uint32 overflow test");
+                result.add_result(1024U - 1U + 0xFFFFFFFFU == 1022U, "ring buffer left space uint32 overflow test1");
+                result.add_result(1024U - 1025U + 1023 == 1022U, "ring buffer left space uint32 overflow test2");
+                result.add_result((uint32_t)1U - (uint32_t)0xFFFFFFFFU == 2, "ring buffer left space uint32 overflow test3");
+
+                do_test(result, 0);
+                do_test(result, 4323245235);
+                //test without mmap
+                
+                
                 return result;
             }
         };
