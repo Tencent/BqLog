@@ -74,6 +74,7 @@ foreach(FILE ${src_list})
 endforeach()
 endfunction(GROUP_FOR_IDE)
 
+message(STATUS "CMAKE_SIZEOF_VOID_P: ${CMAKE_SIZEOF_VOID_P}")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(STATUS "64-bit system detected")
     if(TARGET_PLATFORM STREQUAL "linux" OR TARGET_PLATFORM STREQUAL "unix")

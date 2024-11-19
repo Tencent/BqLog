@@ -1,14 +1,16 @@
 cmake_minimum_required(VERSION 3.22)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
-elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
-endif()
+
 project(BqLogUnitTest)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 OPTION(JAVA_SUPPORT "Support Java" OFF)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
+endif()
 
 #make __cplusplus correct in Visual Studio
 if (MSVC)
