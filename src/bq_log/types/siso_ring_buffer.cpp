@@ -17,6 +17,7 @@
 namespace bq {
 
     siso_ring_buffer::siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_mapped)
+        : is_memory_mapped_(is_memory_mapped)
     {
         //make sure it's cache line size aligned
         cursors_ = (cursors_set*)(((uintptr_t)(char*)cursors_storage_ + (uintptr_t)cache_line_size - 1) & (~((uintptr_t)cache_line_size - 1)));

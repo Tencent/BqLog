@@ -22,6 +22,7 @@ set BUILD_TARGET[1]=arm64-v8a
 set BUILD_TARGET[2]=x86_64
 set BUILD_TYPE[0]=Debug
 set BUILD_TYPE[1]=MinSizeRel
+set BUILD_TYPE[2]=RelWithDebInfo
 
 rem %%j : BUILD_TARGET
 rem %%p : BUILD_TYPE
@@ -30,7 +31,7 @@ for /l %%a in (0,1,2) do (
 		rd /s /q %%j
 		md %%j
 		cd %%j
-		for /l %%a in (0,1,1) do (
+		for /l %%a in (0,1,2) do (
 			for /f "usebackq delims== tokens=1-2" %%o in (`set BUILD_TYPE[%%a]`) do (
 				md %%p
 				cd %%p

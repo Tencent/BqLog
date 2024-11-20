@@ -179,6 +179,11 @@ namespace bq {
             return aligned_blocks_count_;
         }
 
+        bq_forceinline bool get_is_memory_mapped() const
+        {
+            return is_memory_mapped_;
+        }
+
     private:
         bq_forceinline block& cursor_to_block(uint32_t cursor)
         {
