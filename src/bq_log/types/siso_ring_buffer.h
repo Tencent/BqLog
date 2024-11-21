@@ -50,14 +50,6 @@ namespace bq {
         union cursor_type {
             alignas(8) bq::platform::atomic<uint32_t> atomic_value;
             alignas(8) uint32_t odinary_value;
-            cursor_type()
-            {
-                atomic_value.store(0);
-            }
-            cursor_type(const cursor_type& rhs)
-                : atomic_value(rhs.atomic_value.load(bq::platform::memory_order::acquire))
-            {
-            }
         };
 
         union block {
