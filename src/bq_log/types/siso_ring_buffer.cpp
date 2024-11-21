@@ -66,7 +66,7 @@ namespace bq {
 #endif
         ring_buffer_write_handle handle;
 
-        uint32_t size_required = size + sizeof(block::block_head);
+        uint32_t size_required = size + (uint32_t)data_block_offset;
         uint32_t need_block_count = (size_required + (cache_line_size - 1)) >> cache_line_size_log2;
         if (need_block_count > aligned_blocks_count_ || need_block_count == 0) {
 #if BQ_RING_BUFFER_DEBUG
@@ -87,13 +87,13 @@ namespace bq {
             handle.data_addr = (uint8_t*)&new_block + data_block_offset;
         }
 
-        uint32_t left_space = cursors_->wt_reading_cursor_cache_ - current_write_cursor;
+        uint32_t left_space = cursors_->wt_reading_cursor_cache_ + aligned_blocks_count_ - current_write_cursor;
 #if BQ_RING_BUFFER_DEBUG
         assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 1");
 #endif
         if (left_space < need_block_count) {
             cursors_->wt_reading_cursor_cache_ = cursors_->read_cursor_.load(bq::platform::memory_order::acquire);
-            left_space = cursors_->wt_reading_cursor_cache_ - current_write_cursor;
+            left_space = cursors_->wt_reading_cursor_cache_ + aligned_blocks_count_ - current_write_cursor;
 #if BQ_RING_BUFFER_DEBUG
             assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 2");
 #endif
@@ -133,11 +133,12 @@ namespace bq {
         if (handle.result != enum_buffer_result_code::success) {
             return;
         }
-        block* block_ptr = (block*)(handle.data_addr - data_block_offset);
-        if (handle.data_addr == (uint8_t*)aligned_blocks_ + data_block_offset) {  //maybe splited
-            block_ptr = &cursor_to_block(*(uint32_t*)&cursors_->write_cursor_);
-        } 
-        cursors_->write_cursor_.store(*(uint32_t*)&cursors_->write_cursor_ + block_ptr->block_head.block_num, bq::platform::memory_order::release);
+        block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_) 
+                ? &cursor_to_block(*(uint32_t*)&cursors_->write_cursor_)  //splited
+                : (block*)(handle.data_addr - data_block_offset);
+
+        mmap_head_->write_cursor_cache_ = *(uint32_t*)&cursors_->write_cursor_ + block_ptr->block_head.block_num;
+        cursors_->write_cursor_.store(mmap_head_->write_cursor_cache_, bq::platform::memory_order::release);
 #if BQ_RING_BUFFER_DEBUG
         total_write_bytes_ += block_ptr->block_head.block_num * sizeof(block);
 #endif
@@ -165,8 +166,8 @@ namespace bq {
         if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
-            assert(cursors_->rt_reading_cursor_tmp_ != (uint32_t)-1 && "Please ensure that you call the functions in the following order: first begin_read() -> read() -> end_read().");
         }
+        assert(cursors_->rt_reading_cursor_tmp_ != (uint32_t)-1 && "Please ensure that you call the functions in the following order: first begin_read() -> read() -> end_read().");
 #endif
         ring_buffer_read_handle handle;
 
@@ -207,9 +208,12 @@ namespace bq {
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
             assert(cursors_->rt_reading_cursor_tmp_ != (uint32_t)-1 && "Please ensure that you call the functions in the following order: first begin_read() -> read() -> end_read().");
         }
+#endif
+        mmap_head_->read_cursor_cache_ = cursors_->rt_reading_cursor_tmp_;
+        cursors_->read_cursor_.store(cursors_->rt_reading_cursor_tmp_, bq::platform::memory_order::release);
+#if BQ_RING_BUFFER_DEBUG
         cursors_->rt_reading_cursor_tmp_ = (uint32_t)-1;
 #endif
-        cursors_->read_cursor_.store(cursors_->rt_reading_cursor_tmp_, bq::platform::memory_order::release);
     }
 
     void siso_ring_buffer::init_with_memory_map(void* buffer, size_t buffer_size)
