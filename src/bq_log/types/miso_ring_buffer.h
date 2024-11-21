@@ -63,14 +63,13 @@ namespace bq {
         static_assert(cache_line_size >> cache_line_size_log2 == 1, "invalid cache line size information");
         union cursor_type {
             alignas(8) bq::platform::atomic<uint32_t> atomic_value;
-            alignas(8) volatile uint32_t volatile_value;
             alignas(8) uint32_t odinary_value;
             cursor_type()
             {
                 atomic_value.store(0);
             }
             cursor_type(const cursor_type& rhs)
-                : odinary_value(rhs.atomic_value.load(bq::platform::memory_order::acquire))
+                : atomic_value(rhs.atomic_value.load(bq::platform::memory_order::acquire))
             {
             }
         };

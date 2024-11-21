@@ -131,7 +131,7 @@ namespace bq {
                         }
                         uint32_t expected_size = (uint32_t)(left_read_count_ % (8 * 1024));
                         expected_size = bq::max_value((uint32_t)1, expected_size);
-                        test_result_ptr_->add_result((int32_t)handle.data_size == expected_size, "[siso ring buffer %s] data size error ,expected:%d, read:%d", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap", expected_size, (int32_t)handle.data_size);
+                        test_result_ptr_->add_result(handle.data_size == expected_size, "[siso ring buffer %s] data size error ,expected:%d, read:%d", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap", expected_size, (int32_t)handle.data_size);
                         bool data_match = true;
                         int32_t read_index = 0;
                         for (; (size_t)read_index + sizeof(int32_t) <= (size_t)handle.data_size; read_index += (int32_t)sizeof(int32_t)) {

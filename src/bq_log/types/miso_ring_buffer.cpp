@@ -79,7 +79,7 @@ namespace bq {
             return handle;
         }
 
-        uint32_t current_write_cursor = write_cursor_.volatile_value;
+        uint32_t current_write_cursor = write_cursor_.odinary_value;
         uint32_t current_read_cursor = read_cursor_.atomic_value.load(bq::platform::memory_order::acquire);
         if (memory_map_handle_.get_mapped_data()) {
             //Due to the bidirectional synchronization feature of mmap memory, 
