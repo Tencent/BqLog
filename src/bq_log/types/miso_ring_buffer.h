@@ -83,10 +83,7 @@ namespace bq {
         public:
             BQ_STRUCT_PACK(struct
                 {
-                    union {
-                        bq::platform::atomic<block_status> status;
-                        block_status odinary_status;
-                    };
+                    block_status odinary_status;
                     uint32_t block_num;
                     uint32_t data_size;
                     uint8_t data[1];

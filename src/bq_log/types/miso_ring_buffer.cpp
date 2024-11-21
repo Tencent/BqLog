@@ -142,7 +142,7 @@ namespace bq {
                 ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_data_not_contiguous];
 #endif
                 ++max_try_count;
-                new_block.block_head.status.store(bq::miso_ring_buffer::block_status::invalid, platform::memory_order::release);
+                RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(new_block.block_head.odinary_status, block_status).store(bq::miso_ring_buffer::block_status::invalid, platform::memory_order::release);
                 continue;
             }
             new_block.block_head.data_size = size;
@@ -163,7 +163,7 @@ namespace bq {
             return;
         }
         block* block_ptr = (block*)(handle.data_addr - data_block_offset);
-        block_ptr->block_head.status.store(bq::miso_ring_buffer::block_status::used, bq::platform::memory_order::release);
+        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block_ptr->block_head.odinary_status, block_status).store(bq::miso_ring_buffer::block_status::used, bq::platform::memory_order::release);
 #if BQ_RING_BUFFER_DEBUG
         total_write_bytes_ += block_ptr->block_head.block_num * sizeof(block);
 #endif
@@ -197,7 +197,7 @@ namespace bq {
         ring_buffer_read_handle handle;
         while (true) {
             block& block_ref = cursor_to_block(reading_cursor_tmp_);
-            auto status = block_ref.block_head.status.load(bq::platform::memory_order::acquire);
+            auto status = RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block_ref.block_head.odinary_status, block_status).load(bq::platform::memory_order::acquire);
             auto block_count = block_ref.block_head.block_num;
             switch (status) {
             case block_status::invalid:
@@ -304,7 +304,7 @@ namespace bq {
     void miso_ring_buffer::init_with_memory_map()
     {
         for (uint32_t i = 0; i < aligned_blocks_count_; ++i) {
-            aligned_blocks_[i].block_head.status.store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
+            RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(aligned_blocks_[i].block_head.odinary_status, block_status).store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
         }
 
 #if BQ_RING_BUFFER_DEBUG
@@ -325,7 +325,7 @@ namespace bq {
             block& current_block = cursor_to_block(current_cursor);
             auto block_num = current_block.block_head.block_num;
             auto data_size = current_block.block_head.data_size;
-            switch (current_block.block_head.status.load(bq::platform::memory_order::relaxed)) {
+            switch (RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(current_block.block_head.odinary_status, block_status).load(bq::platform::memory_order::relaxed)) {
             case block_status::used:
                 if (data_parse_finished == true) {
                     return false;
@@ -390,7 +390,7 @@ namespace bq {
         mmap_head_ = (mmap_head*)aligned_addr;
         aligned_blocks_ = (miso_ring_buffer::block*)(aligned_addr + head_size);
         for (uint32_t i = 0; i < aligned_blocks_count_; ++i) {
-            aligned_blocks_[i].block_head.status.store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
+            RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(aligned_blocks_[i].block_head.odinary_status, block_status).store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
         }
 #if BQ_RING_BUFFER_DEBUG
         reading_cursor_tmp_ = (uint32_t)-1;

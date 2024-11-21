@@ -30,6 +30,33 @@
 #endif
 
 namespace bq {
+    //Warning ! You Must Ensure The Alignment By Yourself!
+    template<typename FROM, typename TO>
+    bq_forceinline TO& __ring_buffer_force_cast_ignore_alignment_warning(FROM& addr)
+    {
+#if BQ_GCC 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+#elif BQ_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Waddress-of-packed-member"
+#elif BQ_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4324)
+#endif
+        return *(TO*)(void*)&addr;
+#if BQ_GCC
+#pragma GCC diagnostic pop
+#elif BQ_CLANG
+#pragma clang diagnostic pop
+#elif BQ_MSVC
+#pragma warning(pop)
+#endif
+    }
+
+    #define RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) bq::__ring_buffer_force_cast_ignore_alignment_warning<TYPE, bq::platform::atomic<TYPE>>(X)
+
+
     struct ring_buffer_handle_base {
         enum_buffer_result_code result = enum_buffer_result_code::err_alloc_size_invalid;
         uint8_t* data_addr = nullptr;

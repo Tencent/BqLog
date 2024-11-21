@@ -47,11 +47,6 @@ namespace bq {
         static constexpr size_t cache_line_size_log2 = 6;
         static_assert(cache_line_size >> cache_line_size_log2 == 1, "invalid cache line size information");
 
-        union cursor_type {
-            alignas(8) bq::platform::atomic<uint32_t> atomic_value;
-            alignas(8) uint32_t odinary_value;
-        };
-
         union block {
         public:
             BQ_STRUCT_PACK(struct
@@ -76,9 +71,9 @@ namespace bq {
 
 
         BQ_STRUCT_PACK(struct cursors_set {
-            cursor_type write_cursor_;
+            uint32_t write_cursor_;
             char cache_line_padding0_[cache_line_size - sizeof(write_cursor_)];
-            cursor_type read_cursor_;
+            uint32_t read_cursor_;
             char cache_line_padding1_[cache_line_size - sizeof(read_cursor_)];
 
             // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
@@ -88,7 +83,8 @@ namespace bq {
             // this cache variable used in writing thread is used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
             uint32_t wt_reading_cursor_cache_;  
             char cache_line_padding3_[cache_line_size - sizeof(wt_reading_cursor_cache_)];
-        });
+        });  
+
 
         char cursors_storage_[sizeof(cursors_set) + cache_line_size];
         cursors_set* cursors_;   //make sure it is aligned to cache line size.

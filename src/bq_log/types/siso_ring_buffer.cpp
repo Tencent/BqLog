@@ -21,8 +21,8 @@ namespace bq {
     {
         //make sure it's cache line size aligned
         cursors_ = (cursors_set*)(((uintptr_t)(char*)cursors_storage_ + (uintptr_t)cache_line_size - 1) & (~((uintptr_t)cache_line_size - 1)));
-        assert(((uintptr_t)&cursors_->read_cursor_) % (uintptr_t)cache_line_size == 0);
         assert(((uintptr_t)&cursors_->write_cursor_) % (uintptr_t)cache_line_size == 0);
+        assert(((uintptr_t)&cursors_->read_cursor_) % (uintptr_t)cache_line_size == 0);
         assert(((uintptr_t)&cursors_->rt_writing_cursor_cache_) % (uintptr_t)cache_line_size == 0);
         assert(((uintptr_t)&cursors_->wt_reading_cursor_cache_) % (uintptr_t)cache_line_size == 0);
         assert((uintptr_t)cursors_ + (uintptr_t)sizeof(cursors_set) <= (uintptr_t)cursors_storage_ + (uintptr_t)sizeof(cursors_storage_));
@@ -75,7 +75,7 @@ namespace bq {
             handle.result = enum_buffer_result_code::err_alloc_size_invalid;
             return handle;
         }
-        uint32_t current_write_cursor = cursors_->write_cursor_.odinary_value;
+        uint32_t current_write_cursor = cursors_->write_cursor_;
         block& new_block = cursor_to_block(current_write_cursor);
         uint32_t left_blocks_to_tail = aligned_blocks_count_ - (uint32_t)(&new_block - aligned_blocks_);
         if (left_blocks_to_tail < need_block_count) {
@@ -92,7 +92,7 @@ namespace bq {
         assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 1");
 #endif
         if (left_space < need_block_count) {
-            cursors_->wt_reading_cursor_cache_ = cursors_->read_cursor_.atomic_value.load(bq::platform::memory_order::acquire);
+            cursors_->wt_reading_cursor_cache_ = RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load(bq::platform::memory_order::acquire);
             left_space = cursors_->wt_reading_cursor_cache_ + aligned_blocks_count_ - current_write_cursor;
 #if BQ_RING_BUFFER_DEBUG
             assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 2");
@@ -134,11 +134,11 @@ namespace bq {
             return;
         }
         block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_) 
-                ? &cursor_to_block(cursors_->write_cursor_.odinary_value)  //splited
+                ? &cursor_to_block(cursors_->write_cursor_) // splited
                 : (block*)(handle.data_addr - data_block_offset);
 
-        mmap_head_->write_cursor_cache_ = cursors_->write_cursor_.odinary_value + block_ptr->block_head.block_num;
-        cursors_->write_cursor_.atomic_value.store(mmap_head_->write_cursor_cache_, bq::platform::memory_order::release);
+        mmap_head_->write_cursor_cache_ = cursors_->write_cursor_ + block_ptr->block_head.block_num;
+        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(mmap_head_->write_cursor_cache_, bq::platform::memory_order::release);
 #if BQ_RING_BUFFER_DEBUG
         total_write_bytes_ += block_ptr->block_head.block_num * sizeof(block);
 #endif
@@ -157,7 +157,7 @@ namespace bq {
             assert(cursors_->rt_reading_cursor_tmp_ == (uint32_t)-1 && "Please ensure that you call the functions in the following order: first begin_read() -> read() -> end_read().");
         }
 #endif
-        cursors_->rt_reading_cursor_tmp_ = cursors_->read_cursor_.odinary_value;
+        cursors_->rt_reading_cursor_tmp_ = cursors_->read_cursor_;
     }
 
     ring_buffer_read_handle siso_ring_buffer::read()
@@ -173,7 +173,7 @@ namespace bq {
 
         assert(cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ <= aligned_blocks_count_);
         if (cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ == 0) {
-            cursors_->rt_writing_cursor_cache_ = cursors_->write_cursor_.atomic_value.load(bq::platform::memory_order::acquire);
+            cursors_->rt_writing_cursor_cache_ = RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load(bq::platform::memory_order::acquire);
         }
         if (cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ == 0) {
             handle.result = enum_buffer_result_code::err_empty_ring_buffer;
@@ -210,7 +210,7 @@ namespace bq {
         }
 #endif
         mmap_head_->read_cursor_cache_ = cursors_->rt_reading_cursor_tmp_;
-        cursors_->read_cursor_.atomic_value.store(cursors_->rt_reading_cursor_tmp_, bq::platform::memory_order::release);
+        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(cursors_->rt_reading_cursor_tmp_, bq::platform::memory_order::release);
 #if BQ_RING_BUFFER_DEBUG
         cursors_->rt_reading_cursor_tmp_ = (uint32_t)-1;
 #endif
@@ -270,8 +270,8 @@ namespace bq {
             return false;
         }
 
-        cursors_->write_cursor_.atomic_value.store(mmap_head_->write_cursor_cache_, platform::memory_order::release);
-        cursors_->read_cursor_.atomic_value.store(mmap_head_->read_cursor_cache_, platform::memory_order::release);
+        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(mmap_head_->write_cursor_cache_, platform::memory_order::release);
+        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(mmap_head_->read_cursor_cache_, platform::memory_order::release);
         cursors_->rt_reading_cursor_tmp_ = (uint32_t)-1;
         cursors_->rt_writing_cursor_cache_ = mmap_head_->write_cursor_cache_;
         cursors_->wt_reading_cursor_cache_ = mmap_head_->read_cursor_cache_;
@@ -297,8 +297,8 @@ namespace bq {
         mmap_head_->read_cursor_cache_ = 0;
         mmap_head_->write_cursor_cache_ = 0;
         mmap_head_->aligned_blocks_count_cache_ = aligned_blocks_count_;
-        cursors_->write_cursor_.atomic_value.store(0, platform::memory_order::release);
-        cursors_->read_cursor_.atomic_value.store(0, platform::memory_order::release);
+        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(0, platform::memory_order::release);
+        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(0, platform::memory_order::release);
     }
 
 }
