@@ -32,6 +32,7 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::warning, "invalid ring_buffer capacity {}, it should not be less than 16 * 64 bytes. it will be set to 16 * 64 automatically", capacity);
             capacity = 16 * cache_line_size;
         }
+        serialize_id = 0; //disable mmap temporarily , it is not robust enough.
         auto mmap_result = create_memory_map(capacity, serialize_id);
         switch (mmap_result) {
         case bq::ring_buffer::failed:
@@ -221,7 +222,12 @@ namespace bq {
                 current_reading_cursor_tmp_ += block_count;
                 break;
             default:
-                assert(false && "invalid read ring buffer block status");
+                //this error only occurs when memory map is applied
+                assert((memory_map_handle_.has_been_mapped()) && "invalid read ring buffer block status");
+#if BQ_RING_BUFFER_DEBUG
+                    ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_mmap_sync];
+#endif
+                handle.result = enum_buffer_result_code::err_mmap_sync;
                 break;
             }
             break;
@@ -355,6 +361,7 @@ namespace bq {
                 ++current_cursor;
                 break;
             default:
+                return false;
                 break;
             }
         }
