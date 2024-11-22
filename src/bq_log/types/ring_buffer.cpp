@@ -222,7 +222,7 @@ namespace bq {
                 break;
             default:
                 //this error only occurs when memory map is applied
-                assert((!memory_map_handle_.has_been_mapped()) && "invalid read ring buffer block status");
+                assert((memory_map_handle_.has_been_mapped()) && "invalid read ring buffer block status");
 #if BQ_RING_BUFFER_DEBUG
                     ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_mmap_sync];
 #endif
