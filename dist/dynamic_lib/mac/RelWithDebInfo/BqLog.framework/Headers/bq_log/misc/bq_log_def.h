@@ -38,6 +38,7 @@ namespace bq {
         err_alloc_failed_by_race_condition, // alloc failed caused by multi-thread race condition, you can try again later.
         err_alloc_size_invalid, // invalid alloc size, too big or 0.
         err_buffer_not_inited, // buffer not initialized
+        err_mmap_sync, //memory map sync error
         result_code_count
     };
 
