@@ -32,6 +32,7 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::warning, "invalid ring_buffer capacity {}, it should not be less than 16 * 64 bytes. it will be set to 16 * 64 automatically", capacity);
             capacity = 16 * cache_line_size;
         }
+        serialize_id = 0; //disable mmap temporarily , it is not robust enough.
         auto mmap_result = create_memory_map(capacity, serialize_id);
         switch (mmap_result) {
         case bq::ring_buffer::failed:
