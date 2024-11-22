@@ -4,6 +4,7 @@
 - **Bug fix**: [static initialization order fiasco](https://github.com/Tencent/BqLog/issues/26)
 - **Bug fix**: [mmap leads to hang on Android](https://github.com/Tencent/BqLog/issues/32)
 - **Bug fix**: [Enabling mmap on Android Devices May Cause Freezes or Crashes](https://github.com/Tencent/BqLog/issues/34)
+We have to temporarily disable the mmap recover feature until we can resolve its stability issues.
 
 ## [v1.4.5] - 2024-10-10
 - **Improvement**: The configuration for the snapshot feature has been migrated from the API to the configuration file, supporting configurations for buffer size, category mask, and levels. For details, refer to [Snapshot Configuration](./README.md#snapshot).
