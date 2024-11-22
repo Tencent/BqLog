@@ -221,7 +221,12 @@ namespace bq {
                 current_reading_cursor_tmp_ += block_count;
                 break;
             default:
-                assert(false && "invalid read ring buffer block status");
+                //this error only occurs when memory map is applied
+                assert((!memory_map_handle_.has_been_mapped()) && "invalid read ring buffer block status");
+#if BQ_RING_BUFFER_DEBUG
+                    ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_mmap_sync];
+#endif
+                handle.result = enum_buffer_result_code::err_mmap_sync;
                 break;
             }
             break;
@@ -355,6 +360,7 @@ namespace bq {
                 ++current_cursor;
                 break;
             default:
+                return false;
                 break;
             }
         }
