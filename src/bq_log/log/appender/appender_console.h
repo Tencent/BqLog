@@ -71,7 +71,7 @@ namespace bq {
         virtual void log_impl(const log_entry_handle& handle) override;
 
     private:
-        static console_static_misc& get_console_misc();
+        static console_static_misc console_misc_;
 
     private:
         bq::string log_name_prefix_;

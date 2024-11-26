@@ -476,7 +476,6 @@ namespace bq {
         static thread_local bq::string stack_trace_current_str_;
         static thread_local bq::u16string stack_trace_current_str_u16_;
         static HANDLE stack_trace_process_ = GetCurrentProcess();
-        static bq::platform::mutex stack_trace_mutex_;
         static bq::platform::atomic<bool> stack_trace_sym_initialized_ = false;
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
@@ -501,6 +500,7 @@ namespace bq {
                 SymInitialize(stack_trace_process_, NULL, TRUE);
             }
             stack_trace_current_str_u16_.clear();
+            static bq::platform::mutex stack_trace_mutex_;
             bq::platform::scoped_mutex lock(stack_trace_mutex_);
             RtlCaptureContext(&context);
 

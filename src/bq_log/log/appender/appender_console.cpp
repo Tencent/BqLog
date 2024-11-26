@@ -16,6 +16,8 @@
 #include "bq_log/log/appender/appender_console.h"
 
 namespace bq {
+    bq::appender_console::console_static_misc appender_console::console_misc_;
+
     void appender_console::console_callbacks::register_callback(bq::type_func_ptr_console_callback callback)
     {
         bq::platform::scoped_mutex lock(mutex_);
@@ -44,7 +46,7 @@ namespace bq {
     }
 
     appender_console::console_ring_buffer::console_ring_buffer()
-        : buffer_(new miso_ring_buffer(1024))
+        : buffer_(nullptr)
         , fetch_lock_(false)
     {
         buffer_->set_thread_check_enable(false);
@@ -64,6 +66,15 @@ namespace bq {
         }
         size_t write_length = sizeof(log_id) + sizeof(category_idx) + sizeof(log_level) + sizeof(int32_t) + (size_t)length + 1;
 
+        {
+            if (!buffer_) {
+                bq::platform::scoped_spin_lock_write_crazy init_lock(insert_lock_);
+                if (!buffer_)
+                {
+                    buffer_ = new bq::miso_ring_buffer(1024);
+                }
+            }
+        }
         // try insert
         do {
             bq::platform::scoped_spin_lock_read_crazy read_lock(insert_lock_);
@@ -171,6 +182,9 @@ namespace bq {
         }
 
         bq::platform::scoped_mutex mutex_lock(fetch_lock_);
+        if (!buffer_) {
+            return false;
+        }
         buffer_->begin_read();
         auto read_handle = buffer_->read();
         if (read_handle.result == enum_buffer_result_code::success) {
@@ -205,22 +219,22 @@ namespace bq {
 
     void appender_console::register_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        get_console_misc().callback().register_callback(callback);
+        console_misc_.callback().register_callback(callback);
     }
 
     void appender_console::unregister_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        get_console_misc().callback().erase_callback(callback);
+        console_misc_.callback().erase_callback(callback);
     }
 
     void appender_console::set_console_buffer_enable(bool enable)
     {
-        get_console_misc().buffer().set_enable(enable);
+        console_misc_.buffer().set_enable(enable);
     }
 
     bool appender_console::fetch_and_remove_from_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
     {
-        return get_console_misc().buffer().fetch_and_remove(callback, pass_through_param);
+        return console_misc_.buffer().fetch_and_remove(callback, pass_through_param);
     }
 
     bool appender_console::init_impl(const bq::property_value& config_obj)
@@ -249,15 +263,8 @@ namespace bq {
 #if !BQ_UNIT_TEST
         util::log_device_console_plain_text(level, log_entry_cache_.c_str());
 #endif
-        auto& misc = get_console_misc();
-        misc.callback().call(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
-        misc.buffer().insert(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
-    }
-
-    bq::appender_console::console_static_misc& appender_console::get_console_misc()
-    {
-        static console_static_misc misc_;
-        return misc_;
+        console_misc_.callback().call(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        console_misc_.buffer().insert(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
     }
 
 }
