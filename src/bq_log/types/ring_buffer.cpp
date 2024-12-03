@@ -71,7 +71,7 @@ namespace bq {
         ring_buffer_write_handle handle;
         int32_t max_try_count = 100;
 
-        uint32_t size_required = size + data_block_offset;
+        uint32_t size_required = size + (uint32_t)data_block_offset;
         uint32_t need_block_count = (size_required + (cache_line_size - 1)) >> cache_line_size_log2;
         if (need_block_count > aligned_blocks_count_ || need_block_count == 0) {
 #if BQ_RING_BUFFER_DEBUG
