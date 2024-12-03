@@ -209,12 +209,12 @@ namespace bq {
                 continue;
                 break;
             case block_status::unused:
-#if BQ_RING_BUFFER_DEBUG
-                assert((reading_cursor_tmp_ & (aligned_blocks_count_ - 1)) + block_count <= aligned_blocks_count_);
-#endif
                 handle.result = enum_buffer_result_code::err_empty_ring_buffer;
                 break;
             case block_status::used:
+#if BQ_RING_BUFFER_DEBUG
+                assert((reading_cursor_tmp_ & (aligned_blocks_count_ - 1)) + block_count <= aligned_blocks_count_);
+#endif
                 handle.result = enum_buffer_result_code::success;
                 handle.data_addr = block_ref.block_head.data;
                 handle.data_size = block_ref.block_head.data_size;
