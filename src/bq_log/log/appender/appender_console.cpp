@@ -49,7 +49,6 @@ namespace bq {
         : buffer_(nullptr)
         , fetch_lock_(false)
     {
-        buffer_->set_thread_check_enable(false);
     }
 
     appender_console::console_ring_buffer::~console_ring_buffer()
@@ -72,6 +71,7 @@ namespace bq {
                 if (!buffer_)
                 {
                     buffer_ = new bq::miso_ring_buffer(1024);
+                    buffer_->set_thread_check_enable(false);
                 }
             }
         }

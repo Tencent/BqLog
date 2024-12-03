@@ -23,6 +23,7 @@ namespace bq {
     namespace test {
         static bq::platform::atomic<int32_t> ring_buffer_test_total_write_count_ = 0;
         static bq::platform::atomic<int32_t> ring_buffer_test_total_read_count_ = 0;
+        constexpr int32_t total_task = 13;
 
         class miso_write_task {
         private:
@@ -171,7 +172,6 @@ namespace bq {
                 uint64_t serialize_id = with_mmap ? 4323245235 : 0;
                 bq::miso_ring_buffer ring_buffer(1000 * 40, serialize_id);
                 int32_t chunk_count_per_task = 1024000;
-                int32_t total_task = 13;
                 bq::platform::atomic<int32_t> counter(total_task);
                 std::vector<int32_t> task_check_vector;
                 for (int32_t i = 0; i < total_task; ++i) {
