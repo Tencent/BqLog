@@ -298,6 +298,17 @@ namespace bq {
             if (!(int32_t)(mode & (file_open_mode_enum::write | file_open_mode_enum::exclusive))) {
                 return true;
             }
+            if ((int32_t)(mode & file_open_mode_enum::exclusive)) {
+                struct flock lock;
+                memset(&lock, 0, sizeof(lock));
+                lock.l_type = F_WRLCK;
+                lock.l_whence = SEEK_SET;
+                lock.l_start = 0;
+                lock.l_len = 0;
+                if (fcntl(file_handle, F_SETLK, &lock) == -1) {
+                    return false;
+                }
+            }
             struct stat file_info;
             if (fstat(file_handle, &file_info) < 0) {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
