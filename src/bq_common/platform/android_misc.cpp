@@ -270,6 +270,8 @@ namespace bq {
         const bq::string& get_apk_path()
         {
             static bq::string apk_path;
+            static bq::platform::spin_lock spin_lock;
+            bq::platform::scoped_spin_lock lock(spin_lock);
             if (!apk_path.is_empty()) {
                 return apk_path;
             }
