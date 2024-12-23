@@ -3,6 +3,7 @@
 [![Release Version](https://img.shields.io/badge/release-1.4.7-red.svg)](https://github.com/Tencent/BqLog/releases)  
 > BqLog是一个轻量级，高性能日志系统，应用于《Honor Of Kings》等项目，已经上线并良好运行  
 > ***BqLog的1.5.x版本正在路上，BqLog源自移动客户端，在桌面和服务器设备上，该新版本BqLog可以通过放开部分内存使用限制达到成倍以上的性能提高。***
+> ***BqLog的1.5.x版本正在路上，即将提供对纯血鸿蒙的支持。***
 ## 支持平台
 - Windows 64 bit
 - MacOS
