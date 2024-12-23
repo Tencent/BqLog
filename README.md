@@ -4,6 +4,7 @@
 > [中文文档](./README_CHS.md)  
 > BqLog is a lightweight, high-performance logging system used in projects such as "Honor of Kings," and it has been successfully deployed and is running smoothly.  
 > ***Version 1.5.x of BqLog is on its way! Originating from mobile clients, this new version of BqLog can achieve more than double the performance on desktop and server devices by lifting some memory usage restrictions.***
+> ***Version 1.5.x of BqLog is on its way! The supporting to `HarmonyOS` is coming soon.***
 
 ## Supported Platforms
 - Windows 64 bit
