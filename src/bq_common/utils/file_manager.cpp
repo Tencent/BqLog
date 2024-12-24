@@ -273,7 +273,7 @@ namespace bq {
     {
         auto temp_files = bq::file_manager::get_sub_dirs_and_files_name(path);
         for (auto& info : temp_files) {
-            string curr_path = path + "/" + info;
+            string curr_path = combine_path(path, info);
             if (bq::file_manager::is_file(curr_path)) {
                 out_list.push_back(curr_path);
             } else {
