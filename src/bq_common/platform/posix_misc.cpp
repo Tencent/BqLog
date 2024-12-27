@@ -239,15 +239,25 @@ namespace bq {
                         home_dir = getpwuid(getuid())->pw_dir;
                     }
                     result.erase(result.begin(), 1);
-                    result = combine_path(home_dir, result);
+                    if (!home_dir.is_empty() && home_dir[home_dir.size() - 1] == '/') {
+                        home_dir.erase(home_dir.end() - 1);
+                    }
+                    result = home_dir + result;
                 } else {
                     auto slash_index = result.find("/");
                     bq::string username = (slash_index == bq::string::npos) ? result.substr(1) : result.substr(1, (slash_index - 1));
                     struct passwd* pw = getpwnam(username.c_str());
                     if (!pw) {
                         bq::util::log_device_console(log_level::error, "unkown user:%s, when parsing path:%s", username.c_str(), original_path.c_str());
+                    } else if (slash_index == bq::string::npos) {
+                        result = pw->pw_dir;
                     } else {
-                        result = (slash_index == bq::string::npos) ? pw->pw_dir : combine_path(pw->pw_dir, result.substr(slash_index + 1));
+                        bq::string pw_dir = pw->pw_dir;
+                        if (!pw_dir.end_with("/")) {
+                            result = pw_dir + result.substr(slash_index + 1);
+                        } else {
+                            result = pw_dir + result.substr(slash_index);
+                        }
                     }
                 }
             }

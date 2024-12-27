@@ -61,7 +61,7 @@ namespace bq {
             int32_t result = _wstat64((LPCWSTR)file_path_w.c_str(), &buf);
             if (result == 0) {
                 return true;
-            }
+            }  
             return false;
         }
 
@@ -161,24 +161,29 @@ namespace bq {
             return false;
         }
 
-        static int32_t make_dir_recursive(char* path)
+        static int32_t make_dir_recursive(char16_t* path)
         {
-            if (strlen(path) == 2 && path[1] == ':') {
+            constexpr size_t prefix_size = 2; //u"\\\\?\\"
+            if ((wcslen((LPCWSTR)path) == prefix_size + 2) && path[prefix_size + 1] == ':') {
                 return 0;
             }
-            if (is_dir(path)) {
-                return 0;
+            struct __stat64 buf;
+            if (0 == _wstat64((LPCWSTR)path, &buf)) {
+                if ((buf.st_mode & _S_IFMT) == _S_IFDIR) {
+                    return 0;
+                }
             }
-            char* ptr = strrchr(path, '/');
+
+            LPWSTR ptr = wcsrchr((LPWSTR)path, '\\');
             if (ptr != NULL) {
-                *ptr = '\0';
+                *ptr = u'\0';
                 int32_t make_parent_result = make_dir_recursive(path);
-                *ptr = '/';
+                *ptr = u'\\';
                 if (make_parent_result != 0) {
                     return make_parent_result;
                 }
             }
-            if (_mkdir(path) == 0) {
+            if (_wmkdir((LPCWSTR)path) == 0) {
                 return 0;
             }
             return errno;
@@ -188,9 +193,8 @@ namespace bq {
         {
             if (is_dir(path))
                 return 0;
-            char* path_cpy = _strdup(path);
-            int32_t result = make_dir_recursive(path_cpy);
-            free(path_cpy);
+            bq::u16string path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(path)));
+            int32_t result = make_dir_recursive(path_w.begin());
             return result;
         }
 
@@ -258,41 +262,42 @@ namespace bq {
             return false;
         }
 
-        int32_t remove_dir_or_file_inner(char16_t* path, size_t cursor)
+        int32_t remove_dir_or_file_inner(bq::u16string& path)
         {
             struct __stat64 buf;
-            int32_t stat_result = _wstat64((LPCWSTR)path, &buf);
+            int32_t stat_result = _wstat64((LPCWSTR)path.c_str(), &buf);
             if (0 != stat_result) {
                 return errno;
             }
 
             if ((buf.st_mode & _S_IFMT) != _S_IFDIR)
             {
-                DWORD attr = GetFileAttributesW((LPCWSTR)path);
+                DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
                 attr &= ~FILE_ATTRIBUTE_READONLY;
-                SetFileAttributesW((LPCWSTR)path, attr);
-                int32_t result = _wremove((LPCWSTR)path);
+                SetFileAttributesW((LPCWSTR)path.c_str(), attr);
+                int32_t result = _wremove((LPCWSTR)path.c_str());
                 if (result != 0) {
                     return errno;
                 }
                 return 0;
             } else {
-                path[cursor] = u'/';
-                path[cursor + 1] = u'*';
-                path[cursor + 2] = u'\0';
+                size_t path_init_size = path.size();
+                path.push_back(u'\\');
+                path.push_back(u'*');
                 WIN32_FIND_DATAW find_data;
                 HANDLE h_file;
-                h_file = FindFirstFileW((LPCWSTR)path, &find_data);
+                h_file = FindFirstFileW((LPCWSTR)path.c_str(), &find_data);
+                path.erase(path.end() - 2, 2); //u"\\*"
                 if (h_file == INVALID_HANDLE_VALUE) {
                     // it's empty
                 } else {
-                    auto file_name_len = wcslen(find_data.cFileName);
-                    memcpy(path + cursor + 1, find_data.cFileName, file_name_len * sizeof(WCHAR));
-                    path[cursor + 1 + file_name_len] = u'\0';
                     if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
                         // ignore
                     } else {
-                        int32_t result = remove_dir_or_file_inner(path, cursor + 1 + file_name_len);
+                        path.push_back(u'\\');
+                        path += (const char16_t*)find_data.cFileName;
+                        int32_t result = remove_dir_or_file_inner(path);
+                        path.erase(path.begin() + path_init_size, path.size() - path_init_size);
                         if (result != 0) {
                             return result;
                         }
@@ -302,20 +307,19 @@ namespace bq {
                             // ignore
                             continue;
                         }
-                        file_name_len = wcslen(find_data.cFileName);
-                        memcpy(path + cursor + 1, find_data.cFileName, file_name_len * sizeof(WCHAR));
-                        path[cursor + 1 + file_name_len] = u'\0';
-                        int32_t result = remove_dir_or_file_inner(path, cursor + 1 + file_name_len);
+                        path.push_back(u'\\');
+                        path += (const char16_t*)find_data.cFileName;
+                        int32_t result = remove_dir_or_file_inner(path);
+                        path.erase(path.begin() + path_init_size, path.size() - path_init_size);
                         if (result != 0) {
                             return result;
                         }
                     }
                 }
-                path[cursor] = '\0';
-                DWORD attr = GetFileAttributesW((LPCWSTR)path);
+                DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
                 attr &= ~FILE_ATTRIBUTE_READONLY;
-                SetFileAttributesW((LPCWSTR)path, attr);
-                if (!RemoveDirectoryW((LPCWSTR)path)) {
+                SetFileAttributesW((LPCWSTR)path.c_str(), attr);
+                if (!RemoveDirectoryW((LPCWSTR)path.c_str())) {
                     return static_cast<int32_t>(GetLastError());
                 }
                 return 0;
@@ -330,7 +334,7 @@ namespace bq {
                 return 0;
             }
             path_w = u"\\\\?\\" + path_w;
-            return remove_dir_or_file_inner(&path_w[0], path_w.size());
+            return remove_dir_or_file_inner(path_w);
         }
 
         // File exclusive works well across different processes,
@@ -527,7 +531,7 @@ namespace bq {
             bq::array<bq::string> list;
             WIN32_FIND_DATAW find_data;
             HANDLE h_file;
-            h_file = FindFirstFileW((LPCWSTR)((file_path_w + u"/*").c_str()), &find_data);
+            h_file = FindFirstFileW((LPCWSTR)((file_path_w + u"\\*").c_str()), &find_data);
             if (h_file == INVALID_HANDLE_VALUE) {
                 // it's empty
             } else {
