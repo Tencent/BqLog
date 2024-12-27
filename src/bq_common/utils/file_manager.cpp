@@ -158,78 +158,12 @@ namespace bq {
 
     bq::string file_manager::get_lexically_path(const bq::string& original_path)
     {
-        bq::string result;
-        result.set_capacity(original_path.size());
-        bq::array<bq::string> split = original_path.replace("\\", "/").split("/");
-        bq::array<bq::string> result_split;
-        result_split.set_capacity(split.size());
-        for (decltype(split)::size_type i = 0; i < split.size(); ++i) {
-            split[i] = split[i].trim();
-            if (split[i] == "..") {
-                if (result_split.size() > 0 && result_split[result_split.size() - 1] != "..") {
-                    result_split.pop_back();
-                } else {
-                    result_split.push_back(split[i]);
-                }
-            } else if (split[i] == ".") {
-
-            } else {
-                result_split.push_back(split[i]);
-            }
-        }
-        for (decltype(result_split)::size_type i = 0; i < result_split.size(); ++i) {
-            if (i != 0) {
-                result += "/";
-            }
-            result += result_split[i];
-        }
-        if (result.is_empty()) {
-            result = "./";
-        }
-        if (original_path.size() > 0 && original_path[0] == '/')
-            result = "/" + result;
-
-#if defined(BQ_MAC) || defined(BQ_LINUX)
-        if (result.size() > 0 && result[0] == '~') {
-            if (result.size() == 1 || result[1] == '/') {
-                // Case: "~" Or "~/"
-                auto home_dir = getenv("HOME");
-                if (!home_dir) {
-                    home_dir = getpwuid(getuid())->pw_dir;
-                }
-                result.erase(result.begin(), 1);
-                result = combine_path(home_dir, result);
-            } else {
-                auto slash_index = result.find("/");
-                bq::string username = (slash_index == bq::string::npos) ? result.substr(1) : result.substr(1, (slash_index - 1));
-                struct passwd* pw = getpwnam(username.c_str());
-                if (!pw) {
-                    FILE_MANAGER_LOG(bq::log_level::error, "unkown user:%s, when parsing path:%s", username.c_str(), original_path.c_str());
-                } else {
-                    result = (slash_index == bq::string::npos) ? pw->pw_dir : combine_path(pw->pw_dir, result.substr(slash_index + 1));
-                }
-            }
-        }
-#endif
-        return result;
+        return bq::platform::get_lexically_path(original_path);
     }
 
     bool file_manager::is_absolute(const string& path)
     {
-#if defined(BQ_WIN)
-        char first_char = path.is_empty() ? '\0' : path[0];
-
-        if (first_char == '/' || first_char == '\\') {
-            return true;
-        }
-
-        if (path.size() >= 2 && path[1] == ':' && ((first_char >= 'A' && first_char <= 'Z') || (first_char >= 'a' && first_char <= 'z'))) {
-            return true;
-        }
-        return false;
-#else
-        return path.size() > 0 && (path[0] == '/' || path[0] == '~');
-#endif
+        return bq::platform::is_absolute(path);
     }
 
     bool file_manager::is_dir(const bq::string& path)
@@ -361,6 +295,7 @@ namespace bq {
                 first_empty_idx = (int32_t)i;
             }
         }
+
         // open or create file
         bq::string file_name = get_file_name_from_path(path);
         if ((int32_t)(open_mode & file_open_mode_enum::auto_create) && file_name.size() < path.size()) {
