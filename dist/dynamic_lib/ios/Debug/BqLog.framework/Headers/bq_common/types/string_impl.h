@@ -72,8 +72,9 @@ namespace bq {
         if (0 == len2) {
             return nullptr;
         }
+        auto len1 = ___string_len(str1);
         const CHAR_TYPE* begin_pos = ___find_char(str1, *str2);
-        while (begin_pos) {
+        while (begin_pos && begin_pos + len2 <= str1 + len1) {
             if (memcmp(begin_pos, str2, len2 * sizeof(CHAR_TYPE)) == 0) {
                 return begin_pos;
             }
@@ -268,6 +269,13 @@ namespace bq {
     template <typename CHAR_TYPE>
     inline bool string_base<CHAR_TYPE>::operator==(const typename string_base<CHAR_TYPE>::char_type* str) const
     {
+        size_t compare_size = str ? ___string_len(str) : 0;
+        if (compare_size != size()) {
+            return false;
+        }
+        if (compare_size == 0) {
+            return true;
+        }
         int32_t compare = memcmp(c_str(), str, size() * sizeof(CHAR_TYPE));
         if (compare != 0) {
             return false;
@@ -280,6 +288,9 @@ namespace bq {
     {
         if (size() != str.size()) {
             return false;
+        }
+        if (size() == 0) {
+            return true;
         }
         return (memcmp(c_str(), str.c_str(), size() * sizeof(CHAR_TYPE)) == 0);
     }

@@ -107,6 +107,9 @@ namespace bq {
 
         bool unlock_file(const platform_file_handle& file_handle); // undo file write exclusive
 
+        bq::string get_lexically_path(const bq::string& original_path);
+
+        bool is_absolute(const string& path);
         /// <summary>
         /// truncate file
         /// </summary>

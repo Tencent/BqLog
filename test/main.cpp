@@ -19,9 +19,9 @@
 #include "bq_common_test/test_file_manager.h"
 #include "bq_common_test/test_property.h"
 #include "bq_common_test/test_thread_atomic.h"
-#include "bq_common_test/test_optional.h"
 #include "test_ring_buffer.h"
 #include "test_log.h"
+#include <locale.h>
 #if defined(WIN32)
 #include <windows.h>
 #endif
@@ -36,10 +36,10 @@ int32_t main()
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
+    setlocale(LC_ALL, "zh_CN.utf8");
     TEST_GROUP_BEGIN(Bq_Common_Test);
     TEST_GROUP(Bq_Common_Test, bq::test, test_property);
     TEST_GROUP(Bq_Common_Test, bq::test, test_basic_type);
-    TEST_GROUP(Bq_Common_Test, bq::test, test_optional);
     TEST_GROUP(Bq_Common_Test, bq::test, test_array);
     TEST_GROUP(Bq_Common_Test, bq::test, test_string);
     TEST_GROUP(Bq_Common_Test, bq::test, test_hash_map);
