@@ -38,23 +38,19 @@ namespace bq {
         friend class optional;
 
         using value_type = typename bq::decay<T>::type;
+        alignas(value_type) unsigned char storage_[sizeof(value_type)]; 
         bool has_value_;
-        union storage_t {
-            unsigned char dummy_;
-            value_type value_;
 
-            storage_t() noexcept
-                : dummy_ {}
-            {
-            }
-            ~storage_t() { }
-        } storage_;
-
+    private:
+        bq_forceinline value_type* get_pointer() noexcept
+        {
+            return reinterpret_cast<value_type*>(&storage_);
+        }
     public:
         optional() noexcept
-            : has_value_ { false }
-            , storage_ {}
+            : has_value_(false)
         {
+            new(get_pointer()) value_type();
         }
         optional(nullopt_t) noexcept
             : optional()
@@ -95,7 +91,7 @@ namespace bq {
         inline void clear_value() noexcept
         {
             if (has_value_) {
-                bq::object_destructor<value_type>::destruct(&storage_.value_);
+                bq::object_destructor<value_type>::destruct(get_pointer());
                 has_value_ = false;
             }
         }
@@ -109,13 +105,13 @@ namespace bq {
         inline T& operator*() &
         {
             assert(has_value_);
-            return storage_.value_;
+            return *get_pointer();
         }
 
         inline const T& operator*() const&
         {
             assert(has_value_);
-            return storage_.value_;
+            return *get_pointer();
         }
 
         inline explicit operator bool() const noexcept
@@ -130,19 +126,19 @@ namespace bq {
 
         inline T& value() &
         {
-            return storage_.value_;
+            return *get_pointer();
         }
 
         inline T&& value() &&
         {
-            return bq::move(storage_.value_);
+            return bq::move(*get_pointer());
         }
 
         template <typename U>
         inline T value_or(U&& u) const&
         {
             if (has_value_)
-                return storage_.value_;
+                return *get_pointer();
             else
                 return static_cast<T>(bq::forward<U>(u));
         }
@@ -151,7 +147,7 @@ namespace bq {
         inline T value_or(U&& u) &&
         {
             if (has_value_)
-                return bq::move(storage_.value_);
+                return bq::move(*get_pointer());
             else
                 return static_cast<T>(bq::forward<U>(u));
         }
@@ -159,19 +155,19 @@ namespace bq {
 
     template <typename T>
     inline optional<T>::optional(const optional<T>& rhs)
-        : has_value_ { rhs.has_value_ }
+        : has_value_(rhs.has_value_)
     {
         if (rhs.has_value_) {
-            new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(rhs.storage_.value_);
+            new (get_pointer(), bq::enum_new_dummy::dummy) value_type(rhs.*get_pointer());
         }
     }
 
     template <typename T>
     inline optional<T>::optional(optional<T>&& rhs) noexcept
-        : has_value_ { rhs.has_value_ }
+        : has_value_(rhs.has_value_)
     {
         if (rhs.has_value_) {
-            new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(bq::move(rhs.storage_.value_));
+            new (get_pointer(), bq::enum_new_dummy::dummy) value_type(bq::move(rhs.*get_pointer()));
             rhs.clear_value();
         }
     }
@@ -179,20 +175,20 @@ namespace bq {
     template <typename T>
     template <typename U>
     inline optional<T>::optional(const optional<U>& rhs)
-        : has_value_ { rhs.has_value_ }
+        : has_value_(rhs.has_value_)
     {
         if (rhs.has_value_) {
-            new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(rhs.storage_.value_);
+            new (get_pointer(), bq::enum_new_dummy::dummy) value_type(rhs.*get_pointer());
         }
     }
 
     template <typename T>
     template <typename U>
     inline optional<T>::optional(optional<U>&& rhs) noexcept
-        : has_value_ { rhs.has_value_ }
+        : has_value_(rhs.has_value_)
     {
         if (rhs.has_value_) {
-            new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(bq::move(rhs.storage_.value_));
+            new (get_pointer(), bq::enum_new_dummy::dummy) value_type(bq::move(rhs.*get_pointer()));
             rhs.clear_value();
         }
     }
@@ -200,10 +196,9 @@ namespace bq {
     template <typename T>
     template <typename U, typename enable_if<!is_optional<typename decay<U>::type>::value>::type*>
     inline optional<T>::optional(U&& value) noexcept
-        : has_value_ { true }
-        , storage_ {}
+        : has_value_(true)
     {
-        new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(forward<U>(value));
+        new (get_pointer(), bq::enum_new_dummy::dummy) value_type(forward<U>(value));
     }
 
     template <typename T>
@@ -211,14 +206,14 @@ namespace bq {
     {
         if (has_value_) {
             if (rhs.has_value_) {
-                storage_.value_ = rhs.storage_.value_;
+                *get_pointer() = rhs.*get_pointer();
             } else {
                 clear_value();
                 has_value_ = false;
             }
         } else {
             if (rhs.has_value_) {
-                new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(rhs.storage_.value_);
+                new (get_pointer(), bq::enum_new_dummy::dummy) value_type(rhs.*get_pointer());
                 has_value_ = true;
             }
         }
@@ -230,7 +225,7 @@ namespace bq {
     {
         if (has_value_) {
             if (rhs.has_value_) {
-                storage_.value_ = bq::move(rhs.storage_.value_);
+                *get_pointer() = bq::move(rhs.*get_pointer());
                 rhs.clear_value();
             } else {
                 clear_value();
@@ -238,7 +233,7 @@ namespace bq {
             }
         } else {
             if (rhs.has_value_) {
-                new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(bq::move(rhs.storage_.value_));
+                new (get_pointer(), bq::enum_new_dummy::dummy) value_type(bq::move(rhs.*get_pointer()));
                 has_value_ = true;
                 rhs.clear_value();
             }
@@ -252,14 +247,14 @@ namespace bq {
     {
         if (has_value_) {
             if (rhs.has_value_) {
-                storage_.value_ = rhs.storage_.value_;
+                *get_pointer() = rhs.*get_pointer();
             } else {
                 clear_value();
                 has_value_ = false;
             }
         } else {
             if (rhs.has_value_) {
-                new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(rhs.storage_.value_);
+                new (get_pointer(), bq::enum_new_dummy::dummy) value_type(rhs.*get_pointer());
                 has_value_ = true;
             }
         }
@@ -272,7 +267,7 @@ namespace bq {
     {
         if (has_value_) {
             if (rhs.has_value_) {
-                storage_.value_ = bq::move(rhs.storage_.value_);
+                *get_pointer() = bq::move(rhs.*get_pointer());
                 rhs.clear_value();
             } else {
                 clear_value();
@@ -280,7 +275,7 @@ namespace bq {
             }
         } else {
             if (rhs.has_value_) {
-                new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(bq::move(rhs.storage_.value_));
+                new (get_pointer(), bq::enum_new_dummy::dummy) value_type(bq::move(rhs.*get_pointer()));
                 has_value_ = true;
                 rhs.clear_value();
             }
@@ -293,9 +288,9 @@ namespace bq {
     inline optional<T>& optional<T>::operator=(U&& rhs) noexcept
     {
         if (has_value_) {
-            storage_.value_ = bq::move(rhs);
+            *get_pointer() = bq::move(rhs);
         } else {
-            new (&storage_.value_, bq::enum_new_dummy::dummy) value_type(bq::move(rhs));
+            new (get_pointer(), bq::enum_new_dummy::dummy) value_type(bq::move(rhs));
             has_value_ = true;
         }
         return *this;
