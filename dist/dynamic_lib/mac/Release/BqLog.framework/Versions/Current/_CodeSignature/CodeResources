@@ -6,7 +6,7 @@
 	<dict>
 		<key>Resources/Info.plist</key>
 		<data>
-		Lf2aFoTuVQ8a3KcPskPMF5iZD9I=
+		eTeTxAZ2X4GO0gqaWzGrfYuf8rc=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -15,7 +15,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			QxKLUrJiV7eLepyIkkNe/DcdwzCKHAluqUYC9/SJwV8=
+			2k7Rs1EErkJOag1VeAvHvxF1LJSZ4ATsn6sZ1ZztKaw=
 			</data>
 		</dict>
 		<key>Headers/bq_common/misc/assert.h</key>
@@ -95,13 +95,6 @@
 			ZuntT6tkS2N2LP27YiciQ3Y7QKT9r+iu6k7wLB0ERac=
 			</data>
 		</dict>
-		<key>Headers/bq_common/types/optional.h</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			Z+CkNY2XecdKQpNr+Mz9USCsxQtsc0i34I5u5g+UY2Y=
-			</data>
-		</dict>
 		<key>Headers/bq_common/types/string.h</key>
 		<dict>
 			<key>hash2</key>
@@ -113,7 +106,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Uv0hQ16v7jzj9CRqzgzJgNZIVcA7zUTvULyJ24gWJh4=
+			QIT8ua67dDJY4qavWv/Gc8p11mKvL8OwgDt/ZZvfUFQ=
 			</data>
 		</dict>
 		<key>Headers/bq_common/types/type_tools.h</key>
@@ -183,7 +176,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ZSeF66Pwuur0L4LyOP7k0wE9V4L1aDdEetqHgoUEuYo=
+			l2WhqEN1hAse0vfk/8QvlkSNDPhBV6B6z+3Vx2B4Btc=
 			</data>
 		</dict>
 	</dict>

@@ -32,7 +32,6 @@
 #include "bq_common/types/array.h"
 #include "bq_common/types/string.h"
 #include "bq_common/types/hash_map.h"
-#include "bq_common/types/optional.h"
 #include "bq_common/types/basic_types.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic pop
