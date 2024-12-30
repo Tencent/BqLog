@@ -97,9 +97,9 @@ namespace bq {
         friend class BQ_ARRAY_ITER_CLS_NAME<const value_type, BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>>;
 
     protected:
-        value_type* data_;
-        size_type size_;
-        size_type capacity_;
+        value_type* data_ = nullptr;
+        size_type size_ = 0;
+        size_type capacity_ = 0;
 
     public:
         BQ_ARRAY_CLS_NAME();
