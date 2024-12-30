@@ -62,13 +62,6 @@ jobs:
           cd build/test/linux  
           chmod +x *.sh
           ./RunTest_GCC.sh 
-
-      - name: Upload core dump artifact
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: core-dump
-          path: build/test/linux/core.dump
   
   build_ubuntu_test_and_run_Clang:
     runs-on: ubuntu-latest
