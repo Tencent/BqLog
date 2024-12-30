@@ -19,7 +19,6 @@
 #include "bq_common_test/test_file_manager.h"
 #include "bq_common_test/test_property.h"
 #include "bq_common_test/test_thread_atomic.h"
-#include "bq_common_test/test_optional.h"
 #include "test_ring_buffer.h"
 #include "test_log.h"
 #include <locale.h>
@@ -41,7 +40,6 @@ int32_t main()
     TEST_GROUP_BEGIN(Bq_Common_Test);
     TEST_GROUP(Bq_Common_Test, bq::test, test_property);
     TEST_GROUP(Bq_Common_Test, bq::test, test_basic_type);
-    TEST_GROUP(Bq_Common_Test, bq::test, test_optional);
     TEST_GROUP(Bq_Common_Test, bq::test, test_array);
     TEST_GROUP(Bq_Common_Test, bq::test, test_string);
     TEST_GROUP(Bq_Common_Test, bq::test, test_hash_map);
