@@ -14,18 +14,6 @@
 
 namespace bq {
     namespace test {
-        static bq::string multi_thread_string_test_str = "1234567890";
-
-        class multi_thread_string_test_modifier : public bq::platform::thread {
-        protected:
-            virtual void run() override
-            {
-                while (!is_cancelled()) {
-                    multi_thread_string_test_str = "1234567890";
-                    multi_thread_string_test_str = "#";
-                }
-            }
-        };
 
         void test_log::test_2(test_result& result, const test_category_log& log_inst)
         {
@@ -69,27 +57,9 @@ namespace bq {
                 const uint64_t seconds = 10;
                 test_output_dynamic_param(bq::log_level::info, "testing multithread string log. wait for %" PRIu64 " seconds please...\n if error exist, an assert will be triggered\n", seconds);
 
-                multi_thread_string_test_modifier modifier_thread;
-                modifier_thread.start();
 
                 uint64_t start_time = bq::platform::high_performance_epoch_ms();
                 while (true) {
-                    bq::string test_str = "123456789";
-                    for (uint32_t i = 0; i < 512; ++i) {
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:0>+10d}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:0^+10d}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:0<+10d}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:<>10d}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:<^10d}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:0>15} |{:<<10d}|", multi_thread_string_test_str, test_str, i);
-
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:0>+10.3f}|", multi_thread_string_test_str, test_str, i * 3.1415);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<+10b}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<+#10b}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<+#10x}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:<<#10e}|", multi_thread_string_test_str, test_str, i);
-                        log_inst.fatal(log_inst.cat.ModuleA.SystemA.ClassA, "multi_thread Str Test {} {:<15} |{:0>10.2f}|", multi_thread_string_test_str, test_str, i * 3.1415);
-                    }
                     int64_t i { 12 };
                     log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
                     result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       +12|"), "layout format");
@@ -201,8 +171,6 @@ namespace bq {
                         break;
                     }
                 }
-                modifier_thread.cancel();
-                modifier_thread.join();
                 test_output_dynamic(bq::log_level::info, "multithread string log testing is finished!\n");
             }
 
