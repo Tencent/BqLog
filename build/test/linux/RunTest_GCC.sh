@@ -5,7 +5,7 @@ cd CMakeFiles;
 # Enable core dumps
 ulimit -c unlimited
 export CORE_PATTERN=core.dump
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address" ../../../../test;
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS="-fsanitize=address" ../../../../test;
 make;
 ./BqLogUnitTest
 exit_code=$?
