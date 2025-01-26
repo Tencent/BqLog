@@ -15,7 +15,7 @@
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_level_bitmap.h"
 #include "bq_log/log/log_worker.h"
-#include "bq_log/types/miso_ring_buffer.h"
+#include "bq_log/types/buffer/normal/miso_ring_buffer.h"
 
 namespace bq {
     constexpr uint64_t log_id_magic_number = 0x24FE284C23EA5821;

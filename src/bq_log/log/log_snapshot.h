@@ -15,7 +15,7 @@
 // write_data() and take_snapshot() can not be called in the same time
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_def.h"
-#include "bq_log/types/miso_ring_buffer.h"
+#include "bq_log/types/buffer/normal/miso_ring_buffer.h"
 #include "bq_log/log/layout.h"
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_level_bitmap.h"

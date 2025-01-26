@@ -37,15 +37,13 @@
 #include <stddef.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_api.h"
-#include "bq_log/types/ring_buffer_base.h"
+#include "bq_log/types/buffer/log_buffer_types.h"
 
 namespace bq {
 
     class siso_ring_buffer {
     private:
-        static constexpr size_t cache_line_size = 64;
-        static constexpr size_t cache_line_size_log2 = 6;
-        static_assert(cache_line_size >> cache_line_size_log2 == 1, "invalid cache line size information");
+        static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
 
         union block {
         public:
@@ -56,7 +54,7 @@ namespace bq {
                     uint8_t data[1];
                 } block_head);
         private:
-            uint8_t data[cache_line_size];
+            uint8_t data[CACHE_LINE_SIZE];
         };
 
         BQ_STRUCT_PACK(struct mmap_head {
@@ -65,28 +63,31 @@ namespace bq {
             uint32_t write_cursor_cache_;
             uint32_t aligned_blocks_count_cache_;
         });
-        static_assert(sizeof(block) == cache_line_size, "the size of block should be equal to cache line size");
+        static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->block_head.data);
         static_assert(sizeof(block::block_head) < sizeof(block), "the size of block_head should be less than that of block");
 
 
         BQ_STRUCT_PACK(struct cursors_set {
             uint32_t write_cursor_;
-            char cache_line_padding0_[cache_line_size - sizeof(write_cursor_)];
+            char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
             uint32_t read_cursor_;
-            char cache_line_padding1_[cache_line_size - sizeof(read_cursor_)];
+            char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
 
             // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
+            // rt is short name of "read thread", which means this variable is accessed in read thread.
             uint32_t rt_writing_cursor_cache_;
-            uint32_t rt_reading_cursor_tmp_;  
-            char cache_line_padding2_[cache_line_size - sizeof(rt_reading_cursor_tmp_) - sizeof(rt_writing_cursor_cache_)];
+            uint32_t rt_reading_cursor_tmp_;
+            uint32_t rt_reading_count_in_batch_; 
+            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(rt_reading_cursor_tmp_) - sizeof(rt_writing_cursor_cache_) - sizeof(rt_reading_count_in_batch_)];
             // this cache variable used in writing thread is used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
+            // wt is short name of "write thread", which means this variable is accessed in write thread.
             uint32_t wt_reading_cursor_cache_;  
-            char cache_line_padding3_[cache_line_size - sizeof(wt_reading_cursor_cache_)];
+            char cache_line_padding3_[CACHE_LINE_SIZE - sizeof(wt_reading_cursor_cache_)];
         });  
 
 
-        char cursors_storage_[sizeof(cursors_set) + cache_line_size];
+        char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
         cursors_set* cursors_;   //make sure it is aligned to cache line size.
 
         mmap_head* mmap_head_;
@@ -94,8 +95,8 @@ namespace bq {
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bool is_memory_mapped_;
 
-#if BQ_RING_BUFFER_DEBUG
-        char padding_[cache_line_size];
+#if BQ_LOG_BUFFER_DEBUG
+        char padding_[CACHE_LINE_SIZE];
         bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id write_thread_id_ = 0;
@@ -114,38 +115,33 @@ namespace bq {
 
         /// <summary>
         /// A producer can request a block of memory by calling alloc_write_chunk for writing data,
-        /// but the prerequisite is that the result of the returned ring_buffer_write_handle must be success.
+        /// but the prerequisite is that the result of the returned log_buffer_write_handle must be success.
         /// </summary>
         /// <param name="size">the chunk size you desired</param>
         /// <returns>this will only be valid if result code is enum_buffer_result_code::success</returns>
-        ring_buffer_write_handle alloc_write_chunk(uint32_t size);
+        log_buffer_write_handle alloc_write_chunk(uint32_t size);
 
         /// <summary>
         /// After you have requested a memory block by calling alloc_write_chunk,
-        /// you need to invoke commit_write_chunk for the returned `ring_buffer_write_handle`,
+        /// you need to invoke commit_write_chunk for the returned `log_buffer_write_handle`,
         /// regardless of whether the allocation was successful or not.
         /// </summary>
         /// <param name="handle">the handle you want to commit</param>
-        void commit_write_chunk(const ring_buffer_write_handle& handle);
-
-        /// <summary>
-        /// begin read as a consumer
-        /// </summary>
-        void begin_read();
+        void commit_write_chunk(const log_buffer_write_handle& handle);
 
         /// <summary>
         /// To read a block of memory prepared by the producer,
-        /// the function must be called between begin_read and end_read.
         /// </summary>
         /// <returns>data only be valid if result code is enum_buffer_result_code::success</returns>
-        ring_buffer_read_handle read();
+        log_buffer_read_handle read_chunk();
 
         /// <summary>
-        /// the data read won't be marked as consumed until `end_read` is called;
+        /// the chunk date read by `read_chunk` won't be marked as consumed until `return_read_trunk` is called;
         /// once marked as consumed, the memory is considered released and becomes
         /// available for the producer to call `alloc_write_chunk` to alloc and write new data
         /// </summary>
-        void end_read();
+        /// <param name=""></param>
+        void return_read_trunk(const log_buffer_read_handle& handle);
 
         /// <summary>
         /// Warning:ring buffer can only be read from one thread at same time.
@@ -154,7 +150,7 @@ namespace bq {
         /// <param name="in_enable"></param>
         void set_thread_check_enable(bool in_enable)
         {
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
             check_thread_ = in_enable;
             if (!check_thread_) {
                 read_thread_id_ = empty_thread_id_;

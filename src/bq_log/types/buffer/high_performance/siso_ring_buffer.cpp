@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include "bq_log/types/siso_ring_buffer.h"
+#include "bq_log/types/buffer/high_performance/siso_ring_buffer.h"
 
 namespace bq {
 
@@ -20,11 +20,11 @@ namespace bq {
         : is_memory_mapped_(is_memory_mapped)
     {
         //make sure it's cache line size aligned
-        cursors_ = (cursors_set*)(((uintptr_t)(char*)cursors_storage_ + (uintptr_t)cache_line_size - 1) & (~((uintptr_t)cache_line_size - 1)));
-        assert(((uintptr_t)&cursors_->write_cursor_) % (uintptr_t)cache_line_size == 0);
-        assert(((uintptr_t)&cursors_->read_cursor_) % (uintptr_t)cache_line_size == 0);
-        assert(((uintptr_t)&cursors_->rt_writing_cursor_cache_) % (uintptr_t)cache_line_size == 0);
-        assert(((uintptr_t)&cursors_->wt_reading_cursor_cache_) % (uintptr_t)cache_line_size == 0);
+        cursors_ = (cursors_set*)(((uintptr_t)(char*)cursors_storage_ + (uintptr_t)CACHE_LINE_SIZE - 1) & (~((uintptr_t)CACHE_LINE_SIZE - 1)));
+        assert(((uintptr_t)&cursors_->write_cursor_) % (uintptr_t)CACHE_LINE_SIZE == 0);
+        assert(((uintptr_t)&cursors_->read_cursor_) % (uintptr_t)CACHE_LINE_SIZE == 0);
+        assert(((uintptr_t)&cursors_->rt_writing_cursor_cache_) % (uintptr_t)CACHE_LINE_SIZE == 0);
+        assert(((uintptr_t)&cursors_->wt_reading_cursor_cache_) % (uintptr_t)CACHE_LINE_SIZE == 0);
         assert((uintptr_t)cursors_ + (uintptr_t)sizeof(cursors_set) <= (uintptr_t)cursors_storage_ + (uintptr_t)sizeof(cursors_storage_));
 
         assert(((uintptr_t)buffer % sizeof(uint32_t)) == 0 && "input buffer of siso_ring_buffer should be 4 bytes aligned");
@@ -37,7 +37,7 @@ namespace bq {
             init_with_memory(buffer, buffer_size);
         }
 
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
         (void)padding_;
         total_write_bytes_ = 0;
         total_read_bytes_ = 0;
@@ -51,9 +51,9 @@ namespace bq {
     {
     }
 
-    ring_buffer_write_handle siso_ring_buffer::alloc_write_chunk(uint32_t size)
+    log_buffer_write_handle siso_ring_buffer::alloc_write_chunk(uint32_t size)
     {
-#if BQ_RING_BUFFER_DEBUG 
+#if BQ_LOG_BUFFER_DEBUG 
         if (check_thread_)
         {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
@@ -64,12 +64,12 @@ namespace bq {
             }
         }
 #endif
-        ring_buffer_write_handle handle;
+        log_buffer_write_handle handle;
 
         uint32_t size_required = size + (uint32_t)data_block_offset;
-        uint32_t need_block_count = (size_required + (cache_line_size - 1)) >> cache_line_size_log2;
+        uint32_t need_block_count = (size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2;
         if (need_block_count > aligned_blocks_count_ || need_block_count == 0) {
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
 #endif
             handle.result = enum_buffer_result_code::err_alloc_size_invalid;
@@ -80,7 +80,7 @@ namespace bq {
         uint32_t left_blocks_to_tail = aligned_blocks_count_ - (uint32_t)(&new_block - aligned_blocks_);
         if (left_blocks_to_tail < need_block_count) {
             size_required = size;
-            need_block_count = (size_required + (cache_line_size - 1)) >> cache_line_size_log2;
+            need_block_count = (size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2;
             need_block_count += left_blocks_to_tail;
             handle.data_addr = (uint8_t*)aligned_blocks_;
         } else {
@@ -88,19 +88,19 @@ namespace bq {
         }
 
         uint32_t left_space = cursors_->wt_reading_cursor_cache_ + aligned_blocks_count_ - current_write_cursor;
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
         assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 1");
 #endif
         if (left_space < need_block_count) {
-            cursors_->wt_reading_cursor_cache_ = RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load(bq::platform::memory_order::acquire);
+            cursors_->wt_reading_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load(bq::platform::memory_order::acquire);
             left_space = cursors_->wt_reading_cursor_cache_ + aligned_blocks_count_ - current_write_cursor;
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
             assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 2");
 #endif
             if (left_space < need_block_count) {
-                handle.approximate_used_blocks_count = aligned_blocks_count_ - left_space;
+                handle.low_space_flag = true;
                 // not enough space
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
                 ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_not_enough_space];
 #endif
                 handle.result = enum_buffer_result_code::err_not_enough_space;
@@ -110,17 +110,17 @@ namespace bq {
         new_block.block_head.block_num = need_block_count;
         new_block.block_head.data_size = size;
 
-        handle.approximate_used_blocks_count = aligned_blocks_count_ - left_space;
+        handle.low_space_flag = (left_space <= (aligned_blocks_count_ >> 1));
         handle.result = enum_buffer_result_code::success;
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
         ++result_code_statistics_[(int32_t)enum_buffer_result_code::success];
 #endif
         return handle;
     }
 
-    void siso_ring_buffer::commit_write_chunk(const ring_buffer_write_handle& handle)
+    void siso_ring_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
     {
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
         if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (write_thread_id_ == empty_thread_id_) {
@@ -138,15 +138,15 @@ namespace bq {
                 : (block*)(handle.data_addr - data_block_offset);
 
         mmap_head_->write_cursor_cache_ = cursors_->write_cursor_ + block_ptr->block_head.block_num;
-        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(mmap_head_->write_cursor_cache_, bq::platform::memory_order::release);
-#if BQ_RING_BUFFER_DEBUG
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(mmap_head_->write_cursor_cache_, bq::platform::memory_order::release);
+#if BQ_LOG_BUFFER_DEBUG
         total_write_bytes_ += block_ptr->block_head.block_num * sizeof(block);
 #endif
     }
 
-    void siso_ring_buffer::begin_read()
+    log_buffer_read_handle siso_ring_buffer::read_chunk()
     {
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
         if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (read_thread_id_ == empty_thread_id_) {
@@ -154,30 +154,27 @@ namespace bq {
             } else {
                 assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
             }
-            assert(cursors_->rt_reading_cursor_tmp_ == (uint32_t)-1 && "Please ensure that you call the functions in the following order: first begin_read() -> read() -> end_read().");
         }
-#endif
-        cursors_->rt_reading_cursor_tmp_ = cursors_->read_cursor_;
-    }
+#endif 
 
-    ring_buffer_read_handle siso_ring_buffer::read()
-    {
-#if BQ_RING_BUFFER_DEBUG
-        if (check_thread_) {
-            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
-        }
-        assert(cursors_->rt_reading_cursor_tmp_ != (uint32_t)-1 && "Please ensure that you call the functions in the following order: first begin_read() -> read() -> end_read().");
+        if (cursors_->rt_reading_count_in_batch_ == 0) {
+#if BQ_LOG_BUFFER_DEBUG
+            assert(cursors_->rt_reading_cursor_tmp_ == (uint32_t)-1);
 #endif
-        ring_buffer_read_handle handle;
+            cursors_->rt_reading_cursor_tmp_ = cursors_->read_cursor_;
+        } else {
+            assert(cursors_->rt_reading_cursor_tmp_ != (uint32_t)-1);
+        }
+
+        log_buffer_read_handle handle;
 
         assert(cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ <= aligned_blocks_count_);
         if (cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ == 0) {
-            cursors_->rt_writing_cursor_cache_ = RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load(bq::platform::memory_order::acquire);
+            cursors_->rt_writing_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load(bq::platform::memory_order::acquire);
         }
         if (cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ == 0) {
             handle.result = enum_buffer_result_code::err_empty_ring_buffer;
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_empty_ring_buffer];
 #endif
             return handle;
@@ -194,24 +191,31 @@ namespace bq {
         }
         handle.result = enum_buffer_result_code::success;
         cursors_->rt_reading_cursor_tmp_ += block_count;
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
         total_read_bytes_ += block_count * sizeof(block);
 #endif
         return handle;
     }
 
-    void siso_ring_buffer::end_read()
+    void siso_ring_buffer::return_read_trunk(const log_buffer_read_handle& handle)
     {
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
         if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
-            assert(cursors_->rt_reading_cursor_tmp_ != (uint32_t)-1 && "Please ensure that you call the functions in the following order: first begin_read() -> read() -> end_read().");
         }
+        assert((handle.data_addr <= (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) && (handle.data_addr >= (uint8_t*)(aligned_blocks_ + aligned_blocks_count_))
+            && "please don't return a read handle not belongs to this siso_ring_buffer");
 #endif
+        if ((++cursors_->rt_reading_count_in_batch_ < BATCH_FREQUENCY) && (handle.result != enum_buffer_result_code::err_empty_ring_buffer)) {
+            return;
+        }
+        cursors_->rt_reading_count_in_batch_ = 0;
+
+
         mmap_head_->read_cursor_cache_ = cursors_->rt_reading_cursor_tmp_;
-        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(cursors_->rt_reading_cursor_tmp_, bq::platform::memory_order::release);
-#if BQ_RING_BUFFER_DEBUG
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(cursors_->rt_reading_cursor_tmp_, bq::platform::memory_order::release);
+#if BQ_LOG_BUFFER_DEBUG
         cursors_->rt_reading_cursor_tmp_ = (uint32_t)-1;
 #endif
     }
@@ -226,10 +230,10 @@ namespace bq {
         // parse and verify
         mmap_head_ = (mmap_head*)buffer;
         uintptr_t data_start_addr = (uintptr_t)((uint8_t*)buffer + sizeof(mmap_head_));
-        size_t align_unit = cache_line_size;
+        size_t align_unit = CACHE_LINE_SIZE;
         uintptr_t aligned_addr = (data_start_addr + align_unit - 1) & (~(align_unit - 1));
         aligned_blocks_ = (block*)(aligned_addr);
-        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - aligned_addr) >> cache_line_size_log2;
+        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - aligned_addr) >> CACHE_LINE_SIZE_LOG2;
         aligned_blocks_count_ = 1;
         assert(max_block_count > aligned_blocks_count_ && "siso_buffer init buffer size is not enough");
         while ((aligned_blocks_count_ << 1) <= max_block_count) {
@@ -251,7 +255,7 @@ namespace bq {
             if (block_count == 0) {
                 return false;
             }
-            bool is_split = (current_cursor >> cache_line_size_log2) != ((current_cursor + block_count - 1) >> cache_line_size_log2);
+            bool is_split = (current_cursor >> CACHE_LINE_SIZE_LOG2) != ((current_cursor + block_count - 1) >> CACHE_LINE_SIZE_LOG2);
             
             size_t max_data_size = 0;
             if (is_split) {
@@ -270,9 +274,10 @@ namespace bq {
             return false;
         }
 
-        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(mmap_head_->write_cursor_cache_, platform::memory_order::release);
-        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(mmap_head_->read_cursor_cache_, platform::memory_order::release);
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(mmap_head_->write_cursor_cache_, platform::memory_order::release);
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(mmap_head_->read_cursor_cache_, platform::memory_order::release);
         cursors_->rt_reading_cursor_tmp_ = (uint32_t)-1;
+        cursors_->rt_reading_count_in_batch_ = 0;
         cursors_->rt_writing_cursor_cache_ = mmap_head_->write_cursor_cache_;
         cursors_->wt_reading_cursor_cache_ = mmap_head_->read_cursor_cache_;
         return true;
@@ -282,23 +287,24 @@ namespace bq {
     {
         mmap_head_ = (mmap_head*)buffer;
         uintptr_t data_start_addr = (uintptr_t)((uint8_t*)buffer + sizeof(mmap_head_));
-        size_t align_unit = cache_line_size;
+        size_t align_unit = CACHE_LINE_SIZE;
         uintptr_t aligned_addr = (data_start_addr + align_unit - 1) & (~(align_unit - 1));
         aligned_blocks_ = (block*)(aligned_addr);
-        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - aligned_addr) >> cache_line_size_log2;
+        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - aligned_addr) >> CACHE_LINE_SIZE_LOG2;
         aligned_blocks_count_ = 1;
         assert(max_block_count > aligned_blocks_count_ && "siso_buffer init buffer size is not enough");
         while (aligned_blocks_count_ <= (max_block_count >> 1)) {
             aligned_blocks_count_ <<= 1;
         }
         cursors_->rt_reading_cursor_tmp_ = (uint32_t)-1;
+        cursors_->rt_reading_count_in_batch_ = 0;
         cursors_->rt_writing_cursor_cache_ = 0;
         cursors_->wt_reading_cursor_cache_ = 0;
         mmap_head_->read_cursor_cache_ = 0;
         mmap_head_->write_cursor_cache_ = 0;
         mmap_head_->aligned_blocks_count_cache_ = aligned_blocks_count_;
-        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(0, platform::memory_order::release);
-        RING_BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(0, platform::memory_order::release);
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(0, platform::memory_order::release);
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store(0, platform::memory_order::release);
     }
 
 }

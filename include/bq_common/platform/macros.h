@@ -107,15 +107,23 @@
 #ifdef _MSC_VER
 #define BQ_STDCALL __stdcall
 #define BQ_TLS __declspec(thread)
+#define BQ_TLS_STRUCT_DECLARE_BEGIN(STRUCT_NAME)
+#define BQ_TLS_STRUCT_FIELD(STRUCT_NAME, TYPE, NAME, DEFAULT_VALUE) BQ_TLS TYPE STRUCT_NAME##_##NAME = DEFAULT_VALUE;
+#define BQ_TLS_STRUCT_DECLARE_END(STRUCT_NAME)
+#define BQ_TLS_FIELD_REF(STRUCT_NAME, FIELD_NAME) (STRUCT_NAME##_##FIELD_NAME)
 #else
 #define BQ_STDCALL
 #define BQ_TLS __thread
+#define BQ_TLS_STRUCT_DECLARE_BEGIN(STRUCT_NAME) BQ_TLS struct {
+#define BQ_TLS_STRUCT_FIELD(STRUCT_NAME, TYPE, NAME, DEFAULT_VALUE) TYPE NAME = DEFAULT_VALUE;
+#define BQ_TLS_STRUCT_DECLARE_END(STRUCT_NAME) }STRUCT_NAME;
+#define BQ_TLS_FIELD_REF(STRUCT_NAME, FIELD_NAME) (STRUCT_NAME.FIELD_NAME)
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#define BQ_STRUCT_PACK(__Declaration__) __pragma(pack(push, 1)) __Declaration__ __pragma(pack(pop))
+#define BQ_STRUCT_PACK(__Declaration__) __pragma(pack(push, 1)) __Declaration__ ; __pragma(pack(pop))
 #else
-#define BQ_STRUCT_PACK(__Declaration__) __Declaration__ __attribute__((__packed__))
+#define BQ_STRUCT_PACK(__Declaration__) __Declaration__ ; __attribute__((__packed__))
 #endif
 
 #if __cplusplus >= 201402L

@@ -13,7 +13,6 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_base.h"
 #include "bq_log/log/layout.h"
-#include "bq_log/types/miso_ring_buffer.h"
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -33,7 +32,8 @@ namespace bq {
         class console_ring_buffer {
         private:
             bool enable_;
-            class miso_ring_buffer* buffer_;
+            class siso_ring_buffer* buffer_;
+            bq::array<uint8_t> buffer_data_;
             bq::platform::mutex fetch_lock_;
             bq::platform::spin_lock_rw_crazy insert_lock_;
 

@@ -76,41 +76,6 @@ namespace bq {
         }
     };
 
-    struct thread_info {
-        static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
-#ifndef BQ_WIN
-        static constexpr bq::platform::thread::thread_id MAGIC_NUM_VALUE = 0xDEADBEEFDEADBEEF;
-        uint64_t magic_number_;
-        bq::platform::thread::thread_id thread_id_;
-#else
-        bq::platform::thread::thread_id thread_id_ = 0;
-#endif
-        uint8_t thread_name_len_;
-        char thread_name_[MAX_THREAD_NAME_LEN];
-
-#ifndef BQ_WIN
-        // Using magic numbers might not be particularly rigorous,
-        // but generally, it won't cause any problems, at least it won't crash.
-        // Because once you determine whether it's initialized by assigning an initial value,
-        // you'll encounter cases with non-trivial constructors which may lead to slight performance issues in the current implementation of BQ_TLS.
-        bq_forceinline bool is_inited() const
-        {
-            return magic_number_ == 0xDEADBEEFDEADBEEF && thread_name_len_ <= MAX_THREAD_NAME_LEN;
-        }
-#else
-        // windows don't have non-trivial BQ_TLS performance penalty. and event get better performance
-        bq_forceinline bool is_inited() const
-        {
-            return thread_id_ != 0;
-        }
-#endif
-
-        void init();
-    };
-#ifndef BQ_WIN
-    static_assert(bq::is_trivially_constructible<thread_info>::value, "thread_info must be is_trivially_constructible to make thread local better performance");
-#endif
-
     BQ_STRUCT_PACK(struct ext_log_entry_info_head {
         uint64_t thread_id_;
         uint8_t thread_name_len_;

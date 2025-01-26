@@ -52,28 +52,15 @@
 #include <stddef.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_api.h"
-#include "bq_log/types/ring_buffer_base.h"
+#include "bq_log/types/buffer/log_buffer_types.h"
 
 namespace bq {
 
     class miso_ring_buffer {
     private:
-        static constexpr size_t cache_line_size = 64;
-        static constexpr size_t cache_line_size_log2 = 6;
-        static_assert(cache_line_size >> cache_line_size_log2 == 1, "invalid cache line size information");
-        union cursor_type {
-            alignas(8) bq::platform::atomic<uint32_t> atomic_value;
-            alignas(8) uint32_t odinary_value;
-            cursor_type()
-            {
-                atomic_value.store(0);
-            }
-            cursor_type(const cursor_type& rhs)
-                : atomic_value(rhs.atomic_value.load(bq::platform::memory_order::acquire))
-            {
-            }
-        };
-        static_assert(offsetof(cursor_type, atomic_value) == offsetof(cursor_type, odinary_value), "invalid cursor_type size");
+        static constexpr size_t CACHE_LINE_SIZE = 64;
+        static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
+        static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
         enum class block_status : int32_t{
             unused, // data section begin from this block is unused, can not be read
             used, // data section begin from this block has already finished writing, and can be read.
@@ -90,35 +77,45 @@ namespace bq {
                 } block_head);
 
         private:
-            uint8_t data[cache_line_size];
+            uint8_t data[CACHE_LINE_SIZE];
         };
         BQ_STRUCT_PACK(struct mmap_head {
             // it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
+            uint64_t log_checksum_;
         });
-        static_assert(sizeof(block) == cache_line_size, "the size of block should be equal to cache line size");
+        static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->block_head.data);
         static_assert(sizeof(block::block_head) < sizeof(block), "the size of block_head should be less than that of block");
 
-        // CAS version of allocation is slower in high concurrency environment but more stable
-        static constexpr bool use_cas_alloc = false;
+        BQ_STRUCT_PACK(struct cursors_set {
+            uint32_t write_cursor_;
+            char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
+            uint32_t read_cursor_;
+            char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
 
-        uint64_t cache_line_padding0_[cache_line_size / sizeof(uint64_t)];
-        alignas(8) cursor_type write_cursor_;
-        char cache_line_padding1_[cache_line_size - sizeof(write_cursor_)];
-        alignas(8) cursor_type read_cursor_;
-        char cache_line_padding2_[cache_line_size - sizeof(read_cursor_)];
-        uint32_t reading_cursor_tmp_; // used in reading thread to avoid load atomic variable read_cursor_, this can improve performance in high concurrency scenario.
-        char cache_line_padding3_[cache_line_size - sizeof(reading_cursor_tmp_)];
+            // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
+            // rt is short name of "read thread", which means this variable is accessed in read thread.
+            uint32_t rt_reading_cursor_tmp_;
+            uint32_t rt_reading_count_in_batch_;
+            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(rt_reading_cursor_tmp_) - sizeof(rt_reading_count_in_batch_)];
+        });
+        log_buffer_config config_;
+        char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
+        cursors_set* cursors_; // make sure it is aligned to cache line size.
+
         uint8_t* real_buffer_;
         mmap_head* mmap_head_;
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bq::file_handle memory_map_file_;
         bq::memory_map_handle memory_map_handle_;
-
-#if BQ_RING_BUFFER_DEBUG
-        uint8_t padding_[cache_line_size];
+#if BQ_JAVA
+        bq::platform::mutex java_mutex_;
+        jobject direct_byte_array_obj_;
+#endif
+#if BQ_LOG_BUFFER_DEBUG
+        uint8_t padding_[CACHE_LINE_SIZE];
         bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;
@@ -127,15 +124,7 @@ namespace bq {
         bq::platform::atomic<uint64_t> total_read_bytes_;
 #endif
     public:
-        /// <summary>
-        /// constructor and initializer of miso_ring_buffer
-        /// </summary>
-        /// <param name="capacity">desired max size of this miso_ring_buffer(in bytes)</param>
-        /// <param name="serialize_id">ring buffer will try to serialize self to disk
-        ///  if memory map is supported on running platform and serialize_id is not 0.
-        ///  so that if program is killed without process the left data in miso_ring_buffer. it will not
-        ///  be lost in most cases and can be recovered when program is relaunched.</param>
-        miso_ring_buffer(uint32_t capacity, uint64_t serialize_id = 0);
+        miso_ring_buffer(const log_buffer_config& config);
 
         miso_ring_buffer(const miso_ring_buffer& rhs) = delete;
 
@@ -148,7 +137,7 @@ namespace bq {
         /// </summary>
         /// <param name="size">the chunk size you desired</param>
         /// <returns>this will only be valid if result code is enum_buffer_result_code::success</returns>
-        ring_buffer_write_handle alloc_write_chunk(uint32_t size);
+        log_buffer_write_handle alloc_write_chunk(uint32_t size);
 
         /// <summary>
         /// After you have requested a memory block by calling alloc_write_chunk,
@@ -156,26 +145,22 @@ namespace bq {
         /// regardless of whether the allocation was successful or not.
         /// </summary>
         /// <param name="handle">the handle you want to commit</param>
-        void commit_write_chunk(const ring_buffer_write_handle& handle);
-
-        /// <summary>
-        /// begin read as a consumer
-        /// </summary>
-        void begin_read();
+        void commit_write_chunk(const log_buffer_write_handle& handle);
 
         /// <summary>
         /// To read a block of memory prepared by the producer,
-        /// the function must be called between begin_read and end_read.
         /// </summary>
+        /// <param name="current_epoch_ms"></param>
         /// <returns>data only be valid if result code is enum_buffer_result_code::success</returns>
-        ring_buffer_read_handle read();
+        log_buffer_read_handle read_chunk(uint64_t current_epoch_ms);
 
         /// <summary>
-        /// the data read won't be marked as consumed until `end_read` is called;
+        /// the chunk date read by `read_chunk` won't be marked as consumed until `return_read_trunk` is called;
         /// once marked as consumed, the memory is considered released and becomes
         /// available for the producer to call `alloc_write_chunk` to alloc and write new data
         /// </summary>
-        void end_read();
+        /// <param name=""></param>
+        void return_read_trunk(const log_buffer_read_handle& handle);
 
         /// <summary>
         /// Warning:ring buffer can only be read from one thread at same time.
@@ -184,7 +169,7 @@ namespace bq {
         /// <param name="in_enable"></param>
         void set_thread_check_enable(bool in_enable)
         {
-#if BQ_RING_BUFFER_DEBUG
+#if BQ_LOG_BUFFER_DEBUG
             check_thread_ = in_enable;
             if (!check_thread_) {
                 read_thread_id_ = empty_thread_id_;
@@ -194,10 +179,9 @@ namespace bq {
 #endif
         }
 
-        bq_forceinline const uint8_t* get_buffer_addr() const
-        {
-            return (uint8_t*)aligned_blocks_;
-        }
+#if BQ_JAVA
+        java_buffer_info get_java_buffer_info(JavaVM* jvm, const log_buffer_write_handle& handle);
+#endif
 
         bq_forceinline uint32_t get_block_size() const
         {
@@ -215,19 +199,13 @@ namespace bq {
             return aligned_blocks_[cursor & (aligned_blocks_count_ - 1)];
         }
 
-        enum create_memory_map_result {
-            failed,
-            use_existed,
-            new_created
-        };
-
-        create_memory_map_result create_memory_map(uint32_t capacity, uint64_t serialize_id);
+        create_memory_map_result create_memory_map();
 
         bool try_recover_from_exist_memory_map();
 
         void init_with_memory_map();
 
-        void init_with_memory(uint32_t capacity);
+        void init_with_memory();
 
         bool uninit_memory_map();
     };

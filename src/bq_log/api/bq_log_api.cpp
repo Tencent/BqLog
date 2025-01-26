@@ -20,7 +20,7 @@
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/log/decoder/appender_decoder_helper.h"
-#include "bq_log/types/miso_ring_buffer.h"
+#include "bq_log/types/buffer/normal/miso_ring_buffer.h"
 #include "bq_log/log/appender/appender_console.h"
 
 #if BQ_POSIX
@@ -207,7 +207,14 @@ namespace bq {
             return log_manager::instance().reset_config(log_name_utf8, config_content_utf8);
         }
 
-        static BQ_TLS thread_info thread_info_;
+        
+        static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
+        BQ_TLS_STRUCT_DECLARE_BEGIN(thread_info)
+        BQ_TLS_STRUCT_FIELD(thread_info, bq::platform::thread::thread_id, thread_id_, 0)
+        BQ_TLS_STRUCT_FIELD(thread_info, uint8_t, thread_name_len_, 0)
+        BQ_TLS_STRUCT_FIELD(thread_info, char, thread_name_[MAX_THREAD_NAME_LEN], {'\0'})
+        BQ_TLS_STRUCT_DECLARE_END(thread_info)
+
         BQ_API bq::_api_ring_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length)
         {
             auto log = bq::log_manager::get_log_by_id(log_id);
@@ -216,15 +223,19 @@ namespace bq {
                 handle.result = enum_buffer_result_code::err_buffer_not_inited;
                 return handle;
             }
-            if (!thread_info_.is_inited()) {
-                thread_info_.init();
+            if (BQ_TLS_FIELD_REF(thread_info, thread_id_) == 0) {
+                BQ_TLS_FIELD_REF(thread_info, thread_id_) = bq::platform::thread::get_current_thread_id();
+                bq::string thread_name_tmp = bq::platform::thread::get_current_thread_name();
+                BQ_TLS_FIELD_REF(thread_info, thread_name_len_) = (uint8_t)bq::min_value((size_t)MAX_THREAD_NAME_LEN, thread_name_tmp.size());
+                if (BQ_TLS_FIELD_REF(thread_info, thread_name_len_) > 0) {
+                    memcpy(BQ_TLS_FIELD_REF(thread_info, thread_name_), thread_name_tmp.c_str(), BQ_TLS_FIELD_REF(thread_info, thread_name_len_));
+                }
             }
             auto& ring_buffer = log->get_ring_buffer();
             auto reliable_level = log->get_reliable_level();
-            uint32_t ext_info_length = sizeof(ext_log_entry_info_head) + thread_info_.thread_name_len_;
+            uint32_t ext_info_length = sizeof(ext_log_entry_info_head) + BQ_TLS_FIELD_REF(thread_info, thread_name_len_);
             auto write_handle = ring_buffer.alloc_write_chunk(length + ext_info_length);
-            bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space
-                || (write_handle.approximate_used_blocks_count << 1) >= ring_buffer.get_total_blocks_count());
+            bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.low_space_flag);
             if (need_awake_worker) {
                 log_manager::instance().awake_worker();
             }
@@ -243,9 +254,9 @@ namespace bq {
                 bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
                 head->ext_info_offset = length;
                 bq::ext_log_entry_info_head* ext_info = (bq::ext_log_entry_info_head*)(handle.data_addr + length);
-                ext_info->thread_id_ = thread_info_.thread_id_;
-                ext_info->thread_name_len_ = thread_info_.thread_name_len_;
-                memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info_.thread_name_, thread_info_.thread_name_len_);
+                ext_info->thread_id_ = BQ_TLS_FIELD_REF(thread_info, thread_id_);
+                ext_info->thread_name_len_ = BQ_TLS_FIELD_REF(thread_info, thread_name_len_);
+                memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), BQ_TLS_FIELD_REF(thread_info, thread_name_), BQ_TLS_FIELD_REF(thread_info, thread_name_len_));
             }
             return handle;
         }
@@ -257,7 +268,7 @@ namespace bq {
                 assert(false && "commit invalid log buffer");
                 return;
             }
-            bq::ring_buffer_write_handle handle;
+            bq::log_buffer_write_handle handle;
             handle.data_addr = write_handle.data_addr;
             handle.result = write_handle.result;
             bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;

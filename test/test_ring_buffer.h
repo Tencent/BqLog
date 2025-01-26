@@ -16,8 +16,8 @@
 #include <vector>
 #include <thread>
 #include "test_base.h"
-#include "bq_log/types/miso_ring_buffer.h"
-#include "bq_log/types/siso_ring_buffer.h"
+#include "bq_log/types/buffer/normal/miso_ring_buffer.h"
+#include "bq_log/types/buffer/high_performance/siso_ring_buffer.h"
 
 namespace bq {
     namespace test {

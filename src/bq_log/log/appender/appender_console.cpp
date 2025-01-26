@@ -11,9 +11,9 @@
  */
 #include <stdlib.h>
 #include "bq_common/bq_common.h"
-#include "bq_log/types/miso_ring_buffer.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/appender/appender_console.h"
+#include "bq_log/types/buffer/high_performance/siso_ring_buffer.h"
 
 namespace bq {
     bq::appender_console::console_static_misc appender_console::console_misc_;
@@ -70,7 +70,8 @@ namespace bq {
                 bq::platform::scoped_spin_lock_write_crazy init_lock(insert_lock_);
                 if (!buffer_)
                 {
-                    buffer_ = new bq::miso_ring_buffer(1024);
+                    buffer_data_.fill_uninitialized(1024);
+                    buffer_ = new bq::siso_ring_buffer(buffer_data_.begin(), buffer_data_.size(), false);
                     buffer_->set_thread_check_enable(false);
                 }
             }
@@ -129,7 +130,10 @@ namespace bq {
         } while (0);
 
         uint32_t new_size = buffer_->get_total_blocks_count() * buffer_->get_block_size() + (uint32_t)write_length;
-        auto new_buffer = new miso_ring_buffer(new_size);
+        new_size = bq::roundup_pow_of_two(new_size);
+        decltype(buffer_data_) new_data;
+        new_data.fill_uninitialized((size_t)new_size);
+        auto new_buffer = new siso_ring_buffer(new_data.begin(), new_data.size(), false);
         new_buffer->set_thread_check_enable(false);
         buffer_->begin_read();
         while (true) {
@@ -154,6 +158,7 @@ namespace bq {
 
         delete buffer_;
         buffer_ = new_buffer;
+        buffer_data_ = bq::move(new_data);
 
         // insert finally
         auto handle = buffer_->alloc_write_chunk((uint32_t)write_length);
