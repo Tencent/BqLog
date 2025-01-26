@@ -12,7 +12,7 @@
 #include "bq_common/bq_common.h"
 #if BQ_WIN
 #include <corecrt_io.h>
-#include <windows.h>
+#include <Windows.h>
 
 namespace bq {
     static size_t get_memory_map_size_unit()

@@ -23,7 +23,7 @@
 #include "test_ring_buffer.h"
 #include "test_log.h"
 #if defined(WIN32)
-#include <windows.h>
+#include <Windows.h>
 #endif
 
 #if defined(BQ_ANDROID)

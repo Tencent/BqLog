@@ -15,12 +15,8 @@
  * \author pippocao
  * \date 2024/12/06
  */
+ #include "bq_log/types/buffer/log_buffer_tls.h"
  #include "bq_log/types/buffer/high_performance/miso_high_perform_buffer.h"
- #if BQ_WIN
- #include <Windows.h>
- #elif BQ_POSIX
- #include <pthread.h>
- #endif
  namespace bq {
     static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 
@@ -43,20 +39,12 @@
     BQ_TLS_STRUCT_DECLARE_END(hp_buffer_thread_cache_)
 
     
-    struct block_misc_data {
+    BQ_STRUCT_PACK(struct block_misc_data {
         bool is_removed_;
         char padding_inner1_[8 - sizeof(is_removed_)];
         bool need_reallocate_;
         char padding_inner2_[8 - sizeof(need_reallocate_)];
-#if BQ_WIN
-        bq::platform::thread::thread_id thread_id_;
-        uint64_t last_update_epoch_ms_;
-        HANDLE thread_handle_;
-#elif BQ_POSIX
-#else
-        assert(false, "unsupported platform!");
-#endif
-    };
+    });
     static_assert((offsetof(block_misc_data, is_removed_) % 8 == 0), "invalid alignment of block_misc_data");
     static_assert((offsetof(block_misc_data, need_reallocate_) % 8 == 0), "invalid alignment of block_misc_data");
 
@@ -74,31 +62,6 @@
     }
     bq_forceinline void mark_block_need_reallocate(block_node_head* block, bool need_reallocate) { block->get_misc_data<block_misc_data>().need_reallocate_ = need_reallocate; }
     bq_forceinline bool is_block_need_reallocate(block_node_head* block) { return block->get_misc_data<block_misc_data>().need_reallocate_; }
-
-#if BQ_POSIX
-    static pthread_key_t hp_buffer_pthread_key_;
-    static BQ_TSL is_pthread_destructor_registered_ = false;
-    static void on_log_thread_exist(void*)
-    {
-        block_node_head*& block_cache = BQ_TLS_FIELD_REF(hp_buffer_thread_cache_, hp_buffer_thread_cache_current_block_);
-        if (block_cache)
-        {
-            block_cache->mark_removed(true);
-        }
-    }
-    struct hp_pthread_initer
-    {
-        hp_pthread_initer()
-        {
-            int32_t result = pthread_key_create(&hp_buffer_pthread_key_, &on_log_thread_exist);
-            if (0 != result)
-            {
-                bq::util::log_device_console(bq::log_level::fatal, "failed to call pthread_key_create, err value:%d", result);
-            }
-        }
-    };
-    static hp_pthread_initer pthread_initer_;
-#endif
 
     log_buffer_write_handle miso_high_perform_buffer::alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
     {
@@ -136,13 +99,6 @@
                     block_cache = high_perform_buffer_.alloc_new_block();
                     result = block_cache->get_buffer().alloc_write_chunk(size);
                 }
-#if BQ_WIN
-                auto& misc_data = block_cache->get_misc_data<block_misc_data>();
-                if (misc_data.last_update_epoch_ms_ + THREAD_ALIVE_UPDATE_INTERVAL <= current_epoch_ms)
-                {
-                    misc_data.last_update_epoch_ms_ = current_epoch_ms;
-                }
-#endif
                 break;
             } else {
                 result = normal_buffer_.alloc_write_chunk(size);
@@ -291,28 +247,6 @@
     }
 
 #endif
-
-
-    bq_forceinline block_node_head* miso_high_perform_buffer::alloc_new_high_performance_block()
-    {
-        block_node_head* result = high_perform_buffer_.alloc_new_block();
-#if BQ_WIN
-        auto& misc_data = result->get_misc_data<block_misc_data>();
-        misc_data.thread_id_ = bq::platform::thread::get_current_thread_id();
-        misc_data.last_update_epoch_ms_ = 0;
-        misc_data.thread_handle_ = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, misc_data.thread_id_);
-        if (!misc_data.thread_handle_)
-        {
-            // compatible to windows earlier than Windows Vista.
-            misc_data.thread_handle_ = OpenThread(THREAD_QUERY_INFORMATION, FALSE, misc_data.thread_id_);
-        }
-#elif BQ_POSIX
-        if (!is_pthread_destructor_registered_) {
-            pthread_setspecific(hp_buffer_pthread_key_, (void*)this);
-            is_pthread_destructor_registered_ = true;
-        }
-#endif
-    }
 
     void miso_high_perform_buffer::optimize_memory_begin(uint64_t current_epoch_ms)
     {

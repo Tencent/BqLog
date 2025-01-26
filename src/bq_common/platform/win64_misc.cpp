@@ -11,7 +11,7 @@
  */
 #include "bq_common/bq_common.h"
 #if BQ_WIN
-#include <windows.h>
+#include <Windows.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <direct.h>

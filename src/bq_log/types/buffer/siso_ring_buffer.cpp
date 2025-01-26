@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include "bq_log/types/buffer/high_performance/siso_ring_buffer.h"
+#include "bq_log/types/buffer/siso_ring_buffer.h"
 
 namespace bq {
 

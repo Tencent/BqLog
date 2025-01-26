@@ -11,7 +11,7 @@
  */
 #include "bq_common/bq_common.h"
 #ifdef BQ_WIN
-#include <windows.h>
+#include <Windows.h>
 #include <errno.h>
 #include <stdlib.h>
 namespace bq {

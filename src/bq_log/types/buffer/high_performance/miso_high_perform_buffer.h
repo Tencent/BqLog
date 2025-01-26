@@ -18,17 +18,14 @@
  */
 #include <stddef.h>
 #include "bq_common/bq_common.h"
-#include "bq_log/types/buffer/log_buffer_types.h"
-#include "bq_log/types/buffer/high_performance/group_list.h"
+#include "bq_log/types/buffer/log_buffer_defs.h"
+#include "bq_log/types/buffer/group_list.h"
 #include "bq_log/types/buffer/normal/miso_ring_buffer.h"
 
 namespace bq {
     class miso_high_perform_buffer {
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_ = 1000;
         static constexpr size_t HP_BUFFER_CALL_FREQUENCY_CHECK_THRESHOLD_ = 1000; // 1000 times in HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_.
-
-        static constexpr uint64_t THREAD_ALIVE_UPDATE_INTERVAL = 200;
-        static constexpr uint64_t BLOCK_THREAD_VALID_CHECK_THRESHOLD = THREAD_ALIVE_UPDATE_INTERVAL * 2;
     public:
         miso_high_perform_buffer(log_buffer_config& config);
 
@@ -58,8 +55,6 @@ namespace bq {
         java_buffer_info get_java_buffer_info(JavaVM* jvm, const log_buffer_write_handle& handle);
 #endif
     private:
-        block_node_head* alloc_new_high_performance_block();
-
         void optimize_memory_begin(uint64_t current_epoch_ms);
         void optimize_memory_for_group(const group_list::iterator& next_group, uint64_t current_epoch_ms);
         void optimize_memory_for_block(block_node_head* next_block, uint64_t current_epoch_ms);

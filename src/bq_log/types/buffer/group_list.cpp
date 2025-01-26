@@ -1,5 +1,5 @@
 ﻿#include <stdlib.h>
-#include "bq_log/types/buffer/high_performance/group_list.h"
+#include "bq_log/types/buffer/group_list.h"
 
 namespace bq {
     group_data_head::group_data_head(uint16_t max_blocks_count, uint8_t* group_data_addr, size_t group_data_size, bool is_memory_mapped)

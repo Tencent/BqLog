@@ -11,16 +11,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 /*!
- * It's not base class of bq::group_list and bq::miso_ring_buffer. But a proxy to instead of virtual functions to accelerate calling performance.
+ * It's not base class of bq::miso_high_perform_buffer and bq::miso_ring_buffer. But a proxy to instead of virtual functions to accelerate calling performance.
  * so.
  *
  * \author pippocao
  * \date 2024/12/17
  */
 #include "bq_common/bq_common.h"
-#include "bq_log/types/buffer/log_buffer_types.h"
+#include "bq_log/types/buffer/log_buffer_defs.h"
+#include "bq_log/types/buffer/log_buffer_tls.h"
 #include "bq_log/types/buffer/normal/miso_ring_buffer.h"
-#include "bq_log/types/buffer/high_performance/group_list.h"
+#include "bq_log/types/buffer/high_performance/miso_high_perform_buffer.h"
 
 namespace bq {
     class log_buffer {
@@ -40,14 +41,15 @@ namespace bq {
         ~log_buffer();
 
 
-        bq_forceinline log_buffer_write_handle alloc_write_chunk(uint32_t size)
+        bq_forceinline log_buffer_write_handle alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
         {
+            mark_current_log_thread_alive(current_epoch_ms);
             switch (type_) {
             case log_buffer_type::normal:
                 return ((miso_ring_buffer*)buffer_impl_)->alloc_write_chunk(size);
                 break;
             case log_buffer_type::high_performance:
-                return ((group_list*)buffer_impl_)->alloc_write_chunk(size);
+                return ((miso_high_perform_buffer*)buffer_impl_)->alloc_write_chunk(size, current_epoch_ms);
                 break;
             default:
                 assert(false && "unknown log_buffer_type type");
@@ -63,7 +65,7 @@ namespace bq {
                 ((miso_ring_buffer*)buffer_impl_)->commit_write_chunk(handle);
                 break;
             case log_buffer_type::high_performance:
-                ((group_list*)buffer_impl_)->commit_write_chunk(handle);
+                ((miso_high_perform_buffer*)buffer_impl_)->commit_write_chunk(handle);
                 break;
             default:
                 assert(false && "unknown log_buffer_type type");
@@ -71,29 +73,14 @@ namespace bq {
             }
         }
 
-        bq_forceinline void begin_read()
+        bq_forceinline log_buffer_read_handle read_chunk(uint64_t current_epoch_ms)
         {
             switch (type_) {
             case log_buffer_type::normal:
-                ((miso_ring_buffer*)buffer_impl_)->begin_read();
+                return ((miso_ring_buffer*)buffer_impl_)->read_chunk();
                 break;
             case log_buffer_type::high_performance:
-                ((group_list*)buffer_impl_)->begin_read();
-                break;
-            default:
-                assert(false && "unknown log_buffer_type type");
-                break;
-            }
-        }
-
-        bq_forceinline log_buffer_read_handle read()
-        {
-            switch (type_) {
-            case log_buffer_type::normal:
-                return ((miso_ring_buffer*)buffer_impl_)->read();
-                break;
-            case log_buffer_type::high_performance:
-                return ((group_list*)buffer_impl_)->read();
+                return ((miso_high_perform_buffer*)buffer_impl_)->read_chunk(current_epoch_ms);
                 break;
             default:
                 assert(false && "unknown log_buffer_type type");
@@ -102,14 +89,14 @@ namespace bq {
             }
         }
 
-        bq_forceinline void end_read()
+        bq_forceinline void return_read_trunk(const log_buffer_read_handle& handle)
         {
             switch (type_) {
             case log_buffer_type::normal:
-                ((miso_ring_buffer*)buffer_impl_)->end_read();
+                ((miso_ring_buffer*)buffer_impl_)->return_read_trunk(handle);
                 break;
             case log_buffer_type::high_performance:
-                ((group_list*)buffer_impl_)->end_read();
+                ((miso_high_perform_buffer*)buffer_impl_)->return_read_trunk(handle);
                 break;
             default:
                 assert(false && "unknown log_buffer_type type");
@@ -124,7 +111,7 @@ namespace bq {
                 ((miso_ring_buffer*)buffer_impl_)->set_thread_check_enable(in_enable);
                 break;
             case log_buffer_type::high_performance:
-                ((group_list*)buffer_impl_)->set_thread_check_enable(in_enable);
+                ((miso_high_perform_buffer*)buffer_impl_)->set_thread_check_enable(in_enable);
                 break;
             default:
                 assert(false && "unknown log_buffer_type type");
@@ -140,7 +127,7 @@ namespace bq {
                 return ((miso_ring_buffer*)buffer_impl_)->get_java_buffer_info(jvm, handle);
                 break;
             case log_buffer_type::high_performance:
-                return ((group_list*)buffer_impl_)->get_java_buffer_info(jvm, handle);
+                return ((miso_high_perform_buffer*)buffer_impl_)->get_java_buffer_info(jvm, handle);
                 break;
             default:
                 assert(false && "unknown log_buffer_type type");

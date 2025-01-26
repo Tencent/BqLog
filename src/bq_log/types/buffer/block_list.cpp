@@ -18,7 +18,7 @@
  * \date 2024/12/06
  */
  
- #include "bq_log/types/buffer/high_performance/block_list.h"
+ #include "bq_log/types/buffer/block_list.h"
 
  namespace bq {
     block_node_head::pointer_type::pointer_type()

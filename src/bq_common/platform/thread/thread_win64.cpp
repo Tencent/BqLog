@@ -12,7 +12,7 @@
 #include "bq_common/bq_common.h"
 #ifdef BQ_WIN
 #include <processthreadsapi.h>
-#include <windows.h>
+#include <Windows.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <inttypes.h>

@@ -13,7 +13,7 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/appender/appender_console.h"
-#include "bq_log/types/buffer/high_performance/siso_ring_buffer.h"
+#include "bq_log/types/buffer/siso_ring_buffer.h"
 
 namespace bq {
     bq::appender_console::console_static_misc appender_console::console_misc_;
