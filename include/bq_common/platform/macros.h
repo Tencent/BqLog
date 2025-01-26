@@ -123,7 +123,7 @@
 #if defined(_MSC_VER) && !defined(__clang__)
 #define BQ_STRUCT_PACK(__Declaration__) __pragma(pack(push, 1)) __Declaration__ ; __pragma(pack(pop))
 #else
-#define BQ_STRUCT_PACK(__Declaration__) __Declaration__ ; __attribute__((__packed__))
+#define BQ_STRUCT_PACK(__Declaration__) __Declaration__  __attribute__((__packed__));
 #endif
 
 #if __cplusplus >= 201402L
