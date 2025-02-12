@@ -18,9 +18,9 @@ namespace bq.def
     public enum enum_buffer_result_code
     {
         success = 0,
-		err_empty_ring_buffer,                           //no valid data to read in ring buffer;
-		err_not_enough_space,                            //not enough space in ring buffer to alloc
-		err_alloc_failed_by_race_condition,              //alloc failed caused by multi-thread race condition, you can try again later.
+		err_empty_log_buffer,                           //no valid data to read in log buffer;
+        err_not_enough_space,                            //not enough space in log buffer to alloc
+        err_alloc_failed_by_race_condition,              //alloc failed caused by multi-thread race condition, you can try again later.
 		err_alloc_size_invalid,                          //invalid alloc size, too big or 0.
         err_buffer_not_inited,                           //buffer not initialized
         result_code_count
@@ -62,14 +62,14 @@ namespace bq.def
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public unsafe struct _log_api_ring_buffer_write_handle
+    public unsafe struct _log_api_log_buffer_write_handle
     {
         public byte* data_ptr;
         public enum_buffer_result_code result_code;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    internal unsafe struct _log_api_ring_buffer_read_handle
+    internal unsafe struct _log_api_log_buffer_read_handle
     {
         public byte* data_ptr;
         public enum_buffer_result_code result_code;

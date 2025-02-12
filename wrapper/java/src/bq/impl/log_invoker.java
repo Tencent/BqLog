@@ -21,13 +21,11 @@ public class log_invoker {
 
 	public static native void __api_log_reset_config(String log_name,String config_content);
 	
-	public static native java.nio.ByteBuffer __api_get_log_ring_buffer(long log_id);
-	
-	public static native long __api_log_buffer_alloc(long log_id, long length, short level, long category_index, String fmt_string, long string_utf16_byte_len);
+	public static native ByteBuffer[] __api_log_buffer_alloc(long log_id, long length, short level, long category_index, String fmt_string, long string_utf16_byte_len);
 	
 	public static native void __api_log_arg_push_utf16_string(long log_id, long offset, String str, long string_utf16_byte_len);
 	
-	public static native void __api_log_buffer_commit(long log_id, long handle);
+	public static native void __api_log_buffer_commit(long log_id);
 	
 	public static native void __api_set_appenders_enable(long log_id, String appender_name, boolean enable);
 	

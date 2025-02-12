@@ -61,14 +61,14 @@ namespace bq {
         /// </summary>
         /// <param name="lengsh"></param>
         /// <returns>chunk handle, please check result code first</returns>
-        BQ_API _api_ring_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length);
+        BQ_API _api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length);
 
         /// <summary>
         /// commit write handle after you finished writing log data
         /// </summary>
         /// <param name="write_handle"></param>
         /// <returns></returns>
-        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_ring_buffer_chunk_write_handle write_handle);
+        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_log_buffer_chunk_write_handle write_handle);
 
         /// <summary>
         /// toggle of all console appenders,

@@ -23,7 +23,7 @@ namespace bq.impl
         private uint total_size_;
         private log_category_base category_;
         private log_level level_;
-        private _log_api_ring_buffer_write_handle handle_;
+        private _log_api_log_buffer_write_handle handle_;
         private byte* log_params_addr_;
         private param_wrapper format_str_;
         private log log_;
@@ -34,7 +34,7 @@ namespace bq.impl
             log_ = log;
             category_ = category;
             level_ = level;
-            handle_ = new _log_api_ring_buffer_write_handle();
+            handle_ = new _log_api_log_buffer_write_handle();
             log_params_addr_ = null;
             if(null == format_str)
             {

@@ -447,7 +447,7 @@ namespace bq {
 
         int32_t flush_file(const platform_file_handle& file_handle)
         {
-            if (fsync(file_handle) == 0) {
+            if (fdatasync(file_handle) == 0) {
                 return 0;
             }
             return errno;

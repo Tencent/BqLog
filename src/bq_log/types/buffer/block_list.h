@@ -45,7 +45,7 @@ namespace bq {
         };
         static_assert(offsetof(pointer_type, ordinary_value_) == offsetof(pointer_type, index_), "invalid alignment of bq::block_node_head::pointer_type");
         static_assert((size_t)(offsetof(pointer_type, aba_mark_) - offsetof(pointer_type, index_)) == sizeof(uint16_t), "invalid alignment of bq::block_node_head::pointer_type");
-
+        static_assert(sizeof(pointer_type) == sizeof(uint32_t), "invalid size of pointer_type");    
     private:
         BQ_STRUCT_PACK(struct
         {
@@ -91,7 +91,7 @@ namespace bq {
 
 
     class block_list {
-        friend class group_data_head;
+        friend struct group_data_head;
     private:
         union {
             struct {

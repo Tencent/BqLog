@@ -12,15 +12,26 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include "bq_log/types/buffer/normal/miso_ring_buffer.h"
+#include "bq_log/types/buffer/miso_ring_buffer.h"
 
 namespace bq {
 
+    /**
+     *
+     * @param config
+     */
     miso_ring_buffer::miso_ring_buffer(const log_buffer_config& config)
         : config_(config)
+        , cursors_storage_{0}
         , real_buffer_(nullptr)
+        , mmap_head_(nullptr)
+        , aligned_blocks_(nullptr)
+        , aligned_blocks_count_(0)
 #if BQ_JAVA
         , direct_byte_array_obj_(nullptr)
+#endif
+#if BQ_LOG_BUFFER_DEBUG
+        , padding_{0}
 #endif
     {
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
@@ -64,14 +75,6 @@ namespace bq {
         if (!uninit_memory_map()) {
             free(real_buffer_);
         }
-#if BQ_JAVA
-        bq::platform::jni_env env;
-        bq::platform::scoped_mutex lock(java_mutex_);
-        if (direct_byte_array_obj_ != nullptr) {
-            env.env->DeleteGlobalRef(direct_byte_array_obj_);
-            direct_byte_array_obj_ = nullptr;
-        }
-#endif
     }
 
     log_buffer_write_handle miso_ring_buffer::alloc_write_chunk(uint32_t size)
@@ -252,25 +255,6 @@ namespace bq {
         cursors_->rt_reading_cursor_tmp_ = (uint32_t)-1;
 #endif
     }
-
-#if BQ_JAVA
-    java_buffer_info miso_ring_buffer::get_java_buffer_info(JavaVM* jvm, const log_buffer_write_handle& handle)
-    {
-        java_buffer_info result;
-        result.direct_buffer_obj = direct_byte_array_obj_;
-        result.offset = (uint32_t)(ptrdiff_t)(handle.data_addr - (uint8_t*)aligned_blocks_);
-        if (!result.direct_buffer_obj) {
-            bq::platform::scoped_mutex lock(java_mutex_);
-            if (!direct_byte_array_obj_) {
-                bq::platform::jni_env env;
-                direct_byte_array_obj_ = env.env->NewDirectByteBuffer(aligned_blocks_, (jlong)(get_total_blocks_count() * get_block_size()));
-                env.env->NewGlobalRef(direct_byte_array_obj_);
-            }
-            result.direct_buffer_obj = direct_byte_array_obj_;
-        }
-        return result;
-    }
-#endif
 
     create_memory_map_result miso_ring_buffer::create_memory_map()
     {

@@ -86,33 +86,19 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1reset_1config(JNI
     env->ReleaseStringUTFChars(log_config, log_config_c_str);
 }
 
-/*
- * Class:     bq_impl_log_invoker
- * Method:    __api_get_log_ring_buffer
- * Signature: ()Ljava/nio/ByteBuffer;
- */
-JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1ring_1buffer(JNIEnv* env, jclass, jlong log_id)
-{
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    auto& miso_ring_buffer = log->get_ring_buffer();
-    uint8_t* log_ring_buffer_base_addr = const_cast<uint8_t*>(miso_ring_buffer.get_buffer_addr());
-    jlong log_ring_buffer_size = (jlong)(miso_ring_buffer.get_block_size() * miso_ring_buffer.get_total_blocks_count());
-    jobject ring_buffer_java_obj = env->NewDirectByteBuffer(log_ring_buffer_base_addr, log_ring_buffer_size);
-    return ring_buffer_java_obj;
-}
-
-/*
+static BQ_TLS bq::_api_log_buffer_chunk_write_handle tls_write_handle_;
+    /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_buffer_alloc
  * Signature: (J[J)Z
  */
-JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JNIEnv* env, jclass, jlong log_id, jlong length, jshort level, jlong category_index, jstring format_content, jlong utf16_str_bytes_len)
+JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JNIEnv* env, jclass, jlong log_id, jlong length, jshort level, jlong category_index, jstring format_content, jlong utf16_str_bytes_len)
 {
     auto handle = bq::api::__api_log_buffer_alloc(log_id, (uint32_t)length);
     if (handle.result != bq::enum_buffer_result_code::success) {
         return -1;
     }
-
+    tls_write_handle_ = handle;
     bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
     head->category_idx = static_cast<uint32_t>(category_index);
     head->level = (uint8_t)level;
@@ -129,8 +115,20 @@ JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JN
     env->ReleaseStringCritical(format_content, (const jchar*)format_str);
 
     bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::miso_ring_buffer& miso_ring_buffer = log->get_ring_buffer();
-    return ((jlong)((uint8_t*)handle.data_addr - miso_ring_buffer.get_buffer_addr()) << 32) | (jlong)head->log_args_offset;
+    auto& ring_buffer = log->get_ring_buffer();
+    bq::log_buffer_write_handle inner_handle;
+    inner_handle.data_addr = handle.data_addr;
+    inner_handle.result = handle.result;
+    auto jni_handle = ring_buffer.get_java_buffer_info(env, inner_handle);
+    int32_t final_offset = *jni_handle.offset_store_ + (int32_t)head->log_args_offset;
+    uint8_t* final_offset_little_endian = (uint8_t*)&final_offset;
+    //to big endian
+    *jni_handle.offset_store_ = ((int32_t)final_offset_little_endian[0]) 
+                        | (((int32_t)final_offset_little_endian[1]) << 8) 
+                        | (((int32_t)final_offset_little_endian[2]) << 16) 
+                        | (((int32_t)final_offset_little_endian[3]) << 24);
+
+    return jni_handle.buffer_array_obj_;
 }
 
 /*
@@ -156,14 +154,10 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_
  * Method:    __api_log_buffer_commit
  * Signature: ([J)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit(JNIEnv*, jclass, jlong log_id, jlong offset)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit(JNIEnv*, jclass, jlong log_id)
 {
-    bq::_api_ring_buffer_chunk_write_handle handle = {};
-    handle.result = bq::enum_buffer_result_code::success;
     bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::miso_ring_buffer& miso_ring_buffer = log->get_ring_buffer();
-    handle.data_addr = const_cast<uint8_t*>(miso_ring_buffer.get_buffer_addr()) + (ptrdiff_t)(offset >> 32);
-    bq::api::__api_log_buffer_commit(log_id, handle);
+    bq::api::__api_log_buffer_commit(log_id, tls_write_handle_);
 }
 
 /*

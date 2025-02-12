@@ -89,6 +89,7 @@ namespace bq {
             iterator()
                 : last_pointer_(nullptr)
                 , value_(nullptr)
+                , last_lock_type_(lock_type::no_lock)
             {
             }
             bq_forceinline operator bool() const { return value_;}
@@ -105,7 +106,7 @@ namespace bq {
 
         bq_forceinline uint16_t get_max_block_count_per_group() const { return max_block_count_per_group_;}
 
-        bq_forceinline iterator first(lock_type type)
+        bq_forceinline iterator first(const lock_type type)
         {
             iterator result;
             result.last_pointer_ = &head_;

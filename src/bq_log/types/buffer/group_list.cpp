@@ -136,13 +136,13 @@ namespace bq {
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
 
-        uint64_t* hash_checker = reinterpret_cast<uint64_t*>(memory_map_handle_.get_mapped_data());
+        auto hash_checker = static_cast<uint64_t*>(memory_map_handle_.get_mapped_data());
         *hash_checker = (uint64_t)(1 + config.log_categories_name.size());
         *(++hash_checker) = config.log_name.hash_code();
         for (const auto& category_name : config.log_categories_name) {
             *(++hash_checker) = category_name.hash_code();
         }
-        uint8_t* mapped_data_addr = reinterpret_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
+        auto mapped_data_addr = static_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
         new ((void*)(mapped_data_addr + meta_size), bq::enum_new_dummy::dummy) group_data_head(
             max_block_count_per_group, mapped_data_addr + meta_size + sizeof(group_data_head), data_size - sizeof(group_data_head), config.use_mmap);
         head_ptr_ = (group_data_head*)(mapped_data_addr + meta_size);
@@ -155,7 +155,7 @@ namespace bq {
         assert(node_data_ && "not enough memory, alloc memory failed");
         uintptr_t node_head_addr_value = (uintptr_t)node_data_ + (uintptr_t)(CACHE_LINE_SIZE - 1);
         node_head_addr_value -= (node_head_addr_value % CACHE_LINE_SIZE);
-        uint8_t* node_head_addr = (uint8_t*)node_head_addr_value;
+        auto node_head_addr = (uint8_t*)node_head_addr_value;
         new (node_head_addr, bq::enum_new_dummy::dummy) group_data_head(max_block_count_per_group, node_head_addr + sizeof(group_data_head), desired_size - sizeof(group_data_head), config.use_mmap);
         head_ptr_ = (group_data_head*)node_head_addr;
     }

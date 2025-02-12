@@ -110,10 +110,6 @@ namespace bq {
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bq::file_handle memory_map_file_;
         bq::memory_map_handle memory_map_handle_;
-#if BQ_JAVA
-        bq::platform::mutex java_mutex_;
-        jobject direct_byte_array_obj_;
-#endif
 #if BQ_LOG_BUFFER_DEBUG
         uint8_t padding_[CACHE_LINE_SIZE];
         bool check_thread_ = true;
@@ -179,9 +175,10 @@ namespace bq {
 #endif
         }
 
-#if BQ_JAVA
-        java_buffer_info get_java_buffer_info(JavaVM* jvm, const log_buffer_write_handle& handle);
-#endif
+        bq_forceinline const uint8_t* get_buffer_addr() const
+        {
+            return (uint8_t*)aligned_blocks_;
+        }
 
         bq_forceinline uint32_t get_block_size() const
         {

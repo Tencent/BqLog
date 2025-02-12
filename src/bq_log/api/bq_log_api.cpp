@@ -215,11 +215,11 @@ namespace bq {
         BQ_TLS_STRUCT_FIELD(thread_info, char, thread_name_[MAX_THREAD_NAME_LEN], {'\0'})
         BQ_TLS_STRUCT_DECLARE_END(thread_info)
 
-        BQ_API bq::_api_ring_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length)
+        BQ_API bq::_api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length)
         {
             auto log = bq::log_manager::get_log_by_id(log_id);
             if (!log) {
-                bq::_api_ring_buffer_chunk_write_handle handle;
+                bq::_api_log_buffer_chunk_write_handle handle;
                 handle.result = enum_buffer_result_code::err_buffer_not_inited;
                 return handle;
             }
@@ -246,7 +246,7 @@ namespace bq {
                     write_handle = ring_buffer.alloc_write_chunk(length + ext_info_length);
                 }
             }
-            bq::_api_ring_buffer_chunk_write_handle handle;
+            bq::_api_log_buffer_chunk_write_handle handle;
             handle.result = write_handle.result;
             handle.data_addr = write_handle.data_addr;
 
@@ -261,7 +261,7 @@ namespace bq {
             return handle;
         }
 
-        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_ring_buffer_chunk_write_handle write_handle)
+        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_log_buffer_chunk_write_handle write_handle)
         {
             auto log = bq::log_manager::get_log_by_id(log_id);
             if (!log) {

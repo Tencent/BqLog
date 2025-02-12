@@ -39,15 +39,8 @@ import java.util.AbstractMap.SimpleEntry;
 
 
 public class log_context {
-	 enum log_jni_long_params_enum
-	 {
-		 data_offset,
-		 params_count
-	 }
-	 
      private static final int _log_head_def_size = 24;
      private bq.log parent_log_;
- 	 private ThreadLocal<Map.Entry<long[], ByteBuffer>> thread_local_pool = null;
 
 
      private static long align4(long n)
@@ -59,14 +52,6 @@ public class log_context {
  	 public log_context(bq.log parent_log)
  	 {
  		parent_log_ = parent_log;
- 		thread_local_pool = new ThreadLocal<Map.Entry<long[], ByteBuffer>>(){
- 	 		 @Override
- 	 	    protected Map.Entry<long[], ByteBuffer> initialValue() {
- 	 	         ByteBuffer thread_local_ring_buffer_ref = log_invoker.__api_get_log_ring_buffer(parent_log.get_id());
- 	 	 		 thread_local_ring_buffer_ref.order(ByteOrder.LITTLE_ENDIAN);
- 	 	         return new SimpleEntry<long[], ByteBuffer>(new long[log_jni_long_params_enum.params_count.ordinal()], thread_local_ring_buffer_ref);
- 	 	    }
- 	 	 };
  	 }
      
      public long get_param_storage_size(Map.Entry<int[], long[]> obj)
@@ -182,12 +167,8 @@ public class log_context {
 
      //string in Java and C# is immutable, it is thread safe, length() is always equal to real string size.
      //we don't need save string length to avoid crash like c++ wrapper.
-     public Map.Entry<long[], ByteBuffer> begin_copy(log target_log, log_category_base target_category, log_level target_level, String log_format_content, long param_storage_size)
+     public ByteBuffer begin_copy(log target_log, log_category_base target_category, log_level target_level, String log_format_content, long param_storage_size)
      {
-    	 Map.Entry<long[], ByteBuffer> thread_cache_obj = thread_local_pool.get();
-    	 long[] long_params = thread_cache_obj.getKey();
-    	 ByteBuffer ring_buffer = thread_cache_obj.getValue();
-    	 
          if(log_format_content == null)
          {
         	 log_format_content = "null";
@@ -195,15 +176,15 @@ public class log_context {
          long log_format_content_len = (long)log_format_content.length() << 1;
          long fmt_string_storage_size = align4(4/*sizeof(uint32_t)*/ + log_format_content_len);
     	 
-         long data_offset = log_invoker.__api_log_buffer_alloc(target_log.get_id(), (long)_log_head_def_size + fmt_string_storage_size + param_storage_size, (short)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content, log_format_content_len);
+         ByteBuffer[] result = log_invoker.__api_log_buffer_alloc(target_log.get_id(), (long)_log_head_def_size + fmt_string_storage_size + param_storage_size, (short)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content, log_format_content_len);
          
-         if (data_offset < 0)
+         if (null != result)
          {
-             return null;
+        	 result[1].position(0);
+        	 result[0].position(result[1].getInt());
+        	 return result[0];
          }
-         long_params[log_jni_long_params_enum.data_offset.ordinal()] = data_offset;
-         ring_buffer.position((int)((data_offset >> 32) + (data_offset & 0xFFFFFFFF)));
-         return thread_cache_obj;
+         return null;
      }
 
      public void add_param(ByteBuffer ring_buffer, String value)
@@ -392,8 +373,8 @@ public class log_context {
          }
      }
 
-     public void end_copy(log target_log, Map.Entry<long[], ByteBuffer> handle)
+     public void end_copy(log target_log)
      {
-         log_invoker.__api_log_buffer_commit(target_log.get_id(), handle.getKey()[log_jni_long_params_enum.data_offset.ordinal()]);
+         log_invoker.__api_log_buffer_commit(target_log.get_id());
      }
 }

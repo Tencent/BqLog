@@ -130,17 +130,16 @@ public class log {
             }
             log_format_content = sb.toString();
         }
-    	Map.Entry<long[], ByteBuffer> handle = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
-        if(null == handle)
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
         {
             return false;
         }
-        ByteBuffer ring_buffer = handle.getValue();
         for (Object o : args)
         {
         	context_.add_param_no_optimized(ring_buffer, o);
         }
-        context_.end_copy(this, handle);
+        context_.end_copy(this);
         return true;
     }
     

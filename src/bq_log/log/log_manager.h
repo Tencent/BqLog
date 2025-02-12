@@ -11,7 +11,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/bq_common.h"
-#include "bq_log/types/buffer/normal/miso_ring_buffer.h"
 #include "bq_log/log/appender/appender_base.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/log_worker.h"
