@@ -447,7 +447,11 @@ namespace bq {
 
         int32_t flush_file(const platform_file_handle& file_handle)
         {
+#if defined(BQ_IOS) || defined(BQ_MAC)
+            if (fsync(file_handle) == 0) {
+#else
             if (fdatasync(file_handle) == 0) {
+#endif
                 return 0;
             }
             return errno;
