@@ -11,6 +11,7 @@
  */
 #include "bq_common/platform/no_lib_cpp_impl.h"
 #if defined(BQ_NO_LIBCPP)
+#include <pthread.h>
 #include "bq_common/bq_common.h"
 
 void* operator new(size_t size)
@@ -102,6 +103,55 @@ extern "C" void __cxa_guard_abort(_guard_t* gv)
     // Release fence is used to make all stores performed by the construction function
     // visible in other threads.
     gv->state.store(CONSTRUCTION_NOT_YET_STARTED, bq::platform::memory_order::release);
-    //////////////////////////////////////////////cxa_guard end/////////////////////////////////////
 }
+//////////////////////////////////////////////cxa_guard end/////////////////////////////////////
+
+
+//////////////////////////////////////////////__cxa_thread_atexit begin/////////////////////////////////////
+struct tls_entry {
+    void (*destructor_)(void*);
+    void* obj_;
+    tls_entry* next_;
+};
+
+static pthread_key_t stl_key;
+
+static BQ_TLS tls_entry* tls_entry_head_ = nullptr;
+
+static void on_thread_exit(void* param)
+{
+    (void)param;
+    while (tls_entry_head_) {
+        tls_entry_head_->destructor_(tls_entry_head_->obj_);
+        auto next = tls_entry_head_->next_;
+        free(tls_entry_head_);
+        tls_entry_head_ = next;
+    }
+}
+
+struct st_stl_key_initer {
+    st_stl_key_initer()
+    {
+        pthread_key_create(&stl_key, &on_thread_exit);
+    }
+};
+
+extern "C" int __cxa_thread_atexit(void (*destructor)(void*), void* obj, void* destructor_handle)
+{
+    (void)destructor_handle;
+    static st_stl_key_initer key_initer;
+
+    tls_entry* entry = (tls_entry*)malloc(sizeof(tls_entry));
+    if (!entry) {
+        return -1;
+    }
+    entry->destructor_ = destructor;
+    entry->obj_ = obj;
+    entry->next_ = tls_entry_head_;
+    tls_entry_head_ = entry;
+
+    return 0; 
+}
+//////////////////////////////////////////////__cxa_thread_atexit end/////////////////////////////////////
+
 #endif
