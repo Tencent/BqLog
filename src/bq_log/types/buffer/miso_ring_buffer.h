@@ -41,10 +41,9 @@
  *	2. Copy data to the chunk if allocation is successful
  *	3. `commit_write_chunk` (regardless of allocation success or failure, the allocated chunk won't be marked as ready for consumption until `end_read` is called)
  * Consumer Thread (Single Thread): Loop through the sequence of the following steps:
- *	1. `begin_read`
- *	2. Loop through the following one or more times:
- *	   1. `get_read_chunk` (consumer thread can read the data only after the producer thread has marked the chunk as ready for consumption)
- *	3. `end_read` (the data read won't be marked as consumed until `end_read` is called; once marked as consumed, the memory is considered released and becomes available for the producer to write new data)
+ *	1. `read_chunk`
+ *	2. Read data from chunk if #1 returns successful.
+ *	3. `return_read_trunk` (the data read won't be marked as consumed until `return_read_trunk` is called; once marked as consumed, the memory is considered released and becomes available for the producer to write new data)
  *
  * \author pippocao
  * \date 2023/10/08
@@ -74,7 +73,7 @@ namespace bq {
                     uint32_t block_num;
                     uint32_t data_size;
                     uint8_t data[1];
-                } block_head);
+                } chunk_head);
 
         private:
             uint8_t data[CACHE_LINE_SIZE];
@@ -85,8 +84,8 @@ namespace bq {
             uint64_t log_checksum_;
         });
         static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
-        const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->block_head.data);
-        static_assert(sizeof(block::block_head) < sizeof(block), "the size of block_head should be less than that of block");
+        const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
+        static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
         BQ_STRUCT_PACK(struct cursors_set {
             uint32_t write_cursor_;

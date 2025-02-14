@@ -147,7 +147,7 @@ namespace bq {
                 }
                 memcpy(write_handle.data_addr, read_handle.data_addr, (size_t)read_handle.data_size);
                 new_buffer->commit_write_chunk(write_handle);
-            } else if (read_handle.result == enum_buffer_result_code::err_empty_ring_buffer) {
+            } else if (read_handle.result == enum_buffer_result_code::err_empty_log_buffer) {
                 break;
             } else {
                 bq::util::log_device_console(bq::log_level::error, "failed to read data entry from console buffer to copy, ring_buffer error code:%d", (int32_t)read_handle.result);
@@ -204,7 +204,7 @@ namespace bq {
             data += sizeof(int32_t);
             char* content = (char*)data;
             callback(const_cast<void*>(pass_through_param), log_id, category_idx, log_level, content, length);
-        } else if (read_handle.result == enum_buffer_result_code::err_empty_ring_buffer) {
+        } else if (read_handle.result == enum_buffer_result_code::err_empty_log_buffer) {
             // do nothing
         } else {
             bq::util::log_device_console(bq::log_level::error, "failed to fetch data entry from console buffer, ring_buffer error code:%d", (int32_t)read_handle.result);

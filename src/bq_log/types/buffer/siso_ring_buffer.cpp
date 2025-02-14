@@ -107,8 +107,8 @@ namespace bq {
                 return handle;
             }
         }
-        new_block.block_head.block_num = need_block_count;
-        new_block.block_head.data_size = size;
+        new_block.chunk_head.block_num = need_block_count;
+        new_block.chunk_head.data_size = size;
 
         handle.low_space_flag = (left_space <= (aligned_blocks_count_ >> 1));
         handle.result = enum_buffer_result_code::success;
@@ -137,10 +137,10 @@ namespace bq {
                 ? &cursor_to_block(cursors_->write_cursor_) // splited
                 : (block*)(handle.data_addr - data_block_offset);
 
-        mmap_head_->write_cursor_cache_ = cursors_->write_cursor_ + block_ptr->block_head.block_num;
+        mmap_head_->write_cursor_cache_ = cursors_->write_cursor_ + block_ptr->chunk_head.block_num;
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store(mmap_head_->write_cursor_cache_, bq::platform::memory_order::release);
 #if BQ_LOG_BUFFER_DEBUG
-        total_write_bytes_ += block_ptr->block_head.block_num * sizeof(block);
+        total_write_bytes_ += block_ptr->chunk_head.block_num * sizeof(block);
 #endif
     }
 
@@ -173,21 +173,21 @@ namespace bq {
             cursors_->rt_writing_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load(bq::platform::memory_order::acquire);
         }
         if (cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ == 0) {
-            handle.result = enum_buffer_result_code::err_empty_ring_buffer;
+            handle.result = enum_buffer_result_code::err_empty_log_buffer;
 #if BQ_LOG_BUFFER_DEBUG
-            ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_empty_ring_buffer];
+            ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_empty_log_buffer];
 #endif
             return handle;
         }
         block& current_block = cursor_to_block(cursors_->rt_reading_cursor_tmp_);
-        auto block_count = current_block.block_head.block_num;
+        auto block_count = current_block.chunk_head.block_num;
         assert(block_count > 0 && (cursors_->rt_writing_cursor_cache_ - cursors_->rt_reading_cursor_tmp_ >= block_count));
-        handle.data_size = current_block.block_head.data_size;
-        if ((uint8_t*)&current_block.block_head.data + current_block.block_head.data_size > (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) {
+        handle.data_size = current_block.chunk_head.data_size;
+        if ((uint8_t*)&current_block.chunk_head.data + current_block.chunk_head.data_size > (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) {
             //splited
             handle.data_addr = (uint8_t*)aligned_blocks_;
         } else {
-            handle.data_addr = (uint8_t*)&(current_block.block_head.data);
+            handle.data_addr = (uint8_t*)&(current_block.chunk_head.data);
         }
         handle.result = enum_buffer_result_code::success;
         cursors_->rt_reading_cursor_tmp_ += block_count;
@@ -207,7 +207,7 @@ namespace bq {
         assert((handle.data_addr <= (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) && (handle.data_addr >= (uint8_t*)(aligned_blocks_ + aligned_blocks_count_))
             && "please don't return a read handle not belongs to this siso_ring_buffer");
 #endif
-        if ((++cursors_->rt_reading_count_in_batch_ < BATCH_FREQUENCY) && (handle.result != enum_buffer_result_code::err_empty_ring_buffer)) {
+        if ((++cursors_->rt_reading_count_in_batch_ < BATCH_FREQUENCY) && (handle.result != enum_buffer_result_code::err_empty_log_buffer)) {
             return;
         }
         cursors_->rt_reading_count_in_batch_ = 0;
@@ -250,8 +250,8 @@ namespace bq {
         uint32_t current_cursor = mmap_head_->read_cursor_cache_;
         while (current_cursor < mmap_head_->write_cursor_cache_) {
             block& current_block = cursor_to_block(current_cursor);
-            auto block_count = current_block.block_head.block_num;
-            auto data_size = current_block.block_head.data_size;
+            auto block_count = current_block.chunk_head.block_num;
+            auto data_size = current_block.chunk_head.data_size;
             if (block_count == 0) {
                 return false;
             }

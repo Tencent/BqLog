@@ -338,7 +338,7 @@ namespace bq {
                         first_log_epoch_ms = log_item.get_log_head().timestamp_epoch;
                     }
                     process_log_chunk(log_item);
-                } else if (read_chunk.result == enum_buffer_result_code::err_empty_ring_buffer) {
+                } else if (read_chunk.result == enum_buffer_result_code::err_empty_log_buffer) {
                     finished = true;
                     break;
                 }

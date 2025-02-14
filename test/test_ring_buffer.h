@@ -152,7 +152,7 @@ namespace bq {
                         if (left_read_count_ == 0) {
                             bq::platform::thread::sleep(1000);
                             handle = ring_buffer_ptr_->read();
-                            test_result_ptr_->add_result(handle.result == enum_buffer_result_code::err_empty_ring_buffer, "[siso ring buffer %s] chunk count mismatch", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap");
+                            test_result_ptr_->add_result(handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap");
                         }
                         ++ring_buffer_test_total_read_count_;
                     }
@@ -192,7 +192,7 @@ namespace bq {
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     auto handle = ring_buffer.read();
-                    bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_ring_buffer;
+                    bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
                     if (write_finished && read_empty) {
                         break;
                     }
