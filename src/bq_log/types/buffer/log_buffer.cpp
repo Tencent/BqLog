@@ -20,11 +20,6 @@
 #if BQ_JAVA
 #include <jni.h>
 #endif
-#if BQ_WIN
-#include <Windows.h>
-#elif BQ_POSIX
-#include <pthread.h>
-#endif
 
 
 namespace bq {
@@ -66,29 +61,10 @@ namespace bq {
     };
     typedef bq::hash_map_inline<log_buffer*, log_tls_buffer_info> log_tls_buffer_map_type;
 
-#ifdef BQ_WIN
-    BQ_STRUCT_PACK(struct log_tls_platform_info {
-        uint64_t last_update_epoch_ms_;
-        HANDLE thread_handle_;
-    });
-#elif BQ_POSIX
-    BQ_STRUCT_PACK(struct log_tls_platform_info {});
-#endif
-
     BQ_STRUCT_PACK(struct log_tls_info {
-        union {
-            uint64_t dummy0_;
-            log_tls_buffer_map_type* log_map_;
-        };
-        union {
-            uint64_t dummy1_;
-            log_buffer* cur_log_buffer_;
-        };
-        union {
-            uint64_t dummy2_;
-            log_tls_buffer_info* cur_buffer_info_;
-        };
-        log_tls_platform_info platform_;
+        log_tls_buffer_map_type* log_map_;
+        log_buffer* cur_log_buffer_;
+        log_tls_buffer_info* cur_buffer_info_;
     });
 
     static void init_log_tls_info(log_tls_info* info)
@@ -96,15 +72,6 @@ namespace bq {
         info->log_map_ = new log_tls_buffer_map_type();
         info->cur_log_buffer_ = nullptr;
         info->cur_buffer_info_ = nullptr;
-#if BQ_WIN
-        auto thread_id = bq::platform::thread::get_current_thread_id();
-        info->platform_.last_update_epoch_ms_ = 0;
-        info->platform_.thread_handle_ = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, thread_id);
-        if (!info->platform_.thread_handle_) {
-            // compatible to windows earlier than Windows Vista.
-            info->platform_.thread_handle_ = OpenThread(THREAD_QUERY_INFORMATION, FALSE, thread_id);
-        }
-#endif
     }
 
     static void uninit_log_tls_info(log_tls_info* info)
@@ -137,139 +104,31 @@ namespace bq {
         info->log_map_ = nullptr;
         info->cur_log_buffer_ = nullptr;
         info->cur_buffer_info_ = nullptr;
-#if BQ_WIN
-        info->platform_.last_update_epoch_ms_ = 0;
-        info->platform_.thread_handle_ = NULL;
-#endif
-    }
-    BQ_TLS log_tls_info* log_tls_info_ = nullptr;
-
-#if BQ_WIN
-    static group_list tls_group_list_({ "", bq::array<string>(), 1, false, false }, 64);
-
-    bq_forceinline void mark_current_log_thread_alive(uint64_t current_epoch_ms)
-    {
-        if (!log_tls_info_) {
-            auto new_block_node = tls_group_list_.alloc_new_block();
-            log_tls_info_ = &new_block_node->get_misc_data<log_tls_info>();
-            init_log_tls_info(log_tls_info_);
-        }
-        if (log_tls_info_->platform_.last_update_epoch_ms_ + log_buffer::THREAD_ALIVE_UPDATE_INTERVAL <= current_epoch_ms) {
-            log_tls_info_->platform_.last_update_epoch_ms_ = current_epoch_ms;
-        }
     }
 
-    static void check_all_windows_threads_alive(uint64_t current_epoch_ms)
-    {
-        bq::group_list::iterator last_group;
-        bq::group_list::iterator cur_group;
-        cur_group = tls_group_list_.first(bq::group_list::lock_type::no_lock);
-        while (cur_group)
+    struct log_tls_info_holder {
+        log_tls_info* value_ = nullptr;
+
+        ~log_tls_info_holder()
         {
-            block_node_head* new_node = nullptr;
-            while((new_node = cur_group.value().get_data().stage_.pop()) != nullptr)
-            {
-                cur_group.value().get_data().used_.push(new_node);
-            }
-            block_node_head* last_node = nullptr;
-            block_node_head* cur_node = cur_group.value().get_data().used_.first();
-            while (cur_node) {
-                auto& tls_info = cur_node->get_misc_data<log_tls_info>();
-                bool thread_alive = true;
-                if (tls_info.platform_.last_update_epoch_ms_ + log_buffer::BLOCK_THREAD_VALID_CHECK_THRESHOLD < current_epoch_ms)
-                {
-                    //check thread alive.
-                    DWORD exit_code = STILL_ACTIVE;
-                    if (GetExitCodeThread(tls_info.platform_.thread_handle_, &exit_code)) {
-                        if (exit_code != STILL_ACTIVE) {
-                            thread_alive = false;
-                        }
-                    }
-                }
-                if (thread_alive) {
-                    log_tls_info_->platform_.last_update_epoch_ms_ = current_epoch_ms;
-                    last_node = cur_node;
-                    cur_node = cur_group.value().get_data().used_.next(cur_node);
-                } else {
-                    CloseHandle(tls_info.platform_.thread_handle_);
-                    uninit_log_tls_info(&tls_info);
-                    auto next_node = cur_group.value().get_data().used_.next(cur_node);
-                    cur_group.value().get_data().used_.remove_thread_unsafe(last_node, cur_node);
-                    cur_node = new_node;
-                }
-            }
-
-            bq::group_list::iterator next_group = tls_group_list_.next(cur_group, bq::group_list::lock_type::no_lock);
-            //try remove group
-            bool group_removed = false;
-            if ((!cur_group.value().get_data().used_.first())
-                && (!cur_group.value().get_data().stage_.first())) {
-                bq::group_list::iterator current_group_locked;
-                if (last_group) {
-                    current_group_locked = tls_group_list_.next(last_group, group_list::lock_type::write_lock);
-                } else {
-                    // must lock from head, because new group node is inserted after head pointer from other threads.
-                    while (current_group_locked != cur_group) {
-                        current_group_locked = (bool)current_group_locked
-                            ? tls_group_list_.next(current_group_locked, group_list::lock_type::write_lock)
-                            : tls_group_list_.first(bq::group_list::lock_type::write_lock);
-                        if (!current_group_locked) {
-                            assert(false && "try lock removing group from head failed");
-                        }
-                    }
-                }
-                if ((!current_group_locked.value().get_data().used_.first())
-                    && (!current_group_locked.value().get_data().stage_.first())) {
-                    // remove it
-                    tls_group_list_.delete_and_unlock_node_thread_unsafe(current_group_locked);
-                    group_removed = true;
-                } else {
-                    // unlock
-                    tls_group_list_.next(current_group_locked, group_list::lock_type::no_lock);
-                }
-            }
-            cur_group = next_group;
-            if (!group_removed) {
-                last_group = cur_group;
-            }
-        }
-    }
-#elif BQ_POSIX
-    BQ_TLS bool is_posix_log_thread_registered_ = false;
-    static pthread_key_t log_buffer_pthread_key_;
-
-    static void on_log_thread_exist(void*)
-    {
-        uninit_log_tls_info(log_tls_info_);
-        free(log_tls_info_);
-        log_tls_info_ = nullptr;
-    }
-    struct log_pthread_initer {
-        hp_pthread_initer()
-        {
-            int32_t result = pthread_key_create(&log_buffer_pthread_key_, &on_log_thread_exist);
-            if (0 != result) {
-                bq::util::log_device_console(bq::log_level::fatal, "failed to call pthread_key_create, err value:%d", result);
+            if (value_) {
+                uninit_log_tls_info(value_);
+                free(value_);
+                value_ = 0;
             }
         }
     };
-    static log_pthread_initer pthread_initer_;
+
+    static thread_local log_tls_info_holder log_tls_info_;
 
     bq_forceinline void mark_current_log_thread_alive(uint64_t current_epoch_ms)
     {
         (void)current_epoch_ms;
-        if (!log_tls_info_) {
-            log_tls_info_ = (log_tls_info*)malloc(sizeof(log_tls_info));
-            init_log_tls_info(log_tls_info_);
-        }
-        if (!is_posix_log_thread_registered_) {
-            pthread_setspecific(log_buffer_pthread_key_, (void*)&log_buffer_pthread_key_);
-            is_posix_log_thread_registered_ = true;
+        if (!log_tls_info_.value_) {
+            log_tls_info_.value_ = (log_tls_info*)malloc(sizeof(log_tls_info));
+            init_log_tls_info(log_tls_info_.value_);
         }
     }
-#else
-    assert(false, "unsupported platform!");
-#endif
 
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
