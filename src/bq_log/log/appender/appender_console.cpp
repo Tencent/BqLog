@@ -80,6 +80,7 @@ namespace bq {
         do {
             bq::platform::scoped_spin_lock_read_crazy read_lock(insert_lock_);
             auto handle = buffer_->alloc_write_chunk((uint32_t)write_length);
+            scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*buffer_, handle);
             if (handle.result == enum_buffer_result_code::success) {
                 uint8_t* data = handle.data_addr;
                 *(uint64_t*)data = log_id;
@@ -93,12 +94,10 @@ namespace bq {
                 memcpy(data, content, (size_t)length);
                 data[length] = 0;
             } else if (handle.result == enum_buffer_result_code::err_not_enough_space) {
-                buffer_->commit_write_chunk(handle);
                 break;
             } else {
                 bq::util::log_device_console(bq::log_level::error, "failed to insert data entry to console buffer, ring_buffer error code:%d", (int32_t)handle.result);
             }
-            buffer_->commit_write_chunk(handle);
             return;
         } while (0);
 
@@ -107,6 +106,7 @@ namespace bq {
         bq::platform::scoped_mutex mutex_lock(fetch_lock_);
         do {
             auto handle = buffer_->alloc_write_chunk((uint32_t)write_length);
+            scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*buffer_, handle);
             if (handle.result == enum_buffer_result_code::success) {
                 uint8_t* data = handle.data_addr;
                 *(uint64_t*)data = log_id;
@@ -120,33 +120,30 @@ namespace bq {
                 memcpy(data, content, (size_t)length);
                 data[length] = 0;
             } else if (handle.result == enum_buffer_result_code::err_not_enough_space) {
-                buffer_->commit_write_chunk(handle);
                 break;
             } else {
                 bq::util::log_device_console(bq::log_level::error, "failed to insert data entry to console buffer, ring_buffer error code:%d", (int32_t)handle.result);
             }
-            buffer_->commit_write_chunk(handle);
             return;
         } while (0);
 
         uint32_t new_size = buffer_->get_total_blocks_count() * buffer_->get_block_size() + (uint32_t)write_length;
-        new_size = bq::roundup_pow_of_two(new_size);
+        new_size = siso_ring_buffer::calculate_min_size_of_memory(new_size);
         decltype(buffer_data_) new_data;
         new_data.fill_uninitialized((size_t)new_size);
         auto new_buffer = new siso_ring_buffer(new_data.begin(), new_data.size(), false);
         new_buffer->set_thread_check_enable(false);
-        buffer_->begin_read();
         while (true) {
-            auto read_handle = buffer_->read();
+            auto read_handle = buffer_->read_chunk();
+            scoped_log_buffer_handle<siso_ring_buffer> scoped_read_handle(*buffer_, read_handle);
             if (read_handle.result == enum_buffer_result_code::success) {
                 auto write_handle = new_buffer->alloc_write_chunk(read_handle.data_size);
+                scoped_log_buffer_handle<siso_ring_buffer> scoped_write_handle(*buffer_, write_handle);
                 if (write_handle.result != enum_buffer_result_code::success) {
                     bq::util::log_device_console(bq::log_level::error, "failed to copy data entry to new console buffer, ring_buffer error code:%d", (int32_t)write_handle.result);
-                    new_buffer->commit_write_chunk(write_handle);
                     break;
                 }
                 memcpy(write_handle.data_addr, read_handle.data_addr, (size_t)read_handle.data_size);
-                new_buffer->commit_write_chunk(write_handle);
             } else if (read_handle.result == enum_buffer_result_code::err_empty_log_buffer) {
                 break;
             } else {
@@ -154,7 +151,6 @@ namespace bq {
                 break;
             }
         }
-        buffer_->end_read();
 
         delete buffer_;
         buffer_ = new_buffer;
@@ -162,6 +158,7 @@ namespace bq {
 
         // insert finally
         auto handle = buffer_->alloc_write_chunk((uint32_t)write_length);
+        scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*buffer_, handle);
         if (handle.result == enum_buffer_result_code::success) {
             uint8_t* data = handle.data_addr;
             *(uint64_t*)data = log_id;
@@ -177,7 +174,6 @@ namespace bq {
         } else {
             bq::util::log_device_console(bq::log_level::error, "failed to insert data entry to final console buffer, ring_buffer error code:%d", (int32_t)handle.result);
         }
-        buffer_->commit_write_chunk(handle);
     }
 
     bool appender_console::console_ring_buffer::fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
@@ -190,8 +186,8 @@ namespace bq {
         if (!buffer_) {
             return false;
         }
-        buffer_->begin_read();
-        auto read_handle = buffer_->read();
+        auto read_handle = buffer_->read_chunk();
+        scoped_log_buffer_handle<siso_ring_buffer> scoped_read_handle(*buffer_, read_handle);
         if (read_handle.result == enum_buffer_result_code::success) {
             uint8_t* data = read_handle.data_addr;
             uint64_t log_id = *(uint64_t*)data;
@@ -209,7 +205,6 @@ namespace bq {
         } else {
             bq::util::log_device_console(bq::log_level::error, "failed to fetch data entry from console buffer, ring_buffer error code:%d", (int32_t)read_handle.result);
         }
-        buffer_->end_read();
         return read_handle.result == enum_buffer_result_code::success;
     }
 

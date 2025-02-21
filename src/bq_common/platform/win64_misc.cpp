@@ -245,7 +245,8 @@ namespace bq {
         // File exclusive works well across different processes,
         // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
         // To eliminate platform compatibility risks, we decided to implement it ourselves.
-        BQ_STRUCT_PACK(struct windows_file_node_info {
+        BQ_PACK_BEGIN
+        struct windows_file_node_info {
             DWORD volumn;
             DWORD idx_high;
             DWORD idx_low;
@@ -257,7 +258,8 @@ namespace bq {
             {
                 return volumn == rhs.volumn && idx_high == rhs.idx_high && idx_low == rhs.idx_low;
             }
-        });
+        }
+        BQ_PACK_END
 
         static bq::hash_map<windows_file_node_info, file_open_mode_enum> &get_file_exclusive_cache()
         {

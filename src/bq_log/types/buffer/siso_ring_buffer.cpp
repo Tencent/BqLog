@@ -197,6 +197,12 @@ namespace bq {
         return handle;
     }
 
+    uint32_t siso_ring_buffer::calculate_min_size_of_memory(uint32_t expected_buffer_size)
+    {
+        expected_buffer_size = bq::roundup_pow_of_two(expected_buffer_size);
+        return expected_buffer_size + (uint32_t)(sizeof(mmap_head) + CACHE_LINE_SIZE);
+    }
+
     void siso_ring_buffer::return_read_trunk(const log_buffer_read_handle& handle)
     {
 #if BQ_LOG_BUFFER_DEBUG

@@ -22,8 +22,7 @@ namespace bq {
     log_imp::log_imp()
         : id_(0)
         , thread_mode_(log_thread_mode::async)
-        , reliable_level_(bq::log_reliable_level::normal)
-        , ring_buffer_(nullptr)
+        , buffer_(nullptr)
         , snapshot_(nullptr)
         , last_log_entry_epoch_ms_(0)
         , last_flush_io_epoch_ms_(0)
@@ -41,7 +40,6 @@ namespace bq {
         id_ ^= log_id_magic_number;
         const auto& log_config = config["log"];
         name_ = name;
-        uint32_t buffer_size = 1024 * 64;
 
         // init thread_mode
         const auto& thread_mode_config = log_config["thread_mode"];
@@ -54,31 +52,6 @@ namespace bq {
                 thread_mode_ = log_thread_mode::independent;
             } else {
                 util::log_device_console(bq::log_level::warning, "unrecognized thread mode:%s, use async instead.", ((bq::string)thread_mode_config).c_str());
-            }
-        }
-
-        // init reliable level
-        {
-            reliable_level_ = bq::log_reliable_level::normal;
-            if (log_config.is_object() && log_config["reliable_level"].is_string()) {
-                bool reliable_valid = false;
-                bq::string reliable_str = (bq::string)log_config["reliable_level"];
-                if (reliable_str.equals_ignore_case("low")) {
-                    reliable_level_ = log_reliable_level::low;
-                    reliable_valid = true;
-                } else if (reliable_str.equals_ignore_case("normal")) {
-                    reliable_level_ = log_reliable_level::normal;
-                    reliable_valid = true;
-                } else if (reliable_str.equals_ignore_case("high")) {
-                    reliable_level_ = log_reliable_level::high;
-                    reliable_valid = true;
-                }
-                if (!reliable_valid) {
-                    util::log_device_console(bq::log_level::error, "invalid \"reliable_level\" in the config of log :\"%s\", use \"low\", \"normal\", or \"high\", otherwise, default value \"normal\" will be applied. ", name.c_str());
-                }
-            }
-            if (log_config.is_object() && log_config["buffer_size"].is_integral()) {
-                buffer_size = (uint32_t)log_config["buffer_size"];
             }
         }
 
@@ -115,19 +88,33 @@ namespace bq {
             snapshot_ = new log_snapshot(this, snapshot_config);
         }
 
-        if (get_reliable_level() < log_reliable_level::normal) {
-            ring_buffer_ = new log_buffer(buffer_size);
-        } else {
-            bq::array<uint64_t> category_hashes;
-            for (const auto& cat_name : category_names) {
-                category_hashes.push_back(cat_name.hash_code());
+        {
+            log_buffer_config buffer_config;
+            buffer_config.log_name = name_;
+            buffer_config.log_categories_name = categories_name_array_;
+            if (log_config.is_object()) {
+                if (log_config["buffer_size"].is_integral()) {
+                    buffer_config.default_buffer_size = (uint32_t)log_config["buffer_size"];
+                }
+                if (log_config["buffer_mmap"].is_bool()) {
+                    buffer_config.use_mmap = (bool)log_config["buffer_mmap"];
+                }
+                if (log_config["buffer_policy_when_full"].is_string()) {
+                    if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("discard")) {
+                        buffer_config.policy = log_memory_policy::discard_when_full;
+                    } else if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("block")) {
+                        buffer_config.policy = log_memory_policy::block_when_full;
+                    } else if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("expand")) {
+                        buffer_config.policy = log_memory_policy::auto_expand_when_full;
+                    }
+                }
+                if (log_config["buffer_high_freq_threshold_per_second"].is_integral()) {
+                    buffer_config.high_frequency_threshold_per_second = (uint64_t)(int64_t)log_config["buffer_high_freq_threshold_per_second"];
+                }
             }
-            uint64_t categories_hash = bq::util::get_hash_64(category_hashes.begin(), category_hashes.size() * sizeof(bq::remove_reference_t<decltype(category_hashes)>::value_type));
-            uint64_t name_hash = name.hash_code();
-            uint64_t ring_buffer_serialize_key = name_hash ^ categories_hash;
-            ring_buffer_ = new log_buffer(buffer_size, ring_buffer_serialize_key);
+            buffer_ = new log_buffer(buffer_config);
         }
-        ring_buffer_->set_thread_check_enable(false);
+        buffer_->set_thread_check_enable(false);
         worker_.init(thread_mode_, this);
         if (thread_mode_ == log_thread_mode::independent) {
             worker_.start();
@@ -139,26 +126,6 @@ namespace bq {
     {
         const auto& log_config = config["log"];
 
-        // init ring_buffer
-        {
-            if (log_config.is_object() && log_config["reliable_level"].is_string()) {
-                bool reliable_valid = false;
-                bq::string reliable_str = (bq::string)log_config["reliable_level"];
-                if (reliable_str.equals_ignore_case("low")) {
-                    reliable_level_ = log_reliable_level::low;
-                    reliable_valid = true;
-                } else if (reliable_str.equals_ignore_case("normal")) {
-                    reliable_level_ = log_reliable_level::normal;
-                    reliable_valid = true;
-                } else if (reliable_str.equals_ignore_case("high")) {
-                    reliable_level_ = log_reliable_level::high;
-                    reliable_valid = true;
-                }
-                if (!reliable_valid) {
-                    util::log_device_console(bq::log_level::error, "invalid \"reliable_level\" in the config of log :\"%s\", use \"low\", \"normal\", or \"high\", otherwise, default value \"normal\" will be applied. ", reliable_str.c_str());
-                }
-            }
-        }
         // init print_stack_levels
         {
             bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
@@ -257,8 +224,8 @@ namespace bq {
         categories_name_array_.clear();
         name_.clear();
         merged_log_level_bitmap_.clear();
-        if (ring_buffer_) {
-            delete ring_buffer_;
+        if (buffer_) {
+            delete buffer_;
         }
         delete snapshot_;
         snapshot_ = nullptr;
@@ -322,46 +289,25 @@ namespace bq {
 
     void log_imp::process(bool is_force_flush)
     {
-        constexpr int32_t sync_to_producers_frequency_normal = 16;
-        constexpr int32_t sync_to_producers_frequency_high = 1024;
         constexpr uint64_t flush_io_min_interval_ms = 100;
-        int32_t frequence = reliable_level_ >= log_reliable_level::high ? sync_to_producers_frequency_high : sync_to_producers_frequency_normal;
-        uint64_t first_log_epoch_ms = 0;
+        uint64_t current_epoch_ms = bq::platform::high_performance_epoch_ms();
         while (true) {
-            bool finished = false;
-            ring_buffer_->begin_read();
-            for (int32_t i = 0; i < frequence; ++i) {
-                auto read_chunk = ring_buffer_->read();
-                if (read_chunk.result == enum_buffer_result_code::success) {
-                    bq::log_entry_handle log_item(read_chunk.data_addr, read_chunk.data_size);
-                    if (first_log_epoch_ms == 0) {
-                        first_log_epoch_ms = log_item.get_log_head().timestamp_epoch;
-                    }
-                    process_log_chunk(log_item);
-                } else if (read_chunk.result == enum_buffer_result_code::err_empty_log_buffer) {
-                    finished = true;
-                    break;
-                }
-            }
-            if (reliable_level_ >= log_reliable_level::high) {
-                flush_appenders_cache();
-                flush_appenders_io();
-            }
-            get_ring_buffer().end_read();
-            if (finished) {
+            auto read_chunk = buffer_->read_chunk(current_epoch_ms);
+            scoped_log_buffer_handle<log_buffer> scoped_read_chunk(*buffer_, read_chunk);
+            if (read_chunk.result == enum_buffer_result_code::success) {
+                bq::log_entry_handle log_item(read_chunk.data_addr, read_chunk.data_size);
+                process_log_chunk(log_item);
+            } else if (read_chunk.result == enum_buffer_result_code::err_empty_log_buffer) {
                 break;
             }
         }
-        if (reliable_level_ < log_reliable_level::high) {
-            uint64_t current_epoch_ms = (first_log_epoch_ms == 0) ? bq::platform::high_performance_epoch_ms() : first_log_epoch_ms;
-            if (is_force_flush) {
+        if (is_force_flush) {
+            flush_appenders_cache();
+            last_flush_io_epoch_ms_ = current_epoch_ms;
+        } else {
+            if (current_epoch_ms > last_flush_io_epoch_ms_ + flush_io_min_interval_ms) {
                 flush_appenders_cache();
                 last_flush_io_epoch_ms_ = current_epoch_ms;
-            } else {
-                if (current_epoch_ms > last_flush_io_epoch_ms_ + flush_io_min_interval_ms) {
-                    flush_appenders_cache();
-                    last_flush_io_epoch_ms_ = current_epoch_ms;
-                }
             }
         }
     }

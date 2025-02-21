@@ -63,8 +63,8 @@ namespace bq {
     create_memory_map_result group_node::create_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group, uint32_t index)
     {
         char tmp[32];
-        snprintf(tmp, sizeof(tmp), "_" PRIu32 "", index);
-        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/" + tmp + ".mmap", true);
+        snprintf(tmp, sizeof(tmp), "_%" PRIu32 "", index);
+        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/" + config.log_name + tmp + ".mmap", true);
         memory_map_file_ = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         if (!memory_map_file_.is_valid()) {
             bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
@@ -202,6 +202,8 @@ namespace bq {
         : config_(config)
         , max_block_count_per_group_(max_block_count_per_group)
         , current_group_index_(0)
+        , padding_0({})
+        , padding_1({})
     {
         bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name, true);
         if (!config.use_mmap) {
@@ -217,16 +219,17 @@ namespace bq {
         bq::array<bq::string> sub_names = bq::file_manager::get_sub_dirs_and_files_name(memory_map_folder);
         for (const bq::string& file_name : sub_names) {
             bq::string full_path = bq::file_manager::combine_path(memory_map_folder, file_name);
-            if (!file_name.end_with(".mmap")) {
+            if (!file_name.end_with(".mmap") || !file_name.begin_with(config_.log_name + "_")) {
                 bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
                 bq::file_manager::remove_file_or_dir(full_path);
                 continue;
             }
             char* end_ptr = nullptr;
             errno = 0;
-            auto  ul_value = strtoul(file_name.c_str(), &end_ptr, 10);
+            bq::string file_name_cpy = file_name.substr(config_.log_name.size() + 1);
+            auto ul_value = strtoul(file_name_cpy.c_str(), &end_ptr, 10);
             if (errno == ERANGE 
-                || end_ptr != file_name.c_str() + (file_name.size() - strlen(".mmap")) 
+                || end_ptr != file_name_cpy.c_str() + (file_name_cpy.size() - strlen(".mmap")) 
                 || ul_value > UINT32_MAX) {
                 bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
                 bq::file_manager::remove_file_or_dir(full_path);

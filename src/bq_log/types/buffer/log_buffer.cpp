@@ -23,12 +23,16 @@
 
 
 namespace bq {
-    BQ_STRUCT_PACK(struct block_misc_data {
+
+    BQ_PACK_BEGIN
+    struct block_misc_data {
         bool is_removed_;
         char padding_inner1_[8 - sizeof(is_removed_)];
         bool need_reallocate_;
         char padding_inner2_[8 - sizeof(need_reallocate_)];
-    });
+    }
+    BQ_PACK_END
+
     static_assert((offsetof(block_misc_data, is_removed_) % 8 == 0), "invalid alignment of block_misc_data");
     static_assert((offsetof(block_misc_data, need_reallocate_) % 8 == 0), "invalid alignment of block_misc_data");
 
@@ -61,74 +65,75 @@ namespace bq {
     };
     typedef bq::hash_map_inline<log_buffer*, log_tls_buffer_info> log_tls_buffer_map_type;
 
-    BQ_STRUCT_PACK(struct log_tls_info {
+    struct log_tls_info {
         log_tls_buffer_map_type* log_map_;
         log_buffer* cur_log_buffer_;
         log_tls_buffer_info* cur_buffer_info_;
-    });
 
-    static void init_log_tls_info(log_tls_info* info)
-    {
-        info->log_map_ = new log_tls_buffer_map_type();
-        info->cur_log_buffer_ = nullptr;
-        info->cur_buffer_info_ = nullptr;
-    }
-
-    static void uninit_log_tls_info(log_tls_info* info)
-    {
-        for (auto iter : *info->log_map_)
+        log_tls_info()
         {
-            auto& buffer_info = iter.value();
-            block_node_head* block = buffer_info.cur_block_;
-            if (block) {
-                mark_block_removed(block, true);
-            }
-#if BQ_JAVA
-            if (buffer_info.buffer_obj_for_lp_buffer_
-                || buffer_info.buffer_obj_for_hp_buffer_)
-            {
-                bq::platform::jni_env env;
-                if (buffer_info.buffer_obj_for_lp_buffer_)
-                {
-                    env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_lp_buffer_);
-                    buffer_info.buffer_obj_for_lp_buffer_ = NULL;
-                }
-                if (buffer_info.buffer_obj_for_hp_buffer_) {
-                    env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_hp_buffer_);
-                    buffer_info.buffer_obj_for_hp_buffer_ = NULL;
-                }
-            }
-#endif
+            log_map_ = new log_tls_buffer_map_type();
+            cur_log_buffer_ = nullptr;
+            cur_buffer_info_ = nullptr;
         }
-        delete info->log_map_;
-        info->log_map_ = nullptr;
-        info->cur_log_buffer_ = nullptr;
-        info->cur_buffer_info_ = nullptr;
-    }
+        ~log_tls_info()
+        {
+            for (auto iter : *log_map_) {
+                auto& buffer_info = iter.value();
+                block_node_head* block = buffer_info.cur_block_;
+                if (block) {
+                    mark_block_removed(block, true);
+                }
+#if BQ_JAVA
+                if (buffer_info.buffer_obj_for_lp_buffer_
+                    || buffer_info.buffer_obj_for_hp_buffer_) {
+                    bq::platform::jni_env env;
+                    if (buffer_info.buffer_obj_for_lp_buffer_) {
+                        env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_lp_buffer_);
+                        buffer_info.buffer_obj_for_lp_buffer_ = NULL;
+                    }
+                    if (buffer_info.buffer_obj_for_hp_buffer_) {
+                        env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_hp_buffer_);
+                        buffer_info.buffer_obj_for_hp_buffer_ = NULL;
+                    }
+                }
+#endif
+            }
+            delete log_map_;
+            log_map_ = nullptr;
+            cur_log_buffer_ = nullptr;
+            cur_buffer_info_ = nullptr;
+        }
+    };
 
-    struct log_tls_info_holder {
+    class log_tls_info_holder {
         log_tls_info* value_ = nullptr;
+        
+    public:
+        bq_forceinline log_tls_info& get()
+        {
+            if (!value_) {
+                value_ = new log_tls_info();
+            }
+            return *value_;
+        }
+
+        bq_forceinline log_tls_info& get_direct()
+        {
+            return *value_;
+        }
 
         ~log_tls_info_holder()
         {
             if (value_) {
-                uninit_log_tls_info(value_);
-                free(value_);
-                value_ = 0;
+                delete value_;
+                value_ = nullptr;
             }
         }
     };
 
     static thread_local log_tls_info_holder log_tls_info_;
 
-    bq_forceinline void mark_current_log_thread_alive(uint64_t current_epoch_ms)
-    {
-        (void)current_epoch_ms;
-        if (!log_tls_info_.value_) {
-            log_tls_info_.value_ = (log_tls_info*)malloc(sizeof(log_tls_info));
-            init_log_tls_info(log_tls_info_.value_);
-        }
-    }
 
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
@@ -144,20 +149,20 @@ namespace bq {
 
     log_buffer_write_handle log_buffer::alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
     {
-        mark_current_log_thread_alive(current_epoch_ms);
-        if (log_tls_info_->cur_log_buffer_ != this)
+        auto& tls = log_tls_info_.get();
+        if (tls.cur_log_buffer_ != this)
         {
-            auto iter = log_tls_info_->log_map_->find(this);
-            if (iter == log_tls_info_->log_map_->end()){
-                iter = log_tls_info_->log_map_->add(this);
+            auto iter = tls.log_map_->find(this);
+            if (iter == tls.log_map_->end()) {
+                iter = tls.log_map_->add(this);
             }
-            log_tls_info_->cur_buffer_info_ = &iter->value();
-            log_tls_info_->cur_log_buffer_ = this;
+            tls.cur_buffer_info_ = &iter->value();
+            tls.cur_log_buffer_ = this;
         }
 
-        block_node_head*& block_cache = log_tls_info_->cur_buffer_info_->cur_block_;
-        uint64_t& thread_last_update_epoch_ms = log_tls_info_->cur_buffer_info_->last_update_epoch_ms_;
-        size_t& thread_update_times = log_tls_info_->cur_buffer_info_->update_times_;
+        block_node_head*& block_cache = tls.cur_buffer_info_->cur_block_;
+        uint64_t& thread_last_update_epoch_ms = tls.cur_buffer_info_->last_update_epoch_ms_;
+        size_t& thread_update_times = tls.cur_buffer_info_->update_times_;
 
         // frequency check
         bool is_high_frequency = (bool)block_cache;
@@ -183,19 +188,39 @@ namespace bq {
                     block_cache = high_perform_buffer_.alloc_new_block();
                 }
                 result = block_cache->get_buffer().alloc_write_chunk(size);
-                if (config_.auto_expand && (enum_buffer_result_code::err_not_enough_space == result.result)) {
-                    mark_block_removed(block_cache, true); // mark removed
-                    block_cache = high_perform_buffer_.alloc_new_block();
-                    result = block_cache->get_buffer().alloc_write_chunk(size);
+                if (enum_buffer_result_code::err_not_enough_space == result.result) {
+                    switch (config_.policy) {
+                    case log_memory_policy::auto_expand_when_full:
+                        mark_block_removed(block_cache, true); // mark removed
+                        block_cache = high_perform_buffer_.alloc_new_block();
+                        // discard result and switch to high frequency mode and try again
+                        lp_buffer_.commit_write_chunk(result);
+                        continue;
+                        break;
+                    case log_memory_policy::block_when_full:
+                        result.result = enum_buffer_result_code::err_wait_and_retry;
+                    default:
+                        break;
+                    }
                 }
                 break;
             } else {
                 result = lp_buffer_.alloc_write_chunk(size);
-                if (config_.auto_expand && (enum_buffer_result_code::err_not_enough_space == result.result)) {
-                    is_high_frequency = true;
-                    thread_last_update_epoch_ms = current_epoch_ms;
-                    thread_update_times = 0;
-                    continue;
+                if (enum_buffer_result_code::err_not_enough_space == result.result) {
+                    switch (config_.policy) {
+                    case log_memory_policy::auto_expand_when_full:
+                        is_high_frequency = true;
+                        thread_last_update_epoch_ms = current_epoch_ms;
+                        thread_update_times = 0;
+                        // discard result and switch to high frequency mode and try again
+                        lp_buffer_.commit_write_chunk(result);
+                        continue;
+                        break;
+                    case log_memory_policy::block_when_full:
+                        result.result = enum_buffer_result_code::err_wait_and_retry;
+                    default:
+                        break;
+                    }
                 }
                 if (block_cache) {
                     mark_block_removed(block_cache, true); // mark removed;
@@ -209,7 +234,7 @@ namespace bq {
 
     void log_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
     {
-        block_node_head*& block_cache = log_tls_info_->cur_buffer_info_->cur_block_;
+        block_node_head*& block_cache = log_tls_info_.get_direct().cur_buffer_info_->cur_block_;
         bool is_high_frequency = (!block_cache);
         if (is_high_frequency) {
             block_cache->get_buffer().commit_write_chunk(handle);
@@ -230,7 +255,7 @@ namespace bq {
             }
         }
 #endif
-        const block_node_head const* start_node = rt_cache_.current_reading_.block_;
+        const block_node_head* const start_node = rt_cache_.current_reading_.block_;
         do {
             // try read from current data source
             if (rt_cache_.current_reading_.block_) {
@@ -329,25 +354,23 @@ namespace bq {
 #if BQ_JAVA
     log_buffer::java_buffer_info log_buffer::get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
     {
+        auto& tls = log_tls_info_.get_direct();
 #if BQ_LOG_BUFFER_DEBUG
-        assert(this == log_tls_info_->cur_log_buffer_ && "tls cur_log_buffer_ check failed");
+        assert((this == tls.cur_log_buffer_) && "tls cur_log_buffer_ check failed");
 #endif
-        auto& current_buffer_info = *log_tls_info_->cur_buffer_info_;
+        auto& current_buffer_info = *tls.cur_buffer_info_;
         java_buffer_info result;
         result.offset_store_ = &current_buffer_info.buffer_offset_;
-
-        if (!current_buffer_info.buffer_obj_for_lp_buffer_) {
-            current_buffer_info.buffer_obj_for_lp_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
-            env->NewGlobalRef(current_buffer_info.buffer_obj_for_lp_buffer_);
-            env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(lp_buffer_.get_buffer_addr()), (jlong)(lp_buffer_.get_block_size() * lp_buffer_.get_total_blocks_count())));
-            env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1, env->NewDirectByteBuffer(&current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_))); 
-        }
 
         if (current_buffer_info.cur_block_) {
             auto& ring_buffer = current_buffer_info.cur_block_->get_buffer();
             if (!current_buffer_info.buffer_obj_for_hp_buffer_) {
                 current_buffer_info.buffer_obj_for_hp_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
                 env->NewGlobalRef(current_buffer_info.buffer_obj_for_hp_buffer_);
+                auto offset_obj = env->GetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1);
+#if BQ_LOG_BUFFER_DEBUG
+                assert(offset_obj && "offset obj should not be null when jni hp alloc");
+#endif
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, env->GetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1)); 
             }
             if (current_buffer_info.buffer_ref_block != current_buffer_info.cur_block_) {
@@ -355,10 +378,18 @@ namespace bq {
                 current_buffer_info.buffer_ref_block = current_buffer_info.cur_block_;
             }
             result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_hp_buffer_;
-            *result.offset_store_ = (int32_t)(handle.data_addr - ring_buffer.get_buffer_addr());
+            result.buffer_base_addr_ = ring_buffer.get_buffer_addr();
+            *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
         } else {
+            if (!current_buffer_info.buffer_obj_for_lp_buffer_) {
+                current_buffer_info.buffer_obj_for_lp_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
+                env->NewGlobalRef(current_buffer_info.buffer_obj_for_lp_buffer_);
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(lp_buffer_.get_buffer_addr()), (jlong)(lp_buffer_.get_block_size() * lp_buffer_.get_total_blocks_count())));
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1, env->NewDirectByteBuffer(&current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_)));
+            }
             result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_lp_buffer_;
-            *result.offset_store_ = (int32_t)(handle.data_addr - lp_buffer_.get_buffer_addr());
+            result.buffer_base_addr_ = lp_buffer_.get_buffer_addr();
+            *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
         }
         return result;
     }
@@ -366,14 +397,12 @@ namespace bq {
 
     void log_buffer::optimize_memory_begin(uint64_t current_epoch_ms)
     {
+        (void)current_epoch_ms;
         rt_cache_.mem_optimize_.last_block_ = nullptr;
         rt_cache_.mem_optimize_.last_group_ = group_list::iterator();
         rt_cache_.mem_optimize_.left_holes_num_ = 0;
         rt_cache_.mem_optimize_.cur_group_using_blocks_num_ = 0;
         rt_cache_.mem_optimize_.is_block_marked_removed = false;
-#if BQ_WIN
-        check_all_windows_threads_alive(current_epoch_ms);
-#endif
     }
 
     void log_buffer::optimize_memory_for_group(const group_list::iterator& group, uint64_t current_epoch_ms)
@@ -420,6 +449,7 @@ namespace bq {
 
     void log_buffer::optimize_memory_for_block(block_node_head* block, uint64_t current_epoch_ms)
     {
+        (void)current_epoch_ms;
         if (rt_cache_.current_reading_.block_) {
             if (rt_cache_.mem_optimize_.is_block_marked_removed) {
                 // remove it

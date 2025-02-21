@@ -16,6 +16,7 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/api/bq_impl_log_invoker.h"
 #include "bq_log/log/log_manager.h"
+#include "bq_log/types/buffer/log_buffer.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,7 +87,10 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1reset_1config(JNI
     env->ReleaseStringUTFChars(log_config, log_config_c_str);
 }
 
-static BQ_TLS bq::_api_log_buffer_chunk_write_handle tls_write_handle_;
+static BQ_TLS struct{
+    bq::_api_log_buffer_chunk_write_handle write_handle_;
+    bq::log_buffer::java_buffer_info java_info_;
+}tls_write_handle_;
     /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_buffer_alloc
@@ -96,9 +100,10 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
 {
     auto handle = bq::api::__api_log_buffer_alloc(log_id, (uint32_t)length);
     if (handle.result != bq::enum_buffer_result_code::success) {
-        return -1;
+        bq::api::__api_log_buffer_commit(log_id, handle);
+        return nullptr;
     }
-    tls_write_handle_ = handle;
+    tls_write_handle_.write_handle_ = handle;
     bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
     head->category_idx = static_cast<uint32_t>(category_index);
     head->level = (uint8_t)level;
@@ -115,20 +120,20 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     env->ReleaseStringCritical(format_content, (const jchar*)format_str);
 
     bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    auto& ring_buffer = log->get_ring_buffer();
+    auto& ring_buffer = log->get_buffer();
     bq::log_buffer_write_handle inner_handle;
     inner_handle.data_addr = handle.data_addr;
     inner_handle.result = handle.result;
-    auto jni_handle = ring_buffer.get_java_buffer_info(env, inner_handle);
-    int32_t final_offset = *jni_handle.offset_store_ + (int32_t)head->log_args_offset;
+    tls_write_handle_.java_info_ = ring_buffer.get_java_buffer_info(env, inner_handle);
+    int32_t final_offset = *tls_write_handle_.java_info_.offset_store_ + (int32_t)head->log_args_offset;
     uint8_t* final_offset_little_endian = (uint8_t*)&final_offset;
     //to big endian
-    *jni_handle.offset_store_ = ((int32_t)final_offset_little_endian[0]) 
+    *tls_write_handle_.java_info_.offset_store_ = ((int32_t)final_offset_little_endian[0]) 
                         | (((int32_t)final_offset_little_endian[1]) << 8) 
                         | (((int32_t)final_offset_little_endian[2]) << 16) 
                         | (((int32_t)final_offset_little_endian[3]) << 24);
 
-    return jni_handle.buffer_array_obj_;
+    return tls_write_handle_.java_info_.buffer_array_obj_;
 }
 
 /*
@@ -138,11 +143,10 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
  */
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_1string(JNIEnv* env, jclass, jlong log_id, jlong offset, jstring arg_str, jlong arg_utf16_bytes_len)
 {
+    (void)log_id;
     bq::tools::size_seq<true, const char16_t*> seq;
     seq.get_element().value = sizeof(uint32_t) + sizeof(uint32_t) + (size_t)arg_utf16_bytes_len;
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::miso_ring_buffer& miso_ring_buffer = log->get_ring_buffer();
-    uint8_t* log_format_content_addr = const_cast<uint8_t*>(miso_ring_buffer.get_buffer_addr()) + (ptrdiff_t)offset;
+    uint8_t* log_format_content_addr = const_cast<uint8_t*>(tls_write_handle_.java_info_.buffer_base_addr_) + (ptrdiff_t)offset;
     jboolean is_cpy = false;
     const char16_t* str = (const char16_t*)env->GetStringCritical(arg_str, &is_cpy);
     bq::impl::_do_log_args_fill<true>(log_format_content_addr, seq, str);
@@ -156,8 +160,7 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_
  */
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit(JNIEnv*, jclass, jlong log_id)
 {
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::api::__api_log_buffer_commit(log_id, tls_write_handle_);
+    bq::api::__api_log_buffer_commit(log_id, tls_write_handle_.write_handle_);
 }
 
 /*

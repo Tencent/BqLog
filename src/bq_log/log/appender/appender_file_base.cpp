@@ -224,11 +224,8 @@ namespace bq {
             cache_write_.pop_back(handle.alloc_len_ - handle.used_len_);
         }
         current_file_size_ += handle.used_len_;
-
-        if (parent_log_->get_reliable_level() < log_reliable_level::high) {
-            if (cache_write_.size() >= CACHE_WRITE_DEFAULT_SIZE) {
-                flush_cache();
-            }
+        if (cache_write_.size() >= CACHE_WRITE_DEFAULT_SIZE) {
+            flush_cache();
         }
     }
 

@@ -119,24 +119,33 @@ namespace bq {
 
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_decode_length(uint8_t prefix_byte)
     {
-        if (prefix_byte >= prefix<1>::value) {
-            return 1;
-        } else if (prefix_byte >= prefix<2>::value) {
-            return 2;
-        } else if (prefix_byte >= prefix<3>::value) {
-            return 3;
-        } else if (prefix_byte >= prefix<4>::value) {
-            return 4;
-        } else if (prefix_byte >= prefix<5>::value) {
+        if (prefix_byte >= prefix<5>::value) {
+            if (prefix_byte >= prefix<7>::value) {
+                if (prefix_byte >= prefix<8>::value) {
+                    return 8;
+                } else {
+                    return 7;
+                }
+            } else if (prefix_byte >= prefix<6>::value) {
+                return 6;
+            }
             return 5;
-        } else if (prefix_byte >= prefix<6>::value) {
-            return 6;
-        } else if (prefix_byte >= prefix<7>::value) {
-            return 7;
-        } else if (prefix_byte >= prefix<8>::value) {
-            return 8;
+        } else {
+            if (prefix_byte >= prefix<3>::value) {
+                if (prefix_byte >= prefix<4>::value) {
+                    return 4;
+                } else {
+                    return 3;
+                }
+            } else if (prefix_byte >= prefix<1>::value) {
+                if (prefix_byte >= prefix<2>::value) {
+                    return 2;
+                } else {
+                    return 1;
+                }
+            }
+            return 9;
         }
-        return 9;
     }
 
     template <typename T>

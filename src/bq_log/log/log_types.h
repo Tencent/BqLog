@@ -76,9 +76,12 @@ namespace bq {
         }
     };
 
-    BQ_STRUCT_PACK(struct ext_log_entry_info_head {
+    BQ_PACK_BEGIN
+    struct ext_log_entry_info_head {
         uint64_t thread_id_;
         uint8_t thread_name_len_;
-    });
+    } 
+    BQ_PACK_END
+
     static_assert(sizeof(ext_log_entry_info_head::thread_id_) == sizeof(bq::platform::thread::thread_id), "thread_id size error!");
 }

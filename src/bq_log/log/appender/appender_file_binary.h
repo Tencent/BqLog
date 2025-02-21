@@ -23,12 +23,13 @@ namespace bq {
             compressed
         };
 
-        BQ_STRUCT_PACK(struct _binary_appender_head_def {
+        BQ_PACK_BEGIN
+        struct _binary_appender_head_def {
             uint32_t version;
             appender_format_type format;
             bool is_gmt;
             uint32_t category_count;
-        });
+        } BQ_PACK_END
 
     protected:
         virtual bool parse_exist_log_file(parse_file_context& context) override;

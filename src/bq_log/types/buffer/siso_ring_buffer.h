@@ -46,28 +46,34 @@ namespace bq {
 
         union block {
         public:
-            BQ_STRUCT_PACK(struct
+            BQ_ANONYMOUS_STRUCT_PACK(
                 {
                     uint32_t block_num;
                     uint32_t data_size;
                     uint8_t data[1];
-                } chunk_head);
+                }, chunk_head);
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };
 
-        BQ_STRUCT_PACK(struct mmap_head {
+        BQ_PACK_BEGIN
+        struct mmap_head
+        {
             // and it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
             uint32_t write_cursor_cache_;
             uint32_t aligned_blocks_count_cache_;
-        });
+        }
+        BQ_PACK_END
+
         static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
         static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
 
-        BQ_STRUCT_PACK(struct cursors_set {
+        BQ_PACK_BEGIN
+        struct cursors_set
+        {
             uint32_t write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
             uint32_t read_cursor_;
@@ -83,7 +89,8 @@ namespace bq {
             // wt is short name of "write thread", which means this variable is accessed in write thread.
             uint32_t wt_reading_cursor_cache_;  
             char cache_line_padding3_[CACHE_LINE_SIZE - sizeof(wt_reading_cursor_cache_)];
-        });  
+        }
+        BQ_PACK_END
 
 
         char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
@@ -143,6 +150,14 @@ namespace bq {
         void return_read_trunk(const log_buffer_read_handle& handle);
 
         /// <summary>
+        /// Calculates the minimum buffer size required to ensure the final buffer 
+        /// has the desired memory available when passed to the constructor.
+        /// </summary>
+        /// <param name="expected_buffer_size">The desired memory size to be guaranteed</param>
+        /// <returns>The minimum buffer size required</returns>
+        static uint32_t calculate_min_size_of_memory(uint32_t expected_buffer_size);
+
+        /// <summary>
         /// Warning:ring buffer can only be read from one thread at same time.
         /// This option is only work in Debug build and will be ignored in Release build.
         /// </summary>
@@ -191,4 +206,5 @@ namespace bq {
 
         void init_with_memory(void* buffer, size_t buffer_size);
     };
+
 }

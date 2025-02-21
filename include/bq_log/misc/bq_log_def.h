@@ -32,12 +32,12 @@ namespace bq {
 namespace bq {
     enum class enum_buffer_result_code {
         success = 0,
-        err_empty_log_buffer, // no valid data to read in log buffer;
-        err_not_enough_space, // not enough space in log buffer to alloc
-        err_data_not_contiguous, // data is not contiguous, this error code is only used for internal statistics within the log_buffer and will not be exposed externally.
-        err_alloc_failed_by_race_condition, // alloc failed caused by multi-thread race condition, you can try again later.
-        err_alloc_size_invalid, // invalid alloc size, too big or 0.
-        err_buffer_not_inited, // buffer not initialized
+        err_empty_log_buffer,       // no valid data to read in log buffer;
+        err_not_enough_space,       // not enough space in log buffer to alloc
+        err_wait_and_retry,         // need wait and try again
+        err_data_not_contiguous,    // data is not contiguous, this error code is only used for internal statistics within the log_buffer and will not be exposed externally.
+        err_alloc_size_invalid,     // invalid alloc size, too big or 0.
+        err_buffer_not_inited,      // buffer not initialized
         result_code_count
     };
 
@@ -53,7 +53,8 @@ namespace bq {
         independent // asynchronous mode, use independent worker thread.
     };
 
-    BQ_STRUCT_PACK(struct _log_entry_head_def {
+    BQ_PACK_BEGIN
+    struct _log_entry_head_def {
         uint64_t timestamp_epoch;
         uint32_t category_idx;
         uint8_t level;
@@ -61,44 +62,55 @@ namespace bq {
         uint32_t log_args_offset;
         uint32_t ext_info_offset;
         uint16_t dummy;
-    });
+    } 
+    BQ_PACK_END
     static_assert(sizeof(_log_entry_head_def) % 4 == 0
             && (sizeof(_log_entry_head_def) == sizeof(decltype(_log_entry_head_def::timestamp_epoch)) + sizeof(decltype(_log_entry_head_def::category_idx)) + sizeof(decltype(_log_entry_head_def::level)) + sizeof(decltype(_log_entry_head_def::log_format_str_type)) + sizeof(decltype(_log_entry_head_def::log_args_offset)) + sizeof(decltype(_log_entry_head_def::ext_info_offset)) + sizeof(decltype(_log_entry_head_def::dummy))),
         "_log_entry_head_def's memory layout must be packed!");
 
-    BQ_STRUCT_PACK(struct _api_string_def {
+    BQ_PACK_BEGIN
+    struct _api_string_def {
         const char* str;
         uint32_t len;
-    });
+    } 
+    BQ_PACK_END
     static_assert(sizeof(_api_string_def) == sizeof(decltype(_api_string_def::str)) + sizeof(decltype(_api_string_def::len)), "_api_string_def's memory layout must be packed!");
 
-    BQ_STRUCT_PACK(struct _api_u16string_def {
+    BQ_PACK_BEGIN
+    struct _api_u16string_def {
         const char16_t* str;
         uint32_t len;
-    });
+    } 
+    BQ_PACK_END
     static_assert(sizeof(_api_u16string_def) == sizeof(decltype(_api_u16string_def::str)) + sizeof(decltype(_api_u16string_def::len)), "_api_u16string_def's memory layout must be packed!");
 
     // this is C-linkage version of bq::log_buffer_read_handle
-    BQ_STRUCT_PACK(struct _api_log_buffer_chunk_read_handle {
+    BQ_PACK_BEGIN
+    struct _api_log_buffer_chunk_read_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result;
-    });
+    } 
+    BQ_PACK_END
 
     // this is C-linkage version of bq::log_buffer_write_handle
-    BQ_STRUCT_PACK(struct _api_log_buffer_chunk_write_handle {
+    BQ_PACK_BEGIN
+    struct _api_log_buffer_chunk_write_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result;
-    });
+    } 
+    BQ_PACK_END
 
-    BQ_STRUCT_PACK(struct _api_console_log_data_head {
+    BQ_PACK_BEGIN
+    struct _api_console_log_data_head {
         uint64_t log_id;
         uint32_t category_idx;
         int32_t level;
         int32_t log_len;
         char log_str[1];
-    });
+    } 
+    BQ_PACK_END
     static_assert(sizeof(_api_console_log_data_head) == sizeof(decltype(_api_console_log_data_head::log_id)) + sizeof(decltype(_api_console_log_data_head::category_idx)) + sizeof(decltype(_api_console_log_data_head::level)) + sizeof(decltype(_api_console_log_data_head::log_len)) + sizeof(decltype(_api_console_log_data_head::log_str)), "_api_console_log_data_head's memory layout must be packed!");
-    }
+    
 
     struct console_log_item {
     public:

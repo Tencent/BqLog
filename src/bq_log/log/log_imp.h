@@ -42,14 +42,9 @@ namespace bq {
 
         void set_appenders_enable(const bq::string& appender_name, bool enable);
 
-        inline log_buffer& get_ring_buffer() const
+        inline log_buffer& get_buffer() const
         {
-            return *ring_buffer_;
-        }
-
-        inline bq::log_reliable_level get_reliable_level() const
-        {
-            return reliable_level_;
+            return *buffer_;
         }
 
         inline uint64_t id() const
@@ -90,8 +85,7 @@ namespace bq {
         bq::platform::spin_lock spin_lock_;
         log_level_bitmap merged_log_level_bitmap_;
         log_level_bitmap print_stack_level_bitmap_;
-        bq::log_reliable_level reliable_level_;
-        log_buffer* ring_buffer_;
+        log_buffer* buffer_;
         class log_snapshot* snapshot_;
         uint64_t last_log_entry_epoch_ms_;
         uint64_t last_flush_io_epoch_ms_;

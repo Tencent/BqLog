@@ -68,6 +68,7 @@ namespace bq {
         struct java_buffer_info {
             jobjectArray buffer_array_obj_;
             int32_t* offset_store_;
+            const uint8_t* buffer_base_addr_;
         };
         java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif

@@ -31,12 +31,14 @@
 #include "bq_log/types/buffer/block_list.h"
 
 namespace bq {
-    BQ_STRUCT_PACK(struct group_data_head {
+    BQ_PACK_BEGIN
+    struct group_data_head {
         block_list used_;
         block_list free_;
         block_list stage_;
         group_data_head(uint16_t max_blocks_count, uint8_t * group_data_addr, size_t group_data_size, bool is_memory_mapped);
-    });
+    } 
+    BQ_PACK_END
     static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
 
     class group_node {

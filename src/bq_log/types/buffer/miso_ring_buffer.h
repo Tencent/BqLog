@@ -67,27 +67,32 @@ namespace bq {
         };
         union block {
         public:
-            BQ_STRUCT_PACK(struct
+            BQ_ANONYMOUS_STRUCT_PACK(
                 {
                     block_status status;
                     uint32_t block_num;
                     uint32_t data_size;
                     uint8_t data[1];
-                } chunk_head);
+                }, chunk_head);
 
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };
-        BQ_STRUCT_PACK(struct mmap_head {
+
+        BQ_PACK_BEGIN
+        struct mmap_head {
             // it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
             uint64_t log_checksum_;
-        });
+        }
+        BQ_PACK_END
+
         static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
         static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
-        BQ_STRUCT_PACK(struct cursors_set {
+        BQ_PACK_BEGIN
+        struct cursors_set {
             uint32_t write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
             uint32_t read_cursor_;
@@ -98,7 +103,8 @@ namespace bq {
             uint32_t rt_reading_cursor_tmp_;
             uint32_t rt_reading_count_in_batch_;
             char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(rt_reading_cursor_tmp_) - sizeof(rt_reading_count_in_batch_)];
-        });
+        }
+        BQ_PACK_END
         log_buffer_config config_;
         char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
         cursors_set* cursors_; // make sure it is aligned to cache line size.
@@ -205,4 +211,5 @@ namespace bq {
 
         bool uninit_memory_map();
     };
+
 }

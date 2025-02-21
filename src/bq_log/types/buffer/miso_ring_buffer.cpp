@@ -27,9 +27,6 @@ namespace bq {
         , mmap_head_(nullptr)
         , aligned_blocks_(nullptr)
         , aligned_blocks_count_(0)
-#if BQ_JAVA
-        , direct_byte_array_obj_(nullptr)
-#endif
 #if BQ_LOG_BUFFER_DEBUG
         , padding_{0}
 #endif
@@ -152,7 +149,7 @@ namespace bq {
         return handle;
     }
 
-    void miso_ring_buffer::commit_write_chunk(const log_buffer_write_handle& handle)`
+    void miso_ring_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
     {
         if (handle.result != enum_buffer_result_code::success) {
             return;
@@ -261,7 +258,7 @@ namespace bq {
         if (!bq::memory_map::is_platform_support() || !config_.use_mmap) {
             return create_memory_map_result::failed;
         }
-        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + ".mmap", true);
+        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/" + config_.log_name + ".mmap", true);
         memory_map_file_ = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         if (!memory_map_file_.is_valid()) {
             bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());

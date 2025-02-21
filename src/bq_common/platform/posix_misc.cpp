@@ -269,7 +269,8 @@ namespace bq {
         // File exclusive works well across different processes,
         // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
         // To eliminate platform compatibility risks, we decided to implement it ourselves.
-        BQ_STRUCT_PACK(struct posix_file_node_info {
+        BQ_PACK_BEGIN
+        struct posix_file_node_info {
             decltype(bq::declval<struct stat>().st_ino) ino;
             uint64_t hash_code() const
             {
@@ -279,7 +280,8 @@ namespace bq {
             {
                 return ino == rhs.ino;
             }
-        });
+        }
+        BQ_PACK_END
 
         static bq::hash_map<posix_file_node_info, file_open_mode_enum>& get_file_exclusive_cache()
         {
