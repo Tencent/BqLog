@@ -42,6 +42,10 @@ namespace bq {
                 , aba_mark_(rhs.aba_mark_)
             {
             }
+            bq_forceinline pointer_type(uint32_t new_union_value)
+            {
+                union_value() = new_union_value;
+            }
             bq_forceinline uint32_t& union_value() { return *reinterpret_cast<uint32_t*>(&index_); }
             bq_forceinline const uint32_t& union_value() const{ return *reinterpret_cast<const uint32_t*>(&index_); }
             bq_forceinline pointer_type& operator=(const pointer_type& rhs)
@@ -83,7 +87,12 @@ namespace bq {
 
         bq_forceinline siso_ring_buffer& get_buffer() {return buffer_;}
 
-        static ptrdiff_t get_buffer_data_offset();
+        static constexpr ptrdiff_t get_buffer_data_offset()
+        {
+            size_t struct_size = sizeof(block_node_head);
+            size_t offset = struct_size + (CACHE_LINE_SIZE - (struct_size % CACHE_LINE_SIZE));
+            return (ptrdiff_t)offset;
+        }
     } 
     BQ_PACK_END
 
@@ -111,14 +120,29 @@ namespace bq {
         void reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         bool try_recover_from_memory_map(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         void construct_blocks();
-        bq_forceinline block_node_head& get_block_head_by_index(uint16_t index) const
-        {
-            return *(block_node_head*)((uint8_t*)this + (ptrdiff_t)offset_ + (ptrdiff_t)(buffer_size_per_block_ * index));
-        }
     public:
         block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_mapped);
 
         ~block_list();
+
+        bq_forceinline block_node_head& get_block_head_by_index(uint16_t index) const
+        {
+            return *(block_node_head*)((uint8_t*)this + (ptrdiff_t)offset_ + (ptrdiff_t)(buffer_size_per_block_ * index));
+        }
+        bq_forceinline uint16_t get_index_by_block_head(block_node_head* block) const
+        {
+            if (!block) {
+                return (uint16_t)-1;
+            }
+            return (uint16_t)(((const uint8_t*)block - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
+        }
+        bq_forceinline bool is_include(const block_node_head* block) const
+        {
+            if (!block) {
+                return false;
+            }
+            return ((const uint8_t*)block >= ((const uint8_t*)this + (ptrdiff_t)offset_)) && ((const uint8_t*)block < ((const uint8_t*)this + (ptrdiff_t)offset_ + (ptrdiff_t)(buffer_size_per_block_ * max_blocks_count_)));
+        }
 
         bq_forceinline block_node_head* first() const
         {
@@ -139,7 +163,8 @@ namespace bq {
         bq_forceinline block_node_head* pop()
         {
             while (true) {
-                block_node_head::pointer_type head_cpy = head_;
+                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load(bq::platform::memory_order::acquire);
+                block_node_head::pointer_type head_cpy(head_cpy_union);
                 if (head_cpy.is_empty()) {
                     return nullptr;
                 }
@@ -155,11 +180,15 @@ namespace bq {
 
         bq_forceinline void push(block_node_head* new_block_node)
         {
-            new_block_node->next_ = head_;
             while (true) {
-                block_node_head::pointer_type head_cpy = head_;
+                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load(bq::platform::memory_order::acquire);
+                block_node_head::pointer_type head_cpy(head_cpy_union);
+                new_block_node->next_ = head_cpy;
                 uint32_t head_copy_expected_value = head_cpy.union_value();
-                head_cpy.index_ = (uint16_t)(((const uint8_t*)new_block_node - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
+                head_cpy.index_ = get_index_by_block_head(new_block_node);
+#if BQ_LOG_BUFFER_DEBUG
+                assert(head_cpy.index_ >= 0 && head_cpy.index_ < max_blocks_count_ && "push assert failed, invalid new_block_node!");
+#endif
                 ++head_cpy.aba_mark_;
                 if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).compare_exchange_strong(head_copy_expected_value, head_cpy.union_value(), bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                     break;
@@ -175,6 +204,20 @@ namespace bq {
         /// <returns></returns>
         bq_forceinline void push_after_thread_unsafe(block_node_head* prev_block_node, block_node_head* new_block_node)
         {
+#if BQ_LOG_BUFFER_DEBUG
+            uint16_t new_index = get_index_by_block_head(new_block_node);
+            uint16_t prev_index = get_index_by_block_head(prev_block_node);
+            assert(new_index >= 0 && new_index < max_blocks_count_ && "push_after_thread_unsafe assert failed, invalid new_block_node!");
+            assert((prev_index == (uint16_t)-1 || (prev_index >= 0 && prev_index < max_blocks_count_)) && "push_after_thread_unsafe assert failed, invalid prev_block_node!");
+            block_node_head* test_node = first();
+            bool found_prev = false;
+            while (test_node) {
+                assert(test_node != new_block_node);
+                found_prev |= (prev_block_node == test_node);
+                test_node = next(test_node);
+            }
+            assert(found_prev || (!prev_block_node));
+#endif
             auto& prev_pointer = (prev_block_node ? prev_block_node->next_ : head_);
             new_block_node->next_ = prev_pointer;
             prev_pointer.index_ = (uint16_t)(((const uint8_t*)new_block_node - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
@@ -188,12 +231,31 @@ namespace bq {
         /// <returns></returns>
         bq_forceinline void remove_thread_unsafe(block_node_head* prev_block_node, block_node_head* remove_block_node)
         {
-            uint16_t remove_index = (uint16_t)(((const uint8_t*)remove_block_node - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
+#if BQ_LOG_BUFFER_DEBUG
+            uint16_t remove_index = get_index_by_block_head(remove_block_node);
+            assert(remove_index >= 0 && remove_index < max_blocks_count_ && "remove assert failed, invalid remove_block_node!");
+            uint16_t prev_index = get_index_by_block_head(prev_block_node);
+            block_node_head* test_node = first();
+            bool found_prev = false;
+            bool found_remove = false;
+            while (test_node) {
+                found_remove |= (remove_block_node == test_node);
+                found_prev |= (prev_block_node == test_node);
+                test_node = next(test_node);
+            }
+            assert(found_remove);
+            assert(found_prev || !prev_block_node);
+#endif
             if (!prev_block_node) {
+#if BQ_LOG_BUFFER_DEBUG
                 assert(head_.index_ == remove_index && "remove assert failed!");
+#endif
                 head_ = remove_block_node->next_;
             } else {
+#if BQ_LOG_BUFFER_DEBUG
+                assert(prev_index >= 0 && prev_index < max_blocks_count_ && "remove assert failed, invalid prev_block_node!");
                 assert(prev_block_node->next_.index_ == remove_index);
+#endif
                 prev_block_node->next_ = remove_block_node->next_;
             }
         }

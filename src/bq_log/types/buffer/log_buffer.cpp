@@ -63,76 +63,73 @@ namespace bq {
         block_node_head* buffer_ref_block = nullptr;
 #endif
     };
-    typedef bq::hash_map_inline<log_buffer*, log_tls_buffer_info> log_tls_buffer_map_type;
+    typedef bq::hash_map_inline<const log_buffer*, log_tls_buffer_info> log_tls_buffer_map_type;
 
     struct log_tls_info {
+#if !BQ_LOG_BUFFER_DEBUG
+    private:
+#endif
         log_tls_buffer_map_type* log_map_;
-        log_buffer* cur_log_buffer_;
+        const log_buffer* cur_log_buffer_;
         log_tls_buffer_info* cur_buffer_info_;
-
+    public:
         log_tls_info()
         {
-            log_map_ = new log_tls_buffer_map_type();
-            cur_log_buffer_ = nullptr;
-            cur_buffer_info_ = nullptr;
-        }
-        ~log_tls_info()
-        {
-            for (auto iter : *log_map_) {
-                auto& buffer_info = iter.value();
-                block_node_head* block = buffer_info.cur_block_;
-                if (block) {
-                    mark_block_removed(block, true);
-                }
-#if BQ_JAVA
-                if (buffer_info.buffer_obj_for_lp_buffer_
-                    || buffer_info.buffer_obj_for_hp_buffer_) {
-                    bq::platform::jni_env env;
-                    if (buffer_info.buffer_obj_for_lp_buffer_) {
-                        env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_lp_buffer_);
-                        buffer_info.buffer_obj_for_lp_buffer_ = NULL;
-                    }
-                    if (buffer_info.buffer_obj_for_hp_buffer_) {
-                        env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_hp_buffer_);
-                        buffer_info.buffer_obj_for_hp_buffer_ = NULL;
-                    }
-                }
-#endif
-            }
-            delete log_map_;
             log_map_ = nullptr;
             cur_log_buffer_ = nullptr;
             cur_buffer_info_ = nullptr;
         }
+
+        log_tls_buffer_info& get_buffer_info(const log_buffer* buffer)
+        {
+            if (buffer == cur_log_buffer_)
+            {
+                return *cur_buffer_info_;
+            }
+            if (!log_map_)
+            {
+                log_map_ = new log_tls_buffer_map_type();
+                log_map_->set_expand_rate(4);
+            }
+            cur_log_buffer_ = buffer;
+            cur_buffer_info_ = &(*log_map_)[buffer];
+            return *cur_buffer_info_;
+        }
+
+        ~log_tls_info()
+        {
+            if (log_map_)
+            {
+                for (auto iter : *log_map_) {
+                    auto& buffer_info = iter.value();
+                    block_node_head* block = buffer_info.cur_block_;
+                    if (block) {
+                        mark_block_removed(block, true);
+                    }
+#if BQ_JAVA
+                    if (buffer_info.buffer_obj_for_lp_buffer_
+                        || buffer_info.buffer_obj_for_hp_buffer_) {
+                        bq::platform::jni_env env;
+                        if (buffer_info.buffer_obj_for_lp_buffer_) {
+                            env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_lp_buffer_);
+                            buffer_info.buffer_obj_for_lp_buffer_ = NULL;
+                        }
+                        if (buffer_info.buffer_obj_for_hp_buffer_) {
+                            env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_hp_buffer_);
+                            buffer_info.buffer_obj_for_hp_buffer_ = NULL;
+                        }
+                    }
+#endif
+                }
+                delete log_map_;
+                log_map_ = nullptr;
+            }
+            cur_log_buffer_ = nullptr;
+            cur_buffer_info_ = nullptr;
+        }
     };
 
-    class log_tls_info_holder {
-        log_tls_info* value_ = nullptr;
-        
-    public:
-        bq_forceinline log_tls_info& get()
-        {
-            if (!value_) {
-                value_ = new log_tls_info();
-            }
-            return *value_;
-        }
-
-        bq_forceinline log_tls_info& get_direct()
-        {
-            return *value_;
-        }
-
-        ~log_tls_info_holder()
-        {
-            if (value_) {
-                delete value_;
-                value_ = nullptr;
-            }
-        }
-    };
-
-    static thread_local log_tls_info_holder log_tls_info_;
+    static thread_local log_tls_info log_tls_info_;
 
 
     log_buffer::log_buffer(log_buffer_config& config)
@@ -149,31 +146,22 @@ namespace bq {
 
     log_buffer_write_handle log_buffer::alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
     {
-        auto& tls = log_tls_info_.get();
-        if (tls.cur_log_buffer_ != this)
-        {
-            auto iter = tls.log_map_->find(this);
-            if (iter == tls.log_map_->end()) {
-                iter = tls.log_map_->add(this);
-            }
-            tls.cur_buffer_info_ = &iter->value();
-            tls.cur_log_buffer_ = this;
-        }
+        auto& tls_buffer = log_tls_info_.get_buffer_info(this);
 
-        block_node_head*& block_cache = tls.cur_buffer_info_->cur_block_;
-        uint64_t& thread_last_update_epoch_ms = tls.cur_buffer_info_->last_update_epoch_ms_;
-        size_t& thread_update_times = tls.cur_buffer_info_->update_times_;
+        block_node_head*& block_cache = tls_buffer.cur_block_;
+        uint64_t& thread_last_update_epoch_ms = tls_buffer.last_update_epoch_ms_;
+        uint64_t& thread_update_times = tls_buffer.update_times_;
 
         // frequency check
         bool is_high_frequency = (bool)block_cache;
         if (current_epoch_ms >= thread_last_update_epoch_ms + HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_) {
-            if (thread_update_times < HP_BUFFER_CALL_FREQUENCY_CHECK_THRESHOLD_) {
+            if (thread_update_times < config_.high_frequency_threshold_per_second) {
                 is_high_frequency = false;
             }
             thread_last_update_epoch_ms = current_epoch_ms;
             thread_update_times = 0;
         }
-        if (++thread_update_times >= HP_BUFFER_CALL_FREQUENCY_CHECK_THRESHOLD_) {
+        if (++thread_update_times >= config_.high_frequency_threshold_per_second) {
             is_high_frequency = true;
             thread_last_update_epoch_ms = current_epoch_ms;
             thread_update_times = 0;
@@ -199,6 +187,7 @@ namespace bq {
                         break;
                     case log_memory_policy::block_when_full:
                         result.result = enum_buffer_result_code::err_wait_and_retry;
+                        break;
                     default:
                         break;
                     }
@@ -218,6 +207,7 @@ namespace bq {
                         break;
                     case log_memory_policy::block_when_full:
                         result.result = enum_buffer_result_code::err_wait_and_retry;
+                        break;
                     default:
                         break;
                     }
@@ -234,8 +224,8 @@ namespace bq {
 
     void log_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
     {
-        block_node_head*& block_cache = log_tls_info_.get_direct().cur_buffer_info_->cur_block_;
-        bool is_high_frequency = (!block_cache);
+        block_node_head*& block_cache = log_tls_info_.get_buffer_info(this).cur_block_;
+        bool is_high_frequency = block_cache;
         if (is_high_frequency) {
             block_cache->get_buffer().commit_write_chunk(handle);
         } else {
@@ -243,7 +233,7 @@ namespace bq {
         }
     }
 
-    log_buffer_read_handle log_buffer::read_chunk(uint64_t current_epoch_ms)
+    log_buffer_read_handle log_buffer::read_chunk()
     {
 #if BQ_LOG_BUFFER_DEBUG
         if (check_thread_) {
@@ -255,8 +245,9 @@ namespace bq {
             }
         }
 #endif
-        const block_node_head* const start_node = rt_cache_.current_reading_.block_;
-        do {
+        bool lp_visited = false;
+        bool full_visited = false;
+        while(!full_visited) {
             // try read from current data source
             if (rt_cache_.current_reading_.block_) {
 #if BQ_LOG_BUFFER_DEBUG
@@ -266,61 +257,62 @@ namespace bq {
                 if (enum_buffer_result_code::err_empty_log_buffer != handle.result) {
                     return handle;
                 }
+                rt_cache_.current_reading_.block_->get_buffer().return_read_trunk(handle);
             } else {
 #if BQ_LOG_BUFFER_DEBUG
                 assert(!rt_cache_.current_reading_.group_);
 #endif
-                auto handle = lp_buffer_.read_chunk(current_epoch_ms);
+                auto handle = lp_buffer_.read_chunk();
                 if (enum_buffer_result_code::err_empty_log_buffer != handle.result) {
                     return handle;
                 }
+                lp_buffer_.return_read_trunk(handle);
             }
             // find next data source
             bool next_data_source_found = false;
             while (!next_data_source_found) {
                 if (rt_cache_.current_reading_.group_) {
                     block_node_head* next_block = rt_cache_.current_reading_.block_
-                        ? rt_cache_.current_reading_.group_.value().get_data().used_.next(rt_cache_.current_reading_.block_)
-                        : rt_cache_.current_reading_.group_.value().get_data().used_.first();
+                        ? rt_cache_.current_reading_.group_.value().get_data_head().used_.next(rt_cache_.current_reading_.block_)
+                        : rt_cache_.current_reading_.group_.value().get_data_head().used_.first();
                     if (next_block) {
                         next_data_source_found = true;
-                        optimize_memory_for_block(next_block, current_epoch_ms);
-                        rt_cache_.current_reading_.block_ = next_block;
-                        break;
+                        set_current_reading_block(next_block);
+                        continue;
                     }
-                    next_block = rt_cache_.current_reading_.group_.value().get_data().stage_.pop();
+                    next_block = rt_cache_.current_reading_.group_.value().get_data_head().stage_.pop();
                     if (next_block) {
-                        rt_cache_.current_reading_.group_.value().get_data().used_.push_after_thread_unsafe(rt_cache_.current_reading_.block_, next_block);
+                        rt_cache_.current_reading_.group_.value().get_data_head().used_.push_after_thread_unsafe(rt_cache_.current_reading_.block_, next_block);
                         next_data_source_found = true;
-                        optimize_memory_for_block(next_block, current_epoch_ms);
-                        rt_cache_.current_reading_.block_ = next_block;
-                        break;
+                        set_current_reading_block(next_block);
+                        continue;
                     }
                     auto next_group = high_perform_buffer_.next(rt_cache_.current_reading_.group_, group_list::lock_type::no_lock);
-                    optimize_memory_for_block(nullptr, current_epoch_ms);
-                    optimize_memory_for_group(rt_cache_.current_reading_.group_, current_epoch_ms);
-                    rt_cache_.current_reading_.group_ = next_group;
-                    rt_cache_.current_reading_.block_ = nullptr;
-                    if (!rt_cache_.current_reading_.group_) {
+                    set_current_reading_block(next_block);
+                    set_current_reading_group(next_group);
+                    if (!next_group) {
                         // try lp_buffer_.
                         next_data_source_found = true;
-                        optimize_memory_end();
-                        break;
+                        continue;
                     }
                 } else {
 #if BQ_LOG_BUFFER_DEBUG
                     assert(!rt_cache_.current_reading_.block_);
 #endif
-                    rt_cache_.current_reading_.group_ = high_perform_buffer_.first(group_list::lock_type::no_lock);
-                    if (!rt_cache_.current_reading_.group_) {
-                        next_data_source_found = true;
+                    if (lp_visited) {
+                        full_visited = true;
                         break;
                     }
-                    optimize_memory_begin(current_epoch_ms);
-                    optimize_memory_for_group(rt_cache_.current_reading_.group_, current_epoch_ms);
+                    lp_visited = true;
+                    auto next_group = high_perform_buffer_.first(group_list::lock_type::no_lock);
+                    if (!next_group) {
+                        next_data_source_found = true;
+                        continue;
+                    }
+                    set_current_reading_group(next_group);
                 }
             }
-        } while (rt_cache_.current_reading_.block_ != start_node);
+        }
 
         log_buffer_read_handle empty_handle;
         empty_handle.result = enum_buffer_result_code::err_empty_log_buffer;
@@ -354,11 +346,10 @@ namespace bq {
 #if BQ_JAVA
     log_buffer::java_buffer_info log_buffer::get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
     {
-        auto& tls = log_tls_info_.get_direct();
 #if BQ_LOG_BUFFER_DEBUG
-        assert((this == tls.cur_log_buffer_) && "tls cur_log_buffer_ check failed");
+        assert((this == log_tls_info_.cur_log_buffer_) && "tls cur_log_buffer_ check failed");
 #endif
-        auto& current_buffer_info = *tls.cur_buffer_info_;
+        auto& current_buffer_info = log_tls_info_.get_buffer_info(this);
         java_buffer_info result;
         result.offset_store_ = &current_buffer_info.buffer_offset_;
 
@@ -371,7 +362,7 @@ namespace bq {
 #if BQ_LOG_BUFFER_DEBUG
                 assert(offset_obj && "offset obj should not be null when jni hp alloc");
 #endif
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, env->GetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1)); 
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, offset_obj); 
             }
             if (current_buffer_info.buffer_ref_block != current_buffer_info.cur_block_) {
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(ring_buffer.get_buffer_addr()), (jlong)(ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count())));
@@ -394,33 +385,33 @@ namespace bq {
         return result;
     }
 #endif
-
-    void log_buffer::optimize_memory_begin(uint64_t current_epoch_ms)
+    void log_buffer::set_current_reading_group(const group_list::iterator& group)
     {
-        (void)current_epoch_ms;
-        rt_cache_.mem_optimize_.last_block_ = nullptr;
-        rt_cache_.mem_optimize_.last_group_ = group_list::iterator();
-        rt_cache_.mem_optimize_.left_holes_num_ = 0;
-        rt_cache_.mem_optimize_.cur_group_using_blocks_num_ = 0;
-        rt_cache_.mem_optimize_.is_block_marked_removed = false;
+        rt_cache_.current_reading_.group_ = group;
+        optimize_memory_for_group(group);
     }
 
-    void log_buffer::optimize_memory_for_group(const group_list::iterator& group, uint64_t current_epoch_ms)
+    void log_buffer::set_current_reading_block(block_node_head* block)
     {
-        (void)current_epoch_ms;
+        rt_cache_.current_reading_.block_ = block;
+        optimize_memory_for_block(block);
+    }
+
+    void log_buffer::optimize_memory_for_group(const group_list::iterator& group)
+    {
+        auto& mem_opt = rt_cache_.mem_optimize_;
 #if BQ_LOG_BUFFER_DEBUG
-        assert(rt_cache_.mem_optimize_.cur_group_using_blocks_num_ <= high_perform_buffer_.get_max_block_count_per_group());
+        assert(mem_opt.cur_group_using_blocks_num_ <= high_perform_buffer_.get_max_block_count_per_group());
 #endif
         bool group_removed = false;
-        if (rt_cache_.mem_optimize_.cur_group_using_blocks_num_ == 0) {
+        if (mem_opt.cur_group_using_blocks_num_ == 0 && mem_opt.cur_group_) {
             // try lock
             group_list::iterator current_lock_iterator;
-            if (rt_cache_.mem_optimize_.last_group_) {
-                current_lock_iterator = high_perform_buffer_.next(rt_cache_.mem_optimize_.last_group_, group_list::lock_type::write_lock);
-                assert(current_lock_iterator == group && "try lock removing group failed");
+            if (mem_opt.last_group_) {
+                current_lock_iterator = high_perform_buffer_.next(mem_opt.last_group_, group_list::lock_type::write_lock);
             } else {
                 // must lock from head, because new group node is inserted after head pointer from other threads.
-                while (current_lock_iterator != group) {
+                while (current_lock_iterator != mem_opt.cur_group_) {
                     current_lock_iterator = (bool)current_lock_iterator
                         ? high_perform_buffer_.next(current_lock_iterator, group_list::lock_type::write_lock)
                         : high_perform_buffer_.first(group_list::lock_type::write_lock);
@@ -429,8 +420,9 @@ namespace bq {
                     }
                 }
             }
-            if ((!current_lock_iterator.value().get_data().used_.first())
-                && (!current_lock_iterator.value().get_data().stage_.first())) {
+            assert(current_lock_iterator == mem_opt.cur_group_ && "try lock removing group failed");
+            if ((!current_lock_iterator.value().get_data_head().used_.first())
+                && (!current_lock_iterator.value().get_data_head().stage_.first())) {
                 // remove it
                 group_removed = true;
                 high_perform_buffer_.delete_and_unlock_node_thread_unsafe(current_lock_iterator);
@@ -440,42 +432,45 @@ namespace bq {
             }
         }
 
-        rt_cache_.mem_optimize_.left_holes_num_ += high_perform_buffer_.get_max_block_count_per_group() - rt_cache_.mem_optimize_.cur_group_using_blocks_num_;
-        rt_cache_.mem_optimize_.cur_group_using_blocks_num_ = 0;
+        mem_opt.left_holes_num_ += high_perform_buffer_.get_max_block_count_per_group() - rt_cache_.mem_optimize_.cur_group_using_blocks_num_;
+        mem_opt.cur_group_using_blocks_num_ = 0;
         if (!group_removed) {
-            rt_cache_.mem_optimize_.last_group_ = group;
+            mem_opt.last_group_ = mem_opt.cur_group_;
+        }
+        mem_opt.cur_group_ = group;
+        if (!group) {
+            rt_cache_.mem_optimize_.left_holes_num_ = 0;
         }
     }
 
-    void log_buffer::optimize_memory_for_block(block_node_head* block, uint64_t current_epoch_ms)
+    void log_buffer::optimize_memory_for_block(block_node_head* block)
     {
-        (void)current_epoch_ms;
-        if (rt_cache_.current_reading_.block_) {
-            if (rt_cache_.mem_optimize_.is_block_marked_removed) {
+        auto& mem_opt = rt_cache_.mem_optimize_;
+        bool block_removed = false;
+        if (mem_opt.cur_block_) {
+            if (mem_opt.is_block_marked_removed) {
                 // remove it
-                rt_cache_.current_reading_.group_.value().get_data().used_.remove_thread_unsafe(rt_cache_.mem_optimize_.last_block_, rt_cache_.current_reading_.block_);
-                rt_cache_.current_reading_.group_.value().get_data().free_.push(rt_cache_.current_reading_.block_);
+                if (mem_opt.cur_group_.value().get_data_head().used_.is_include(mem_opt.last_block_)) {
+                    high_perform_buffer_.recycle_block_thread_unsafe(mem_opt.cur_group_, mem_opt.last_block_, mem_opt.cur_block_);
+                } else {
+                    high_perform_buffer_.recycle_block_thread_unsafe(mem_opt.cur_group_, nullptr, mem_opt.cur_block_);
+                }
+                block_removed = true;
             } else {
-                ++rt_cache_.mem_optimize_.cur_group_using_blocks_num_;
+                ++mem_opt.cur_group_using_blocks_num_;
             }
         }
 
         if (block) {
-            rt_cache_.mem_optimize_.is_block_marked_removed = is_block_removed(block);
-            if (rt_cache_.mem_optimize_.left_holes_num_ > 0) {
+            mem_opt.is_block_marked_removed = is_block_removed(block);
+            if (mem_opt.left_holes_num_ > 0) {
                 mark_block_need_reallocate(block, true);
-                --rt_cache_.mem_optimize_.left_holes_num_;
+                --mem_opt.left_holes_num_;
             }
         }
-        rt_cache_.mem_optimize_.last_block_ = rt_cache_.current_reading_.block_;
-    }
-
-    void log_buffer::optimize_memory_end()
-    {
-        rt_cache_.mem_optimize_.last_block_ = nullptr;
-        rt_cache_.mem_optimize_.last_group_ = group_list::iterator();
-        rt_cache_.mem_optimize_.left_holes_num_ = 0;
-        rt_cache_.mem_optimize_.cur_group_using_blocks_num_ = 0;
-        rt_cache_.mem_optimize_.is_block_marked_removed = false;
+        if (!block_removed) {
+            mem_opt.last_block_ = mem_opt.cur_block_;
+        }
+        mem_opt.cur_block_ = block;
     }
 }

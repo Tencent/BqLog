@@ -33,7 +33,6 @@
 namespace bq {
     static constexpr size_t CACHE_LINE_SIZE = 64;
     static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
-    static constexpr uint32_t BATCH_FREQUENCY= 1024;
 
     //Warning ! You Must Ensure The Alignment By Yourself!
     template<typename TO, typename FROM>

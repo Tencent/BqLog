@@ -32,12 +32,6 @@ namespace bq {
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_ = 1000; 
-        static constexpr size_t HP_BUFFER_CALL_FREQUENCY_CHECK_THRESHOLD_ = 1000; // 1000 times in HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_.
-        
-#if BQ_WIN
-        static constexpr uint64_t THREAD_ALIVE_UPDATE_INTERVAL = 200;
-        static constexpr uint64_t BLOCK_THREAD_VALID_CHECK_THRESHOLD = THREAD_ALIVE_UPDATE_INTERVAL * 2;
-#endif
 
     public:
         log_buffer(log_buffer_config& config);
@@ -51,9 +45,8 @@ namespace bq {
         /// <summary>
         ///
         /// </summary>
-        /// <param name="current_epoch_ms"></param>
         /// <returns></returns>
-        log_buffer_read_handle read_chunk(uint64_t current_epoch_ms);
+        log_buffer_read_handle read_chunk();
 
         void return_read_trunk(const log_buffer_read_handle& handle);
 
@@ -73,10 +66,11 @@ namespace bq {
         java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
     private:
-        void optimize_memory_begin(uint64_t current_epoch_ms);
-        void optimize_memory_for_group(const group_list::iterator& group, uint64_t current_epoch_ms);
-        void optimize_memory_for_block(block_node_head* block, uint64_t current_epoch_ms);
-        void optimize_memory_end();
+        void set_current_reading_group(const group_list::iterator& group);
+        void set_current_reading_block(block_node_head* block);
+
+        void optimize_memory_for_group(const group_list::iterator& group);
+        void optimize_memory_for_block(block_node_head* block);
 
     private:
         log_buffer_config config_;
@@ -90,7 +84,9 @@ namespace bq {
 
             // memory fragmentation optimize
             struct {
+                group_list::iterator cur_group_;
                 group_list::iterator last_group_;
+                block_node_head* cur_block_ = nullptr;
                 block_node_head* last_block_ = nullptr;
                 uint32_t left_holes_num_ = 0;
                 uint16_t cur_group_using_blocks_num_ = 0;
@@ -98,7 +94,7 @@ namespace bq {
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
 #if BQ_LOG_BUFFER_DEBUG
-        char padding_[CACHE_LINE_SIZE];
+        char padding_[CACHE_LINE_SIZE] = {};
         bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;

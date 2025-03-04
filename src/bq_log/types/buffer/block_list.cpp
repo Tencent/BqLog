@@ -29,19 +29,13 @@
         memset(misc_data_, 0, sizeof(misc_data_));
         next_.index_ = (uint16_t)-1;
         next_.aba_mark_ = 0;
-        assert(((size_t)(buffer_.get_block_size() * buffer_.get_total_blocks_count()) == buffer_size) && "siso_ring_buffer usable size is unexpected, please check caculation as memory alignment");
+        size_t min_size = bq::roundup_pow_of_two(buffer_size) == buffer_size ? buffer_size : (bq::roundup_pow_of_two(buffer_size) >> 1);
+        assert(((size_t)(buffer_.get_block_size() * buffer_.get_total_blocks_count()) == min_size) && "siso_ring_buffer usable size is unexpected, please check caculation as memory alignment");
     }
 
     void block_node_head::reset_misc_data()
     {
         memset(misc_data_, 0, sizeof(misc_data_));
-    }
-
-    ptrdiff_t block_node_head::get_buffer_data_offset()
-    {
-        size_t struct_size = sizeof(block_node_head);
-        size_t offset = struct_size + (CACHE_LINE_SIZE - (struct_size % CACHE_LINE_SIZE));
-        return (ptrdiff_t)offset;
     }
 
     void block_list::reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size)
@@ -85,6 +79,7 @@
         if (current_blocks_count > max_blocks_count_) {
             return false;
         }
+        return true;
     }
 
     void block_list::construct_blocks()

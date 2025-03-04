@@ -292,7 +292,7 @@ namespace bq {
         constexpr uint64_t flush_io_min_interval_ms = 100;
         uint64_t current_epoch_ms = bq::platform::high_performance_epoch_ms();
         while (true) {
-            auto read_chunk = buffer_->read_chunk(current_epoch_ms);
+            auto read_chunk = buffer_->read_chunk();
             scoped_log_buffer_handle<log_buffer> scoped_read_chunk(*buffer_, read_chunk);
             if (read_chunk.result == enum_buffer_result_code::success) {
                 bq::log_entry_handle log_item(read_chunk.data_addr, read_chunk.data_size);

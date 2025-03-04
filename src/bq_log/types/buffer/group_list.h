@@ -71,7 +71,7 @@ namespace bq {
         ~group_node();
 
         bq_forceinline pointer_type& get_next_ptr() { return next_; }
-        bq_forceinline group_data_head& get_data() { return *head_ptr_;}
+        bq_forceinline group_data_head& get_data_head() { return *head_ptr_;}
     };
 
     class group_list {
@@ -105,6 +105,8 @@ namespace bq {
         ~group_list();
 
         block_node_head* alloc_new_block();
+
+        void recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block);
 
         bq_forceinline uint16_t get_max_block_count_per_group() const { return max_block_count_per_group_;}
 
@@ -160,6 +162,7 @@ namespace bq {
             iterator result;
             result.last_pointer_ = &current.value_->get_next_ptr();
             result.value_ = current.value_->get_next_ptr().node_;
+            result.last_lock_type_ = type;
             if (!result.value_) {
                 switch (type) {
                 case bq::group_list::lock_type::no_lock:

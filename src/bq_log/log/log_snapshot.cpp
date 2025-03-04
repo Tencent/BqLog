@@ -76,7 +76,9 @@ namespace bq {
                     delete snapshot_buffer_;
                     snapshot_buffer_ = new_buffer;
                 }
-            } else{
+            } else {
+                buffer_data_.reset();
+                buffer_data_.fill_uninitialized((size_t)buffer_size_);
                 snapshot_buffer_ = new siso_ring_buffer(buffer_data_.begin(), (size_t)buffer_size_, false);
                 snapshot_buffer_->set_thread_check_enable(false);
             }

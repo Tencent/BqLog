@@ -47,15 +47,13 @@ namespace bq {
 
     size_t group_node::get_group_meta_size(const log_buffer_config& config)
     {
-        size_t desired_size = sizeof(uint64_t) * (1 + 1 + config.log_categories_name.size()); // count, name hase, categorie hash values.   count is the number of name and category hash values.
-        size_t aligned_size = desired_size + (CACHE_LINE_SIZE - 1);
-        aligned_size -= (desired_size % CACHE_LINE_SIZE);
-        return aligned_size;
+        static_assert(sizeof(decltype(config.calculate_check_sum())) <= CACHE_LINE_SIZE, "group meta data size overflow");
+        return CACHE_LINE_SIZE;
     }
 
     size_t group_node::get_group_data_size(const log_buffer_config& config, uint16_t max_block_count_per_group)
     {
-        size_t data_per_block = block_node_head::get_buffer_data_offset() + config.default_buffer_size;
+        size_t data_per_block = block_node_head::get_buffer_data_offset() + siso_ring_buffer::calculate_min_size_of_memory(config.default_buffer_size);
         size_t total_size_of_block_datas = data_per_block * max_block_count_per_group + sizeof(group_data_head);
         return total_size_of_block_datas;
     }
@@ -109,22 +107,12 @@ namespace bq {
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
 
-        const uint64_t* hash_checker = reinterpret_cast<const uint64_t*>(memory_map_handle_.get_mapped_data());
-        if (*hash_checker != (uint64_t)(1 + config.log_categories_name.size())) {
-            bq::util::log_device_console(log_level::info, "group node memory map verify failed by names count, data will be reset.");
-            return false;
-        }
-        if (*(++hash_checker) != config.log_name.hash_code()) {
-            bq::util::log_device_console(log_level::info, "group node memory map verify failed by log name, data will be reset.");
-            return false;
-        }
-        for (const auto& category_name : config.log_categories_name) {
-            if (*(++hash_checker) != category_name.hash_code()) {
-                bq::util::log_device_console(log_level::info, "group node memory map verify failed by category name : %s, data will be reset.", category_name.c_str());
-                return false;
-            }
-        }
         uint8_t* mapped_data_addr = reinterpret_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
+        if(*(uint64_t*)mapped_data_addr != config.calculate_check_sum()) {
+            bq::util::log_device_console(bq::log_level::warning, "recover from memory map verify failed, create new memory map, log_name:%s", config.log_name.c_str());
+            return false;
+        }
+
         new ((void*)(mapped_data_addr + meta_size), bq::enum_new_dummy::dummy) group_data_head(
             max_block_count_per_group, mapped_data_addr + meta_size + sizeof(group_data_head), data_size - sizeof(group_data_head), config.use_mmap);
         head_ptr_ = (group_data_head*)(mapped_data_addr + meta_size);
@@ -136,13 +124,8 @@ namespace bq {
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
 
-        auto hash_checker = static_cast<uint64_t*>(memory_map_handle_.get_mapped_data());
-        *hash_checker = (uint64_t)(1 + config.log_categories_name.size());
-        *(++hash_checker) = config.log_name.hash_code();
-        for (const auto& category_name : config.log_categories_name) {
-            *(++hash_checker) = category_name.hash_code();
-        }
         auto mapped_data_addr = static_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
+        *(uint64_t*)mapped_data_addr = config.calculate_check_sum();
         new ((void*)(mapped_data_addr + meta_size), bq::enum_new_dummy::dummy) group_data_head(
             max_block_count_per_group, mapped_data_addr + meta_size + sizeof(group_data_head), data_size - sizeof(group_data_head), config.use_mmap);
         head_ptr_ = (group_data_head*)(mapped_data_addr + meta_size);
@@ -260,34 +243,44 @@ namespace bq {
         group_node* src_node = nullptr;
         while (!current_pointer->is_empty()) {
             src_node = current_pointer->node_;
-            result = src_node->get_data().free_.pop();
+            result = src_node->get_data_head().free_.pop();
             if (result) {
                 break;
             }
-            src_node->get_next_ptr().lock_.read_lock();
+            current_pointer->node_->get_next_ptr().lock_.read_lock();
             current_pointer->lock_.read_unlock();
             current_pointer = &src_node->get_next_ptr();
         }
-        current_pointer->lock_.read_unlock();
 
         if (!result) { // alloc new group
-            bq::platform::scoped_spin_lock_write_crazy lock(head_.lock_);
+            current_pointer->lock_.read_unlock();
+            current_pointer = &head_;
+            current_pointer->lock_.read_lock();
             // double check
             if (!head_.is_empty()) {
-                group_node* node = head_.node_;
-                result = node->get_data().free_.pop();
-                if (!result) {
-                    src_node = new bq::group_node(config_, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
-                    result = src_node->get_data().free_.pop();
-                    src_node->get_data().stage_.push(result);
-                    src_node->get_next_ptr().node_ = head_.node_;
-                    head_.node_ = src_node;
-                }
+                src_node = head_.node_;
+                result = src_node->get_data_head().free_.pop();
+            }
+            if (!result) {
+                src_node = new bq::group_node(config_, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
+                result = src_node->get_data_head().free_.pop();
+                src_node->get_next_ptr().node_ = head_.node_;
+                head_.node_ = src_node;
             }
         }
         result->reset_misc_data();
-        src_node->get_data().stage_.push(result);
+        result->get_buffer().set_thread_check_enable(true);
+        src_node->get_data_head().stage_.push(result);
+        current_pointer->lock_.read_unlock();
         return result;
+    }
+
+
+    void group_list::recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block)
+    {
+        group.value().get_data_head().used_.remove_thread_unsafe(prev_block, recycle_block);
+        group.value().get_data_head().free_.push(recycle_block);
+        recycle_block->get_buffer().set_thread_check_enable(false);
     }
 
 }

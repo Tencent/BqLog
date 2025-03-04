@@ -80,7 +80,7 @@ namespace bq {
         };
 
         BQ_PACK_BEGIN
-        struct mmap_head {
+        struct head {
             // it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
             uint64_t log_checksum_;
@@ -97,12 +97,6 @@ namespace bq {
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
             uint32_t read_cursor_;
             char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
-
-            // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
-            // rt is short name of "read thread", which means this variable is accessed in read thread.
-            uint32_t rt_reading_cursor_tmp_;
-            uint32_t rt_reading_count_in_batch_;
-            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(rt_reading_cursor_tmp_) - sizeof(rt_reading_count_in_batch_)];
         }
         BQ_PACK_END
         log_buffer_config config_;
@@ -110,7 +104,7 @@ namespace bq {
         cursors_set* cursors_; // make sure it is aligned to cache line size.
 
         uint8_t* real_buffer_;
-        mmap_head* mmap_head_;
+        head* head_;
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bq::file_handle memory_map_file_;
@@ -151,9 +145,8 @@ namespace bq {
         /// <summary>
         /// To read a block of memory prepared by the producer,
         /// </summary>
-        /// <param name="current_epoch_ms"></param>
         /// <returns>data only be valid if result code is enum_buffer_result_code::success</returns>
-        log_buffer_read_handle read_chunk(uint64_t current_epoch_ms);
+        log_buffer_read_handle read_chunk();
 
         /// <summary>
         /// the chunk date read by `read_chunk` won't be marked as consumed until `return_read_trunk` is called;

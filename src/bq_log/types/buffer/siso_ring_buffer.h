@@ -57,7 +57,7 @@ namespace bq {
         };
 
         BQ_PACK_BEGIN
-        struct mmap_head
+        struct head
         {
             // and it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
@@ -82,9 +82,7 @@ namespace bq {
             // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
             // rt is short name of "read thread", which means this variable is accessed in read thread.
             uint32_t rt_writing_cursor_cache_;
-            uint32_t rt_reading_cursor_tmp_;
-            uint32_t rt_reading_count_in_batch_; 
-            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(rt_reading_cursor_tmp_) - sizeof(rt_writing_cursor_cache_) - sizeof(rt_reading_count_in_batch_)];
+            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(rt_writing_cursor_cache_)];
             // this cache variable used in writing thread is used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
             // wt is short name of "write thread", which means this variable is accessed in write thread.
             uint32_t wt_reading_cursor_cache_;  
@@ -96,7 +94,7 @@ namespace bq {
         char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
         cursors_set* cursors_;   //make sure it is aligned to cache line size.
 
-        mmap_head* mmap_head_;
+        head* head_;
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bool is_memory_mapped_;
@@ -168,6 +166,7 @@ namespace bq {
             check_thread_ = in_enable;
             if (!check_thread_) {
                 read_thread_id_ = empty_thread_id_;
+                write_thread_id_ = empty_thread_id_;
             }
 #else
             (void)in_enable;
