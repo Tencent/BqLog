@@ -32,41 +32,51 @@ namespace bq {
         friend void block_head_aligment_check();
 
         BQ_PACK_BEGIN
-        struct pointer_type {
+        struct pointer_type_datas {
             uint16_t index_;
             uint16_t aba_mark_;
-
-            bq_forceinline pointer_type() : index_((uint16_t)-1), aba_mark_(0) {};
-            bq_forceinline pointer_type(const pointer_type& rhs)
-                : index_(rhs.index_)
-                , aba_mark_(rhs.aba_mark_)
-            {
-            }
-            bq_forceinline pointer_type(uint32_t new_union_value)
-            {
-                union_value() = new_union_value;
-            }
-            bq_forceinline uint32_t& union_value() { return *reinterpret_cast<uint32_t*>(&index_); }
-            bq_forceinline const uint32_t& union_value() const{ return *reinterpret_cast<const uint32_t*>(&index_); }
-            bq_forceinline pointer_type& operator=(const pointer_type& rhs)
-            {
-                union_value() = rhs.union_value();
-                return *this;
-            }
-            bq_forceinline bool is_empty() const { return index_ == (uint16_t)-1; }
         }
         BQ_PACK_END
 
-        static_assert((size_t)(offsetof(pointer_type, aba_mark_) - offsetof(pointer_type, index_)) == sizeof(pointer_type::index_), "invalid alignment of bq::block_node_head::pointer_type");
+        BQ_PACK_BEGIN
+        union pointer_type {
+            friend class block_node_head;
+            friend class block_list;
+        private:
+            pointer_type_datas data_;
+            uint32_t union_value_;
+        public:
+            bq_forceinline pointer_type()
+            {
+                data_.index_ = (uint16_t)-1;
+                data_.aba_mark_ = 0;
+            }
+            bq_forceinline pointer_type(const pointer_type& rhs)
+            {
+                union_value_ = rhs.union_value_;
+            }
+            bq_forceinline pointer_type(uint32_t new_union_value)
+            {
+                union_value_ = new_union_value;
+            }
+            bq_forceinline pointer_type& operator=(const pointer_type& rhs)
+            {
+                union_value_ = rhs.union_value_;
+                return *this;
+            }
+            bq_forceinline bool is_empty() const { return data_.index_ == (uint16_t)-1; }
+        }
+        BQ_PACK_END
+
         static_assert(sizeof(pointer_type) == sizeof(uint32_t), "invalid size of pointer_type");    
     private:
         // These members are modified in different threads which will leads to "False Share".
         // So we must modify them in a low frequency
         pointer_type next_;
-        char padding_inner0_[8 - sizeof(next_)];
+        char padding_inner0_[8 - sizeof(next_)] = {};
         // reserved data. can be cast to any struct, all the bytes will be set to 0 in constructor.
-        char misc_data_[56];
-        siso_ring_buffer buffer_;
+        char misc_data_[56] = {};
+        char buffer_[sizeof(siso_ring_buffer)];
     public:
         /// <summary>
         /// constructor
@@ -75,6 +85,8 @@ namespace bq {
         /// <param name="buffer_size">buffer size for siso_ring_buffer</param>
         /// <param name="is_memory_mapped">is buffer memory mapped</param>
         block_node_head(void* buffer, size_t buffer_size, bool is_memory_mapped);
+
+        ~block_node_head();
 
         template<typename T>
         bq_forceinline T& get_misc_data()
@@ -85,7 +97,7 @@ namespace bq {
 
         void reset_misc_data();
 
-        bq_forceinline siso_ring_buffer& get_buffer() {return buffer_;}
+        bq_forceinline siso_ring_buffer& get_buffer() {return *(siso_ring_buffer*)buffer_; }
 
         static constexpr ptrdiff_t get_buffer_data_offset()
         {
@@ -149,7 +161,7 @@ namespace bq {
             if (head_.is_empty()) {
                 return nullptr;
             }
-            return &get_block_head_by_index(head_.index_);
+            return &get_block_head_by_index(head_.data_.index_);
         }
 
         bq_forceinline block_node_head* next(const block_node_head* current) const
@@ -157,22 +169,22 @@ namespace bq {
             if (current->next_.is_empty()) {
                 return nullptr;
             }
-            return &get_block_head_by_index(current->next_.index_);
+            return &get_block_head_by_index(current->next_.data_.index_);
         }
 
         bq_forceinline block_node_head* pop()
         {
             while (true) {
-                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load_acquire();
+                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
                 block_node_head::pointer_type head_cpy(head_cpy_union);
                 if (head_cpy.is_empty()) {
                     return nullptr;
                 }
-                block_node_head* first_node = &get_block_head_by_index(head_cpy.index_);
-                uint32_t head_copy_expected_value = head_cpy.union_value();
-                head_cpy.union_value() = first_node->next_.union_value();
-                ++head_cpy.aba_mark_;
-                if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).compare_exchange_strong(head_copy_expected_value, head_cpy.union_value(), bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                block_node_head* first_node = &get_block_head_by_index(head_cpy.data_.index_);
+                uint32_t head_copy_expected_value = head_cpy.union_value_;
+                head_cpy.union_value_ = first_node->next_.union_value_;
+                ++head_cpy.data_.aba_mark_;
+                if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_copy_expected_value, head_cpy.union_value_, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                     return first_node;
                 }
             }
@@ -181,16 +193,16 @@ namespace bq {
         bq_forceinline void push(block_node_head* new_block_node)
         {
             while (true) {
-                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load_acquire();
+                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
                 block_node_head::pointer_type head_cpy(head_cpy_union);
                 new_block_node->next_ = head_cpy;
-                uint32_t head_copy_expected_value = head_cpy.union_value();
-                head_cpy.index_ = get_index_by_block_head(new_block_node);
+                uint32_t head_copy_expected_value = head_cpy.union_value_;
+                head_cpy.data_.index_ = get_index_by_block_head(new_block_node);
 #if BQ_LOG_BUFFER_DEBUG
-                assert(head_cpy.index_ >= 0 && head_cpy.index_ < max_blocks_count_ && "push assert failed, invalid new_block_node!");
+                assert(head_cpy.data_.index_ >= 0 && head_cpy.data_.index_ < max_blocks_count_ && "push assert failed, invalid new_block_node!");
 #endif
-                ++head_cpy.aba_mark_;
-                if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).compare_exchange_strong(head_copy_expected_value, head_cpy.union_value(), bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                ++head_cpy.data_.aba_mark_;
+                if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_copy_expected_value, head_cpy.union_value_, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                     break;
                 }
             }
@@ -220,7 +232,7 @@ namespace bq {
 #endif
             auto& prev_pointer = (prev_block_node ? prev_block_node->next_ : head_);
             new_block_node->next_ = prev_pointer;
-            prev_pointer.index_ = (uint16_t)(((const uint8_t*)new_block_node - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
+            prev_pointer.data_.index_ = (uint16_t)(((const uint8_t*)new_block_node - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
         }
 
         /// <summary>
@@ -248,13 +260,13 @@ namespace bq {
 #endif
             if (!prev_block_node) {
 #if BQ_LOG_BUFFER_DEBUG
-                assert(head_.index_ == remove_index && "remove assert failed!");
+                assert(head_.data_.index_ == remove_index && "remove assert failed!");
 #endif
                 head_ = remove_block_node->next_;
             } else {
 #if BQ_LOG_BUFFER_DEBUG
                 assert(prev_index >= 0 && prev_index < max_blocks_count_ && "remove assert failed, invalid prev_block_node!");
-                assert(prev_block_node->next_.index_ == remove_index);
+                assert(prev_block_node->next_.data_.index_ == remove_index);
 #endif
                 prev_block_node->next_ = remove_block_node->next_;
             }

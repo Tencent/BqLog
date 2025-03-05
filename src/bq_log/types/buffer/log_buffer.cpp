@@ -42,44 +42,36 @@ namespace bq {
         }
         void bq_forceinline set_version(uint8_t ver, uint32_t seq)
         {
+            (void)padding_;
             *(uint32_t*)version_ = (seq & 0x00FFFFFF) | ((uint32_t)ver << 24);
         }
     } 
     BQ_PACK_END
 
-    BQ_PACK_BEGIN union bool_atomic {
-    public:
-        bq::platform::atomic<bool> value_;
-    private:
-        char padding_[8];
-    };
-    BQ_PACK_END
-
     BQ_PACK_BEGIN
     struct block_misc_data {
-        bool_atomic is_removed_;
-        bool_atomic need_reallocate_;
+        bool is_removed_;
+        char padding_inner1_[8 - sizeof(is_removed_)];
+        bool need_reallocate_;
+        char padding_inner2_[8 - sizeof(need_reallocate_)];
         version_head version_;
     }
     BQ_PACK_END
 
-    static_assert((offsetof(block_misc_data, is_removed_) % 8 == 0), "invalid alignment of block_misc_data");
-    static_assert((offsetof(block_misc_data, need_reallocate_) % 8 == 0), "invalid alignment of block_misc_data");
-
-    bq_forceinline void mark_block_removed(block_node_head* block, bool removed) { block->get_misc_data<block_misc_data>().is_removed_.value_.store_release(removed); }
+    bq_forceinline void mark_block_removed(block_node_head* block, bool removed) { BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block->get_misc_data<block_misc_data>().is_removed_, bool).store_release(removed); }
     bq_forceinline bool is_block_removed(block_node_head* block)
     {
-        auto& is_removed_variable = block->get_misc_data<block_misc_data>().is_removed_.value_;
-        if (is_removed_variable.load_raw()) {
+        bool& is_removed_variable = block->get_misc_data<block_misc_data>().is_removed_;
+        if (is_removed_variable) {
             // inter thread sync
-            if (is_removed_variable.load_acquire()) {
+            if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(is_removed_variable, bool).load_acquire()) {
                 return true;
             }
         }
         return false;
     }
-    bq_forceinline void mark_block_need_reallocate(block_node_head* block, bool need_reallocate) { block->get_misc_data<block_misc_data>().need_reallocate_.value_.store_raw(need_reallocate); }
-    bq_forceinline bool is_block_need_reallocate(block_node_head* block) { return block->get_misc_data<block_misc_data>().need_reallocate_.value_.load_raw(); }
+    bq_forceinline void mark_block_need_reallocate(block_node_head* block, bool need_reallocate) { block->get_misc_data<block_misc_data>().need_reallocate_ = need_reallocate; }
+    bq_forceinline bool is_block_need_reallocate(block_node_head* block) { return block->get_misc_data<block_misc_data>().need_reallocate_; }
 
 
     struct log_tls_buffer_info {
@@ -167,6 +159,9 @@ namespace bq {
         , high_perform_buffer_(config, BLOCKS_PER_GROUP_NODE)
         , lp_buffer_(config)
     {
+#if BQ_LOG_BUFFER_DEBUG
+        (void)padding_;
+#endif
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
     }
 

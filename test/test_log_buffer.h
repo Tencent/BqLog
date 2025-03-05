@@ -110,7 +110,7 @@ namespace bq {
                 bq::array<uint8_t> buffer;
                 buffer.fill_uninitialized(size);
                 uintptr_t base_addr = (uintptr_t)(uint8_t*)buffer.begin();
-                uintptr_t aligned_addr = base_addr + (CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1);
+                uintptr_t aligned_addr = (base_addr + (uintptr_t)(CACHE_LINE_SIZE - 1)) & ~((uintptr_t)CACHE_LINE_SIZE - 1);
                 uintptr_t buffer_addr = aligned_addr + 2 * sizeof(block_list);
                 new ((void*)aligned_addr, bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, (uint8_t*)buffer_addr, size - (ptrdiff_t)(buffer_addr - base_addr), config.use_mmap);
                 block_list& list_from = *(block_list*)aligned_addr;
@@ -131,7 +131,7 @@ namespace bq {
                 task2.start();
                 
                 int32_t percent = 0;
-                test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms\r", config.use_mmap ? "enable" : "disable",  percent, 0);
+                test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms\r", config.use_mmap ? "Y" : "-",  percent, 0);
                 auto start_time = bq::platform::high_performance_epoch_ms();
                 while (task1.get_left_count() + task2.get_left_count() > 0) {
                     int32_t current_left_count = 2 * LOOP_COUNT - task1.get_left_count() - task2.get_left_count();
@@ -139,7 +139,7 @@ namespace bq {
                     if (new_percent != percent) {
                         percent = new_percent;
                         auto current_time = bq::platform::high_performance_epoch_ms();
-                        test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms              \r", config.use_mmap ? "enable" : "disable", percent, (int32_t)(current_time - start_time));
+                        test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms              \r", config.use_mmap ? "Y" : "-", percent, (int32_t)(current_time - start_time));
                     }
                     bq::platform::thread::yield();
                 }
@@ -147,8 +147,8 @@ namespace bq {
                 task2.join();
                 percent = 100;
                 auto current_time = bq::platform::high_performance_epoch_ms();
-                test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms              \r", config.use_mmap ? "enable" : "disable", percent, (int32_t)(current_time - start_time));
-                test_output_dynamic_param(bq::log_level::info, "\n[block list] mmap:%s, test finished\n", config.use_mmap ? "enable" : "disable");
+                test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms              \r", config.use_mmap ? "Y" : "-", percent, (int32_t)(current_time - start_time));
+                test_output_dynamic_param(bq::log_level::info, "\n[block list] mmap:%s, test finished\n", config.use_mmap ? "Y" : "-");
                 result.add_result(list_to.pop() == nullptr, "block list test 1");
                 size_t num_from = 0;
                 auto from_node = list_from.first();
@@ -188,9 +188,9 @@ namespace bq {
                 auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 
                 test_output_dynamic_param(bq::log_level::info, "================\n[log buffer] mmap:%s, auto expand:%s, high performance mode:%s\n"
-                    , config.use_mmap ? "enable" : "disable"
-                    , config.policy == log_memory_policy::auto_expand_when_full ? "enable" : "disable"
-                    , config.high_frequency_threshold_per_second < UINT64_MAX ? "enable" : "disable");
+                    , config.use_mmap ? "Y" : "-"
+                    , config.policy == log_memory_policy::auto_expand_when_full ? "Y" : "-"
+                    , config.high_frequency_threshold_per_second < UINT64_MAX ? "Y" : "-");
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms\r", percent, 0);
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
@@ -240,7 +240,7 @@ namespace bq {
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
                     result.add_result(task_check_vector[i] == chunk_count_per_task, "[log buffer]chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
-                test_output_dynamic_param(bq::log_level::info, "\n[log buffer] test finished\n");
+                test_output_dynamic(bq::log_level::info, "\n[log buffer] test finished\n");
                 result.add_result(total_chunk == log_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", log_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "[log buffer] total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
             }
@@ -267,7 +267,6 @@ namespace bq {
                 do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
                 do_basic_test(result, config);
-
 
                 config.high_frequency_threshold_per_second = UINT64_MAX;
                 do_basic_test(result, config);

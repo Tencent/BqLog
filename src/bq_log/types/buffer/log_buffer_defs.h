@@ -35,8 +35,8 @@ namespace bq {
     static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
 
     //Warning ! You Must Ensure The Alignment By Yourself!
-    template<typename TO, typename FROM>
-    bq_forceinline TO& __ring_buffer_force_cast_ignore_alignment_warning(FROM* from)
+    template<typename TO>
+    bq_forceinline TO& __ring_buffer_force_cast_ignore_alignment_warning(uint8_t* from)
     {
 #if BQ_GCC 
 #pragma GCC diagnostic push
@@ -58,7 +58,7 @@ namespace bq {
 #endif
     }
 
-    #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) bq::__ring_buffer_force_cast_ignore_alignment_warning<bq::platform::atomic<TYPE>>(&X)
+    #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) bq::__ring_buffer_force_cast_ignore_alignment_warning<bq::platform::atomic<TYPE>>((uint8_t*)&X)
 
 
     struct log_buffer_handle_base {
@@ -129,7 +129,6 @@ namespace bq {
         log_buffer_read_handle read_handle_;
         log_buffer_write_handle write_handle_;
         bool is_read_handle_;
-        bool is_canceled_;
 
     public:
         scoped_log_buffer_handle() = delete;
@@ -137,7 +136,6 @@ namespace bq {
             : buffer_(&buffer)
             , read_handle_(handle)
             , is_read_handle_(true)
-            , is_canceled_(false)
         {
             (void)write_handle_;
         }
@@ -145,19 +143,11 @@ namespace bq {
             : buffer_(&buffer)
             , write_handle_(handle)
             , is_read_handle_(false)
-            , is_canceled_(false)
         {
             (void)read_handle_;
         }
-        bq_forceinline void cancel()
-        {
-            is_canceled_ = true;
-        }
         bq_forceinline ~scoped_log_buffer_handle()
         {
-            if (is_canceled_) {
-                return;
-            }
             if (is_read_handle_) {
                 buffer_->return_read_trunk(read_handle_);
             } else {

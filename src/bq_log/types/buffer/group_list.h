@@ -216,9 +216,9 @@ namespace bq {
         const log_buffer_config& config_;
         uint16_t max_block_count_per_group_;
         bq::platform::atomic<uint32_t> current_group_index_;
-        char padding_0[CACHE_LINE_SIZE];
+        char padding_0[CACHE_LINE_SIZE] = {};
         group_node::pointer_type head_;
-        char padding_1[CACHE_LINE_SIZE];
+        char padding_1[CACHE_LINE_SIZE] = {};
     };
 
 }

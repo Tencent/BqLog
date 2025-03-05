@@ -45,7 +45,7 @@ namespace bq {
             buffer_size_ = bq::siso_ring_buffer::calculate_min_size_of_memory(buffer_size_);
             if (snapshot_buffer_) {
                 uint32_t current_useable_buffer_size = (uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count());
-                if (abs((int64_t)current_useable_buffer_size - (int64_t)buffer_size_) > CACHE_LINE_SIZE * 2) {
+                if (abs((int64_t)current_useable_buffer_size - (int64_t)buffer_size_) > (int64_t)CACHE_LINE_SIZE * 2) {
                     buffer_data_.reset();
                     buffer_data_.fill_uninitialized((size_t)buffer_size_);
                     // create a new snapshot_buffer_ and backup log data.

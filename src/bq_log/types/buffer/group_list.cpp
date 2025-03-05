@@ -185,9 +185,9 @@ namespace bq {
         : config_(config)
         , max_block_count_per_group_(max_block_count_per_group)
         , current_group_index_(0)
-        , padding_0({})
-        , padding_1({})
     {
+        (void)padding_0;
+        (void)padding_1;
         bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name, true);
         if (!config.use_mmap) {
             bq::file_manager::remove_file_or_dir(memory_map_folder);

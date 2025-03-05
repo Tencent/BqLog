@@ -23,14 +23,16 @@
  namespace bq {
 
     block_node_head::block_node_head(void* buffer, size_t buffer_size, bool is_memory_mapped)
-        : padding_inner0_({})
-        , buffer_(buffer, buffer_size, is_memory_mapped)
     {
+        new ((void*)&get_buffer(), bq::enum_new_dummy::dummy) siso_ring_buffer(buffer, buffer_size, is_memory_mapped);
         memset(misc_data_, 0, sizeof(misc_data_));
-        next_.index_ = (uint16_t)-1;
-        next_.aba_mark_ = 0;
         size_t min_size = bq::roundup_pow_of_two(buffer_size) == buffer_size ? buffer_size : (bq::roundup_pow_of_two(buffer_size) >> 1);
-        assert(((size_t)(buffer_.get_block_size() * buffer_.get_total_blocks_count()) == min_size) && "siso_ring_buffer usable size is unexpected, please check caculation as memory alignment");
+        assert(((size_t)(get_buffer().get_block_size() * get_buffer().get_total_blocks_count()) == min_size) && "siso_ring_buffer usable size is unexpected, please check calculation as memory alignment");
+    }
+
+    block_node_head::~block_node_head()
+    {
+        get_buffer().~siso_ring_buffer();
     }
 
     void block_node_head::reset_misc_data()
@@ -70,10 +72,10 @@
         uint16_t current_blocks_count = 0;
         while (!current_ptr->is_empty() && current_blocks_count <= max_blocks_count_) {
             ++current_blocks_count;
-            if (current_ptr->index_ >= max_blocks_count_) {
+            if (current_ptr->data_.index_ >= max_blocks_count_) {
                 return false;
             }
-            const block_node_head& next_block_head = get_block_head_by_index(current_ptr->index_); 
+            const block_node_head& next_block_head = get_block_head_by_index(current_ptr->data_.index_); 
             current_ptr = &(next_block_head.next_);
         }
         if (current_blocks_count > max_blocks_count_) {
