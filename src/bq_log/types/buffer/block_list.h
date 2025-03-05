@@ -45,25 +45,8 @@ namespace bq {
         private:
             pointer_type_datas data_;
             uint32_t union_value_;
+
         public:
-            bq_forceinline pointer_type()
-            {
-                data_.index_ = (uint16_t)-1;
-                data_.aba_mark_ = 0;
-            }
-            bq_forceinline pointer_type(const pointer_type& rhs)
-            {
-                union_value_ = rhs.union_value_;
-            }
-            bq_forceinline pointer_type(uint32_t new_union_value)
-            {
-                union_value_ = new_union_value;
-            }
-            bq_forceinline pointer_type& operator=(const pointer_type& rhs)
-            {
-                union_value_ = rhs.union_value_;
-                return *this;
-            }
             bq_forceinline bool is_empty() const { return data_.index_ == (uint16_t)-1; }
         }
         BQ_PACK_END
@@ -176,7 +159,8 @@ namespace bq {
         {
             while (true) {
                 auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
-                block_node_head::pointer_type head_cpy(head_cpy_union);
+                block_node_head::pointer_type head_cpy;
+                head_cpy.union_value_ = head_cpy_union;
                 if (head_cpy.is_empty()) {
                     return nullptr;
                 }
@@ -194,7 +178,8 @@ namespace bq {
         {
             while (true) {
                 auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
-                block_node_head::pointer_type head_cpy(head_cpy_union);
+                block_node_head::pointer_type head_cpy;
+                head_cpy.union_value_ = head_cpy_union;
                 new_block_node->next_ = head_cpy;
                 uint32_t head_copy_expected_value = head_cpy.union_value_;
                 head_cpy.data_.index_ = get_index_by_block_head(new_block_node);
