@@ -129,6 +129,7 @@ namespace bq {
         log_buffer_read_handle read_handle_;
         log_buffer_write_handle write_handle_;
         bool is_read_handle_;
+        bool is_canceled_;
 
     public:
         scoped_log_buffer_handle() = delete;
@@ -136,6 +137,7 @@ namespace bq {
             : buffer_(&buffer)
             , read_handle_(handle)
             , is_read_handle_(true)
+            , is_canceled_(false)
         {
             (void)write_handle_;
         }
@@ -143,11 +145,19 @@ namespace bq {
             : buffer_(&buffer)
             , write_handle_(handle)
             , is_read_handle_(false)
+            , is_canceled_(false)
         {
             (void)read_handle_;
         }
+        bq_forceinline void cancel()
+        {
+            is_canceled_ = true;
+        }
         bq_forceinline ~scoped_log_buffer_handle()
         {
+            if (is_canceled_) {
+                return;
+            }
             if (is_read_handle_) {
                 buffer_->return_read_trunk(read_handle_);
             } else {

@@ -25,31 +25,61 @@
 namespace bq {
 
     BQ_PACK_BEGIN
+    struct version_head {
+    private:
+        char version_[4]; // 8 bits mmap version and 24 bits sequence (int24_t, ^_^)
+        char padding_[4];
+    public:
+        struct log_tls_buffer_info* tls_info_; //Only meaningful when get_ver() equals the current version of log_buffer.
+
+        bq_forceinline uint32_t get_seq() const
+        {
+            return (*(uint32_t*)version_) * 0x00FFFFFF;
+        }
+        bq_forceinline uint8_t get_ver() const
+        {
+            return (uint8_t)version_[3];
+        }
+        void bq_forceinline set_version(uint8_t ver, uint32_t seq)
+        {
+            *(uint32_t*)version_ = (seq & 0x00FFFFFF) | ((uint32_t)ver << 24);
+        }
+    } 
+    BQ_PACK_END
+
+    BQ_PACK_BEGIN union bool_atomic {
+    public:
+        bq::platform::atomic<bool> value_;
+    private:
+        char padding_[8];
+    };
+    BQ_PACK_END
+
+    BQ_PACK_BEGIN
     struct block_misc_data {
-        bool is_removed_;
-        char padding_inner1_[8 - sizeof(is_removed_)];
-        bool need_reallocate_;
-        char padding_inner2_[8 - sizeof(need_reallocate_)];
+        bool_atomic is_removed_;
+        bool_atomic need_reallocate_;
+        version_head version_;
     }
     BQ_PACK_END
 
     static_assert((offsetof(block_misc_data, is_removed_) % 8 == 0), "invalid alignment of block_misc_data");
     static_assert((offsetof(block_misc_data, need_reallocate_) % 8 == 0), "invalid alignment of block_misc_data");
 
-    bq_forceinline void mark_block_removed(block_node_head* block, bool removed) { BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block->get_misc_data<block_misc_data>().is_removed_, bool).store(removed, bq::platform::memory_order::release); }
+    bq_forceinline void mark_block_removed(block_node_head* block, bool removed) { block->get_misc_data<block_misc_data>().is_removed_.value_.store_release(removed); }
     bq_forceinline bool is_block_removed(block_node_head* block)
     {
-        bool& is_removed_variable = block->get_misc_data<block_misc_data>().is_removed_;
-        if (is_removed_variable) {
+        auto& is_removed_variable = block->get_misc_data<block_misc_data>().is_removed_.value_;
+        if (is_removed_variable.load_raw()) {
             // inter thread sync
-            if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(is_removed_variable, bool).load(bq::platform::memory_order::acquire)) {
+            if (is_removed_variable.load_acquire()) {
                 return true;
             }
         }
         return false;
     }
-    bq_forceinline void mark_block_need_reallocate(block_node_head* block, bool need_reallocate) { block->get_misc_data<block_misc_data>().need_reallocate_ = need_reallocate; }
-    bq_forceinline bool is_block_need_reallocate(block_node_head* block) { return block->get_misc_data<block_misc_data>().need_reallocate_; }
+    bq_forceinline void mark_block_need_reallocate(block_node_head* block, bool need_reallocate) { block->get_misc_data<block_misc_data>().need_reallocate_.value_.store_raw(need_reallocate); }
+    bq_forceinline bool is_block_need_reallocate(block_node_head* block) { return block->get_misc_data<block_misc_data>().need_reallocate_.value_.load_raw(); }
 
 
     struct log_tls_buffer_info {

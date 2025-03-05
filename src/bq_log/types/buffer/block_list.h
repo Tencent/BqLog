@@ -163,7 +163,7 @@ namespace bq {
         bq_forceinline block_node_head* pop()
         {
             while (true) {
-                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load(bq::platform::memory_order::acquire);
+                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load_acquire();
                 block_node_head::pointer_type head_cpy(head_cpy_union);
                 if (head_cpy.is_empty()) {
                     return nullptr;
@@ -181,7 +181,7 @@ namespace bq {
         bq_forceinline void push(block_node_head* new_block_node)
         {
             while (true) {
-                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load(bq::platform::memory_order::acquire);
+                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load_acquire();
                 block_node_head::pointer_type head_cpy(head_cpy_union);
                 new_block_node->next_ = head_cpy;
                 uint32_t head_copy_expected_value = head_cpy.union_value();

@@ -74,7 +74,7 @@ namespace bq {
                     uint32_t data_size;
                     uint8_t data[1];
                 }, chunk_head);
-
+            static_assert(sizeof(chunk_head) == 13, "invalid chunk_head size");
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };
@@ -93,12 +93,14 @@ namespace bq {
 
         BQ_PACK_BEGIN
         struct cursors_set {
-            uint32_t write_cursor_;
+            bq::platform::atomic<uint32_t> write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
-            uint32_t read_cursor_;
+            bq::platform::atomic<uint32_t> read_cursor_;
             char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
         }
         BQ_PACK_END
+        
+
         log_buffer_config config_;
         char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
         cursors_set* cursors_; // make sure it is aligned to cache line size.

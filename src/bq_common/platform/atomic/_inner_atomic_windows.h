@@ -57,6 +57,18 @@ namespace bq {
 #define _INTRIN_RELEASE(x) BQ_ATOMIC_CONCATX(x, _rel)
 #endif
 
+#define BQ_ATOMIC_INTRINSIC_RELAXED(_Result, _Intrinsic, ...) \
+    _Result = _INTRIN_RELAXED(_Intrinsic)(__VA_ARGS__);
+
+#define BQ_ATOMIC_INTRINSIC_ACQUIRE(_Result, _Intrinsic, ...) \
+    _Result = _INTRIN_ACQUIRE(_Intrinsic)(__VA_ARGS__);
+
+#define BQ_ATOMIC_INTRINSIC_RELEASE(_Result, _Intrinsic, ...) \
+    _Result = _INTRIN_RELEASE(_Intrinsic)(__VA_ARGS__);
+
+#define BQ_ATOMIC_INTRINSIC_SEQ_CST(_Result, _Intrinsic, ...) \
+    _Result = _Intrinsic(__VA_ARGS__);
+
 #define BQ_ATOMIC_CHOOSE_INTRINSIC(_Order, _Result, _Intrinsic, ...) \
     switch (_Order) {                                                \
     case memory_order::relaxed:                                      \
@@ -90,7 +102,7 @@ namespace bq {
         static_assert(sizeof(T) == SIZE_BYTE, "please don't use bq::platform::_atomic_base, use bq::platform::atomic instead.");                                                                                                   \
         typedef typename bq::decay<T>::type value_type;                                                                                                                                                                            \
         typedef typename _atomic_standard_windows_type<sizeof(T)>::value_type api_type;                                                                                                                                            \
-        alignas(8) volatile value_type value_;                                                                                                                                                                                                \
+        alignas(8) value_type value_;                                                                                                                                                                                                \
         _atomic_base()                                                                                                                                                                                                             \
             : value_()                                                                                                                                                                                                             \
         {                                                                                                                                                                                                                          \
@@ -99,17 +111,61 @@ namespace bq {
             : value_(value)                                                                                                                                                                                                        \
         {                                                                                                                                                                                                                          \
         }                                                                                                                                                                                                                          \
-                                                                                                                                                                                                                                   \
         bq_forceinline value_type load(memory_order order = memory_order::seq_cst) const noexcept                                                                                                                                  \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>((value_type)0));                                               \
             return (value_type)result;                                                                                                                                                                                             \
         }                                                                                                                                                                                                                          \
+        bq_forceinline value_type load_raw() const noexcept\
+        {\
+            return value_;\
+        }\
+        bq_forceinline value_type load_acquire() const noexcept\
+        {                                                                                                                                                                            \
+            api_type result;                                                                                                                                                         \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>((value_type)0)); \
+            return (value_type)result;                                                                                                                                               \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type load_relaxed() const noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>((value_type)0));                                                     \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type load_seq_cst() const noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>((value_type)0));                                                     \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
         bq_forceinline void store(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                             \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                            \
+            (void)result;\
+        }\
+        bq_forceinline void store_raw(value_type val) noexcept\
+        {\
+            value_ = val;\
+        }\
+        bq_forceinline void store_release(value_type val) noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                            \
+            (void)result;                                                                                                                                                                                                          \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline void store_relaxed(value_type val) noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                            \
+            (void)result;                                                                                                                                                                                                          \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline void store_seq_cst(value_type val) noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                            \
+            (void)result;                                                                                                                                                                                                          \
         }                                                                                                                                                                                                                          \
         bq_forceinline value_type exchange(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                    \
         {                                                                                                                                                                                                                          \
@@ -117,28 +173,83 @@ namespace bq {
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                            \
             return (value_type)result;                                                                                                                                                                                             \
         }                                                                                                                                                                                                                          \
+        bq_forceinline value_type exchange_raw(value_type val) noexcept\
+        {\
+            value_type old = value_;\
+            value_ = val;\
+            return old;\
+        }\
+        bq_forceinline value_type exchange_acquire(value_type val) noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                            \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type exchange_release(value_type val) noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                           \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type exchange_relaxed(value_type val) noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                           \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type exchange_seq_cst(value_type val) noexcept\
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                           \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
         bq_forceinline bool compare_exchange_weak(value_type& expected, value_type desired, const memory_order success_order = memory_order::seq_cst, const memory_order fail_order = memory_order::seq_cst) noexcept              \
         {                                                                                                                                                                                                                          \
-            (void)fail_order;                                                                                                                                                                                                      \
             api_type result;                                                                                                                                                                                                       \
             BQ_ATOMIC_CHOOSE_INTRINSIC(success_order, result, _INTRIN_BIT_SUFFIX(_InterlockedCompareExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(desired), get_atomic_value<value_type>(expected)); \
             bool is_suc = ((value_type)result == expected);                                                                                                                                                                        \
-            expected = (value_type)result;                                                                                                                                                                                         \
+            if (!is_suc) {                                                                                                                                                                                                        \
+                expected = load(fail_order);                                                                                                                                                                                       \
+            }                                                                                                                                                                                                                      \
             return is_suc;                                                                                                                                                                                                         \
         }                                                                                                                                                                                                                          \
         bq_forceinline bool compare_exchange_strong(value_type& expected, value_type desired, const memory_order success_order = memory_order::seq_cst, const memory_order fail_order = memory_order::seq_cst) noexcept            \
         {                                                                                                                                                                                                                          \
-            (void)fail_order;                                                                                                                                                                                                      \
-            api_type result;                                                                                                                                                                                                       \
-            BQ_ATOMIC_CHOOSE_INTRINSIC(success_order, result, _INTRIN_BIT_SUFFIX(_InterlockedCompareExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(desired), get_atomic_value<value_type>(expected)); \
-            bool is_suc = ((value_type)result == expected);                                                                                                                                                                        \
-            expected = (value_type)result;                                                                                                                                                                                         \
-            return is_suc;                                                                                                                                                                                                         \
+            return compare_exchange_weak(expected, desired, success_order, fail_order);                                                                                                                                            \
         }                                                                                                                                                                                                                          \
         bq_forceinline value_type add_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                         \
+            return (value_type)result + val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type add_fetch_raw(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            value_ += val;\
+            return value_;\
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type add_fetch_acquire(value_type val) noexcept                                                                                                                   \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                         \
+            return (value_type)result + val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type add_fetch_release(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                               \
+            return (value_type)result + val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type add_fetch_relaxed(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                               \
+            return (value_type)result + val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type add_fetch_seq_cst(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                               \
             return (value_type)result + val;                                                                                                                                                                                       \
         }                                                                                                                                                                                                                          \
         bq_forceinline value_type fetch_add(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
@@ -147,18 +258,117 @@ namespace bq {
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                         \
             return (value_type)result;                                                                                                                                                                                             \
         }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_add_raw(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            value_type old_value = value_; \
+            value_ += val;                                                                                                                                                                                                          \
+            return old_value;                                                                                                                                                                                                          \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_add_acquire(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                               \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_add_release(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                               \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_add_relaxed(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                               \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_add_seq_cst(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedExchangeAdd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                               \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
         bq_forceinline value_type sub_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
         {                                                                                                                                                                                                                          \
             return add_fetch(-val, order);                                                                                                                                                                                         \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type sub_fetch_raw(value_type val) noexcept                                                                                                                   \
+        {                                                                                                                                                                                                                          \
+            return add_fetch_raw(-val);                                                                                                                                                                                         \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type sub_fetch_acquire(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return add_fetch_acquire(-val);                                                                                                                                                                                            \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type sub_fetch_release(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return add_fetch_release(-val);                                                                                                                                                                                            \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type sub_fetch_relaxed(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return add_fetch_relaxed(-val);                                                                                                                                                                                            \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type sub_fetch_seq_cst(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return add_fetch_seq_cst(-val);                                                                                                                                                                                            \
         }                                                                                                                                                                                                                          \
         bq_forceinline value_type fetch_sub(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
         {                                                                                                                                                                                                                          \
             return fetch_add(-val, order);                                                                                                                                                                                         \
         }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_sub_raw(value_type val) noexcept                                                                                                                   \
+        {                                                                                                                                                                                                                          \
+            return fetch_add_raw(-val);                                                                                                                                                                                         \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_sub_acquire(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return fetch_add_acquire(-val);                                                                                                                                                                                            \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_sub_release(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return fetch_add_release(-val);                                                                                                                                                                                            \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_sub_relaxed(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return fetch_add_relaxed(-val);                                                                                                                                                                                            \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_sub_seq_cst(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            return fetch_add_seq_cst(-val);                                                                                                                                                                                            \
+        }                                                                                                                                                                                                                          \
         bq_forceinline value_type xor_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                 \
+            return (value_type)result ^ val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type xor_fetch_raw(value_type val) noexcept                                                                                                                   \
+        {                                                                                                                                                                                                                          \
+            value_ ^= val;\
+            return value_;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type xor_fetch_acquire(value_type val) noexcept                                                                                                                   \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                 \
+            return (value_type)result ^ val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type xor_fetch_release(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result ^ val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type xor_fetch_relaxed(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result ^ val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type xor_fetch_seq_cst(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
             return (value_type)result ^ val;                                                                                                                                                                                       \
         }                                                                                                                                                                                                                          \
         bq_forceinline value_type fetch_xor(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
@@ -167,10 +377,69 @@ namespace bq {
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                 \
             return (value_type)result;                                                                                                                                                                                             \
         }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_xor_raw(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            value_type old_value = value_;                                                                                                                                                                                                         \
+            value_ ^= val;                                                                                                                                                                                                         \
+            return old_value;                                                                                                                                                                                                         \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_xor_acquire(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_xor_release(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_xor_relaxed(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_xor_seq_cst(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedXor, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
         bq_forceinline value_type or_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                    \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                  \
+            return (value_type)result | val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type or_fetch_raw(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            value_ |= val;                                                                                                                                                                                                         \
+            return value_;                                                                                                                                                                                                         \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type or_fetch_acquire(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result | val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type or_fetch_release(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result | val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type or_fetch_relaxed(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result | val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type or_fetch_seq_cst(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
             return (value_type)result | val;                                                                                                                                                                                       \
         }                                                                                                                                                                                                                          \
         bq_forceinline value_type fetch_or(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                    \
@@ -179,16 +448,105 @@ namespace bq {
             BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                  \
             return (value_type)result;                                                                                                                                                                                             \
         }                                                                                                                                                                                                                          \
-        bq_forceinline value_type and_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
+        bq_forceinline value_type fetch_or_raw(value_type val) noexcept                                                                                                                                                           \
+        {                                                                                                                                                                                                                          \
+            value_type old_value = value_;                                                                                                                                                                                         \
+            value_ |= val;                                                                                                                                                                                                         \
+            return old_value;                                                                                                                                                                                                      \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_or_acquire(value_type val) noexcept                                                                                                                                                       \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
-            BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                 \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_or_release(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_or_relaxed(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_or_seq_cst(value_type val) noexcept                                                                                                                                                       \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedOr, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                       \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type and_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                    \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                  \
             return (value_type)result & val;                                                                                                                                                                                       \
         }                                                                                                                                                                                                                          \
-        bq_forceinline value_type fetch_and(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                   \
+        bq_forceinline value_type and_fetch_raw(value_type val) noexcept                                                                                                                                                            \
+        {                                                                                                                                                                                                                          \
+            value_ &= val;                                                                                                                                                                                                         \
+            return value_;                                                                                                                                                                                                         \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type and_fetch_acquire(value_type val) noexcept                                                                                                                                                        \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
-            BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                 \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
+            return (value_type)result & val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type and_fetch_release(value_type val) noexcept                                                                                                                                                        \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
+            return (value_type)result & val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type and_fetch_relaxed(value_type val) noexcept                                                                                                                                                        \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
+            return (value_type)result & val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type and_fetch_seq_cst(value_type val) noexcept                                                                                                                                                        \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
+            return (value_type)result & val;                                                                                                                                                                                       \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_and(value_type val, memory_order order = memory_order::seq_cst) noexcept                                                                                                                    \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_CHOOSE_INTRINSIC(order, result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                  \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_and_raw(value_type val) noexcept                                                                                                                                                            \
+        {                                                                                                                                                                                                                          \
+            value_type old_value = value_;                                                                                                                                                                                         \
+            value_ &= val;                                                                                                                                                                                                         \
+            return old_value;                                                                                                                                                                                                      \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_and_acquire(value_type val) noexcept                                                                                                                                                        \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_ACQUIRE(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_and_release(value_type val) noexcept                                                                                                                                                        \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELEASE(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_and_relaxed(value_type val) noexcept                                                                                                                                                        \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_RELAXED(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
+            return (value_type)result;                                                                                                                                                                                             \
+        }                                                                                                                                                                                                                          \
+        bq_forceinline value_type fetch_and_seq_cst(value_type val) noexcept                                                                                                                                                        \
+        {                                                                                                                                                                                                                          \
+            api_type result;                                                                                                                                                                                                       \
+            BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedAnd, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                        \
             return (value_type)result;                                                                                                                                                                                             \
         }                                                                                                                                                                                                                          \
     };
@@ -199,25 +557,25 @@ namespace bq {
 
         template <>
         struct _atomic_standard_windows_type<1> {
-            typedef volatile char* ptr_type;
+            typedef char* ptr_type;
             typedef char value_type;
         };
 
         template <>
         struct _atomic_standard_windows_type<2> {
-            typedef volatile short* ptr_type; // int16_t is not compatible to VC++ type short in the intrinsic functions
+            typedef short* ptr_type; // int16_t is not compatible to VC++ type short in the intrinsic functions
             typedef short value_type;
         };
 
         template <>
         struct _atomic_standard_windows_type<4> {
-            typedef volatile long* ptr_type; // int32_t is not compatible to VC++ type short in the intrinsic functions
+            typedef long* ptr_type; // int32_t is not compatible to VC++ type short in the intrinsic functions
             typedef long value_type;
         };
 
         template <>
         struct _atomic_standard_windows_type<8> {
-            typedef volatile __int64* ptr_type; // int64_t is not compatible to VC++ type short in the intrinsic functions
+            typedef __int64* ptr_type; // int64_t is not compatible to VC++ type short in the intrinsic functions
             typedef __int64 value_type;
         };
 

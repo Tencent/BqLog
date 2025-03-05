@@ -74,9 +74,9 @@ namespace bq {
         BQ_PACK_BEGIN
         struct cursors_set
         {
-            uint32_t write_cursor_;
+            bq::platform::atomic<uint32_t> write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
-            uint32_t read_cursor_;
+            bq::platform::atomic<uint32_t> read_cursor_;
             char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
 
             // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.

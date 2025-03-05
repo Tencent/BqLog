@@ -51,16 +51,16 @@ namespace bq {
             inline void lock()
             {
                 while (true) {
-                    if (!value_.get().exchange(true, bq::platform::memory_order::acquire)) {
+                    if (!value_.get().exchange_acquire(true)) {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                        thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
+                        thread_id_.store_seq_cst(bq::platform::thread::get_current_thread_id());
 #endif
                         break;
                     }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                    assert(bq::platform::thread::get_current_thread_id() != thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
+                    assert(bq::platform::thread::get_current_thread_id() != thread_id_.load_seq_cst() && "spin_lock is not reentrant");
 #endif
-                    while (value_.get().load(bq::platform::memory_order::relaxed)) {
+                    while (value_.get().load_relaxed()) {
                         yield();
                     }
                 }
@@ -69,9 +69,9 @@ namespace bq {
             inline void unlock()
             {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                thread_id_.store(0, bq::platform::memory_order::seq_cst);
+                thread_id_.store_seq_cst(0);
 #endif
-                value_.get().store(false, bq::platform::memory_order::release);
+                value_.get().store_release(false);
             }
         };
 
@@ -111,14 +111,14 @@ namespace bq {
             inline void read_lock()
             {
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add(1, bq::platform::memory_order::acquire);
+                    counter_type previous_counter = counter_.get().fetch_add_acquire(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
                     }
                     while (true) {
                         yield();
-                        counter_type current_counter = counter_.get().load(bq::platform::memory_order::relaxed);
+                        counter_type current_counter = counter_.get().load_relaxed();
                         if (current_counter >= 0) {
                             break;
                         }
@@ -128,7 +128,7 @@ namespace bq {
 
             inline void read_unlock()
             {
-                counter_type previous_counter = counter_.get().fetch_add(-1, bq::platform::memory_order::release);
+                counter_type previous_counter = counter_.get().fetch_add_release(-1);
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
 #else
@@ -139,8 +139,8 @@ namespace bq {
             inline void write_lock()
             {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                assert(bq::platform::thread::get_current_thread_id() != write_lock_thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
-                write_lock_thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
+                assert(bq::platform::thread::get_current_thread_id() != write_lock_thread_id_.load_seq_cst() && "spin_lock is not reentrant");
+                write_lock_thread_id_.store_seq_cst(bq::platform::thread::get_current_thread_id());
 #endif
                 while (true) {
                     counter_type expected_counter = 0;
@@ -154,9 +154,9 @@ namespace bq {
             inline void write_unlock()
             {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                write_lock_thread_id_.store(0, bq::platform::memory_order::seq_cst);
+                write_lock_thread_id_.store_seq_cst(0);
 #endif
-                counter_.get().store(0, bq::platform::memory_order::release);
+                counter_.get().store_release(0);
             }
         };
 
