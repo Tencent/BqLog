@@ -45,9 +45,9 @@ namespace bq {
         if (thread_mode_ == log_thread_mode::async) {
             set_thread_name("BqLogW_Pub");
         } else {
-            log_worker_name_seq.fetch_add(1);
+            int32_t name_seq = log_worker_name_seq.fetch_add_relaxed(1);
             char name_tmp[16];
-            snprintf(name_tmp, sizeof(name_tmp), "BqLogW_%d", log_worker_name_seq.load());
+            snprintf(name_tmp, sizeof(name_tmp), "BqLogW_%d", name_seq);
             set_thread_name(name_tmp);
         }
     }

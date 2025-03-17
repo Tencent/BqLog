@@ -26,20 +26,20 @@
 
 namespace bq {
     BQ_PACK_BEGIN
-    class block_node_head {
+    class alignas(8) block_node_head {
     public:
         friend class block_list;
         friend void block_head_aligment_check();
 
         BQ_PACK_BEGIN
-        struct pointer_type_datas {
+        struct alignas(2) pointer_type_datas {
             uint16_t index_;
             uint16_t aba_mark_;
         }
         BQ_PACK_END
 
-        BQ_PACK_BEGIN
-        union pointer_type {
+        BQ_PACK_BEGIN 
+        union alignas(4) pointer_type {
             friend class block_node_head;
             friend class block_list;
         private:
@@ -56,9 +56,9 @@ namespace bq {
         // These members are modified in different threads which will leads to "False Share".
         // So we must modify them in a low frequency
         pointer_type next_;
-        char padding_inner0_[8 - sizeof(next_)] = {};
         // reserved data. can be cast to any struct, all the bytes will be set to 0 in constructor.
-        char misc_data_[56] = {};
+        alignas(8) char misc_data_[56] = {};
+        // only POD field can be used in packed struct, so we can't use siso_ring_buffer directly.
         char buffer_[sizeof(siso_ring_buffer)];
     public:
         /// <summary>
@@ -75,10 +75,10 @@ namespace bq {
         bq_forceinline T& get_misc_data()
         {
             static_assert(sizeof(T) <= sizeof(misc_data_), "size of T too large");
-            return *((T*)(void*)misc_data_);
+            return *reinterpret_cast<T*>((void*)misc_data_);
         }
 
-        void reset_misc_data();
+        void set_misc_data(const void* data_src, size_t data_size);
 
         bq_forceinline siso_ring_buffer& get_buffer() {return *(siso_ring_buffer*)buffer_; }
 
@@ -100,17 +100,13 @@ namespace bq {
 
         
     BQ_PACK_BEGIN
-    class block_list {
+    class alignas(CACHE_LINE_SIZE) block_list {
         friend struct group_data_head;
     private:
-        block_node_head::pointer_type head_;
-        char padding_0_[8 - sizeof(head_)];
-        uint16_t offset_;
-        char padding_1_[8 - sizeof(offset_)];
-        uint16_t max_blocks_count_;
-        char padding_2_[8 - sizeof(max_blocks_count_)];
-        size_t buffer_size_per_block_;
-        char padding_3_[40 - sizeof(buffer_size_per_block_)];
+        alignas(8) block_node_head::pointer_type head_;
+        alignas(8) uint16_t offset_;
+        alignas(8) uint16_t max_blocks_count_;
+        alignas(8) size_t buffer_size_per_block_;
     private:
         void reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         bool try_recover_from_memory_map(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);

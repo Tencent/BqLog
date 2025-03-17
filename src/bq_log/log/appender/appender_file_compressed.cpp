@@ -376,7 +376,7 @@ namespace bq {
         }
 
         const auto& ext_info = handle.get_ext_head();
-        auto thread_info__iter = thread_info_hash_cache_.find(ext_info.thread_id_);
+        auto thread_info__iter = thread_info_hash_cache_.find(BQ_PACK_ACCESS(ext_info.thread_id_));
         uint32_t thread_info_idx = (uint32_t)-1;
         // write thread_info template
         if (thread_info__iter == thread_info_hash_cache_.end()) {
@@ -394,7 +394,7 @@ namespace bq {
             uint32_t thread_info_data_cursor = prealloc_head_size;
             write_handle.data()[thread_info_data_cursor++] = (uint32_t)template_sub_type::thread_info_template;
             thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(current_thread_info_max_index_, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE);
-            thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(ext_info.thread_id_, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE_64);
+            thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(BQ_PACK_ACCESS(ext_info.thread_id_), write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE_64);
             memcpy(write_handle.data() + thread_info_data_cursor, (uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), (size_t)ext_info.thread_name_len_);
             thread_info_data_cursor += ext_info.thread_name_len_;
             write_handle.reset_used_len(thread_info_data_cursor);
@@ -403,7 +403,7 @@ namespace bq {
             auto real_body_len_size = bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, 1);
             assert(real_body_len_size == 1 && "thread info template size encoding error");
             write_with_cache_commit(write_handle);
-            thread_info_hash_cache_[ext_info.thread_id_] = current_thread_info_max_index_;
+            thread_info_hash_cache_[BQ_PACK_ACCESS(ext_info.thread_id_)] = current_thread_info_max_index_;
             thread_info_idx = current_thread_info_max_index_;
             ++current_thread_info_max_index_;
         } else {
@@ -427,9 +427,10 @@ namespace bq {
 
             auto log_epoch = handle.get_log_head().timestamp_epoch;
             // in particular case, log epoch may less than base epoch time.
-            uint64_t epoch_offset = (log_epoch > last_log_entry_epoch_) ? (log_epoch - last_log_entry_epoch_) : 0;
-            last_log_entry_epoch_ += epoch_offset;
-            log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(epoch_offset, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
+            int64_t epoch_offset = (int64_t)(log_epoch - last_log_entry_epoch_);
+            last_log_entry_epoch_ = log_epoch;
+            uint64_t zigzag_epoch_offset = bq::log_utils::zigzag::encode(epoch_offset);
+            log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(zigzag_epoch_offset, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
             log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(format_template_idx, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
             log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(thread_info_idx, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
 
@@ -463,15 +464,21 @@ namespace bq {
                         args_data_cursor += 4;
                         break;
                     case bq::log_arg_type_enum::char16_type:
-                    case bq::log_arg_type_enum::int16_type:
                     case bq::log_arg_type_enum::uint16_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(uint16_t*)(args_data_ptr + args_data_cursor + 2), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
                         args_data_cursor += 4;
                         break;
+                    case bq::log_arg_type_enum::int16_type:
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(int16_t*)(args_data_ptr + args_data_cursor + 2)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
+                        args_data_cursor += 4;
+                        break;
                     case bq::log_arg_type_enum::char32_type:
-                    case bq::log_arg_type_enum::int32_type:
                     case bq::log_arg_type_enum::uint32_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(uint32_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
+                        args_data_cursor += (4 + sizeof(int32_t));
+                        break;
+                    case bq::log_arg_type_enum::int32_type:
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(int32_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
                         args_data_cursor += (4 + sizeof(int32_t));
                         break;
                     case bq::log_arg_type_enum::float_type:
@@ -479,9 +486,12 @@ namespace bq {
                         log_data_cursor += sizeof(int32_t);
                         args_data_cursor += (4 + sizeof(int32_t));
                         break;
-                    case bq::log_arg_type_enum::int64_type:
                     case bq::log_arg_type_enum::uint64_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(uint64_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
+                        args_data_cursor += (4 + sizeof(int64_t));
+                        break;
+                    case bq::log_arg_type_enum::int64_type:
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(int64_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
                         args_data_cursor += (4 + sizeof(int64_t));
                         break;
                     case bq::log_arg_type_enum::double_type:

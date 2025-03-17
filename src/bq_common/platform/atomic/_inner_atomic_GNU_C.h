@@ -118,7 +118,7 @@ namespace bq {
                 return (value_type)(__atomic_load_n(&value_standard, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline void store(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline void store(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -149,7 +149,7 @@ namespace bq {
                 return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
             }
 
-            bq_forceinline value_type exchange(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type exchange(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -252,7 +252,7 @@ namespace bq {
                 }
             }
 
-            bq_forceinline value_type add_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type add_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -292,7 +292,7 @@ namespace bq {
                 return (value_type)(__atomic_add_fetch(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type fetch_add(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_add(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -333,7 +333,7 @@ namespace bq {
                 return (value_type)(__atomic_fetch_add(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type sub_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type sub_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -373,7 +373,7 @@ namespace bq {
                 return (value_type)(__atomic_sub_fetch(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type fetch_sub(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_sub(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -414,7 +414,7 @@ namespace bq {
                 return (value_type)(__atomic_fetch_sub(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type xor_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type xor_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -454,7 +454,7 @@ namespace bq {
                 return (value_type)(__atomic_xor_fetch(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type fetch_xor(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_xor(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -495,7 +495,7 @@ namespace bq {
                 return (value_type)(__atomic_fetch_xor(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type or_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type or_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -535,7 +535,7 @@ namespace bq {
                 return (value_type)(__atomic_or_fetch(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type fetch_or(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_or(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -576,7 +576,7 @@ namespace bq {
                 return (value_type)(__atomic_fetch_or(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type and_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type and_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
@@ -616,7 +616,7 @@ namespace bq {
                 return (value_type)(__atomic_and_fetch(&value_standard, val, __ATOMIC_SEQ_CST));
             }
 
-            bq_forceinline value_type fetch_and(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_and(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:

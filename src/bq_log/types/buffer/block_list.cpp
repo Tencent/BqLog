@@ -37,9 +37,10 @@
         get_buffer().~siso_ring_buffer();
     }
 
-    void block_node_head::reset_misc_data()
+    void block_node_head::set_misc_data(const void* data_src, size_t data_size)
     {
-        memset(misc_data_, 0, sizeof(misc_data_));
+        assert(data_size <= sizeof(misc_data_) && "data_size is too large");
+        memcpy(misc_data_, data_src, data_size);
     }
 
     void block_list::reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size)
@@ -99,10 +100,6 @@
 
     block_list::block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_mapped)
     {
-        (void)padding_0_;
-        (void)padding_1_;
-        (void)padding_2_;
-        (void)padding_3_;
         assert((uintptr_t)buffers_base_addr % CACHE_LINE_SIZE == 0 && "buffers_base_addr is not properly aligned!");
         if (!is_memory_mapped) {
             reset(max_blocks_count, buffers_base_addr, blocks_total_buffer_size);

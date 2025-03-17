@@ -21,7 +21,7 @@
 namespace bq {
     namespace test {
         static bq::platform::atomic<int32_t> log_buffer_test_total_write_count_ = 0;
-        constexpr int32_t log_buffer_total_task = 1;
+        constexpr int32_t log_buffer_total_task = 5;
 
         class log_block_list_test_task : public bq::platform::thread{
             private:
@@ -170,16 +170,16 @@ namespace bq {
 
             void do_basic_test(test_result& result, log_buffer_config config)
             {
-                log_buffer_test_total_write_count_.store(0);
+                log_buffer_test_total_write_count_.store_seq_cst(0);
                 bq::log_buffer ring_buffer(config);
                 int32_t chunk_count_per_task = 1024000;
                 bq::platform::atomic<int32_t> counter(log_buffer_total_task);
                 std::vector<int32_t> task_check_vector;
+                std::vector<std::thread> task_thread_vector; 
                 for (int32_t i = 0; i < log_buffer_total_task; ++i) {
                     task_check_vector.push_back(0);
                     log_buffer_write_task task(i, chunk_count_per_task, &ring_buffer, counter);
-                    std::thread task_thread(task);
-                    task_thread.detach();
+                    task_thread_vector.emplace_back(task);
                 }
 
                 int32_t total_chunk = chunk_count_per_task * log_buffer_total_task;
@@ -237,12 +237,21 @@ namespace bq {
                     }
                     result.add_result(content_check, "[log buffer]content check error");
                 }
+                test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms              \r", 100, (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
                     result.add_result(task_check_vector[i] == chunk_count_per_task, "[log buffer]chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
                 test_output_dynamic(bq::log_level::info, "\n[log buffer] test finished\n");
                 result.add_result(total_chunk == log_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", log_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "[log buffer] total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
+            
+                for (auto& task : task_thread_vector) {
+                    task.join();
+                }
+                auto final_handle = ring_buffer.read_chunk();
+                bq::scoped_log_buffer_handle<log_buffer> scoped_final_handle(ring_buffer, final_handle);
+                result.add_result(final_handle.result == bq::enum_buffer_result_code::err_empty_log_buffer, "final read test");
+                result.add_result(ring_buffer.get_groups_count() == 0, "group recycle test");
             }
         public:
             virtual test_result test() override

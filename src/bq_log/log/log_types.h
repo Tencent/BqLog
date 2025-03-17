@@ -82,6 +82,7 @@ namespace bq {
         uint8_t thread_name_len_;
     } 
     BQ_PACK_END
+    static_assert(sizeof(ext_log_entry_info_head) == sizeof(decltype(ext_log_entry_info_head::thread_id_)) + sizeof(decltype(ext_log_entry_info_head::thread_name_len_)), "ext_log_entry_info_head's memory layout must be packed!");
 
     static_assert(sizeof(ext_log_entry_info_head::thread_id_) == sizeof(bq::platform::thread::thread_id), "thread_id size error!");
 }

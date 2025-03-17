@@ -45,19 +45,25 @@ namespace bq {
         static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
 
         union block {
+        private:
+            BQ_PACK_BEGIN
+            struct alignas(4) chunk_head_def { //alignas(4) can make sure compiler generate more effective code when access int fields
+                uint32_t block_num;
+                uint32_t data_size;
+                uint8_t data[1];
+                uint8_t padding[3];
+            }
+            BQ_PACK_END
         public:
-            BQ_ANONYMOUS_STRUCT_PACK(
-                {
-                    uint32_t block_num;
-                    uint32_t data_size;
-                    uint8_t data[1];
-                }, chunk_head);
+            chunk_head_def chunk_head;
+            static_assert(offsetof(decltype(chunk_head), data) % 8 == 0, "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };
 
+
         BQ_PACK_BEGIN
-        struct head
+        struct alignas(4) head
         {
             // and it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
@@ -72,7 +78,7 @@ namespace bq {
 
 
         BQ_PACK_BEGIN
-        struct cursors_set
+        struct alignas(4) cursors_set
         {
             uint32_t write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
@@ -89,10 +95,10 @@ namespace bq {
             char cache_line_padding3_[CACHE_LINE_SIZE - sizeof(wt_reading_cursor_cache_)];
         }
         BQ_PACK_END
-
+        static_assert(sizeof(cursors_set) % CACHE_LINE_SIZE == 0, "invalid cursors_set size");
 
         char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
-        cursors_set* cursors_;   //make sure it is aligned to cache line size.
+        cursors_set* cursors_;   //make sure it is aligned to cache line size even in placement new.
 
         head* head_;
         block* aligned_blocks_;
@@ -146,6 +152,13 @@ namespace bq {
         /// </summary>
         /// <param name=""></param>
         void return_read_trunk(const log_buffer_read_handle& handle);
+
+        /// <summary>
+        /// Traverses all data written, invoking the provided callback for each chunk from the consumer thread.
+        /// </summary>
+        /// <param name="in_callback">A function pointer to the callback that will be called with the data and its size.</param>
+        /// <param name="in_user_data">user defined data passed to in_callback.</param>
+        void data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data);
 
         /// <summary>
         /// Calculates the minimum buffer size required to ensure the final buffer 

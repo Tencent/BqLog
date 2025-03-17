@@ -34,6 +34,14 @@ namespace bq {
             result.add_result(log_inst.get_name() == "test_log", "log name test");
 
             {
+                // test zigzag
+                for (int64_t i = INT64_MIN; i < INT64_MAX - 0x123456789AB; i += 0x123456789AB) {
+                    uint64_t i_encode = bq::log_utils::zigzag::encode(i);
+                    int64_t i_decode = bq::log_utils::zigzag::decode(i_encode);
+                    result.add_result(i == i_decode, "zigzag test %d", i);
+                }
+                
+
                 // test vlq
                 uint8_t target_data[16];
                 {
@@ -86,6 +94,19 @@ namespace bq {
                     decltype(i) i_decode;
                     auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                     result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
+                }
+
+                //test vlq + zigzag
+                {
+                    int32_t i = -1;
+                    uint32_t ui = bq::log_utils::zigzag::encode(i);
+                    auto len = bq::log_utils::vlq::vlq_encode(ui, target_data, 16);
+                    result.add_result(len == 1, "zigzag + vlq test 1");
+                    decltype(ui) ui_decode;
+                    auto len_decode = bq::log_utils::vlq::vlq_decode(ui_decode, target_data);
+                    result.add_result(len == len_decode, "zigzag + vlq test 2");
+                    decltype(i) i_decoded = bq::log_utils::zigzag::decode(ui_decode);
+                    result.add_result(i == i_decoded, "zigzag + vlq test 3");
                 }
             }
 

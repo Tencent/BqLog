@@ -24,44 +24,13 @@
 
 namespace bq {
 
-    BQ_PACK_BEGIN
-    struct version_head {
-    private:
-        char version_[4]; // 8 bits mmap version and 24 bits sequence (int24_t, ^_^)
-        char padding_[4];
-    public:
-        struct log_tls_buffer_info* tls_info_; //Only meaningful when get_ver() equals the current version of log_buffer.
-
-        bq_forceinline uint32_t get_seq() const
-        {
-            return (*(uint32_t*)version_) * 0x00FFFFFF;
-        }
-        bq_forceinline uint8_t get_ver() const
-        {
-            return (uint8_t)version_[3];
-        }
-        void bq_forceinline set_version(uint8_t ver, uint32_t seq)
-        {
-            (void)padding_;
-            *(uint32_t*)version_ = (seq & 0x00FFFFFF) | ((uint32_t)ver << 24);
-        }
-    } 
-    BQ_PACK_END
-
-    BQ_PACK_BEGIN
-    struct block_misc_data {
-        bool is_removed_;
-        char padding_inner1_[8 - sizeof(is_removed_)];
-        bool need_reallocate_;
-        char padding_inner2_[8 - sizeof(need_reallocate_)];
-        version_head version_;
-    }
-    BQ_PACK_END
-
-    bq_forceinline void mark_block_removed(block_node_head* block, bool removed) { BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block->get_misc_data<block_misc_data>().is_removed_, bool).store_release(removed); }
-    bq_forceinline bool is_block_removed(block_node_head* block)
+    bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
     {
-        bool& is_removed_variable = block->get_misc_data<block_misc_data>().is_removed_;
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block->get_misc_data<log_buffer::block_misc_data>().is_removed_, bool).store_release(removed);
+    }
+    bq_forceinline static bool is_block_removed(block_node_head* block)
+    {
+        bool& is_removed_variable = block->get_misc_data<log_buffer::block_misc_data>().is_removed_;
         if (is_removed_variable) {
             // inter thread sync
             if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(is_removed_variable, bool).load_acquire()) {
@@ -70,99 +39,88 @@ namespace bq {
         }
         return false;
     }
-    bq_forceinline void mark_block_need_reallocate(block_node_head* block, bool need_reallocate) { block->get_misc_data<block_misc_data>().need_reallocate_ = need_reallocate; }
-    bq_forceinline bool is_block_need_reallocate(block_node_head* block) { return block->get_misc_data<block_misc_data>().need_reallocate_; }
+    bq_forceinline static void mark_block_need_reallocate(block_node_head* block, bool need_reallocate)
+    {
+        block->get_misc_data<log_buffer::block_misc_data>().need_reallocate_ = need_reallocate;
+    }
+    bq_forceinline static bool is_block_need_reallocate(block_node_head* block)
+    {
+        return block->get_misc_data<log_buffer::block_misc_data>().need_reallocate_;
+    }
 
-
-    struct log_tls_buffer_info {
-        block_node_head* cur_block_ = nullptr; // nullptr means use public miso_ring_buffer.
-        uint64_t last_update_epoch_ms_ = 0;
-        uint64_t update_times_ = 0;
+    log_buffer::log_tls_buffer_info::~log_tls_buffer_info()
+    {
 #if BQ_JAVA
-        jobjectArray buffer_obj_for_lp_buffer_ = NULL;  // miso_ring_buffer shared between low frequency threads;
-        jobjectArray buffer_obj_for_hp_buffer_ = NULL;  // siso_ring_buffer on block_node;
-        int32_t buffer_offset_;            
-        block_node_head* buffer_ref_block = nullptr;
-#endif
-    };
-    typedef bq::hash_map_inline<const log_buffer*, log_tls_buffer_info> log_tls_buffer_map_type;
-
-    struct log_tls_info {
-#if !BQ_LOG_BUFFER_DEBUG
-    private:
-#endif
-        log_tls_buffer_map_type* log_map_;
-        const log_buffer* cur_log_buffer_;
-        log_tls_buffer_info* cur_buffer_info_;
-    public:
-        log_tls_info()
-        {
-            log_map_ = nullptr;
-            cur_log_buffer_ = nullptr;
-            cur_buffer_info_ = nullptr;
-        }
-
-        log_tls_buffer_info& get_buffer_info(const log_buffer* buffer)
-        {
-            if (buffer == cur_log_buffer_)
-            {
-                return *cur_buffer_info_;
+        if (buffer_obj_for_lp_buffer_
+            || buffer_obj_for_hp_buffer_) {
+            bq::platform::jni_env env;
+            if (buffer_obj_for_lp_buffer_) {
+                env.env->DeleteGlobalRef(buffer_obj_for_lp_buffer_);
+                buffer_obj_for_lp_buffer_ = NULL;
             }
-            if (!log_map_)
-            {
-                log_map_ = new log_tls_buffer_map_type();
-                log_map_->set_expand_rate(4);
+            if (buffer_obj_for_hp_buffer_) {
+                env.env->DeleteGlobalRef(buffer_obj_for_hp_buffer_);
+                buffer_obj_for_hp_buffer_ = NULL;
             }
-            cur_log_buffer_ = buffer;
-            cur_buffer_info_ = &(*log_map_)[buffer];
-            return *cur_buffer_info_;
         }
+#endif
+    }
 
-        ~log_tls_info()
-        {
-            if (log_map_)
-            {
-                for (auto iter : *log_map_) {
-                    auto& buffer_info = iter.value();
-                    block_node_head* block = buffer_info.cur_block_;
-                    if (block) {
-                        mark_block_removed(block, true);
-                    }
-#if BQ_JAVA
-                    if (buffer_info.buffer_obj_for_lp_buffer_
-                        || buffer_info.buffer_obj_for_hp_buffer_) {
-                        bq::platform::jni_env env;
-                        if (buffer_info.buffer_obj_for_lp_buffer_) {
-                            env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_lp_buffer_);
-                            buffer_info.buffer_obj_for_lp_buffer_ = NULL;
-                        }
-                        if (buffer_info.buffer_obj_for_hp_buffer_) {
-                            env.env->DeleteGlobalRef(buffer_info.buffer_obj_for_hp_buffer_);
-                            buffer_info.buffer_obj_for_hp_buffer_ = NULL;
+    
+
+    log_buffer::log_tls_info::log_tls_info()
+    {
+        log_map_ = nullptr;
+        cur_log_buffer_ = nullptr;
+        cur_buffer_info_ = nullptr;
+    }
+
+    log_buffer::log_tls_info::~log_tls_info()
+    {
+        if (log_map_) {
+            for (auto pair : *log_map_) {
+                if (pair.value()->cur_block_) {
+                    pair.value()->cur_block_->get_misc_data<log_buffer::block_misc_data>().context_.is_thread_finished_ = true;
+                    mark_block_removed(pair.value()->cur_block_, true);
+                } else {
+                    while (true) {
+                        auto finish_mark_handle = const_cast<log_buffer*>(pair.key())->lp_buffer_.alloc_write_chunk(sizeof(context_head*));
+                        bq::scoped_log_buffer_handle scoped_handle(const_cast<log_buffer*>(pair.key())->lp_buffer_, finish_mark_handle);
+                        if (enum_buffer_result_code::success == finish_mark_handle.result) {
+                            context_head* context = (context_head*)(finish_mark_handle.data_addr);
+                            context->version_ = pair.key()->version_;
+                            context->set_tls_info(pair.value());
+                            context->is_thread_finished_ = true;
+                            context->seq_ = pair.value()->wt_data_.current_write_seq_++;
+                            break;
                         }
                     }
-#endif
                 }
-                delete log_map_;
-                log_map_ = nullptr;
             }
-            cur_log_buffer_ = nullptr;
-            cur_buffer_info_ = nullptr;
+            // the entries in the map will be destructed by consumer thread of log_buffer.
+            delete log_map_;
+            log_map_ = nullptr;
         }
-    };
+        cur_log_buffer_ = nullptr;
+        cur_buffer_info_ = nullptr;
+    }
 
-    static thread_local log_tls_info log_tls_info_;
-
+    static thread_local log_buffer::log_tls_info log_tls_info_;
 
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
         , high_perform_buffer_(config, BLOCKS_PER_GROUP_NODE)
         , lp_buffer_(config)
+        , version_(config.use_mmap ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
     {
-#if BQ_LOG_BUFFER_DEBUG
-        (void)padding_;
-#endif
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
+        if (config.use_mmap) {
+            rt_cache_.current_reading_.version_ = static_cast<uint16_t>(version_ - MAX_RECOVERY_VERSION_RANGE);
+            prepare_and_fix_recovery_data();
+        } else {
+            assert(lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ == 0 && "invalid lp_buffer_head_misc init value");
+            rt_cache_.current_reading_.version_ = 0;
+        }
     }
 
     log_buffer::~log_buffer()
@@ -195,17 +153,17 @@ namespace bq {
         while (true) {
             if (is_high_frequency) {
                 if (!block_cache) {
-                    block_cache = high_perform_buffer_.alloc_new_block();
+                    block_cache = alloc_new_hp_block();
                 } else if (is_block_need_reallocate(block_cache)) {
                     mark_block_removed(block_cache, true); // mark removed
-                    block_cache = high_perform_buffer_.alloc_new_block();
+                    block_cache = alloc_new_hp_block();
                 }
                 result = block_cache->get_buffer().alloc_write_chunk(size);
                 if (enum_buffer_result_code::err_not_enough_space == result.result) {
                     switch (config_.policy) {
                     case log_memory_policy::auto_expand_when_full:
                         mark_block_removed(block_cache, true); // mark removed
-                        block_cache = high_perform_buffer_.alloc_new_block();
+                        block_cache = alloc_new_hp_block();
                         // discard result and switch to high frequency mode and try again
                         lp_buffer_.commit_write_chunk(result);
                         continue;
@@ -219,8 +177,15 @@ namespace bq {
                 }
                 break;
             } else {
-                result = lp_buffer_.alloc_write_chunk(size);
-                if (enum_buffer_result_code::err_not_enough_space == result.result) {
+                result = lp_buffer_.alloc_write_chunk(size + sizeof(context_head));
+                if (enum_buffer_result_code::success == result.result) {
+                    context_head* context = (context_head*)(result.data_addr);
+                    context->version_ = version_;
+                    context->is_thread_finished_ = false;
+                    context->seq_ = tls_buffer.wt_data_.current_write_seq_++;
+                    context->set_tls_info(&tls_buffer);
+                    result.data_addr += sizeof(context_head);
+                } else if (enum_buffer_result_code::err_not_enough_space == result.result) {
                     switch (config_.policy) {
                     case log_memory_policy::auto_expand_when_full:
                         is_high_frequency = true;
@@ -236,7 +201,7 @@ namespace bq {
                     default:
                         break;
                     }
-                }
+                } 
                 if (block_cache) {
                     mark_block_removed(block_cache, true); // mark removed;
                     block_cache = nullptr;
@@ -249,12 +214,15 @@ namespace bq {
 
     void log_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
     {
-        block_node_head*& block_cache = log_tls_info_.get_buffer_info(this).cur_block_;
+        auto& tls_buffer_info = log_tls_info_.get_buffer_info_directly(this);
+        block_node_head*& block_cache = tls_buffer_info.cur_block_;
         bool is_high_frequency = block_cache;
         if (is_high_frequency) {
             block_cache->get_buffer().commit_write_chunk(handle);
         } else {
-            lp_buffer_.commit_write_chunk(handle);
+            log_buffer_write_handle handle_copy = handle;
+            handle_copy.data_addr -= sizeof(context_head);
+            lp_buffer_.commit_write_chunk(handle_copy);
         }
     }
 
@@ -270,9 +238,10 @@ namespace bq {
             }
         }
 #endif
+        
         bool lp_visited = false;
         bool full_visited = false;
-        while(!full_visited) {
+        while (!full_visited) {
             // try read from current data source
             if (rt_cache_.current_reading_.block_) {
 #if BQ_LOG_BUFFER_DEBUG
@@ -281,17 +250,58 @@ namespace bq {
                 auto handle = rt_cache_.current_reading_.block_->get_buffer().read_chunk();
                 if (enum_buffer_result_code::err_empty_log_buffer != handle.result) {
                     return handle;
+                } else {
+                    rt_cache_.current_reading_.block_->get_buffer().return_read_trunk(handle);
                 }
-                rt_cache_.current_reading_.block_->get_buffer().return_read_trunk(handle);
             } else {
 #if BQ_LOG_BUFFER_DEBUG
                 assert(!rt_cache_.current_reading_.group_);
 #endif
-                auto handle = lp_buffer_.read_chunk();
+                bool veryfied_chunk_read = false;
+                bq::log_buffer_read_handle handle;
+                while (!veryfied_chunk_read) {
+                    handle = rt_cache_.current_reading_.lp_snapshot_.result == enum_buffer_result_code::err_empty_log_buffer
+                        ? lp_buffer_.read_chunk()
+                        : rt_cache_.current_reading_.lp_snapshot_;
+                    rt_cache_.current_reading_.lp_snapshot_.result = enum_buffer_result_code::err_empty_log_buffer;
+                    if (enum_buffer_result_code::success == handle.result) {
+                        const auto& context = *reinterpret_cast<const context_head*>(handle.data_addr);
+                        auto verify_result = verify_context(context);
+                        switch (verify_result) {
+                        case context_verify_result::valid:
+                            if (context.is_thread_finished_) {
+                                deregister_seq(context);
+                            } else {
+                                veryfied_chunk_read = true;
+                            }
+                            break;
+                        case context_verify_result::version_invalid:
+                            // invalid block generated by mmap.
+                            break;
+                        case context_verify_result::version_waiting:
+                        case context_verify_result::seq_pendding:
+                            rt_cache_.current_reading_.lp_snapshot_ = handle;
+                            handle.result = enum_buffer_result_code::err_empty_log_buffer;
+                            veryfied_chunk_read = true;
+                            break;
+                        default:
+                            break;
+                        }
+                        if (!veryfied_chunk_read) {
+                            lp_buffer_.return_read_trunk(handle);
+                        } else {
+                            handle.data_addr += sizeof(context_head);
+                            handle.data_size -= (uint32_t)sizeof(context_head);
+                        }
+                    } else {
+                        veryfied_chunk_read = true;
+                    }
+                }
                 if (enum_buffer_result_code::err_empty_log_buffer != handle.result) {
                     return handle;
+                } else {
+                    lp_buffer_.return_read_trunk(handle);
                 }
-                lp_buffer_.return_read_trunk(handle);
             }
             // find next data source
             bool next_data_source_found = false;
@@ -300,20 +310,36 @@ namespace bq {
                     block_node_head* next_block = rt_cache_.current_reading_.block_
                         ? rt_cache_.current_reading_.group_.value().get_data_head().used_.next(rt_cache_.current_reading_.block_)
                         : rt_cache_.current_reading_.group_.value().get_data_head().used_.first();
+
+                    if (!next_block) {
+                        next_block = rt_cache_.current_reading_.group_.value().get_data_head().stage_.pop();
+                        if (next_block) {
+                            rt_cache_.current_reading_.group_.value().get_data_head().used_.push_after_thread_unsafe(rt_cache_.current_reading_.block_, next_block);
+                        }
+                    }
+
                     if (next_block) {
-                        next_data_source_found = true;
-                        set_current_reading_block(next_block);
+                        auto& context = next_block->get_misc_data<block_misc_data>().context_;
+                        auto verify_result = verify_context(context);
+                        switch (verify_result) {
+                        case context_verify_result::valid:
+                            next_data_source_found = true;
+                            break;
+                        case context_verify_result::version_invalid:
+                            mark_block_removed(next_block, true); // invalid block generated by mmap.
+                            break;
+                        case context_verify_result::version_waiting:
+                        case context_verify_result::seq_pendding:
+                            break;
+                        default:
+                            break;
+                        }
+                        set_current_reading_block(next_block, verify_result);
                         continue;
                     }
-                    next_block = rt_cache_.current_reading_.group_.value().get_data_head().stage_.pop();
-                    if (next_block) {
-                        rt_cache_.current_reading_.group_.value().get_data_head().used_.push_after_thread_unsafe(rt_cache_.current_reading_.block_, next_block);
-                        next_data_source_found = true;
-                        set_current_reading_block(next_block);
-                        continue;
-                    }
+
                     auto next_group = high_perform_buffer_.next(rt_cache_.current_reading_.group_, group_list::lock_type::no_lock);
-                    set_current_reading_block(next_block);
+                    set_current_reading_block(nullptr, context_verify_result::version_invalid);
                     set_current_reading_group(next_group);
                     if (!next_group) {
                         // try lp_buffer_.
@@ -325,7 +351,11 @@ namespace bq {
                     assert(!rt_cache_.current_reading_.block_);
 #endif
                     if (lp_visited) {
-                        full_visited = true;
+                        if (rt_cache_.current_reading_.version_ != version_) {
+                            ++rt_cache_.current_reading_.version_;
+                        } else {
+                            full_visited = true;
+                        }
                         break;
                     }
                     lp_visited = true;
@@ -338,6 +368,7 @@ namespace bq {
                 }
             }
         }
+        
 
         log_buffer_read_handle empty_handle;
         empty_handle.result = enum_buffer_result_code::err_empty_log_buffer;
@@ -351,7 +382,16 @@ namespace bq {
         if (rt_cache_.current_reading_.block_) {
             rt_cache_.current_reading_.block_->get_buffer().return_read_trunk(handle);
         } else {
-            lp_buffer_.return_read_trunk(handle);
+            if (enum_buffer_result_code::success == handle.result) {
+                log_buffer_read_handle handle_cpy = handle;
+                handle_cpy.data_addr -= sizeof(context_head);
+                handle_cpy.data_size += (uint32_t)sizeof(context_head);
+                const auto& context = *reinterpret_cast<const context_head*>(handle_cpy.data_addr);
+                deregister_seq(context);
+                lp_buffer_.return_read_trunk(handle_cpy);
+            } else {
+                lp_buffer_.return_read_trunk(handle);
+            }
         }
     }
 
@@ -374,7 +414,7 @@ namespace bq {
 #if BQ_LOG_BUFFER_DEBUG
         assert((this == log_tls_info_.cur_log_buffer_) && "tls cur_log_buffer_ check failed");
 #endif
-        auto& current_buffer_info = log_tls_info_.get_buffer_info(this);
+        auto& current_buffer_info = log_tls_info_.get_buffer_info_directly(this);
         java_buffer_info result;
         result.offset_store_ = &current_buffer_info.buffer_offset_;
 
@@ -389,9 +429,9 @@ namespace bq {
 #endif
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, offset_obj); 
             }
-            if (current_buffer_info.buffer_ref_block != current_buffer_info.cur_block_) {
+            if (current_buffer_info.buffer_ref_block_ != current_buffer_info.cur_block_) {
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(ring_buffer.get_buffer_addr()), (jlong)(ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count())));
-                current_buffer_info.buffer_ref_block = current_buffer_info.cur_block_;
+                current_buffer_info.buffer_ref_block_ = current_buffer_info.cur_block_;
             }
             result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_hp_buffer_;
             result.buffer_base_addr_ = ring_buffer.get_buffer_addr();
@@ -410,16 +450,81 @@ namespace bq {
         return result;
     }
 #endif
+
+    bq::block_node_head* log_buffer::alloc_new_hp_block()
+    {
+        log_tls_buffer_info& tls_buffer_info = log_tls_info_.get_buffer_info_directly(this);
+        block_misc_data misc_data;
+        memset(&misc_data, 0, sizeof(misc_data));
+        misc_data.context_.set_tls_info(&tls_buffer_info);
+        misc_data.context_.version_ = version_;
+        misc_data.context_.is_thread_finished_ = false;
+        misc_data.context_.seq_ = tls_buffer_info.wt_data_.current_write_seq_++;
+        auto new_node = high_perform_buffer_.alloc_new_block(&misc_data, sizeof(block_misc_data));
+        return new_node;
+    }
+
+
+    bq::log_buffer::context_verify_result log_buffer::verify_context(const context_head& context)
+    {
+        if (context.version_ == rt_cache_.current_reading_.version_) {
+            //This is the most common scenario. When uncertain about CPU out-of-order execution and branch prediction, placing the code upfront ensures efficiency.
+            if (context.version_ == version_) {
+                //for new data
+                if (context.seq_ == context.get_tls_info()->rt_data_.current_read_seq_) {
+                    return context_verify_result::valid;
+                } 
+                return context_verify_result::seq_pendding;
+            } else {
+                //for recovering
+                auto iter = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)].find(context.get_tls_info());
+#if BQ_LOG_BUFFER_DEBUG
+                assert((iter != rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)].end()) && "unknowing thread found in recovering");
+#endif
+                if (iter->value() == context.seq_) {
+                    return context_verify_result::valid;
+                }
+                return context_verify_result::seq_pendding;
+            }
+        }else if (static_cast<uint16_t>(version_ - context.version_) > static_cast<uint16_t>(version_ - rt_cache_.current_reading_.version_)) {
+            // need discard.
+            return context_verify_result::version_invalid;
+        }
+        return context_verify_result::version_waiting;
+        
+    }
+
+    void log_buffer::deregister_seq(const context_head& context)
+    {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(context.version_ == rt_cache_.current_reading_.version_ && "invalid deregister_version");
+#endif
+        if (context.version_ == version_) {
+            // for new data
+            if (context.is_thread_finished_) {
+                delete context.get_tls_info();
+            }
+            ++context.get_tls_info()->rt_data_.current_read_seq_;
+        } else {
+            // for recovering data
+            auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
+#if BQ_LOG_BUFFER_DEBUG
+            assert((recover_map.find(context.get_tls_info()) != recover_map.end()) && "unregister none exist seq");
+#endif
+            ++recover_map[context.get_tls_info()];
+        }
+    }
+
     void log_buffer::set_current_reading_group(const group_list::iterator& group)
     {
         rt_cache_.current_reading_.group_ = group;
         optimize_memory_for_group(group);
     }
 
-    void log_buffer::set_current_reading_block(block_node_head* block)
+    void log_buffer::set_current_reading_block(block_node_head* block, context_verify_result verify_result)
     {
         rt_cache_.current_reading_.block_ = block;
-        optimize_memory_for_block(block);
+        optimize_memory_for_block(block, verify_result);
     }
 
     void log_buffer::optimize_memory_for_group(const group_list::iterator& group)
@@ -468,12 +573,16 @@ namespace bq {
         }
     }
 
-    void log_buffer::optimize_memory_for_block(block_node_head* block)
+    void log_buffer::optimize_memory_for_block(block_node_head* block, context_verify_result verify_result)
     {
         auto& mem_opt = rt_cache_.mem_optimize_;
         bool block_removed = false;
         if (mem_opt.cur_block_) {
             if (mem_opt.is_block_marked_removed) {
+                const auto& context = mem_opt.cur_block_->get_misc_data<block_misc_data>().context_;
+                if (context_verify_result::valid == mem_opt.verify_result) {
+                    deregister_seq(context);
+                }
                 // remove it
                 if (mem_opt.cur_group_.value().get_data_head().used_.is_include(mem_opt.last_block_)) {
                     high_perform_buffer_.recycle_block_thread_unsafe(mem_opt.cur_group_, mem_opt.last_block_, mem_opt.cur_block_);
@@ -487,15 +596,74 @@ namespace bq {
         }
 
         if (block) {
-            mem_opt.is_block_marked_removed = is_block_removed(block);
+            mem_opt.is_block_marked_removed = (verify_result == context_verify_result::valid || verify_result == context_verify_result::version_invalid) && is_block_removed(block);
+            mem_opt.verify_result = verify_result;
             if (mem_opt.left_holes_num_ > 0) {
                 mark_block_need_reallocate(block, true);
                 --mem_opt.left_holes_num_;
             }
+        } else {
+            mem_opt.is_block_marked_removed = false;
+            mem_opt.verify_result = verify_result;
         }
         if (!block_removed) {
             mem_opt.last_block_ = mem_opt.cur_block_;
         }
         mem_opt.cur_block_ = block;
     }
+
+    /**
+     * @brief Fixes mmap data errors by invalidating data with the same version as the current run.
+     *
+     * Although both lp_buffer_ and hp_buffer_ have their own mmap recovery error correction capabilities,
+     * log_buffer needs to handle some logical layer error corrections itself. This function primarily
+     * addresses mmap saved data errors where data with the same version as the current run appears.
+     * Such data needs to be invalidated.
+     */
+    void log_buffer::prepare_and_fix_recovery_data()
+    {
+        for (uint32_t i = 0; i < MAX_RECOVERY_VERSION_RANGE; ++i) {
+            rt_cache_.current_reading_.recovery_records_.push_back(decltype(rt_cache_.current_reading_.recovery_records_)::value_type());
+        }
+        lp_buffer_.set_thread_check_enable(false);
+        lp_buffer_.data_traverse([](uint8_t* data, uint32_t size, void* user_data) {
+            (void)size;
+            log_buffer& buffer = *reinterpret_cast<log_buffer*>(user_data);
+            context_head& context = *reinterpret_cast<context_head*>(data);
+            if (context.version_ == buffer.version_) {
+                context.version_++;  //mark invalid
+            } else if (static_cast<uint16_t>(buffer.version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
+                auto& recovery_map = buffer.rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(buffer.version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE];
+                auto iter = recovery_map.find(context.get_tls_info());
+                if (iter == recovery_map.end()) {
+                    recovery_map[context.get_tls_info()] = context.seq_;
+                } else {
+                    iter->value() = bq::min_value(iter->value(), context.seq_);
+                }
+            }
+        }, this);
+        lp_buffer_.set_thread_check_enable(true);
+        
+        auto group = high_perform_buffer_.first(group_list::lock_type::no_lock);
+        while (group) {
+            auto block = group.value().get_data_head().used_.first();
+            while (block) {
+                auto& context = block->get_misc_data<block_misc_data>().context_;
+                if (context.version_ == version_) {
+                    context.version_++; // mark invalid
+                } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
+                    auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE];
+                    auto iter = recovery_map.find(context.get_tls_info());
+                    if (iter == recovery_map.end()) {
+                        recovery_map[context.get_tls_info()] = context.seq_;
+                    } else {
+                        iter->value() = bq::min_value(iter->value(), context.seq_);
+                    }
+                }
+                block = group.value().get_data_head().used_.next(block);
+            }
+            group = high_perform_buffer_.next(group, group_list::lock_type::no_lock);
+        }
+    }
+
 }

@@ -111,7 +111,7 @@ namespace bq {
         if (log_name.is_empty()) {
             // assign a new log_name
             while (true) {
-                auto new_seq = automatic_log_name_seq_.add_fetch(1);
+                auto new_seq = automatic_log_name_seq_.add_fetch_relaxed(1);
                 char tmp[64];
                 snprintf(tmp, sizeof(tmp), "AutoBqLog_%d", new_seq);
                 bq::string random_log_name = tmp;

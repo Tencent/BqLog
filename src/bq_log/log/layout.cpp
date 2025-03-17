@@ -172,10 +172,10 @@ namespace bq {
     bq::layout::enum_layout_result layout::insert_thread_info(const bq::log_entry_handle& log_entry)
     {
         const auto& ext_info = log_entry.get_ext_head();
-        auto iter = thread_names_cache_.find(ext_info.thread_id_);
+        auto iter = thread_names_cache_.find(BQ_PACK_ACCESS(ext_info.thread_id_));
         if (iter == thread_names_cache_.end()) {
             char tmp[256];
-            uint32_t cursor = snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", ext_info.thread_id_);
+            uint32_t cursor = snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", BQ_PACK_ACCESS(ext_info.thread_id_));
             memcpy(tmp + cursor, (uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), ext_info.thread_name_len_);
             cursor += ext_info.thread_name_len_;
             tmp[cursor++] = ']';
@@ -183,7 +183,7 @@ namespace bq {
             assert(cursor < 256);
             tmp[cursor] = '\0';
             bq::string thread_name = tmp;
-            iter = thread_names_cache_.add(ext_info.thread_id_, bq::move(thread_name));
+            iter = thread_names_cache_.add(BQ_PACK_ACCESS(ext_info.thread_id_), bq::move(thread_name));
         }
         if (iter->value().size() > 0) {
             expand_format_content_buff_size(format_content_cursor + (uint32_t)iter->value().size());

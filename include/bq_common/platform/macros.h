@@ -123,6 +123,19 @@
 #define BQ_PACK_END __attribute__((__packed__));
 #define BQ_ANONYMOUS_STRUCT_PACK(DECLARATION, NAME) struct DECLARATION __attribute__((__packed__)) NAME
 #endif
+// Template function used to isolate the casting operation for better code optimization and maintainability.
+// We avoid performing reinterpret_cast directly in the macro to allow the compiler to potentially inline and optimize
+// the code more effectively, rather than embedding the cast in a less predictable macro expansion.
+template <typename TO>
+bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(char* from)
+{
+    return *reinterpret_cast<TO*>(from);
+}
+// Macro designed to generate high-performance code by accessing a variable Var through a forced cast.
+// CAUTION: Use carefully! This bypasses alignment checks for `speed ensure` Var is properly aligned for its type,
+// as misalignment can cause undefined behavior. No alignment verification is performed here.
+#define BQ_PACK_ACCESS_BY_TYPE(Var, Type) __bq_macro_force_cast_ignore_alignment_warning<Type>((char*)&Var)
+#define BQ_PACK_ACCESS(Var) __bq_macro_force_cast_ignore_alignment_warning<decltype(Var)>((char*)&Var)
 
 #if __cplusplus >= 201402L
 #define BQ_CPP_14 1

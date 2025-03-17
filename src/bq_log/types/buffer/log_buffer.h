@@ -27,12 +27,95 @@
 #include "bq_log/types/buffer/group_list.h"
 
 namespace bq {
-    class log_buffer {
+    class alignas(CACHE_LINE_SIZE) log_buffer {
     public:
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
-
+        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 10;
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_ = 1000; 
+    public:
+        BQ_PACK_BEGIN
+        struct lp_buffer_head_misc {
+            uint16_t saved_version_;
+        } 
+        BQ_PACK_END
 
+        struct alignas(CACHE_LINE_SIZE) log_tls_buffer_info {
+            uint64_t last_update_epoch_ms_ = 0;
+            uint64_t update_times_ = 0;
+            block_node_head* cur_block_ = nullptr; // nullptr means use public miso_ring_buffer.
+#if BQ_JAVA
+            jobjectArray buffer_obj_for_lp_buffer_ = NULL; // miso_ring_buffer shared between low frequency threads;
+            jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
+            block_node_head* buffer_ref_block_ = nullptr;
+            int32_t buffer_offset_ = 0;
+#endif
+            // Fields frequently accessed by write(produce) thread.
+            alignas(CACHE_LINE_SIZE) struct {
+                uint32_t current_write_seq_ = 0;
+            } wt_data_;
+            // Fields frequently accessed by read(consumer) thread.
+            alignas(CACHE_LINE_SIZE) struct {
+                uint32_t current_read_seq_ = 0;
+            } rt_data_;
+
+            ~log_tls_buffer_info();
+        };
+        static_assert(offsetof(log_tls_buffer_info, wt_data_) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_write_seq_ must be 64 bytes aligned");
+        static_assert(offsetof(log_tls_buffer_info, rt_data_) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
+        static_assert(sizeof(log_tls_buffer_info) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
+
+        struct log_tls_info {
+#if !BQ_LOG_BUFFER_DEBUG
+        private:
+#endif
+            bq::hash_map_inline<const log_buffer*, log_tls_buffer_info*>* log_map_;
+            const log_buffer* cur_log_buffer_;
+            log_tls_buffer_info* cur_buffer_info_;
+        public:
+            bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
+            bq_forceinline log_tls_buffer_info& get_buffer_info_directly(const log_buffer* buffer);
+            log_tls_info();
+            ~log_tls_info();
+        };
+
+        BQ_PACK_BEGIN 
+        struct alignas(8) pointer_8_bytes_for_32_bits_system {
+            log_tls_buffer_info* ptr;
+            uintptr_t dummy;
+        } BQ_PACK_END
+
+        BQ_PACK_BEGIN 
+        struct alignas(8) pointer_8_bytes_for_64_bits_system {
+            log_tls_buffer_info* ptr;
+        } BQ_PACK_END
+
+        BQ_PACK_BEGIN 
+        struct alignas(8) context_head {
+        public:
+            uint16_t version_;
+            bool is_thread_finished_;
+            char padding_;
+            uint32_t seq_;
+            bq::condition_type_t<sizeof(void*) == 8, pointer_8_bytes_for_64_bits_system, pointer_8_bytes_for_32_bits_system> tls_info_; // Only meaningful when get_ver() equals the current version of log_buffer.
+
+            bq_forceinline log_tls_buffer_info* get_tls_info() const
+            {
+                return tls_info_.ptr;
+            }
+            bq_forceinline void set_tls_info(log_tls_buffer_info* tls_info)
+            {
+                tls_info_.ptr = tls_info;
+            }
+        } BQ_PACK_END 
+        static_assert(sizeof(context_head) == 16, "context_head size must be 16");
+        static_assert(sizeof(context_head) % 8 == 0, "context_head size must be a multiple of 8");
+
+        BQ_PACK_BEGIN
+        struct alignas(8) block_misc_data {
+            alignas(8) bool is_removed_;
+            alignas(8) bool need_reallocate_;
+            alignas(8) context_head context_;
+        } BQ_PACK_END
     public:
         log_buffer(log_buffer_config& config);
 
@@ -65,21 +148,42 @@ namespace bq {
         };
         java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
+
+#if BQ_UNIT_TEST
+        uint32_t get_groups_count() const { return high_perform_buffer_.get_groups_count();}
+#endif
     private:
+        bq::block_node_head* alloc_new_hp_block();
+
+        enum class context_verify_result {
+            valid,
+            version_waiting,
+            version_invalid,
+            seq_pendding,
+        };
+        context_verify_result verify_context(const context_head& context);
+        void deregister_seq(const context_head& context);
+
         void set_current_reading_group(const group_list::iterator& group);
-        void set_current_reading_block(block_node_head* block);
+        void set_current_reading_block(block_node_head* block, context_verify_result verify_result);
 
         void optimize_memory_for_group(const group_list::iterator& group);
-        void optimize_memory_for_block(block_node_head* block);
+        void optimize_memory_for_block(block_node_head* block, context_verify_result verify_result);
+
+        void prepare_and_fix_recovery_data();
 
     private:
         log_buffer_config config_;
         group_list high_perform_buffer_;
         miso_ring_buffer lp_buffer_; // used to save memory for low frequency threads.
-        struct {
+        const uint16_t version_ = 0;
+        struct alignas(CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator group_;
                 block_node_head* block_ = nullptr;
+                uint16_t version_ = 0;
+                log_buffer_read_handle lp_snapshot_;
+                bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data    
             } current_reading_;
 
             // memory fragmentation optimize
@@ -91,13 +195,42 @@ namespace bq {
                 uint32_t left_holes_num_ = 0;
                 uint16_t cur_group_using_blocks_num_ = 0;
                 bool is_block_marked_removed = false;
+                context_verify_result verify_result;
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
 #if BQ_LOG_BUFFER_DEBUG
-        char padding_[CACHE_LINE_SIZE] = {};
         bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;
 #endif
     };
+
+    
+
+    bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info(const log_buffer* buffer)
+    {
+        if (buffer == cur_log_buffer_) {
+            return *cur_buffer_info_;
+        }
+        if (!log_map_) {
+            log_map_ = new bq::hash_map_inline<const log_buffer*, log_tls_buffer_info*>();
+            log_map_->set_expand_rate(4);
+        }
+        cur_log_buffer_ = buffer;
+        auto iter = log_map_->find(buffer);
+        if (iter == log_map_->end()) {
+            iter = log_map_->add(buffer, new log_tls_buffer_info());
+        }
+        cur_buffer_info_ = iter->value();
+        return *cur_buffer_info_;
+    }
+
+    bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info_directly(const log_buffer* buffer)
+    {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(buffer == cur_log_buffer_ && "log_buffer::alloc and log_buffer::commit must use in pair");
+#endif
+        (void)buffer;
+        return *cur_buffer_info_;
+    }
 }

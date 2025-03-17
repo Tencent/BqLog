@@ -21,7 +21,6 @@
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/log/decoder/appender_decoder_helper.h"
 #include "bq_log/types/buffer/log_buffer.h"
-#include "bq_log/log/appender/appender_console.h"
 
 #if BQ_POSIX
 #ifdef BQ_PS
@@ -250,10 +249,14 @@ namespace bq {
 
             if (write_handle.result == enum_buffer_result_code::success) {
                 bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
+#if BQ_LOG_BUFFER_DEBUG
+                // 8 bytes alignment to ensure best performance and avoid SIG_BUS on some platforms
+                assert((((uintptr_t)(&(head->timestamp_epoch))) & 0x7) == 0 && "log buffer alignment error");
+#endif
                 head->timestamp_epoch = epoch_ms;
                 head->ext_info_offset = length;
                 bq::ext_log_entry_info_head* ext_info = (bq::ext_log_entry_info_head*)(handle.data_addr + length);
-                ext_info->thread_id_ = thread_info.thread_id_;
+                BQ_PACK_ACCESS(ext_info->thread_id_) = thread_info.thread_id_;
                 ext_info->thread_name_len_ = thread_info.thread_name_len_;
                 memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info.thread_name_, thread_info.thread_name_len_);
             }

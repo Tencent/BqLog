@@ -225,10 +225,10 @@ namespace bq {
                 }
             }
 #endif
-            status_.store(enum_thread_status::running);
+            status_.store_seq_cst(enum_thread_status::running);
             apply_thread_name();
             run();
-            status_.store(enum_thread_status::finished);
+            status_.store_seq_cst(enum_thread_status::finished);
             on_finished();
             thread_id_ = 0;
 
@@ -238,7 +238,7 @@ namespace bq {
                 platform_data_->jvm->DetachCurrentThread();
             }
 #endif
-            status_.store(enum_thread_status::released);
+            status_.store_seq_cst(enum_thread_status::released);
         }
     }
 }

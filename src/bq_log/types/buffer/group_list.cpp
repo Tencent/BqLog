@@ -164,8 +164,10 @@ namespace bq {
     {
         if (memory_map_handle_.has_been_mapped()) {
             bq::memory_map::release_memory_map(memory_map_handle_);
+            bq::string file_abs_path = memory_map_file_.abs_file_path();
+            bq::file_manager::instance().close_file(memory_map_file_);
             node_data_ = nullptr;
-            bq::file_manager::instance().remove_file_or_dir(memory_map_file_.abs_file_path());
+            bq::file_manager::instance().remove_file_or_dir(file_abs_path);
             // memory_map_file_ can be automatically destructed by destructor.
         } else {
             free(node_data_);
@@ -186,8 +188,6 @@ namespace bq {
         , max_block_count_per_group_(max_block_count_per_group)
         , current_group_index_(0)
     {
-        (void)padding_0;
-        (void)padding_1;
         bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name, true);
         if (!config.use_mmap) {
             bq::file_manager::remove_file_or_dir(memory_map_folder);
@@ -234,28 +234,31 @@ namespace bq {
         
     }
 
-    block_node_head* group_list::alloc_new_block()
+    block_node_head* group_list::alloc_new_block(const void* misc_data_src, size_t misc_data_size)
     {
         //try alloc from current exist groups
-        group_node::pointer_type* current_pointer = &head_;
-        current_pointer->lock_.read_lock();
+        group_node::pointer_type* current_read_pointer = &head_;
+        current_read_pointer->lock_.read_lock();
         block_node_head* result = nullptr;
         group_node* src_node = nullptr;
-        while (!current_pointer->is_empty()) {
-            src_node = current_pointer->node_;
+        while (!current_read_pointer->is_empty()) {
+            src_node = current_read_pointer->node_;
             result = src_node->get_data_head().free_.pop();
             if (result) {
+                result->set_misc_data(misc_data_src, misc_data_size);
+                result->get_buffer().set_thread_check_enable(true);
+                src_node->get_data_head().stage_.push(result);
                 break;
             }
-            current_pointer->node_->get_next_ptr().lock_.read_lock();
-            current_pointer->lock_.read_unlock();
-            current_pointer = &src_node->get_next_ptr();
+            src_node->get_next_ptr().lock_.read_lock();
+            current_read_pointer->lock_.read_unlock();
+            current_read_pointer = &src_node->get_next_ptr();
         }
+        current_read_pointer->lock_.read_unlock();
 
-        if (!result) { // alloc new group
-            current_pointer->lock_.read_unlock();
-            current_pointer = &head_;
-            current_pointer->lock_.read_lock();
+        if (!result) { 
+            // alloc new group
+            head_.lock_.write_lock();
             // double check
             if (!head_.is_empty()) {
                 src_node = head_.node_;
@@ -266,12 +269,15 @@ namespace bq {
                 result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;
                 head_.node_ = src_node;
+#if BQ_UNIT_TEST
+                groups_count_.fetch_add_seq_cst(1);
+#endif
             }
+            result->set_misc_data(misc_data_src, misc_data_size);
+            result->get_buffer().set_thread_check_enable(true);
+            src_node->get_data_head().stage_.push(result);
+            head_.lock_.write_unlock();
         }
-        result->reset_misc_data();
-        result->get_buffer().set_thread_check_enable(true);
-        src_node->get_data_head().stage_.push(result);
-        current_pointer->lock_.read_unlock();
         return result;
     }
 

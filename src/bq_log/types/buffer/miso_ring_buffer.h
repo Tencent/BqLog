@@ -60,50 +60,67 @@ namespace bq {
         static constexpr size_t CACHE_LINE_SIZE = 64;
         static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
         static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
-        enum class block_status : int32_t{
+        enum class block_status : uint8_t{
             unused, // data section begin from this block is unused, can not be read
             used, // data section begin from this block has already finished writing, and can be read.
             invalid // data section begin from this block is invalid, it should be skipped by reading thread.
         };
         union block {
-        public:
-            BQ_ANONYMOUS_STRUCT_PACK(
+        private:
+            BQ_PACK_BEGIN
+            struct alignas(4) chunk_head_def { //alignas(4) can make sure compiler generate more effective code when access int fields
+            private:
+                char block_num_[3]; // 24 bits block number
+            public:
+                block_status status; //8 bits status
+                uint32_t data_size;
+                uint8_t data[1];
+                uint8_t padding[3];
+            public:
+                bq_forceinline uint32_t get_block_num() const {
+                    return (*(uint32_t*)block_num_) & (0xFFFFFF);
+                }
+                bq_forceinline void set_block_num(uint32_t num)
                 {
-                    block_status status;
-                    uint32_t block_num;
-                    uint32_t data_size;
-                    uint8_t data[1];
-                }, chunk_head);
-            static_assert(sizeof(chunk_head) == 13, "invalid chunk_head size");
+                    *(uint32_t*)block_num_ = num;
+                }
+            }
+            BQ_PACK_END
+        public:
+            static constexpr uint32_t MAX_BLOCK_NUM_PER_CHUNK = 0xFFFFFF;
+            chunk_head_def chunk_head;
+            static_assert(offsetof(decltype(chunk_head), data) % 8 == 0, "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };
 
+        // frequently modified by read thread, so don't access it in write thread too often.
         BQ_PACK_BEGIN
-        struct head {
+        struct alignas(4) head {
             // it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
             uint64_t log_checksum_;
+            char mmap_misc_data_[CACHE_LINE_SIZE - sizeof(read_cursor_cache_) - sizeof(log_checksum_)];
         }
-        BQ_PACK_END
+        BQ_PACK_END 
+        static_assert(sizeof(head) == CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
 
         static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
         static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
         BQ_PACK_BEGIN
-        struct cursors_set {
+        struct alignas(4) cursors_set {
             uint32_t write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
             uint32_t read_cursor_;
             char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
-        }
-        BQ_PACK_END
-        
+        } BQ_PACK_END 
+        static_assert(sizeof(cursors_set) % CACHE_LINE_SIZE == 0, "invalid cursors_set size");
 
         log_buffer_config config_;
         char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
-        cursors_set* cursors_; // make sure it is aligned to cache line size.
+        cursors_set* cursors_; // make sure it is aligned to cache line size even in placement new.
 
         uint8_t* real_buffer_;
         head* head_;
@@ -159,6 +176,13 @@ namespace bq {
         void return_read_trunk(const log_buffer_read_handle& handle);
 
         /// <summary>
+        /// Traverses all data written, invoking the provided callback for each chunk from the consumer thread.
+        /// </summary>
+        /// <param name="in_callback">A function pointer to the callback that will be called with the data and its size.</param>
+        /// <param name="in_user_data">user defined data passed to in_callback.</param>
+        void data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data);
+
+        /// <summary>
         /// Warning:ring buffer can only be read from one thread at same time.
         /// This option is only work in Debug build and will be ignored in Release build.
         /// </summary>
@@ -188,6 +212,13 @@ namespace bq {
         bq_forceinline uint32_t get_total_blocks_count() const
         {
             return aligned_blocks_count_;
+        }
+
+        template <typename T>
+        bq_forceinline T& get_mmap_misc_data()
+        {
+            static_assert(sizeof(T) <= sizeof(head_->mmap_misc_data_), "size of T too large");
+            return *((T*)(void*)head_->mmap_misc_data_);
         }
 
     private:

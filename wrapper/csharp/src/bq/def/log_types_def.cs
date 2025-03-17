@@ -86,34 +86,25 @@ namespace bq.def
         public byte log_str;
     };
 
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
     internal unsafe struct _log_head_def
     {
         public ulong timestamp_epoch;
         public uint category_idx;
-        public byte level;
-        public byte log_format_str_type; //log_arg_type_enum.string_utf8_type or log_arg_type_enum.string_utf16_type
         public uint log_args_offset;
         public uint ext_info_offset;
-        public ushort dummy;
+        public byte level;
+        public byte log_format_str_type; //log_arg_type_enum.string_utf8_type or log_arg_type_enum.string_utf16_type
+        public ushort padding;
     }
 
 
 
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public unsafe struct _api_string_def
     {
         public sbyte* str;
         public uint len;
-    }
-
-    public class log_console_item
-    {
-        public ulong log_id;
-        public uint category_idx;
-        //public uint category_hash;
-        public log_level level;
-        public string log_str;
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]

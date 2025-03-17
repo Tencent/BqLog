@@ -62,7 +62,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
     if (result != appender_decode_result::success) {
         return result;
     }
-    out_handle = idx_seq_.add_fetch(1);
+    out_handle = idx_seq_.add_fetch_seq_cst(1);
 #if !BQ_TOOLS
     bq::platform::scoped_mutex lock(mutex_);
 #endif

@@ -17,16 +17,56 @@ namespace bq {
     class log_utils {
     public:
         template <typename T>
+        struct is_signed {
+        public:
+            using Type = typename bq::remove_cv_t<typename bq::remove_reference_t<T>>;
+            static constexpr bool value = static_cast<Type>(-1) < static_cast<Type>(0);
+        };
+
+        template <typename T>
         struct make_unsinged {
         public:
-            using type = typename bq::condition_type<
+            using type = typename bq::condition_type_t<
                 sizeof(T) == 1, uint8_t,
-                typename bq::condition_type<
+                typename bq::condition_type_t<
                     sizeof(T) == 2, uint16_t,
-                    typename bq::condition_type<
+                    typename bq::condition_type_t<
                         sizeof(T) == 4, uint32_t,
-                        typename bq::condition_type<
-                            sizeof(T) == 8, uint64_t, void>::type>::type>::type>::type;
+                        typename bq::condition_type_t<
+                            sizeof(T) == 8, uint64_t, void>>>>;
+            static_assert(!is_signed<type>::value, " ");
+        };
+
+        template <typename T>
+        struct make_singed {
+        public:
+            using type = typename bq::condition_type_t<
+                sizeof(T) == 1, int8_t,
+                typename bq::condition_type_t<
+                    sizeof(T) == 2, int16_t,
+                    typename bq::condition_type_t<
+                        sizeof(T) == 4, int32_t,
+                        typename bq::condition_type_t<
+                            sizeof(T) == 8, int64_t, void>>>>;
+            static_assert(is_signed<type>::value, " ");
+        };
+
+        class zigzag {
+        public:
+            template <typename T>
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR typename make_unsinged<T>::type encode(T value)
+            {
+                static_assert(is_signed<T>::value, "zigzag encode only support signed integers");
+                typedef typename make_unsinged<T>::type UT;
+                return static_cast<UT>((value << 1) ^ (value >> (sizeof(T) * 8 - 1)));
+            }
+            template <typename T>
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR typename make_singed<T>::type decode(T value)
+            {
+                static_assert(!is_signed<T>::value, "zigzag decode only support unsigned integers");
+                typedef typename make_singed<T>::type ST;
+                return static_cast<ST>((value >> 1) ^ (static_cast<T>(0) - (value & 1)));
+            }
         };
 
         class vlq {
@@ -95,6 +135,8 @@ namespace bq {
         static constexpr uint64_t value = 0;
     };
 
+
+
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_encode_length(uint64_t value)
     {
         if (value < min_value_of_length<2>::value) {
@@ -117,50 +159,44 @@ namespace bq {
         return 9;
     }
 
+
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_decode_length(uint8_t prefix_byte)
     {
-        if (prefix_byte >= prefix<5>::value) {
-            if (prefix_byte >= prefix<7>::value) {
-                if (prefix_byte >= prefix<8>::value) {
-                    return 8;
-                } else {
-                    return 7;
-                }
-            } else if (prefix_byte >= prefix<6>::value) {
-                return 6;
-            }
-            return 5;
-        } else {
-            if (prefix_byte >= prefix<3>::value) {
-                if (prefix_byte >= prefix<4>::value) {
-                    return 4;
-                } else {
-                    return 3;
-                }
-            } else if (prefix_byte >= prefix<1>::value) {
-                if (prefix_byte >= prefix<2>::value) {
-                    return 2;
-                } else {
-                    return 1;
-                }
-            }
+        /*
+        if (prefix_byte == 0)
             return 9;
-        }
+#if BQ_MSVC
+        uint32_t zero_count = _lzcnt_u32(static_cast<uint32_t>(prefix_byte));
+#else
+        uint32_t zero_count = __builtin_clz(static_cast<uint32_t>(prefix_byte));
+#endif
+        const uint32_t bit_pos = 31 - zero_count;
+        return 8 - bit_pos;
+        */
+        constexpr uint8_t vlq_length_lut[256] = {
+            9,
+            8,
+            7,7,
+            6,6,6,6,
+            5,5,5,5,5,5,5,5, 
+            4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+            3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+            2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+            2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+        };
+        return vlq_length_lut[prefix_byte];
     }
 
     template <typename T>
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR size_t log_utils::vlq::vlq_encode(T value, void* target_data, size_t data_len)
     {
-        using PURE_T = typename bq::remove_cv<typename bq::remove_reference<T>::type>::type;
-        static_assert(bq::is_same<PURE_T, uint8_t>::value
-                || bq::is_same<PURE_T, int8_t>::value
-                || bq::is_same<PURE_T, uint16_t>::value
-                || bq::is_same<PURE_T, int16_t>::value
-                || bq::is_same<PURE_T, uint32_t>::value
-                || bq::is_same<PURE_T, int32_t>::value
-                || bq::is_same<PURE_T, uint64_t>::value
-                || bq::is_same<PURE_T, int64_t>::value,
-            "input parameter of vlq_encode must be integers and data size not exceed 8 bytes");
+        using PURE_T = typename bq::remove_cv_t<typename bq::remove_reference_t<T>>;
+        static_assert(is_signed<PURE_T>::value == false, "vlq_encode only support unsigned integers");
+        static_assert(sizeof(T) <= 8, "vlq_encode only support integers with size less than or equal to 8 bytes");
         (void)data_len;
         using U_T = typename make_unsinged<PURE_T>::type;
         uint32_t length = get_vlq_encode_length((U_T)value);
@@ -252,15 +288,8 @@ namespace bq {
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR size_t log_utils::vlq::vlq_decode(T& value, const void* src_data)
     {
         using PURE_T = typename bq::remove_cv<typename bq::remove_reference<T>::type>::type;
-        static_assert(bq::is_same<PURE_T, uint8_t>::value
-                || bq::is_same<PURE_T, int8_t>::value
-                || bq::is_same<PURE_T, uint16_t>::value
-                || bq::is_same<PURE_T, int16_t>::value
-                || bq::is_same<PURE_T, int32_t>::value
-                || bq::is_same<PURE_T, uint32_t>::value
-                || bq::is_same<PURE_T, uint64_t>::value
-                || bq::is_same<PURE_T, int64_t>::value,
-            "input parameter of vlq_decode must be integers");
+        static_assert(is_signed<PURE_T>::value == false, "vlq_decode only support unsigned integers");
+        static_assert(sizeof(T) <= 8, "vlq_decode only support integers with size less than or equal to 8 bytes");
         const uint8_t* src_data_uint8 = (const uint8_t*)src_data;
         uint32_t length = get_vlq_decode_length(*src_data_uint8);
         if (length > vlq_max_bytes_count<PURE_T>()) {

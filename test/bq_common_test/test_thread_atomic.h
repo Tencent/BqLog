@@ -88,9 +88,9 @@ namespace bq {
                 for (uint32_t i = 0; i < test_thread_atomic_loop_times; ++i) {
                     m_ptr->lock();
                     uint32_t value = base_value;
-                    i_ptr->i.store(value);
+                    i_ptr->i.store_seq_cst(value);
                     for (uint32_t j = 0; j < cas_times_per_loop; ++j) {
-                        a_ptr->push_back(i_ptr->i.fetch_add(1));
+                        a_ptr->push_back(i_ptr->i.fetch_add_seq_cst(1));
                         ++value;
                     }
                     m_ptr->unlock();
@@ -120,9 +120,9 @@ namespace bq {
                 for (uint32_t i = 0; i < test_thread_atomic_loop_times; ++i) {
                     m_ptr->lock();
                     uint32_t value = base_value;
-                    i_ptr->i.store(value);
+                    i_ptr->i.store_seq_cst(value);
                     for (uint32_t j = 0; j < cas_times_per_loop; ++j) {
-                        a_ptr->push_back(i_ptr->i.fetch_add(1));
+                        a_ptr->push_back(i_ptr->i.fetch_add_seq_cst(1));
                         ++value;
                     }
                     m_ptr->unlock();
@@ -338,7 +338,7 @@ namespace bq {
                     // CAS test
                     constexpr uint32_t cas_times_per_loop = 5;
                     test_atomic_struct<uint32_t> i_value;
-                    i_value.i.store(test_thread_cas::magic_number);
+                    i_value.i.store_seq_cst(test_thread_cas::magic_number);
                     bq::array<uint32_t> test_array;
                     test_array.set_capacity(test_thread_atomic_loop_times * cas_times_per_loop * 5);
                     test_thread_cas thread1(i_value, test_array, cas_times_per_loop, 0);

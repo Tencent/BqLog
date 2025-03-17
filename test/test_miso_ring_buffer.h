@@ -72,7 +72,7 @@ namespace bq {
         private:
             void do_miso_test(test_result& result, bool with_mmap)
             {
-                miso_ring_buffer_test_total_write_count_.store(0);
+                miso_ring_buffer_test_total_write_count_.store_seq_cst(0);
                 log_buffer_config config;
                 config.log_name = "test_miso_log_buffer";
                 config.log_categories_name = { "_default", "category1" };
@@ -147,6 +147,56 @@ namespace bq {
                 result.add_result(total_chunk == miso_ring_buffer_test_total_write_count_.load(), "%s total write count error, real:%d , expected:%d", with_mmap ? "with mmap" : "without mmap", miso_ring_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "[miso ring buffer] %s total chunk count check error, read:%d , expected:%d", with_mmap ? "with mmap" : "without mmap", readed_chunk, total_chunk);
             }
+
+            void do_traverse_test(test_result& result)
+            {
+                log_buffer_config config;
+                config.log_name = "test_miso_log_buffer";
+                config.log_categories_name = { "_default", "category1" };
+                config.use_mmap = false;
+                bq::miso_ring_buffer ring_buffer1(config);
+                bq::miso_ring_buffer ring_buffer2(config);
+                bq::array<uint32_t> data_src;
+                constexpr uint32_t data_src_size = 4096;
+                data_src.fill_uninitialized(4096 / sizeof(uint32_t));
+                for (size_t i = 0; i < data_src.size(); ++i) {
+                    data_src[i] = bq::util::rand();
+                }
+                while (true) {
+                    
+                    uint32_t size = bq::util::rand() % data_src_size;
+                    auto handle1 = ring_buffer1.alloc_write_chunk(size);
+                    bq::scoped_log_buffer_handle scoped1(ring_buffer1, handle1);
+                    auto handle2 = ring_buffer2.alloc_write_chunk(size);
+                    bq::scoped_log_buffer_handle scoped2(ring_buffer2, handle2);
+                    result.add_result(handle1.result == handle2.result, "miso traverse test, prepare data");
+                    if (handle1.result != enum_buffer_result_code::success) {
+                        break;
+                    }
+                    size_t start_pos = (size == data_src_size) ? 0 : bq::util::rand() % (uint32_t)(4096 - size);
+                    memcpy(handle1.data_addr, (uint8_t*)(uint32_t*)data_src.begin() + start_pos, size);
+                    memcpy(handle2.data_addr, (uint8_t*)(uint32_t*)data_src.begin() + start_pos, size);
+                }
+                auto user_data = bq::make_tuple(&ring_buffer1, &result);
+                using user_data_type = decltype(user_data);
+                ring_buffer2.data_traverse([](uint8_t* data, uint32_t size, void* user_data) {
+                    // do nothing
+                    user_data_type& user_data_ref = *(user_data_type*)user_data;
+                    auto& ring_buffer1_ref = *bq::get<0>(user_data_ref);
+                    auto& result_ref = *bq::get<1>(user_data_ref);
+                    auto handle = ring_buffer1_ref.read_chunk();
+                    bq::scoped_log_buffer_handle<miso_ring_buffer> scoped(ring_buffer1_ref, handle);
+                    result_ref.add_result(handle.result == enum_buffer_result_code::success, "miso traverse test, read data");
+                    result_ref.add_result(handle.data_size == size, "miso traverse test, read data size");
+                    result_ref.add_result(memcmp(handle.data_addr, data, size) == 0, "miso traverse test, read data content");
+                    return;
+                },
+                    &user_data);
+
+                auto handle1 = ring_buffer1.read_chunk();
+                result.add_result(handle1.result == enum_buffer_result_code::err_empty_log_buffer, "miso traverse test, final");
+
+            }
         public:
             virtual test_result test() override
             {
@@ -161,6 +211,7 @@ namespace bq {
                 do_miso_test(result, false);
                 // test with mmap
                 do_miso_test(result, true);
+                do_traverse_test(result);
                 return result;
             }
         };

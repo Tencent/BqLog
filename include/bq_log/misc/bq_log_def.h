@@ -54,22 +54,24 @@ namespace bq {
     };
 
     BQ_PACK_BEGIN
-    struct _log_entry_head_def {
+    struct alignas(8) _log_entry_head_def {
         uint64_t timestamp_epoch;
         uint32_t category_idx;
-        uint8_t level;
-        uint8_t log_format_str_type; // log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type
         uint32_t log_args_offset;
         uint32_t ext_info_offset;
-        uint16_t dummy;
+        uint8_t level;
+        uint8_t log_format_str_type; // log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type
+        uint16_t padding_;
     } 
     BQ_PACK_END
-    static_assert(sizeof(_log_entry_head_def) % 4 == 0
-            && (sizeof(_log_entry_head_def) == sizeof(decltype(_log_entry_head_def::timestamp_epoch)) + sizeof(decltype(_log_entry_head_def::category_idx)) + sizeof(decltype(_log_entry_head_def::level)) + sizeof(decltype(_log_entry_head_def::log_format_str_type)) + sizeof(decltype(_log_entry_head_def::log_args_offset)) + sizeof(decltype(_log_entry_head_def::ext_info_offset)) + sizeof(decltype(_log_entry_head_def::dummy))),
+    static_assert(sizeof(_log_entry_head_def) % 8 == 0
+            && (sizeof(_log_entry_head_def) == sizeof(decltype(_log_entry_head_def::timestamp_epoch)) + sizeof(decltype(_log_entry_head_def::category_idx)) + sizeof(decltype(_log_entry_head_def::level)) + sizeof(decltype(_log_entry_head_def::log_format_str_type)) + sizeof(decltype(_log_entry_head_def::log_args_offset)) + sizeof(decltype(_log_entry_head_def::ext_info_offset)) + sizeof(decltype(_log_entry_head_def::padding_))),
+        "_log_entry_head_def's memory layout must be packed!");
+    static_assert(sizeof(_log_entry_head_def)  == 24,
         "_log_entry_head_def's memory layout must be packed!");
 
     BQ_PACK_BEGIN
-    struct _api_string_def {
+    struct alignas(4) _api_string_def {
         const char* str;
         uint32_t len;
     } 
@@ -77,7 +79,7 @@ namespace bq {
     static_assert(sizeof(_api_string_def) == sizeof(decltype(_api_string_def::str)) + sizeof(decltype(_api_string_def::len)), "_api_string_def's memory layout must be packed!");
 
     BQ_PACK_BEGIN
-    struct _api_u16string_def {
+    struct alignas(4) _api_u16string_def {
         const char16_t* str;
         uint32_t len;
     } 
@@ -86,39 +88,21 @@ namespace bq {
 
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN
-    struct _api_log_buffer_chunk_read_handle {
+    struct alignas(4) _api_log_buffer_chunk_read_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result;
     } 
-    BQ_PACK_END
+    BQ_PACK_END 
+    static_assert(sizeof(_api_log_buffer_chunk_read_handle) == sizeof(decltype(_api_log_buffer_chunk_read_handle::data_addr)) + sizeof(decltype(_api_log_buffer_chunk_read_handle::result)), "_api_log_buffer_chunk_read_handle's memory layout must be packed!");
 
     // this is C-linkage version of bq::log_buffer_write_handle
     BQ_PACK_BEGIN
-    struct _api_log_buffer_chunk_write_handle {
+    struct alignas(4) _api_log_buffer_chunk_write_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result;
     } 
-    BQ_PACK_END
+    BQ_PACK_END static_assert(sizeof(_api_log_buffer_chunk_write_handle) == sizeof(decltype(_api_log_buffer_chunk_write_handle::data_addr)) + sizeof(decltype(_api_log_buffer_chunk_write_handle::result)), "_api_log_buffer_chunk_write_handle's memory layout must be packed!");
 
-    BQ_PACK_BEGIN
-    struct _api_console_log_data_head {
-        uint64_t log_id;
-        uint32_t category_idx;
-        int32_t level;
-        int32_t log_len;
-        char log_str[1];
-    } 
-    BQ_PACK_END
-    static_assert(sizeof(_api_console_log_data_head) == sizeof(decltype(_api_console_log_data_head::log_id)) + sizeof(decltype(_api_console_log_data_head::category_idx)) + sizeof(decltype(_api_console_log_data_head::level)) + sizeof(decltype(_api_console_log_data_head::log_len)) + sizeof(decltype(_api_console_log_data_head::log_str)), "_api_console_log_data_head's memory layout must be packed!");
-    
-
-    struct console_log_item {
-    public:
-        uint64_t log_id;
-        uint32_t category_idx;
-        bq::log_level level;
-        bq::string log_str;
-    };
 
     struct _log_level_bitmap_def {
         uint32_t bitmap = 0;

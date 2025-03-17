@@ -104,7 +104,7 @@ namespace bq {
             }
 
             // store
-            bq_forceinline void store(value_type value, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline void store(value_type value, memory_order order) noexcept
             {
                 base_type::store(value, order);
             }
@@ -130,7 +130,7 @@ namespace bq {
             }
 
             //exchange
-            bq_forceinline value_type exchange(value_type value, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type exchange(value_type value, memory_order order) noexcept
             {
                 return base_type::exchange(value, order);
             }
@@ -171,7 +171,7 @@ namespace bq {
             }
 
             // add_fetch
-            bq_forceinline value_type add_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type add_fetch(value_type val, memory_order order) noexcept
             {
                 return base_type::add_fetch(val, order);
             }
@@ -202,7 +202,7 @@ namespace bq {
             }
 
             // fetch_add
-            bq_forceinline value_type fetch_add(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_add(value_type val, memory_order order) noexcept
             {
                 return base_type::fetch_add(val, order);
             }
@@ -233,7 +233,7 @@ namespace bq {
             }
 
             // sub_fetch
-            bq_forceinline value_type sub_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type sub_fetch(value_type val, memory_order order) noexcept
             {
                 return base_type::sub_fetch(val, order);
             }
@@ -264,7 +264,7 @@ namespace bq {
             }
 
             // fetch_sub
-            bq_forceinline value_type fetch_sub(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_sub(value_type val, memory_order order) noexcept
             {
                 return base_type::fetch_sub(val, order);
             }
@@ -295,7 +295,7 @@ namespace bq {
             }
 
             // xor_fetch
-            bq_forceinline value_type xor_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type xor_fetch(value_type val, memory_order order) noexcept
             {
                 return base_type::xor_fetch(val, order);
             }
@@ -326,7 +326,7 @@ namespace bq {
             }
 
             // fetch_xor
-            bq_forceinline value_type fetch_xor(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_xor(value_type val, memory_order order) noexcept
             {
                 return base_type::fetch_xor(val, order);
             }
@@ -357,7 +357,7 @@ namespace bq {
             }
 
             // or_fetch
-            bq_forceinline value_type or_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type or_fetch(value_type val, memory_order order) noexcept
             {
                 return base_type::or_fetch(val, order);
             }
@@ -388,7 +388,7 @@ namespace bq {
             }
 
             // fetch_or
-            bq_forceinline value_type fetch_or(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_or(value_type val, memory_order order) noexcept
             {
                 return base_type::fetch_or(val, order);
             }
@@ -419,7 +419,7 @@ namespace bq {
             }
 
             // and_fetch
-            bq_forceinline value_type and_fetch(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type and_fetch(value_type val, memory_order order) noexcept
             {
                 return base_type::and_fetch(val, order);
             }
@@ -450,7 +450,7 @@ namespace bq {
             }
 
             // fetch_and
-            bq_forceinline value_type fetch_and(value_type val, memory_order order = memory_order::seq_cst) noexcept
+            bq_forceinline value_type fetch_and(value_type val, memory_order order) noexcept
             {
                 return base_type::fetch_and(val, order);
             }
@@ -482,53 +482,53 @@ namespace bq {
 
             bq_forceinline atomic<T>& operator++()
             {
-                fetch_add(1);
+                fetch_add_seq_cst(1);
                 return *this;
             }
 
             bq_forceinline atomic<T> operator++(int32_t)
             {
                 atomic<T> tmp = *this;
-                fetch_add(1);
+                fetch_add_seq_cst(1);
                 return tmp;
             }
 
             bq_forceinline atomic<T>& operator--()
             {
-                fetch_sub(1);
+                fetch_sub_seq_cst(1);
                 return *this;
             }
 
             bq_forceinline atomic<T> operator--(int32_t)
             {
                 atomic<T> tmp = *this;
-                fetch_sub(1);
+                fetch_sub_seq_cst(1);
                 return tmp;
             }
 
             bq_forceinline atomic<T>& operator+=(value_type value)
             {
-                fetch_add(value);
+                fetch_add_seq_cst(value);
                 return *this;
             }
 
             bq_forceinline atomic<T> operator+(value_type value)
             {
                 atomic<T> tmp = *this;
-                tmp.add_fetch(value);
+                tmp.add_fetch_seq_cst(value);
                 return tmp;
             }
 
             bq_forceinline atomic<T>& operator-=(value_type value)
             {
-                fetch_sub(value);
+                fetch_sub_seq_cst(value);
                 return *this;
             }
 
             bq_forceinline atomic<T> operator-(value_type value)
             {
                 atomic<T> tmp = *this;
-                tmp.sub_fetch(value);
+                tmp.sub_fetch_seq_cst(value);
                 return tmp;
             }
         };

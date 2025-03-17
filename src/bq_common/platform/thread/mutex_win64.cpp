@@ -30,7 +30,7 @@ namespace bq {
 #pragma warning(disable : 6011)
             platform_data_ = (mutex_platform_def*)malloc(sizeof(mutex_platform_def));
             new (platform_data_, bq::enum_new_dummy::dummy) mutex_platform_def();
-            platform_data_->owner_thread_id.store(0);
+            platform_data_->owner_thread_id.store_seq_cst(0);
             platform_data_->mutex_handle = CreateMutex(NULL, false, NULL);
             if (!platform_data_->mutex_handle) {
                 bq::util::log_device_console(log_level::fatal, "%s : %d : create mutex failed, error code:%d", __FILE__, __LINE__, GetLastError());
@@ -47,7 +47,7 @@ namespace bq {
 #pragma warning(disable : 6011)
             platform_data_ = (mutex_platform_def*)malloc(sizeof(mutex_platform_def));
             new (platform_data_, bq::enum_new_dummy::dummy) mutex_platform_def();
-            platform_data_->owner_thread_id.store(0);
+            platform_data_->owner_thread_id.store_seq_cst(0);
             platform_data_->mutex_handle = CreateMutex(NULL, false, NULL);
             if (!platform_data_->mutex_handle) {
                 bq::util::log_device_console(log_level::fatal, "%s : %d : create mutex failed, error code:%d", __FILE__, __LINE__, GetLastError());

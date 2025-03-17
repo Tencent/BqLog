@@ -32,7 +32,7 @@
 
 namespace bq {
     BQ_PACK_BEGIN
-    struct group_data_head {
+    struct alignas(CACHE_LINE_SIZE) group_data_head {
         block_list used_;
         block_list free_;
         block_list stage_;
@@ -104,11 +104,15 @@ namespace bq {
 
         ~group_list();
 
-        block_node_head* alloc_new_block();
+        block_node_head* alloc_new_block(const void* misc_data_src, size_t misc_data_size);
 
         void recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block);
 
         bq_forceinline uint16_t get_max_block_count_per_group() const { return max_block_count_per_group_;}
+
+#if BQ_UNIT_TEST
+        bq_forceinline int32_t get_groups_count() const { return groups_count_.load_seq_cst(); }
+#endif
 
         bq_forceinline iterator first(const lock_type type)
         {
@@ -210,15 +214,19 @@ namespace bq {
                 break;
             }
             delete &current.value();
+#if BQ_UNIT_TEST
+            groups_count_.fetch_add_seq_cst(-1);
+#endif
         }
 
     private:
         const log_buffer_config& config_;
         uint16_t max_block_count_per_group_;
-        bq::platform::atomic<uint32_t> current_group_index_;
-        char padding_0[CACHE_LINE_SIZE] = {};
-        group_node::pointer_type head_;
-        char padding_1[CACHE_LINE_SIZE] = {};
+#if BQ_UNIT_TEST
+        bq::platform::atomic<int32_t> groups_count_ = 0;
+#endif
+        alignas(CACHE_LINE_SIZE) bq::platform::atomic<uint32_t> current_group_index_;
+        alignas(CACHE_LINE_SIZE) group_node::pointer_type head_;
     };
 
 }

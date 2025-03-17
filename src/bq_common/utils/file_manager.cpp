@@ -650,12 +650,12 @@ namespace bq {
 
     void file_manager::file_descriptor::inc_ref()
     {
-        ref_cout.add_fetch(1);
+        ref_cout.add_fetch_seq_cst(1);
     }
 
     void file_manager::file_descriptor::dec_ref()
     {
-        ref_cout.add_fetch(-1);
+        ref_cout.add_fetch_seq_cst(-1);
         assert(ref_cout.load() >= 0 && "file_descriptor ref_cout < 0");
         if (ref_cout.load() == 0) {
             clear();

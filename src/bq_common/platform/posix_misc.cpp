@@ -270,7 +270,7 @@ namespace bq {
         // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
         // To eliminate platform compatibility risks, we decided to implement it ourselves.
         BQ_PACK_BEGIN
-        struct posix_file_node_info {
+        struct alignas(4) posix_file_node_info {
             decltype(bq::declval<struct stat>().st_ino) ino;
             uint64_t hash_code() const
             {

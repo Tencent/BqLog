@@ -91,7 +91,7 @@ namespace bq {
             }
             platform_data_->thread_handle = CreateThread(NULL, attr_.max_stack_size, &thread_platform_processor::thread_process, this, STACK_SIZE_PARAM_IS_A_RESERVATION, (DWORD*)&thread_id_);
             if (!platform_data_->thread_handle.load()) {
-                status_.store(enum_thread_status::error);
+                status_.store_seq_cst(enum_thread_status::error);
                 bq::util::log_device_console(log_level::fatal, "create thread \"%s\" failed, error code:%d", thread_name_.c_str(), GetLastError());
                 assert(false && "create thread failed, see the device log output for more information");
                 return;
@@ -286,10 +286,10 @@ namespace bq {
                 }
             }
 #endif
-            status_.store(enum_thread_status::running);
+            status_.store_seq_cst(enum_thread_status::running);
             apply_thread_name();
             run();
-            status_.store(enum_thread_status::finished);
+            status_.store_seq_cst(enum_thread_status::finished);
             on_finished();
 
             thread_id_ = 0;
@@ -299,7 +299,7 @@ namespace bq {
                 platform_data_->jvm->DetachCurrentThread();
             }
 #endif
-            status_.store(enum_thread_status::released);
+            status_.store_seq_cst(enum_thread_status::released);
         }
     }
 }

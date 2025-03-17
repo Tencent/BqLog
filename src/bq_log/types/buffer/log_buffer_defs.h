@@ -30,40 +30,22 @@
 #define BQ_LOG_BUFFER_DEBUG 0
 #endif
 
+#if BQ_GCC
+#elif BQ_CLANG
+#elif BQ_MSVC
+#pragma warning(disable : 4324)
+#endif
+
 namespace bq {
     static constexpr size_t CACHE_LINE_SIZE = 64;
     static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
 
-    //Warning ! You Must Ensure The Alignment By Yourself!
-    template<typename TO>
-    bq_forceinline TO& __ring_buffer_force_cast_ignore_alignment_warning(uint8_t* from)
-    {
-#if BQ_GCC 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
-#elif BQ_CLANG
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Waddress-of-packed-member"
-#elif BQ_MSVC
-#pragma warning(push)
-#pragma warning(disable : 4324)
-#endif
-        return *reinterpret_cast<TO*>(from);
-#if BQ_GCC
-#pragma GCC diagnostic pop
-#elif BQ_CLANG
-#pragma clang diagnostic pop
-#elif BQ_MSVC
-#pragma warning(pop)
-#endif
-    }
-
-    #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) bq::__ring_buffer_force_cast_ignore_alignment_warning<bq::platform::atomic<TYPE>>((uint8_t*)&X)
+    #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)  
 
 
     struct log_buffer_handle_base {
         uint8_t* data_addr;
-        enum_buffer_result_code result = enum_buffer_result_code::err_alloc_size_invalid;
+        enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
     };
 
     struct log_buffer_write_handle : public log_buffer_handle_base {

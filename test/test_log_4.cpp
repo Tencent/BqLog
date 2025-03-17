@@ -38,7 +38,7 @@ namespace bq {
         {
             (void)length;
             bq::platform::scoped_spin_lock lock(test_4_lock_);
-            left_test_4_round_.add_fetch(-1);
+            left_test_4_round_.add_fetch_seq_cst(-1);
 
             bool result = true;
             if (test_4_check_array_.is_empty()) {

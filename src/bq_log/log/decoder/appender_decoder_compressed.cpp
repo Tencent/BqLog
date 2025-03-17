@@ -177,8 +177,8 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
         return appender_decode_result::failed_decode_error;
     }
     size_t cursor = 0;
-    uint64_t epoch_diff_ms;
-    const size_t epoch_diff_ms_len = bq::log_utils::vlq::vlq_decode(epoch_diff_ms, read_handle.data() + cursor);
+    uint64_t epoch_offset_zigzag_ms;
+    const size_t epoch_diff_ms_len = bq::log_utils::vlq::vlq_decode(epoch_offset_zigzag_ms, read_handle.data() + cursor);
     if (epoch_diff_ms_len == bq::log_utils::vlq::invalid_decode_length) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, decode epoch_diff_ms failed");
         return appender_decode_result::failed_decode_error;
@@ -188,6 +188,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, log entry epoch_diff_ms vlq decode error");
         return appender_decode_result::failed_decode_error;
     }
+    int64_t epoch_offset = bq::log_utils::zigzag::decode(epoch_offset_zigzag_ms);
     uint32_t formate_template_idx;
     const size_t formate_template_idx_len = bq::log_utils::vlq::vlq_decode(formate_template_idx, read_handle.data() + cursor);
     if (formate_template_idx_len == bq::log_utils::vlq::invalid_decode_length) {
@@ -219,7 +220,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, log entry thread_info_idx vlq decode error");
         return appender_decode_result::failed_decode_error;
     }
-    last_log_entry_epoch_ += epoch_diff_ms;
+    last_log_entry_epoch_ += epoch_offset;
     auto& formate_template = log_templates_array_[formate_template_idx];
 
     raw_data_.clear();
@@ -275,7 +276,6 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             raw_cursor += 4;
             break;
         case bq::log_arg_type_enum::char16_type:
-        case bq::log_arg_type_enum::int16_type:
         case bq::log_arg_type_enum::uint16_type:
             vlq_decode_length_tmp = bq::log_utils::vlq::vlq_decode(*(uint16_t*)(&raw_data_[raw_cursor + 2]), read_handle.data() + cursor);
             if (bq::log_utils::vlq::invalid_decode_length == vlq_decode_length_tmp) {
@@ -285,8 +285,17 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             cursor += vlq_decode_length_tmp;
             raw_cursor += 4;
             break;
+        case bq::log_arg_type_enum::int16_type:
+            vlq_decode_length_tmp = bq::log_utils::vlq::vlq_decode(*(uint16_t*)(&raw_data_[raw_cursor + 2]), read_handle.data() + cursor);
+            *(int16_t*)(&raw_data_[raw_cursor + 2]) = bq::log_utils::zigzag::decode(*(uint16_t*)(&raw_data_[raw_cursor + 2]));
+            if (bq::log_utils::vlq::invalid_decode_length == vlq_decode_length_tmp) {
+                bq::util::log_device_console(bq::log_level::error, "decode compressed log file failed : param 16 bits integer decode error");
+                return bq::appender_decode_result::failed_decode_error;
+            }
+            cursor += vlq_decode_length_tmp;
+            raw_cursor += 4;
+            break;
         case bq::log_arg_type_enum::char32_type:
-        case bq::log_arg_type_enum::int32_type:
         case bq::log_arg_type_enum::uint32_type:
             raw_data_.fill_uninitialized(sizeof(uint32_t));
             vlq_decode_length_tmp = bq::log_utils::vlq::vlq_decode(*(uint32_t*)(&raw_data_[raw_cursor + 4]), read_handle.data() + cursor);
@@ -297,10 +306,31 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             cursor += vlq_decode_length_tmp;
             raw_cursor += 4 + sizeof(uint32_t);
             break;
-        case bq::log_arg_type_enum::int64_type:
+        case bq::log_arg_type_enum::int32_type:
+            raw_data_.fill_uninitialized(sizeof(uint32_t));
+            vlq_decode_length_tmp = bq::log_utils::vlq::vlq_decode(*(uint32_t*)(&raw_data_[raw_cursor + 4]), read_handle.data() + cursor);
+            *(int32_t*)(&raw_data_[raw_cursor + 4]) = bq::log_utils::zigzag::decode(*(uint32_t*)(&raw_data_[raw_cursor + 4]));
+            if (bq::log_utils::vlq::invalid_decode_length == vlq_decode_length_tmp) {
+                bq::util::log_device_console(bq::log_level::error, "decode compressed log file failed : param 32 bits integer decode error");
+                return bq::appender_decode_result::failed_decode_error;
+            }
+            cursor += vlq_decode_length_tmp;
+            raw_cursor += 4 + sizeof(uint32_t);
+            break;
         case bq::log_arg_type_enum::uint64_type:
             raw_data_.fill_uninitialized(sizeof(uint64_t));
             vlq_decode_length_tmp = bq::log_utils::vlq::vlq_decode(*(uint64_t*)(&raw_data_[raw_cursor + 4]), read_handle.data() + cursor);
+            if (bq::log_utils::vlq::invalid_decode_length == vlq_decode_length_tmp) {
+                bq::util::log_device_console(bq::log_level::error, "decode compressed log file failed : param 64 bits integer decode error");
+                return bq::appender_decode_result::failed_decode_error;
+            }
+            cursor += vlq_decode_length_tmp;
+            raw_cursor += 4 + sizeof(uint64_t);
+            break;
+        case bq::log_arg_type_enum::int64_type:
+            raw_data_.fill_uninitialized(sizeof(uint64_t));
+            vlq_decode_length_tmp = bq::log_utils::vlq::vlq_decode(*(uint64_t*)(&raw_data_[raw_cursor + 4]), read_handle.data() + cursor);
+            *(int64_t*)(&raw_data_[raw_cursor + 4]) = bq::log_utils::zigzag::decode(*(uint64_t*)(&raw_data_[raw_cursor + 4]));
             if (bq::log_utils::vlq::invalid_decode_length == vlq_decode_length_tmp) {
                 bq::util::log_device_console(bq::log_level::error, "decode compressed log file failed : param 64 bits integer decode error");
                 return bq::appender_decode_result::failed_decode_error;
@@ -361,7 +391,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
     // head is invalid now, because raw_data may have expanded it's capacity.
     entry.get_log_head().ext_info_offset = (uint32_t)ext_info_offset;
     auto& ext_info = const_cast<ext_log_entry_info_head&>(entry.get_ext_head());
-    ext_info.thread_id_ = thread_info_iter->value().thread_id;
+    BQ_PACK_ACCESS(ext_info.thread_id_) = thread_info_iter->value().thread_id;
     ext_info.thread_name_len_ = (uint8_t)thread_info_iter->value().thread_name.size();
     memcpy((uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), thread_info_iter->value().thread_name.c_str(), ext_info.thread_name_len_);
     return do_decode_by_log_entry_handle(entry);
