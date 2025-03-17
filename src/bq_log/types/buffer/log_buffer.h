@@ -60,8 +60,6 @@ namespace bq {
 
             ~log_tls_buffer_info();
         };
-        static_assert(offsetof(log_tls_buffer_info, wt_data_) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_write_seq_ must be 64 bytes aligned");
-        static_assert(offsetof(log_tls_buffer_info, rt_data_) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
         static_assert(sizeof(log_tls_buffer_info) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
 
         struct log_tls_info {

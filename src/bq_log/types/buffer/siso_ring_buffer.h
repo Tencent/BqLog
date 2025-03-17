@@ -45,7 +45,7 @@ namespace bq {
         static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
 
         union block {
-        private:
+        public:
             BQ_PACK_BEGIN
             struct alignas(4) chunk_head_def { //alignas(4) can make sure compiler generate more effective code when access int fields
                 uint32_t block_num;
@@ -56,7 +56,6 @@ namespace bq {
             BQ_PACK_END
         public:
             chunk_head_def chunk_head;
-            static_assert(offsetof(decltype(chunk_head), data) % 8 == 0, "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };

@@ -121,6 +121,12 @@ namespace bq {
             assert(lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ == 0 && "invalid lp_buffer_head_misc init value");
             rt_cache_.current_reading_.version_ = 0;
         }
+
+        block_node_head::alignment_assert();
+
+        assert((BQ_POD_RUNTIME_OFFSET_OF(log_tls_buffer_info, wt_data_) % CACHE_LINE_SIZE == 0) && "log_tls_buffer_info current_write_seq_ must be 64 bytes aligned");
+        assert((BQ_POD_RUNTIME_OFFSET_OF(log_tls_buffer_info, rt_data_) % CACHE_LINE_SIZE == 0) && "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
+        
     }
 
     log_buffer::~log_buffer()

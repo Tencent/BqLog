@@ -42,6 +42,7 @@ namespace bq {
 
     #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)  
 
+    #define BQ_POD_RUNTIME_OFFSET_OF(Type, Field) (((size_t)&(((Type*)0x10000)->Field)) - (size_t)0x10000)
 
     struct log_buffer_handle_base {
         uint8_t* data_addr;

@@ -37,6 +37,14 @@
         get_buffer().~siso_ring_buffer();
     }
 
+
+    void block_node_head::alignment_assert()
+    {
+        assert((BQ_POD_RUNTIME_OFFSET_OF(block_node_head, next_) == 0) && "invalid alignment of bq::block_node_head");
+        assert((BQ_POD_RUNTIME_OFFSET_OF(block_node_head, misc_data_) % 8 == 0) && "invalid alignment of bq::block_node_head");
+        assert((BQ_POD_RUNTIME_OFFSET_OF(block_node_head, buffer_) == CACHE_LINE_SIZE) && "invalid alignment of bq::block_node_head");
+    }
+
     void block_node_head::set_misc_data(const void* data_src, size_t data_size)
     {
         assert(data_size <= sizeof(misc_data_) && "data_size is too large");

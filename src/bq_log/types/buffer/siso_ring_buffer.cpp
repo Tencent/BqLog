@@ -45,6 +45,8 @@ namespace bq {
             result_code_statistics_[i].store_release(0);
         }
 #endif
+        assert((BQ_POD_RUNTIME_OFFSET_OF(block::chunk_head_def, data) % 8 == 0) && "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
+        
     }
 
     siso_ring_buffer::~siso_ring_buffer()

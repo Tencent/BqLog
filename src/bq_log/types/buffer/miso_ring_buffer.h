@@ -66,7 +66,7 @@ namespace bq {
             invalid // data section begin from this block is invalid, it should be skipped by reading thread.
         };
         union block {
-        private:
+        public:
             BQ_PACK_BEGIN
             struct alignas(4) chunk_head_def { //alignas(4) can make sure compiler generate more effective code when access int fields
             private:
@@ -89,7 +89,6 @@ namespace bq {
         public:
             static constexpr uint32_t MAX_BLOCK_NUM_PER_CHUNK = 0xFFFFFF;
             chunk_head_def chunk_head;
-            static_assert(offsetof(decltype(chunk_head), data) % 8 == 0, "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };

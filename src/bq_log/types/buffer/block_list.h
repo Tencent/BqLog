@@ -29,7 +29,6 @@ namespace bq {
     class alignas(8) block_node_head {
     public:
         friend class block_list;
-        friend void block_head_aligment_check();
 
         BQ_PACK_BEGIN
         struct alignas(2) pointer_type_datas {
@@ -71,6 +70,8 @@ namespace bq {
 
         ~block_node_head();
 
+        static void alignment_assert();
+
         template<typename T>
         bq_forceinline T& get_misc_data()
         {
@@ -90,13 +91,6 @@ namespace bq {
         }
     } 
     BQ_PACK_END
-
-    bq_forceinline void block_head_aligment_check()
-    {
-        static_assert(offsetof(block_node_head, next_) == 0, "invalid alignment of bq::block_node_head");
-        static_assert((offsetof(block_node_head, misc_data_) % 8 == 0), "invalid alignment of bq::block_node_head");
-        static_assert((offsetof(block_node_head, buffer_) == CACHE_LINE_SIZE), "invalid alignment of bq::block_node_head");
-    }
 
         
     BQ_PACK_BEGIN
