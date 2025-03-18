@@ -147,40 +147,31 @@ namespace bq {
 
         bq_forceinline block_node_head* pop()
         {
-            while (true) {
-                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
-                block_node_head::pointer_type head_cpy;
-                head_cpy.union_value_ = head_cpy_union;
-                if (head_cpy.is_empty()) {
+            auto head_cpy = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
+            block_node_head::pointer_type head_desired;
+            block_node_head* first_node = nullptr;
+            do {
+                if (reinterpret_cast<block_node_head::pointer_type*>(&head_cpy)->is_empty()) {
                     return nullptr;
                 }
-                block_node_head* first_node = &get_block_head_by_index(head_cpy.data_.index_);
-                uint32_t head_copy_expected_value = head_cpy.union_value_;
-                head_cpy.union_value_ = first_node->next_.union_value_;
-                ++head_cpy.data_.aba_mark_;
-                if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_copy_expected_value, head_cpy.union_value_, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-                    return first_node;
-                }
-            }
+                first_node = &get_block_head_by_index(reinterpret_cast<block_node_head::pointer_type*>(&head_cpy)->data_.index_);
+                head_desired.data_.index_ = first_node->next_.data_.index_;
+                head_desired.data_.aba_mark_ = reinterpret_cast<block_node_head::pointer_type*>(&head_cpy)->data_.aba_mark_ + 1;
+            }while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_cpy, BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_desired.union_value_, uint32_t).load_raw(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
+            return first_node;
         }
 
         bq_forceinline void push(block_node_head* new_block_node)
         {
-            while (true) {
-                auto head_cpy_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
-                block_node_head::pointer_type head_cpy;
-                head_cpy.union_value_ = head_cpy_union;
-                new_block_node->next_ = head_cpy;
-                uint32_t head_copy_expected_value = head_cpy.union_value_;
-                head_cpy.data_.index_ = get_index_by_block_head(new_block_node);
-#if BQ_LOG_BUFFER_DEBUG
-                assert(head_cpy.data_.index_ >= 0 && head_cpy.data_.index_ < max_blocks_count_ && "push assert failed, invalid new_block_node!");
-#endif
-                ++head_cpy.data_.aba_mark_;
-                if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_copy_expected_value, head_cpy.union_value_, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-                    break;
-                }
-            }
+            auto head_cpy = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
+            block_node_head::pointer_type head_desired;
+            do {
+                uint16_t head_index = reinterpret_cast<block_node_head::pointer_type*>(&head_cpy)->data_.index_;
+                uint16_t head_aba = reinterpret_cast<block_node_head::pointer_type*>(&head_cpy)->data_.aba_mark_;
+                new_block_node->next_.data_.index_ = head_index;
+                head_desired.data_.index_ = get_index_by_block_head(new_block_node);
+                head_desired.data_.aba_mark_ = ++head_aba;
+            }while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_cpy, BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_desired.union_value_, uint32_t).load_raw(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
         }
 
         /// <summary>

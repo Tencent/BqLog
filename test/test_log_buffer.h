@@ -118,6 +118,19 @@ namespace bq {
                 new ((void*)aligned_addr, bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, (uint8_t*)buffer_addr, size - (ptrdiff_t)(buffer_addr - base_addr), config.use_mmap);
                 block_list& list_to = *(block_list*)aligned_addr;
 
+                if (config.use_mmap) {
+                    while (true) {
+                        if (!list_from.pop()) {
+                            break;
+                        }
+                    }
+                    while (true) {
+                        if (!list_to.pop()) {
+                            break;
+                        }
+                    }
+                }
+
                 for (uint16_t i = 0; i < BLOCK_COUNT; ++i) {
                     uint8_t* block_head_addr = (uint8_t*)(buffer_addr + i * config.default_buffer_size);
                     new ((void*)block_head_addr, bq::enum_new_dummy::dummy) block_node_head(block_head_addr + block_node_head::get_buffer_data_offset(), config.default_buffer_size - (size_t)block_node_head::get_buffer_data_offset(), config.use_mmap);

@@ -123,7 +123,7 @@ namespace bq {
     {
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
-
+        memset(memory_map_handle_.get_mapped_data(), 0, memory_map_handle_.get_mapped_size());
         auto mapped_data_addr = static_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
         *(uint64_t*)mapped_data_addr = config.calculate_check_sum();
         new ((void*)(mapped_data_addr + meta_size), bq::enum_new_dummy::dummy) group_data_head(
