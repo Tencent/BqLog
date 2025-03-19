@@ -77,7 +77,7 @@ namespace bq {
                     // The acquire and release memory orders provide memory synchronization semantics
                     // for the business logic protected by this lock, ensuring thread safety and data consistency.
                     while (node.locked_.load_acquire()) {
-                        yield();
+                        //yield();
                     }
                 }
                 else {
@@ -104,7 +104,7 @@ namespace bq {
                         return;
                     }
                     while ((next = node.next_.load_acquire()) == nullptr) {
-                        yield();
+                        //yield();
                     }
                 }
                 // The acquire and release memory orders provide memory synchronization semantics 

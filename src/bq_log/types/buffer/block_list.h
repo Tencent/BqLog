@@ -101,7 +101,6 @@ namespace bq {
         alignas(8) uint16_t offset_;
         alignas(8) uint16_t max_blocks_count_;
         alignas(8) size_t buffer_size_per_block_;
-        bq::platform::spin_lock lock_;
     private:
         void reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         bool try_recover_from_memory_map(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
@@ -148,7 +147,7 @@ namespace bq {
 
         bq_forceinline block_node_head* pop()
         {
-            /*auto head_cpy = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
+            auto head_cpy = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
             block_node_head::pointer_type head_desired;
             block_node_head* first_node = nullptr;
             do {
@@ -159,19 +158,12 @@ namespace bq {
                 head_desired.data_.index_ = first_node->next_.data_.index_;
                 head_desired.data_.aba_mark_ = reinterpret_cast<block_node_head::pointer_type*>(&head_cpy)->data_.aba_mark_ + 1;
             }while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_cpy, BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_desired.union_value_, uint32_t).load_raw(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
-            return first_node;*/
-            platform::scoped_spin_lock lock(lock_);
-            if (head_.is_empty()) {
-                return nullptr;
-            }
-            auto first_node = &get_block_head_by_index(head_.data_.index_);
-            head_.data_.index_ = first_node->next_.data_.index_;
             return first_node;
         }
 
         bq_forceinline void push(block_node_head* new_block_node)
         {
-            /*auto head_cpy = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
+            auto head_cpy = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).load_acquire();
             block_node_head::pointer_type head_desired;
             do {
                 uint16_t head_index = reinterpret_cast<block_node_head::pointer_type*>(&head_cpy)->data_.index_;
@@ -179,11 +171,7 @@ namespace bq {
                 new_block_node->next_.data_.index_ = head_index;
                 head_desired.data_.index_ = get_index_by_block_head(new_block_node);
                 head_desired.data_.aba_mark_ = ++head_aba;
-            }while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_cpy, BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_desired.union_value_, uint32_t).load_raw(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));*/
-            platform::scoped_spin_lock lock(lock_);
-            auto new_index = get_index_by_block_head(new_block_node);
-            new_block_node->next_.data_.index_ = head_.data_.index_;
-            head_.data_.index_ = new_index;
+            }while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value_, uint32_t).compare_exchange_strong(head_cpy, BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_desired.union_value_, uint32_t).load_raw(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
         }
 
         /// <summary>
