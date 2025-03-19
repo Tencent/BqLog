@@ -25,18 +25,29 @@
 
 namespace bq {
     namespace platform {
+
+        // Similar to Linux MCS lock, but it is a simpler version.
         class spin_lock {
         private:
-            bq::cache_friendly_type<bq::platform::atomic<bool>> value_;
+            struct lock_stack_node {
+                bq::platform::atomic<bool> locked_ = true;
+                bq::platform::atomic<lock_stack_node*> next_ = nullptr;
+            };
+        private:
+            bq::platform::atomic<lock_stack_node*> tail_;
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
             bq::platform::atomic<bq::platform::thread::thread_id> thread_id_;
 #endif
         private:
             void yield();
-
+            bq_forceinline static lock_stack_node& get_lock_stack_node()
+            {
+                thread_local lock_stack_node stack_node_;
+                return stack_node_;
+            }
         public:
             spin_lock()
-                : value_(false)
+                : tail_(nullptr)
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 , thread_id_(0)
 #endif
@@ -50,28 +61,58 @@ namespace bq {
 
             inline void lock()
             {
-                while (true) {
-                    if (!value_.get().exchange_acquire(true)) {
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                        thread_id_.store_seq_cst(bq::platform::thread::get_current_thread_id());
+                lock_stack_node& node = get_lock_stack_node();
+#if !defined(NDEBUG)
+                assert((bq::platform::thread::get_current_thread_id() != thread_id_.load_seq_cst()) && "spin_lock is not reentrant");
+                assert((node.next_.load_relaxed() == nullptr) && "spin_lock unit status error, next_ should be null");
+                assert((node.locked_.load_relaxed()) && "spin_lock unit status error, it is locked");
 #endif
-                        break;
-                    }
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                    assert(bq::platform::thread::get_current_thread_id() != thread_id_.load_seq_cst() && "spin_lock is not reentrant");
+
+                lock_stack_node* prev_tail = tail_.exchange_acquire(&node);
+                if (prev_tail) {
+#if !defined(NDEBUG)
+                    assert(prev_tail->next_.load_relaxed() == nullptr && "spin_lock unit status error, next_ should be null");
 #endif
-                    while (value_.get().load_relaxed()) {
+                    prev_tail->next_.store_release(&node);
+                    // The acquire and release memory orders provide memory synchronization semantics
+                    // for the business logic protected by this lock, ensuring thread safety and data consistency.
+                    while (node.locked_.load_acquire()) {
                         yield();
                     }
                 }
+                else {
+                    node.locked_.store_relaxed(false);
+                }
+#if !defined(NDEBUG)
+                thread_id_.store_seq_cst(bq::platform::thread::get_current_thread_id());
+#endif
             }
 
             inline void unlock()
             {
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
+                assert((bq::platform::thread::get_current_thread_id() == thread_id_.load_seq_cst()) && "spin_lock thread id error");
                 thread_id_.store_seq_cst(0);
 #endif
-                value_.get().store_release(false);
+                lock_stack_node& node = get_lock_stack_node();
+                lock_stack_node* next = node.next_.load_acquire();
+                if (next == nullptr) { 
+                    lock_stack_node* expected = &node;
+                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::relaxed, bq::platform::memory_order::relaxed)) {
+                        node.locked_.store_relaxed(true);
+                        node.next_.store_relaxed(nullptr);
+                        return;
+                    }
+                    while ((next = node.next_.load_acquire()) == nullptr) {
+                        yield();
+                    }
+                }
+                // The acquire and release memory orders provide memory synchronization semantics 
+                // for the business logic protected by this lock, ensuring thread safety and data consistency.
+                next->locked_.store_release(false);
+
+                node.next_.store_relaxed(nullptr);
+                node.locked_.store_relaxed(true);
             }
         };
 

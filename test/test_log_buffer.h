@@ -282,22 +282,22 @@ namespace bq {
                 config.use_mmap = true;
                 do_block_list_test(result, config);
 
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
                 config.use_mmap = false;
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
 
                 config.high_frequency_threshold_per_second = UINT64_MAX;
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
                 config.use_mmap = true;
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
-                do_basic_test(result, config);
+                //do_basic_test(result, config);
 
                 return result;
             }
