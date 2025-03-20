@@ -29,6 +29,7 @@
 #include "bq_log/misc/bq_log_api.h"
 #include "bq_log/types/buffer/log_buffer_defs.h"
 #include "bq_log/types/buffer/block_list.h"
+#include "bq_log/types/buffer/memory_pool.h"
 
 namespace bq {
     BQ_PACK_BEGIN
@@ -41,7 +42,7 @@ namespace bq {
     BQ_PACK_END
     static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
 
-    class group_node {
+    class group_node : public bq::memory_pool_obj_base<group_node, true>{
     public:
         struct pointer_type {
             bq::platform::spin_lock_rw_crazy lock_;
@@ -49,7 +50,6 @@ namespace bq {
 
             bq_forceinline bool is_empty() const { return node_ == nullptr; }
         };
-        static constexpr uint32_t blocks_per_group = 16;
     private:
         size_t get_group_meta_size(const log_buffer_config& config);
         size_t get_group_data_size(const log_buffer_config& config, uint16_t max_block_count_per_group);
@@ -63,6 +63,7 @@ namespace bq {
         bq::memory_map_handle memory_map_handle_;
         uint8_t* node_data_ = nullptr;
         group_data_head* head_ptr_ = nullptr;
+        uint64_t in_pool_epoch_ms_ = 0;
 #if BQ_JAVA
         jobject java_buffer_obj_ = nullptr;
 #endif
@@ -72,6 +73,8 @@ namespace bq {
 
         bq_forceinline pointer_type& get_next_ptr() { return next_; }
         bq_forceinline group_data_head& get_data_head() { return *head_ptr_;}
+        uint64_t get_in_pool_epoch_ms() const { return in_pool_epoch_ms_; }
+        void set_in_pool_epoch_ms(uint64_t epoch_ms) { in_pool_epoch_ms_ = epoch_ms; }
     };
 
     class group_list {
@@ -99,6 +102,7 @@ namespace bq {
             bq_forceinline const group_node& value() const { return *value_; }
             bq_forceinline bool operator==(const group_list::iterator& rhs) const { return value_ == rhs.value_;}
         };
+        static constexpr uint64_t GROUP_NODE_GC_LIFE_TIME_MS = 5000; // If a group node has not been used for 5 seconds, it will be deleted. Otherwise it can stay in the memory pool.
     public:
         group_list(const log_buffer_config& config, uint16_t max_block_count_per_group);
 
@@ -113,6 +117,8 @@ namespace bq {
 #if BQ_UNIT_TEST
         bq_forceinline int32_t get_groups_count() const { return groups_count_.load_seq_cst(); }
 #endif
+
+        void garbage_collect();
 
         bq_forceinline iterator first(const lock_type type)
         {
@@ -197,7 +203,7 @@ namespace bq {
             return result;
         }
 
-        bq_forceinline void delete_and_unlock_node_thread_unsafe(iterator& current)
+        bq_forceinline void delete_and_unlock_thread_unsafe(iterator& current)
         {
             current.last_pointer_->node_ = current.value().get_next_ptr().node_;
 
@@ -213,7 +219,8 @@ namespace bq {
             default:
                 break;
             }
-            delete &current.value();
+            current.value().set_in_pool_epoch_ms(bq::platform::high_performance_epoch_ms());
+            pool_.push(&current.value());
 #if BQ_UNIT_TEST
             groups_count_.fetch_add_seq_cst(-1);
 #endif
@@ -227,6 +234,7 @@ namespace bq {
 #endif
         alignas(CACHE_LINE_SIZE) bq::platform::atomic<uint32_t> current_group_index_;
         alignas(CACHE_LINE_SIZE) group_node::pointer_type head_;
+        alignas(CACHE_LINE_SIZE) memory_pool<group_node> pool_;
     };
 
 }

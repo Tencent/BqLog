@@ -45,120 +45,44 @@ namespace bq {
         }
     }
 
-    appender_console::console_ring_buffer::console_ring_buffer()
+    appender_console::console_buffer::console_buffer()
         : buffer_(nullptr)
-        , fetch_lock_(false)
     {
     }
 
-    appender_console::console_ring_buffer::~console_ring_buffer()
+    appender_console::console_buffer::~console_buffer()
     {
-        if (buffer_) {
-            delete buffer_;
+        auto real_buffer = buffer_.exchange_seq_cst(nullptr);
+        if (real_buffer) {
+            delete real_buffer;
         }
     }
 
-    void appender_console::console_ring_buffer::insert(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+    void appender_console::console_buffer::insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
     {
         if (!is_enable()) {
             return;
         }
         size_t write_length = sizeof(log_id) + sizeof(category_idx) + sizeof(log_level) + sizeof(int32_t) + (size_t)length + 1;
 
-        {
-            if (!buffer_) {
-                bq::platform::scoped_spin_lock_write_crazy init_lock(insert_lock_);
-                if (!buffer_)
-                {
-                    buffer_data_.fill_uninitialized(1024);
-                    buffer_ = new bq::siso_ring_buffer(buffer_data_.begin(), buffer_data_.size(), false);
-                    buffer_->set_thread_check_enable(false);
+        auto buffer = buffer_.load_relaxed();
+        if (!buffer) {
+            buffer = buffer_.load_acquire();
+            if (!buffer) {
+                log_buffer_config config;
+                config.use_mmap = false;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                config.high_frequency_threshold_per_second = UINT64_MAX;
+                buffer = new bq::log_buffer(config);
+                log_buffer* expected = nullptr;
+                if (!buffer_.compare_exchange_strong(expected, buffer, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                    delete buffer;
+                    buffer = expected;
                 }
             }
         }
-        // try insert
-        do {
-            bq::platform::scoped_spin_lock_read_crazy read_lock(insert_lock_);
-            auto handle = buffer_->alloc_write_chunk((uint32_t)write_length);
-            scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*buffer_, handle);
-            if (handle.result == enum_buffer_result_code::success) {
-                uint8_t* data = handle.data_addr;
-                *(uint64_t*)data = log_id;
-                data += sizeof(uint64_t);
-                *(uint32_t*)data = category_idx;
-                data += sizeof(uint32_t);
-                *(int32_t*)data = log_level;
-                data += sizeof(int32_t);
-                *(int32_t*)data = length;
-                data += sizeof(int32_t);
-                memcpy(data, content, (size_t)length);
-                data[length] = 0;
-            } else if (handle.result == enum_buffer_result_code::err_not_enough_space) {
-                break;
-            } else {
-                bq::util::log_device_console(bq::log_level::error, "failed to insert data entry to console buffer, ring_buffer error code:%d", (int32_t)handle.result);
-            }
-            return;
-        } while (0);
-
-        // expand and re-insert
-        bq::platform::scoped_spin_lock_write_crazy write_lock(insert_lock_);
-        bq::platform::scoped_mutex mutex_lock(fetch_lock_);
-        do {
-            auto handle = buffer_->alloc_write_chunk((uint32_t)write_length);
-            scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*buffer_, handle);
-            if (handle.result == enum_buffer_result_code::success) {
-                uint8_t* data = handle.data_addr;
-                *(uint64_t*)data = log_id;
-                data += sizeof(uint64_t);
-                *(uint32_t*)data = category_idx;
-                data += sizeof(uint32_t);
-                *(int32_t*)data = log_level;
-                data += sizeof(int32_t);
-                *(int32_t*)data = length;
-                data += sizeof(int32_t);
-                memcpy(data, content, (size_t)length);
-                data[length] = 0;
-            } else if (handle.result == enum_buffer_result_code::err_not_enough_space) {
-                break;
-            } else {
-                bq::util::log_device_console(bq::log_level::error, "failed to insert data entry to console buffer, ring_buffer error code:%d", (int32_t)handle.result);
-            }
-            return;
-        } while (0);
-
-        uint32_t new_size = buffer_->get_total_blocks_count() * buffer_->get_block_size() + (uint32_t)write_length;
-        new_size = siso_ring_buffer::calculate_min_size_of_memory(new_size);
-        decltype(buffer_data_) new_data;
-        new_data.fill_uninitialized((size_t)new_size);
-        auto new_buffer = new siso_ring_buffer(new_data.begin(), new_data.size(), false);
-        new_buffer->set_thread_check_enable(false);
-        while (true) {
-            auto read_handle = buffer_->read_chunk();
-            scoped_log_buffer_handle<siso_ring_buffer> scoped_read_handle(*buffer_, read_handle);
-            if (read_handle.result == enum_buffer_result_code::success) {
-                auto write_handle = new_buffer->alloc_write_chunk(read_handle.data_size);
-                scoped_log_buffer_handle<siso_ring_buffer> scoped_write_handle(*buffer_, write_handle);
-                if (write_handle.result != enum_buffer_result_code::success) {
-                    bq::util::log_device_console(bq::log_level::error, "failed to copy data entry to new console buffer, ring_buffer error code:%d", (int32_t)write_handle.result);
-                    break;
-                }
-                memcpy(write_handle.data_addr, read_handle.data_addr, (size_t)read_handle.data_size);
-            } else if (read_handle.result == enum_buffer_result_code::err_empty_log_buffer) {
-                break;
-            } else {
-                bq::util::log_device_console(bq::log_level::error, "failed to read data entry from console buffer to copy, ring_buffer error code:%d", (int32_t)read_handle.result);
-                break;
-            }
-        }
-
-        delete buffer_;
-        buffer_ = new_buffer;
-        buffer_data_ = bq::move(new_data);
-
-        // insert finally
-        auto handle = buffer_->alloc_write_chunk((uint32_t)write_length);
-        scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*buffer_, handle);
+        auto handle = buffer->alloc_write_chunk((uint32_t)write_length, epoch_ms);
+        bq::scoped_log_buffer_handle scoped_handle(*buffer, handle);
         if (handle.result == enum_buffer_result_code::success) {
             uint8_t* data = handle.data_addr;
             *(uint64_t*)data = log_id;
@@ -172,22 +96,22 @@ namespace bq {
             memcpy(data, content, (size_t)length);
             data[length] = 0;
         } else {
-            bq::util::log_device_console(bq::log_level::error, "failed to insert data entry to final console buffer, ring_buffer error code:%d", (int32_t)handle.result);
+            util::log_device_console(log_level::error, "failed to insert data entry to console fetch buffer, ring_buffer error code:%d", (int32_t)handle.result);
         }
     }
 
-    bool appender_console::console_ring_buffer::fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
+    bool appender_console::console_buffer::fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
     {
         if (!is_enable()) {
             return false;
         }
 
-        bq::platform::scoped_mutex mutex_lock(fetch_lock_);
-        if (!buffer_) {
+        auto buffer = buffer_.load_relaxed();
+        if (!buffer) {
             return false;
         }
-        auto read_handle = buffer_->read_chunk();
-        scoped_log_buffer_handle<siso_ring_buffer> scoped_read_handle(*buffer_, read_handle);
+        auto read_handle = buffer->read_chunk();
+        scoped_log_buffer_handle scoped_read_handle(*buffer, read_handle);
         if (read_handle.result == enum_buffer_result_code::success) {
             uint8_t* data = read_handle.data_addr;
             uint64_t log_id = *(uint64_t*)data;
@@ -208,7 +132,7 @@ namespace bq {
         return read_handle.result == enum_buffer_result_code::success;
     }
 
-    void appender_console::console_ring_buffer::set_enable(bool enable)
+    void appender_console::console_buffer::set_enable(bool enable)
     {
         enable_ = enable;
     }
@@ -264,7 +188,7 @@ namespace bq {
         util::log_device_console_plain_text(level, log_entry_cache_.c_str());
 #endif
         console_misc_.callback().call(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
-        console_misc_.buffer().insert(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        console_misc_.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
     }
 
 }

@@ -12,6 +12,7 @@
  */
 #include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_base.h"
+#include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/log/layout.h"
 #include "bq_common/bq_common.h"
 
@@ -29,18 +30,15 @@ namespace bq {
             void call(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
         };
 
-        class console_ring_buffer {
+        class console_buffer {
         private:
             bool enable_;
-            class siso_ring_buffer* buffer_;
-            bq::array<uint8_t> buffer_data_;
-            bq::platform::mutex fetch_lock_;
-            bq::platform::spin_lock_rw_crazy insert_lock_;
+            class bq::platform::atomic<log_buffer*> buffer_;
 
         public:
-            console_ring_buffer();
-            ~console_ring_buffer();
-            void insert(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
+            console_buffer();
+            ~console_buffer();
+            void insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
             bool fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param);
             void set_enable(bool enalbe);
             bq_forceinline bool is_enable() const { return enable_; }
@@ -49,11 +47,11 @@ namespace bq {
         class console_static_misc {
         private:
             console_callbacks callbacks_;
-            console_ring_buffer buffer_;
+            console_buffer buffer_;
 
         public:
             bq_forceinline console_callbacks& callback() { return callbacks_; }
-            bq_forceinline console_ring_buffer& buffer() { return buffer_; }
+            bq_forceinline console_buffer& buffer() { return buffer_; }
         };
 
     public:

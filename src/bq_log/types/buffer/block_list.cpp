@@ -24,11 +24,13 @@
 
     block_node_head::block_node_head(void* buffer, size_t buffer_size, bool is_memory_mapped)
     {
-        next_.data_.index_ = (uint16_t)(-1);
-        next_.data_.aba_mark_ = 0;
+        next_.index() = (uint16_t)(-1);
+        next_.aba_mark() = 0;
         new ((void*)&get_buffer(), bq::enum_new_dummy::dummy) siso_ring_buffer(buffer, buffer_size, is_memory_mapped);
         memset(misc_data_, 0, sizeof(misc_data_));
         size_t min_size = bq::roundup_pow_of_two(buffer_size) == buffer_size ? buffer_size : (bq::roundup_pow_of_two(buffer_size) >> 1);
+        assert(reinterpret_cast<uintptr_t>((void*)buffer_) % CACHE_LINE_SIZE == 0 && "siso_ring_buffer is not properly aligned!");
+        assert((reinterpret_cast<uintptr_t>((void*)buffer_) - reinterpret_cast<uintptr_t>((void*)&next_) == CACHE_LINE_SIZE) && "siso_ring_buffer is not properly aligned!");
         assert(((size_t)(get_buffer().get_block_size() * get_buffer().get_total_blocks_count()) == min_size) && "siso_ring_buffer usable size is unexpected, please check calculation as memory alignment");
     }
 
@@ -53,8 +55,8 @@
 
     void block_list::reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size)
     {
-        head_.data_.index_ = (uint16_t)(-1);
-        head_.data_.aba_mark_ = 0;
+        head_.index() = (uint16_t)(-1);
+        head_.aba_mark() = 0;
         ptrdiff_t offset = buffers_base_addr - (uint8_t*)this;
         assert(offset <= UINT16_MAX && "block_list buffer offset too large");
         offset_ = (uint16_t)offset;
@@ -84,10 +86,10 @@
         uint16_t current_blocks_count = 0;
         while (!current_ptr->is_empty() && current_blocks_count <= max_blocks_count_) {
             ++current_blocks_count;
-            if (current_ptr->data_.index_ >= max_blocks_count_) {
+            if (current_ptr->index() >= max_blocks_count_) {
                 return false;
             }
-            const block_node_head& next_block_head = get_block_head_by_index(current_ptr->data_.index_); 
+            const block_node_head& next_block_head = get_block_head_by_index(current_ptr->index()); 
             current_ptr = &(next_block_head.next_);
         }
         if (current_blocks_count > max_blocks_count_) {

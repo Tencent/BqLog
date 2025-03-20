@@ -29,7 +29,11 @@
 namespace bq {
     class alignas(CACHE_LINE_SIZE) log_buffer {
     public:
+#if BQ_ANDROID || BQ_IOS
+        static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 8;
+#else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
+#endif
         static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 10;
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_ = 1000; 
     public:
@@ -131,13 +135,6 @@ namespace bq {
 
         void return_read_trunk(const log_buffer_read_handle& handle);
 
-        /// <summary>
-        /// Warning:ring buffer can only be read from one thread at same time.
-        /// This option is only work in Debug build and will be ignored in Release build.
-        /// </summary>
-        /// <param name="in_enable"></param>
-        void set_thread_check_enable(bool in_enable);
-
 #if BQ_JAVA
         struct java_buffer_info {
             jobjectArray buffer_array_obj_;
@@ -196,11 +193,6 @@ namespace bq {
                 context_verify_result verify_result;
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
-#if BQ_LOG_BUFFER_DEBUG
-        bool check_thread_ = true;
-        bq::platform::thread::thread_id empty_thread_id_ = 0;
-        bq::platform::thread::thread_id read_thread_id_ = 0;
-#endif
     };
 
     

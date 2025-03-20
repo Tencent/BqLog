@@ -64,6 +64,16 @@ namespace bq {
 #endif
     //------------------------------------------------------------------------------------------
 
+    template <typename Base, typename Derived>
+    struct is_base_of : bool_type<__is_base_of(Base, Derived)> {
+    };
+
+#if defined(BQ_CPP_14)
+    template <typename Base, typename Derived>
+    constexpr bool is_base_of_v = is_base_of<Base, Derived>::value;
+#endif
+    //------------------------------------------------------------------------------------------
+
     template <typename T>
     struct is_array : public false_type {
     };

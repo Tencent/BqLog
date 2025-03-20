@@ -22,6 +22,9 @@
 #include "bq_common/types/type_traits.h"
 #include "bq_common/types/type_tools.h"
 namespace bq {
+
+    static constexpr size_t CACHE_LINE_SIZE = 64;
+
     enum class log_level {
         verbose,
         debug,

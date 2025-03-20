@@ -114,7 +114,6 @@ namespace bq {
             }
             buffer_ = new log_buffer(buffer_config);
         }
-        buffer_->set_thread_check_enable(false);
         worker_.init(thread_mode_, this);
         if (thread_mode_ == log_thread_mode::independent) {
             worker_.start();

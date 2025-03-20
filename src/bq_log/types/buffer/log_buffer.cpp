@@ -234,17 +234,6 @@ namespace bq {
 
     log_buffer_read_handle log_buffer::read_chunk()
     {
-#if BQ_LOG_BUFFER_DEBUG
-        if (check_thread_) {
-            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            if (read_thread_id_ == empty_thread_id_) {
-                read_thread_id_ = current_thread_id;
-            } else {
-                assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_high_perform_buffer!");
-            }
-        }
-#endif
-        
         bool lp_visited = false;
         bool full_visited = false;
         while (!full_visited) {
@@ -401,19 +390,6 @@ namespace bq {
         }
     }
 
-    void log_buffer::set_thread_check_enable(bool in_enable)
-    {
-#if BQ_LOG_BUFFER_DEBUG
-        check_thread_ = in_enable;
-        if (!check_thread_) {
-            read_thread_id_ = empty_thread_id_;
-        }
-        lp_buffer_.set_thread_check_enable(check_thread_);
-#else
-        (void)in_enable;
-#endif
-    }
-
 #if BQ_JAVA
     log_buffer::java_buffer_info log_buffer::get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
     {
@@ -469,7 +445,6 @@ namespace bq {
         auto new_node = high_perform_buffer_.alloc_new_block(&misc_data, sizeof(block_misc_data));
         return new_node;
     }
-
 
     bq::log_buffer::context_verify_result log_buffer::verify_context(const context_head& context)
     {
@@ -561,14 +536,16 @@ namespace bq {
                 && (!current_lock_iterator.value().get_data_head().stage_.first())) {
                 // remove it
                 group_removed = true;
-                high_perform_buffer_.delete_and_unlock_node_thread_unsafe(current_lock_iterator);
+                high_perform_buffer_.delete_and_unlock_thread_unsafe(current_lock_iterator);
             } else {
                 // unlock
                 high_perform_buffer_.next(current_lock_iterator, group_list::lock_type::no_lock);
             }
         }
-
-        mem_opt.left_holes_num_ += high_perform_buffer_.get_max_block_count_per_group() - rt_cache_.mem_optimize_.cur_group_using_blocks_num_;
+        
+        if (mem_opt.cur_group_) {
+            mem_opt.left_holes_num_ += high_perform_buffer_.get_max_block_count_per_group() - rt_cache_.mem_optimize_.cur_group_using_blocks_num_;
+        }
         mem_opt.cur_group_using_blocks_num_ = 0;
         if (!group_removed) {
             mem_opt.last_group_ = mem_opt.cur_group_;
@@ -576,6 +553,7 @@ namespace bq {
         mem_opt.cur_group_ = group;
         if (!group) {
             rt_cache_.mem_optimize_.left_holes_num_ = 0;
+            high_perform_buffer_.garbage_collect();
         }
     }
 

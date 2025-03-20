@@ -37,7 +37,6 @@
 #endif
 
 namespace bq {
-    static constexpr size_t CACHE_LINE_SIZE = 64;
     static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
 
     #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)  
@@ -73,7 +72,11 @@ namespace bq {
         /// <summary>The initial size of the buffer in bytes. Depending on the type, this can signify the total buffer
         /// size(normal) or the size per thread(high_performance). In some cases, the actual size might be adjusted to be larger than
         /// this initial value.</summary>
+#if BQ_ANDROID || BQ_IOS
+        uint32_t default_buffer_size = 1024 * 32;
+#else
         uint32_t default_buffer_size = 1024 * 64;
+#endif
 
         /// <summary>Specifies whether memory-mapped files are used for buffer storage to support
         /// data recovery. That if program is killed without process the left data in log buffer. it will not

@@ -17,11 +17,78 @@
 #include <thread>
 #include "test_base.h"
 #include "bq_log/types/buffer/log_buffer.h"
+#include "bq_log/types/buffer/memory_pool.h"
 
 namespace bq {
     namespace test {
         static bq::platform::atomic<int32_t> log_buffer_test_total_write_count_ = 0;
         constexpr int32_t log_buffer_total_task = 5;
+
+        class memory_pool_test_obj_aligned : public bq::memory_pool_obj_base<memory_pool_test_obj_aligned, true> {
+        public :
+            int32_t id_;
+            memory_pool_test_obj_aligned(int32_t id)
+                : id_(id)
+            {
+            }
+        };
+        class memory_pool_test_obj_not_aligned : public bq::memory_pool_obj_base<memory_pool_test_obj_not_aligned, false> {
+        public:
+            int32_t id_;
+            memory_pool_test_obj_not_aligned(int32_t id)
+                : id_(id)
+            {
+            }
+        };
+
+        template<bool is_aligned>
+        class memory_pool_test_task {
+            using obj_type = bq::condition_type_t<is_aligned, memory_pool_test_obj_aligned, memory_pool_test_obj_not_aligned>;
+            bq::memory_pool<obj_type>& from_pool_;
+            bq::memory_pool<obj_type>& to_pool_;
+            int32_t left_loop_count_;
+            int32_t op_;
+        public:
+            memory_pool_test_task(bq::memory_pool<obj_type>& from_pool, bq::memory_pool<obj_type>& to_pool, int32_t left_loop_count, int32_t op)
+                : from_pool_(from_pool)
+                , to_pool_(to_pool)
+                , left_loop_count_(left_loop_count)
+                , op_(op)
+            {
+            }
+
+            void operator()()
+            {
+                while (left_loop_count_> 0) {
+                    switch (op_) {
+                    case 0:
+                        if (auto obj = from_pool_.pop()) {
+                            to_pool_.push(obj);
+                            --left_loop_count_;
+                        } else {
+                            bq::platform::thread::yield();
+                        }
+                        break;
+                    case 1:
+                        if (auto obj = from_pool_.evict([](const obj_type* candidiate_obj, void* user_data) {
+                                (void)candidiate_obj;
+                                (void)user_data;
+                                return true;
+                            }, nullptr)){
+                            to_pool_.push(obj);
+                            --left_loop_count_;
+                        } else {
+                            bq::platform::thread::yield();
+                        }
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        };
+
+
 
         class log_block_list_test_task : public bq::platform::thread{
             private:
@@ -41,7 +108,7 @@ namespace bq {
                 {
                     return left_write_count_.load(bq::platform::memory_order::acquire);
                 }
-
+            protected:
                 virtual void run() override
                 {
                     while (left_write_count_.load(bq::platform::memory_order::relaxed) > 0) {
@@ -102,6 +169,80 @@ namespace bq {
 
         class test_log_buffer : public test_base {
         private:
+            void do_memory_pool_test(test_result& result)
+            {
+                {
+                    constexpr int32_t LOOP_COUNT = 1000000;
+                    constexpr int32_t OBJ_COUNT = 1024;
+                    constexpr int32_t THREAD_COUNT = 4;
+                    bq::memory_pool<memory_pool_test_obj_aligned> pool_aligned_form, pool_aligned_to;
+                    bq::memory_pool<memory_pool_test_obj_not_aligned> pool_not_aligned_form, pool_not_aligned_to;
+
+                    for (int32_t i = 0; i < OBJ_COUNT; ++i) {
+                        pool_aligned_form.push(new memory_pool_test_obj_aligned(i));
+                        pool_aligned_to.push(new memory_pool_test_obj_aligned(i));
+                        pool_not_aligned_form.push(new memory_pool_test_obj_not_aligned(i));
+                        pool_not_aligned_to.push(new memory_pool_test_obj_not_aligned(i));
+                    }
+
+                    // aligned test
+                    test_output_dynamic(bq::log_level::info, "[memory pool] Cache Line Aligned test begin\n");
+                    uint64_t start_time = bq::platform::high_performance_epoch_ms();
+                    std::vector<std::thread> task_aligned; 
+                    for (int32_t i = 0; i < THREAD_COUNT; ++i) {
+                        task_aligned.emplace_back(memory_pool_test_task<true>(pool_aligned_form, pool_aligned_to, LOOP_COUNT, i % 2));
+                        task_aligned.emplace_back(memory_pool_test_task<true>(pool_aligned_to, pool_aligned_form, LOOP_COUNT, i % 2));
+                    }
+                    for (auto& task : task_aligned) {
+                        task.join();
+                    }
+                    test_output_dynamic_param(bq::log_level::info, "[memory pool] Cache Line Aligned test end, time cost:%" PRIu64 "ms\n\n", bq::platform::high_performance_epoch_ms() - start_time);
+                    
+                    bq::array<int32_t> marks;
+                    marks.fill_uninitialized(OBJ_COUNT);
+                    memset((int32_t*)marks.begin(), 0, sizeof(decltype(marks)::value_type) * marks.size());
+                    while (auto obj = pool_aligned_form.pop()) {
+                        marks[obj->id_]++;
+                        delete obj;
+                    }
+                    while (auto obj = pool_aligned_to.pop()) {
+                        marks[obj->id_]++;
+                        delete obj;
+                    }
+                    for (int32_t i = 0; i < OBJ_COUNT; ++i) {
+                        result.add_result(marks[i] == 2, "memory pool aligned test %d", i);
+                    }
+
+                    
+                    // not aligned test
+                    test_output_dynamic(bq::log_level::info, "[memory pool] Cache Line Not Aligned test begin\n");
+                    start_time = bq::platform::high_performance_epoch_ms();
+                    std::vector<std::thread> task_not_aligned;
+                    for (int32_t i = 0; i < THREAD_COUNT; ++i) {
+                        task_not_aligned.emplace_back(memory_pool_test_task<false>(pool_not_aligned_form, pool_not_aligned_to, LOOP_COUNT, i % 2));
+                        task_not_aligned.emplace_back(memory_pool_test_task<false>(pool_not_aligned_to, pool_not_aligned_form, LOOP_COUNT, i % 2));
+                    }
+                    for (auto& task : task_not_aligned) {
+                        task.join();
+                    }
+                    test_output_dynamic_param(bq::log_level::info, "[memory pool] Cache Line Not Aligned test end, time cost:%" PRIu64 "ms\n\n", bq::platform::high_performance_epoch_ms() - start_time);
+
+                    memset((int32_t*)marks.begin(), 0, sizeof(decltype(marks)::value_type) * marks.size());
+                    while (auto obj = pool_not_aligned_form.pop()) {
+                        marks[obj->id_]++;
+                        delete obj;
+                    }
+                    while (auto obj = pool_not_aligned_to.pop()) {
+                        marks[obj->id_]++;
+                        delete obj;
+                    }
+                    for (int32_t i = 0; i < OBJ_COUNT; ++i) {
+                        result.add_result(marks[i] == 2, "memory pool not aligned test %d", i);
+                    }
+                }
+            }
+
+
             void do_block_list_test(test_result& result, log_buffer_config config)
             {
                 config.default_buffer_size = bq::roundup_pow_of_two(config.default_buffer_size);
@@ -161,7 +302,7 @@ namespace bq {
                 percent = 100;
                 auto current_time = bq::platform::high_performance_epoch_ms();
                 test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms              \r", config.use_mmap ? "Y" : "-", percent, (int32_t)(current_time - start_time));
-                test_output_dynamic_param(bq::log_level::info, "\n[block list] mmap:%s, test finished\n", config.use_mmap ? "Y" : "-");
+                test_output_dynamic_param(bq::log_level::info, "\n[block list] mmap:%s, test finished, time cost:%dms\n", config.use_mmap ? "Y" : "-", (int32_t)(current_time - start_time));
                 result.add_result(list_to.pop() == nullptr, "block list test 1");
                 size_t num_from = 0;
                 auto from_node = list_from.first();
@@ -254,7 +395,7 @@ namespace bq {
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
                     result.add_result(task_check_vector[i] == chunk_count_per_task, "[log buffer]chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
                 }
-                test_output_dynamic(bq::log_level::info, "\n[log buffer] test finished\n");
+                test_output_dynamic_param(bq::log_level::info, "\n[log buffer] test finished, time cost:%dms\n", (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
                 result.add_result(total_chunk == log_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", log_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "[log buffer] total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
             
@@ -271,20 +412,22 @@ namespace bq {
             {
                 test_result result;
 
+                //do_memory_pool_test(result);
+
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
-                config.log_categories_name = { "_default"};
+                config.log_categories_name = { "_default" };
                 config.use_mmap = false;
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = 1000;
 
-                do_block_list_test(result, config);
+                //do_block_list_test(result, config);
                 config.use_mmap = true;
-                do_block_list_test(result, config);
+                //do_block_list_test(result, config);
 
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
                 config.use_mmap = false;
                 //do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;

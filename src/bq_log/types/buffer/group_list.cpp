@@ -2,6 +2,7 @@
 #include "bq_log/types/buffer/group_list.h"
 
 namespace bq {
+
     group_data_head::group_data_head(uint16_t max_blocks_count, uint8_t* group_data_addr, size_t group_data_size, bool is_memory_mapped)
         : used_(max_blocks_count, group_data_addr, group_data_size, is_memory_mapped)
         , free_(max_blocks_count, group_data_addr, group_data_size, false)
@@ -134,8 +135,13 @@ namespace bq {
     void group_node::init_memory(const log_buffer_config& config, uint16_t max_block_count_per_group)
     {
         size_t desired_size = get_group_data_size(config, max_block_count_per_group);
-        node_data_ = (uint8_t*)malloc(desired_size + CACHE_LINE_SIZE);
-        assert(node_data_ && "not enough memory, alloc memory failed");
+        if (memory_map_handle_.has_been_mapped()) {
+            memset(memory_map_handle_.get_mapped_data(), 0, memory_map_handle_.get_mapped_size());
+            node_data_ = static_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
+        } else {
+            node_data_ = (uint8_t*)malloc(desired_size + CACHE_LINE_SIZE);
+            assert(node_data_ && "not enough memory, alloc memory failed");
+        }
         uintptr_t node_head_addr_value = (uintptr_t)node_data_ + (uintptr_t)(CACHE_LINE_SIZE - 1);
         node_head_addr_value -= (node_head_addr_value % CACHE_LINE_SIZE);
         auto node_head_addr = (uint8_t*)node_head_addr_value;
@@ -145,30 +151,32 @@ namespace bq {
 
     group_node::group_node(const log_buffer_config& config, uint16_t max_block_count_per_group, uint32_t index)
     {
+        // This high-frequency memory should be kept from being swapped to the swap partition or LLC as much as possible, 
+        // so having a memory map as a backing mechanism is a relatively cost-effective solution.
+        auto mmap_create_result = create_memory_map(config, max_block_count_per_group, index);
         if (config.use_mmap) {
-            auto mmap_create_result = create_memory_map(config, max_block_count_per_group, index);
             if (mmap_create_result == create_memory_map_result::new_created) {
                 init_memory_map(config, max_block_count_per_group);
-                return;
             } else if (mmap_create_result == create_memory_map_result::use_existed) {
                 if (!try_recover_from_memory_map(config, max_block_count_per_group)) {
                     init_memory_map(config, max_block_count_per_group);
                 }
-                return;
             }
+        } else {
+            init_memory(config, max_block_count_per_group);
         }
-        init_memory(config, max_block_count_per_group);
     }
 
     group_node::~group_node()
     {
         if (memory_map_handle_.has_been_mapped()) {
-            bq::memory_map::release_memory_map(memory_map_handle_);
-            bq::string file_abs_path = memory_map_file_.abs_file_path();
-            bq::file_manager::instance().close_file(memory_map_file_);
             node_data_ = nullptr;
-            bq::file_manager::instance().remove_file_or_dir(file_abs_path);
-            // memory_map_file_ can be automatically destructed by destructor.
+            bq::memory_map::release_memory_map(memory_map_handle_);
+            if (memory_map_file_) {
+                bq::string file_abs_path = memory_map_file_.abs_file_path();
+                bq::file_manager::instance().close_file(memory_map_file_);
+                bq::file_manager::instance().remove_file_or_dir(file_abs_path);
+            }
         } else {
             free(node_data_);
             node_data_ = nullptr;
@@ -188,8 +196,8 @@ namespace bq {
         , max_block_count_per_group_(max_block_count_per_group)
         , current_group_index_(0)
     {
-        bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name, true);
-        if (!config.use_mmap) {
+        bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name, true);
+        if (!config_.use_mmap) {
             bq::file_manager::remove_file_or_dir(memory_map_folder);
             return;
         }
@@ -231,7 +239,9 @@ namespace bq {
 
     group_list::~group_list()
     {
-        
+        while (auto node = pool_.pop()) {
+            delete node;
+        }
     }
 
     block_node_head* group_list::alloc_new_block(const void* misc_data_src, size_t misc_data_size)
@@ -265,7 +275,10 @@ namespace bq {
                 result = src_node->get_data_head().free_.pop();
             }
             if (!result) {
-                src_node = new bq::group_node(config_, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
+                src_node = pool_.pop();
+                if (!src_node) {
+                    src_node = new bq::group_node(config_, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
+                }
                 result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;
                 head_.node_ = src_node;
@@ -289,4 +302,20 @@ namespace bq {
         recycle_block->get_buffer().set_thread_check_enable(false);
     }
 
+    void group_list::garbage_collect()
+    {
+        uint64_t current_epoch_ms = bq::platform::high_performance_epoch_ms();
+        while (true) {
+            group_node* candidiate = pool_.evict([](const group_node* node, void* user_data) {
+                uint64_t current_epoch_ms_local = *(uint64_t*)user_data;
+                return current_epoch_ms_local > node->get_in_pool_epoch_ms() + GROUP_NODE_GC_LIFE_TIME_MS;
+            },
+                &current_epoch_ms);
+            if (candidiate) {
+                delete candidiate;
+            } else {
+                break;
+            }
+        }
+    }
 }
