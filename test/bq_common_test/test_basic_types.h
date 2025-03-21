@@ -1,4 +1,7 @@
 #pragma once
+#include <thread>
+#include <atomic>
+#include <vector>
 #include "test_base.h"
 #include "bq_common/bq_common.h"
 
@@ -163,6 +166,45 @@ namespace bq {
                 swap1.swap(swap2);
                 result.add_result(*swap1 == 22, "test_unique_ptr 4");
                 result.add_result(*swap2 == 11, "test_unique_ptr 5");
+
+                {
+                    std::atomic<int32_t> test_value(0);
+                    struct shared_ptr_test_struct {
+                        shared_ptr_test_struct(std::atomic<int32_t>& value)
+                            : value_(value)
+                        {
+                            value_.fetch_add(1, std::memory_order::relaxed);
+                        }
+                        ~shared_ptr_test_struct()
+                        {
+                            value_.fetch_sub(1, std::memory_order::relaxed);
+                        }
+                        std::atomic<int32_t>& value_;
+                    };
+                    std::vector<bq::shared_ptr<shared_ptr_test_struct>> vec;
+                    for (uint32_t i = 0; i < 1024 * 128; ++i) {
+                        vec.push_back(bq::make_shared<shared_ptr_test_struct>(test_value));
+                    }
+
+                    std::vector<std::thread> test_threads;
+                    for (uint32_t i = 0; i < 8; ++i) {
+                        test_threads.push_back(std::thread([&vec]() {
+                            std::vector<bq::shared_ptr<shared_ptr_test_struct>> local_vec;
+                            for (uint32_t loop = 0; loop < 16; ++loop) {
+                                for (size_t i = 0; i < vec.size(); ++i) {
+                                    bq::shared_ptr<shared_ptr_test_struct> sp = vec[i];
+                                    bq::shared_ptr<shared_ptr_test_struct> sp2 = std::move(sp);
+                                    local_vec.push_back(sp2);
+                                }
+                            }
+                        }));
+                    }
+                    for (auto& t : test_threads) {
+                        t.join();
+                    }
+                    vec.clear();
+                    result.add_result(test_value.load(std::memory_order::relaxed) == 0, "shared_ptr test");
+                }
 
                 {
                     bq::tuple<int32_t, bool, bq::string> tuple_empty;

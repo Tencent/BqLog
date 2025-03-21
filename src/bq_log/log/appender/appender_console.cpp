@@ -70,7 +70,7 @@ namespace bq {
             buffer = buffer_.load_acquire();
             if (!buffer) {
                 log_buffer_config config;
-                config.use_mmap = false;
+                config.need_recovery = false;
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = UINT64_MAX;
                 buffer = new bq::log_buffer(config);

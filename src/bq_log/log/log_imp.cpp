@@ -97,7 +97,7 @@ namespace bq {
                     buffer_config.default_buffer_size = (uint32_t)log_config["buffer_size"];
                 }
                 if (log_config["buffer_mmap"].is_bool()) {
-                    buffer_config.use_mmap = (bool)log_config["buffer_mmap"];
+                    buffer_config.need_recovery = (bool)log_config["buffer_mmap"];
                 }
                 if (log_config["buffer_policy_when_full"].is_string()) {
                     if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("discard")) {

@@ -343,7 +343,7 @@ namespace bq {
 
     create_memory_map_result miso_ring_buffer::create_memory_map()
     {
-        if (!bq::memory_map::is_platform_support() || !config_.use_mmap) {
+        if (!bq::memory_map::is_platform_support() || !config_.need_recovery) {
             return create_memory_map_result::failed;
         }
         bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/" + config_.log_name + ".mmap", true);

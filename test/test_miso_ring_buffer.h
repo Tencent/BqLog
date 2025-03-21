@@ -76,7 +76,7 @@ namespace bq {
                 log_buffer_config config;
                 config.log_name = "test_miso_log_buffer";
                 config.log_categories_name = { "_default", "category1" };
-                config.use_mmap = with_mmap;
+                config.need_recovery = with_mmap;
                 bq::miso_ring_buffer ring_buffer(config);
                 int32_t chunk_count_per_task = 1024000;
                 bq::platform::atomic<int32_t> counter(miso_total_task);
@@ -153,7 +153,7 @@ namespace bq {
                 log_buffer_config config;
                 config.log_name = "test_miso_log_buffer";
                 config.log_categories_name = { "_default", "category1" };
-                config.use_mmap = false;
+                config.need_recovery = false;
                 bq::miso_ring_buffer ring_buffer1(config);
                 bq::miso_ring_buffer ring_buffer2(config);
                 bq::array<uint32_t> data_src;

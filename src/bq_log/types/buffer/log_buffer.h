@@ -43,10 +43,17 @@ namespace bq {
         } 
         BQ_PACK_END
 
+        struct destruction_mark {
+            bq::platform::spin_lock lock_;
+            bool is_destructed_ = false;
+        };
+
         struct alignas(CACHE_LINE_SIZE) log_tls_buffer_info {
             uint64_t last_update_epoch_ms_ = 0;
             uint64_t update_times_ = 0;
-            block_node_head* cur_block_ = nullptr; // nullptr means use public miso_ring_buffer.
+            block_node_head* cur_block_ = nullptr; // nullptr means using lp_buffer.
+            log_buffer* buffer_ = nullptr;
+            bq::shared_ptr<destruction_mark> destruction_mark_;
 #if BQ_JAVA
             jobjectArray buffer_obj_for_lp_buffer_ = NULL; // miso_ring_buffer shared between low frequency threads;
             jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
@@ -70,13 +77,12 @@ namespace bq {
 #if !BQ_LOG_BUFFER_DEBUG
         private:
 #endif
-            bq::hash_map_inline<const log_buffer*, log_tls_buffer_info*>* log_map_;
-            const log_buffer* cur_log_buffer_;
-            log_tls_buffer_info* cur_buffer_info_;
+            bq::hash_map_inline<uint64_t, log_tls_buffer_info*>* log_map_ = nullptr;
+            uint64_t cur_log_buffer_id_ = 0;
+            log_tls_buffer_info* cur_buffer_info_ = nullptr;
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
             bq_forceinline log_tls_buffer_info& get_buffer_info_directly(const log_buffer* buffer);
-            log_tls_info();
             ~log_tls_info();
         };
 
@@ -145,9 +151,9 @@ namespace bq {
 #endif
 
 #if BQ_UNIT_TEST
-        uint32_t get_groups_count() const { return high_perform_buffer_.get_groups_count();}
-        void garbage_collect() { high_perform_buffer_.garbage_collect(); }
-        size_t get_garbage_count() { return high_perform_buffer_.get_garbage_count(); }
+        uint32_t get_groups_count() const { return hp_buffer_.get_groups_count();}
+        void garbage_collect() { hp_buffer_.garbage_collect(); }
+        size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
 #endif
     private:
         bq::block_node_head* alloc_new_hp_block();
@@ -170,10 +176,13 @@ namespace bq {
         void prepare_and_fix_recovery_data();
 
     private:
+        friend struct log_tls_info;
         log_buffer_config config_;
-        group_list high_perform_buffer_;
+        uint64_t id_; // unique id for log_buffer
+        group_list hp_buffer_; // high performance buffer, each thread has its own block, but more memory usage.
         miso_ring_buffer lp_buffer_; // used to save memory for low frequency threads.
         const uint16_t version_ = 0;
+        bq::shared_ptr<destruction_mark> destruction_mark_;
         struct alignas(CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator group_;
@@ -201,17 +210,19 @@ namespace bq {
 
     bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info(const log_buffer* buffer)
     {
-        if (buffer == cur_log_buffer_) {
+        if (buffer->id_ == cur_log_buffer_id_) {
             return *cur_buffer_info_;
         }
         if (!log_map_) {
-            log_map_ = new bq::hash_map_inline<const log_buffer*, log_tls_buffer_info*>();
+            log_map_ = new bq::hash_map_inline<uint64_t, log_tls_buffer_info*>();
             log_map_->set_expand_rate(4);
         }
-        cur_log_buffer_ = buffer;
-        auto iter = log_map_->find(buffer);
+        cur_log_buffer_id_ = buffer->id_;
+        auto iter = log_map_->find(buffer->id_);
         if (iter == log_map_->end()) {
-            iter = log_map_->add(buffer, new log_tls_buffer_info());
+            iter = log_map_->add(buffer->id_, new log_tls_buffer_info());
+            iter->value()->destruction_mark_ = buffer->destruction_mark_;
+            iter->value()->buffer_ = const_cast<log_buffer*>(buffer);
         }
         cur_buffer_info_ = iter->value();
         return *cur_buffer_info_;
@@ -220,7 +231,7 @@ namespace bq {
     bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info_directly(const log_buffer* buffer)
     {
 #if BQ_LOG_BUFFER_DEBUG
-        assert(buffer == cur_log_buffer_ && "log_buffer::alloc and log_buffer::commit must use in pair");
+        assert(buffer->id_ == cur_log_buffer_id_ && "log_buffer::alloc and log_buffer::commit must use in pair");
 #endif
         (void)buffer;
         return *cur_buffer_info_;

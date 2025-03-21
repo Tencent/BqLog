@@ -16,8 +16,8 @@
 
 namespace bq {
 
-    siso_ring_buffer::siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_mapped)
-        : is_memory_mapped_(is_memory_mapped)
+    siso_ring_buffer::siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_recovery)
+        : is_memory_recovery_(is_memory_recovery)
     {
         //make sure it's cache line size aligned
         cursors_ = (cursors_set*)(((uintptr_t)(char*)cursors_storage_ + (uintptr_t)CACHE_LINE_SIZE - 1) & (~((uintptr_t)CACHE_LINE_SIZE - 1)));
@@ -29,7 +29,7 @@ namespace bq {
 
         assert(((uintptr_t)buffer % sizeof(uint32_t)) == 0 && "input buffer of siso_ring_buffer should be 4 bytes aligned");
         assert(buffer_size >= sizeof(block) * 4 && "input buffer size of siso_ring_buffer must be at least 256 bytes");
-        if (is_memory_mapped) {
+        if (is_memory_recovery) {
             if (!try_recover_from_exist_memory_map(buffer, buffer_size)) {
                 init_with_memory_map(buffer, buffer_size);
             }
@@ -305,17 +305,17 @@ namespace bq {
             if (block_count == 0) {
                 return false;
             }
-            bool is_split = (current_cursor >> CACHE_LINE_SIZE_LOG2) != ((current_cursor + block_count - 1) >> CACHE_LINE_SIZE_LOG2);
+            bool is_split = ((uint8_t*)&current_block.chunk_head.data + current_block.chunk_head.data_size > (uint8_t*)(aligned_blocks_ + aligned_blocks_count_));
             
-            size_t max_data_size = 0;
+            uint32_t expected_block_count = 0;
+
             if (is_split) {
-                max_data_size = ((current_cursor + block_count) & (aligned_blocks_count_ - 1)) * sizeof(block);
-                assert(max_data_size >= sizeof(block));
+                uint32_t left_blocks_to_tail = static_cast<uint32_t>(aligned_blocks_count_ - (uint32_t)(&current_block - aligned_blocks_));
+                expected_block_count = left_blocks_to_tail + ((data_size + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
             } else {
-                max_data_size = block_count * sizeof(block) - data_block_offset;
-            }
-            size_t min_data_size = (max_data_size < sizeof(block)) ? 1 : max_data_size - sizeof(block) + 1;
-            if (data_size < min_data_size || data_size > max_data_size) {
+                expected_block_count = ((data_size + (uint32_t)data_block_offset + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
+            } 
+            if (expected_block_count != block_count) {
                 return false;
             }
             current_cursor += block_count;

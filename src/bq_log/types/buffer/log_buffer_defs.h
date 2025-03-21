@@ -81,7 +81,7 @@ namespace bq {
         /// <summary>Specifies whether memory-mapped files are used for buffer storage to support
         /// data recovery. That if program is killed without process the left data in log buffer. it will not
         ///  be lost in most cases and can be recovered when program is relaunched.</summary>
-        bool use_mmap = false;
+        bool need_recovery = false;
 
         /// <summary>Memory policy when space is not enough.</summary>
         bq::log_memory_policy policy = log_memory_policy::block_when_full;

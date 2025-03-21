@@ -21,6 +21,7 @@
  *
  */
 #include <stdint.h>
+#include "bq_common/utils/utility_types.h"
 #include "bq_common/bq_common.h"
 
 namespace bq {

@@ -37,7 +37,7 @@ namespace bq {
         block_list used_;
         block_list free_;
         block_list stage_;
-        group_data_head(uint16_t max_blocks_count, uint8_t * group_data_addr, size_t group_data_size, bool is_memory_mapped);
+        group_data_head(uint16_t max_blocks_count, uint8_t * group_data_addr, size_t group_data_size, bool is_memory_recovery);
     } 
     BQ_PACK_END
     static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
@@ -64,11 +64,12 @@ namespace bq {
         uint8_t* node_data_ = nullptr;
         group_data_head* head_ptr_ = nullptr;
         uint64_t in_pool_epoch_ms_ = 0;
+        class group_list* parent_list_ = nullptr;
 #if BQ_JAVA
         jobject java_buffer_obj_ = nullptr;
 #endif
     public:
-        group_node(const log_buffer_config& config, uint16_t max_block_count_per_group, uint32_t index);
+        group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint32_t index);
         ~group_node();
 
         bq_forceinline pointer_type& get_next_ptr() { return next_; }
@@ -227,6 +228,8 @@ namespace bq {
             groups_count_.fetch_add_seq_cst(-1);
 #endif
         }
+
+        bq_forceinline const log_buffer_config& get_config() const { return config_; }
 
     private:
         const log_buffer_config& config_;

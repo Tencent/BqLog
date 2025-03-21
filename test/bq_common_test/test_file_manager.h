@@ -129,6 +129,7 @@ namespace bq {
                     result.add_result(group_handle_A_3 && !group_handle_A_4, "exclusive test 3");
                 }
 
+                if (bq::memory_map::is_platform_support())
                 {
                     //memory map test
                     constexpr size_t memory_map_file_size = 64 * 1024;

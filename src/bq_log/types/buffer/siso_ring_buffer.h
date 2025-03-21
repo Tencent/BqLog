@@ -102,7 +102,7 @@ namespace bq {
         head* head_;
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
-        bool is_memory_mapped_;
+        bool is_memory_recovery_;
 
 #if BQ_LOG_BUFFER_DEBUG
         char padding_[CACHE_LINE_SIZE];
@@ -115,7 +115,7 @@ namespace bq {
         bq::platform::atomic<uint64_t> total_read_bytes_;
 #endif
     public:
-        siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_mapped);
+        siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_recovery);
 
         siso_ring_buffer(const siso_ring_buffer& rhs) = delete;
 
@@ -200,9 +200,9 @@ namespace bq {
             return aligned_blocks_count_;
         }
 
-        bq_forceinline bool get_is_memory_mapped() const
+        bq_forceinline bool get_is_memory_recovery() const
         {
-            return is_memory_mapped_;
+            return is_memory_recovery_;
         }
 
     private:

@@ -49,7 +49,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
         bq::util::log_device_console(log_level::error, "decode log file :%s failed, size less than appender head", path.c_str());
         return appender_decode_result::failed_decode_error;
     }
-    bq::unique_ptr<appender_decoder_base> decoder = nullptr;
+    bq::unique_ptr<appender_decoder_base> decoder(nullptr);
     if (head.format == bq::appender_file_binary::appender_format_type::raw) {
         decoder = bq::make_unique<bq::appender_decoder_raw>();
     } else if (head.format == bq::appender_file_binary::appender_format_type::compressed) {

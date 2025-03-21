@@ -86,13 +86,13 @@ namespace bq {
                         bq::platform::thread::yield();
                         continue;
                     } else if (handle.result != enum_buffer_result_code::success) {
-                        test_result_ptr_->add_result(false, "[siso ring buffer %s] error read return code:%d", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap", (int32_t)handle.result);
+                        test_result_ptr_->add_result(false, "[siso ring buffer %s] error read return code:%d", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap", (int32_t)handle.result);
                         break;
                     }
                     uint32_t expected_size = (uint32_t)(left_read_count_ % (8 * 1024));
                     expected_size = bq::max_value((uint32_t)1, expected_size);
                     expected_size = bq::min_value(expected_size, (uint32_t)(ring_buffer_ptr_->get_block_size() * ring_buffer_ptr_->get_total_blocks_count()) >> 1);
-                    test_result_ptr_->add_result(handle.data_size == expected_size, "[siso ring buffer %s] data size error ,expected:%d, read:%d", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap", expected_size, (int32_t)handle.data_size);
+                    test_result_ptr_->add_result(handle.data_size == expected_size, "[siso ring buffer %s] data size error ,expected:%d, read:%d", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap", expected_size, (int32_t)handle.data_size);
                     bool data_match = true;
                     int32_t read_index = 0;
                     for (; (size_t)read_index + sizeof(int32_t) <= (size_t)handle.data_size; read_index += (int32_t)sizeof(int32_t)) {
@@ -107,14 +107,14 @@ namespace bq {
                             data_match = false;
                         }
                     }
-                    test_result_ptr_->add_result(data_match, "[siso ring buffer %s] data mismatch for num:%d", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap", left_read_count_);
+                    test_result_ptr_->add_result(data_match, "[siso ring buffer %s] data mismatch for num:%d", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap", left_read_count_);
                     --left_read_count_;
                     ++siso_ring_buffer_test_total_read_count_;
                 }
                 auto new_handle = ring_buffer_ptr_->read_chunk();
-                test_result_ptr_->add_result(new_handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch, overflow 1", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap");
+                test_result_ptr_->add_result(new_handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch, overflow 1", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
                 ring_buffer_ptr_->return_read_trunk(new_handle);
-                test_result_ptr_->add_result(left_read_count_ == 0, "[siso ring buffer %s]total block count mismatch", ring_buffer_ptr_->get_is_memory_mapped() ? "with mmap" : "without mmap");
+                test_result_ptr_->add_result(left_read_count_ == 0, "[siso ring buffer %s]total block count mismatch", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
                 --siso_ring_buffer_test_alive_read_thread_count;
             }
         };
@@ -257,7 +257,9 @@ namespace bq {
                 // test without mmap
                 do_siso_test(result, false);
                 // test with mmap
-                do_siso_test(result, true);
+                if (bq::memory_map::is_platform_support()) {
+                    do_siso_test(result, true);
+                }
 
                 do_traverse_test(result);
                 return result;

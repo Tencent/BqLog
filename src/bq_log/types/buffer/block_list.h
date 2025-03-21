@@ -33,7 +33,7 @@ namespace bq {
         BQ_PACK_BEGIN 
         struct pointer_type {
         private:
-            char value[4] = {};
+            char value[4];
         public:
             bq_forceinline uint32_t& union_value() { return *reinterpret_cast<uint32_t*>(value); }
             bq_forceinline const uint32_t& union_value() const { return *reinterpret_cast<const uint32_t*>(value); }
@@ -50,8 +50,8 @@ namespace bq {
         // These members are modified in different threads which will leads to "False Share".
         // So we must modify them in a low frequency
         pointer_type next_;
-        // reserved data. can be cast to any struct, all the bytes will be set to 0 in constructor.
-        alignas(8) char misc_data_[56] = {};
+        // reserved data. can be cast to any struct, all the bytes will be set to 0 when new created.
+        alignas(8) char misc_data_[56];
         // only POD field can be used in packed struct, so we can't use siso_ring_buffer directly.
         char buffer_[sizeof(siso_ring_buffer)];
     public:
@@ -60,8 +60,8 @@ namespace bq {
         /// </summary>
         /// <param name="buffer">buffer for siso_ring_buffer</param>
         /// <param name="buffer_size">buffer size for siso_ring_buffer</param>
-        /// <param name="is_memory_mapped">is buffer memory mapped</param>
-        block_node_head(void* buffer, size_t buffer_size, bool is_memory_mapped);
+        /// <param name="is_memory_recovery">is buffer memory mapped</param>
+        block_node_head(void* buffer, size_t buffer_size, bool is_memory_recovery);
 
         ~block_node_head();
 
@@ -99,9 +99,9 @@ namespace bq {
     private:
         void reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         bool try_recover_from_memory_map(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
-        void construct_blocks();
+        void recovery_blocks();
     public:
-        block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_mapped);
+        block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_recovery);
 
         ~block_list();
 

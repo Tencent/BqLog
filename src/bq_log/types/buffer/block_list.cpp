@@ -22,12 +22,14 @@
 
  namespace bq {
 
-    block_node_head::block_node_head(void* buffer, size_t buffer_size, bool is_memory_mapped)
+    block_node_head::block_node_head(void* buffer, size_t buffer_size, bool is_memory_recovery)
     {
-        next_.index() = (uint16_t)(-1);
-        next_.aba_mark() = 0;
-        new ((void*)&get_buffer(), bq::enum_new_dummy::dummy) siso_ring_buffer(buffer, buffer_size, is_memory_mapped);
-        memset(misc_data_, 0, sizeof(misc_data_));
+        if (!is_memory_recovery) {
+            next_.index() = (uint16_t)(-1);
+            next_.aba_mark() = 0;
+            memset(misc_data_, 0, sizeof(misc_data_));
+        }
+        new ((void*)&get_buffer(), bq::enum_new_dummy::dummy) siso_ring_buffer(buffer, buffer_size, is_memory_recovery);
         size_t min_size = bq::roundup_pow_of_two(buffer_size) == buffer_size ? buffer_size : (bq::roundup_pow_of_two(buffer_size) >> 1);
         assert(reinterpret_cast<uintptr_t>((void*)buffer_) % CACHE_LINE_SIZE == 0 && "siso_ring_buffer is not properly aligned!");
         assert((reinterpret_cast<uintptr_t>((void*)buffer_) - reinterpret_cast<uintptr_t>((void*)&next_) == CACHE_LINE_SIZE) && "siso_ring_buffer is not properly aligned!");
@@ -98,7 +100,7 @@
         return true;
     }
 
-    void block_list::construct_blocks()
+    void block_list::recovery_blocks()
     {
         block_node_head* current_node = first();
         while (current_node) {
@@ -108,10 +110,10 @@
         }
     }
 
-    block_list::block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_mapped)
+    block_list::block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_recovery)
     {
         assert((uintptr_t)buffers_base_addr % CACHE_LINE_SIZE == 0 && "buffers_base_addr is not properly aligned!");
-        if (!is_memory_mapped) {
+        if (!is_memory_recovery) {
             reset(max_blocks_count, buffers_base_addr, blocks_total_buffer_size);
             return;
         }
