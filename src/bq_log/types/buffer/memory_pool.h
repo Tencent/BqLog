@@ -144,5 +144,21 @@ namespace bq {
             }
             return old_tail;
         }
+
+        /// <summary>
+        /// get current objects count in pool
+        /// </summary>
+        /// <returns></returns>
+        bq_forceinline size_t size()
+        {
+            bq::platform::scoped_spin_lock lock(lock_);
+            size_t result = 0;
+            T* obj = head_;
+            while (obj) {
+                ++result;
+                obj = obj->memory_pool_next_;
+            }
+            return result;
+        }
     };
 }

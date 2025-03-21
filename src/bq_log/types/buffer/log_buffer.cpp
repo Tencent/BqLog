@@ -353,6 +353,7 @@ namespace bq {
                         }
                         break;
                     }
+                    high_perform_buffer_.garbage_collect();
                     lp_visited = true;
                     auto next_group = high_perform_buffer_.first(group_list::lock_type::no_lock);
                     if (!next_group) {
@@ -553,7 +554,6 @@ namespace bq {
         mem_opt.cur_group_ = group;
         if (!group) {
             rt_cache_.mem_optimize_.left_holes_num_ = 0;
-            high_perform_buffer_.garbage_collect();
         }
     }
 

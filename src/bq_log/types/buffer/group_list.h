@@ -102,7 +102,7 @@ namespace bq {
             bq_forceinline const group_node& value() const { return *value_; }
             bq_forceinline bool operator==(const group_list::iterator& rhs) const { return value_ == rhs.value_;}
         };
-        static constexpr uint64_t GROUP_NODE_GC_LIFE_TIME_MS = 5000; // If a group node has not been used for 5 seconds, it will be deleted. Otherwise it can stay in the memory pool.
+        static constexpr uint64_t GROUP_NODE_GC_LIFE_TIME_MS = 1000; // If a group node has not been used for 1 seconds, it will be deleted. Otherwise it can stay in the memory pool.
     public:
         group_list(const log_buffer_config& config, uint16_t max_block_count_per_group);
 
@@ -119,6 +119,8 @@ namespace bq {
 #endif
 
         void garbage_collect();
+
+        size_t get_garbage_count();
 
         bq_forceinline iterator first(const lock_type type)
         {

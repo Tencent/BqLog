@@ -325,14 +325,14 @@ namespace bq {
             void do_basic_test(test_result& result, log_buffer_config config)
             {
                 log_buffer_test_total_write_count_.store_seq_cst(0);
-                bq::log_buffer ring_buffer(config);
+                bq::log_buffer test_buffer(config);
                 int32_t chunk_count_per_task = 1024000;
                 bq::platform::atomic<int32_t> counter(log_buffer_total_task);
                 std::vector<int32_t> task_check_vector;
                 std::vector<std::thread> task_thread_vector; 
                 for (int32_t i = 0; i < log_buffer_total_task; ++i) {
                     task_check_vector.push_back(0);
-                    log_buffer_write_task task(i, chunk_count_per_task, &ring_buffer, counter);
+                    log_buffer_write_task task(i, chunk_count_per_task, &test_buffer, counter);
                     task_thread_vector.emplace_back(task);
                 }
 
@@ -348,8 +348,8 @@ namespace bq {
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms\r", percent, 0);
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
-                    auto handle = ring_buffer.read_chunk();
-                    bq::scoped_log_buffer_handle<log_buffer> read_handle(ring_buffer, handle);
+                    auto handle = test_buffer.read_chunk();
+                    bq::scoped_log_buffer_handle<log_buffer> read_handle(test_buffer, handle);
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
                     if (write_finished && read_empty) {
                         break;
@@ -402,17 +402,20 @@ namespace bq {
                 for (auto& task : task_thread_vector) {
                     task.join();
                 }
-                auto final_handle = ring_buffer.read_chunk();
-                bq::scoped_log_buffer_handle<log_buffer> scoped_final_handle(ring_buffer, final_handle);
+                auto final_handle = test_buffer.read_chunk();
+                bq::scoped_log_buffer_handle<log_buffer> scoped_final_handle(test_buffer, final_handle);
                 result.add_result(final_handle.result == bq::enum_buffer_result_code::err_empty_log_buffer, "final read test");
-                result.add_result(ring_buffer.get_groups_count() == 0, "group recycle test");
+                result.add_result(test_buffer.get_groups_count() == 0, "group recycle test");
+                bq::platform::thread::sleep(group_list::GROUP_NODE_GC_LIFE_TIME_MS * 2);
+                test_buffer.garbage_collect();
+                result.add_result(test_buffer.get_garbage_count() == 0, "group garbage collect test");
             }
         public:
             virtual test_result test() override
             {
                 test_result result;
 
-                //do_memory_pool_test(result);
+                do_memory_pool_test(result);
 
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
@@ -421,26 +424,26 @@ namespace bq {
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = 1000;
 
-                //do_block_list_test(result, config);
+                do_block_list_test(result, config);
                 config.use_mmap = true;
-                //do_block_list_test(result, config);
+                do_block_list_test(result, config);
 
                 do_basic_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
                 do_basic_test(result, config);
                 config.use_mmap = false;
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
 
                 config.high_frequency_threshold_per_second = UINT64_MAX;
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
                 config.use_mmap = true;
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
-                //do_basic_test(result, config);
+                do_basic_test(result, config);
 
                 return result;
             }

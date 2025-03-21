@@ -146,6 +146,8 @@ namespace bq {
 
 #if BQ_UNIT_TEST
         uint32_t get_groups_count() const { return high_perform_buffer_.get_groups_count();}
+        void garbage_collect() { high_perform_buffer_.garbage_collect(); }
+        size_t get_garbage_count() { return high_perform_buffer_.get_garbage_count(); }
 #endif
     private:
         bq::block_node_head* alloc_new_hp_block();

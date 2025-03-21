@@ -308,7 +308,7 @@ namespace bq {
         while (true) {
             group_node* candidiate = pool_.evict([](const group_node* node, void* user_data) {
                 uint64_t current_epoch_ms_local = *(uint64_t*)user_data;
-                return current_epoch_ms_local > node->get_in_pool_epoch_ms() + GROUP_NODE_GC_LIFE_TIME_MS;
+                return current_epoch_ms_local >= node->get_in_pool_epoch_ms() + GROUP_NODE_GC_LIFE_TIME_MS;
             },
                 &current_epoch_ms);
             if (candidiate) {
@@ -317,5 +317,10 @@ namespace bq {
                 break;
             }
         }
+    }
+
+    size_t group_list::get_garbage_count()
+    {
+        return pool_.size();
     }
 }
