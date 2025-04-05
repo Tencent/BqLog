@@ -546,7 +546,8 @@ namespace bq {
 #if BQ_LOG_BUFFER_DEBUG
         assert(mem_opt.cur_group_using_blocks_num_ <= hp_buffer_.get_max_block_count_per_group());
 #endif
-        if (!block_removed) {
+        if ((!block_removed && is_cur_block_in_group)
+            || !rt_reading.cur_block_) {
             rt_reading.last_block_ = rt_reading.cur_block_;
         }
 
