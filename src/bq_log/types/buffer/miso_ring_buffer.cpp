@@ -73,9 +73,6 @@ namespace bq {
         , head_(nullptr)
         , aligned_blocks_(nullptr)
         , aligned_blocks_count_(0)
-#if BQ_LOG_BUFFER_DEBUG
-        , padding_{0}
-#endif
     {
         assert((BQ_POD_RUNTIME_OFFSET_OF(block::chunk_head_def, data) % 8 == 0) && "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
         
@@ -105,7 +102,6 @@ namespace bq {
         }
 
 #if BQ_LOG_BUFFER_DEBUG
-        (void)padding_;
         total_write_bytes_ = 0;
         total_read_bytes_ = 0;
         for (int32_t i = 0; i < (int32_t)enum_buffer_result_code::result_code_count; ++i) {
@@ -216,6 +212,7 @@ namespace bq {
     log_buffer_read_handle miso_ring_buffer::read_chunk()
     {
 #if BQ_LOG_BUFFER_DEBUG
+        assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
         if (check_thread_) {
             if (0 == read_thread_id_) {
                 read_thread_id_ = bq::platform::thread::get_current_thread_id();
@@ -223,6 +220,7 @@ namespace bq {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
         }
+        is_read_chunk_waiting_for_return_ = true;
 #endif
         log_buffer_read_handle handle;
         while (true) {
@@ -265,8 +263,43 @@ namespace bq {
         return handle;
     }
 
-    void miso_ring_buffer::return_read_trunk(const log_buffer_read_handle& handle)
+    log_buffer_read_handle miso_ring_buffer::read_an_empty_chunk()
     {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
+        if (check_thread_) {
+            if (0 == read_thread_id_) {
+                read_thread_id_ = bq::platform::thread::get_current_thread_id();
+            }
+            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+        }
+        is_read_chunk_waiting_for_return_ = true;
+#endif
+        log_buffer_read_handle handle;
+        handle.result = enum_buffer_result_code::err_empty_log_buffer;
+        return handle;
+    }
+
+    void miso_ring_buffer::discard_read_chunk(log_buffer_read_handle& handle)
+    {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(is_read_chunk_waiting_for_return_ && "You cant discard a chunk has not been read yet");
+        is_read_chunk_waiting_for_return_ = false;
+        if (check_thread_) {
+            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+        }
+#endif
+        handle.result = enum_buffer_result_code::err_empty_log_buffer;
+    }
+
+    void miso_ring_buffer::return_read_chunk(const log_buffer_read_handle& handle)
+    {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(is_read_chunk_waiting_for_return_ && "You cant return a chunk has not been read yet");
+        is_read_chunk_waiting_for_return_ = false;
+#endif
         if (handle.result != enum_buffer_result_code::success) {
             return;
         }
@@ -414,10 +447,8 @@ namespace bq {
             block& current_block = cursor_to_block(current_cursor);
             auto block_num = current_block.chunk_head.get_block_num();
             auto data_size = current_block.chunk_head.data_size;
-            if (current_cursor + block_num > head_->read_cursor_cache_ + aligned_blocks_count_) {
-                return false;
-            }
-            switch (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(current_block.chunk_head.status, block_status).load_relaxed()) {
+            auto status = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(current_block.chunk_head.status, block_status).load_raw();
+            switch (status) {
             case block_status::used:
                 if ((current_cursor & (aligned_blocks_count_ - 1)) + block_num > aligned_blocks_count_) {
                     return false;

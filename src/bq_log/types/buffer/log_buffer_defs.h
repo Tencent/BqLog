@@ -110,35 +110,55 @@ namespace bq {
     
     template<typename BUFFER_TYPE>
     class scoped_log_buffer_handle {
+        enum class destruction_type : uint8_t {
+            return_chunk,
+            commit_chunk,
+        };
     private:
         BUFFER_TYPE* buffer_;
         log_buffer_read_handle read_handle_;
         log_buffer_write_handle write_handle_;
-        bool is_read_handle_;
+        destruction_type destruction_type_;
 
     public:
         scoped_log_buffer_handle() = delete;
-        bq_forceinline scoped_log_buffer_handle(BUFFER_TYPE& buffer, log_buffer_read_handle& handle)
-            : buffer_(&buffer)
-            , read_handle_(handle)
-            , is_read_handle_(true)
-        {
-            (void)write_handle_;
-        }
-        bq_forceinline scoped_log_buffer_handle(BUFFER_TYPE& buffer, log_buffer_write_handle& handle)
-            : buffer_(&buffer)
-            , write_handle_(handle)
-            , is_read_handle_(false)
-        {
-            (void)read_handle_;
-        }
-        bq_forceinline ~scoped_log_buffer_handle()
-        {
-            if (is_read_handle_) {
-                buffer_->return_read_trunk(read_handle_);
-            } else {
-                buffer_->commit_write_chunk(write_handle_);
-            }
-        }
+        bq_forceinline scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_read_handle& handle);
+        bq_forceinline scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_write_handle& handle);
+        bq_forceinline ~scoped_log_buffer_handle();
     };
+
+    template <typename BUFFER_TYPE>
+    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_write_handle& handle)
+        : buffer_(&buffer)
+        , read_handle_(log_buffer_read_handle())
+        , write_handle_(handle)
+        , destruction_type_(destruction_type::commit_chunk)
+    {
+        (void)read_handle_;
+    }
+
+    template <typename BUFFER_TYPE>
+    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_read_handle& handle)
+        : buffer_(&buffer)
+        , read_handle_(handle)
+        , write_handle_(log_buffer_write_handle())
+        , destruction_type_(destruction_type::return_chunk)
+    {
+        (void)write_handle_;
+    }
+
+    template <typename BUFFER_TYPE>
+    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::~scoped_log_buffer_handle<BUFFER_TYPE>()
+    {
+        switch (destruction_type_) {
+        case destruction_type::return_chunk:
+            buffer_->return_read_chunk(read_handle_);
+            break;
+        case destruction_type::commit_chunk:
+            buffer_->commit_write_chunk(write_handle_);
+            break;
+        default:
+            break;
+        }
+    }
 }

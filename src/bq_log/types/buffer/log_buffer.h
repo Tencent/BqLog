@@ -133,13 +133,9 @@ namespace bq {
 
         void commit_write_chunk(const log_buffer_write_handle& handle);
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <returns></returns>
         log_buffer_read_handle read_chunk();
 
-        void return_read_trunk(const log_buffer_read_handle& handle);
+        void return_read_chunk(const log_buffer_read_handle& handle);
 
 #if BQ_JAVA
         struct java_buffer_info {
@@ -162,19 +158,26 @@ namespace bq {
             valid,
             version_waiting,
             version_invalid,
-            seq_pendding,
+            seq_pending,
         };
+
+        enum class read_state {
+            init,
+            lp_buffer_reading,
+            hp_block_reading,
+            next_block_finding,
+            next_group_finding,
+            traversal_completed
+        };
+
         context_verify_result verify_context(const context_head& context);
         void deregister_seq(const context_head& context);
-
-        void set_current_reading_group(const group_list::iterator& group);
-        void set_current_reading_block(block_node_head* block, context_verify_result verify_result);
-
-        void optimize_memory_for_group(const group_list::iterator& group);
-        void optimize_memory_for_block(block_node_head* block, context_verify_result verify_result);
-
         void prepare_and_fix_recovery_data();
 
+        //For reading thread.
+        bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
+        bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
+        bool rt_try_traverse_to_next_group();
     private:
         friend struct log_tls_info;
         log_buffer_config config_;
@@ -185,25 +188,29 @@ namespace bq {
         bq::shared_ptr<destruction_mark> destruction_mark_;
         struct alignas(CACHE_LINE_SIZE) {
             struct {
-                group_list::iterator group_;
-                block_node_head* block_ = nullptr;
+                group_list::iterator last_group_;     //empty means read from lp_buffer
+                group_list::iterator cur_group_;
+                block_node_head* last_block_ = nullptr;
+                block_node_head* cur_block_ = nullptr;
                 uint16_t version_ = 0;
-                log_buffer_read_handle lp_snapshot_;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data    
+                read_state state_ = read_state::init;
+                block_node_head* traverse_end_block_ = nullptr;
             } current_reading_;
 
             // memory fragmentation optimize
             struct {
-                group_list::iterator cur_group_;
-                group_list::iterator last_group_;
-                block_node_head* cur_block_ = nullptr;
-                block_node_head* last_block_ = nullptr;
                 uint32_t left_holes_num_ = 0;
                 uint16_t cur_group_using_blocks_num_ = 0;
                 bool is_block_marked_removed = false;
                 context_verify_result verify_result;
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
+
+#if BQ_LOG_BUFFER_DEBUG
+        alignas(CACHE_LINE_SIZE) bq::platform::thread::thread_id empty_thread_id_ = 0;
+        bq::platform::thread::thread_id read_thread_id_ = 0;
+#endif
     };
 
     

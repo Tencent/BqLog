@@ -38,18 +38,17 @@ namespace bq {
     {
         buffer_size_ = 0;
         if (snapshot_config["buffer_size"].is_integral()) {
-            buffer_size_ = (uint32_t)(int64_t)snapshot_config["buffer_size"];
+            buffer_size_ = static_cast<uint32_t>(static_cast<int64_t>(snapshot_config["buffer_size"]));
         }
         bq::platform::scoped_spin_lock scoped_lock(lock_);
         if (buffer_size_ != 0) {
-            buffer_size_ = bq::siso_ring_buffer::calculate_min_size_of_memory(buffer_size_);
             if (snapshot_buffer_) {
-                uint32_t current_useable_buffer_size = (uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count());
-                if (abs((int64_t)current_useable_buffer_size - (int64_t)buffer_size_) > (int64_t)CACHE_LINE_SIZE * 2) {
+                auto current_usable_buffer_size = (uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count());
+                if (abs(static_cast<int64_t>(current_usable_buffer_size) - static_cast<int64_t>(buffer_size_)) > static_cast<int64_t>(CACHE_LINE_SIZE) * 2) {
                     buffer_data_.reset();
                     buffer_data_.fill_uninitialized((size_t)buffer_size_);
                     // create a new snapshot_buffer_ and backup log data.
-                    siso_ring_buffer* new_buffer = new siso_ring_buffer(buffer_data_.begin(), (size_t)buffer_size_, false);
+                    auto* new_buffer = new siso_ring_buffer(buffer_data_.begin(), static_cast<size_t>(buffer_size_), false);
                     new_buffer->set_thread_check_enable(false);
                     while (true) {
                         auto backup_read_handle = snapshot_buffer_->read_chunk();
@@ -68,7 +67,7 @@ namespace bq {
                             } else {
                                 new_buffer->commit_write_chunk(write_handle);
                                 auto discard_handle = new_buffer->read_chunk();
-                                new_buffer->return_read_trunk(discard_handle);
+                                new_buffer->return_read_chunk(discard_handle);
                                 snapshot_text_continuous_ = false;
                             }
                         }
@@ -119,7 +118,7 @@ namespace bq {
                             break;
                         } else if (snapshot_write_handle.result == enum_buffer_result_code::err_not_enough_space) {
                             auto discard_handle = snapshot_buffer_->read_chunk();
-                            snapshot_buffer_->return_read_trunk(discard_handle);
+                            snapshot_buffer_->return_read_chunk(discard_handle);
                             snapshot_text_continuous_ = false;
                         } else {
                             break;

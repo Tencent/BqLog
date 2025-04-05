@@ -81,6 +81,7 @@ namespace bq {
             {
                 while (left_read_count_ > 0) {
                     auto handle = ring_buffer_ptr_->read_chunk();
+                    bq::scoped_log_buffer_handle scoped_handle(*ring_buffer_ptr_, handle);
                     bq::scoped_log_buffer_handle<siso_ring_buffer> read_handle(*ring_buffer_ptr_, handle);
                     if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
                         bq::platform::thread::yield();
@@ -112,8 +113,8 @@ namespace bq {
                     ++siso_ring_buffer_test_total_read_count_;
                 }
                 auto new_handle = ring_buffer_ptr_->read_chunk();
+                bq::scoped_log_buffer_handle scoped_new_handle(*ring_buffer_ptr_, new_handle);
                 test_result_ptr_->add_result(new_handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch, overflow 1", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
-                ring_buffer_ptr_->return_read_trunk(new_handle);
                 test_result_ptr_->add_result(left_read_count_ == 0, "[siso ring buffer %s]total block count mismatch", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
                 --siso_ring_buffer_test_alive_read_thread_count;
             }

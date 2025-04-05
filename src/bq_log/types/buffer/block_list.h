@@ -96,35 +96,65 @@ namespace bq {
         alignas(8) uint16_t offset_;
         alignas(8) uint16_t max_blocks_count_;
         alignas(8) size_t buffer_size_per_block_;
+        alignas(16) const uint8_t* data_range_start_;
+        alignas(16) const uint8_t* data_range_end_;
     private:
-        void reset(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
-        bool try_recover_from_memory_map(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
+        void reset(uint16_t max_blocks_count, const uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
+        bool try_recover_from_memory_map(uint16_t max_blocks_count, const uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         void recovery_blocks();
     public:
         block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_recovery);
 
         ~block_list();
 
-        bq_forceinline block_node_head& get_block_head_by_index(uint16_t index) const
+        bq_forceinline block_node_head& get_block_head_by_index(uint16_t index)
         {
-            return *(block_node_head*)((uint8_t*)this + (ptrdiff_t)offset_ + (ptrdiff_t)(buffer_size_per_block_ * index));
+            return *reinterpret_cast<block_node_head*>(reinterpret_cast<uint8_t*>(this) + static_cast<ptrdiff_t>(offset_) + static_cast<ptrdiff_t>(buffer_size_per_block_ * index));
         }
-        bq_forceinline uint16_t get_index_by_block_head(block_node_head* block) const
+
+        bq_forceinline uint16_t get_index_by_block_head(const block_node_head* block) const
         {
             if (!block) {
-                return (uint16_t)-1;
+                return static_cast<uint16_t>(-1);
             }
-            return (uint16_t)(((const uint8_t*)block - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
+            ptrdiff_t diff = reinterpret_cast<const uint8_t*>(block) - (reinterpret_cast<const uint8_t*>(this) + static_cast<ptrdiff_t>(offset_));
+#if BQ_LOG_BUFFER_DEBUG
+            assert(((diff % buffer_size_per_block_) == 0) && "invalid block node head address");
+#endif
+            return static_cast<uint16_t>(diff / buffer_size_per_block_);
         }
-        bq_forceinline bool is_include(const block_node_head* block) const
+
+        bq_forceinline bool is_range_include(const block_node_head* block) const
         {
             if (!block) {
                 return false;
             }
-            return ((const uint8_t*)block >= ((const uint8_t*)this + (ptrdiff_t)offset_)) && ((const uint8_t*)block < ((const uint8_t*)this + (ptrdiff_t)offset_ + (ptrdiff_t)(buffer_size_per_block_ * max_blocks_count_)));
+            return (reinterpret_cast<const uint8_t*>(block) >= data_range_start_)
+                && (reinterpret_cast<const uint8_t*>(block) < data_range_end_);
         }
 
-        bq_forceinline block_node_head* first() const
+#if BQ_LOG_BUFFER_DEBUG
+        bq_forceinline bool is_include(const block_node_head* block_node)
+        {
+            if (!block_node) {
+                return false;
+            }
+            uint16_t index = get_index_by_block_head(block_node);
+            if(index >= max_blocks_count_) {
+                return false;
+            }
+            block_node_head* test_node = first();
+            while (test_node) {
+                if (block_node == test_node) {
+                    return true;
+                }
+                test_node = next(test_node);
+            }
+            return false;
+        }
+#endif
+
+        bq_forceinline block_node_head* first()
         {
             if (head_.is_empty()) {
                 return nullptr;
@@ -132,7 +162,7 @@ namespace bq {
             return &get_block_head_by_index(head_.index());
         }
 
-        bq_forceinline block_node_head* next(const block_node_head* current) const
+        bq_forceinline block_node_head* next(const block_node_head* current)
         {
             if (current->next_.is_empty()) {
                 return nullptr;

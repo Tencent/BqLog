@@ -21,7 +21,6 @@
 #include <jni.h>
 #endif
 
-
 namespace bq {
 
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
@@ -70,30 +69,29 @@ namespace bq {
     {
         if (log_map_) {
             for (auto pair : *log_map_) {
-                {
-                    bq::platform::scoped_spin_lock lock(pair.value()->destruction_mark_->lock_);
-                    //make sure log_buffer obj is still alive.
-                    if (!pair.value()->destruction_mark_->is_destructed_) {
-                        if (pair.value()->cur_block_) {
-                            pair.value()->cur_block_->get_misc_data<log_buffer::block_misc_data>().context_.is_thread_finished_ = true;
-                            mark_block_removed(pair.value()->cur_block_, true);
-                        } else {
-                            while (true) {
-                                auto finish_mark_handle = pair.value()->buffer_->lp_buffer_.alloc_write_chunk(sizeof(context_head*));
-                                bq::scoped_log_buffer_handle scoped_handle(pair.value()->buffer_->lp_buffer_, finish_mark_handle);
-                                if (enum_buffer_result_code::success == finish_mark_handle.result) {
-                                    context_head* context = (context_head*)(finish_mark_handle.data_addr);
-                                    context->version_ = pair.value()->buffer_->version_;
-                                    context->set_tls_info(pair.value());
-                                    context->is_thread_finished_ = true;
-                                    context->seq_ = pair.value()->wt_data_.current_write_seq_++;
-                                    break;
-                                }
+                bq::platform::scoped_spin_lock lock(pair.value()->destruction_mark_->lock_);
+                // make sure log_buffer obj is still alive.
+                if (!pair.value()->destruction_mark_->is_destructed_) {
+                    if (pair.value()->cur_block_) {
+                        pair.value()->cur_block_->get_misc_data<log_buffer::block_misc_data>().context_.is_thread_finished_ = true;
+                        mark_block_removed(pair.value()->cur_block_, true);
+                    } else {
+                        while (true) {
+                            auto finish_mark_handle = pair.value()->buffer_->lp_buffer_.alloc_write_chunk(sizeof(context_head*));
+                            bq::scoped_log_buffer_handle scoped_handle(pair.value()->buffer_->lp_buffer_, finish_mark_handle);
+                            if (enum_buffer_result_code::success == finish_mark_handle.result) {
+                                context_head* context = (context_head*)(finish_mark_handle.data_addr);
+                                context->version_ = pair.value()->buffer_->version_;
+                                context->set_tls_info(pair.value());
+                                context->is_thread_finished_ = true;
+                                context->seq_ = pair.value()->wt_data_.current_write_seq_++;
+                                break;
                             }
                         }
                     }
+                } else {
+                    delete pair.value();
                 }
-                delete pair.value();
             }
             // the entries in the map will be destructed by consumer thread of log_buffer.
             delete log_map_;
@@ -189,7 +187,7 @@ namespace bq {
             } else {
                 result = lp_buffer_.alloc_write_chunk(size + sizeof(context_head));
                 if (enum_buffer_result_code::success == result.result) {
-                    context_head* context = (context_head*)(result.data_addr);
+                    auto* context = reinterpret_cast<context_head*>(result.data_addr);
                     context->version_ = version_;
                     context->is_thread_finished_ = false;
                     context->seq_ = tls_buffer.wt_data_.current_write_seq_++;
@@ -236,151 +234,118 @@ namespace bq {
         }
     }
 
+
     log_buffer_read_handle log_buffer::read_chunk()
     {
-        bool lp_visited = false;
-        bool full_visited = false;
-        while (!full_visited) {
-            // try read from current data source
-            if (rt_cache_.current_reading_.block_) {
 #if BQ_LOG_BUFFER_DEBUG
-                assert(rt_cache_.current_reading_.group_);
+        if (empty_thread_id_ == read_thread_id_) {
+            read_thread_id_ = bq::platform::thread::get_current_thread_id();
+        }
+        bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+        assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
-                auto handle = rt_cache_.current_reading_.block_->get_buffer().read_chunk();
-                if (enum_buffer_result_code::err_empty_log_buffer != handle.result) {
-                    return handle;
-                } else {
-                    rt_cache_.current_reading_.block_->get_buffer().return_read_trunk(handle);
+        auto& rt_reading = rt_cache_.current_reading_;
+        log_buffer_read_handle read_handle;
+        context_verify_result verify_result = context_verify_result::version_invalid;
+        bool loop_finished = false;
+        bool traverse_completed = false;
+        rt_reading.traverse_end_block_ = rt_reading.last_block_;
+        // Principle 1 : Only last_block_ is reliable, because cur_block_ might be recycled in rt_try_traverse_to_next_block_in_group.
+        // Principle 2 : traverse_end_block_ always records the last_block_ from the start of each traversal loop.
+        // Principle 3 : If the currently processed block or buffer equals traverse_end_block_, it means one full traversal loop has been completed.
+        // Principle 4 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
+        while (!loop_finished) {
+            switch (rt_reading.state_) {
+            case read_state::init:
+            case read_state::lp_buffer_reading:
+                if (rt_read_from_lp_buffer(read_handle)) {
+                    loop_finished = true;
+                    read_handle.data_addr += sizeof(context_head);
+                    read_handle.data_size -= static_cast<uint32_t>(sizeof(context_head));
+                    break;
                 }
-            } else {
-#if BQ_LOG_BUFFER_DEBUG
-                assert(!rt_cache_.current_reading_.group_);
-#endif
-                bool veryfied_chunk_read = false;
-                bq::log_buffer_read_handle handle;
-                while (!veryfied_chunk_read) {
-                    handle = rt_cache_.current_reading_.lp_snapshot_.result == enum_buffer_result_code::err_empty_log_buffer
-                        ? lp_buffer_.read_chunk()
-                        : rt_cache_.current_reading_.lp_snapshot_;
-                    rt_cache_.current_reading_.lp_snapshot_.result = enum_buffer_result_code::err_empty_log_buffer;
-                    if (enum_buffer_result_code::success == handle.result) {
-                        const auto& context = *reinterpret_cast<const context_head*>(handle.data_addr);
-                        auto verify_result = verify_context(context);
-                        switch (verify_result) {
-                        case context_verify_result::valid:
-                            if (context.is_thread_finished_) {
-                                deregister_seq(context);
-                            } else {
-                                veryfied_chunk_read = true;
-                            }
-                            break;
-                        case context_verify_result::version_invalid:
-                            // invalid block generated by mmap.
-                            break;
-                        case context_verify_result::version_waiting:
-                        case context_verify_result::seq_pendding:
-                            rt_cache_.current_reading_.lp_snapshot_ = handle;
-                            handle.result = enum_buffer_result_code::err_empty_log_buffer;
-                            veryfied_chunk_read = true;
-                            break;
-                        default:
-                            break;
-                        }
-                        if (!veryfied_chunk_read) {
-                            lp_buffer_.return_read_trunk(handle);
-                        } else {
-                            handle.data_addr += sizeof(context_head);
-                            handle.data_size -= (uint32_t)sizeof(context_head);
-                        }
-                    } else {
-                        veryfied_chunk_read = true;
+                if (!traverse_completed
+                        && rt_reading.traverse_end_block_ == nullptr
+                        && rt_reading.state_ != read_state::init) {
+                    if (rt_reading.version_ == version_) {
+                        traverse_completed = true;
+                    }else {
+                        ++rt_reading.version_;
+                        rt_reading.traverse_end_block_ = nullptr;
                     }
                 }
-                if (enum_buffer_result_code::err_empty_log_buffer != handle.result) {
-                    return handle;
-                } else {
-                    lp_buffer_.return_read_trunk(handle);
+                rt_reading.state_ = read_state::next_group_finding;
+                break;
+            case read_state::hp_block_reading:
+                read_handle = rt_reading.cur_block_->get_buffer().read_chunk();
+                if (enum_buffer_result_code::err_empty_log_buffer != read_handle.result) {
+                    loop_finished = true;
+                    break;
                 }
+                rt_reading.cur_block_->get_buffer().return_read_chunk(read_handle);
+                rt_reading.state_ = read_state::next_block_finding;
+                break;
+            case read_state::next_block_finding: {
+#if BQ_LOG_BUFFER_DEBUG
+                assert(rt_reading.cur_group_);
+#endif
+                const auto processing_block_snapshot = rt_reading.cur_block_;
+                const auto next_block_found = rt_try_traverse_to_next_block_in_group(verify_result);
+                if (!traverse_completed
+                    && rt_reading.traverse_end_block_ == processing_block_snapshot
+                    && rt_reading.cur_group_.value().is_range_include(processing_block_snapshot)) {
+                    if (rt_reading.version_ == version_) {
+                        traverse_completed = true;
+                    }else {
+                        ++rt_reading.version_;
+                        rt_reading.traverse_end_block_ = rt_reading.last_block_;
+                    }
+                }
+                if (!next_block_found) {
+                    rt_reading.state_ = read_state::next_group_finding;
+                    break;
+                }
+#if BQ_LOG_BUFFER_DEBUG
+                assert(rt_reading.cur_block_);
+#endif
+                if (context_verify_result::valid == verify_result) {
+                    rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::hp_block_reading;
+                }
+                break;
             }
-            // find next data source
-            bool next_data_source_found = false;
-            while (!next_data_source_found) {
-                if (rt_cache_.current_reading_.group_) {
-                    block_node_head* next_block = rt_cache_.current_reading_.block_
-                        ? rt_cache_.current_reading_.group_.value().get_data_head().used_.next(rt_cache_.current_reading_.block_)
-                        : rt_cache_.current_reading_.group_.value().get_data_head().used_.first();
-
-                    if (!next_block) {
-                        next_block = rt_cache_.current_reading_.group_.value().get_data_head().stage_.pop();
-                        if (next_block) {
-                            rt_cache_.current_reading_.group_.value().get_data_head().used_.push_after_thread_unsafe(rt_cache_.current_reading_.block_, next_block);
-                        }
-                    }
-
-                    if (next_block) {
-                        auto& context = next_block->get_misc_data<block_misc_data>().context_;
-                        auto verify_result = verify_context(context);
-                        switch (verify_result) {
-                        case context_verify_result::valid:
-                            next_data_source_found = true;
-                            break;
-                        case context_verify_result::version_invalid:
-                            mark_block_removed(next_block, true); // invalid block generated by mmap.
-                            break;
-                        case context_verify_result::version_waiting:
-                        case context_verify_result::seq_pendding:
-                            break;
-                        default:
-                            break;
-                        }
-                        set_current_reading_block(next_block, verify_result);
-                        continue;
-                    }
-
-                    auto next_group = hp_buffer_.next(rt_cache_.current_reading_.group_, group_list::lock_type::no_lock);
-                    set_current_reading_block(nullptr, context_verify_result::version_invalid);
-                    set_current_reading_group(next_group);
-                    if (!next_group) {
-                        // try lp_buffer_.
-                        next_data_source_found = true;
-                        continue;
-                    }
-                } else {
-#if BQ_LOG_BUFFER_DEBUG
-                    assert(!rt_cache_.current_reading_.block_);
-#endif
-                    if (lp_visited) {
-                        if (rt_cache_.current_reading_.version_ != version_) {
-                            ++rt_cache_.current_reading_.version_;
-                        } else {
-                            full_visited = true;
-                            break;
-                        }
-                    }
-                    hp_buffer_.garbage_collect();
-                    lp_visited = true;
-                    auto next_group = hp_buffer_.first(group_list::lock_type::no_lock);
-                    if (!next_group) {
-                        next_data_source_found = true;
-                        continue;
-                    }
-                    set_current_reading_group(next_group);
+            case read_state::next_group_finding:
+                if (!rt_try_traverse_to_next_group()) {
+                    rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::lp_buffer_reading;
+                }else {
+                    rt_reading.state_ = read_state::next_block_finding;
                 }
+                break;
+            case read_state::traversal_completed:
+                if (rt_reading.cur_block_) {
+                    read_handle = rt_reading.cur_block_->get_buffer().read_an_empty_chunk();
+                    rt_reading.state_ = read_state::hp_block_reading;
+                }else {
+                    read_handle = lp_buffer_.read_an_empty_chunk();
+                    rt_reading.state_ = read_state::lp_buffer_reading;
+                }
+                loop_finished = true;
+                break;
+            default:
+                assert(false && "unexpected state!");
+                break;
             }
         }
-        
-
-        log_buffer_read_handle empty_handle;
-        empty_handle.result = enum_buffer_result_code::err_empty_log_buffer;
-        empty_handle.data_addr = nullptr;
-        empty_handle.data_size = 0;
-        return empty_handle;
+        return read_handle;
     }
 
-    void log_buffer::return_read_trunk(const log_buffer_read_handle& handle)
+    void log_buffer::return_read_chunk(const log_buffer_read_handle& handle)
     {
-        if (rt_cache_.current_reading_.block_) {
-            rt_cache_.current_reading_.block_->get_buffer().return_read_trunk(handle);
+#if BQ_LOG_BUFFER_DEBUG 
+        bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+        assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
+#endif
+        if (rt_cache_.current_reading_.cur_block_) {
+            rt_cache_.current_reading_.cur_block_->get_buffer().return_read_chunk(handle);
         } else {
             if (enum_buffer_result_code::success == handle.result) {
                 log_buffer_read_handle handle_cpy = handle;
@@ -388,9 +353,9 @@ namespace bq {
                 handle_cpy.data_size += (uint32_t)sizeof(context_head);
                 const auto& context = *reinterpret_cast<const context_head*>(handle_cpy.data_addr);
                 deregister_seq(context);
-                lp_buffer_.return_read_trunk(handle_cpy);
+                lp_buffer_.return_read_chunk(handle_cpy);
             } else {
-                lp_buffer_.return_read_trunk(handle);
+                lp_buffer_.return_read_chunk(handle);
             }
         }
     }
@@ -460,7 +425,7 @@ namespace bq {
                 if (context.seq_ == context.get_tls_info()->rt_data_.current_read_seq_) {
                     return context_verify_result::valid;
                 } 
-                return context_verify_result::seq_pendding;
+                return context_verify_result::seq_pending;
             } else {
                 //for recovering
                 auto iter = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)].find(context.get_tls_info());
@@ -470,7 +435,7 @@ namespace bq {
                 if (iter->value() == context.seq_) {
                     return context_verify_result::valid;
                 }
-                return context_verify_result::seq_pendding;
+                return context_verify_result::seq_pending;
             }
         }else if (static_cast<uint16_t>(version_ - context.version_) > static_cast<uint16_t>(version_ - rt_cache_.current_reading_.version_)) {
             // need discard.
@@ -501,34 +466,123 @@ namespace bq {
         }
     }
 
-    void log_buffer::set_current_reading_group(const group_list::iterator& group)
+    bool log_buffer::rt_read_from_lp_buffer(log_buffer_read_handle& out_handle)
     {
-        rt_cache_.current_reading_.group_ = group;
-        optimize_memory_for_group(group);
+        while (true) {
+            auto read_handle = lp_buffer_.read_chunk();
+            if (enum_buffer_result_code::success == read_handle.result) {
+                const auto& context = *reinterpret_cast<const context_head*>(read_handle.data_addr);
+                switch (auto verify_result = verify_context(context)) {
+                case context_verify_result::valid:
+                    if (!context.is_thread_finished_) {
+                        out_handle = read_handle;
+                        return true;
+                    }
+                    deregister_seq(context);
+                    lp_buffer_.return_read_chunk(read_handle);
+                    break;
+                case context_verify_result::version_invalid:
+                    lp_buffer_.return_read_chunk(read_handle);
+                    break;
+                case context_verify_result::version_waiting:
+                case context_verify_result::seq_pending:
+                    lp_buffer_.discard_read_chunk(read_handle);
+                    return false;
+                    break;
+                default:
+                    break;
+                }
+            }else {
+                lp_buffer_.return_read_chunk(read_handle);
+                return false;
+            }
+        }
     }
 
-    void log_buffer::set_current_reading_block(block_node_head* block, context_verify_result verify_result)
-    {
-        rt_cache_.current_reading_.block_ = block;
-        optimize_memory_for_block(block, verify_result);
-    }
-
-    void log_buffer::optimize_memory_for_group(const group_list::iterator& group)
+    bool log_buffer::rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result)
     {
         auto& mem_opt = rt_cache_.mem_optimize_;
+        auto& rt_reading = rt_cache_.current_reading_;
+        bool is_cur_block_in_group = rt_reading.cur_group_.value().is_range_include(rt_reading.cur_block_);
+        //Find new block
+        block_node_head* next_block = is_cur_block_in_group
+                        ? rt_reading.cur_group_.value().get_data_head().used_.next(rt_reading.cur_block_)
+                        : rt_reading.cur_group_.value().get_data_head().used_.first();
+        if (!next_block) {
+            next_block = rt_reading.cur_group_.value().get_data_head().stage_.pop();
+            if (next_block) {
+                rt_reading.cur_group_.value().get_data_head().used_.push_after_thread_unsafe(is_cur_block_in_group ? rt_reading.cur_block_ : nullptr, next_block);
+            }
+        }
+
+        if (next_block) {
+            assert(next_block != rt_reading.cur_block_);
+        }
+
+        //Process traversed block
+        bool block_removed = false;
+#if BQ_LOG_BUFFER_DEBUG
+        if (is_cur_block_in_group) {
+            assert (rt_reading.cur_group_.value().get_data_head().used_.is_include(rt_reading.cur_block_));
+        }
+#endif
+        if (is_cur_block_in_group) {
+            if (mem_opt.is_block_marked_removed) {
+                if (context_verify_result::valid == mem_opt.verify_result) {
+                    const auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
+                    deregister_seq(context);
+                }
+                // remove it
+                if (rt_reading.cur_group_.value().is_range_include(rt_reading.last_block_)) {
+                    hp_buffer_.recycle_block_thread_unsafe(rt_reading.cur_group_, rt_reading.last_block_, rt_reading.cur_block_);
+                } else {
+                    hp_buffer_.recycle_block_thread_unsafe(rt_reading.cur_group_, nullptr, rt_reading.cur_block_);
+                }
+                block_removed = true;
+            } else {
+                ++mem_opt.cur_group_using_blocks_num_;
+            }
+        }
 #if BQ_LOG_BUFFER_DEBUG
         assert(mem_opt.cur_group_using_blocks_num_ <= hp_buffer_.get_max_block_count_per_group());
 #endif
+        if (!block_removed) {
+            rt_reading.last_block_ = rt_reading.cur_block_;
+        }
+
+        //Verify and prepare for next block
+        if (next_block) {
+            auto& context = next_block->get_misc_data<block_misc_data>().context_;
+            out_verify_result = verify_context(context);
+            mem_opt.is_block_marked_removed = (out_verify_result == context_verify_result::valid || out_verify_result == context_verify_result::version_invalid) && is_block_removed(next_block);
+            mem_opt.verify_result = out_verify_result;
+            if (mem_opt.left_holes_num_ > 0) {
+                mark_block_need_reallocate(next_block, true);
+                --mem_opt.left_holes_num_;
+            }
+            rt_reading.cur_block_ = next_block;
+            return true;
+        }else {
+            mem_opt.is_block_marked_removed = false;
+            mem_opt.verify_result = context_verify_result::version_invalid;;
+        }
+        return false;
+    }
+
+    bool log_buffer::rt_try_traverse_to_next_group()
+    {
+        auto& mem_opt = rt_cache_.mem_optimize_;
+        auto& rt_reading = rt_cache_.current_reading_;
         bool group_removed = false;
-        if (mem_opt.cur_group_using_blocks_num_ == 0 && mem_opt.cur_group_) {
+        if (mem_opt.cur_group_using_blocks_num_ == 0 && rt_reading.cur_group_) {
             // try lock
             group_list::iterator current_lock_iterator;
-            if (mem_opt.last_group_) {
-                current_lock_iterator = hp_buffer_.next(mem_opt.last_group_, group_list::lock_type::write_lock);
+            if (rt_reading.last_group_) {
+                current_lock_iterator = hp_buffer_.next(rt_reading.last_group_, group_list::lock_type::write_lock);
             } else {
                 // must lock from head, because new group node is inserted after head pointer from other threads.
-                while (current_lock_iterator != mem_opt.cur_group_) {
-                    current_lock_iterator = (bool)current_lock_iterator
+                while (current_lock_iterator != rt_reading.cur_group_) {
+                    current_lock_iterator = static_cast<bool>(current_lock_iterator)
                         ? hp_buffer_.next(current_lock_iterator, group_list::lock_type::write_lock)
                         : hp_buffer_.first(group_list::lock_type::write_lock);
                     if (!current_lock_iterator) {
@@ -536,68 +590,35 @@ namespace bq {
                     }
                 }
             }
-            assert(current_lock_iterator == mem_opt.cur_group_ && "try lock removing group failed");
+            assert(current_lock_iterator == rt_reading.cur_group_ && "try lock removing group failed");
             if ((!current_lock_iterator.value().get_data_head().used_.first())
                 && (!current_lock_iterator.value().get_data_head().stage_.first())) {
                 // remove it
                 group_removed = true;
+                assert(!rt_reading.cur_group_.value().is_range_include(rt_reading.last_block_));
                 hp_buffer_.delete_and_unlock_thread_unsafe(current_lock_iterator);
             } else {
                 // unlock
                 hp_buffer_.next(current_lock_iterator, group_list::lock_type::no_lock);
             }
         }
-        
-        if (mem_opt.cur_group_) {
-            mem_opt.left_holes_num_ += hp_buffer_.get_max_block_count_per_group() - rt_cache_.mem_optimize_.cur_group_using_blocks_num_;
+        if (rt_reading.cur_group_ && !group_removed) {
+            mem_opt.left_holes_num_ += hp_buffer_.get_max_block_count_per_group() - mem_opt.cur_group_using_blocks_num_;
         }
         mem_opt.cur_group_using_blocks_num_ = 0;
         if (!group_removed) {
-            mem_opt.last_group_ = mem_opt.cur_group_;
-        }
-        mem_opt.cur_group_ = group;
-        if (!group) {
-            rt_cache_.mem_optimize_.left_holes_num_ = 0;
-        }
-    }
-
-    void log_buffer::optimize_memory_for_block(block_node_head* block, context_verify_result verify_result)
-    {
-        auto& mem_opt = rt_cache_.mem_optimize_;
-        bool block_removed = false;
-        if (mem_opt.cur_block_) {
-            if (mem_opt.is_block_marked_removed) {
-                const auto& context = mem_opt.cur_block_->get_misc_data<block_misc_data>().context_;
-                if (context_verify_result::valid == mem_opt.verify_result) {
-                    deregister_seq(context);
-                }
-                // remove it
-                if (mem_opt.cur_group_.value().get_data_head().used_.is_include(mem_opt.last_block_)) {
-                    hp_buffer_.recycle_block_thread_unsafe(mem_opt.cur_group_, mem_opt.last_block_, mem_opt.cur_block_);
-                } else {
-                    hp_buffer_.recycle_block_thread_unsafe(mem_opt.cur_group_, nullptr, mem_opt.cur_block_);
-                }
-                block_removed = true;
-            } else {
-                ++mem_opt.cur_group_using_blocks_num_;
-            }
+            rt_reading.last_group_ = rt_reading.cur_group_;
         }
 
-        if (block) {
-            mem_opt.is_block_marked_removed = (verify_result == context_verify_result::valid || verify_result == context_verify_result::version_invalid) && is_block_removed(block);
-            mem_opt.verify_result = verify_result;
-            if (mem_opt.left_holes_num_ > 0) {
-                mark_block_need_reallocate(block, true);
-                --mem_opt.left_holes_num_;
-            }
-        } else {
-            mem_opt.is_block_marked_removed = false;
-            mem_opt.verify_result = verify_result;
+        auto next_group = rt_reading.cur_group_
+            ? hp_buffer_.next(rt_reading.cur_group_, group_list::lock_type::no_lock)
+            : hp_buffer_.first(group_list::lock_type::no_lock);
+        if (!next_group) {
+            mem_opt.left_holes_num_ = 0;
+            rt_reading.cur_block_ = nullptr;
         }
-        if (!block_removed) {
-            mem_opt.last_block_ = mem_opt.cur_block_;
-        }
-        mem_opt.cur_block_ = block;
+        rt_reading.cur_group_ = next_group;
+        return next_group;
     }
 
     /**
@@ -640,7 +661,7 @@ namespace bq {
                 if (context.version_ == version_) {
                     context.version_++; // mark invalid
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
-                    auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE];
+                    auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
                     auto iter = recovery_map.find(context.get_tls_info());
                     if (iter == recovery_map.end()) {
                         recovery_map[context.get_tls_info()] = context.seq_;

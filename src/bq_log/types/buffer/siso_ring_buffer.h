@@ -28,7 +28,7 @@
  * Consumer Thread (Single Thread): Loop through the sequence of the following steps:
  *	1. `read_chunk`
  *	2. Read data from chunk if #1 returns successful.
- *	3. `return_read_trunk` (the data read won't be marked as consumed until `return_read_trunk` is called; once marked as consumed, the memory is considered released and becomes available for the producer to write new data)
+ *	3. `return_read_chunk` (the data read won't be marked as consumed until `return_read_chunk` is called; once marked as consumed, the memory is considered released and becomes available for the producer to write new data)
  *
  * \author pippocao
  * \date 2024/11/19
@@ -113,6 +113,7 @@ namespace bq {
         bq::platform::atomic<uint32_t> result_code_statistics_[(int32_t)enum_buffer_result_code::result_code_count];
         bq::platform::atomic<uint64_t> total_write_bytes_;
         bq::platform::atomic<uint64_t> total_read_bytes_;
+        bool is_read_chunk_waiting_for_return_ = false;
 #endif
     public:
         siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_recovery);
@@ -145,12 +146,27 @@ namespace bq {
         log_buffer_read_handle read_chunk();
 
         /// <summary>
-        /// the chunk date read by `read_chunk` won't be marked as consumed until `return_read_trunk` is called;
+        /// A ugly hack, used to return a empty chunk even when the buffer is not empty
+        /// </summary>
+        /// <returns>result code is enum_buffer_result_code::err_empty_log_buffer</returns>
+        log_buffer_read_handle read_an_empty_chunk();
+
+        /// <summary>
+        /// Some times you just want a peak of the data, and you don't want to consume it.
+        /// So you can call the function instead of `return_read_chunk` to discard the read handle.
+        /// And you will get the same data next time you call `read_chunk`.
+        /// Note : the result code of the handle will be set to `enum_buffer_result_code::err_empty_log_buffer` after calling this function.
+        /// </summary>
+        /// <param name="handle"></param>
+        void discard_read_chunk(log_buffer_read_handle& handle);
+
+        /// <summary>
+        /// the chunk date read by `read_chunk` won't be marked as consumed until `return_read_chunk` is called;
         /// once marked as consumed, the memory is considered released and becomes
         /// available for the producer to call `alloc_write_chunk` to alloc and write new data
         /// </summary>
         /// <param name=""></param>
-        void return_read_trunk(const log_buffer_read_handle& handle);
+        void return_read_chunk(const log_buffer_read_handle& handle);
 
         /// <summary>
         /// Traverses all data written, invoking the provided callback for each chunk from the consumer thread.

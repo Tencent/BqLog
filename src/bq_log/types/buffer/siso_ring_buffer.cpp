@@ -150,6 +150,7 @@ namespace bq {
     log_buffer_read_handle siso_ring_buffer::read_chunk()
     {
 #if BQ_LOG_BUFFER_DEBUG
+        assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
         if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (read_thread_id_ == empty_thread_id_) {
@@ -161,6 +162,7 @@ namespace bq {
 #endif 
         uint32_t current_read_cursor = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load_raw();
 #if BQ_LOG_BUFFER_DEBUG
+        is_read_chunk_waiting_for_return_ = true;
         assert(static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
 #endif
         log_buffer_read_handle handle;
@@ -196,8 +198,45 @@ namespace bq {
         return handle;
     }
 
-    void siso_ring_buffer::return_read_trunk(const log_buffer_read_handle& handle)
+    log_buffer_read_handle siso_ring_buffer::read_an_empty_chunk()
     {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
+        if (check_thread_) {
+            if (0 == read_thread_id_) {
+                read_thread_id_ = bq::platform::thread::get_current_thread_id();
+            }
+            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+        }
+        is_read_chunk_waiting_for_return_ = true;
+#endif
+        log_buffer_read_handle handle;
+        handle.result = enum_buffer_result_code::err_empty_log_buffer;
+        return handle;
+    }
+
+
+
+    void siso_ring_buffer::discard_read_chunk(log_buffer_read_handle& handle)
+    {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(is_read_chunk_waiting_for_return_ && "You cant discard a chunk has not been read yet");
+        is_read_chunk_waiting_for_return_ = false;
+        if (check_thread_) {
+            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+        }
+#endif
+        handle.result = enum_buffer_result_code::err_empty_log_buffer;
+    }
+
+    void siso_ring_buffer::return_read_chunk(const log_buffer_read_handle& handle)
+    {
+#if BQ_LOG_BUFFER_DEBUG
+        assert(is_read_chunk_waiting_for_return_ && "You cant return a chunk has not been read yet");
+        is_read_chunk_waiting_for_return_ = false;
+#endif
         if (handle.result != enum_buffer_result_code::success) {
             return;
         }
