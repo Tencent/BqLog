@@ -355,7 +355,6 @@ namespace bq {
                 assert((current_read_cursor & (aligned_blocks_count_ - 1)) + block_count > aligned_blocks_count_);
                 assert(block_count <= aligned_blocks_count_);
 #endif
-                continue;
                 break;
             case block_status::unused:
                 finished = true;
@@ -461,7 +460,7 @@ namespace bq {
                 break;
             case block_status::invalid:
                 current_cursor += block_num;
-                if ((current_cursor & (aligned_blocks_count_ - 1)) + block_num <= aligned_blocks_count_) {
+                if ((current_cursor & (aligned_blocks_count_ - 1)) + block_num > aligned_blocks_count_) {
                     return false;
                 }
                 break;

@@ -82,7 +82,6 @@ namespace bq {
                 while (left_read_count_ > 0) {
                     auto handle = ring_buffer_ptr_->read_chunk();
                     bq::scoped_log_buffer_handle scoped_handle(*ring_buffer_ptr_, handle);
-                    bq::scoped_log_buffer_handle<siso_ring_buffer> read_handle(*ring_buffer_ptr_, handle);
                     if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
                         bq::platform::thread::yield();
                         continue;

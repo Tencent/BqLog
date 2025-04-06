@@ -285,7 +285,7 @@ namespace bq {
                 task2.start();
                 
                 int32_t percent = 0;
-                test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms\r", config.need_recovery ? "Y" : "-",  percent, 0);
+                test_output_dynamic_param(bq::log_level::info, "[block list] recovery:%s, test progress:%d%%, time cost:%dms\r", config.need_recovery ? "Y" : "-",  percent, 0);
                 auto start_time = bq::platform::high_performance_epoch_ms();
                 while (task1.get_left_count() + task2.get_left_count() > 0) {
                     int32_t current_left_count = 2 * LOOP_COUNT - task1.get_left_count() - task2.get_left_count();
@@ -293,7 +293,7 @@ namespace bq {
                     if (new_percent != percent) {
                         percent = new_percent;
                         auto current_time = bq::platform::high_performance_epoch_ms();
-                        test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms              \r", config.need_recovery ? "Y" : "-", percent, (int32_t)(current_time - start_time));
+                        test_output_dynamic_param(bq::log_level::info, "[block list] recovery:%s, test progress:%d%%, time cost:%dms              \r", config.need_recovery ? "Y" : "-", percent, (int32_t)(current_time - start_time));
                     }
                     bq::platform::thread::yield();
                 }
@@ -301,8 +301,8 @@ namespace bq {
                 task2.join();
                 percent = 100;
                 auto current_time = bq::platform::high_performance_epoch_ms();
-                test_output_dynamic_param(bq::log_level::info, "[block list] mmap:%s, test progress:%d%%, time cost:%dms              \r", config.need_recovery ? "Y" : "-", percent, (int32_t)(current_time - start_time));
-                test_output_dynamic_param(bq::log_level::info, "\n[block list] mmap:%s, test finished, time cost:%dms\n", config.need_recovery ? "Y" : "-", (int32_t)(current_time - start_time));
+                test_output_dynamic_param(bq::log_level::info, "[block list] recovery:%s, test progress:%d%%, time cost:%dms              \r", config.need_recovery ? "Y" : "-", percent, (int32_t)(current_time - start_time));
+                test_output_dynamic_param(bq::log_level::info, "\n[block list] recovery:%s, test finished, time cost:%dms\n", config.need_recovery ? "Y" : "-", (int32_t)(current_time - start_time));
                 result.add_result(list_to.pop() == nullptr, "block list test 1");
                 size_t num_from = 0;
                 auto from_node = list_from.first();
@@ -341,7 +341,7 @@ namespace bq {
                 int32_t percent = 0;
                 auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 
-                test_output_dynamic_param(bq::log_level::info, "================\n[log buffer] mmap:%s, auto expand:%s, high performance mode:%s\n"
+                test_output_dynamic_param(bq::log_level::info, "================\n[log buffer] recovery:%s, auto expand:%s, high performance mode:%s\n"
                     , config.need_recovery ? "Y" : "-"
                     , config.policy == log_memory_policy::auto_expand_when_full ? "Y" : "-"
                     , config.high_frequency_threshold_per_second < UINT64_MAX ? "Y" : "-");
@@ -419,10 +419,69 @@ namespace bq {
                     return;
                 }
                 constexpr uint32_t WRITE_VERSION_COUNT = 5;
-                constexpr uint32_t MESSAGE_PER_VERSION = 10000;
-                test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test begin...");
+                constexpr uint32_t MESSAGE_PER_VERSION = 100000;
+                test_output_dynamic(bq::log_level::info, "=======================\n[log buffer] do recovery test begin...");
                 
                 //Single Thread Test
+                for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                     log_buffer_config config;
+                     config.log_name = "log_buffer_recovery_test";
+                     config.log_categories_name = { "_default" };
+                     config.need_recovery = true;
+                     config.policy = log_memory_policy::auto_expand_when_full;
+                     config.high_frequency_threshold_per_second = 1000;
+                     bq::log_buffer test_recovery_buffer(config);
+                     std::random_device sd;
+                     std::minstd_rand linear_ran(sd());
+                     std::uniform_int_distribution<int32_t> rand_seq(0, 1024);
+                     for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
+                         uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
+                         auto handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
+                         result.add_result(handle.result == enum_buffer_result_code::success, "recovery test write alloc, size:%" PRIu32 "", alloc_size);
+                         bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
+                         for (size_t pos = 0; pos + sizeof(uint64_t) <= alloc_size; pos += sizeof(uint64_t)) {
+                             uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
+                             ptr[0] = version;
+                             ptr[1] = i;
+                         }
+                     }
+                 }
+
+                 {
+                     log_buffer_config config;
+                     config.log_name = "log_buffer_recovery_test";
+                     config.log_categories_name = { "_default" };
+                     config.need_recovery = true;
+                     config.policy = log_memory_policy::auto_expand_when_full;
+                     config.high_frequency_threshold_per_second = 1000;
+                     bq::log_buffer test_recovery_buffer(config);
+                     for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                         for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
+                             auto handle = test_recovery_buffer.read_chunk();
+                             result.add_result(handle.result == enum_buffer_result_code::success, "recovery test read chunk, version:%" PRIu32 "index:%" PRIu32 "", version , i);
+                             bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
+                             bool valid = true;
+                             for (size_t pos = 0; pos + sizeof(uint64_t) <= handle.data_size; pos += sizeof(uint64_t)) {
+                                 uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
+                                 if (ptr[0] != version || ptr[1] != i) {
+                                     valid = false;
+                                     break;
+                                 }
+                             }
+                             result.add_result(valid, "recovery test read content, version:%" PRIu32 "index:%" PRIu32 "", version, i);
+                         }
+                     }
+                     auto handle = test_recovery_buffer.read_chunk();
+                     result.add_result(handle.result == enum_buffer_result_code::err_empty_log_buffer, "recovery test read content final for single thread");
+                 }
+
+                // Multi Thread Test
+                constexpr uint32_t THREAD_COUNT = 5;
+                uint32_t message_verify_group[WRITE_VERSION_COUNT][THREAD_COUNT];
+                static_assert(sizeof(message_verify_group) == sizeof(uint32_t) * WRITE_VERSION_COUNT * THREAD_COUNT, "message_verify_group size error");
+                memset(message_verify_group, 0, sizeof(message_verify_group));
+                uint32_t total_message_count = WRITE_VERSION_COUNT * THREAD_COUNT * MESSAGE_PER_VERSION;
+                uint32_t read_message_count = 0;
                 for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
@@ -431,19 +490,61 @@ namespace bq {
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
                     bq::log_buffer test_recovery_buffer(config);
+                    std::vector<std::thread> task_thread_vector;
+                    for (uint32_t thread_idx = 0; thread_idx < THREAD_COUNT; ++thread_idx) {
+                        task_thread_vector.emplace_back([&test_recovery_buffer, &result, version, thread_idx]() {
+                            std::random_device sd;
+                            std::minstd_rand linear_ran(sd());
+                            std::uniform_int_distribution<int32_t> rand_seq((int32_t)(3 * sizeof(uint32_t)), 1024);
+                            for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
+                                uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
+                                auto handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
+                                result.add_result(handle.result == enum_buffer_result_code::success, "recovery test write alloc, size:%" PRIu32 "", alloc_size);
+                                bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
+                                for (size_t pos = 0; pos + 3 * sizeof(uint32_t) <= alloc_size; pos += 3 * sizeof(uint32_t)) {
+                                    uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
+                                    ptr[0] = version;
+                                    ptr[1] = thread_idx;
+                                    ptr[2] = i;
+                                }
+                            }
+                        });
+                    }
+
                     std::random_device sd;
                     std::minstd_rand linear_ran(sd());
-                    std::uniform_int_distribution<int32_t> rand_seq(0, 1024);
-                    for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
-                        uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
-                        auto handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
-                        result.add_result(handle.result == enum_buffer_result_code::success, "recovery test write alloc, size:%" PRIu32 "", alloc_size);
-                        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
-                        for (size_t pos = 0; pos + sizeof(uint64_t) <= alloc_size; pos += sizeof(uint64_t)) {
-                            uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
-                            ptr[0] = version;
-                            ptr[1] = i;
+                    std::uniform_int_distribution<uint32_t> rand_seq(0, MESSAGE_PER_VERSION);
+                    uint32_t total_read_count = (uint32_t)rand_seq(linear_ran);
+                    for (uint32_t i = 0; i < total_read_count; ++i) {
+                        auto handle = test_recovery_buffer.read_chunk();
+                        bq::scoped_log_buffer_handle scoped_handle(test_recovery_buffer, handle);
+                        if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
+                            --i;
+                            continue;
                         }
+                        result.add_result(handle.result == enum_buffer_result_code::success, "recovery multi thread test read chunk, version:%" PRIu32 "index:%" PRIu32 "", version, i);
+                        if (handle.result == enum_buffer_result_code::success) {
+                            ++read_message_count;
+                            uint32_t read_version = ((uint32_t*)(handle.data_addr))[0];
+                            uint32_t read_thread_idx = ((uint32_t*)(handle.data_addr))[1];
+                            uint32_t read_message_idx = ((uint32_t*)(handle.data_addr))[2];
+                            bool valid = true;
+                            for (size_t pos = 0; pos + 3 * sizeof(uint32_t) <= handle.data_size; pos += 3 * sizeof(uint32_t)) {
+                                uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
+                                if (ptr[0] != read_version || ptr[1] != read_thread_idx || ptr[2] != read_message_idx) {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                            result.add_result(valid, "recovery multi thread test read content check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
+                            if (valid) {
+                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
+                                ++message_verify_group[read_version][read_thread_idx];
+                            }
+                        }
+                    }
+                    for (auto& task : task_thread_vector) {
+                        task.join();
                     }
                 }
 
@@ -455,31 +556,44 @@ namespace bq {
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
                     bq::log_buffer test_recovery_buffer(config);
-                    for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
-                        for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
-                            auto handle = test_recovery_buffer.read_chunk();
-                            result.add_result(handle.result == enum_buffer_result_code::success, "recovery test read chunk, version:%" PRIu32 "index:%" PRIu32 "", version , i);
-                            bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
+                    bool first_message = true;
+                    for (; read_message_count < total_message_count; ) {
+                        auto handle = test_recovery_buffer.read_chunk();
+                        bq::scoped_log_buffer_handle scoped_handle(test_recovery_buffer, handle);
+                        if (first_message) {
+                            if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
+                                continue;
+                            }
+                        }
+                        ++read_message_count;
+                        first_message = false;
+                        result.add_result(handle.result == enum_buffer_result_code::success, "recovery multi thread test read chunk for left messages idx:%" PRIu32 "", read_message_count);
+                        if (handle.result == enum_buffer_result_code::success) {
+                            uint32_t read_version = ((uint32_t*)(handle.data_addr))[0];
+                            uint32_t read_thread_idx = ((uint32_t*)(handle.data_addr))[1];
+                            uint32_t read_message_idx = ((uint32_t*)(handle.data_addr))[2];
                             bool valid = true;
-                            for (size_t pos = 0; pos + sizeof(uint64_t) <= handle.data_size; pos += sizeof(uint64_t)) {
+                            for (size_t pos = 0; pos + 3 * sizeof(uint32_t) <= handle.data_size; pos += 3 * sizeof(uint32_t)) {
                                 uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
-                                if (ptr[0] != version || ptr[1] != i) {
+                                if (ptr[0] != read_version || ptr[1] != read_thread_idx || ptr[2] != read_message_idx) {
                                     valid = false;
                                     break;
                                 }
                             }
-                            result.add_result(valid, "recovery test read content, version:%" PRIu32 "index:%" PRIu32 "", version, i);
+                            result.add_result(valid, "recovery multi thread test read content check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
+                            if (valid) {
+                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
+                                ++message_verify_group[read_version][read_thread_idx];
+                            }
                         }
                     }
+
+
                     auto handle = test_recovery_buffer.read_chunk();
-                    result.add_result(handle.result == enum_buffer_result_code::err_empty_log_buffer, "recovery test read content final for single thread");
+                    result.add_result(handle.result == enum_buffer_result_code::err_empty_log_buffer, "recovery multi thread test read content final for single thread");
                 }
-
-
-                // Multi Thread Test
                 
-                
-                test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test end...");
+                test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test end...\n");
             }
         public:
             virtual test_result test() override
@@ -516,7 +630,7 @@ namespace bq {
                 config.policy = log_memory_policy::auto_expand_when_full;
                 do_basic_test(result, config);
 
-                //do_recovery_test(result);
+                do_recovery_test(result);
                 return result;
             }
         };
