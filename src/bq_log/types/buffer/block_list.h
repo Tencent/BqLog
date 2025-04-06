@@ -80,9 +80,7 @@ namespace bq {
 
         static constexpr ptrdiff_t get_buffer_data_offset()
         {
-            size_t struct_size = sizeof(block_node_head);
-            size_t offset = struct_size + (CACHE_LINE_SIZE - (struct_size % CACHE_LINE_SIZE));
-            return (ptrdiff_t)offset;
+            return (ptrdiff_t)(sizeof(block_node_head) + (CACHE_LINE_SIZE - (sizeof(block_node_head) % CACHE_LINE_SIZE)));
         }
     } 
     BQ_PACK_END

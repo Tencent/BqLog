@@ -82,18 +82,18 @@ namespace bq {
             }
         }
         auto handle = buffer->alloc_write_chunk((uint32_t)write_length, epoch_ms);
-        bq::scoped_log_buffer_handle scoped_handle(*buffer, handle);
+        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(*buffer, handle);
         if (handle.result == enum_buffer_result_code::success) {
             uint8_t* data = handle.data_addr;
-            *(uint64_t*)data = log_id;
+            *reinterpret_cast<uint64_t*>(data) = log_id;
             data += sizeof(uint64_t);
-            *(uint32_t*)data = category_idx;
+            *reinterpret_cast<int32_t*>(data) = category_idx;
             data += sizeof(uint32_t);
-            *(int32_t*)data = log_level;
+            *reinterpret_cast<int32_t*>(data) = log_level;
             data += sizeof(int32_t);
-            *(int32_t*)data = length;
+            *reinterpret_cast<int32_t*>(data) = length;
             data += sizeof(int32_t);
-            memcpy(data, content, (size_t)length);
+            memcpy(data, content, static_cast<size_t>(length));
             data[length] = 0;
         } else {
             util::log_device_console(log_level::error, "failed to insert data entry to console fetch buffer, ring_buffer error code:%d", (int32_t)handle.result);
@@ -111,18 +111,18 @@ namespace bq {
             return false;
         }
         auto read_handle = buffer->read_chunk();
-        scoped_log_buffer_handle scoped_read_handle(*buffer, read_handle);
+        scoped_log_buffer_handle<log_buffer> scoped_read_handle(*buffer, read_handle);
         if (read_handle.result == enum_buffer_result_code::success) {
             uint8_t* data = read_handle.data_addr;
-            uint64_t log_id = *(uint64_t*)data;
+            const uint64_t log_id = *reinterpret_cast<uint64_t*>(data);
             data += sizeof(uint64_t);
-            uint32_t category_idx = *(uint32_t*)data;
+            const int32_t category_idx = *reinterpret_cast<int32_t*>(data);
             data += sizeof(uint32_t);
-            int32_t log_level = *(int32_t*)data;
+            const int32_t log_level = *reinterpret_cast<int32_t*>(data);
             data += sizeof(int32_t);
-            int32_t length = *(int32_t*)data;
+            const int32_t length = *reinterpret_cast<int32_t*>(data);
             data += sizeof(int32_t);
-            char* content = (char*)data;
+            const char* content = reinterpret_cast<char*>(data);
             callback(const_cast<void*>(pass_through_param), log_id, category_idx, log_level, content, length);
         } else if (read_handle.result == enum_buffer_result_code::err_empty_log_buffer) {
             // do nothing
