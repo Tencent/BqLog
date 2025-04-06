@@ -33,6 +33,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+namespace std {
+	enum class align_val_t : size_t {};
+	struct nothrow_t {
+	};
+	extern const nothrow_t nothrow;
+}
+
 inline void* operator new(size_t, void* p) noexcept { return p; }
 inline void* operator new[](size_t, void* p) noexcept { return p; }
 inline void operator delete(void*, void*) noexcept { }
@@ -42,6 +49,21 @@ void* operator new(size_t size);
 void* operator new[](size_t size);
 void operator delete(void* ptr) noexcept;
 void operator delete[](void* ptr) noexcept;
+
+void* operator new(size_t size, std::align_val_t alignment);
+void* operator new[](size_t size, std::align_val_t alignment);
+void operator delete(void* ptr, std::align_val_t alignment) noexcept;
+void operator delete[](void* ptr, std::align_val_t alignment) noexcept;
+
+void* operator new(size_t size, const std::nothrow_t&) noexcept;
+void* operator new[](size_t size, const std::nothrow_t&) noexcept;
+void* operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept;
+void* operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept;
+
+void operator delete(void* ptr, const std::nothrow_t&) noexcept;
+void operator delete[](void* ptr, const std::nothrow_t&) noexcept;
+void operator delete(void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept;
+void operator delete[](void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept;
 #else
 #include <new>
 #endif

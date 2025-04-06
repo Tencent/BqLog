@@ -44,7 +44,7 @@ namespace bq {
         if (buffer_size_ != 0) {
             if (snapshot_buffer_) {
                 auto current_usable_buffer_size = (uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count());
-                if (abs(static_cast<int64_t>(current_usable_buffer_size) - static_cast<int64_t>(buffer_size_)) > static_cast<int64_t>(CACHE_LINE_SIZE) * 2) {
+                if (abs(static_cast<int32_t>(current_usable_buffer_size) - static_cast<int32_t>(buffer_size_)) > static_cast<int32_t>(CACHE_LINE_SIZE) * 2) {
                     buffer_data_.reset();
                     buffer_data_.fill_uninitialized((size_t)buffer_size_);
                     // create a new snapshot_buffer_ and backup log data.

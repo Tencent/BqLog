@@ -478,7 +478,7 @@ namespace bq {
     template <typename T, typename... Ts>
     shared_ptr<T> make_shared(Ts&&... params)
     {
-        return shared_ptr<T>(new T(std::forward<Ts>(params)...));
+        return shared_ptr<T>(new T(bq::forward<Ts>(params)...));
     }
 
     // make_shared with default initialization

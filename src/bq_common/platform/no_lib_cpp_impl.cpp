@@ -14,6 +14,8 @@
 #include <pthread.h>
 #include "bq_common/bq_common.h"
 
+const std::nothrow_t std::nothrow = {};
+
 void* operator new(size_t size)
 {
     void* p = nullptr;
@@ -38,6 +40,90 @@ void operator delete(void* ptr) noexcept
 }
 
 void operator delete[](void* ptr) noexcept
+{
+    free(ptr);
+}
+
+void* operator new(size_t size, std::align_val_t alignment)
+{
+    void* p = nullptr;
+    if (posix_memalign(&p, static_cast<size_t>(alignment), size) != 0) {
+        assert(false && "bad alloc");
+    }
+    return p;
+}
+
+void* operator new[](size_t size, std::align_val_t alignment)
+{
+    void* p = nullptr;
+    if (posix_memalign(&p, static_cast<size_t>(alignment), size) != 0) {
+        assert(false && "bad alloc");
+    }
+    return p;
+}
+
+void operator delete(void* ptr, std::align_val_t) noexcept
+{
+    free(ptr);
+}
+
+void operator delete[](void* ptr, std::align_val_t) noexcept
+{
+    free(ptr);
+}
+
+void* operator new(size_t size, const std::nothrow_t&) noexcept
+{
+    void* p = nullptr;
+    if (posix_memalign(&p, 8, size) != 0) {
+        assert(false && "bad alloc");
+    }
+    return p;
+}
+
+void* operator new[](size_t size, const std::nothrow_t&) noexcept
+{
+    void* p = nullptr;
+    if (posix_memalign(&p, 8, size) != 0) {
+        assert(false && "bad alloc");
+    }
+    return p;
+}
+
+void* operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept
+{
+    void* p = nullptr;
+    if (posix_memalign(&p, static_cast<size_t>(alignment), size) != 0) {
+        assert(false && "bad alloc");
+    }
+    return p;
+}
+
+void* operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept
+{
+    void* p = nullptr;
+    if (posix_memalign(&p, static_cast<size_t>(alignment), size) != 0) {
+        assert(false && "bad alloc");
+    }
+    return p;
+}
+
+void operator delete(void* ptr, const std::nothrow_t&) noexcept
+{
+    free(ptr);
+}
+
+void operator delete[](void* ptr, const std::nothrow_t&) noexcept
+{
+    free(ptr);
+}
+
+void operator delete(void* ptr, std::align_val_t, const std::nothrow_t&) noexcept
+{
+    free(ptr);
+}
+
+void operator delete[](void* ptr, std::align_val_t, const std::nothrow_t&) noexcept
 {
     free(ptr);
 }
