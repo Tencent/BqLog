@@ -70,7 +70,6 @@ namespace bq {
     private:
         bool add_appender(const string& name, const bq::property_value& jobj);
         void refresh_merged_log_level_bitmap();
-        void set_thread_mode(log_thread_mode thread_mode);
         void flush_appenders_cache();
         void flush_appenders_io();
         void clear();

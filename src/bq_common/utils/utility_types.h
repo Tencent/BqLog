@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 /*!
- * \file basic_types.h
+ * \file utility_types.h
  *
  * \author pippocao
  * \date 2022/07/14
@@ -358,33 +358,38 @@ namespace bq {
     class shared_ptr {
     public:
         shared_ptr() noexcept
-            : ptr(nullptr)
-            , ref_count(nullptr)
+            : ptr_(nullptr)
+            , ref_count_(nullptr)
         {
         }
 
         explicit shared_ptr(T* new_ptr)
-            : ptr(new_ptr)
-            , ref_count(new_ptr ? new bq::platform::atomic<int64_t>(1) : nullptr)
+            : ptr_(new_ptr)
+            , ref_count_(new_ptr ? new bq::platform::atomic<int64_t>(1) : nullptr)
         {
         }
 
         shared_ptr(const shared_ptr& rhs) noexcept
-            : ptr(rhs.ptr)
-            , ref_count(rhs.ref_count)
         {
-            if (ref_count) {
-                ref_count->fetch_add_seq_cst(1);
+            if (rhs.ref_count_) {
+                uint64_t prev_value = rhs.ref_count_->fetch_add_seq_cst(1);
+                if ((prev_value >> 32) == 0) {
+                    ptr_ = rhs.ptr_;
+                    ref_count_ = rhs.ref_count_;
+                    return;
+                }
             }
+            ptr_ = nullptr;
+            ref_count_ = nullptr;
         }
 
         template <typename D>
-        shared_ptr(shared_ptr<D>&& rhs) noexcept
-            : ptr(rhs.ptr)
-            , ref_count(rhs.ref_count)
+        explicit shared_ptr(shared_ptr<D>&& rhs) noexcept
+            : ptr_(rhs.ptr_)
+            , ref_count_(rhs.ref_count_)
         {
-            rhs.ptr = nullptr;
-            rhs.ref_count = nullptr;
+            rhs.ptr_ = nullptr;
+            rhs.ref_count_ = nullptr;
         }
 
         ~shared_ptr()
@@ -396,10 +401,13 @@ namespace bq {
         {
             if (this != &rhs) {
                 release();
-                ptr = rhs.ptr;
-                ref_count = rhs.ref_count;
-                if (ref_count) {
-                    ref_count->fetch_add_seq_cst(1);
+                if (rhs.ref_count_) {
+                    uint64_t prev_value = rhs.ref_count_->fetch_add_seq_cst(1);
+                    if ((prev_value >> 32) == 0) {
+                        ptr_ = rhs.ptr_;
+                        ref_count_ = rhs.ref_count_;
+                        return *this;
+                    }
                 }
             }
             return *this;
@@ -410,52 +418,60 @@ namespace bq {
         {
             if (this != &rhs) {
                 release();
-                ptr = rhs.ptr;
-                ref_count = rhs.ref_count;
-                rhs.ptr = nullptr;
-                rhs.ref_count = nullptr;
+                ptr_ = rhs.ptr_;
+                ref_count_ = rhs.ref_count_;
+                rhs.ptr_ = nullptr;
+                rhs.ref_count_ = nullptr;
             }
             return *this;
         }
 
-        T* operator->() const { return ptr; }
-        T& operator*() const { return *ptr; }
+        T* operator->() const { return ptr_; }
+        T& operator*() const { return *ptr_; }
 
-        T* get() const noexcept { return ptr; }
+        T* get() const noexcept { return ptr_; }
 
-        long use_count() const noexcept
+        int32_t use_count() const noexcept
         {
-            return ref_count ? ref_count->load_relaxed() : 0;
+            if (ref_count_) {
+                int64_t state = ref_count_->load_relaxed();
+                if ((state >> 32) == 0) {
+                    return static_cast<int32_t>(state & 0xFFFFFFFF);
+                }
+            }
+            return 0;
         }
 
         template <typename D>
         bool operator==(const shared_ptr<D>& rhs) const noexcept
         {
-            return ptr == rhs.ptr;
+            return ptr_ == rhs.ptr;
         }
         bool operator==(decltype(nullptr)) const noexcept
         {
-            return ptr == nullptr;
+            return ptr_ == nullptr;
         }
-
         template <typename D>
         bool operator!=(const shared_ptr<D>& rhs) const noexcept
         {
-            return ptr != rhs.ptr;
+            return ptr_ != rhs.ptr;
+        }
+        template <typename D>
+        bool operator!=(decltype(nullptr)) const noexcept
+        {
+            return ptr_ != nullptr;
         }
 
         void reset() noexcept
         {
             release();
-            ptr = nullptr;
-            ref_count = nullptr;
         }
 
         void reset(T* new_ptr)
         {
             release();
-            ptr = new_ptr;
-            ref_count = new_ptr ? new bq::platform::atomic<int64_t>(1) : nullptr;
+            ptr_ = new_ptr;
+            ref_count_ = new_ptr ? new bq::platform::atomic<int64_t>(1) : nullptr;
         }
 
     private:
@@ -464,14 +480,34 @@ namespace bq {
 
         void release() noexcept
         {
-            if (ref_count && ref_count->fetch_sub_seq_cst(1) == 1) {
-                delete ptr;
-                delete ref_count;
+            if (ref_count_) {
+                int64_t expected_value = ref_count_->load_relaxed();
+                while (true) {
+                    if (expected_value == 1) {
+                        if (ref_count_->compare_exchange_strong(expected_value
+                            , static_cast<int64_t>(1) << 32
+                            , bq::platform::memory_order::seq_cst
+                            , bq::platform::memory_order::seq_cst)) {
+                            delete ptr_;
+                            delete ref_count_;
+                            break;
+                        }
+                    }else {
+                        if (ref_count_->compare_exchange_strong(expected_value
+                            , expected_value - 1
+                            , bq::platform::memory_order::seq_cst
+                            , bq::platform::memory_order::seq_cst)) {
+                            break;
+                            }
+                    }
+                }
             }
+            ptr_ = nullptr;
+            ref_count_ = nullptr;
         }
 
-        T* ptr;
-        bq::platform::atomic<int64_t>* ref_count;
+        T* ptr_;
+        bq::platform::atomic<int64_t>* ref_count_;
     };
 
     // make_shared equivalent (simplified, no allocator support)

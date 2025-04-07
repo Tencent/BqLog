@@ -170,6 +170,9 @@ namespace bq {
                 int32_t last_read_count = 0;
                 auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
                 while (true) {
+                    bool all_finished = siso_ring_buffer_test_alive_read_thread_count.load() == 0
+                        && siso_ring_buffer_test_alive_write_thread_count.load() == 0;
+
                     int32_t current_read_count = siso_ring_buffer_test_total_read_count_.load();
                     int32_t prev_percent = last_read_count * 100 / total_chunk;
                     int32_t new_percent = current_read_count * 100 / total_chunk;
@@ -178,8 +181,7 @@ namespace bq {
                         test_output_dynamic_param(bq::log_level::info, "siso ring buffer test progress:%d%%, time cost:%dms              \r", new_percent, (int32_t)(current_time - start_time));
                         last_read_count = current_read_count;
                     }
-                    if (siso_ring_buffer_test_alive_read_thread_count.load() == 0
-                        && siso_ring_buffer_test_alive_write_thread_count.load() == 0) {
+                    if (all_finished) {
                         result.add_result(current_read_count == total_chunk, "[siso_test] read write mismatch, read_count :%d, total_chunk:%d", current_read_count, total_chunk);
                         break;
                     }

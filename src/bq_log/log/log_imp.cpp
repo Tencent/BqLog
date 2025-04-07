@@ -163,11 +163,6 @@ namespace bq {
         return true;
     }
 
-    void log_imp::set_thread_mode(log_thread_mode thread_mode)
-    {
-        thread_mode_ = thread_mode;
-    }
-
     void log_imp::set_config(const bq::string& config)
     {
         last_config_ = config;

@@ -406,7 +406,7 @@ namespace bq {
                 auto final_handle = test_buffer.read_chunk();
                 bq::scoped_log_buffer_handle<log_buffer> scoped_final_handle(test_buffer, final_handle);
                 result.add_result(final_handle.result == bq::enum_buffer_result_code::err_empty_log_buffer, "final read test");
-                result.add_result(test_buffer.get_groups_count() == 0, "group recycle test");
+                result.add_result(test_buffer.get_groups_count() == 0, "group recycle test， expected left group:0, but: %" PRIu32 "", test_buffer.get_groups_count());
                 bq::platform::thread::sleep(group_list::GROUP_NODE_GC_LIFE_TIME_MS * 2);
                 test_buffer.garbage_collect();
                 result.add_result(test_buffer.get_garbage_count() == 0, "group garbage collect test");

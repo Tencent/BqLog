@@ -28,7 +28,8 @@ namespace bq {
     namespace platform {
 
         // Similar to Linux MCS lock, but it is a simpler version.
-        class spin_lock {
+        // It has bug when nested lock on different spin_lock objects.
+        /*class spin_lock {
         private:
             struct lock_stack_node {
                 bq::platform::atomic<bool> locked_ = true;
@@ -69,10 +70,10 @@ namespace bq {
                 assert((node.locked_.load_relaxed()) && "spin_lock unit status error, it is locked");
 #endif
 
-                lock_stack_node* prev_tail = tail_.exchange_acquire(&node);
+                lock_stack_node* prev_tail = tail_.exchange_seq_cst(&node);
                 if (prev_tail) {
 #if !defined(NDEBUG)
-                    assert(prev_tail->next_.load_relaxed() == nullptr && "spin_lock unit status error, next_ should be null");
+                    assert(prev_tail->next_.load_relaxed() == nullptr && "spin_lock init status error, next_ should be null");
 #endif
                     prev_tail->next_.store_release(&node);
                     // The acquire and release memory orders provide memory synchronization semantics
@@ -99,7 +100,7 @@ namespace bq {
                 lock_stack_node* next = node.next_.load_acquire();
                 if (next == nullptr) { 
                     lock_stack_node* expected = &node;
-                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::relaxed, bq::platform::memory_order::relaxed)) {
+                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::seq_cst, bq::platform::memory_order::relaxed)) {
                         node.locked_.store_relaxed(true);
                         node.next_.store_relaxed(nullptr);
                         return;
@@ -108,7 +109,7 @@ namespace bq {
                         //yield();
                     }
                 }
-                // The acquire and release memory orders provide memory synchronization semantics 
+                // The acquire and release memory orders provide memory synchronization semantics
                 // for the business logic protected by this lock, ensuring thread safety and data consistency.
                 next->locked_.store_release(false);
 
@@ -116,6 +117,57 @@ namespace bq {
                 node.locked_.store_relaxed(true);
             }
         };
+        */
+        class spin_lock {
+        private:
+            bq::cache_friendly_type<bq::platform::atomic<bool>> value_;
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+            bq::platform::atomic<bq::platform::thread::thread_id> thread_id_;
+#endif
+        private:
+            void yield();
+
+        public:
+            spin_lock()
+                : value_(false)
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                , thread_id_(0)
+#endif
+            {
+            }
+
+            spin_lock(const spin_lock&) = delete;
+            spin_lock(spin_lock&&) noexcept = delete;
+            spin_lock& operator=(const spin_lock&) = delete;
+            spin_lock& operator=(spin_lock&&) noexcept = delete;
+
+            inline void lock()
+            {
+                while (true) {
+                    if (!value_.get().exchange(true, bq::platform::memory_order::acquire)) {
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                        thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
+#endif
+                        break;
+                    }
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                    assert(bq::platform::thread::get_current_thread_id() != thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
+#endif
+                    while (value_.get().load(bq::platform::memory_order::relaxed)) {
+                        yield();
+                    }
+                }
+            }
+
+            inline void unlock()
+            {
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                thread_id_.store(0, bq::platform::memory_order::seq_cst);
+#endif
+                value_.get().store(false, bq::platform::memory_order::release);
+            }
+        };
+
 
         /// <summary>
         /// This is an crazy optimized read-write spin lock,
@@ -160,7 +212,7 @@ namespace bq {
                     }
                     while (true) {
                         yield();
-                        counter_type current_counter = counter_.get().load_relaxed();
+                        counter_type current_counter = counter_.get().load_acquire();
                         if (current_counter >= 0) {
                             break;
                         }
@@ -186,7 +238,7 @@ namespace bq {
 #endif
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acquire, bq::platform::memory_order::relaxed)) {
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
                         break;
                     }
                     yield();

@@ -60,7 +60,7 @@ namespace bq {
     template <typename T>
     class memory_pool {
     private:
-        bq::platform::spin_lock lock_; 
+        bq::platform::spin_lock lock_;
         T* head_; 
         T* tail_; 
 
