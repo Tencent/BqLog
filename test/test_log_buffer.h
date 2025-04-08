@@ -140,6 +140,7 @@ namespace bq {
 
             void operator()()
             {
+                bq::util::log_device_console(bq::log_level::error, "write thread id:%" PRIu64, ", idx:%d", bq::platform::thread::get_current_thread_id(), id);
                 std::random_device sd;
                 std::minstd_rand linear_ran(sd());
                 std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);

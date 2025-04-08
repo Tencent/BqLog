@@ -61,8 +61,9 @@ namespace bq {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (write_thread_id_ == empty_thread_id_) {
                 write_thread_id_ = current_thread_id;
-            } else {
-                assert(current_thread_id == write_thread_id_ && "only single thread writing is supported for siso_ring_buffer!");
+            } else if (current_thread_id != write_thread_id_){
+                bq::util::log_device_console(bq::log_level::error, "only single thread writing is supported for siso_ring_buffer! expected:%" PRIu64, ", but:%" PRIu64 "", write_thread_id_, current_thread_id);
+                assert(false && "only single thread writing is supported for siso_ring_buffer!");
             }
         }
 #endif
