@@ -28,27 +28,24 @@ namespace bq {
     namespace platform {
 
         // Similar to Linux MCS lock, but it is a simpler version.
+        // MCS Lock is much faster than normal spin lock which is implemented by single atomic variable
+        // when there are many threads contending for the lock.
         // It has bug when nested lock on different spin_lock objects.
-        /*class spin_lock {
-        private:
-            struct lock_stack_node {
+        class mcs_spin_lock {
+        public:
+            struct lock_node {
                 bq::platform::atomic<bool> locked_ = true;
-                bq::platform::atomic<lock_stack_node*> next_ = nullptr;
+                bq::platform::atomic<lock_node*> next_ = nullptr;
             };
         private:
-            bq::platform::atomic<lock_stack_node*> tail_;
+            bq::platform::atomic<lock_node*> tail_;
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
             bq::platform::atomic<bq::platform::thread::thread_id> thread_id_;
 #endif
         private:
             void yield();
-            bq_forceinline static lock_stack_node& get_lock_stack_node()
-            {
-                thread_local lock_stack_node stack_node_;
-                return stack_node_;
-            }
         public:
-            spin_lock()
+            mcs_spin_lock()
                 : tail_(nullptr)
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 , thread_id_(0)
@@ -56,21 +53,20 @@ namespace bq {
             {
             }
 
-            spin_lock(const spin_lock&) = delete;
-            spin_lock(spin_lock&&) noexcept = delete;
-            spin_lock& operator=(const spin_lock&) = delete;
-            spin_lock& operator=(spin_lock&&) noexcept = delete;
+            mcs_spin_lock(const mcs_spin_lock&) = delete;
+            mcs_spin_lock(mcs_spin_lock&&) noexcept = delete;
+            mcs_spin_lock& operator=(const mcs_spin_lock&) = delete;
+            mcs_spin_lock& operator=(mcs_spin_lock&&) noexcept = delete;
 
-            inline void lock()
+            inline void lock(mcs_spin_lock::lock_node& node)
             {
-                lock_stack_node& node = get_lock_stack_node();
 #if !defined(NDEBUG)
                 assert((bq::platform::thread::get_current_thread_id() != thread_id_.load_seq_cst()) && "spin_lock is not reentrant");
                 assert((node.next_.load_relaxed() == nullptr) && "spin_lock unit status error, next_ should be null");
                 assert((node.locked_.load_relaxed()) && "spin_lock unit status error, it is locked");
 #endif
 
-                lock_stack_node* prev_tail = tail_.exchange_seq_cst(&node);
+                lock_node* prev_tail = tail_.exchange_seq_cst(&node);
                 if (prev_tail) {
 #if !defined(NDEBUG)
                     assert(prev_tail->next_.load_relaxed() == nullptr && "spin_lock init status error, next_ should be null");
@@ -90,16 +86,15 @@ namespace bq {
 #endif
             }
 
-            inline void unlock()
+            inline void unlock(mcs_spin_lock::lock_node& node)
             {
 #if !defined(NDEBUG)
                 assert((bq::platform::thread::get_current_thread_id() == thread_id_.load_seq_cst()) && "spin_lock thread id error");
                 thread_id_.store_seq_cst(0);
 #endif
-                lock_stack_node& node = get_lock_stack_node();
-                lock_stack_node* next = node.next_.load_acquire();
+                lock_node* next = node.next_.load_acquire();
                 if (next == nullptr) { 
-                    lock_stack_node* expected = &node;
+                    lock_node* expected = &node;
                     if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::seq_cst, bq::platform::memory_order::relaxed)) {
                         node.locked_.store_relaxed(true);
                         node.next_.store_relaxed(nullptr);
@@ -117,7 +112,7 @@ namespace bq {
                 node.locked_.store_relaxed(true);
             }
         };
-        */
+
         class spin_lock {
         private:
             bq::cache_friendly_type<bq::platform::atomic<bool>> value_;
@@ -254,6 +249,25 @@ namespace bq {
             }
         };
 
+        class scoped_mcs_spin_lock {
+        private:
+            mcs_spin_lock& lock_;
+            mcs_spin_lock::lock_node node_;
+        public:
+            scoped_mcs_spin_lock() = delete;
+
+            explicit scoped_mcs_spin_lock(mcs_spin_lock& lock)
+                : lock_(lock)
+            {
+                lock_.lock(node_);
+            }
+
+            ~scoped_mcs_spin_lock()
+            {
+                lock_.unlock(node_);
+            }
+        };
+
         class scoped_spin_lock {
         private:
             spin_lock& lock_;
@@ -261,7 +275,7 @@ namespace bq {
         public:
             scoped_spin_lock() = delete;
 
-            scoped_spin_lock(spin_lock& lock)
+            explicit scoped_spin_lock(spin_lock& lock)
                 : lock_(lock)
             {
                 lock_.lock();
@@ -280,7 +294,7 @@ namespace bq {
         public:
             scoped_spin_lock_read_crazy() = delete;
 
-            scoped_spin_lock_read_crazy(spin_lock_rw_crazy& lock)
+            explicit scoped_spin_lock_read_crazy(spin_lock_rw_crazy& lock)
                 : lock_(lock)
             {
                 lock_.read_lock();
@@ -299,7 +313,7 @@ namespace bq {
         public:
             scoped_spin_lock_write_crazy() = delete;
 
-            scoped_spin_lock_write_crazy(spin_lock_rw_crazy& lock)
+            explicit scoped_spin_lock_write_crazy(spin_lock_rw_crazy& lock)
                 : lock_(lock)
             {
                 lock_.write_lock();

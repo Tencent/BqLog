@@ -10,10 +10,8 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_base.h"
 #include "bq_log/types/buffer/log_buffer.h"
-#include "bq_log/log/layout.h"
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -33,8 +31,8 @@ namespace bq {
         class console_buffer {
         private:
             bool enable_;
-            class bq::platform::atomic<log_buffer*> buffer_;
-
+            bq::platform::atomic<log_buffer*> buffer_;
+            bq::platform::thread::thread_id fetch_thread_id_;
         public:
             console_buffer();
             ~console_buffer();
@@ -69,7 +67,7 @@ namespace bq {
         virtual void log_impl(const log_entry_handle& handle) override;
 
     private:
-        static console_static_misc console_misc_;
+        static console_static_misc& get_console_misc();
 
     private:
         bq::string log_name_prefix_;

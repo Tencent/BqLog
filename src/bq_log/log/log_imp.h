@@ -24,7 +24,6 @@ namespace bq {
         friend const uint8_t* bq::api::__api_get_log_category_masks_array_by_log_id(uint64_t log_id);
         friend const uint32_t* bq::api::__api_get_log_merged_log_level_bitmap_by_log_id(uint64_t log_id);
         friend const uint32_t* bq::api::__api_get_log_print_stack_level_bitmap_by_log_id(uint64_t log_id);
-
     public:
         log_imp();
         ~log_imp();
@@ -63,7 +62,9 @@ namespace bq {
 
         void process(bool is_force_flush);
 
-        void sync_process();
+        void sync_process(bool is_force_flush);
+
+        uint8_t* get_sync_buffer(uint32_t data_size);
 
         const layout& get_layout() const;
 

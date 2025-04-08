@@ -22,6 +22,11 @@
 namespace bq {
     namespace platform {
 
+        void mcs_spin_lock::yield()
+        {
+            bq::platform::thread::cpu_relax();
+        }
+
         void spin_lock::yield()
         {
             bq::platform::thread::cpu_relax();

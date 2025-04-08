@@ -136,7 +136,6 @@ namespace bq {
         log_buffer_read_handle read_chunk();
 
         void return_read_chunk(const log_buffer_read_handle& handle);
-
 #if BQ_JAVA
         struct java_buffer_info {
             jobjectArray buffer_array_obj_;

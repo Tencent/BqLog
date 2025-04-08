@@ -26,7 +26,7 @@ namespace bq {
         };
 
         static bq::platform::thread* test_4_callback_thread_ = nullptr;
-        static bq::array<bq::platform::thread*> test_4_fetch_threads_(nullptr, nullptr, nullptr);
+        static bq::platform::thread* test_4_fetch_thread_ = nullptr;
         static test_result* result_ = nullptr;
         static constexpr int32_t total_test_4_test_round_ = 200000;
         static bq::platform::spin_lock test_4_lock_;
@@ -53,9 +53,7 @@ namespace bq {
             }
             if (!result) {
                 test_4_callback_thread_->cancel();
-                for (size_t i = 0; i < test_4_fetch_threads_.size(); ++i) {
-                    test_4_fetch_threads_[i]->cancel();
-                }
+                test_4_fetch_thread_->cancel();
             }
             return result;
         }
@@ -136,18 +134,14 @@ namespace bq {
             bq::log::set_console_buffer_enable(true);
             test_4_callback_thread_ = new test_4_callback_thread();
             test_4_callback_thread_->start();
-            for (size_t i = 0; i < test_4_fetch_threads_.size(); ++i) {
-                test_4_fetch_threads_[i] = new test_4_fetch_thread();
-                test_4_fetch_threads_[i]->start();
-            }
+            test_4_fetch_thread_ = new test_4_fetch_thread();
+            test_4_fetch_thread_->start();
             test_4_callback_thread_->join();
             delete test_4_callback_thread_;
             test_4_callback_thread_ = nullptr;
-            for (size_t i = 0; i < test_4_fetch_threads_.size(); ++i) {
-                test_4_fetch_threads_[i]->join();
-                delete test_4_fetch_threads_[i];
-                test_4_fetch_threads_[i] = nullptr;
-            }
+            test_4_fetch_thread_->join();
+            delete test_4_fetch_thread_;
+            test_4_fetch_thread_ = nullptr;
             result_ = nullptr;
 
             bq::log::set_console_buffer_enable(false);

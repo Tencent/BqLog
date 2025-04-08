@@ -19,6 +19,63 @@
 #include "bq_log/utils/log_utils.h"
 
 namespace bq {
+
+    class sync_buffer {
+    private:
+        uint8_t* real_data_;
+        uint8_t* aligned_data_;   //8 bytes aligned
+        uint32_t aligned_size_;
+        uint32_t used_data_size_;
+    public:
+        sync_buffer()
+            : real_data_(nullptr)
+            , aligned_data_(nullptr)
+            , aligned_size_(0)
+            , used_data_size_(0)
+        {
+        }
+        ~sync_buffer()
+        {
+            if (real_data_) {
+                free(real_data_);
+            }
+            real_data_ = nullptr;
+            aligned_data_ = nullptr;
+            aligned_size_ = 0;
+            used_data_size_ = 0;
+        }
+        bq_forceinline uint8_t* alloc_data(uint32_t size)
+        {
+            if (aligned_size_ < size) {
+                if (real_data_) {
+                    free(real_data_);
+                }
+                real_data_ = static_cast<uint8_t*>(malloc(size + 8));
+                aligned_data_ = reinterpret_cast<uint8_t*>((reinterpret_cast<uintptr_t>(real_data_) + 7) & ~7);
+                aligned_size_ = size;
+            }
+            used_data_size_ = size;
+            return aligned_data_;
+        }
+        const bq_forceinline uint8_t* get_aligned_data() const
+        {
+            return aligned_data_;
+        }
+        bq_forceinline void recycle_data()
+        {
+            used_data_size_ = 0;
+        }
+        bq_forceinline bool is_empty() const
+        {
+            return used_data_size_ == 0;
+        }
+        bq_forceinline uint32_t get_used_data_size() const
+        {
+            return used_data_size_;
+        }
+    };
+    thread_local sync_buffer sync_buffer_;
+
     log_imp::log_imp()
         : id_(0)
         , thread_mode_(log_thread_mode::async)
@@ -284,16 +341,20 @@ namespace bq {
     void log_imp::process(bool is_force_flush)
     {
         constexpr uint64_t flush_io_min_interval_ms = 100;
-        uint64_t current_epoch_ms = bq::platform::high_performance_epoch_ms();
+        uint64_t current_epoch_ms = 0;
         while (true) {
             auto read_chunk = buffer_->read_chunk();
             scoped_log_buffer_handle<log_buffer> scoped_read_chunk(*buffer_, read_chunk);
             if (read_chunk.result == enum_buffer_result_code::success) {
                 bq::log_entry_handle log_item(read_chunk.data_addr, read_chunk.data_size);
+                current_epoch_ms = log_item.get_log_head().timestamp_epoch;
                 process_log_chunk(log_item);
             } else if (read_chunk.result == enum_buffer_result_code::err_empty_log_buffer) {
                 break;
             }
+        }
+        if (0 == current_epoch_ms) {
+            current_epoch_ms = bq::platform::high_performance_epoch_ms();
         }
         if (is_force_flush) {
             flush_appenders_cache();
@@ -306,10 +367,31 @@ namespace bq {
         }
     }
 
-    void log_imp::sync_process()
+    void log_imp::sync_process(bool is_force_flush)
     {
+        if (sync_buffer_.is_empty()) {
+            return;
+        }
+        constexpr uint64_t flush_io_min_interval_ms = 100;
         bq::platform::scoped_spin_lock lock(spin_lock_);
-        process(true);
+        bq::log_entry_handle log_item(sync_buffer_.get_aligned_data(), sync_buffer_.get_used_data_size());
+        process_log_chunk(log_item);
+        sync_buffer_.recycle_data();
+        uint64_t current_epoch_ms = log_item.get_log_head().timestamp_epoch;
+        if (is_force_flush) {
+            flush_appenders_cache();
+            last_flush_io_epoch_ms_ = current_epoch_ms;
+        } else {
+            if (current_epoch_ms > last_flush_io_epoch_ms_ + flush_io_min_interval_ms) {
+                flush_appenders_cache();
+                last_flush_io_epoch_ms_ = current_epoch_ms;
+            }
+        }
+    }
+
+    uint8_t* log_imp::get_sync_buffer(uint32_t data_size)
+    {
+        return sync_buffer_.alloc_data(data_size);
     }
 
     const bq::layout& log_imp::get_layout() const

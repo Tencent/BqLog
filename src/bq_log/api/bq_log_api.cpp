@@ -230,24 +230,31 @@ namespace bq {
                     memcpy(thread_info.thread_name_, thread_name_tmp.c_str(), thread_info.thread_name_len_);
                 }
             }
-            auto& ring_buffer = log->get_buffer();
             uint32_t ext_info_length = sizeof(ext_log_entry_info_head) + thread_info.thread_name_len_;
+            auto total_length = length + ext_info_length;
             auto epoch_ms = bq::platform::high_performance_epoch_ms();
-            auto write_handle = ring_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
-            bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.low_space_flag);
-            if (need_awake_worker) {
-                log_manager::instance().awake_worker();
-            }
-            while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
-                bq::platform::thread::cpu_relax();
-                ring_buffer.commit_write_chunk(write_handle);
-                write_handle = ring_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
-            }
-            bq::_api_log_buffer_chunk_write_handle handle;
-            handle.result = write_handle.result;
-            handle.data_addr = write_handle.data_addr;
 
-            if (write_handle.result == enum_buffer_result_code::success) {
+            bq::_api_log_buffer_chunk_write_handle handle;
+            if (log->get_thread_mode() == log_thread_mode::sync) {
+                handle.result = enum_buffer_result_code::success;
+                handle.data_addr = log->get_sync_buffer(total_length);
+            }else {
+                auto& ring_buffer = log->get_buffer();
+                auto write_handle = ring_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
+                bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.low_space_flag);
+                if (need_awake_worker) {
+                    log_manager::instance().awake_worker();
+                }
+                while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
+                    bq::platform::thread::cpu_relax();
+                    ring_buffer.commit_write_chunk(write_handle);
+                    write_handle = ring_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
+                }
+                handle.result = write_handle.result;
+                handle.data_addr = write_handle.data_addr;
+            }
+
+            if (handle.result == enum_buffer_result_code::success) {
                 bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
 #if BQ_LOG_BUFFER_DEBUG
                 // 8 bytes alignment to ensure best performance and avoid SIG_BUS on some platforms
@@ -270,15 +277,16 @@ namespace bq {
                 assert(false && "commit invalid log buffer");
                 return;
             }
-            bq::log_buffer_write_handle handle;
-            handle.data_addr = write_handle.data_addr;
-            handle.result = write_handle.result;
-            auto& ring_buffer = log->get_buffer();
-            ring_buffer.commit_write_chunk(handle);
-
             if (log->get_thread_mode() == log_thread_mode::sync) {
-                log->sync_process();
+                log->sync_process(false);
+            }else {
+                bq::log_buffer_write_handle handle;
+                handle.data_addr = write_handle.data_addr;
+                handle.result = write_handle.result;
+                auto& ring_buffer = log->get_buffer();
+                ring_buffer.commit_write_chunk(handle);
             }
+
         }
 
         BQ_API void __api_set_appenders_enable(uint64_t log_id, const char* appender_name, bool enable)

@@ -60,7 +60,7 @@ namespace bq {
     template <typename T>
     class memory_pool {
     private:
-        bq::platform::spin_lock lock_;
+        bq::platform::mcs_spin_lock lock_;
         T* head_; 
         T* tail_; 
 
@@ -83,7 +83,7 @@ namespace bq {
             if (!object) {
                 return;
             }
-            bq::platform::scoped_spin_lock lock(lock_);
+            bq::platform::scoped_mcs_spin_lock lock(lock_);
             object->memory_pool_next_ = head_;
             object->memory_pool_prev_ = nullptr;
             if (head_) {
@@ -101,7 +101,7 @@ namespace bq {
         /// <returns>Pointer to the removed object, or nullptr if the pool is empty.</returns>
         bq_forceinline T* pop()
         {
-            bq::platform::scoped_spin_lock lock(lock_);
+            bq::platform::scoped_mcs_spin_lock lock(lock_);
             if (!head_) {
                 return nullptr;
             }
@@ -128,7 +128,7 @@ namespace bq {
         /// <returns>Pointer to the evicted object, or nullptr if empty or tail doesn't meet the condition.</returns>
         bq_forceinline T* evict(bool (*evaluate)(const T*, void* user_data), void* user_data)
         {
-            bq::platform::scoped_spin_lock lock(lock_);
+            bq::platform::scoped_mcs_spin_lock lock(lock_);
             if (!tail_) {
                 return nullptr;
             }
@@ -151,7 +151,7 @@ namespace bq {
         /// <returns></returns>
         bq_forceinline size_t size()
         {
-            bq::platform::scoped_spin_lock lock(lock_);
+            bq::platform::scoped_mcs_spin_lock lock(lock_);
             size_t result = 0;
             T* obj = head_;
             while (obj) {

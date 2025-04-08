@@ -107,9 +107,9 @@ namespace bq {
 
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
-        , hp_buffer_(config, BLOCKS_PER_GROUP_NODE)
-        , lp_buffer_(config)
-        , version_(config.need_recovery ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
+        , hp_buffer_(config_, BLOCKS_PER_GROUP_NODE)
+        , lp_buffer_(config_)
+        , version_(config_.need_recovery ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
         , destruction_mark_(bq::make_shared_for_overwrite<destruction_mark>())
     {
         static bq::platform::atomic<uint64_t> id_generator(0);

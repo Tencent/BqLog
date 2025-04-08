@@ -225,11 +225,12 @@ namespace bq {
             context.log_parse_fail_reason("log entry content size should be equal or larger than 2");
             return false;
         }
-        uint64_t epoch_offset;
-        if (bq::log_utils::vlq::vlq_decode(epoch_offset, data_handle.data()) == bq::log_utils::vlq::invalid_decode_length) {
+        uint64_t epoch_offset_zigzag;
+        if (bq::log_utils::vlq::vlq_decode(epoch_offset_zigzag, data_handle.data()) == bq::log_utils::vlq::invalid_decode_length) {
             context.log_parse_fail_reason("log entry epoch_offset decode failed");
             return false;
         }
+        const int64_t epoch_offset = bq::log_utils::zigzag::decode(epoch_offset_zigzag);
         last_log_entry_epoch_ += epoch_offset;
         return true;
     }

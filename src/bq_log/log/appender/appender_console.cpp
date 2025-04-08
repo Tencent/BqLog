@@ -16,7 +16,6 @@
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 
 namespace bq {
-    bq::appender_console::console_static_misc appender_console::console_misc_;
 
     void appender_console::console_callbacks::register_callback(bq::type_func_ptr_console_callback callback)
     {
@@ -46,7 +45,9 @@ namespace bq {
     }
 
     appender_console::console_buffer::console_buffer()
-        : buffer_(nullptr)
+        : enable_(false)
+        , buffer_(nullptr)
+        , fetch_thread_id_(0)
     {
     }
 
@@ -70,6 +71,7 @@ namespace bq {
             buffer = buffer_.load_acquire();
             if (!buffer) {
                 log_buffer_config config;
+                config.log_name = "___console_buffer_global";
                 config.need_recovery = false;
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = UINT64_MAX;
@@ -81,7 +83,7 @@ namespace bq {
                 }
             }
         }
-        auto handle = buffer->alloc_write_chunk((uint32_t)write_length, epoch_ms);
+        auto handle = buffer->alloc_write_chunk(static_cast<uint32_t>(write_length), epoch_ms);
         bq::scoped_log_buffer_handle<log_buffer> scoped_handle(*buffer, handle);
         if (handle.result == enum_buffer_result_code::success) {
             uint8_t* data = handle.data_addr;
@@ -105,7 +107,14 @@ namespace bq {
         if (!is_enable()) {
             return false;
         }
-
+        if (fetch_thread_id_ == 0) {
+            fetch_thread_id_ = bq::platform::thread::get_current_thread_id();
+        }else if (fetch_thread_id_ != bq::platform::thread::get_current_thread_id()) {
+            auto output_error = "Don't fetch console buffer in different threads";
+            auto length = static_cast<int32_t>(strlen(output_error));
+            callback(const_cast<void*>(pass_through_param), 0, 0, static_cast<int32_t>(bq::log_level::error), output_error, length);
+            return false;
+        }
         auto buffer = buffer_.load_relaxed();
         if (!buffer) {
             return false;
@@ -143,22 +152,22 @@ namespace bq {
 
     void appender_console::register_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        console_misc_.callback().register_callback(callback);
+        get_console_misc().callback().register_callback(callback);
     }
 
     void appender_console::unregister_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        console_misc_.callback().erase_callback(callback);
+        get_console_misc().callback().erase_callback(callback);
     }
 
     void appender_console::set_console_buffer_enable(bool enable)
     {
-        console_misc_.buffer().set_enable(enable);
+        get_console_misc().buffer().set_enable(enable);
     }
 
     bool appender_console::fetch_and_remove_from_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
     {
-        return console_misc_.buffer().fetch_and_remove(callback, pass_through_param);
+        return get_console_misc().buffer().fetch_and_remove(callback, pass_through_param);
     }
 
     bool appender_console::init_impl(const bq::property_value& config_obj)
@@ -187,8 +196,14 @@ namespace bq {
 #if !BQ_UNIT_TEST
         util::log_device_console_plain_text(level, log_entry_cache_.c_str());
 #endif
-        console_misc_.callback().call(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
-        console_misc_.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        auto& console_misc = get_console_misc();
+        console_misc.callback().call(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
     }
 
+    appender_console::console_static_misc& appender_console::get_console_misc()
+    {
+        static console_static_misc console_misc_inst_;
+        return console_misc_inst_;
+    }
 }
