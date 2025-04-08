@@ -122,13 +122,13 @@ namespace bq {
 
     public:
         scoped_log_buffer_handle() = delete;
-        bq_forceinline scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_read_handle& handle);
-        bq_forceinline scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_write_handle& handle);
-        bq_forceinline ~scoped_log_buffer_handle();
+        scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_read_handle& handle);
+        scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_write_handle& handle);
+        ~scoped_log_buffer_handle();
     };
 
     template <typename BUFFER_TYPE>
-    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_write_handle& handle)
+    bq::scoped_log_buffer_handle<BUFFER_TYPE>::scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_write_handle& handle)
         : buffer_(&buffer)
         , read_handle_(log_buffer_read_handle())
         , write_handle_(handle)
@@ -138,17 +138,7 @@ namespace bq {
     }
 
     template <typename BUFFER_TYPE>
-    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_read_handle& handle)
-        : buffer_(&buffer)
-        , read_handle_(handle)
-        , write_handle_(log_buffer_write_handle())
-        , destruction_type_(destruction_type::return_chunk)
-    {
-        (void)write_handle_;
-    }
-
-    template <typename BUFFER_TYPE>
-    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::~scoped_log_buffer_handle()
+    scoped_log_buffer_handle<BUFFER_TYPE>::~scoped_log_buffer_handle()
     {
         switch (destruction_type_) {
         case destruction_type::return_chunk:
@@ -160,5 +150,15 @@ namespace bq {
         default:
             break;
         }
+    }
+
+    template <typename BUFFER_TYPE>
+    bq::scoped_log_buffer_handle<BUFFER_TYPE>::scoped_log_buffer_handle(BUFFER_TYPE& buffer, const log_buffer_read_handle& handle)
+        : buffer_(&buffer)
+        , read_handle_(handle)
+        , write_handle_(log_buffer_write_handle())
+        , destruction_type_(destruction_type::return_chunk)
+    {
+        (void)write_handle_;
     }
 }
