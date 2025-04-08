@@ -473,7 +473,7 @@ namespace bq {
             auto read_handle = lp_buffer_.read_chunk();
             if (enum_buffer_result_code::success == read_handle.result) {
                 const auto& context = *reinterpret_cast<const context_head*>(read_handle.data_addr);
-                auto verify_result = verify_context(context)
+                auto verify_result = verify_context(context);
                 switch (verify_result) {
                 case context_verify_result::valid:
                     if (!context.is_thread_finished_) {
