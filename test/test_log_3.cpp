@@ -23,8 +23,6 @@
 #endif
 #include "bq_log/utils/log_utils.h"
 
-#pragma message("Compiling test_log_3.cpp will take minutes of time.")
-
 namespace bq {
     namespace test {
         static test_result* result_ptr;
