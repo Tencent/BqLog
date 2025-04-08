@@ -227,11 +227,6 @@ namespace bq {
             uint32_t trace_len = str.len << 1;
             return bq::make_tuple(trace_str, trace_len);
         }
-        bq::_api_string_def str;
-        bq::api::__api_get_stack_trace(&str, 0);
-        const char* trace_str = str.str;
-        uint32_t trace_len = str.len;
-        return bq::make_tuple(trace_str, trace_len);
     }
 
     template <typename STR>

@@ -148,7 +148,7 @@ namespace bq {
     }
 
     template <typename BUFFER_TYPE>
-    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::~scoped_log_buffer_handle<BUFFER_TYPE>()
+    bq_forceinline bq::scoped_log_buffer_handle<BUFFER_TYPE>::~scoped_log_buffer_handle()
     {
         switch (destruction_type_) {
         case destruction_type::return_chunk:
