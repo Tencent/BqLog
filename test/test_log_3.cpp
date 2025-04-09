@@ -9,6 +9,10 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+
+// Only works for C++14 and later
+#include "bq_common/bq_common.h"
+#if defined(BQ_CPP_14)
 #include <cstddef>
 #include <math.h>
 #include <tuple>
@@ -17,11 +21,6 @@
 #include <locale>
 #include <string>
 #include "test_log.h"
-#include <inttypes.h>
-#if defined(BQ_CPP_17)
-#include <string_view>
-#endif
-#include "bq_log/utils/log_utils.h"
 
 namespace bq {
     namespace test {
@@ -920,3 +919,17 @@ namespace bq {
         }
     }
 }
+#else
+#include "test_log.h"
+#include <string_view>
+namespace bq {
+    namespace test {
+        void test_log::test_3(test_result& result, const test_category_log& log_inst)
+        {
+            test_output(bq::log_level::info, "full log test only works for c++ 14 or later version.\n");
+            (void)result;
+            (void)log_inst;
+        }
+    }
+}
+#endif

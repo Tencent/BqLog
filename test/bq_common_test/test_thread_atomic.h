@@ -9,7 +9,8 @@ namespace bq {
             bq::platform::atomic<T> i = 0;
         };
 
-        constexpr uint32_t test_thread_atomic_loop_times = 1000000;
+        constexpr uint32_t TEST_THREAD_ATOMIC_LOOP_TIMES = 1000000;
+        constexpr uint32_t MAGIC_NUMBER = 0x4323;
 
         class test_thread_add : public bq::platform::thread {
         public:
@@ -22,7 +23,7 @@ namespace bq {
 
             virtual void run() override
             {
-                for (uint32_t i = 0; i < test_thread_atomic_loop_times; ++i) {
+                for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
                     i_ptr->i.fetch_add(1, platform::memory_order::release);
                 }
             }
@@ -34,7 +35,6 @@ namespace bq {
             test_atomic_struct<uint32_t>* i_ptr = nullptr;
             uint32_t cas_times_per_loop = 0;
             uint32_t base_value;
-            static constexpr uint32_t magic_number = 0x4323;
 
             test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a, uint32_t in_cas_times_per_loop, uint32_t in_base_value)
             {
@@ -46,11 +46,11 @@ namespace bq {
 
             virtual void run() override
             {
-                for (uint32_t i = 0; i < test_thread_atomic_loop_times; ++i) {
+                for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
                     uint32_t value = base_value;
-                    auto magic_number_cpy = magic_number;
+                    auto magic_number_cpy = MAGIC_NUMBER;
                     while (!i_ptr->i.compare_exchange_strong(magic_number_cpy, value + 1, platform::memory_order::release)) {
-                        magic_number_cpy = magic_number;
+                        magic_number_cpy = MAGIC_NUMBER;
                     }
                     a_ptr->push_back(value);
                     for (uint32_t j = 1; j < cas_times_per_loop; ++j) {
@@ -58,10 +58,10 @@ namespace bq {
                         if (i_ptr->i.compare_exchange_strong(value, value + 1, platform::memory_order::release)) {
                             a_ptr->push_back(value);
                         } else {
-                            a_ptr->push_back(magic_number); // imposible branch
+                            a_ptr->push_back(MAGIC_NUMBER); // imposible branch
                         }
                     }
-                    i_ptr->i.store(magic_number, platform::memory_order::release);
+                    i_ptr->i.store(MAGIC_NUMBER, platform::memory_order::release);
                 }
             }
         };
@@ -85,7 +85,7 @@ namespace bq {
 
             virtual void run() override
             {
-                for (uint32_t i = 0; i < test_thread_atomic_loop_times; ++i) {
+                for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
                     m_ptr->lock();
                     uint32_t value = base_value;
                     i_ptr->i.store_seq_cst(value);
@@ -117,7 +117,7 @@ namespace bq {
 
             virtual void run() override
             {
-                for (uint32_t i = 0; i < test_thread_atomic_loop_times; ++i) {
+                for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
                     m_ptr->lock();
                     uint32_t value = base_value;
                     i_ptr->i.store_seq_cst(value);
@@ -331,16 +331,16 @@ namespace bq {
                     thread5.join();
 
                     auto i_result = i_value.i.load(platform::memory_order::acquire);
-                    result.add_result(i_result == test_thread_atomic_loop_times * 5, "atomic add test 1, final value:%d", i_result);
+                    result.add_result(i_result == TEST_THREAD_ATOMIC_LOOP_TIMES * 5, "atomic add test 1, final value:%d", i_result);
                 }
                 test_output_dynamic(bq::log_level::info, "atomic add test is finished, now begin the cas test, please wait...                \r");
                 {
                     // CAS test
                     constexpr uint32_t cas_times_per_loop = 5;
                     test_atomic_struct<uint32_t> i_value;
-                    i_value.i.store_seq_cst(test_thread_cas::magic_number);
+                    i_value.i.store_seq_cst(MAGIC_NUMBER);
                     bq::array<uint32_t> test_array;
-                    test_array.set_capacity(test_thread_atomic_loop_times * cas_times_per_loop * 5);
+                    test_array.set_capacity(TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5);
                     test_thread_cas thread1(i_value, test_array, cas_times_per_loop, 0);
                     thread1.set_thread_name("thread1");
                     thread1.start();
@@ -367,7 +367,7 @@ namespace bq {
                     thread4.join();
                     thread5.join();
 
-                    result.add_result(test_array.size() == test_thread_atomic_loop_times * cas_times_per_loop * 5, "atomic CAS test 1, final size:%d", test_array.size());
+                    result.add_result(test_array.size() == TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5, "atomic CAS test 1, final size:%d", test_array.size());
                     bool check_result = true;
                     uint32_t test_base = 0;
                     for (uint32_t i = 0; i < test_array.size(); ++i) {
@@ -389,7 +389,7 @@ namespace bq {
                     constexpr uint32_t cas_times_per_loop = 5;
                     test_atomic_struct<uint32_t> i_value;
                     bq::array<uint32_t> test_array;
-                    test_array.set_capacity(test_thread_atomic_loop_times * cas_times_per_loop * 5);
+                    test_array.set_capacity(TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5);
                     bq::platform::mutex test_mutex(false);
                     test_thread_mutex thread1(i_value, test_array, cas_times_per_loop, 0, test_mutex);
                     thread1.set_thread_name("thread1");
@@ -417,7 +417,7 @@ namespace bq {
                     thread4.join();
                     thread5.join();
 
-                    result.add_result(test_array.size() == test_thread_atomic_loop_times * cas_times_per_loop * 5, "atomic mutex test 1, final size:%d", test_array.size());
+                    result.add_result(test_array.size() == TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5, "atomic mutex test 1, final size:%d", test_array.size());
                     bool check_result = true;
                     uint32_t test_base = 0;
                     for (uint32_t i = 0; i < test_array.size(); ++i) {
@@ -438,7 +438,7 @@ namespace bq {
                     constexpr uint32_t cas_times_per_loop = 5;
                     test_atomic_struct<uint32_t> i_value;
                     bq::array<uint32_t> test_array;
-                    test_array.set_capacity(test_thread_atomic_loop_times * cas_times_per_loop * 5);
+                    test_array.set_capacity(TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5);
                     bq::platform::spin_lock test_lock;
                     test_thread_spin_lock thread1(i_value, test_array, cas_times_per_loop, 0, test_lock);
                     thread1.set_thread_name("thread1");
@@ -466,7 +466,7 @@ namespace bq {
                     thread4.join();
                     thread5.join();
 
-                    result.add_result(test_array.size() == test_thread_atomic_loop_times * cas_times_per_loop * 5, "atomic mutex test 1, final size:%d", test_array.size());
+                    result.add_result(test_array.size() == TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5, "atomic mutex test 1, final size:%d", test_array.size());
                     bool check_result = true;
                     uint32_t test_base = 0;
                     for (uint32_t i = 0; i < test_array.size(); ++i) {

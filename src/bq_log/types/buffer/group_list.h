@@ -106,6 +106,7 @@ namespace bq {
             bq_forceinline group_node& value() { return *value_; }
             bq_forceinline const group_node& value() const { return *value_; }
             bq_forceinline bool operator==(const group_list::iterator& rhs) const { return value_ == rhs.value_;}
+            bq_forceinline bool operator!=(const group_list::iterator& rhs) const { return value_ != rhs.value_;}
         };
         static constexpr uint64_t GROUP_NODE_GC_LIFE_TIME_MS = 1000; // If a group node has not been used for 1 seconds, it will be deleted. Otherwise it can stay in the memory pool.
     public:

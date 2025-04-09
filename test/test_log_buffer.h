@@ -140,7 +140,6 @@ namespace bq {
 
             void operator()()
             {
-                bq::util::log_device_console(bq::log_level::error, "write thread id:%" PRIu64 ", idx:%d", bq::platform::thread::get_current_thread_id(), id);
                 std::random_device sd;
                 std::minstd_rand linear_ran(sd());
                 std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
@@ -532,7 +531,7 @@ namespace bq {
                     uint32_t total_read_count = (uint32_t)rand_seq(linear_ran);
                     for (uint32_t i = 0; i < total_read_count; ++i) {
                         auto handle = test_recovery_buffer.read_chunk();
-                        bq::scoped_log_buffer_handle scoped_handle(test_recovery_buffer, handle);
+                        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
                         if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
                             --i;
                             continue;
@@ -574,7 +573,7 @@ namespace bq {
                     bool first_message = true;
                     for (; read_message_count < total_message_count; ) {
                         auto handle = test_recovery_buffer.read_chunk();
-                        bq::scoped_log_buffer_handle scoped_handle(test_recovery_buffer, handle);
+                        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
                         if (first_message) {
                             if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
                                 continue;

@@ -1,8 +1,9 @@
 #!/bin/bash
 
+CPP_VER_PARAM=${1:-17}
 mkdir CMakeFiles;
 cd CMakeFiles;
-CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug ../../../../test;
+CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER=$CPP_VER_PARAM ../../../../test;
 make;
 ./BqLogUnitTest
 exit_code=$?
@@ -13,7 +14,7 @@ else
     exit 1
 fi
 
-CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo ../../../../test;
+CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=$CPP_VER_PARAM ../../../../test;
 make;
 ./BqLogUnitTest
 exit_code=$?

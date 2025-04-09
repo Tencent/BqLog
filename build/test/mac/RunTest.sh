@@ -1,9 +1,10 @@
 #!/bin/zsh
 
+CPP_VER_PARAM=${1:-17}
 mkdir XCodeProj
 cd XCodeProj
 
-cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -G "Xcode"
+cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM -G "Xcode"
 xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration Debug
 ./Debug/BqLogUnitTest
 exit_code=$?
@@ -14,7 +15,7 @@ else
     exit 1
 fi
 
-cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -G "Xcode"
+cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM -G "Xcode"
 xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration RelWithDebInfo
 ./RelWithDebInfo/BqLogUnitTest
 exit_code=$?

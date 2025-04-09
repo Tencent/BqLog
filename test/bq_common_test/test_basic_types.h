@@ -173,11 +173,11 @@ namespace bq {
                         shared_ptr_test_struct(std::atomic<int32_t>& value)
                             : value_(value)
                         {
-                            value_.fetch_add(1, std::memory_order::relaxed);
+                            value_.fetch_add(1, std::memory_order_relaxed);
                         }
                         ~shared_ptr_test_struct()
                         {
-                            value_.fetch_sub(1, std::memory_order::relaxed);
+                            value_.fetch_sub(1, std::memory_order_relaxed);
                         }
                         std::atomic<int32_t>& value_;
                     };
@@ -203,7 +203,7 @@ namespace bq {
                         t.join();
                     }
                     vec.clear();
-                    result.add_result(test_value.load(std::memory_order::relaxed) == 0, "shared_ptr test");
+                    result.add_result(test_value.load(std::memory_order_relaxed) == 0, "shared_ptr test");
                 }
 
                 {

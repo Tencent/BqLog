@@ -81,7 +81,7 @@ namespace bq {
             {
                 while (left_read_count_ > 0) {
                     auto handle = ring_buffer_ptr_->read_chunk();
-                    bq::scoped_log_buffer_handle scoped_handle(*ring_buffer_ptr_, handle);
+                    bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*ring_buffer_ptr_, handle);
                     if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
                         bq::platform::thread::yield();
                         continue;
@@ -112,7 +112,7 @@ namespace bq {
                     ++siso_ring_buffer_test_total_read_count_;
                 }
                 auto new_handle = ring_buffer_ptr_->read_chunk();
-                bq::scoped_log_buffer_handle scoped_new_handle(*ring_buffer_ptr_, new_handle);
+                bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_new_handle(*ring_buffer_ptr_, new_handle);
                 test_result_ptr_->add_result(new_handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch, overflow 1", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
                 test_result_ptr_->add_result(left_read_count_ == 0, "[siso ring buffer %s]total block count mismatch", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
                 --siso_ring_buffer_test_alive_read_thread_count;
@@ -217,9 +217,9 @@ namespace bq {
                 while (true) {
                     uint32_t size = bq::util::rand() % data_src_size;
                     auto handle1 = ring_buffer1.alloc_write_chunk(size);
-                    bq::scoped_log_buffer_handle scoped1(ring_buffer1, handle1);
+                    bq::scoped_log_buffer_handle<siso_ring_buffer> scoped1(ring_buffer1, handle1);
                     auto handle2 = ring_buffer2.alloc_write_chunk(size);
-                    bq::scoped_log_buffer_handle scoped2(ring_buffer2, handle2);
+                    bq::scoped_log_buffer_handle<siso_ring_buffer> scoped2(ring_buffer2, handle2);
                     result.add_result(handle1.result == handle2.result, "miso traverse test, prepare data");
                     if (handle1.result != enum_buffer_result_code::success) {
                         break;
@@ -236,7 +236,7 @@ namespace bq {
                     auto& ring_buffer1_ref = *bq::get<0>(user_data_ref);
                     auto& result_ref = *bq::get<1>(user_data_ref);
                     auto handle = ring_buffer1_ref.read_chunk();
-                    bq::scoped_log_buffer_handle scoped(ring_buffer1_ref, handle);
+                    bq::scoped_log_buffer_handle<siso_ring_buffer> scoped(ring_buffer1_ref, handle);
                     result_ref.add_result(handle.result == enum_buffer_result_code::success, "miso traverse test, read data");
                     result_ref.add_result(handle.data_size == size, "miso traverse test, read data size");
                     result_ref.add_result(memcmp(handle.data_addr, data, size) == 0, "miso traverse test, read data content");

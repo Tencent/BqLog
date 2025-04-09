@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(BqLogUnitTest)
-set(CMAKE_CXX_STANDARD 20)
+
+if(NOT DEFINED CPP_VER)
+    set(CMAKE_CXX_STANDARD 17)
+    message("Use default C++ 17")
+else()
+    set(CMAKE_CXX_STANDARD ${CPP_VER})
+    message("Use custom C++ ${CPP_VER}")
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 OPTION(JAVA_SUPPORT "Support Java" OFF)

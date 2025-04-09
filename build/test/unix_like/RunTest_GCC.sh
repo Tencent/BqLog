@@ -1,8 +1,9 @@
 #!/bin/sh
 
+CPP_VER_PARAM=${1:-17}
 mkdir CMakeFiles;
 cd CMakeFiles;
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=Debug ../../../../test;
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=Debug  -DCPP_VER=$CPP_VER_PARAM../../../../test;
 make;
 ./BqLogUnitTest
 exit_code=$?
@@ -12,7 +13,7 @@ else
     echo "Test failed."
     exit 1
 fi
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=RelWithDebInfo ../../../../test;
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=$CPP_VER_PARAM ../../../../test;
 make;
 ./BqLogUnitTest
 exit_code=$?

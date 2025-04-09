@@ -166,9 +166,9 @@ namespace bq {
                     
                     uint32_t size = bq::util::rand() % data_src_size;
                     auto handle1 = ring_buffer1.alloc_write_chunk(size);
-                    bq::scoped_log_buffer_handle scoped1(ring_buffer1, handle1);
+                    bq::scoped_log_buffer_handle<miso_ring_buffer> scoped1(ring_buffer1, handle1);
                     auto handle2 = ring_buffer2.alloc_write_chunk(size);
-                    bq::scoped_log_buffer_handle scoped2(ring_buffer2, handle2);
+                    bq::scoped_log_buffer_handle<miso_ring_buffer> scoped2(ring_buffer2, handle2);
                     result.add_result(handle1.result == handle2.result, "miso traverse test, prepare data");
                     if (handle1.result != enum_buffer_result_code::success) {
                         break;
