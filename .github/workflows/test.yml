@@ -57,9 +57,6 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y gdb
-
       - name: Build for Linux
         run: |
           cd build/test/linux  
