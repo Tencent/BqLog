@@ -82,7 +82,6 @@ namespace bq {
 #endif
                 log_buffer* expected = nullptr;
                 if (!buffer_.compare_exchange_strong(expected, buffer, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-
 #if BQ_CPP_17
                     delete buffer;
 #else

@@ -169,7 +169,11 @@ namespace bq {
                     buffer_config.high_frequency_threshold_per_second = (uint64_t)(int64_t)log_config["buffer_high_freq_threshold_per_second"];
                 }
             }
-            buffer_ = new log_buffer(buffer_config);
+#if BQ_CPP_17
+            buffer_ = new bq::log_buffer(buffer_config);
+#else
+            buffer_ = bq::util::aligned_new<bq::log_buffer>(CACHE_LINE_SIZE, buffer_config);
+#endif
         }
         worker_.init(thread_mode_, this);
         if (thread_mode_ == log_thread_mode::independent) {
@@ -276,7 +280,11 @@ namespace bq {
         name_.clear();
         merged_log_level_bitmap_.clear();
         if (buffer_) {
+#if BQ_CPP_17
             delete buffer_;
+#else
+            bq::util::aligned_delete(buffer_);
+#endif
         }
         delete snapshot_;
         snapshot_ = nullptr;

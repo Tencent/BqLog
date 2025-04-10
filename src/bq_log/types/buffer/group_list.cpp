@@ -240,7 +240,11 @@ namespace bq {
             if (index_value > current_group_index_.load(bq::platform::memory_order::relaxed)) {
                 current_group_index_.store(index_value, bq::platform::memory_order::relaxed);
             }
+#if BQ_CPP_17
             group_node* new_node = new group_node(this, max_block_count_per_group_, index_value);
+#else
+            auto* new_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, index_value);
+#endif
             new_node->get_next_ptr().node_ = head_.node_;
             head_.node_ = new_node;
         }
@@ -253,7 +257,11 @@ namespace bq {
             delete_and_unlock_thread_unsafe(iter);
         }
         while (auto node = pool_.pop()) {
+#if BQ_CPP_17
             delete node;
+#else
+            bq::util::aligned_delete(node);
+#endif
         }
     }
 
@@ -325,7 +333,11 @@ namespace bq {
             },
                 &current_epoch_ms);
             if (candidiate) {
+#if BQ_CPP_17
                 delete candidiate;
+#else
+                bq::util::aligned_delete(candidiate);
+#endif
             } else {
                 break;
             }

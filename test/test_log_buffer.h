@@ -179,8 +179,13 @@ namespace bq {
                     bq::memory_pool<memory_pool_test_obj_not_aligned> pool_not_aligned_form, pool_not_aligned_to;
 
                     for (int32_t i = 0; i < OBJ_COUNT; ++i) {
+#if BQ_CPP_17
                         pool_aligned_form.push(new memory_pool_test_obj_aligned(i));
                         pool_aligned_to.push(new memory_pool_test_obj_aligned(i));
+#else
+                        pool_aligned_form.push(bq::util::aligned_new<memory_pool_test_obj_aligned>(CACHE_LINE_SIZE, i));
+                        pool_aligned_to.push(util::aligned_new<memory_pool_test_obj_aligned>(CACHE_LINE_SIZE, i));
+#endif
                         pool_not_aligned_form.push(new memory_pool_test_obj_not_aligned(i));
                         pool_not_aligned_to.push(new memory_pool_test_obj_not_aligned(i));
                     }
@@ -203,7 +208,11 @@ namespace bq {
                     memset((int32_t*)marks.begin(), 0, sizeof(decltype(marks)::value_type) * marks.size());
                     while (auto obj = pool_aligned_form.pop()) {
                         marks[obj->id_]++;
+#if BQ_CPP_17
                         delete obj;
+#else
+                        bq::util::aligned_delete(obj);
+#endif
                     }
                     while (auto obj = pool_aligned_to.pop()) {
                         marks[obj->id_]++;
@@ -506,7 +515,7 @@ namespace bq {
                     bq::log_buffer test_recovery_buffer(config);
                     std::vector<std::thread> task_thread_vector;
                     for (uint32_t thread_idx = 0; thread_idx < THREAD_COUNT; ++thread_idx) {
-                        task_thread_vector.emplace_back([&test_recovery_buffer, &result, version, thread_idx]() {
+                        task_thread_vector.emplace_back([&test_recovery_buffer, &result, version, thread_idx, MESSAGE_PER_VERSION]() {
                             std::random_device sd;
                             std::minstd_rand linear_ran(sd());
                             std::uniform_int_distribution<int32_t> rand_seq((int32_t)(3 * sizeof(uint32_t)), 1024);
