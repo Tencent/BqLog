@@ -216,7 +216,11 @@ namespace bq {
                     }
                     while (auto obj = pool_aligned_to.pop()) {
                         marks[obj->id_]++;
+#if BQ_CPP_17
                         delete obj;
+#else
+                        bq::util::aligned_delete(obj);
+#endif
                     }
                     for (int32_t i = 0; i < OBJ_COUNT; ++i) {
                         result.add_result(marks[i] == 2, "memory pool aligned test %d", i);
