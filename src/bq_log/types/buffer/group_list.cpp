@@ -298,7 +298,11 @@ namespace bq {
             if (!result) {
                 src_node = pool_.pop();
                 if (!src_node) {
+#if BQ_CPP_17
                     src_node = new bq::group_node(this, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
+#else
+                    src_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
+#endif
                 }
                 result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;

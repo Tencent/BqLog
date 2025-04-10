@@ -515,7 +515,7 @@ namespace bq {
                     bq::log_buffer test_recovery_buffer(config);
                     std::vector<std::thread> task_thread_vector;
                     for (uint32_t thread_idx = 0; thread_idx < THREAD_COUNT; ++thread_idx) {
-                        task_thread_vector.emplace_back([&test_recovery_buffer, &result, version, thread_idx, MESSAGE_PER_VERSION]() {
+                        task_thread_vector.emplace_back([&]() {
                             std::random_device sd;
                             std::minstd_rand linear_ran(sd());
                             std::uniform_int_distribution<int32_t> rand_seq((int32_t)(3 * sizeof(uint32_t)), 1024);
