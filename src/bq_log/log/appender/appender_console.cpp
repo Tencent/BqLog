@@ -75,10 +75,19 @@ namespace bq {
                 config.need_recovery = false;
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = UINT64_MAX;
+#if BQ_CPP_17
                 buffer = new bq::log_buffer(config);
+#else
+                buffer = bq::util::aligned_new<bq::log_buffer>(64, config);
+#endif
                 log_buffer* expected = nullptr;
                 if (!buffer_.compare_exchange_strong(expected, buffer, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+
+#if BQ_CPP_17
                     delete buffer;
+#else
+                    bq::util::aligned_delete(buffer);
+#endif
                     buffer = expected;
                 }
             }
