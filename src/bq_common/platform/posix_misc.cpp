@@ -539,6 +539,19 @@ namespace bq {
         {
             get_file_exclusive_mutex();
         }
+
+        void* aligned_alloc(size_t alignment, size_t size)
+        {
+            void* p = nullptr;
+            if (posix_memalign(&p, alignment, size) != 0) {
+                return nullptr;
+            }
+            return p;
+        }
+        void aligned_free(void* ptr)
+        {
+            free(ptr);
+        }
     }
 }
 #endif

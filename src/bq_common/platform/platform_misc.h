@@ -117,5 +117,8 @@ namespace bq {
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count);
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count);
+
+        void* aligned_alloc(size_t alignment, size_t size);
+        void aligned_free(void* ptr);
     }
 }

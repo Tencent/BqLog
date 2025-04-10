@@ -91,7 +91,11 @@ namespace bq {
                         }
                     }
                 } else {
+#if BQ_CPP_17
                     delete pair.value();
+#else
+                    bq::util::aligned_delete(pair.value());
+#endif
                 }
             }
             // the entries in the map will be destructed by consumer thread of log_buffer.
@@ -454,7 +458,11 @@ namespace bq {
         if (context.version_ == version_) {
             // for new data
             if (context.is_thread_finished_) {
+#if BQ_CPP_17
                 delete context.get_tls_info();
+#else
+                bq::util::aligned_delete(context.get_tls_info());
+#endif
             }
             ++context.get_tls_info()->rt_data_.current_read_seq_;
         } else {

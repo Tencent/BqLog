@@ -621,6 +621,15 @@ namespace bq {
         {
             get_file_exclusive_mutex();
         }
+
+        void* aligned_alloc(size_t alignment, size_t size)
+        {
+            return _aligned_malloc(size, alignment);
+        }
+        void aligned_free(void* ptr)
+        {
+            _aligned_free(ptr);
+        }
     }
 }
 #endif

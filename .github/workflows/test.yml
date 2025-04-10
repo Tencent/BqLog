@@ -5,7 +5,7 @@ on:
   workflow_call:
 jobs:
   #Windows
-  build_windows_test_and_run_MSVC_cpp14:
+  win64_test_MSVC_cpp14:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -24,7 +24,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
   
-  build_windows_test_and_run_Clang_cpp14:
+  win64_test_Clang_cpp14:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -43,7 +43,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_test_and_run_MSVC_cpp17:
+  win64_test_MSVC_cpp17:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -62,7 +62,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_test_and_run_Clang_cpp17:
+  win64_test_Clang_cpp17:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -81,7 +81,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_test_and_run_MSVC_cpp20:
+  win64_test_MSVC_cpp20:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -100,7 +100,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_test_and_run_Clang_cpp20:
+  win64_test_Clang_cpp20:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -119,7 +119,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_test_and_run_MSVC_cpp23:
+  win64_test_MSVC_cpp23:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -138,7 +138,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  build_windows_test_and_run_Clang_cpp23:
+  win64_test_Clang_cpp23:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -158,7 +158,7 @@ jobs:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
   #Linux-ubuntu
-  build_ubuntu_test_and_run_GCC_cpp11:
+  ubuntu_test_GCC_cpp11:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -176,7 +176,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_GCC.sh 11
   
-  build_ubuntu_test_and_run_Clang_cpp11:
+  ubuntu_test_Clang_cpp11:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -194,7 +194,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_Clang.sh 11
 
-  build_ubuntu_test_and_run_GCC_cpp14:
+  ubuntu_test_GCC_cpp14:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -212,7 +212,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_GCC.sh 14
 
-  build_ubuntu_test_and_run_Clang_cpp14:
+  ubuntu_test_Clang_cpp14:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -230,7 +230,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_Clang.sh 14
 
-  build_ubuntu_test_and_run_GCC_cpp17:
+  ubuntu_test_GCC_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -248,7 +248,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_GCC.sh 17
 
-  build_ubuntu_test_and_run_Clang_cpp17:
+  ubuntu_test_Clang_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -266,7 +266,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_Clang.sh 17
 
-  build_ubuntu_test_and_run_GCC_cpp20:
+  ubuntu_test_GCC_cpp20:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -284,7 +284,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_GCC.sh 20
 
-  build_ubuntu_test_and_run_Clang_cpp20:
+  ubuntu_test_Clang_cpp20:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -302,7 +302,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_Clang.sh 20
 
-  build_ubuntu_test_and_run_GCC_cpp23:
+  ubuntu_test_GCC_cpp23:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -320,7 +320,7 @@ jobs:
           chmod +x *.sh
           ./RunTest_GCC.sh 23
 
-  build_ubuntu_test_and_run_Clang_cpp23:
+  ubuntu_test_Clang_cpp23:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -339,7 +339,7 @@ jobs:
           ./RunTest_Clang.sh 23
 
   #linux-debian
-  build_debian_test_and_run_GCC:
+  debian_test_GCC:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/debian:latest
@@ -367,7 +367,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_GCC.sh 
   
-  build_debian_test_and_run_Clang:
+  debian_test_Clang:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/debian:latest
@@ -395,7 +395,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_Clang.sh 
 
-  build_debian_32bits_test_and_run_GCC:
+  debian32_test_GCC:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
@@ -414,7 +414,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_GCC.sh 
 
-  build_debian_32bits_test_and_run_Clang:
+  debian32_test_Clang:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
@@ -434,7 +434,7 @@ jobs:
             ./RunTest_Clang.sh 
 
   #Mac
-  build_mac_test_and_run_cpp11:
+  mac_apple_chip_test_cpp11:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -455,7 +455,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 11
 
-  build_mac_test_and_run_cpp14:
+  mac_apple_chip_test_cpp14:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -476,7 +476,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 14
 
-  build_mac_test_and_run_cpp17:
+  mac_apple_chip_test_cpp17:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -497,7 +497,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 17
 
-  build_mac_test_and_run_cpp20:
+  mac_apple_chip_test_cpp20:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -518,7 +518,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 20
 
-  build_mac_test_and_run_cpp23:
+  mac_apple_chip_test_cpp23:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -540,7 +540,7 @@ jobs:
           ./RunTest.sh 23
 
   #Unix-FreeBSD
-  build_freeBSD_test_and_run_GCC:
+  freeBSD_test_GCC:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -565,7 +565,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_GCC.sh 
   
-  build_freeBSD_test_and_run_Clang:
+  freeBSD_test_Clang:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

@@ -69,6 +69,25 @@ namespace bq {
         /// <param name="target_utf16_character_num"></param>
         /// <returns>length of final utf16 str, it's len of char16_t*, not char*</returns>
         static uint32_t utf8_to_utf16(const char* src_utf8_str, uint32_t src_character_num, char16_t* target_utf16_str, uint32_t target_utf16_character_num);
+
+
+        template <typename T, typename... V>
+        static T* aligned_new(const size_t alignment, V&&... args)
+        {
+            void* ptr = bq::platform::aligned_alloc(alignment, sizeof(T));
+            if (!ptr) {
+                return nullptr;
+            }
+            new ((void*)ptr, bq::enum_new_dummy::dummy) T(bq::forward<V>(args)...);
+            return static_cast<T*>(ptr);
+        }
+
+        template <typename T, typename... V>
+        static void aligned_delete(T* ptr)
+        {
+            bq::object_destructor<T>::destruct(static_cast<T*>(ptr));
+            bq::platform::aligned_free(ptr);
+        }
     };
 
 }
