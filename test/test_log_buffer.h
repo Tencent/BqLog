@@ -518,12 +518,13 @@ namespace bq {
                     config.high_frequency_threshold_per_second = 1000;
                     bq::log_buffer test_recovery_buffer(config);
                     std::vector<std::thread> task_thread_vector;
+                    uint32_t msg_count_cpy = MESSAGE_PER_VERSION;
                     for (uint32_t thread_idx = 0; thread_idx < THREAD_COUNT; ++thread_idx) {
-                        task_thread_vector.emplace_back([&]() {
+                        task_thread_vector.emplace_back([&test_recovery_buffer, &result, version, thread_idx, msg_count_cpy]() {
                             std::random_device sd;
                             std::minstd_rand linear_ran(sd());
                             std::uniform_int_distribution<int32_t> rand_seq((int32_t)(3 * sizeof(uint32_t)), 1024);
-                            for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
+                            for (uint32_t i = 0; i < msg_count_cpy; ++i) {
                                 uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
                                 auto handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
                                 result.add_result(handle.result == enum_buffer_result_code::success, "recovery test write alloc, size:%" PRIu32 "", alloc_size);
