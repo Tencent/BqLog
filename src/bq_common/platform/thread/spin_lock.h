@@ -55,7 +55,7 @@ namespace bq {
             {
                 auto this_thread_id = bq::platform::thread::get_current_thread_id();
                 auto old_value = node.owner_.exchange_relaxed(this_thread_id);
-                assert(old_value == 0 || old_value == this_thread_id && "a mcs_spin_lock::lock_node only can be used by one thread");
+                assert((old_value == 0 || old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread");
                 if (node.lock_counter_.load_raw() > 0) {
                     node.lock_counter_.fetch_add_raw(1); // reentrant
                     return;
@@ -81,7 +81,7 @@ namespace bq {
             {
                 auto this_thread_id = bq::platform::thread::get_current_thread_id();
                 auto old_value = node.owner_.exchange_relaxed(this_thread_id);
-                assert(old_value == this_thread_id && "a mcs_spin_lock::lock_node only can be used by one thread, and lock() must be called before unlock()");
+                assert((old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread, and lock() must be called before unlock()");
                 auto old_counter = node.lock_counter_.fetch_sub_raw(1);
                 if (old_counter > 1) {
                     return; // reentrant
