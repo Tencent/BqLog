@@ -434,7 +434,7 @@ jobs:
             ./RunTest_Clang.sh 
 
   #Mac
-  mac_apple_chip_test_cpp11:
+  mac_apple_silicon_test_cpp11:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -455,7 +455,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 11
 
-  mac_apple_chip_test_cpp14:
+  mac_apple_silicon_test_cpp14:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -476,7 +476,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 14
 
-  mac_apple_chip_test_cpp17:
+  mac_apple_silicon_test_cpp17:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -497,7 +497,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 17
 
-  mac_apple_chip_test_cpp20:
+  mac_apple_silicon_test_cpp20:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -518,7 +518,7 @@ jobs:
           chmod +x *.sh
           ./RunTest.sh 20
 
-  mac_apple_chip_test_cpp23:
+  mac_apple_silicon_test_cpp23:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
