@@ -26,6 +26,14 @@
 
 namespace bq {
     namespace platform {
+        /*
+         * The MCS spin lock performed exceptionally well on my test devices under
+         * multi-core, high-concurrency scenarios, significantly outperforming regular
+         * spin_lock. However, for some unknown reason, its performance was extremely
+         * poor in the GitHub Actions test environment. Since it’s difficult to run a
+         * profiler on their platform and I’m unclear about their hardware and virtual
+         * machine setup, I’ve temporarily abandoned the MCS spin lock.
+         */
 
         // Similar to Linux MCS lock, but it is a simpler version.
         // MCS Lock is much faster than normal spin lock which is implemented by single atomic variable
@@ -44,6 +52,7 @@ namespace bq {
         public:
             mcs_spin_lock() : tail_(nullptr)
             {
+                assert(false && "mcs_spin_lock is unavailable now, please use spin_lock instead");
             }
 
             mcs_spin_lock(const mcs_spin_lock&) = delete;
