@@ -360,7 +360,7 @@ namespace bq {
                     , config.high_frequency_threshold_per_second < UINT64_MAX ? "Y" : "-");
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms\r", percent, 0);
 
-                //int32_t read_empty_time = 0;
+                int32_t read_empty_time = 0;
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     auto handle = test_buffer.read_chunk();
@@ -368,9 +368,9 @@ namespace bq {
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
                     if (write_finished && read_empty) {
                         // without double check, this may fails on ARM chips, need review.
-                        //if (++read_empty_time >= 2) {
+                        if (++read_empty_time >= 2) {
                             break;
-                        //}
+                        }
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
                         continue;

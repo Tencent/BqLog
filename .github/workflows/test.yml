@@ -339,7 +339,7 @@ jobs:
           ./RunTest_Clang.sh 23
 
   #linux-debian
-  debian_test_GCC:
+  debian_test_GCC_cpp17:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/debian:latest
@@ -367,7 +367,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_GCC.sh 
   
-  debian_test_Clang:
+  debian_test_Clang_cpp17:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/debian:latest
@@ -395,7 +395,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_Clang.sh 
 
-  debian32_test_GCC:
+  debian32_test_GCC_cpp17:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
@@ -414,7 +414,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_GCC.sh 
 
-  debian32_test_Clang:
+  debian32_test_Clang_cpp17:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
@@ -540,7 +540,7 @@ jobs:
           ./RunTest.sh 23
 
   #Unix-FreeBSD
-  freeBSD_test_GCC:
+  freeBSD_test_GCC_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -565,7 +565,7 @@ jobs:
             chmod +x *.sh
             ./RunTest_GCC.sh 
   
-  freeBSD_test_Clang:
+  freeBSD_test_Clang_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
