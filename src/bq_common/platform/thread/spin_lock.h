@@ -35,7 +35,7 @@ namespace bq {
             struct lock_node {
                 bq::platform::atomic<int32_t> lock_counter_ = 0;
                 bq::platform::atomic<lock_node*> next_ = nullptr;
-                //bq::platform::atomic<bq::platform::thread::thread_id> owner_ = 0;
+                bq::platform::atomic<bq::platform::thread::thread_id> owner_ = 0;
             };
         private:
             bq::platform::atomic<lock_node*> tail_;
@@ -53,11 +53,11 @@ namespace bq {
 
             inline void lock(mcs_spin_lock::lock_node& node)
             {
-                //auto this_thread_id = bq::platform::thread::get_current_thread_id();
-                // auto old_value = node.owner_.exchange_relaxed(this_thread_id);
-                // assert((old_value == 0 || old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread");
-                if (node.lock_counter_.load_seq_cst() > 0) {
-                    node.lock_counter_.fetch_add_seq_cst(1); // reentrant
+                auto this_thread_id = bq::platform::thread::get_current_thread_id();
+                auto old_value = node.owner_.exchange_relaxed(this_thread_id);
+                assert((old_value == 0 || old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread");
+                if (node.lock_counter_.load_raw() > 0) {
+                    node.lock_counter_.fetch_add_raw(1); // reentrant
                     return;
                 }
                 lock_node* prev_tail = tail_.exchange_seq_cst(&node);
@@ -65,45 +65,45 @@ namespace bq {
 #if !defined(NDEBUG)
                     assert(prev_tail->next_.load_relaxed() == nullptr && "spin_lock init status error, next_ should be null");
 #endif
-                    prev_tail->next_.store_seq_cst(&node);
+                    prev_tail->next_.store_release(&node);
                     // The acquire and release memory orders provide memory synchronization semantics
                     // for the business logic protected by this lock, ensuring thread safety and data consistency.
-                    while (node.lock_counter_.load_seq_cst() == 0) {
+                    while (node.lock_counter_.load_acquire() == 0) {
                         yield();
                     }
                 }
                 else {
-                    node.lock_counter_.fetch_add_seq_cst(1); //only access in self thread in this case, so no need to use atomic operation
+                    node.lock_counter_.fetch_add_raw(1); //only access in self thread in this case, so no need to use atomic operation
                 }
             }
 
             inline void unlock(mcs_spin_lock::lock_node& node)
             {
-                //auto this_thread_id = bq::platform::thread::get_current_thread_id();
-                // auto old_value = node.owner_.exchange_relaxed(this_thread_id);
-                // assert((old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread, and lock() must be called before unlock()");
-                auto old_counter = node.lock_counter_.fetch_sub_seq_cst(1);
+                auto this_thread_id = bq::platform::thread::get_current_thread_id();
+                auto old_value = node.owner_.exchange_relaxed(this_thread_id);
+                assert((old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread, and lock() must be called before unlock()");
+                auto old_counter = node.lock_counter_.fetch_sub_raw(1);
                 if (old_counter > 1) {
                     return; // reentrant
                 }
                 assert(old_counter >=1 && "mcs_spin_lock unlock time more than lock time");
 
-                lock_node* next = node.next_.load_seq_cst();
+                lock_node* next = node.next_.load_acquire();
                 if (next == nullptr) {
                     lock_node* expected = &node;
-                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
-                        node.lock_counter_.store_seq_cst(0);
-                        node.next_.store_seq_cst(nullptr);
+                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::seq_cst, bq::platform::memory_order::acquire)) {
+                        node.lock_counter_.store_raw(0);
+                        node.next_.store_raw(nullptr);
                         return;
                     }
-                    while ((next = node.next_.load_seq_cst()) == nullptr) {
-                        //yield();
+                    while ((next = node.next_.load_acquire()) == nullptr) {
+                        yield();
                     }
                 }
                 // The acquire and release memory orders provide memory synchronization semantics
                 // for the business logic protected by this lock, ensuring thread safety and data consistency.
-                next->lock_counter_.store_seq_cst(1);
-                node.next_.store_seq_cst(nullptr);
+                next->lock_counter_.store_release(1);
+                node.next_.store_raw(nullptr);
             }
         };
 
