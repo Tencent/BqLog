@@ -255,13 +255,20 @@ namespace bq {
         bool loop_finished = false;
         bool traverse_completed = false;
         rt_reading.traverse_end_block_ = rt_reading.last_block_;
+
+        bool ignore_first_loop = false;
+        if (rt_reading.last_block_ == rt_reading.cur_block_) {
+            assert(!rt_reading.last_block_);
+            if (hp_buffer_.first(bq::group_list::lock_type::no_lock)) {
+                ignore_first_loop = true;
+            }
+        }
         // Principle 1 : Only last_block_ is reliable, because cur_block_ might be recycled in rt_try_traverse_to_next_block_in_group.
         // Principle 2 : traverse_end_block_ always records the last_block_ from the start of each traversal loop.
         // Principle 3 : If the currently processed block or buffer equals traverse_end_block_, it means one full traversal loop has been completed.
         // Principle 4 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
         while (!loop_finished) {
             switch (rt_reading.state_) {
-            case read_state::init:
             case read_state::lp_buffer_reading:
                 if (rt_read_from_lp_buffer(read_handle)) {
                     loop_finished = true;
@@ -271,7 +278,7 @@ namespace bq {
                 }
                 if (!traverse_completed
                         && rt_reading.traverse_end_block_ == nullptr
-                        && rt_reading.state_ != read_state::init) {
+                        && !ignore_first_loop) {
                     if (rt_reading.version_ == version_) {
                         traverse_completed = true;
                     }else {
@@ -339,6 +346,7 @@ namespace bq {
                 assert(false && "unexpected state!");
                 break;
             }
+            ignore_first_loop = false;
         }
         return read_handle;
     }

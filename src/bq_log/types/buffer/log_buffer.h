@@ -161,7 +161,6 @@ namespace bq {
         };
 
         enum class read_state {
-            init,
             lp_buffer_reading,
             hp_block_reading,
             next_block_finding,
@@ -193,7 +192,7 @@ namespace bq {
                 block_node_head* cur_block_ = nullptr;
                 uint16_t version_ = 0;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data    
-                read_state state_ = read_state::init;
+                read_state state_ = read_state::lp_buffer_reading;
                 block_node_head* traverse_end_block_ = nullptr;
             } current_reading_;
 

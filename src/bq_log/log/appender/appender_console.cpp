@@ -54,9 +54,11 @@ namespace bq {
     appender_console::console_buffer::~console_buffer()
     {
         auto real_buffer = buffer_.exchange_seq_cst(nullptr);
-        if (real_buffer) {
-            delete real_buffer;
-        }
+#if BQ_CPP_17 
+        delete real_buffer;
+#else
+        bq::util::aligned_delete(real_buffer);
+#endif
     }
 
     void appender_console::console_buffer::insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
