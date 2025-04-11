@@ -65,10 +65,10 @@ namespace bq {
 #if !defined(NDEBUG)
                     assert(prev_tail->next_.load_relaxed() == nullptr && "spin_lock init status error, next_ should be null");
 #endif
-                    prev_tail->next_.store_release(&node);
+                    prev_tail->next_.store_seq_cst(&node);
                     // The acquire and release memory orders provide memory synchronization semantics
                     // for the business logic protected by this lock, ensuring thread safety and data consistency.
-                    while (node.lock_counter_.load_acquire() == 0) {
+                    while (node.lock_counter_.load_seq_cst() == 0) {
                         yield();
                     }
                 }
@@ -88,21 +88,21 @@ namespace bq {
                 }
                 assert(old_counter >=1 && "mcs_spin_lock unlock time more than lock time");
 
-                lock_node* next = node.next_.load_acquire();
-                if (next == nullptr) { 
+                lock_node* next = node.next_.load_seq_cst();
+                if (next == nullptr) {
                     lock_node* expected = &node;
-                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::seq_cst, bq::platform::memory_order::relaxed)) {
+                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
                         node.lock_counter_.store_raw(0);
                         node.next_.store_raw(nullptr);
                         return;
                     }
-                    while ((next = node.next_.load_acquire()) == nullptr) {
+                    while ((next = node.next_.load_seq_cst()) == nullptr) {
                         //yield();
                     }
                 }
                 // The acquire and release memory orders provide memory synchronization semantics
                 // for the business logic protected by this lock, ensuring thread safety and data consistency.
-                next->lock_counter_.store_release(1);
+                next->lock_counter_.store_seq_cst(1);
                 node.next_.store_raw(nullptr);
             }
         };
