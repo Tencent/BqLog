@@ -104,9 +104,10 @@ namespace bq {
                 : value_()
             {
             }
-            _atomic_base(const value_type& value)
-                : value_(value)
+            _atomic_base(const value_type& val)
+                : value_(val)
             {
+                __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline value_type load(memory_order order = memory_order::seq_cst) const noexcept

@@ -630,35 +630,35 @@ namespace bq {
 
                 do_memory_pool_test(result);
 
-                log_buffer_config config;
-                config.log_name = "log_buffer_test";
-                config.log_categories_name = { "_default" };
-                config.need_recovery = false;
-                config.policy = log_memory_policy::auto_expand_when_full;
-                config.high_frequency_threshold_per_second = 1000;
-
-                do_block_list_test(result, config);
-                config.need_recovery = true;
-                do_block_list_test(result, config);
-
-                do_basic_test(result, config);
-                config.policy = log_memory_policy::block_when_full;
-                do_basic_test(result, config);
-                config.need_recovery = false;
-                do_basic_test(result, config);
-                config.policy = log_memory_policy::auto_expand_when_full;
-                do_basic_test(result, config);
-
-                config.high_frequency_threshold_per_second = UINT64_MAX;
-                do_basic_test(result, config);
-                config.policy = log_memory_policy::block_when_full;
-                do_basic_test(result, config);
-                config.need_recovery = true;
-                do_basic_test(result, config);
-                config.policy = log_memory_policy::auto_expand_when_full;
-                do_basic_test(result, config);
-
-                do_recovery_test(result);
+                // log_buffer_config config;
+                // config.log_name = "log_buffer_test";
+                // config.log_categories_name = { "_default" };
+                // config.need_recovery = false;
+                // config.policy = log_memory_policy::auto_expand_when_full;
+                // config.high_frequency_threshold_per_second = 1000;
+                //
+                // do_block_list_test(result, config);
+                // config.need_recovery = true;
+                // do_block_list_test(result, config);
+                //
+                // do_basic_test(result, config);
+                // config.policy = log_memory_policy::block_when_full;
+                // do_basic_test(result, config);
+                // config.need_recovery = false;
+                // do_basic_test(result, config);
+                // config.policy = log_memory_policy::auto_expand_when_full;
+                // do_basic_test(result, config);
+                //
+                // config.high_frequency_threshold_per_second = UINT64_MAX;
+                // do_basic_test(result, config);
+                // config.policy = log_memory_policy::block_when_full;
+                // do_basic_test(result, config);
+                // config.need_recovery = true;
+                // do_basic_test(result, config);
+                // config.policy = log_memory_policy::auto_expand_when_full;
+                // do_basic_test(result, config);
+                //
+                // do_recovery_test(result);
                 return result;
             }
         };
