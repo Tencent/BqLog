@@ -60,7 +60,7 @@ namespace bq {
                     node.lock_counter_.fetch_add_raw(1); // reentrant
                     return;
                 }
-                lock_node* prev_tail = tail_.exchange_release(&node);
+                lock_node* prev_tail = tail_.exchange_seq_cst(&node);
                 if (prev_tail) {
 #if !defined(NDEBUG)
                     assert(prev_tail->next_.load_relaxed() == nullptr && "spin_lock init status error, next_ should be null");
@@ -91,8 +91,8 @@ namespace bq {
                 lock_node* next = node.next_.load_acquire();
                 if (next == nullptr) { 
                     lock_node* expected = &node;
-                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-                        node.lock_counter_.store_raw(true);
+                    if (tail_.compare_exchange_strong(expected, nullptr, bq::platform::memory_order::seq_cst, bq::platform::memory_order::relaxed)) {
+                        node.lock_counter_.store_raw(0);
                         node.next_.store_raw(nullptr);
                         return;
                     }
