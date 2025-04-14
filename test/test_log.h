@@ -36,7 +36,7 @@ namespace bq {
 						appenders_config.ConsoleAppender.time_zone=default local time
 						appenders_config.ConsoleAppender.levels=[all]
                         log.buffer_size=65535
-                        log.reliable_level=normal
+                        log.recovery=true
 			            log.thread_mode=sync
 
 			        )"

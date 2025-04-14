@@ -153,8 +153,8 @@ namespace bq {
                 if (log_config["buffer_size"].is_integral()) {
                     buffer_config.default_buffer_size = (uint32_t)log_config["buffer_size"];
                 }
-                if (log_config["buffer_mmap"].is_bool()) {
-                    buffer_config.need_recovery = (bool)log_config["buffer_mmap"];
+                if (log_config["recovery"].is_bool()) {
+                    buffer_config.need_recovery = (bool)log_config["recovery"];
                 }
                 if (log_config["buffer_policy_when_full"].is_string()) {
                     if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("discard")) {
