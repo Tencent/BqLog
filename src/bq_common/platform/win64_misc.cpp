@@ -588,6 +588,12 @@ namespace bq {
         {
             _aligned_free(ptr);
         }
+
+        uint64_t file_node_info::hash_code() const
+        {
+            return bq::util::get_hash_64(this, sizeof(file_node_info));
+        }
+
     }
 }
 #endif

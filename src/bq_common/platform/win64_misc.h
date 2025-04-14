@@ -37,10 +37,7 @@ namespace bq {
             DWORD volumn;
             DWORD idx_high;
             DWORD idx_low;
-            uint64_t hash_code() const
-            {
-                return bq::util::get_hash_64(this, sizeof(file_node_info));
-            }
+            uint64_t hash_code() const;
             bool operator==(const file_node_info& rhs) const
             {
                 return volumn == rhs.volumn && idx_high == rhs.idx_high && idx_low == rhs.idx_low;
