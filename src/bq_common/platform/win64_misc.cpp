@@ -465,8 +465,7 @@ namespace bq {
                 SymInitialize(get_common_global_vars().stack_trace_process_, NULL, TRUE);
             }
             stack_trace_current_str_u16_.clear();
-            static bq::platform::mutex stack_trace_mutex_;
-            bq::platform::scoped_mutex lock(stack_trace_mutex_);
+            bq::platform::scoped_mutex lock(get_common_global_vars().stack_trace_mutex_);
             RtlCaptureContext(&context);
 
             STACKFRAME64 stack;
