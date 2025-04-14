@@ -23,7 +23,6 @@
 #include "bq_common/bq_common.h"
 #if BQ_POSIX
 #include <pthread.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -266,33 +265,9 @@ namespace bq {
             return remove_dir_or_file_inner(temp_path, str_len);
         }
 
-        // File exclusive works well across different processes,
-        // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
-        // To eliminate platform compatibility risks, we decided to implement it ourselves.
-        BQ_PACK_BEGIN
-        struct alignas(4) posix_file_node_info {
-            decltype(bq::declval<struct stat>().st_ino) ino;
-            uint64_t hash_code() const
-            {
-                return bq::util::get_hash_64(this, sizeof(posix_file_node_info));
-            }
-            bool operator==(const posix_file_node_info& rhs) const
-            {
-                return ino == rhs.ino;
-            }
-        }
-        BQ_PACK_END
-
-        static bq::hash_map<posix_file_node_info, file_open_mode_enum>& get_file_exclusive_cache()
+        uint64_t file_node_info::hash_code() const
         {
-            static bq::hash_map<posix_file_node_info, file_open_mode_enum> file_exclusive_cache;
-            return file_exclusive_cache;
-        }
-
-        static bq::platform::mutex& get_file_exclusive_mutex()
-        {
-            static bq::platform::mutex file_exclusive_mutex;
-            return file_exclusive_mutex;
+            return bq::util::get_hash_64(this, sizeof(file_node_info));
         }
 
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
@@ -316,10 +291,9 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return false;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            posix_file_node_info node_info;
+            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            file_node_info node_info;
             node_info.ino = file_info.st_ino;
             auto iter = file_exclusive_cache.find(node_info);
             if (iter == file_exclusive_cache.end()) {
@@ -339,10 +313,9 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            posix_file_node_info node_info;
+            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            file_node_info node_info;
             node_info.ino = file_info.st_ino;
             file_exclusive_cache.erase(node_info);
         }
@@ -534,11 +507,6 @@ namespace bq {
             out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
         }
 #endif
-
-        void init_for_file_manager()
-        {
-            get_file_exclusive_mutex();
-        }
 
         void* aligned_alloc(size_t alignment, size_t size)
         {

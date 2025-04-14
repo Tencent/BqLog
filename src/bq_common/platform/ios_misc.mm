@@ -32,18 +32,18 @@ namespace bq {
             ret += ((uint64_t)tv.tv_sec * 1000);
             return ret;
         }
-    
-		static bq::string base_dir;
+
+        base_dir_initializer::base_dir_initializer()
+        {
+            NSString *documents_path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+            base_dir_0_ = [documents_path UTF8String];
+            NSString* cache_path = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
+		    base_dir_1_ = [cache_path UTF8String];
+        }
 
 		const bq::string& get_base_dir(bool is_sandbox)
 		{
-			(void)is_sandbox;
-			if(base_dir.is_empty())
-			{
-				NSString* cache_path = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
-				base_dir = [cache_path UTF8String];
-			}
-			return base_dir;
+            return is_sandbox ? get_common_global_vars().base_dir_init_inst_.base_dir_0_ : get_common_global_vars().base_dir_init_inst_.base_dir_1_;
 		}
     
         bq::string get_programe_home_path()

@@ -218,8 +218,12 @@ namespace bq {
 
                 create_test_log_3_file_appender("snapshot.buffer_size=65536");
                 test_3(result, log_inst);
-                snapeshot1.cancel();
-                snapeshot2.cancel();
+                while (!snapeshot1.cancel()) {
+                    bq::platform::thread::yield();
+                }
+                while (!snapeshot2.cancel()) {
+                    bq::platform::thread::yield();
+                }
                 snapeshot1.join();
                 snapeshot2.join();
 

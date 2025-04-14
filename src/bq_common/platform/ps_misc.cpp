@@ -22,10 +22,14 @@ namespace bq {
             return epoch_milliseconds;
         }
 
-        static bq::string base_dir = "./";
+        base_dir_initializer::base_dir_initializer()
+        {
+            base_dir_0_ = "./";
+        }
+
         const bq::string& get_base_dir(bool is_sandbox)
         {
-            return base_dir;
+            return get_common_global_vars().base_dir_init_inst_.base_dir_0_;
         }
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)

@@ -12,12 +12,12 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include "bq_common/bq_common.h"
-#include "bq_log/bq_log.h"
 #include "bq_log/log/log_manager.h"
+
+#include "bq_log/global/vars.h"
 #include "bq_log/log/log_worker.h"
 
 namespace bq {
-    log_manager* log_manager::static_inst_cache_ = nullptr;
 
     log_manager::log_manager()
     {
@@ -30,20 +30,9 @@ namespace bq {
         bq::util::log_device_console(log_level::info, "log_manager is constructed");
     }
 
-    log_manager& log_manager::scoped_static_instance()
-    {
-        static log_manager inst_;
-        return inst_;
-    }
-
     log_manager& log_manager::instance()
     {
-        if (!static_inst_cache_) {
-            // make sure file_manager's lifecycle can wrap that of log_manager.
-            bq::file_manager::instance();
-            static_inst_cache_ = &scoped_static_instance();
-        }
-        return *static_inst_cache_;
+        return get_log_global_vars().log_manager_inst_;
     }
 
     log_manager::~log_manager()
@@ -70,7 +59,7 @@ namespace bq {
             break;
         case phase::working:
             break;
-        case phase::uninited:
+        case phase::uninitialized:
             util::log_device_console(bq::log_level::error, "you can not create log after BqLog is uninited!");
             return 0;
             break;
@@ -156,7 +145,7 @@ namespace bq {
             break;
         case phase::working:
             break;
-        case phase::uninited:
+        case phase::uninitialized:
             util::log_device_console(bq::log_level::error, "you can not reset log config after BqLog is uninited!");
             return 0;
             break;
@@ -243,7 +232,7 @@ namespace bq {
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
         phase expected_phase = phase::working;
-        if (!phase_.compare_exchange_strong(expected_phase, phase::uninited)) {
+        if (!phase_.compare_exchange_strong(expected_phase, phase::uninitialized)) {
             return;
         }
         public_worker_.cancel();

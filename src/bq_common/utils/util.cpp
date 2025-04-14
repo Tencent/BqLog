@@ -22,12 +22,6 @@
 namespace bq {
     static uint32_t rand_seed = 0;
 
-    static bq::array<char>& get_device_console_buffer()
-    {
-        static bq::array<char> device_console_buffer_({ '\0' });
-        return device_console_buffer_;
-    }
-
     void util::bq_assert(bool cond, bq::string msg)
     {
         if (!cond)
@@ -37,8 +31,7 @@ namespace bq {
 
     void util::bq_record(bq::string msg, string file_name)
     {
-        static bq::platform::mutex mutex_;
-        bq::platform::scoped_mutex lock(mutex_);
+        bq::platform::scoped_mutex lock(get_common_global_vars().console_mutex_);
         string path = TO_ABSOLUTE_PATH(file_name, true);
         bq::file_manager::instance().append_all_text(path, msg);
     }
@@ -110,9 +103,8 @@ namespace bq {
             return;
         }
 #endif
-        auto& device_console_buffer = get_device_console_buffer();
-        static bq::platform::mutex mutex_;
-        bq::platform::scoped_mutex lock(mutex_);
+        auto& device_console_buffer = get_common_global_vars().device_console_buffer_;
+        bq::platform::scoped_mutex lock(get_common_global_vars().console_mutex_);
         va_list args;
         va_start(args, format);
         if (format) {
@@ -147,8 +139,7 @@ namespace bq {
         bq::platform::ios_print(text);
 #else
         decltype(stdout) output_target = stdout;
-        static bq::platform::mutex mutex;
-        bq::platform::scoped_mutex lock(mutex);
+        bq::platform::scoped_mutex lock(get_common_global_vars().console_mutex_);
         switch (level) {
         case bq::log_level::verbose:
             fputs("\033[3m", output_target);

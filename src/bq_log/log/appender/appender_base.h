@@ -30,7 +30,7 @@ namespace bq {
         virtual ~appender_base();
 
     public:
-        static const bq::string& get_config_name_by_type(appender_type type);
+        static const bq::string& get_config_name_by_type(const appender_type type);
         virtual void set_enable(bool enable);
         virtual bool get_enable();
         void clear();

@@ -25,8 +25,7 @@ namespace bq {
 
         static bq::array<void (*)()>& get_jni_onload_callbacks()
         {
-            static bq::array<void (*)()> jni_onload_callbacks_inst;
-            return jni_onload_callbacks_inst;
+            return get_common_global_vars().jni_onload_callbacks_inst_;
         }
 
         jni_env::jni_env()

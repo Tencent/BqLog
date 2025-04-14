@@ -66,6 +66,4 @@ public class log_invoker {
 	public static native void __api_set_console_buffer_enable(boolean enable);
 	
 	public static native boolean __api_fetch_and_remove_console_buffer(Object callback);
-	
-	public static native void __api_uninit();
 }

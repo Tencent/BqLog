@@ -21,13 +21,11 @@ namespace bq {
         enum class phase {
             invalid,
             working,
-            uninited
+            uninitialized
         };
-
+        friend struct log_global_vars;
     private:
         log_manager();
-        static log_manager& scoped_static_instance();
-
     public:
         ~log_manager();
         static log_manager& instance();
@@ -67,7 +65,6 @@ namespace bq {
         bq::layout& get_public_layout();
 
     private:
-        static log_manager* static_inst_cache_;
         bq::platform::atomic<phase> phase_;
         bq::array_inline<bq::unique_ptr<log_imp>> log_imp_list_;
         bq::log_worker public_worker_;

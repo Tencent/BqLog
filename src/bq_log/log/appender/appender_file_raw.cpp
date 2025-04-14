@@ -28,10 +28,9 @@ namespace bq {
         write_with_cache_commit(write_handle);
     }
 
-    static const bq::string log_file_ext_name_raw = ".lograw";
     bq::string appender_file_raw::get_file_ext_name()
     {
-        return log_file_ext_name_raw;
+        return ".lograw";
     }
 
     uint32_t appender_file_raw::get_binary_format_version() const

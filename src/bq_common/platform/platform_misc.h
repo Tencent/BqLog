@@ -69,8 +69,11 @@ namespace bq {
             return static_cast<file_open_mode_enum>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
         }
 
-        //to avoid Static Initialization Order Fiasco
-        void init_for_file_manager();
+        struct base_dir_initializer {
+            bq::string base_dir_0_;
+            bq::string base_dir_1_;
+            base_dir_initializer();
+        };
 
         // TODO optimize use TSC
         uint64_t high_performance_epoch_ms();

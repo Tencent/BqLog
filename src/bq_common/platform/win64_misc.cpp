@@ -49,23 +49,20 @@ namespace bq {
             return ret;
         }
 
-        struct ___base_dir_initializer {
-            bq::string base_dir;
-            ___base_dir_initializer()
-            {
-                bq::array<char> tmp;
+        base_dir_initializer::base_dir_initializer()
+        {
+            bq::array<char> tmp;
+            tmp.fill_uninitialized(1024);
+            while (getcwd(&tmp[0], (int32_t)tmp.size()) == NULL) {
                 tmp.fill_uninitialized(1024);
-                while (_getcwd(&tmp[0], (int32_t)tmp.size()) == NULL) {
-                    tmp.fill_uninitialized(1024);
-                }
-                base_dir = &tmp[0];
             }
-        };
+            base_dir_0_ = &tmp[0];
+        }
+
         const bq::string& get_base_dir(bool is_sandbox)
         {
             (void)is_sandbox;
-            static ___base_dir_initializer base_dir_init_inst;
-            return base_dir_init_inst.base_dir;
+            return get_common_global_vars().base_dir_init_inst_.base_dir_0_;
         }
 
         int32_t get_file_size(const char* file_path, size_t& size_ref)
@@ -242,37 +239,6 @@ namespace bq {
             return remove_dir_or_file_inner(temp_path, str_len);
         }
 
-        // File exclusive works well across different processes,
-        // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
-        // To eliminate platform compatibility risks, we decided to implement it ourselves.
-        BQ_PACK_BEGIN
-        struct alignas(4) windows_file_node_info {
-            DWORD volumn;
-            DWORD idx_high;
-            DWORD idx_low;
-            uint64_t hash_code() const
-            {
-                return bq::util::get_hash_64(this, sizeof(windows_file_node_info));
-            }
-            bool operator==(const windows_file_node_info& rhs) const
-            {
-                return volumn == rhs.volumn && idx_high == rhs.idx_high && idx_low == rhs.idx_low;
-            }
-        }
-        BQ_PACK_END
-
-        static bq::hash_map<windows_file_node_info, file_open_mode_enum> &get_file_exclusive_cache()
-        {
-            static bq::hash_map<windows_file_node_info, file_open_mode_enum> file_exclusive_cache;
-            return file_exclusive_cache;
-        }
-
-        static bq::platform::mutex &get_file_exclusive_mutex()
-        {
-            static bq::platform::mutex file_exclusive_mutex;
-            return file_exclusive_mutex;
-        }
-
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
         {
             if (!(int32_t)(mode & (file_open_mode_enum::write | file_open_mode_enum::exclusive))) {
@@ -283,10 +249,9 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check GetFileInformationByHandle failed");
                 return false;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<windows_file_node_info, file_open_mode_enum> &file_exclusive_cache = get_file_exclusive_cache();
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            windows_file_node_info node_info;
+            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;
             node_info.idx_high = file_info.nFileIndexHigh;
             node_info.idx_low = file_info.nFileIndexLow;
@@ -308,10 +273,9 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check GetFileInformationByHandle failed");
                 return;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            windows_file_node_info node_info;
+            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;
             node_info.idx_high = file_info.nFileIndexHigh;
             node_info.idx_low = file_info.nFileIndexLow;
@@ -477,8 +441,7 @@ namespace bq {
 
         static thread_local bq::string stack_trace_current_str_;
         static thread_local bq::u16string stack_trace_current_str_u16_;
-        static HANDLE stack_trace_process_ = GetCurrentProcess();
-        static bq::platform::atomic<bool> stack_trace_sym_initialized_ = false;
+
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
             const char16_t* u16_str;
@@ -498,8 +461,8 @@ namespace bq {
             HANDLE thread = GetCurrentThread();
             CONTEXT context;
 
-            if (!stack_trace_sym_initialized_.exchange(true, bq::platform::memory_order::relaxed)) {
-                SymInitialize(stack_trace_process_, NULL, TRUE);
+            if (!get_common_global_vars().stack_trace_sym_initialized_.exchange(true, bq::platform::memory_order::relaxed)) {
+                SymInitialize(get_common_global_vars().stack_trace_process_, NULL, TRUE);
             }
             stack_trace_current_str_u16_.clear();
             static bq::platform::mutex stack_trace_mutex_;
@@ -520,7 +483,7 @@ namespace bq {
             uint32_t current_frame_idx = 0;
             while (StackWalk64(
                 IMAGE_FILE_MACHINE_AMD64,
-                stack_trace_process_,
+                get_common_global_vars().stack_trace_process_,
                 thread,
                 &stack,
                 &context,
@@ -536,13 +499,13 @@ namespace bq {
                 symbol->SizeOfStruct = sizeof(SYMBOL_INFOW);
                 symbol->MaxNameLen = MAX_SYM_NAME;
                 DWORD64 displacement64 = 0;
-                bool symbo_found = SymFromAddrW(stack_trace_process_, address, &displacement64, symbol);
+                bool symbo_found = SymFromAddrW(get_common_global_vars().stack_trace_process_, address, &displacement64, symbol);
                 if (!symbo_found && !sym_refreshed) {
                     int32_t error_code = GetLastError();
                     (void)error_code;
                     sym_refreshed = true;
-                    SymRefreshModuleList(stack_trace_process_);
-                    symbo_found = SymFromAddrW(stack_trace_process_, address, &displacement64, symbol);
+                    SymRefreshModuleList(get_common_global_vars().stack_trace_process_);
+                    symbo_found = SymFromAddrW(get_common_global_vars().stack_trace_process_, address, &displacement64, symbol);
                 }
                 if (symbo_found) {
                     if (!effective_stack_started) {
@@ -563,11 +526,11 @@ namespace bq {
                 swprintf((wchar_t*)(char16_t*)stack_trace_current_str_u16_.end() - 16, 16 + 1, L"%016" PRIx64 "", (uintptr_t)address);
                 stack_trace_current_str_u16_.push_back(L'\t');
 
-                DWORD64 module_base = SymGetModuleBase64(stack_trace_process_, address);
+                DWORD64 module_base = SymGetModuleBase64(get_common_global_vars().stack_trace_process_, address);
                 if (!module_base && !sym_refreshed) {
                     sym_refreshed = true;
-                    SymRefreshModuleList(stack_trace_process_);
-                    module_base = SymGetModuleBase64(stack_trace_process_, address);
+                    SymRefreshModuleList(get_common_global_vars().stack_trace_process_);
+                    module_base = SymGetModuleBase64(get_common_global_vars().stack_trace_process_, address);
                 }
 
                 if (module_base) {
@@ -578,7 +541,7 @@ namespace bq {
                     DWORD get_module_length = GetModuleFileNameW(h_module, module_file_name, default_max_module_name_len);
                     if (!get_module_length && !sym_refreshed) {
                         sym_refreshed = true;
-                        SymRefreshModuleList(stack_trace_process_);
+                        SymRefreshModuleList(get_common_global_vars().stack_trace_process_);
                         get_module_length = GetModuleFileNameW(h_module, module_file_name, default_max_module_name_len);
                     }
                     module_file_name[default_max_module_name_len - 1] = (wchar_t)0;
@@ -600,7 +563,7 @@ namespace bq {
                     DWORD displacement = 0;
                     IMAGEHLP_LINEW64 line;
                     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-                    if (SymGetLineFromAddrW64(stack_trace_process_, address, &displacement, &line)) {
+                    if (SymGetLineFromAddrW64(get_common_global_vars().stack_trace_process_, address, &displacement, &line)) {
                         stack_trace_current_str_u16_.push_back(u'(');
                         stack_trace_current_str_u16_ += (const char16_t*)line.FileName;
                         stack_trace_current_str_u16_.push_back(u':');
@@ -615,11 +578,6 @@ namespace bq {
             }
             out_str_ptr = stack_trace_current_str_u16_.begin();
             out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
-        }
-
-        void init_for_file_manager()
-        {
-            get_file_exclusive_mutex();
         }
 
         void* aligned_alloc(size_t alignment, size_t size)

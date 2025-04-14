@@ -318,7 +318,6 @@ namespace bq {
         snapshot_->write_data(handle);
     }
 
-    const static bq::string empty_snapshot;
     const bq::string& log_imp::take_snapshot_string(bool use_gmt_time)
     {
         return snapshot_->take_snapshot_string(use_gmt_time);

@@ -23,9 +23,6 @@
 namespace bq {
     static BQ_TLS int32_t file_manager_file_error_no_ = 0;
 
-    file_manager* file_manager::static_inst_cache_ = nullptr;
-    ;
-
     file_manager::file_manager()
         : mutex(true)
     {
@@ -43,14 +40,7 @@ namespace bq {
 
     file_manager& file_manager::instance()
     {
-        if (!static_inst_cache_) {
-            // Scoped static implementation introduces a small amount of overhead for atomic variable synchronization between threads,
-            // so we implemented a cache optimization.
-            // make sure IO relative static variables can initialize before file_manager and destruct after file_manager
-            bq::platform::init_for_file_manager();
-            static_inst_cache_ = &scoped_static_instance();
-        }
-        return *static_inst_cache_;
+        return get_common_global_vars().file_manager_inst_;
     }
 
     const bq::string& file_manager::get_base_dir(bool in_sand_box)
@@ -593,12 +583,6 @@ namespace bq {
             break;
         }
         return 0;
-    }
-
-    file_manager& file_manager::scoped_static_instance()
-    {
-        static file_manager instance_;
-        return instance_;
     }
 
     int32_t file_manager::get_file_descriptor_index_by_handle(const file_handle& handle) const

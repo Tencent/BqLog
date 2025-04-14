@@ -11,6 +11,7 @@
  */
 #include <stddef.h>
 #include "bq_log/bq_log.h"
+#include "bq_log/global/vars.h"
 
 #if BQ_JAVA
 #include "bq_common/bq_common.h"
@@ -387,11 +388,11 @@ static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_id
 
     bq::platform::jni_env env_holder;
     JNIEnv* env = env_holder.env;
-    static jclass cls = env->FindClass("bq/log");
+    jclass cls = bq::get_log_global_vars().cls_bq_log_;
     if (!cls) {
         return;
     }
-    static jmethodID mid = env->GetStaticMethodID(cls, "native_console_callbck", "(JIILjava/lang/String;)V");
+    jmethodID mid = bq::get_log_global_vars().mid_native_console_callbck_;
     if (!mid) {
         return;
     }
@@ -428,11 +429,11 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
     (void)length;
     bq::platform::jni_env env_holder;
     JNIEnv* env = env_holder.env;
-    static jclass cls = env->FindClass("bq/log");
+    jclass cls = bq::get_log_global_vars().cls_bq_log_;
     if (!cls) {
         return;
     }
-    static jmethodID mid = env->GetStaticMethodID(cls, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
+    jmethodID mid = bq::get_log_global_vars().mid_native_console_buffer_fetch_and_remove_callbck_;
     if (!mid) {
         return;
     }
@@ -447,15 +448,6 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
 JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove_1console_1buffer(JNIEnv*, jclass, jobject callback_obj)
 {
     return bq::api::__api_fetch_and_remove_console_buffer(jni_console_buffer_fetch_callback, callback_obj);
-}
-/*
- * Class:     bq_impl_log_invoker
- * Method:    __api_uninit
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1uninit(JNIEnv*, jclass)
-{
-    bq::api::__api_uninit();
 }
 
 #ifdef __cplusplus

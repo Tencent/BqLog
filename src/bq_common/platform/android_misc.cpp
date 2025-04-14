@@ -24,6 +24,7 @@
 #include <unwind.h>
 #include <dlfcn.h>
 #include <string.h>
+#include "bq_common/bq_common.h"
 
 namespace bq {
     namespace platform {
@@ -37,13 +38,6 @@ namespace bq {
             uint64_t epoch_milliseconds = (uint64_t)(ts.tv_sec) * 1000 + (uint64_t)(ts.tv_nsec) / 1000000;
             return epoch_milliseconds;
         }
-
-        static jobject android_asset_manager_java_instance = nullptr;
-        static AAssetManager* android_asset_manager_inst = nullptr;
-        static bq::string android_internal_storage_path;
-        static bq::string android_external_storage_path;
-        static bq::string android_id;
-        static bq::string android_package_name;
 
         jobject get_global_context()
         {
@@ -206,24 +200,24 @@ namespace bq {
                 "()Landroid/content/res/AssetManager;");
             jobject context = get_global_context();
             jobject android_asset_manager_tmp = env->CallObjectMethod(context, get_asset_manager_method);
-            android_asset_manager_java_instance = env->NewGlobalRef(android_asset_manager_tmp);
-            android_asset_manager_inst = AAssetManager_fromJava(env, android_asset_manager_java_instance);
+            get_common_global_vars().android_asset_manager_java_instance_ = env->NewGlobalRef(android_asset_manager_tmp);
+            get_common_global_vars().android_asset_manager_inst_ = AAssetManager_fromJava(env, get_common_global_vars().android_asset_manager_java_instance_);
         }
 
         const bq::string& get_base_dir(bool is_sandbox)
         {
             assert(bq::platform::get_jvm() && "JNI_Onload was not invoked yet");
             if (is_sandbox) {
-                return android_internal_storage_path;
+                return get_common_global_vars().base_dir_init_inst_.base_dir_0_;
             } else {
-                return android_external_storage_path;
+                return get_common_global_vars().base_dir_init_inst_.base_dir_1_;
             }
         }
 
-        const bq::string& get_android_id()
+        const bq::string& get_get_common_global_vars().android_id_()
         {
-            if (!android_id.is_empty())
-                return android_id;
+            if (!get_common_global_vars().android_id_.is_empty())
+                return get_common_global_vars().android_id_;
             jni_env env_holder;
             JNIEnv* env = env_holder.env;
             jobject context = get_global_context();
@@ -233,25 +227,25 @@ namespace bq {
                 "()Landroid/content/ContentResolver;");
             jobject resolver_instance = env->CallObjectMethod(context, method);
 
-            // get android_id from android Settings$Secure
+            // get get_common_global_vars().android_id_ from android Settings$Secure
             jclass android_settings_class = env->FindClass("android/provider/Settings$Secure");
             jmethodID method_id = env->GetStaticMethodID(android_settings_class, "getString",
                 "(Landroid/content/ContentResolver;Ljava/lang/"
                 "String;)Ljava/lang/String;");
-            jstring param_android_id = env->NewStringUTF("android_id");
-            jstring android_id_string = (jstring)env->CallStaticObjectMethod(
-                android_settings_class, method_id, resolver_instance, param_android_id);
-            const char* android_id_c_str = env->GetStringUTFChars(android_id_string, JNI_FALSE);
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "android_id: %s\n", android_id_c_str);
-            android_id = android_id_c_str;
-            env->ReleaseStringUTFChars(android_id_string, android_id_c_str);
-            return android_id;
+            jstring param_get_common_global_vars().android_id_ = env->NewStringUTF("get_common_global_vars().android_id_");
+            jstring get_common_global_vars().android_id_string = (jstring)env->CallStaticObjectMethod(
+                android_settings_class, method_id, resolver_instance, param_get_common_global_vars().android_id_);
+            const char* get_common_global_vars().android_id_c_str = env->GetStringUTFChars(get_common_global_vars().android_id_string, JNI_FALSE);
+            __android_log_print(ANDROID_LOG_INFO, "Bq", "get_common_global_vars().android_id_: %s\n", get_common_global_vars().android_id_c_str);
+            get_common_global_vars().android_id_ = get_common_global_vars().android_id_c_str;
+            env->ReleaseStringUTFChars(get_common_global_vars().android_id_string, get_common_global_vars().android_id_c_str);
+            return get_common_global_vars().android_id_;
         }
 
         const bq::string& get_package_name()
         {
-            if (!android_package_name.is_empty())
-                return android_package_name;
+            if (!get_common_global_vars().android_package_name_.is_empty())
+                return get_common_global_vars().android_package_name_;
             jni_env env_holder;
             JNIEnv* env = env_holder.env;
             jobject context = get_global_context();
@@ -261,17 +255,16 @@ namespace bq {
             jstring package_name_string = (jstring)env->CallObjectMethod(context,
                 get_package_name_method);
             const char* package_name_c_str = env->GetStringUTFChars(package_name_string, JNI_FALSE);
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "android_package_name: %s\n", package_name_c_str);
-            android_package_name = package_name_c_str;
+            __android_log_print(ANDROID_LOG_INFO, "Bq", "get_common_global_vars().android_package_name_: %s\n", package_name_c_str);
+            get_common_global_vars().android_package_name_ = package_name_c_str;
             env->ReleaseStringUTFChars(package_name_string, package_name_c_str);
-            return android_package_name;
+            return get_common_global_vars().android_package_name_;
         }
 
         const bq::string& get_apk_path()
         {
-            static bq::string apk_path;
-            static bq::platform::spin_lock spin_lock;
-            bq::platform::scoped_spin_lock lock(spin_lock);
+            bq::string& apk_path = get_common_global_vars().apk_path_;
+            bq::platform::scoped_spin_lock lock(get_common_global_vars().apk_path_spin_lock_);
             if (!apk_path.is_empty()) {
                 return apk_path;
             }
@@ -299,7 +292,7 @@ namespace bq {
         android_asset_file_handle android_asset_file_open(const bq::string& path)
         {
             android_asset_file_handle result;
-            result.asset = (void*)AAssetManager_open(android_asset_manager_inst, path.c_str(), AASSET_MODE_UNKNOWN);
+            result.asset = (void*)AAssetManager_open(get_common_global_vars().android_asset_manager_inst_, path.c_str(), AASSET_MODE_UNKNOWN);
             result.path = path.trim();
             return result;
         }
@@ -357,7 +350,7 @@ namespace bq {
         android_asset_dir_handle android_asset_dir_open(const bq::string& path)
         {
             android_asset_dir_handle result;
-            result.asset = (void*)AAssetManager_openDir(android_asset_manager_inst, path.c_str());
+            result.asset = (void*)AAssetManager_openDir(get_common_global_vars().android_asset_manager_inst_, path.c_str());
             result.path = path.trim();
             // AAssetManager_openDir will never return null whether it is directory or not.
             // so we use this method to ensure it is a real directory.
@@ -400,10 +393,10 @@ namespace bq {
             jni_env env_holder;
             JNIEnv* env = env_holder.env;
             bq::array<bq::string> list;
-            jclass cls = env->GetObjectClass(android_asset_manager_java_instance);
+            jclass cls = env->GetObjectClass(get_common_global_vars().android_asset_manager_java_instance_);
             jmethodID list_method = env->GetMethodID(cls, "list", "(Ljava/lang/String;)[Ljava/lang/String;");
             jstring java_path = env->NewStringUTF(handle.path.c_str());
-            jobjectArray string_array = (jobjectArray)env->CallObjectMethod(android_asset_manager_java_instance, list_method, java_path);
+            jobjectArray string_array = (jobjectArray)env->CallObjectMethod(get_common_global_vars().android_asset_manager_java_instance_, list_method, java_path);
             if (env->ExceptionOccurred()) {
                 env->ExceptionDescribe();
                 env->ExceptionClear();
@@ -439,43 +432,43 @@ namespace bq {
 
             init_android_asset_manager();
 
-            android_internal_storage_path = get_files_dir();
-            android_external_storage_path = get_external_files_dir();
+            get_common_global_vars().base_dir_init_inst_.base_dir_0_ = get_files_dir();
+            get_common_global_vars().base_dir_init_inst_.base_dir_1_ = get_external_files_dir();
 
             // priority:
             // for sand box dir: internal storage -> external storage -> cache storage
             // for not in sand box dir: external storage -> internal storage -> cache storage
             bool need_alarm = false;
-            if (android_internal_storage_path.is_empty() || !can_write_to_dir(android_internal_storage_path)) {
+            if (get_common_global_vars().base_dir_init_inst_.base_dir_0_.is_empty() || !can_write_to_dir(get_common_global_vars().base_dir_init_inst_.base_dir_0_)) {
                 bq::string candidiate_path;
-                if (android_external_storage_path.is_empty() || !can_write_to_dir(android_external_storage_path)) {
+                if (get_common_global_vars().base_dir_init_inst_.base_dir_1_.is_empty() || !can_write_to_dir(get_common_global_vars().base_dir_init_inst_.base_dir_1_)) {
                     need_alarm = true;
                     candidiate_path = get_cache_dir();
                 } else {
-                    candidiate_path = android_external_storage_path;
+                    candidiate_path = get_common_global_vars().base_dir_init_inst_.base_dir_1_;
                 }
                 __android_log_print(ANDROID_LOG_WARN, "Bq",
-                    "android_internal_storage_path:\"%s\" can_write_to_dir = false, use \"%s\" instead",
-                    android_internal_storage_path.c_str(),
+                    "get_common_global_vars().base_dir_init_inst_.base_dir_0_:\"%s\" can_write_to_dir = false, use \"%s\" instead",
+                    get_common_global_vars().base_dir_init_inst_.base_dir_0_.c_str(),
                     candidiate_path.c_str());
-                android_internal_storage_path = candidiate_path;
+                get_common_global_vars().base_dir_init_inst_.base_dir_0_ = candidiate_path;
             }
-            if (android_external_storage_path.is_empty() || !can_write_to_dir(android_external_storage_path)) {
+            if (get_common_global_vars().base_dir_init_inst_.base_dir_1_.is_empty() || !can_write_to_dir(get_common_global_vars().base_dir_init_inst_.base_dir_1_)) {
                 bq::string candidiate_path;
-                if (android_internal_storage_path.is_empty() || !can_write_to_dir(android_internal_storage_path)) {
+                if (get_common_global_vars().base_dir_init_inst_.base_dir_0_.is_empty() || !can_write_to_dir(get_common_global_vars().base_dir_init_inst_.base_dir_0_)) {
                     need_alarm = true;
                     candidiate_path = get_cache_dir();
                 } else {
-                    candidiate_path = android_internal_storage_path;
+                    candidiate_path = get_common_global_vars().base_dir_init_inst_.base_dir_0_;
                 }
                 __android_log_print(ANDROID_LOG_WARN, "Bq",
-                    "android_external_storage_path:\"%s\" can_write_to_dir = false, use \"%s\" instead",
-                    android_external_storage_path.c_str(),
+                    "get_common_global_vars().base_dir_init_inst_.base_dir_1_:\"%s\" can_write_to_dir = false, use \"%s\" instead",
+                    get_common_global_vars().base_dir_init_inst_.base_dir_1_.c_str(),
                     candidiate_path.c_str());
-                android_external_storage_path = candidiate_path;
+                get_common_global_vars().base_dir_init_inst_.base_dir_1_ = candidiate_path;
             }
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "Storage Path In Sand Box:%s", android_internal_storage_path.c_str());
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "Storage Path Out Sand Box:%s", android_external_storage_path.c_str());
+            __android_log_print(ANDROID_LOG_INFO, "Bq", "Storage Path In Sand Box:%s", get_common_global_vars().base_dir_init_inst_.base_dir_0_.c_str());
+            __android_log_print(ANDROID_LOG_INFO, "Bq", "Storage Path Out Sand Box:%s", get_common_global_vars().base_dir_init_inst_.base_dir_1_.c_str());
             if (need_alarm) {
                 __android_log_print(ANDROID_LOG_ERROR, "Bq", "If you are using BQ in isolateProcess Android Service, you may not have any I/O read/write permissions, and all file read/write operations will fail.");
             }

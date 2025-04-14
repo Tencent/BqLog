@@ -159,11 +159,11 @@ namespace bq {
         };
 
         template <int SIG>
-        bool log_signal_handler<SIG>::registered = false;
+        bool log_signal_handler<SIG>::registered; // false (according to C++ Zero Initialization);
         template <int SIG>
         struct sigaction log_signal_handler<SIG>::original_sigaction;
         template <int SIG>
-        typename log_signal_handler<SIG>::sigaction_func_type log_signal_handler<SIG>::handler = nullptr;
+        typename log_signal_handler<SIG>::sigaction_func_type log_signal_handler<SIG>::handler; // nullptr (according to C++ Zero Initialization);
 
         static void log_crash_handler(int signal, siginfo_ptr_type info, void*)
         {
@@ -485,11 +485,6 @@ namespace bq {
             bq::platform::get_stack_trace_utf16(skip_frame_count, str, len);
             out_name_ptr->str = str;
             out_name_ptr->len = len;
-        }
-
-        BQ_API void __api_uninit()
-        {
-            bq::log_manager::instance().uninit();
         }
     }
 }

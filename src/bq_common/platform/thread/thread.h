@@ -74,7 +74,7 @@ namespace bq {
 
             void join();
 
-            void cancel();
+            bool cancel();
 
             bool is_cancelled();
 

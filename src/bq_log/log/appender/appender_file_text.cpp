@@ -14,7 +14,6 @@
 #include "bq_log/log/log_imp.h"
 
 namespace bq {
-    // static char appender_file_text_end_line[] = { '\r', '\n' };    //use LF intead of CRLF
 
     void appender_file_text::log_impl(const log_entry_handle& handle)
     {
@@ -43,10 +42,9 @@ namespace bq {
         appender_file_base::on_file_open(is_new_created);
     }
 
-    static const bq::string log_file_ext_name_text = ".log";
     bq::string appender_file_text::get_file_ext_name()
     {
-        return log_file_ext_name_text;
+        return ".log";
     }
 
 }

@@ -11,6 +11,8 @@
  */
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/appender/appender_base.h"
+
+#include "bq_log/global/vars.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/utils/log_utils.h"
 
@@ -25,10 +27,9 @@ namespace bq {
         clear();
     }
 
-    const bq::string& appender_base::get_config_name_by_type(appender_base::appender_type type)
+    const bq::string& appender_base::get_config_name_by_type(const appender_base::appender_type type)
     {
-        const static bq::string TYPE_CONFIG_NAME[(int32_t)appender_base::appender_type::type_count] = { "console", "text_file", "raw_file", "compressed_file" };
-        return TYPE_CONFIG_NAME[(int32_t)type];
+        return get_log_global_vars().log_appender_type_names_[static_cast<int32_t>(type)];
     }
 
     void appender_base::set_enable(bool enable)

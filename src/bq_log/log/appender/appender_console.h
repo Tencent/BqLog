@@ -16,6 +16,7 @@
 
 namespace bq {
     class appender_console : public appender_base {
+        friend struct log_global_vars;
     private:
         class console_callbacks {
         private:

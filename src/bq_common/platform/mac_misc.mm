@@ -33,25 +33,22 @@ namespace bq {
             ret += ((uint64_t)tv.tv_sec * 1000);
             return ret;
         }
-    
-		struct ___base_dir_initializer {
-			bq::string base_dir;
-			___base_dir_initializer()
+
+        base_dir_initializer::base_dir_initializer()
+        {
+            bq::array<char> tmp;
+			tmp.fill_uninitialized(1024);
+			while (getcwd(&tmp[0], (int32_t)tmp.size()) == NULL)
 			{
-				bq::array<char> tmp;
 				tmp.fill_uninitialized(1024);
-				while (getcwd(&tmp[0], (int32_t)tmp.size()) == NULL)
-				{
-					tmp.fill_uninitialized(1024);
-				}
-				base_dir = &tmp[0];
 			}
-		};
+            base_dir_0_ = &tmp[0];
+        }
+
 		const bq::string& get_base_dir(bool is_sandbox)
 		{
 			(void)is_sandbox;
-			static ___base_dir_initializer base_dir_init_inst;
-			return base_dir_init_inst.base_dir;
+			return get_common_global_vars().base_dir_init_inst_.base_dir_0_;
 		}
 
         bool share_file(const char* file_path)

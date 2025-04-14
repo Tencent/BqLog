@@ -97,9 +97,11 @@ namespace bq {
         return static_cast<file_open_mode_enum>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
     }
 
+    struct common_global_vars;
+
     class file_manager {
         friend file_handle;
-
+        friend struct common_global_vars;
     private:
         struct file_descriptor {
             bq::platform::platform_file_handle* handle_ptr;
@@ -287,13 +289,10 @@ namespace bq {
         size_t get_file_size(const file_handle& handle) const;
 
     private:
-        static file_manager& scoped_static_instance();
         int32_t get_file_descriptor_index_by_handle(const file_handle& handle) const;
         void inc_ref(const file_handle& handle);
 
     private:
-        static file_manager* static_inst_cache_;
-
         uint32_t seq_generator;
 
         array<file_descriptor> file_descriptors;

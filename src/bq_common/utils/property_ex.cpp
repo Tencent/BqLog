@@ -341,8 +341,7 @@ namespace bq {
 
     const bq::property_value& property_value::get_null_value()
     {
-        static property_value null_value(enum_property_value_type::null);
-        return null_value;
+        return get_common_global_vars().null_property_value_;
     }
 
     property_value& property_value::add_null_array_item()

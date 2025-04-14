@@ -13,6 +13,8 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/appender/appender_console.h"
+
+#include "bq_log/global/vars.h"
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 
 namespace bq {
@@ -213,7 +215,6 @@ namespace bq {
 
     appender_console::console_static_misc& appender_console::get_console_misc()
     {
-        static console_static_misc console_misc_inst_;
-        return console_misc_inst_;
+        return get_log_global_vars().console_static_misc_;
     }
 }

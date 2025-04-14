@@ -10,6 +10,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_log/log/decoder/appender_decoder_manager.h"
+
+#include "bq_log/global/vars.h"
 #include "bq_log/log/decoder/appender_decoder_raw.h"
 #include "bq_log/log/decoder/appender_decoder_compressed.h"
 #include "bq_log/log/appender/appender_file_binary.h"
@@ -30,9 +32,7 @@ bq::appender_decoder_manager::~appender_decoder_manager()
 
 bq::appender_decoder_manager& bq::appender_decoder_manager::instance()
 {
-    bq::file_manager::instance();
-    static appender_decoder_manager inst;
-    return inst;
+    return get_log_global_vars().appender_decoder_manager_inst_;
 }
 
 bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq::string& path, uint32_t& out_handle)

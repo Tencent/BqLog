@@ -11,11 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #ifdef BQ_POSIX
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <pwd.h>
+#include <sys/stat.h>
 #include "bq_common/platform/macros.h"
 #include "bq_common/types/array.h"
 #include "bq_common/types/string.h"
@@ -28,6 +24,20 @@ namespace bq {
         {
             return file_handle >= 0;
         }
+
+        // File exclusive works well across different processes,
+        // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
+        // To eliminate platform compatibility risks, we decided to implement it ourselves.
+        BQ_PACK_BEGIN
+        struct alignas(4) file_node_info {
+            decltype(bq::declval<struct stat>().st_ino) ino;
+            uint64_t hash_code() const;
+            bool operator==(const file_node_info& rhs) const
+            {
+                return ino == rhs.ino;
+            }
+        }
+        BQ_PACK_END
     }
 }
 #endif
