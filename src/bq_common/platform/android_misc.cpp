@@ -16,11 +16,9 @@
 #include <pthread.h>
 #include <sys/prctl.h>
 #include <jni.h>
-#include <android/log.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
-#include <android/asset_manager_jni.h>
 #include <unwind.h>
 #include <dlfcn.h>
 #include <string.h>
@@ -67,6 +65,10 @@ namespace bq {
             }
             env->DeleteGlobalRef(context_inst_new);
             return context_inst_atomic.load();
+        }
+
+        base_dir_initializer::base_dir_initializer(){
+            //empty implementation
         }
 
         bool can_write_to_dir(bq::string path)
@@ -165,8 +167,7 @@ namespace bq {
             if (context == nullptr) {
                 return "";
             }
-            jobject external_files_dir_obj = env->CallObjectMethod(context, get_external_files_dir_method,
-                nullptr);
+            jobject external_files_dir_obj = env->CallObjectMethod(context, get_external_files_dir_method, nullptr);
             if (env->ExceptionOccurred()) {
                 env->ExceptionDescribe();
                 env->ExceptionClear();
@@ -214,7 +215,7 @@ namespace bq {
             }
         }
 
-        const bq::string& get_get_common_global_vars().android_id_()
+        const bq::string& get_android_id()
         {
             if (!get_common_global_vars().android_id_.is_empty())
                 return get_common_global_vars().android_id_;
@@ -232,13 +233,13 @@ namespace bq {
             jmethodID method_id = env->GetStaticMethodID(android_settings_class, "getString",
                 "(Landroid/content/ContentResolver;Ljava/lang/"
                 "String;)Ljava/lang/String;");
-            jstring param_get_common_global_vars().android_id_ = env->NewStringUTF("get_common_global_vars().android_id_");
-            jstring get_common_global_vars().android_id_string = (jstring)env->CallStaticObjectMethod(
-                android_settings_class, method_id, resolver_instance, param_get_common_global_vars().android_id_);
-            const char* get_common_global_vars().android_id_c_str = env->GetStringUTFChars(get_common_global_vars().android_id_string, JNI_FALSE);
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "get_common_global_vars().android_id_: %s\n", get_common_global_vars().android_id_c_str);
-            get_common_global_vars().android_id_ = get_common_global_vars().android_id_c_str;
-            env->ReleaseStringUTFChars(get_common_global_vars().android_id_string, get_common_global_vars().android_id_c_str);
+            jstring android_id = env->NewStringUTF("get_common_global_vars().android_id_");
+            jstring android_id_string = (jstring)env->CallStaticObjectMethod(
+                android_settings_class, method_id, resolver_instance, android_id);
+            const char* android_id_c_str = env->GetStringUTFChars(android_id_string, JNI_FALSE);
+            __android_log_print(ANDROID_LOG_INFO, "Bq", "get_common_global_vars().android_id_: %s\n", android_id_c_str);
+            get_common_global_vars().android_id_ = android_id_c_str;
+            env->ReleaseStringUTFChars(android_id_string, android_id_c_str);
             return get_common_global_vars().android_id_;
         }
 

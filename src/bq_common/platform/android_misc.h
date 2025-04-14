@@ -14,6 +14,8 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <android/log.h>
+#include <android/asset_manager_jni.h>
 #include "bq_common/platform/macros.h"
 #include "bq_common/types/array.h"
 #include "bq_common/types/string.h"

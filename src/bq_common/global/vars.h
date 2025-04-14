@@ -33,7 +33,7 @@ namespace bq {
 #endif
 #if BQ_ANDROID
         jobject android_asset_manager_java_instance_ = nullptr;
-        struct AAssetManager* android_asset_manager_inst_ = nullptr;
+        AAssetManager* android_asset_manager_inst_ = nullptr;
         bq::string android_id_;
         bq::string android_package_name_;
         bq::string apk_path_;
