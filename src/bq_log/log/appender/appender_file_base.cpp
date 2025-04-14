@@ -101,6 +101,10 @@ namespace bq {
 
         config_file_name_ = ((string)config_obj["file_name"]).trim();
 
+        if (config_obj["always_create_new_file"].is_bool()) {
+            always_create_new_file_ = (bool)config_obj["always_create_new_file"];
+        }
+
         if (config_obj["max_file_size"].is_integral()) {
             max_file_size_ = (size_t)(int64_t)config_obj["max_file_size"];
         } else {
@@ -314,7 +318,7 @@ namespace bq {
                 }
             }
         }
-        if (is_prev_file_exist || max_index == 0) {
+        if (is_prev_file_exist || max_index == 0 || always_create_new_file_) {
             // open a new file
             max_index++;
         } else {

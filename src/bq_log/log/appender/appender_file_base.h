@@ -116,6 +116,7 @@ namespace bq {
 
     private:
         bq::string config_file_name_;
+        bool always_create_new_file_ = false;
         size_t max_file_size_;
         size_t current_file_size_;
         bq::file_handle file_;
