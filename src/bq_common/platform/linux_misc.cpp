@@ -9,7 +9,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/platform/platform_misc.h"
+#include "bq_common/bq_common.h"
 #if BQ_LINUX
 #include <pthread.h>
 #include <sys/time.h>
