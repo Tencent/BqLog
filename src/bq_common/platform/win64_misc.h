@@ -39,9 +39,9 @@ namespace bq {
             DWORD idx_low;
             uint64_t hash_code() const
             {
-                return bq::util::get_hash_64(this, sizeof(windows_file_node_info));
+                return bq::util::get_hash_64(this, sizeof(file_node_info));
             }
-            bool operator==(const windows_file_node_info& rhs) const
+            bool operator==(const file_node_info& rhs) const
             {
                 return volumn == rhs.volumn && idx_high == rhs.idx_high && idx_low == rhs.idx_low;
             }
