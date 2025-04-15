@@ -43,7 +43,7 @@ namespace bq {
 
 		const bq::string& get_base_dir(bool is_sandbox)
 		{
-            return is_sandbox ? get_common_global_vars().base_dir_init_inst_.base_dir_0_ : get_common_global_vars().base_dir_init_inst_.base_dir_1_;
+            return is_sandbox ? common_global_vars::get().base_dir_init_inst_.base_dir_0_ : common_global_vars::get().base_dir_init_inst_.base_dir_1_;
 		}
     
         bq::string get_programe_home_path()

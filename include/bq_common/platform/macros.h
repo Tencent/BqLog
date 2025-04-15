@@ -151,3 +151,12 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(char* from)
 #if __cplusplus >= 202002L
 #define BQ_CPP_20 1
 #endif
+
+
+#if defined(BQ_CPP17)
+#if defined(BQ_IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
+#define BQ_ALIGNAS_NEW 1
+#else
+#define BQ_ALIGNAS_NEW 1
+#endif
+#endif
