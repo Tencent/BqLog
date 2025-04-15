@@ -48,7 +48,7 @@ namespace bq {
 		const bq::string& get_base_dir(bool is_sandbox)
 		{
 			(void)is_sandbox;
-			return get_common_global_vars().base_dir_init_inst_.base_dir_0_;
+			return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
 		}
 
         bool share_file(const char* file_path)

@@ -91,7 +91,7 @@ namespace bq {
                         }
                     }
                 } else {
-#if BQ_CPP_17
+#if BQ_ALIGNAS_NEW
                     delete pair.value();
 #else
                     bq::util::aligned_delete(pair.value());
@@ -466,7 +466,7 @@ namespace bq {
         if (context.version_ == version_) {
             // for new data
             if (context.is_thread_finished_) {
-#if BQ_CPP_17
+#if BQ_ALIGNAS_NEW
                 delete context.get_tls_info();
 #else
                 bq::util::aligned_delete(context.get_tls_info());

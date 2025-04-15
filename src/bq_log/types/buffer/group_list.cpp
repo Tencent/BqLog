@@ -240,7 +240,7 @@ namespace bq {
             if (index_value > current_group_index_.load(bq::platform::memory_order::relaxed)) {
                 current_group_index_.store(index_value, bq::platform::memory_order::relaxed);
             }
-#if BQ_CPP_17
+#if BQ_ALIGNAS_NEW
             group_node* new_node = new group_node(this, max_block_count_per_group_, index_value);
 #else
             auto* new_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, index_value);
@@ -257,7 +257,7 @@ namespace bq {
             delete_and_unlock_thread_unsafe(iter);
         }
         while (auto node = pool_.pop()) {
-#if BQ_CPP_17
+#if BQ_ALIGNAS_NEW
             delete node;
 #else
             bq::util::aligned_delete(node);
@@ -298,7 +298,7 @@ namespace bq {
             if (!result) {
                 src_node = pool_.pop();
                 if (!src_node) {
-#if BQ_CPP_17
+#if BQ_ALIGNAS_NEW
                     src_node = new bq::group_node(this, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
 #else
                     src_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
@@ -337,7 +337,7 @@ namespace bq {
             },
                 &current_epoch_ms);
             if (candidiate) {
-#if BQ_CPP_17
+#if BQ_ALIGNAS_NEW
                 delete candidiate;
 #else
                 bq::util::aligned_delete(candidiate);
