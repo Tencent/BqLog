@@ -29,7 +29,7 @@ namespace bq {
 
         const bq::string& get_base_dir(bool is_sandbox)
         {
-            return get_common_global_vars().base_dir_init_inst_.base_dir_0_;
+            return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
         }
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)

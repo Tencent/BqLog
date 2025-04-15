@@ -27,9 +27,9 @@ namespace bq {
         clear();
     }
 
-    const bq::string& appender_base::get_config_name_by_type(const appender_base::appender_type type)
+    bq::string appender_base::get_config_name_by_type(const appender_base::appender_type type)
     {
-        return get_log_global_vars().log_appender_type_names_[static_cast<int32_t>(type)];
+        return log_global_vars::get().log_appender_type_names_[static_cast<int32_t>(type)];
     }
 
     void appender_base::set_enable(bool enable)

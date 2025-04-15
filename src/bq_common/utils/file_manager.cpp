@@ -40,7 +40,7 @@ namespace bq {
 
     file_manager& file_manager::instance()
     {
-        return get_common_global_vars().file_manager_inst_;
+        return *common_global_vars::get().file_manager_inst_;
     }
 
     const bq::string& file_manager::get_base_dir(bool in_sand_box)

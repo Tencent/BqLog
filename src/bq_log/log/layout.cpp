@@ -66,8 +66,8 @@ namespace bq {
             bq::util::log_device_console(log_level::error, "layout_prefix error, log_level %d, maybe header file or struct mismatch in include", level);
             return enum_layout_result::parse_error;
         }
-        const auto& level_str = get_log_global_vars().log_level_str_[(int32_t)log_entry.get_level()];
-        insert_str_utf8(level_str.c_str(), (uint32_t)level_str.size());
+        const auto& level_str = log_global_vars::get().log_level_str_[(int32_t)log_entry.get_level()];
+        insert_str_utf8(level_str, sizeof(level_str));
         insert_char('\t');
 
         if (head.category_idx >= categories_name_array_ptr_->size()) {
@@ -96,14 +96,14 @@ namespace bq {
                 bq::util::get_local_time_by_epoch(epoch, time_st);
             }
             time_cache_len_ = snprintf(time_cache_, sizeof(time_cache_),
-                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? get_log_global_vars().utc_time_zone_str_ : get_log_global_vars().time_zone_str_, time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec);
+                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? log_global_vars::get().utc_time_zone_str_ : log_global_vars::get().time_zone_str_, time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec);
             last_time_epoch_cache_ = epoch;
         }
         memcpy(&format_content[format_content_cursor], time_cache_, time_cache_len_);
         format_content_cursor += (uint32_t)time_cache_len_;
 
         int32_t millsec = static_cast<int32_t>(epoch % 1000);
-        const char* ms_src = &get_log_global_vars().digit3_array[millsec * 3];
+        const char* ms_src = &log_global_vars::get().digit3_array[millsec * 3];
         char* ms_dest = &format_content[format_content_cursor];
         ms_dest[0] = ms_src[0];
         ms_dest[1] = ms_src[1];

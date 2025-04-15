@@ -16,5 +16,5 @@
 #include "bq_common/bq_common.h"
 
 namespace bq {
-    common_global_vars* common_global_vars_holder::global_vars_ptr_ = &init_common_global_vars();;
+    static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();
 }

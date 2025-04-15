@@ -62,7 +62,7 @@ namespace bq {
         const bq::string& get_base_dir(bool is_sandbox)
         {
             (void)is_sandbox;
-            return get_common_global_vars().base_dir_init_inst_.base_dir_0_;
+            return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
         }
 
         int32_t get_file_size(const char* file_path, size_t& size_ref)
@@ -249,8 +249,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check GetFileInformationByHandle failed");
                 return false;
             }
-            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
-            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
             file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;
             node_info.idx_high = file_info.nFileIndexHigh;
@@ -273,8 +273,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check GetFileInformationByHandle failed");
                 return;
             }
-            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
-            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
             file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;
             node_info.idx_high = file_info.nFileIndexHigh;
@@ -461,11 +461,11 @@ namespace bq {
             HANDLE thread = GetCurrentThread();
             CONTEXT context;
 
-            if (!get_common_global_vars().stack_trace_sym_initialized_.exchange(true, bq::platform::memory_order::relaxed)) {
-                SymInitialize(get_common_global_vars().stack_trace_process_, NULL, TRUE);
+            if (!common_global_vars::get().stack_trace_sym_initialized_.exchange(true, bq::platform::memory_order::relaxed)) {
+                SymInitialize(common_global_vars::get().stack_trace_process_, NULL, TRUE);
             }
             stack_trace_current_str_u16_.clear();
-            bq::platform::scoped_mutex lock(get_common_global_vars().stack_trace_mutex_);
+            bq::platform::scoped_mutex lock(common_global_vars::get().stack_trace_mutex_);
             RtlCaptureContext(&context);
 
             STACKFRAME64 stack;
@@ -482,7 +482,7 @@ namespace bq {
             uint32_t current_frame_idx = 0;
             while (StackWalk64(
                 IMAGE_FILE_MACHINE_AMD64,
-                get_common_global_vars().stack_trace_process_,
+                common_global_vars::get().stack_trace_process_,
                 thread,
                 &stack,
                 &context,
@@ -498,13 +498,13 @@ namespace bq {
                 symbol->SizeOfStruct = sizeof(SYMBOL_INFOW);
                 symbol->MaxNameLen = MAX_SYM_NAME;
                 DWORD64 displacement64 = 0;
-                bool symbo_found = SymFromAddrW(get_common_global_vars().stack_trace_process_, address, &displacement64, symbol);
+                bool symbo_found = SymFromAddrW(common_global_vars::get().stack_trace_process_, address, &displacement64, symbol);
                 if (!symbo_found && !sym_refreshed) {
                     int32_t error_code = GetLastError();
                     (void)error_code;
                     sym_refreshed = true;
-                    SymRefreshModuleList(get_common_global_vars().stack_trace_process_);
-                    symbo_found = SymFromAddrW(get_common_global_vars().stack_trace_process_, address, &displacement64, symbol);
+                    SymRefreshModuleList(common_global_vars::get().stack_trace_process_);
+                    symbo_found = SymFromAddrW(common_global_vars::get().stack_trace_process_, address, &displacement64, symbol);
                 }
                 if (symbo_found) {
                     if (!effective_stack_started) {
@@ -525,11 +525,11 @@ namespace bq {
                 swprintf((wchar_t*)(char16_t*)stack_trace_current_str_u16_.end() - 16, 16 + 1, L"%016" PRIx64 "", (uintptr_t)address);
                 stack_trace_current_str_u16_.push_back(L'\t');
 
-                DWORD64 module_base = SymGetModuleBase64(get_common_global_vars().stack_trace_process_, address);
+                DWORD64 module_base = SymGetModuleBase64(common_global_vars::get().stack_trace_process_, address);
                 if (!module_base && !sym_refreshed) {
                     sym_refreshed = true;
-                    SymRefreshModuleList(get_common_global_vars().stack_trace_process_);
-                    module_base = SymGetModuleBase64(get_common_global_vars().stack_trace_process_, address);
+                    SymRefreshModuleList(common_global_vars::get().stack_trace_process_);
+                    module_base = SymGetModuleBase64(common_global_vars::get().stack_trace_process_, address);
                 }
 
                 if (module_base) {
@@ -540,7 +540,7 @@ namespace bq {
                     DWORD get_module_length = GetModuleFileNameW(h_module, module_file_name, default_max_module_name_len);
                     if (!get_module_length && !sym_refreshed) {
                         sym_refreshed = true;
-                        SymRefreshModuleList(get_common_global_vars().stack_trace_process_);
+                        SymRefreshModuleList(common_global_vars::get().stack_trace_process_);
                         get_module_length = GetModuleFileNameW(h_module, module_file_name, default_max_module_name_len);
                     }
                     module_file_name[default_max_module_name_len - 1] = (wchar_t)0;
@@ -562,7 +562,7 @@ namespace bq {
                     DWORD displacement = 0;
                     IMAGEHLP_LINEW64 line;
                     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-                    if (SymGetLineFromAddrW64(get_common_global_vars().stack_trace_process_, address, &displacement, &line)) {
+                    if (SymGetLineFromAddrW64(common_global_vars::get().stack_trace_process_, address, &displacement, &line)) {
                         stack_trace_current_str_u16_.push_back(u'(');
                         stack_trace_current_str_u16_ += (const char16_t*)line.FileName;
                         stack_trace_current_str_u16_.push_back(u':');

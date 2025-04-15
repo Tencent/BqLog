@@ -32,7 +32,7 @@ bq::appender_decoder_manager::~appender_decoder_manager()
 
 bq::appender_decoder_manager& bq::appender_decoder_manager::instance()
 {
-    return get_log_global_vars().appender_decoder_manager_inst_;
+    return *log_global_vars::get().appender_decoder_manager_inst_;
 }
 
 bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq::string& path, uint32_t& out_handle)

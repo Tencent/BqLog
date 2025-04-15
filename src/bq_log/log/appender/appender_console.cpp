@@ -215,6 +215,6 @@ namespace bq {
 
     appender_console::console_static_misc& appender_console::get_console_misc()
     {
-        return get_log_global_vars().console_static_misc_;
+        return *log_global_vars::get().console_static_misc_;
     }
 }

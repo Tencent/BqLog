@@ -25,38 +25,51 @@
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 
 namespace bq {
-    struct log_global_vars {
-        const bq::string log_appender_type_names_[static_cast<int32_t>(appender_base::appender_type::type_count)] = {
+
+
+    // To ensure these variables can be used at any time without being destroyed, we accept a small amount of memory leakage.
+    struct log_global_vars : public global_vars_base<log_global_vars, common_global_vars>{
+        const char* log_appender_type_names_[static_cast<int32_t>(appender_base::appender_type::type_count)] = {
                                                 "console",
                                                 "text_file",
                                                 "raw_file",
                                                 "compressed_file" };
-        const bq::string log_level_str_[6] = {
-                                                "[V]", // VERBOSE
-                                                "[D]", // DEBUG
-                                                "[I]", // INFO
-                                                "[W]", // WARN
-                                                "[E]", // ERROR
-                                                "[F]" // FATAL
+        const char log_level_str_[6][3] = {
+                                                { '[', 'V', ']' }, // VERBOSE
+                                                { '[', 'D', ']' }, // DEBUG
+                                                { '[', 'I', ']' }, // INFO
+                                                { '[', 'W', ']' }, // WARN
+                                                { '[', 'E', ']' }, // ERROR
+                                                { '[', 'F', ']' } // FATAL
                                             };
         const char time_zone_str_[32] = { 0 };
         const int32_t time_zone_str_len = 0;
         const char* utc_time_zone_str_ = "UTC0 ";
         const int32_t utc_time_zone_str_len = (int32_t)strlen(utc_time_zone_str_);
         const char digit3_array[3000 + 16] = {};
-        log_manager log_manager_inst_;
-        appender_console::console_static_misc console_static_misc_;
-        appender_decoder_manager appender_decoder_manager_inst_;
 #if BQ_JAVA
         jclass cls_bq_log_ = nullptr;
         jmethodID mid_native_console_callbck_ = nullptr;
         jmethodID mid_native_console_buffer_fetch_and_remove_callbck_ = nullptr;
 #endif
+        log_manager* log_manager_inst_ = new log_manager();
+        appender_console::console_static_misc* console_static_misc_ = new appender_console::console_static_misc();
+        appender_decoder_manager* appender_decoder_manager_inst_ = new appender_decoder_manager();
 
     private:
 #if BQ_JAVA
         static void jni_onload_callback();
 #endif
+    protected:
+        virtual void partial_destruct() override
+        {
+            delete appender_decoder_manager_inst_;
+            appender_decoder_manager_inst_ = nullptr;
+            delete console_static_misc_;
+            console_static_misc_ = nullptr;
+            delete log_manager_inst_;
+            log_manager_inst_ = nullptr;
+        }
     public:
         log_global_vars()
         {
@@ -65,26 +78,4 @@ namespace bq {
 #endif
         }
     };
-
-    class log_global_vars_holder {
-    private:
-        friend log_global_vars& get_log_global_vars();
-    private:
-        static log_global_vars* global_vars_ptr_;
-    };
-
-    inline log_global_vars& init_log_global_vars()
-    {
-        init_common_global_vars();
-        static log_global_vars global_vars_;
-        return global_vars_;
-    }
-
-    bq_forceinline log_global_vars& get_log_global_vars()
-    {
-        if (!log_global_vars_holder::global_vars_ptr_) { //Zero Initialization
-            log_global_vars_holder::global_vars_ptr_ = &init_log_global_vars();
-        }
-        return *log_global_vars_holder::global_vars_ptr_;
-    }
 }

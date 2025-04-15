@@ -291,8 +291,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return false;
             }
-            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
-            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
             file_node_info node_info;
             node_info.ino = file_info.st_ino;
             auto iter = file_exclusive_cache.find(node_info);
@@ -313,8 +313,8 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return;
             }
-            auto& file_exclusive_cache = get_common_global_vars().file_exclusive_cache_;
-            bq::platform::scoped_mutex lock(get_common_global_vars().file_exclusive_mutex_);
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
             file_node_info node_info;
             node_info.ino = file_info.st_ino;
             file_exclusive_cache.erase(node_info);

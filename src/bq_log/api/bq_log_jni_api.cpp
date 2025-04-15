@@ -388,11 +388,11 @@ static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_id
 
     bq::platform::jni_env env_holder;
     JNIEnv* env = env_holder.env;
-    jclass cls = bq::get_log_global_vars().cls_bq_log_;
+    jclass cls = bq::log_global_vars::get().cls_bq_log_;
     if (!cls) {
         return;
     }
-    jmethodID mid = bq::get_log_global_vars().mid_native_console_callbck_;
+    jmethodID mid = bq::log_global_vars::get().mid_native_console_callbck_;
     if (!mid) {
         return;
     }
@@ -429,11 +429,11 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
     (void)length;
     bq::platform::jni_env env_holder;
     JNIEnv* env = env_holder.env;
-    jclass cls = bq::get_log_global_vars().cls_bq_log_;
+    jclass cls = bq::log_global_vars::get().cls_bq_log_;
     if (!cls) {
         return;
     }
-    jmethodID mid = bq::get_log_global_vars().mid_native_console_buffer_fetch_and_remove_callbck_;
+    jmethodID mid = bq::log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callbck_;
     if (!mid) {
         return;
     }

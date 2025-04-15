@@ -19,23 +19,23 @@
 #include "bq_log/global/vars.h"
 
 namespace bq {
-    log_global_vars* log_global_vars_holder::global_vars_ptr_ = &init_log_global_vars();;
+    log_global_vars* log_global_var_default_initer_ = &log_global_vars::get();
 
 #if BQ_JAVA
     void log_global_vars::jni_onload_callback()
     {
         bq::platform::jni_env env_holder;
         JNIEnv* env = env_holder.env;
-        get_log_global_vars().cls_bq_log_ = env->FindClass("bq/log");
-        get_log_global_vars().mid_native_console_callbck_ = env->GetStaticMethodID(get_log_global_vars().cls_bq_log_, "native_console_callbck", "(JIILjava/lang/String;)V");
-        get_log_global_vars().mid_native_console_buffer_fetch_and_remove_callbck_ = env->GetStaticMethodID(get_log_global_vars().cls_bq_log_, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
+        log_global_vars::get().cls_bq_log_ = env->FindClass("bq/log");
+        log_global_vars::get().mid_native_console_callbck_ = env->GetStaticMethodID(log_global_vars::get().cls_bq_log_, "native_console_callbck", "(JIILjava/lang/String;)V");
+        log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callbck_ = env->GetStaticMethodID(log_global_vars::get().cls_bq_log_, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
     }
 #endif
 
     static struct layout_const_value_initializer {
         layout_const_value_initializer()
         {
-            auto& global_vars = get_log_global_vars();
+            auto& global_vars = log_global_vars::get();
             uint64_t epoch = bq::platform::high_performance_epoch_ms();
             struct tm local;
             if (!bq::util::get_local_time_by_epoch(epoch, local)) {
