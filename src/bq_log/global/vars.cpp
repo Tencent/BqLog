@@ -32,41 +32,38 @@ namespace bq {
     }
 #endif
 
-    static struct layout_const_value_initializer {
-        layout_const_value_initializer()
-        {
-            auto& global_vars = log_global_vars::get();
-            uint64_t epoch = bq::platform::high_performance_epoch_ms();
-            struct tm local;
-            if (!bq::util::get_local_time_by_epoch(epoch, local)) {
-                const_cast<int32_t&>(global_vars.time_zone_str_len) = snprintf(const_cast<char*>(global_vars.time_zone_str_), sizeof(global_vars.time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
-            time_t local_time = mktime(const_cast<struct tm*>(&local));
-            if (local_time == (time_t)(-1)) {
-                const_cast<int32_t&>(global_vars.time_zone_str_len) = snprintf(const_cast<char*>(global_vars.time_zone_str_), sizeof(global_vars.time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
-
-            struct tm utc0;
-            if (!bq::util::get_gmt_time_by_epoch(epoch, utc0)) {
-                const_cast<int32_t&>(global_vars.time_zone_str_len) = snprintf(const_cast<char*>(global_vars.time_zone_str_), sizeof(global_vars.time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
-            time_t utc_time = mktime(const_cast<struct tm*>(&utc0));
-            if (utc_time == (time_t)(-1)) {
-                const_cast<int32_t&>(global_vars.time_zone_str_len) = snprintf(const_cast<char*>(global_vars.time_zone_str_), sizeof(global_vars.time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
-
-            double timezone_offset = difftime(local_time, utc_time);
-            int32_t offset_hours = (int32_t)timezone_offset / 3600;
-            const_cast<int32_t&>(global_vars.time_zone_str_len) = snprintf(const_cast<char*>(global_vars.time_zone_str_), sizeof(global_vars.time_zone_str_), "UTC%+03d", offset_hours);
-
-            for (uint32_t i = 0; i < 1000; ++i) {
-                // 16 may overflow, it only make compilers ignore warning.
-                snprintf(const_cast<char*>(global_vars.digit3_array) + i * 3, 16, "%03d", i);
-            }
+    void log_global_vars::init_layout_values()
+    {
+        uint64_t epoch = bq::platform::high_performance_epoch_ms();
+        struct tm local;
+        if (!bq::util::get_local_time_by_epoch(epoch, local)) {
+            const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
+            return;
         }
-    } layout_const_value_initializer_;
+        time_t local_time = mktime(const_cast<struct tm*>(&local));
+        if (local_time == (time_t)(-1)) {
+            const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
+            return;
+        }
+
+        struct tm utc0;
+        if (!bq::util::get_gmt_time_by_epoch(epoch, utc0)) {
+            const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
+            return;
+        }
+        time_t utc_time = mktime(const_cast<struct tm*>(&utc0));
+        if (utc_time == (time_t)(-1)) {
+            const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
+            return;
+        }
+
+        double timezone_offset = difftime(local_time, utc_time);
+        int32_t offset_hours = (int32_t)timezone_offset / 3600;
+        const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "UTC%+03d", offset_hours);
+
+        for (uint32_t i = 0; i < 1000; ++i) {
+            // 16 may overflow, it only make compilers ignore warning.
+            snprintf(const_cast<char*>(digit3_array) + i * 3, 16, "%03d", i);
+        }
+    }
 }

@@ -85,7 +85,6 @@ public class demo_main {
 		
 		
 		log.force_flush_all_logs();
-		log.uninit();
 	}
 
 }

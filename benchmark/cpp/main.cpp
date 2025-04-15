@@ -132,12 +132,14 @@ int main()
 		appenders_config.appender_3.levels=[all]
 		appenders_config.appender_3.file_name= benchmark_output/compress_
 		appenders_config.appender_3.capacity_limit=1
+        log.high_perform_mode_freq_threshold_per_second=0
 	)");
     bq::log text_log = bq::log::create_log("text", R"(
 		appenders_config.appender_3.type=text_file
 		appenders_config.appender_3.levels=[all]
 		appenders_config.appender_3.file_name= benchmark_output/text_
 		appenders_config.appender_3.capacity_limit=1
+        log.high_perform_mode_freq_threshold_per_second=0
 	)");
     std::cout << "Please input the number of threads which will write log simultaneously:" << std::endl;
     int32_t thread_count;
@@ -151,6 +153,5 @@ int main()
     test_text_multi_param(thread_count);
     test_compress_no_param(thread_count);
     test_text_no_param(thread_count);
-    bq::log::uninit();
     return 0;
 }

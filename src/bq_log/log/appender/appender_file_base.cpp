@@ -120,7 +120,7 @@ namespace bq {
         }
 
         if (config_obj["capacity_limit"].is_integral()) {
-            capacity_limit = (uint64_t)config_obj["capacity_limit"];
+            capacity_limit_ = (uint64_t)config_obj["capacity_limit"];
         }
 
         // Calculate time difference from UTC time to local time.
@@ -383,7 +383,7 @@ namespace bq {
 
     void appender_file_base::clear_all_limit_files()
     {
-        if (capacity_limit == 0) {
+        if (capacity_limit_ == 0) {
             return;
         }
         auto dir_name = bq::file_manager::get_directory_from_path(config_file_name_);
@@ -412,7 +412,7 @@ namespace bq {
             file_sum_size += static_cast<uint64_t>(file_size);
             sort_list.push_back(bq::make_tuple(last_m_time_ms, full_name_in_absolute_path, (uint64_t)file_size));
         }
-        if (file_sum_size >= capacity_limit) {
+        if (file_sum_size >= capacity_limit_) {
             if (sort_list.size() > 0) {
                 qsort(&sort_list[0], sort_list.size(), sizeof(typename decltype(sort_list)::value_type), [](void const* v1, void const* v2) {
                     typename decltype(sort_list)::value_type const* value1 = (typename decltype(sort_list)::value_type const*)v1;
@@ -428,7 +428,7 @@ namespace bq {
             for (auto& cell : sort_list) {
                 file_manager::instance().remove_file_or_dir(bq::get<1>(cell));
                 file_sum_size -= bq::get<2>(cell);
-                if (file_sum_size < capacity_limit) {
+                if (file_sum_size < capacity_limit_) {
                     break;
                 }
             }

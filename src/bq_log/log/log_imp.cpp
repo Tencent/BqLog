@@ -165,8 +165,11 @@ namespace bq {
                         buffer_config.policy = log_memory_policy::auto_expand_when_full;
                     }
                 }
-                if (log_config["buffer_high_freq_threshold_per_second"].is_integral()) {
-                    buffer_config.high_frequency_threshold_per_second = (uint64_t)(int64_t)log_config["buffer_high_freq_threshold_per_second"];
+                if (log_config["high_perform_mode_freq_threshold_per_second"].is_integral()) {
+                    buffer_config.high_frequency_threshold_per_second = (uint64_t)(int64_t)log_config["high_perform_mode_freq_threshold_per_second"];
+                    if (0 == buffer_config.high_frequency_threshold_per_second) {
+                        buffer_config.high_frequency_threshold_per_second = UINT64_MAX;
+                    }
                 }
             }
 #if BQ_CPP_17

@@ -60,6 +60,7 @@ namespace bq {
 #if BQ_JAVA
         static void jni_onload_callback();
 #endif
+    void init_layout_values();
     protected:
         virtual void partial_destruct() override
         {
@@ -76,6 +77,7 @@ namespace bq {
 #if BQ_JAVA
             platform::jni_onload_register register_(&log_global_vars::jni_onload_callback);
 #endif
+            init_layout_values();
         }
     };
 }

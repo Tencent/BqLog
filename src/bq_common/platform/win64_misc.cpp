@@ -96,8 +96,8 @@ namespace bq {
 
         bool is_dir(const char* path)
         {
-            struct _stat buf;
-            int32_t result = _stat(path, &buf);
+            struct _stat64 buf;
+            int32_t result = _stat64(path, &buf);
             if (result == 0) {
                 if ((buf.st_mode & _S_IFMT) == _S_IFDIR) {
                     return true;
@@ -108,8 +108,8 @@ namespace bq {
 
         bool is_regular_file(const char* path)
         {
-            struct _stat buf;
-            int32_t result = _stat(path, &buf);
+            struct _stat64 buf;
+            int32_t result = _stat64(path, &buf);
             if (result == 0) {
                 if ((buf.st_mode & _S_IFMT) == _S_IFREG) {
                     return true;
