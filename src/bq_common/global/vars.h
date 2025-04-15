@@ -20,6 +20,19 @@
 #include "bq_common/bq_common.h"
 
 namespace bq {
+    template<typename P>
+    struct _global_vars_priority_var_initializer {
+        static void init() {
+            P::get();
+        }
+    };
+    template <>
+    struct _global_vars_priority_var_initializer<void> {
+        static void init()
+        {
+        }
+    };
+
     /// <summary>
     /// Base class template for managing global objects with controlled initialization and destruction.
     /// </summary>
@@ -56,18 +69,6 @@ namespace bq {
         static bq::platform::atomic<int32_t> global_vars_init_flag_;   // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
     private:
-        template<typename P>
-        struct priotity_var_initer {
-            static void init() {
-                P::get();
-            }
-        };
-        template <>
-        struct priotity_var_initer<void> {
-            static void init()
-            {
-            }
-        };
         struct global_var_holder {
             global_var_holder()
             {
@@ -95,7 +96,7 @@ namespace bq {
                 if (global_vars_init_flag_.load_acquire() == 0) {
                     int32_t expected = 0;
                     if (global_vars_init_flag_.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-                        priotity_var_initer<Priority_Global_Var_Type>::init();
+                        _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
                         static global_var_holder holder;
                         global_vars_buffer_ = reinterpret_cast<T*>(bq::platform::aligned_alloc(8, sizeof(T)));
                         global_vars_ptr_ = global_vars_buffer_;
