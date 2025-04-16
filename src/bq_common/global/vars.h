@@ -122,7 +122,7 @@ namespace bq {
     BQ_TLS T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_ptr_;
 
     template <typename T, typename Priority_Global_Var_Type>
-    int32_t global_vars_base<T, Priority_Global_Var_Type>::global_vars_init_flag_; // Init by Zero Initialization to avoid static init order fiasco
+    alignas(8) int32_t global_vars_base<T, Priority_Global_Var_Type>::global_vars_init_flag_; // Init by Zero Initialization to avoid static init order fiasco
 
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
