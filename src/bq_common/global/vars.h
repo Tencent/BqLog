@@ -66,7 +66,7 @@ namespace bq {
         friend struct global_var_holder;
     protected:
         static BQ_TLS T* global_vars_ptr_;
-        static bq::platform::atomic<int32_t> global_vars_init_flag_;   // 0 not init, 1 initializing, 2 initialized
+        alignas(8) static int32_t global_vars_init_flag_;   // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
     private:
         struct global_var_holder {
@@ -76,13 +76,13 @@ namespace bq {
             ~global_var_holder()
             {
                 //"To ensure these variables can be used at any time without being destroyed, we accept a small amount of memory leakage."
-                if (global_vars_ptr_) {
-                    (reinterpret_cast<global_vars_base*>(global_vars_ptr_))->partial_destruct();
-                    /*global_vars_ptr_->~T();
-                    bq::platform::aligned_free(global_vars_ptr_);
-                    global_vars_ptr_ = nullptr;*/
-                } else if (global_vars_buffer_) {
-                    (reinterpret_cast<global_vars_base*>(global_vars_buffer_))->partial_destruct();
+                if (T::global_vars_ptr_) {
+                    (reinterpret_cast<global_vars_base*>(T::global_vars_ptr_))->partial_destruct();
+                    /*T::global_vars_ptr_->~T();
+                    bq::platform::aligned_free(T::global_vars_ptr_);
+                    T::global_vars_ptr_ = nullptr;*/
+                } else if (T::global_vars_buffer_) {
+                    (reinterpret_cast<global_vars_base*>(T::global_vars_buffer_))->partial_destruct();
                 }
             }
         };
@@ -92,25 +92,29 @@ namespace bq {
         }
     public:
         static T& get() {
-            if (!global_vars_ptr_) {
-                if (global_vars_init_flag_.load_acquire() == 0) {
+            if (!T::global_vars_ptr_) {
+                bq::platform::atomic<int32_t>& atomic_status = *reinterpret_cast<bq::platform::atomic<int32_t>*>(&T::global_vars_init_flag_);
+                if (atomic_status.load_acquire() == 0) {
                     int32_t expected = 0;
-                    if (global_vars_init_flag_.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                    if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
                         static global_var_holder holder;
-                        global_vars_buffer_ = reinterpret_cast<T*>(bq::platform::aligned_alloc(8, sizeof(T)));
-                        global_vars_ptr_ = global_vars_buffer_;
-                        new (global_vars_buffer_, bq::enum_new_dummy::dummy) T();
-                        global_vars_init_flag_.store_release(2);
-                        return *global_vars_ptr_; 
+                        T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(8, sizeof(T)));
+                        T::global_vars_ptr_ = T::global_vars_buffer_;
+                        new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
+                        atomic_status.store_release(2);
+                        return *T::global_vars_ptr_;
                     }
                 }
-                while (global_vars_init_flag_.load_acquire() != 2) {
+                while (atomic_status.load_acquire() != 2) {
                     bq::platform::thread::yield();
                 }
-                global_vars_ptr_ = global_vars_buffer_;
+                T::global_vars_ptr_ = T::global_vars_buffer_;
             }
-            return *global_vars_ptr_; 
+#ifndef NDEBUG
+            assert(T::global_vars_ptr_ == T::global_vars_buffer_);
+#endif
+            return *T::global_vars_ptr_;
         }
     };
 
@@ -118,7 +122,7 @@ namespace bq {
     BQ_TLS T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_ptr_;
 
     template <typename T, typename Priority_Global_Var_Type>
-    bq::platform::atomic<int32_t> global_vars_base<T, Priority_Global_Var_Type>::global_vars_init_flag_; // Init by Zero Initialization to avoid static init order fiasco
+    alignas(8) int32_t global_vars_base<T, Priority_Global_Var_Type>::global_vars_init_flag_; // Init by Zero Initialization to avoid static init order fiasco
 
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
