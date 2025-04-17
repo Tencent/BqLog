@@ -108,15 +108,13 @@ namespace bq {
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
         static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
-        BQ_PACK_BEGIN
         struct alignas(CACHE_LINE_SIZE) cursors_set {
             bq::platform::atomic<uint32_t> write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
             bq::platform::atomic<uint32_t> read_cursor_;
             char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
-        }
-        BQ_PACK_END
-        static_assert(sizeof(cursors_set) % CACHE_LINE_SIZE == 0, "invalid cursors_set size");
+        };
+        static_assert(sizeof(cursors_set) == CACHE_LINE_SIZE * 2, "invalid cursors_set size");
 
         log_buffer_config config_;
         cursors_set cursors_; // make sure it is aligned to cache line size even in placement new.
