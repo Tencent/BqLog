@@ -55,7 +55,7 @@
 
 namespace bq {
 
-    class miso_ring_buffer {
+    class alignas(CACHE_LINE_SIZE) miso_ring_buffer {
     private:
         static constexpr size_t CACHE_LINE_SIZE = 64;
         static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
@@ -109,17 +109,17 @@ namespace bq {
         static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
         BQ_PACK_BEGIN
-        struct alignas(4) cursors_set {
-            uint32_t write_cursor_;
+        struct alignas(CACHE_LINE_SIZE) cursors_set {
+            bq::platform::atomic<uint32_t> write_cursor_;
             char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
-            uint32_t read_cursor_;
-            char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
-        } BQ_PACK_END 
+            bq::platform::atomic<uint32_t> read_cursor_;
+            char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
+        }
+        BQ_PACK_END
         static_assert(sizeof(cursors_set) % CACHE_LINE_SIZE == 0, "invalid cursors_set size");
 
         log_buffer_config config_;
-        char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
-        cursors_set* cursors_; // make sure it is aligned to cache line size even in placement new.
+        cursors_set cursors_; // make sure it is aligned to cache line size even in placement new.
 
         uint8_t* real_buffer_;
         head* head_;
