@@ -98,8 +98,9 @@ namespace bq {
         struct alignas(4) head {
             // it is a snapshot of last read cursor when recovering from memory map file .
             uint32_t read_cursor_cache_;
+            uint32_t read_cursor_start_cache_;
             uint64_t log_checksum_;
-            char mmap_misc_data_[CACHE_LINE_SIZE - sizeof(read_cursor_cache_) - sizeof(log_checksum_)];
+            char mmap_misc_data_[CACHE_LINE_SIZE - sizeof(read_cursor_cache_) - sizeof(log_checksum_) - sizeof(read_cursor_start_cache_)];
         }
         BQ_PACK_END 
         static_assert(sizeof(head) == CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
