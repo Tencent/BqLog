@@ -225,7 +225,9 @@ namespace bq {
                 }
             }
 #endif
-            status_.store_seq_cst(enum_thread_status::running);
+            while (status_.load_seq_cst() != enum_thread_status::running) {
+                cpu_relax();
+            }
             apply_thread_name();
             run();
             status_.store_seq_cst(enum_thread_status::finished);
