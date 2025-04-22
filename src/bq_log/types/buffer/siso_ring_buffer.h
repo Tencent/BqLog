@@ -64,40 +64,30 @@ namespace bq {
         BQ_PACK_BEGIN
         struct alignas(4) head
         {
-            // and it is a snapshot of last read cursor when recovering from memory map file .
-            uint32_t read_cursor_cache_;
-            uint32_t write_cursor_cache_;
-            uint32_t aligned_blocks_count_cache_;
-        }
-        BQ_PACK_END
-
-        static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
-        const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
-        static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
-
-
-        BQ_PACK_BEGIN
-        struct alignas(4) cursors_set
-        {
-            uint32_t write_cursor_;
-            char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
-            uint32_t read_cursor_;
-            char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(read_cursor_)];
+            uint32_t aligned_blocks_count_cache_;  //This field is used as snapshot when recovering from memory map file .
 
             // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
             // rt is short name of "read thread", which means this variable is accessed in read thread.
+            uint32_t rt_reading_cursor_cache_;   //This field is used as snapshot when recovering from memory map file .
             uint32_t rt_writing_cursor_cache_;
-            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(rt_writing_cursor_cache_)];
+            uint32_t rt_unsync_blocks_count_;
+            char cache_line_padding0_[CACHE_LINE_SIZE - 4 * sizeof(uint32_t)];
             // this cache variable used in writing thread is used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
             // wt is short name of "write thread", which means this variable is accessed in write thread.
-            uint32_t wt_reading_cursor_cache_;  
-            char cache_line_padding3_[CACHE_LINE_SIZE - sizeof(wt_reading_cursor_cache_)];
-        }
-        BQ_PACK_END
-        static_assert(sizeof(cursors_set) % CACHE_LINE_SIZE == 0, "invalid cursors_set size");
+            uint32_t wt_reading_cursor_cache_;
+            uint32_t wt_writing_cursor_cache_; // This field is used as snapshot when recovering from memory map file .
+            char cache_line_padding1_[CACHE_LINE_SIZE - 2 * sizeof(uint32_t)];
 
-        char cursors_storage_[sizeof(cursors_set) + CACHE_LINE_SIZE];
-        cursors_set* cursors_;   //make sure it is aligned to cache line size even in placement new.
+            uint32_t reading_cursor_; // Used to sync data between read thread and write thread in run-time.
+            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(uint32_t)];
+            uint32_t writing_cursor_; // Used to sync data between read thread and write thread in run-time.
+            char cache_line_padding3_[CACHE_LINE_SIZE - sizeof(uint32_t)];
+
+        } BQ_PACK_END 
+        static_assert(sizeof(head) == 4 * CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
+        static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
+        const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
+        static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
         head* head_;
         block* aligned_blocks_;

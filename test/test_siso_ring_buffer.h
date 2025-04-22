@@ -154,7 +154,7 @@ namespace bq {
                         }
                         buffers[i] = (uint8_t*)mmap_handles[i].get_mapped_data();
                     } else {
-                        buffers[i] = (uint8_t*)malloc(buffer_size);
+                        buffers[i] = (uint8_t*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, buffer_size);
                     }
                     ring_buffers[i] = new bq::siso_ring_buffer(buffers[i], buffer_size, with_mmap);
                     siso_write_task write_task(chunk_count_per_task, ring_buffers[i]);
@@ -194,7 +194,7 @@ namespace bq {
                     if (with_mmap) {
                         bq::memory_map::release_memory_map(mmap_handles[i]);
                     } else {
-                        free(buffers[i]);
+                        bq::platform::aligned_free(buffers[i]);
                     }
                 }
             }
@@ -202,12 +202,10 @@ namespace bq {
             void do_traverse_test(test_result& result)
             {
                 auto buffer_size = siso_ring_buffer::calculate_min_size_of_memory(64 * 1024);
-                bq::array<uint8_t> buffer_data1;
-                bq::array<uint8_t> buffer_data2;
-                buffer_data1.fill_uninitialized(buffer_size);
-                buffer_data2.fill_uninitialized(buffer_size);
-                bq::siso_ring_buffer ring_buffer1(buffer_data1.begin(), buffer_size, false);
-                bq::siso_ring_buffer ring_buffer2(buffer_data2.begin(), buffer_size, false);
+                uint8_t* buffer_data1 = (uint8_t*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, buffer_size);
+                uint8_t* buffer_data2 = (uint8_t*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, buffer_size);
+                bq::siso_ring_buffer ring_buffer1(buffer_data1, buffer_size, false);
+                bq::siso_ring_buffer ring_buffer2(buffer_data2, buffer_size, false);
                 bq::array<uint32_t> data_src;
                 constexpr uint32_t data_src_size = 4096;
                 data_src.fill_uninitialized(4096 / sizeof(uint32_t));
@@ -245,6 +243,8 @@ namespace bq {
                     &user_data);
                 auto handle1 = ring_buffer1.read_chunk();
                 result.add_result(handle1.result == enum_buffer_result_code::err_empty_log_buffer, "miso traverse test, final");
+                bq::platform::aligned_free(buffer_data1);
+                bq::platform::aligned_free(buffer_data2);
             }
         public:
             virtual test_result test() override

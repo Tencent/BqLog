@@ -20,14 +20,7 @@ namespace bq {
         : is_memory_recovery_(is_memory_recovery)
     {
         //make sure it's cache line size aligned
-        cursors_ = (cursors_set*)(((uintptr_t)(char*)cursors_storage_ + (uintptr_t)CACHE_LINE_SIZE - 1) & (~((uintptr_t)CACHE_LINE_SIZE - 1)));
-        assert(((uintptr_t)&BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t)) % (uintptr_t)CACHE_LINE_SIZE == 0);
-        assert(((uintptr_t)&BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t)) % (uintptr_t)CACHE_LINE_SIZE == 0);
-        assert(((uintptr_t)&cursors_->rt_writing_cursor_cache_) % (uintptr_t)CACHE_LINE_SIZE == 0);
-        assert(((uintptr_t)&cursors_->wt_reading_cursor_cache_) % (uintptr_t)CACHE_LINE_SIZE == 0);
-        assert((uintptr_t)cursors_ + (uintptr_t)sizeof(cursors_set) <= (uintptr_t)cursors_storage_ + (uintptr_t)sizeof(cursors_storage_));
-
-        assert(((uintptr_t)buffer % sizeof(uint32_t)) == 0 && "input buffer of siso_ring_buffer should be 4 bytes aligned");
+        assert((uintptr_t)buffer % CACHE_LINE_SIZE == 0 && "input buffer of siso_ring_buffer should be cache line size aligned");
         assert(buffer_size >= sizeof(block) * 4 && "input buffer size of siso_ring_buffer must be at least 256 bytes");
         if (is_memory_recovery) {
             if (!try_recover_from_exist_memory_map(buffer, buffer_size)) {
@@ -36,7 +29,11 @@ namespace bq {
         } else {
             init_with_memory(buffer, buffer_size);
         }
-
+        assert((uintptr_t)&head_->aligned_blocks_count_cache_ % CACHE_LINE_SIZE == 0 && "head_->aligned_blocks_count_cache_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->wt_reading_cursor_cache_ % CACHE_LINE_SIZE == 0 && "head_->wt_reading_cursor_cache_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->reading_cursor_ % CACHE_LINE_SIZE == 0 && "head_->reading_cursor_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->writing_cursor_ % CACHE_LINE_SIZE == 0 && "head_->writing_cursor_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)aligned_blocks_ % CACHE_LINE_SIZE == 0 && "aligned_blocks_ of siso_ring_buffer should be cache line size aligned");
 #if BQ_LOG_BUFFER_DEBUG
         (void)padding_;
         total_write_bytes_ = 0;
@@ -78,8 +75,7 @@ namespace bq {
             handle.result = enum_buffer_result_code::err_alloc_size_invalid;
             return handle;
         }
-        uint32_t current_write_cursor = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load_raw();
-        block& new_block = cursor_to_block(current_write_cursor);
+        block& new_block = cursor_to_block(head_->wt_writing_cursor_cache_);
         uint32_t left_blocks_to_tail = static_cast<uint32_t>(aligned_blocks_count_ - (uint32_t)(&new_block - aligned_blocks_));
         if (left_blocks_to_tail < need_block_count) {
             size_required = size;
@@ -90,13 +86,13 @@ namespace bq {
             handle.data_addr = (uint8_t*)&new_block + data_block_offset;
         }
 
-        uint32_t left_space = static_cast<uint32_t>(cursors_->wt_reading_cursor_cache_ + aligned_blocks_count_ - current_write_cursor);
+        uint32_t left_space = static_cast<uint32_t>(head_->wt_reading_cursor_cache_ + aligned_blocks_count_ - head_->wt_writing_cursor_cache_);
 #if BQ_LOG_BUFFER_DEBUG
         assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 1");
 #endif
         if (left_space < need_block_count) {
-            cursors_->wt_reading_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load_acquire();
-            left_space = static_cast<uint32_t>(cursors_->wt_reading_cursor_cache_ + aligned_blocks_count_ - current_write_cursor);
+            head_->wt_reading_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).load_acquire();
+            left_space = static_cast<uint32_t>(head_->wt_reading_cursor_cache_ + aligned_blocks_count_ - head_->wt_writing_cursor_cache_);
 #if BQ_LOG_BUFFER_DEBUG
             assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 2");
 #endif
@@ -136,13 +132,12 @@ namespace bq {
             }
         }
 #endif
-        uint32_t current_write_cursor = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load_raw();
         block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_) 
-                ? &cursor_to_block(current_write_cursor) // splited
+                ? &cursor_to_block(head_->wt_writing_cursor_cache_) // splited
                 : (block*)(handle.data_addr - data_block_offset);
 
-        head_->write_cursor_cache_ = current_write_cursor + block_ptr->chunk_head.block_num;
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store_release(head_->write_cursor_cache_);
+        head_->wt_writing_cursor_cache_ += block_ptr->chunk_head.block_num;
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).store_release(head_->wt_writing_cursor_cache_);
 #if BQ_LOG_BUFFER_DEBUG
         total_write_bytes_ += block_ptr->chunk_head.block_num * sizeof(block);
 #endif
@@ -161,29 +156,28 @@ namespace bq {
             }
         }
 #endif 
-        uint32_t current_read_cursor = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load_raw();
 #if BQ_LOG_BUFFER_DEBUG
         is_read_chunk_waiting_for_return_ = true;
-        assert(static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
+        assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) <= aligned_blocks_count_);
 #endif
         log_buffer_read_handle handle;
-        if (static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) == 0) {
-            cursors_->rt_writing_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load_acquire();
+        if (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) == 0) {
+            head_->rt_writing_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).load_acquire();
 #if BQ_LOG_BUFFER_DEBUG
-            assert(static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
+            assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) <= aligned_blocks_count_);
 #endif
         }
-        if (static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) == 0) {
+        if (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) == 0) {
             handle.result = enum_buffer_result_code::err_empty_log_buffer;
 #if BQ_LOG_BUFFER_DEBUG
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_empty_log_buffer];
 #endif
             return handle;
         }
-        block& current_block = cursor_to_block(current_read_cursor);
+        block& current_block = cursor_to_block(head_->rt_reading_cursor_cache_);
 #if BQ_LOG_BUFFER_DEBUG
         auto block_count = current_block.chunk_head.block_num;
-        assert(block_count > 0 && (static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) >= block_count));
+        assert(block_count > 0 && (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) >= block_count));
 #endif
         handle.data_size = current_block.chunk_head.data_size;
         if ((uint8_t*)&current_block.chunk_head.data + current_block.chunk_head.data_size > (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) {
@@ -239,6 +233,12 @@ namespace bq {
         is_read_chunk_waiting_for_return_ = false;
 #endif
         if (handle.result != enum_buffer_result_code::success) {
+            if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
+                // all data is read, sync read cursor to write thread.
+                if (head_->rt_unsync_blocks_count_ > 0) {
+                    BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(head_->rt_reading_cursor_cache_);
+                }
+            }
             return;
         }
 #if BQ_LOG_BUFFER_DEBUG
@@ -249,17 +249,20 @@ namespace bq {
         assert((handle.data_addr <= (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) && (handle.data_addr >= (uint8_t*)aligned_blocks_)
             && "please don't return a read handle not belongs to this siso_ring_buffer");
 #endif
-        uint32_t current_read_cursor = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load_raw();
         block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_)
-            ? &cursor_to_block(current_read_cursor) // splited
+            ? &cursor_to_block(head_->rt_reading_cursor_cache_) // splited
             : (block*)(handle.data_addr - data_block_offset);
 
 #if BQ_LOG_BUFFER_DEBUG
         assert(block_ptr->chunk_head.block_num <= aligned_blocks_count_);
 #endif
 
-        head_->read_cursor_cache_ = current_read_cursor + block_ptr->chunk_head.block_num;
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store_release(head_->read_cursor_cache_);
+        head_->rt_reading_cursor_cache_ += block_ptr->chunk_head.block_num;
+        head_->rt_unsync_blocks_count_ += block_ptr->chunk_head.block_num;
+        if (head_->rt_unsync_blocks_count_ > (aligned_blocks_count_ >> 2)) {
+            BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(head_->rt_reading_cursor_cache_);
+            head_->rt_unsync_blocks_count_ = 0;
+        }
     }
 
     void siso_ring_buffer::data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data)
@@ -275,24 +278,24 @@ namespace bq {
             }
         }
 #endif 
-        uint32_t current_read_cursor = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).load_raw();
+        uint32_t current_read_cursor = head_->rt_reading_cursor_cache_;
 #if BQ_LOG_BUFFER_DEBUG
-        assert(static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
+        assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
 #endif
         while (true) {
-            if (static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) == 0) {
-                cursors_->rt_writing_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).load_acquire();
+            if (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) == 0) {
+                head_->rt_writing_cursor_cache_ = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).load_acquire();
 #if BQ_LOG_BUFFER_DEBUG
-                assert(static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
+                assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
 #endif
             }
-            if (static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) == 0) {
+            if (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) == 0) {
                 break;
             }
             block& current_block = cursor_to_block(current_read_cursor);
             auto block_count = current_block.chunk_head.block_num;
 #if BQ_LOG_BUFFER_DEBUG
-            assert(block_count > 0 && (static_cast<uint32_t>(cursors_->rt_writing_cursor_cache_ - current_read_cursor) >= block_count));
+            assert(block_count > 0 && (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) >= block_count));
 #endif
             if ((uint8_t*)&current_block.chunk_head.data + current_block.chunk_head.data_size > (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) {
                 // splited
@@ -319,26 +322,23 @@ namespace bq {
     {
         // parse and verify
         head_ = (head*)buffer;
-        uintptr_t data_start_addr = (uintptr_t)((uint8_t*)buffer + sizeof(head_));
-        size_t align_unit = CACHE_LINE_SIZE;
-        uintptr_t aligned_addr = (data_start_addr + align_unit - 1) & (~(align_unit - 1));
-        aligned_blocks_ = (block*)(aligned_addr);
-        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - aligned_addr) >> CACHE_LINE_SIZE_LOG2;
-        assert(max_block_count > 1 && "siso_buffer init buffer size is not enough");
-        aligned_blocks_count_ = bq::roundup_pow_of_two((uint32_t)max_block_count);
-        if (aligned_blocks_count_ > max_block_count) {
-            aligned_blocks_count_ >>= 1;
+        aligned_blocks_ = (block*)((uint8_t*)buffer + sizeof(head));
+        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - (uintptr_t)aligned_blocks_) >> CACHE_LINE_SIZE_LOG2;
+        aligned_blocks_count_ = 1;
+        assert(max_block_count > aligned_blocks_count_ && "siso_buffer init buffer size is not enough");
+        while (aligned_blocks_count_ <= (max_block_count >> 1)) {
+            aligned_blocks_count_ <<= 1;
         }
 
         if (head_->aligned_blocks_count_cache_ != aligned_blocks_count_) {
             return false;
         }
-        if (static_cast<uint32_t>(head_->write_cursor_cache_ - head_->read_cursor_cache_) > aligned_blocks_count_) {
+        if (static_cast<uint32_t>(head_->wt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) > aligned_blocks_count_) {
             return false;
         }
 
-        uint32_t current_cursor = head_->read_cursor_cache_;
-        while (current_cursor < head_->write_cursor_cache_) {
+        uint32_t current_cursor = head_->rt_reading_cursor_cache_;
+        while (current_cursor < head_->wt_writing_cursor_cache_) {
             block& current_block = cursor_to_block(current_cursor);
             auto block_count = current_block.chunk_head.block_num;
             auto data_size = current_block.chunk_head.data_size;
@@ -360,37 +360,35 @@ namespace bq {
             }
             current_cursor += block_count;
         }
-        if (current_cursor != head_->write_cursor_cache_) {
+        if (current_cursor != head_->wt_writing_cursor_cache_) {
             return false;
         }
-
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store_release(head_->write_cursor_cache_);
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store_release(head_->read_cursor_cache_);
-        cursors_->rt_writing_cursor_cache_ = head_->write_cursor_cache_;
-        cursors_->wt_reading_cursor_cache_ = head_->read_cursor_cache_;
+        head_->rt_writing_cursor_cache_ = head_->wt_writing_cursor_cache_;
+        head_->rt_unsync_blocks_count_ = 0;
+        head_->wt_reading_cursor_cache_ = head_->rt_reading_cursor_cache_;
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(head_->rt_reading_cursor_cache_);
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).store_release(head_->wt_writing_cursor_cache_);
         return true;
     }
 
     void siso_ring_buffer::init_with_memory(void* buffer, size_t buffer_size)
     {
         head_ = (head*)buffer;
-        uintptr_t data_start_addr = (uintptr_t)((uint8_t*)buffer + sizeof(head_));
-        size_t align_unit = CACHE_LINE_SIZE;
-        uintptr_t aligned_addr = (data_start_addr + align_unit - 1) & (~(align_unit - 1));
-        aligned_blocks_ = (block*)(aligned_addr);
-        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - aligned_addr) >> CACHE_LINE_SIZE_LOG2;
+        aligned_blocks_ = (block*)((uint8_t*)buffer + sizeof(head));
+        size_t max_block_count = (size_t)((uintptr_t)buffer + (uintptr_t)buffer_size - (uintptr_t)aligned_blocks_) >> CACHE_LINE_SIZE_LOG2;
         aligned_blocks_count_ = 1;
         assert(max_block_count > aligned_blocks_count_ && "siso_buffer init buffer size is not enough");
         while (aligned_blocks_count_ <= (max_block_count >> 1)) {
             aligned_blocks_count_ <<= 1;
         }
-        cursors_->rt_writing_cursor_cache_ = 0;
-        cursors_->wt_reading_cursor_cache_ = 0;
-        head_->read_cursor_cache_ = 0;
-        head_->write_cursor_cache_ = 0;
+        head_->rt_writing_cursor_cache_ = 0;
+        head_->rt_reading_cursor_cache_ = 0;
+        head_->rt_unsync_blocks_count_ = 0;
+        head_->wt_writing_cursor_cache_ = 0;
+        head_->wt_reading_cursor_cache_ = 0;
         head_->aligned_blocks_count_cache_ = aligned_blocks_count_;
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->write_cursor_, uint32_t).store_release(0);
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursors_->read_cursor_, uint32_t).store_release(0);
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(0);
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).store_release(0);
     }
 
 }

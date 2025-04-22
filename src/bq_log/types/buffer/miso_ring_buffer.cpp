@@ -342,7 +342,7 @@ namespace bq {
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
         }
 #endif
-        uint32_t current_read_cursor = cursors_.read_cursor_.load_raw();
+        uint32_t current_read_cursor = cursors_.read_cursor_.load_acquire();
         bool finished = false;
         while (!finished) {
             block& block_ref = cursor_to_block(current_read_cursor);

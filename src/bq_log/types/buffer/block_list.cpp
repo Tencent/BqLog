@@ -24,6 +24,7 @@
 
     block_node_head::block_node_head(void* buffer, size_t buffer_size, bool is_memory_recovery)
     {
+        (void)padding_;
         if (!is_memory_recovery) {
             next_.index() = static_cast<uint16_t>(-1);
             next_.aba_mark() = 0;

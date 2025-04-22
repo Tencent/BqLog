@@ -50,6 +50,7 @@ namespace bq {
         // These members are modified in different threads which will leads to "False Share".
         // So we must modify them in a low frequency
         pointer_type next_;
+        char padding_[8 - sizeof(pointer_type)];
         // reserved data. can be cast to any struct, all the bytes will be set to 0 when new created.
         alignas(8) char misc_data_[56];
         // only POD field can be used in packed struct, so we can't use siso_ring_buffer directly.
@@ -80,7 +81,7 @@ namespace bq {
 
         static constexpr ptrdiff_t get_buffer_data_offset()
         {
-            return (ptrdiff_t)(sizeof(block_node_head) + (CACHE_LINE_SIZE - (sizeof(block_node_head) % CACHE_LINE_SIZE)));
+            return (ptrdiff_t)((sizeof(block_node_head) + CACHE_LINE_SIZE - 1) - ((sizeof(block_node_head) + CACHE_LINE_SIZE - 1) % CACHE_LINE_SIZE));
         }
     } 
     BQ_PACK_END

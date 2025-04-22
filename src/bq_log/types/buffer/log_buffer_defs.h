@@ -42,19 +42,22 @@ namespace bq {
     #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)  
 
     #define BQ_POD_RUNTIME_OFFSET_OF(Type, Field) (((size_t)&(((Type*)0x10000)->Field)) - (size_t)0x10000)
-
-    struct log_buffer_handle_base {
+    
+    BQ_PACK_BEGIN
+    struct alignas(16) log_buffer_write_handle{
         uint8_t* data_addr;
         enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
-    };
-
-    struct log_buffer_write_handle : public log_buffer_handle_base {
         bool low_space_flag = false; // just approximate because of multi-thread
-    };
+    } 
+    BQ_PACK_END 
 
-    struct log_buffer_read_handle : public log_buffer_handle_base {
+    BQ_PACK_BEGIN 
+    struct alignas(16) log_buffer_read_handle {
+        uint8_t* data_addr;
+        enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
         uint32_t data_size;
-    };
+    } 
+    BQ_PACK_END
 
     enum create_memory_map_result {
         failed,
