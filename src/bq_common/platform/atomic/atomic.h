@@ -67,13 +67,13 @@ namespace bq {
 
             bq_forceinline atomic<T>& operator=(const value_type& value)
             {
-                store(value, memory_order::seq_cst);
+                store_seq_cst(value);
                 return *this;
             }
 
             bq_forceinline atomic<T>& operator=(const atomic<T>& rhs)
             {
-                store(rhs.load(memory_order::seq_cst), memory_order::seq_cst);
+                store_seq_cst(rhs.load_seq_cst());
                 return *this;
             }
 

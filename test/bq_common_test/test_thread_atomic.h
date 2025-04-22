@@ -66,6 +66,22 @@ namespace bq {
             }
         };
 
+        class test_thread_cancel : public bq::platform::thread {
+        public:
+            bq::platform::atomic<bool> status_is_cancelled = false;
+            virtual void run() override
+            {
+                const auto start_epoch_ms = static_cast<int64_t>(bq::platform::high_performance_epoch_ms());
+                while (!is_cancelled()) {
+                    bq::platform::thread::yield();
+                    if (static_cast<int64_t>(bq::platform::high_performance_epoch_ms()) - start_epoch_ms > 5000) {
+                        return;
+                    }
+                }
+                status_is_cancelled = true;
+            }
+        };
+
         class test_thread_mutex : public bq::platform::thread {
         public:
             bq::array<uint32_t>* a_ptr = nullptr;
@@ -383,7 +399,28 @@ namespace bq {
 
                     result.add_result(check_result, "atomic CAS test2");
                 }
-                test_output_dynamic(bq::log_level::info, "cas test is finished, now begin the mutex test, please wait...                \r");
+                test_output_dynamic(bq::log_level::info, "cas test is finished, now begin the thread cancel test, please wait...                \r");
+                {
+                    auto start_epoch_ms = static_cast<int64_t>(bq::platform::high_performance_epoch_ms());
+                    for (uint32_t i = 0; i < 1000; ++i) {
+                        bq::array<test_thread_cancel*> test_array;
+                        test_array.fill_uninitialized(16);
+                        for (size_t j = 0; j< test_array.size(); ++j) {
+                            test_array[j] = new test_thread_cancel();
+                            test_array[j]->start();
+                            test_array[j]->cancel();
+                        }
+                        for (size_t j = 0; j < test_array.size(); ++j) {
+                            test_array[j]->join();
+                            result.add_result(test_array[j]->status_is_cancelled.load_seq_cst(), "thread cancel test");
+                            delete test_array[j];
+                        }
+                        if (static_cast<int64_t>(bq::platform::high_performance_epoch_ms()) - start_epoch_ms > 15000) {
+                            break;
+                        }
+                    }
+                }
+                test_output_dynamic(bq::log_level::info, "thread cancel test is finished, now begin the mutex test, please wait...                \r");
                 {
                     // mutex test
                     constexpr uint32_t cas_times_per_loop = 5;

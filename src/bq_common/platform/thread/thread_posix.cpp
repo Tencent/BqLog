@@ -121,7 +121,6 @@ namespace bq {
             if (create_result != 0) {
                 return;
             }
-            // double setting 2
             thread_id_ = (thread_id)(platform_data_->thread_handle);
             auto expected_status = enum_thread_status::init;
             status_.compare_exchange_strong(expected_status, enum_thread_status::running);
@@ -225,10 +224,17 @@ namespace bq {
                 }
             }
 #endif
-            status_.store_seq_cst(enum_thread_status::running);
+            while (status_.load() != enum_thread_status::running
+                    && status_.load() != enum_thread_status::pendding_cancel) {
+                cpu_relax();
+            }
             apply_thread_name();
             run();
-            status_.store_seq_cst(enum_thread_status::finished);
+            auto expected_status = enum_thread_status::running;
+            if (!status_.compare_exchange_strong(expected_status, enum_thread_status::finished, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
+                expected_status = enum_thread_status::pendding_cancel;
+                status_.compare_exchange_strong(expected_status, enum_thread_status::finished, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst);
+            }
             on_finished();
             thread_id_ = 0;
 
