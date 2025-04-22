@@ -41,7 +41,7 @@ namespace bq {
     private:
         uint32_t buffer_size_;
         siso_ring_buffer* snapshot_buffer_;
-        bq::array<uint8_t> buffer_data_;
+        uint8_t* buffer_data_;
         bq::string snapshot_text_[2];
         uint32_t snapshot_text_index_;
         bool snapshot_text_continuous_;

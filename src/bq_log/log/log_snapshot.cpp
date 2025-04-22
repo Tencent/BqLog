@@ -18,6 +18,7 @@ namespace bq {
     log_snapshot::log_snapshot(class log_imp* parent_log, const bq::property_value& snapshot_config)
         : buffer_size_(0)
         , snapshot_buffer_(nullptr)
+        , buffer_data_(nullptr)
         , snapshot_text_ { "", "" }
         , snapshot_text_index_(0)
         , snapshot_text_continuous_(false)
@@ -31,6 +32,11 @@ namespace bq {
         bq::platform::scoped_spin_lock scoped_lock(lock_);
         if (snapshot_buffer_) {
             delete snapshot_buffer_;
+            snapshot_buffer_ = nullptr;
+        }
+        if (buffer_data_) {
+            bq::platform::aligned_free(buffer_data_);
+            snapshot_buffer_ = nullptr;
         }
     }
 
@@ -45,10 +51,9 @@ namespace bq {
             if (snapshot_buffer_) {
                 auto current_usable_buffer_size = (uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count());
                 if (abs(static_cast<int32_t>(current_usable_buffer_size) - static_cast<int32_t>(buffer_size_)) > static_cast<int32_t>(CACHE_LINE_SIZE) * 2) {
-                    decltype(buffer_data_) new_data;
-                    new_data.fill_uninitialized((size_t)buffer_size_);
+                    decltype(buffer_data_) new_data = (decltype(buffer_data_))bq::platform::aligned_alloc(CACHE_LINE_SIZE, (size_t)siso_ring_buffer::calculate_min_size_of_memory(buffer_size_));
                     // create a new snapshot_buffer_ and backup log data.
-                    auto* new_buffer = new siso_ring_buffer(new_data.begin(), static_cast<size_t>(buffer_size_), false);
+                    auto* new_buffer = new siso_ring_buffer(new_data, static_cast<size_t>(buffer_size_), false);
                     new_buffer->set_thread_check_enable(false);
                     while (true) {
                         auto backup_read_handle = snapshot_buffer_->read_chunk();
@@ -74,18 +79,24 @@ namespace bq {
                     }
                     delete snapshot_buffer_;
                     snapshot_buffer_ = new_buffer;
-                    buffer_data_ = bq::move(new_data);
+                    if (buffer_data_) {
+                        bq::platform::aligned_free(buffer_data_);
+                    }
+                    buffer_data_ = new_data;
                 }
             } else {
-                buffer_data_.reset();
-                buffer_data_.fill_uninitialized((size_t)buffer_size_);
-                snapshot_buffer_ = new siso_ring_buffer(buffer_data_.begin(), (size_t)buffer_size_, false);
+                buffer_data_ = (decltype(buffer_data_))bq::platform::aligned_alloc(CACHE_LINE_SIZE, (size_t)siso_ring_buffer::calculate_min_size_of_memory(buffer_size_));
+                snapshot_buffer_ = new siso_ring_buffer(buffer_data_, (size_t)buffer_size_, false);
                 snapshot_buffer_->set_thread_check_enable(false);
             }
         } else {
             if (snapshot_buffer_) {
                 delete snapshot_buffer_;
                 snapshot_buffer_ = nullptr;
+            }
+            if (buffer_data_) {
+                bq::platform::aligned_free(buffer_data_);
+                buffer_data_ = nullptr;
             }
             snapshot_text_[0].clear();
             snapshot_text_[1].clear();
