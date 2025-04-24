@@ -38,6 +38,9 @@ namespace bq {
         // take_snapshot_string and release_snapshot_string must be called in pair, or the lock will not be released
         void release_snapshot_string();
 
+        bq_forceinline bool is_enable() const {
+            return snapshot_buffer_;
+        }
     private:
         uint32_t buffer_size_;
         siso_ring_buffer* snapshot_buffer_;

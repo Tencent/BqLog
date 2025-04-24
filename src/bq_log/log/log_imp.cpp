@@ -318,7 +318,9 @@ namespace bq {
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
             appenders_list_[i]->log(handle);
         }
-        snapshot_->write_data(handle);
+        if (snapshot_->is_enable()) {
+            snapshot_->write_data(handle);
+        }
     }
 
     const bq::string& log_imp::take_snapshot_string(bool use_gmt_time)

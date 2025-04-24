@@ -33,58 +33,54 @@ namespace bq {
 
     void appender_file_base::flush_cache()
     {
-        if (file_) {
-            size_t real_write_size = 0;
-            size_t need_write_size = cache_write_.size();
-            for (int32_t i = 0; i < 10; ++i) {
-                // try 10 times;
-                real_write_size += file_manager::instance().write_file(file_, cache_write_.begin() + real_write_size, need_write_size - real_write_size);
-                if (real_write_size >= need_write_size) {
-                    break;
-                }
-                bq::platform::thread::yield();
+        size_t real_write_size = 0;
+        size_t need_write_size = cache_write_.size();
+        for (int32_t i = 0; i < 10; ++i) {
+            // try 10 times;
+            real_write_size += file_manager::instance().write_file(file_, cache_write_.begin() + real_write_size, need_write_size - real_write_size);
+            if (real_write_size >= need_write_size) {
+                break;
             }
-            cache_write_.clear();
-            if (cache_write_.capacity() > (CACHE_WRITE_DEFAULT_SIZE << 1)) {
-                cache_write_.shrink();
-            }
-            if (real_write_size != need_write_size) {
-                int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
+            bq::platform::thread::yield();
+        }
+        cache_write_.clear();
+        if (cache_write_.capacity() > (CACHE_WRITE_DEFAULT_SIZE << 1)) {
+            cache_write_.shrink();
+        }
+        if (real_write_size != need_write_size) {
+            int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
 
-                if (err_code != 0 && err_code != 28) {
-                    char error_text[256] = { 0 };
-                    auto epoch = bq::platform::high_performance_epoch_ms();
-                    struct tm time_st;
-                    if (is_gmt_time_) {
-                        bq::util::get_gmt_time_by_epoch(epoch, time_st);
-                    } else {
-                        bq::util::get_local_time_by_epoch(epoch, time_st);
-                    }
-                    snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file ecode:%d, trying open new file real_write_size:%d,need_write_size:%d\n",
-                        is_gmt_time_ ? "UTC0" : "LOCAL",
-                        time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
-                        err_code, (int32_t)real_write_size, (int32_t)need_write_size);
-                    string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
-                    bq::file_manager::append_all_text(path, error_text);
-                    bq::util::log_device_console_plain_text(log_level::warning, error_text);
+            if (err_code != 0 && err_code != 28) {
+                char error_text[256] = { 0 };
+                auto epoch = bq::platform::high_performance_epoch_ms();
+                struct tm time_st;
+                if (is_gmt_time_) {
+                    bq::util::get_gmt_time_by_epoch(epoch, time_st);
+                } else {
+                    bq::util::get_local_time_by_epoch(epoch, time_st);
                 }
-                open_new_indexed_file_by_name();
+                snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file ecode:%d, trying open new file real_write_size:%d,need_write_size:%d\n",
+                    is_gmt_time_ ? "UTC0" : "LOCAL",
+                    time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
+                    err_code, (int32_t)real_write_size, (int32_t)need_write_size);
+                string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
+                bq::file_manager::append_all_text(path, error_text);
+                bq::util::log_device_console_plain_text(log_level::warning, error_text);
             }
+            open_new_indexed_file_by_name();
         }
     }
 
     void appender_file_base::flush_io()
     {
-        if (file_) {
-            if (!file_manager::instance().flush_file(file_)) {
-                int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
-                if (err_code != 0) {
-                    char ids[32] = { 0 };
-                    snprintf(ids, 32, "%d", err_code);
-                    string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", true);
-                    bq::file_manager::write_all_text(path, ids);
-                    bq::util::log_device_console(log_level::warning, "appender_file_base::flush_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
-                }
+        if (!file_manager::instance().flush_file(file_)) {
+            int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
+            if (err_code != 0) {
+                char ids[32] = { 0 };
+                snprintf(ids, 32, "%d", err_code);
+                string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", true);
+                bq::file_manager::write_all_text(path, ids);
+                bq::util::log_device_console(log_level::warning, "appender_file_base::flush_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
             }
         }
     }
@@ -259,8 +255,10 @@ namespace bq {
                 bq::util::log_device_console(bq::log_level::error, "exception: set expire_time in refresh_file_handle!!!");
             }
             current_file_expire_time_epoch_ms_ -= time_zone_diff_to_gmt_ms_;
-            flush_cache();
-            flush_io();
+            if (file_) {
+                flush_cache();
+                flush_io();
+            }
             clear_read_cache();
             open_new_indexed_file_by_name();
         }
