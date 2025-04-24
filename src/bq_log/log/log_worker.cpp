@@ -26,6 +26,7 @@ namespace bq {
         , thread_mode_(log_thread_mode::sync)
         , mutex_(true)
         , wait_flag_(false)
+        , awake_flag_(false)
     {
 #if BQ_JAVA
         attach_to_jvm();
@@ -50,11 +51,6 @@ namespace bq {
             snprintf(name_tmp, sizeof(name_tmp), "BqLogW_%d", name_seq);
             set_thread_name(name_tmp);
         }
-    }
-
-    void log_worker::awake()
-    {
-        trigger_.notify_all();
     }
 
     void log_worker::awake_and_wait_begin(log_imp* log_target_for_pub_worker /*=nullptr*/)
@@ -106,8 +102,11 @@ namespace bq {
             if (is_cancelled()) {
                 break;
             }
-            bq::platform::scoped_mutex lock(mutex_);
+            mutex_.lock();
+            awake_flag_.store_relaxed(true);
             trigger_.wait_for(mutex_, process_interval_ms);
+            awake_flag_.store_relaxed(false);
+            mutex_.unlock();
         }
     }
 

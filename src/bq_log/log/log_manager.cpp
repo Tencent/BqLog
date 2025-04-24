@@ -18,7 +18,6 @@
 #include "bq_log/log/log_worker.h"
 
 namespace bq {
-
     log_manager::log_manager()
     {
         phase_ = phase::invalid;
@@ -221,11 +220,6 @@ namespace bq {
         default:
             break;
         }
-    }
-
-    void log_manager::awake_worker()
-    {
-        public_worker_.awake();
     }
 
     void log_manager::uninit()

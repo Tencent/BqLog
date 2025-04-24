@@ -41,19 +41,24 @@ namespace bq {
 
         void set_appenders_enable(const bq::string& appender_name, bool enable);
 
-        inline log_buffer& get_buffer() const
+        bq_forceinline log_buffer& get_buffer() const
         {
             return *buffer_;
         }
 
-        inline uint64_t id() const
+        bq_forceinline uint64_t id() const
         {
             return id_;
         }
 
-        inline log_thread_mode get_thread_mode() const
+        bq_forceinline log_thread_mode get_thread_mode() const
         {
             return thread_mode_;
+        }
+
+        bq_forceinline log_worker& get_worker()
+        {
+            return worker_;
         }
 
         void set_config(const bq::string& config);

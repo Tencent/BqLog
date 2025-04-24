@@ -54,7 +54,10 @@ namespace bq {
 
         void force_flush(uint64_t log_id);
 
-        void awake_worker();
+        bq_forceinline log_worker& get_public_worker()
+        {
+            return public_worker_;
+        }
 
         void uninit();
 
@@ -72,5 +75,4 @@ namespace bq {
         bq::platform::spin_lock_rw_crazy logs_lock_;
         bq::platform::atomic<int32_t> automatic_log_name_seq_;
     };
-
 }

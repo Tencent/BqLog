@@ -97,7 +97,6 @@ namespace bq {
             assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 2");
 #endif
             if (left_space < need_block_count) {
-                handle.low_space_flag = true;
                 // not enough space
 #if BQ_LOG_BUFFER_DEBUG
                 ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_not_enough_space];
@@ -109,7 +108,7 @@ namespace bq {
         new_block.chunk_head.block_num = need_block_count;
         new_block.chunk_head.data_size = size;
 
-        handle.low_space_flag = (left_space <= (aligned_blocks_count_ >> 1));
+        handle.low_space_flag = ((aligned_blocks_count_ - left_space) << 1) >= aligned_blocks_count_;
         handle.result = enum_buffer_result_code::success;
 #if BQ_LOG_BUFFER_DEBUG
         ++result_code_statistics_[(int32_t)enum_buffer_result_code::success];

@@ -241,9 +241,10 @@ namespace bq {
             }else {
                 auto& ring_buffer = log->get_buffer();
                 auto write_handle = ring_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
-                bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.low_space_flag);
+                bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.result == enum_buffer_result_code::err_wait_and_retry || write_handle.low_space_flag);
                 if (need_awake_worker) {
-                    log_manager::instance().awake_worker();
+                    auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
+                    worker.awake();
                 }
                 while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
                     bq::platform::thread::cpu_relax();

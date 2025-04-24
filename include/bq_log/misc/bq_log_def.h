@@ -56,12 +56,12 @@ namespace bq {
     BQ_PACK_BEGIN
     struct alignas(8) _log_entry_head_def {
         uint64_t timestamp_epoch;
-        uint32_t category_idx;
         uint32_t log_args_offset;
         uint32_t ext_info_offset;
-        uint8_t level;
-        uint8_t log_format_str_type; // log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type
         uint16_t padding_;
+        uint8_t log_format_str_type; // log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type
+        uint8_t level;
+        uint32_t category_idx;
     } 
     BQ_PACK_END
     static_assert(sizeof(_log_entry_head_def) % 8 == 0

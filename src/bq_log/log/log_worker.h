@@ -32,6 +32,7 @@ namespace bq {
         platform::condition_variable trigger_;
         platform::mutex mutex_;
         platform::atomic<bool> wait_flag_;
+        platform::atomic<bool> awake_flag_;
 
     public:
         log_worker();
@@ -44,7 +45,15 @@ namespace bq {
             return thread_mode_ == log_thread_mode::async;
         }
 
-        void awake();
+        bq_forceinline void awake()
+        {
+            bool origin_value = awake_flag_.exchange_relaxed(false);
+            if (origin_value) {
+                mutex_.lock();
+                trigger_.notify_all();
+                mutex_.unlock();
+            }
+        }
 
         // These two function must be called in pair
         void awake_and_wait_begin(log_imp* log_target_for_pub_worker = nullptr);
