@@ -118,8 +118,8 @@ namespace bq {
 
     void log_snapshot::write_data(const bq::log_entry_handle& log_entry)
     {
-        if (log_level_bitmap_.have_level(log_entry.get_level()) && categories_mask_array_[log_entry.get_category_idx()]) {
-            if (snapshot_buffer_) {
+        if (snapshot_buffer_) {
+            if (log_level_bitmap_.have_level(log_entry.get_level()) && categories_mask_array_[log_entry.get_category_idx()]) {
                 bq::platform::scoped_spin_lock scoped_lock(lock_);
                 if (snapshot_buffer_) {
                     while (true) {
