@@ -61,7 +61,7 @@ namespace bq {
 
     create_memory_map_result group_node::create_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group, uint32_t index)
     {
-        if (!bq::memory_map::is_platform_support()) {
+        if (!bq::memory_map::is_platform_support() || !config.need_recovery) {
             return create_memory_map_result::failed;
         }
         char tmp[32];
@@ -160,7 +160,7 @@ namespace bq {
         const auto& config = parent_list->get_config();
         auto mmap_create_result = create_memory_map(config, max_block_count_per_group, index);
 
-        if (!config.need_recovery || create_memory_map_result::failed == mmap_create_result) {
+        if (create_memory_map_result::failed == mmap_create_result) {
             init_memory(config, max_block_count_per_group);
         } else if (mmap_create_result == create_memory_map_result::new_created) {
             init_memory_map(config, max_block_count_per_group);
@@ -208,6 +208,7 @@ namespace bq {
     {
         bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/hp", true);
         if (!config_.need_recovery) {
+            if (bq::file_manager::is_dir(memory_map_folder) || bq::file_manager::is_file(memory_map_folder))
             bq::file_manager::remove_file_or_dir(memory_map_folder);
             return;
         }

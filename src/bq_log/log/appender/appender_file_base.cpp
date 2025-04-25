@@ -73,14 +73,16 @@ namespace bq {
 
     void appender_file_base::flush_io()
     {
-        if (!file_manager::instance().flush_file(file_)) {
-            int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
-            if (err_code != 0) {
-                char ids[32] = { 0 };
-                snprintf(ids, 32, "%d", err_code);
-                string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", true);
-                bq::file_manager::write_all_text(path, ids);
-                bq::util::log_device_console(log_level::warning, "appender_file_base::flush_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
+        if (file_) {
+            if (!file_manager::instance().flush_file(file_)) {
+                int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
+                if (err_code != 0) {
+                    char ids[32] = { 0 };
+                    snprintf(ids, 32, "%d", err_code);
+                    string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", true);
+                    bq::file_manager::write_all_text(path, ids);
+                    bq::util::log_device_console(log_level::warning, "appender_file_base::flush_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
+                }
             }
         }
     }
