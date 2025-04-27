@@ -203,7 +203,7 @@ namespace bq {
             inline void read_lock()
             {
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_seq_cst(1);
+                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
@@ -220,7 +220,7 @@ namespace bq {
 
             inline void read_unlock()
             {
-                counter_type previous_counter = counter_.get().fetch_add_seq_cst(-1);
+                counter_type previous_counter = counter_.get().fetch_add_acq_rel(-1);
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
 #else
@@ -236,7 +236,7 @@ namespace bq {
 #endif
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::seq_cst, bq::platform::memory_order::relaxed)) {
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::relaxed)) {
                         break;
                     }
                     yield();

@@ -201,7 +201,7 @@ namespace bq {
                 read_thread_id_ = bq::platform::thread::get_current_thread_id();
             }
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
         }
         is_read_chunk_waiting_for_return_ = true;
 #endif
