@@ -117,8 +117,6 @@ namespace bq {
                     return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_RELAXED));
                 case memory_order::acquire:
                     return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_ACQUIRE));
-                case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_ACQ_REL));
                 default:
                     return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_SEQ_CST));
                 }
@@ -141,7 +139,7 @@ namespace bq {
             
             bq_forceinline value_type load_acq_rel() const noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type load_seq_cst() const noexcept
@@ -156,8 +154,6 @@ namespace bq {
                     return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_RELAXED);
                 case memory_order::release:
                     return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_RELEASE);
-                case memory_order::acq_rel:
-                    return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_ACQ_REL);
                 default:
                     return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
                 }
@@ -179,7 +175,7 @@ namespace bq {
 
             bq_forceinline void store_acq_rel(value_type val) noexcept
             {
-                return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_ACQ_REL);
+                return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline void store_seq_cst(value_type val) noexcept
