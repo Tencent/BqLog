@@ -157,7 +157,7 @@ jobs:
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  #Linux-ubuntu
+  #Linux-ubuntu-X86_64
   ubuntu_test_GCC_cpp11:
     runs-on: ubuntu-latest
     steps:
@@ -322,6 +322,187 @@ jobs:
 
   ubuntu_test_Clang_cpp23:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 23
+          
+  #Linux-ubuntu-ARM64
+  ubuntu_arm64_test_GCC_cpp11:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 11
+
+  ubuntu_arm64_test_Clang_cpp11:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 11
+
+  ubuntu_arm64_test_GCC_cpp14:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 14
+
+  ubuntu_arm64_test_Clang_cpp14:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 14
+
+  ubuntu_arm64_test_GCC_cpp17:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 17
+
+  ubuntu_arm64_test_Clang_cpp17:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 17
+
+  ubuntu_arm64_test_GCC_cpp20:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 20
+
+  ubuntu_arm64_test_Clang_cpp20:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 20
+
+  ubuntu_arm64_test_GCC_cpp23:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 23
+
+  ubuntu_arm64_test_Clang_cpp23:
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
