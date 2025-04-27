@@ -203,7 +203,7 @@ namespace bq {
             inline void read_lock()
             {
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_acquire(1);
+                    counter_type previous_counter = counter_.get().fetch_add_seq_cst(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
@@ -220,7 +220,7 @@ namespace bq {
 
             inline void read_unlock()
             {
-                counter_type previous_counter = counter_.get().fetch_add_release(-1);
+                counter_type previous_counter = counter_.get().fetch_add_seq_cst(-1);
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
 #else
