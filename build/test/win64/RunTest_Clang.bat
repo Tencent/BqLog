@@ -12,14 +12,28 @@ set BUILD_TOOL=
 set MSBUILD_PATH=
 set DEVENV_PATH=%VS_PATH%\devenv.com
 
-set VSWHERE="C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
-if exist %VSWHERE% (
-    for /f "tokens=*" %%i in ('%VSWHERE% -latest -products * -requires Microsoft.Component.MSBuild -property installationPath') do set VS_INSTALL_PATH=%%i
-    if defined VS_INSTALL_PATH (
-        set MSBUILD_PATH=%VS_INSTALL_PATH%\MSBuild\Current\Bin\MSBuild.exe
-        if exist "!MSBUILD_PATH!" (
-            set BUILD_TOOL=MSBUILD
+set MSBUILD_PATH="%VS_PATH%\..\..\MSBuild\Current\Bin\MSBuild.exe"
+if exist !MSBUILD_PATH! (
+    set BUILD_TOOL=MSBUILD
+)
+
+if not defined BUILD_TOOL (
+    set VSWHERE="C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+    if exist %VSWHERE% (
+        for /f "tokens=*" %%i in ('%VSWHERE% -latest -products * -requires Microsoft.Component.MSBuild -property installationPath') do set VS_INSTALL_PATH=%%i
+        if defined VS_INSTALL_PATH (
+            set MSBUILD_PATH=%VS_INSTALL_PATH%\MSBuild\Current\Bin\MSBuild.exe
+            if exist "!MSBUILD_PATH!" (
+                set BUILD_TOOL=MSBUILD
+            )
         )
+    )
+)
+
+if not defined BUILD_TOOL (
+    set MSBUILD_PATH="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+    if exist !MSBUILD_PATH! (
+        set BUILD_TOOL=MSBUILD
     )
 )
 
