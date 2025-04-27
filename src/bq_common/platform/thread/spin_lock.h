@@ -236,7 +236,7 @@ namespace bq {
 #endif
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::seq_cst, bq::platform::memory_order::relaxed)) {
                         break;
                     }
                     yield();
