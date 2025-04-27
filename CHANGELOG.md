@@ -1,8 +1,16 @@
 # Changelog
+## [v1.4.8] - 2024-12-30
+- **Bug fix**: [Support for multi-byte character paths on Windows and long paths across platforms](https://github.com/Tencent/BqLog/issues/37), resolving issues with paths exceeding 256 bytes on all platforms.
+
+## [v1.4.7] - 2024-11-15
+- **Bug fix**: [Enabling mmap on Android Devices May Cause Freezes or Crashes](https://github.com/Tencent/BqLog/issues/34), mmap recover feature is reopen.
+
 ## [v1.4.6] - 2024-11-15
 - **Bug fix**: [mmap is not working on linux](https://github.com/Tencent/BqLog/issues/25)
 - **Bug fix**: [static initialization order fiasco](https://github.com/Tencent/BqLog/issues/26)
 - **Bug fix**: [mmap leads to hang on Android](https://github.com/Tencent/BqLog/issues/32)
+- **Bug fix**: [Enabling mmap on Android Devices May Cause Freezes or Crashes](https://github.com/Tencent/BqLog/issues/34)
+We have to temporarily disable the mmap recover feature until we can resolve its stability issues.
 
 ## [v1.4.5] - 2024-10-10
 - **Improvement**: The configuration for the snapshot feature has been migrated from the API to the configuration file, supporting configurations for buffer size, category mask, and levels. For details, refer to [Snapshot Configuration](./README.md#snapshot).

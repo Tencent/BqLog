@@ -47,7 +47,16 @@ namespace bq {
         static bq::array<bq::string> test_log_3_all_console_outputs;
 
         // Larger parameter (eg. 3) will result in an exponential increase in test time overhead.
-        constexpr int32_t MAX_PARAM = 2;
+        template <size_t BITS>
+        struct param_count_helper { };
+        template <>
+        struct param_count_helper<32> {
+            constexpr static int32_t MAX_PARAM = 1;
+        };
+        template <>
+        struct param_count_helper<64> {
+            constexpr static int32_t MAX_PARAM = 2;
+        };
 
         template <typename T, typename... Ts>
         constexpr std::array<T, sizeof...(Ts)> test_make_array(Ts... ts)
@@ -895,6 +904,7 @@ namespace bq {
         {
             test_output(bq::log_level::info, "full log test begin, this will take minutes, and need about 50M free disk space.\n");
             clear_test_output_folder();
+            constexpr size_t MAX_PARAM = param_count_helper<sizeof(void*) * 8>::MAX_PARAM;
             init_fmt_strings<MAX_PARAM>();
 
             log_head = "[" + log_inst.get_name() + "]\t";

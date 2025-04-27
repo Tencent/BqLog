@@ -196,6 +196,80 @@ namespace bq {
             return true;
         }
 
+        bq::string get_lexically_path(const bq::string& original_path)
+        {
+            bq::string result;
+            result.set_capacity(original_path.size());
+            bq::array<bq::string> split = original_path.split("/");
+            bq::array<bq::string> result_split;
+            result_split.set_capacity(split.size());
+            for (decltype(split)::size_type i = 0; i < split.size(); ++i) {
+                split[i] = split[i].trim();
+                if (split[i] == "..") {
+                    if (result_split.size() > 0 && result_split[result_split.size() - 1] != "..") {
+                        result_split.pop_back();
+                    } else {
+                        result_split.push_back(split[i]);
+                    }
+                } else if (split[i] == ".") {
+
+                } else {
+                    result_split.push_back(split[i]);
+                }
+            }
+            for (decltype(result_split)::size_type i = 0; i < result_split.size(); ++i) {
+                if (i != 0) {
+                    result += "/";
+                }
+                result += result_split[i];
+            }
+            if (result.is_empty()) {
+                result = "./";
+            }
+            if (original_path.size() > 0 && original_path[0] == '/')
+                result = "/" + result;
+
+#if defined(BQ_MAC) || defined(BQ_LINUX) || defined(BQ_UNIX)
+            if (result.size() > 0 && result[0] == '~') {
+                if (result.size() == 1 || result[1] == '/') {
+                    // Case: "~" Or "~/"
+                    auto home_dir_c_str = getenv("HOME");
+                    if (!home_dir_c_str) {
+                        home_dir_c_str = getpwuid(getuid())->pw_dir;
+                    }
+                    result.erase(result.begin(), 1);
+                    bq::string home_dir = home_dir_c_str;
+                    if (!home_dir.is_empty() && home_dir[home_dir.size() - 1] == '/') {
+                        home_dir.erase(home_dir.end() - 1);
+                    }
+                    result = home_dir + result;
+                } else {
+                    auto slash_index = result.find("/");
+                    bq::string username = (slash_index == bq::string::npos) ? result.substr(1) : result.substr(1, (slash_index - 1));
+                    struct passwd* pw = getpwnam(username.c_str());
+                    if (!pw) {
+                        bq::util::log_device_console(log_level::error, "unknown user:%s, when parsing path:%s", username.c_str(), original_path.c_str());
+                    } else if (slash_index == bq::string::npos) {
+                        result = pw->pw_dir;
+                    } else {
+                        bq::string pw_dir = pw->pw_dir;
+                        if (!pw_dir.end_with("/")) {
+                            result = pw_dir + result.substr(slash_index + 1);
+                        } else {
+                            result = pw_dir + result.substr(slash_index);
+                        }
+                    }
+                }
+            }
+#endif
+            return result;
+        }
+
+        bool is_absolute(const string& path)
+        {
+            return path.size() > 0 && (path[0] == '/' || path[0] == '~');
+        }
+
         int32_t truncate_file(const platform_file_handle& file_handle, size_t offset)
         {
             auto result = ftruncate(file_handle, (off_t)offset);
@@ -205,21 +279,21 @@ namespace bq {
             return errno;
         }
 
-        constexpr int32_t BQ_MAX_PATH = 255;
 
-        int32_t remove_dir_or_file_inner(char* path, size_t cursor)
+        int32_t remove_dir_or_file_inner(bq::string& path)
         {
 #ifdef BQ_PS
             // TODO
             return 0;
 #else
-            if (!is_dir(path)) {
-                if (remove(path) == 0) {
+            if (!is_dir(path.c_str())) {
+                if (remove(path.c_str()) == 0) {
                     return 0;
                 }
                 return errno;
             } else {
-                auto dp = __posix_opendir(path);
+                size_t path_init_size = path.size();
+                auto dp = __posix_opendir(path.c_str());
                 if (!dp) {
                     return errno;
                 }
@@ -228,21 +302,16 @@ namespace bq {
                     if (strcmp(dirp->d_name, ".") == 0 || strcmp(dirp->d_name, "..") == 0) {
                         continue;
                     }
-                    size_t name_len = strlen(dirp->d_name);
-                    size_t next_cursor = cursor + 1 + name_len;
-                    if (next_cursor > BQ_MAX_PATH) {
-                        return 0;
-                    }
-                    path[cursor] = '/';
-                    memcpy(path + cursor + 1, dirp->d_name, name_len);
-                    path[next_cursor] = '\0';
-                    int32_t result = remove_dir_or_file_inner(path, next_cursor);
+
+                    path.push_back('/');
+                    path += dirp->d_name;
+                    int32_t result = remove_dir_or_file_inner(path);
+                    path.erase(path.begin() + path_init_size, path.size() - path_init_size);
                     if (result != 0) {
                         return result;
                     }
                 }
-                path[cursor] = '\0';
-                if (remove(path) == 0) {
+                if (remove(path.c_str()) == 0) {
                     return 0;
                 }
                 return errno;
@@ -252,17 +321,11 @@ namespace bq {
 
         int32_t remove_dir_or_file(const char* path)
         {
-            char temp_path[BQ_MAX_PATH + 1] = { '\0' };
-            auto str_len = strlen(path);
-            if (str_len == 0 || str_len > BQ_MAX_PATH) {
+            bq::string path_str = get_lexically_path(path);
+            if (path_str.is_empty()) {
                 return 0;
             }
-            memcpy(temp_path, path, str_len);
-            if (temp_path[str_len - 1] == '\\' || temp_path[str_len - 1] == '/') {
-                temp_path[str_len - 1] = '\0';
-                --str_len;
-            }
-            return remove_dir_or_file_inner(temp_path, str_len);
+            return remove_dir_or_file_inner(path_str);
         }
 
         uint64_t file_node_info::hash_code() const
