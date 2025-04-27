@@ -683,7 +683,7 @@ namespace bq {
                 return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
-            bq_forceinline value_type fetch_or_seq_cst(value_type val) noexcept
+            bq_forceinline value_type fetch_or_acq_rel(value_type val) noexcept
             {
                 return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
