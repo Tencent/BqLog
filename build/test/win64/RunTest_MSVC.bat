@@ -14,7 +14,7 @@ if "%CPP_VER_PARAM%"=="" set CPP_VER_PARAM=17
 md VSProj
 cd VSProj
 
-cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DCMAKE_GENERATOR_PLATFORM=x64 -DJAVA_SUPPORT=ON -DCPP_VER=%CPP_VER_PARAM%
+cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=%CPP_VER_PARAM%
 
 echo "%VS_PATH%\devenv.com"
 call "%VS_PATH%\devenv.com" ./BqLogUnitTest.sln /Rebuild "Debug" /Project "./BqLogUnitTest.vcxproj" /Out Build.log
