@@ -19,8 +19,8 @@ if exist !MSBUILD_PATH! (
 
 if not defined BUILD_TOOL (
     set VSWHERE="C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
-    if exist %VSWHERE% (
-        for /f "tokens=*" %%i in ('%VSWHERE% -latest -products * -requires Microsoft.Component.MSBuild -property installationPath') do set VS_INSTALL_PATH=%%i
+    if exist "%VSWHERE%" (
+        for /f "tokens=*" %%i in ('"%VSWHERE%" -latest -products * -requires Microsoft.Component.MSBuild -property installationPath') do set VS_INSTALL_PATH=%%i
         if defined VS_INSTALL_PATH (
             set MSBUILD_PATH=%VS_INSTALL_PATH%\MSBuild\Current\Bin\MSBuild.exe
             if exist "!MSBUILD_PATH!" (
