@@ -190,6 +190,12 @@ namespace bq {
                 log_imp_list_[i]->worker_.awake_and_wait_begin();
             }
         }
+        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
+            auto& log_impl = log_imp_list_[i];
+            if (log_impl->get_thread_mode() == log_thread_mode::sync) {
+                log_imp_list_[i]->sync_process(true);
+            }
+        }
         public_worker_.awake_and_wait_join();
         for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
             auto& log_impl = log_imp_list_[i];
@@ -208,14 +214,15 @@ namespace bq {
         }
         switch (log->get_thread_mode()) {
         case log_thread_mode::sync:
+            log->sync_process(true);
             break;
         case log_thread_mode::async:
             public_worker_.awake_and_wait_begin(log);
             public_worker_.awake_and_wait_join();
             break;
         case log_thread_mode::independent:
-            log->worker_.awake_and_wait_begin();
-            log->worker_.awake_and_wait_join();
+            log->get_worker().awake_and_wait_begin();
+            log->get_worker().awake_and_wait_join();
             break;
         default:
             break;

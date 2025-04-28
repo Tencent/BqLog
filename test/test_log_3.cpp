@@ -894,7 +894,14 @@ namespace bq {
         };
 
         template <size_t PARAM_COUNT>
-        void log_param_test()
+        void
+        
+        
+        
+        
+        
+        
+        log_param_test()
         {
             std::tuple<> empty_tuple = std::make_tuple();
             log_param_test_level1<PARAM_COUNT>()(empty_tuple);
@@ -916,6 +923,8 @@ namespace bq {
             log_param_test<MAX_PARAM>();
             test_3_phase = test_log_3_phase::do_test;
             log_param_test<MAX_PARAM>();
+
+            bq::log::force_flush_all_logs();
 
             // decode test
             for (size_t i = 0; i < test_log_3_all_console_outputs.size(); ++i) {

@@ -98,6 +98,8 @@ namespace bq {
         const auto& log_config = config["log"];
         name_ = name;
 
+        bq::platform::scoped_spin_lock lock(spin_lock_);
+
         // init thread_mode
         const auto& thread_mode_config = log_config["thread_mode"];
         if (thread_mode_config.is_string()) {
@@ -381,15 +383,18 @@ namespace bq {
 
     void log_imp::sync_process(bool is_force_flush)
     {
-        if (sync_buffer_.is_empty()) {
-            return;
+        bq::platform::scoped_spin_lock lock(spin_lock_);
+        uint64_t current_epoch_ms = 0;
+        if (!sync_buffer_.is_empty()) {
+            bq::log_entry_handle log_item(sync_buffer_.get_aligned_data(), sync_buffer_.get_used_data_size());
+            current_epoch_ms = log_item.get_log_head().timestamp_epoch;
+            process_log_chunk(log_item);
+            sync_buffer_.recycle_data();
+        } else {
+            current_epoch_ms = bq::platform::high_performance_epoch_ms();
         }
         constexpr uint64_t flush_io_min_interval_ms = 100;
-        bq::platform::scoped_spin_lock lock(spin_lock_);
-        bq::log_entry_handle log_item(sync_buffer_.get_aligned_data(), sync_buffer_.get_used_data_size());
-        process_log_chunk(log_item);
-        sync_buffer_.recycle_data();
-        uint64_t current_epoch_ms = log_item.get_log_head().timestamp_epoch;
+        
         if (is_force_flush) {
             flush_appenders_cache();
             last_flush_io_epoch_ms_ = current_epoch_ms;
