@@ -51,7 +51,7 @@ namespace bq {
         struct param_count_helper { };
         template <>
         struct param_count_helper<32> {
-            constexpr static int32_t MAX_PARAM = 1;
+            constexpr static int32_t MAX_PARAM = 2;
         };
         template <>
         struct param_count_helper<64> {
