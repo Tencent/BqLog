@@ -111,7 +111,7 @@
 #else
 #define BQ_STDCALL
 #define BQ_TLS __thread
-#define BQ_TLS_NON_POD __thread
+#define BQ_TLS_NON_POD thread_local
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
