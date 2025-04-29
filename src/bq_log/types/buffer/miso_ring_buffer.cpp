@@ -60,7 +60,7 @@ namespace bq {
             cur_buffer_info_ = nullptr;
         }
     };
-    static thread_local miso_tls_info miso_tls_info_;
+    static BQ_TLS_NON_POD miso_tls_info miso_tls_info_;
 
     /**
      *

@@ -106,7 +106,7 @@ namespace bq {
         cur_buffer_info_ = nullptr;
     }
 
-    static thread_local log_buffer::log_tls_info log_tls_info_;
+    static BQ_TLS_NON_POD log_buffer::log_tls_info log_tls_info_;
 
 
     log_buffer::log_buffer(log_buffer_config& config)

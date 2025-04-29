@@ -527,8 +527,8 @@ namespace bq {
             return reinterpret_cast<int64_t>(result) > 32;
         }
 
-        static thread_local bq::string stack_trace_current_str_;
-        static thread_local bq::u16string stack_trace_current_str_u16_;
+        static BQ_TLS_NON_POD bq::string stack_trace_current_str_;
+        static BQ_TLS_NON_POD bq::u16string stack_trace_current_str_u16_;
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
