@@ -244,9 +244,22 @@ jobs:
 
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
-          dir "C:\msys64\mingw64\bin"
+        shell: powershell
+
+      - name: Verify MSYS2 Installation
+        run: |
+          dir C:\tools
+          dir C:\tools\msys64
+          dir C:\tools\msys64\mingw64\bin
+          dir C:\tools\msys64\mingw64\bin\gcc.exe
+          dir C:\tools\msys64\mingw64\bin\mingw32-make.exe
+          gcc --version  # 期望 GCC 15.1.0
+          as --version   # 期望 binutils 2.44
+          C:\tools\msys64\mingw64\bin\mingw32-make.exe --version
+          where gcc      # 期望 C:\tools\msys64\mingw64\bin\gcc.exe
+          where mingw32-make  # 期望 C:\tools\msys64\mingw64\bin\mingw32-make.exe
         shell: powershell
 
       - name: Build for Windows
