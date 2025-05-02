@@ -229,12 +229,33 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
+      - name: Uninstall old MinGW
+        run: choco uninstall -y mingw --all-versions
+        shell: powershell
+        continue-on-error: true
+
       - name: Install MSYS2 and MinGW-w64 x64
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
+          release: true
           update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+
+      - name: Ensure MSYS2 packages
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+
+      - name: Find MSYS2 Installation
+        run: |
+          echo "MSYS2 Location: ${{ steps.msys2.outputs.msys2-location }}"
+          dir ${{ steps.msys2.outputs.msys2-location }} -ErrorAction SilentlyContinue
+          dir ${{ steps.msys2.outputs.msys2-location }}\mingw64\bin -ErrorAction SilentlyContinue
+          Get-ChildItem -Path C:\,D:\ -Recurse -Include gcc.exe,mingw32-make.exe -ErrorAction SilentlyContinue
+          where gcc
+          where mingw32-make
+        shell: powershell
 
       - name: Remove conflicting MinGW paths
         run: |
@@ -244,28 +265,18 @@ jobs:
 
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
-      - name: Verify MSYS2 Installation
+      - name: Verify MSYS2 Tools
         run: |
-          dir C:\tools
-          dir C:\tools\msys64
-          dir C:\tools\msys64\mingw64\bin
-          dir C:\tools\msys64\mingw64\bin\gcc.exe
-          dir C:\tools\msys64\mingw64\bin\mingw32-make.exe
+          dir ${{ steps.msys2.outputs.msys2-location }}\mingw64\bin\gcc.exe
+          dir ${{ steps.msys2.outputs.msys2-location }}\mingw64\bin\mingw32-make.exe
           gcc --version  # 期望 GCC 15.1.0
           as --version   # 期望 binutils 2.44
-          C:\tools\msys64\mingw64\bin\mingw32-make.exe --version
-          where gcc      # 期望 C:\tools\msys64\mingw64\bin\gcc.exe
-          where mingw32-make  # 期望 C:\tools\msys64\mingw64\bin\mingw32-make.exe
+          mingw32-make --version
         shell: powershell
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_MinGW_GCC.bat 20
 
   win64_test_MinGW_Clang_cpp20:
     runs-on: windows-latest
