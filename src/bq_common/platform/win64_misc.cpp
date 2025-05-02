@@ -23,7 +23,7 @@
 #include <wchar.h>
 #include <inttypes.h>
 
-#if BQ_MSVC
+#if BQ_VISUAL_STUDIO
 #pragma comment(lib, "dbghelp.lib")
 #else
 #pragma message("Warning: DbgHelp.a is not linked without MSVC automatically. Please link it manually by -ldbghelp. ")
@@ -58,14 +58,13 @@ namespace bq {
             }
         }
 
-        static bool get_stat_by_path(const bq::string& path, struct __stat64& buf)
+        static bool get_stat_by_path(const bq::string& path, WIN32_FILE_ATTRIBUTE_DATA& buf)
         {
             bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(path)));
-            int32_t result = _wstat64((LPCWSTR)file_path_w.c_str(), &buf);
-            if (result == 0) {
-                return true;
-            }  
-            return false;
+            if (!GetFileAttributesExW((LPCWSTR)file_path_w.c_str(), GetFileExInfoStandard, &buf)) {
+                return false;
+            }
+            return true;
         }
 
 
@@ -140,9 +139,9 @@ namespace bq {
 
         bool is_dir(const char* path)
         {
-            struct __stat64 buf;
+            WIN32_FILE_ATTRIBUTE_DATA buf;
             if (get_stat_by_path(path, buf)) {
-                if ((buf.st_mode & _S_IFMT) == _S_IFDIR) {
+                if (buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     return true;
                 }
             }
@@ -151,9 +150,10 @@ namespace bq {
 
         bool is_regular_file(const char* path)
         {
-            struct __stat64 buf;
+            WIN32_FILE_ATTRIBUTE_DATA buf;
             if (get_stat_by_path(path, buf)) {
-                if ((buf.st_mode & _S_IFMT) == _S_IFREG) {
+                if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
+                    !(buf.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
                     return true;
                 }
             }
@@ -166,9 +166,9 @@ namespace bq {
             if ((wcslen((LPCWSTR)path) == prefix_size + 2) && path[prefix_size + 1] == ':') {
                 return 0;
             }
-            struct __stat64 buf;
-            if (0 == _wstat64((LPCWSTR)path, &buf)) {
-                if ((buf.st_mode & _S_IFMT) == _S_IFDIR) {
+            WIN32_FILE_ATTRIBUTE_DATA buf;
+            if (GetFileAttributesExW((LPCWSTR)path, GetFileExInfoStandard, &buf)) {
+                if (buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     return 0;
                 }
             }
@@ -263,13 +263,13 @@ namespace bq {
 
         int32_t remove_dir_or_file_inner(bq::u16string& path)
         {
-            struct __stat64 buf;
-            int32_t stat_result = _wstat64((LPCWSTR)path.c_str(), &buf);
-            if (0 != stat_result) {
-                return errno;
+            WIN32_FILE_ATTRIBUTE_DATA buf;
+            if (!GetFileAttributesExW((LPCWSTR)path.c_str(), GetFileExInfoStandard, &buf)) {
+                DWORD err = GetLastError();
+                return (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) ? ENOENT : EACCES;
             }
 
-            if ((buf.st_mode & _S_IFMT) != _S_IFDIR)
+            if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
             {
                 DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
                 attr &= ~FILE_ATTRIBUTE_READONLY;

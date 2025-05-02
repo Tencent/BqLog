@@ -73,35 +73,38 @@
 
     bool block_list::try_recover_from_memory_map(uint16_t max_blocks_count, const uint8_t* buffers_base_addr, size_t blocks_total_buffer_size)
     {
-        if (max_blocks_count_ != max_blocks_count) {
+        uint16_t& prev_max_blocks_count = *bq::launder(&max_blocks_count_);
+        uint16_t& prev_offset = *bq::launder(&offset_);
+        size_t& prev_buffer_size_per_block = *bq::launder(&buffer_size_per_block_);
+        if (prev_max_blocks_count != max_blocks_count) {
             return false;
         }
         const ptrdiff_t offset = buffers_base_addr - reinterpret_cast<uint8_t*>(this);
         assert(offset <= UINT16_MAX && "block_list buffer offset too large");
-        if (offset_ != offset) {
+        if (prev_offset != offset) {
             return false;
         }
         auto buffer_size_per_block = (size_t)(blocks_total_buffer_size / max_blocks_count);
         buffer_size_per_block -= (buffer_size_per_block % CACHE_LINE_SIZE);
-        if (buffer_size_per_block_ != buffer_size_per_block) {
+        if (prev_buffer_size_per_block != buffer_size_per_block) {
             return false;
         }
-        assert((buffer_size_per_block_ > static_cast<size_t>(block_node_head::get_buffer_data_offset())) && "too small of block buffer size");
-        const block_node_head::pointer_type* current_ptr = &head_;
+        assert((prev_buffer_size_per_block > static_cast<size_t>(block_node_head::get_buffer_data_offset())) && "too small of block buffer size");
+        const block_node_head::pointer_type* current_ptr = bq::launder(&head_);
         uint16_t current_blocks_count = 0;
-        while (!current_ptr->is_empty() && current_blocks_count <= max_blocks_count_) {
+        while (!current_ptr->is_empty() && current_blocks_count <= prev_max_blocks_count) {
             ++current_blocks_count;
-            if (current_ptr->index() >= max_blocks_count_) {
+            if (current_ptr->index() >= prev_max_blocks_count) {
                 return false;
             }
             const block_node_head& next_block_head = get_block_head_by_index(current_ptr->index()); 
             current_ptr = &(next_block_head.next_);
         }
-        if (current_blocks_count > max_blocks_count_) {
+        if (current_blocks_count > prev_max_blocks_count) {
             return false;
         }
-        data_range_start_ = reinterpret_cast<const uint8_t*>(this) + static_cast<ptrdiff_t>(offset_);
-        data_range_end_ = data_range_start_ + static_cast<ptrdiff_t>(buffer_size_per_block_ * max_blocks_count_);
+        data_range_start_ = reinterpret_cast<const uint8_t*>(this) + static_cast<ptrdiff_t>(prev_offset);
+        data_range_end_ = data_range_start_ + static_cast<ptrdiff_t>(prev_buffer_size_per_block * prev_max_blocks_count);
         return true;
     }
 

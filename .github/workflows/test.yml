@@ -169,146 +169,23 @@ jobs:
         with:
           java-version: '21'
           distribution: 'adopt'
+          
+      - name: Install Clang
+        run: |
+          choco install -y llvm
+        shell: powershell
 
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MSVC.bat 14
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-  win64_arm64_test_Clang_cpp14:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_Clang.bat 14
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-  win64_arm64_test_MSVC_cpp17:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_MSVC.bat 17
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-  win64_arm64_test_Clang_cpp17:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_Clang.bat 17
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-  win64_arm64_test_MSVC_cpp20:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_MSVC.bat 20
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-  win64_arm64_test_Clang_cpp20:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_Clang.bat 20
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-  win64_arm64_test_MSVC_cpp23:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_MSVC.bat 23
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-  win64_arm64_test_Clang_cpp23:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\RunTest_Clang.bat 23
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+          mkdir build_folder
+          cd build_folder
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=14 -DCMAKE_BUILD_TYPE=Debug
+          make
+          .\BqLogUnitTest.exe
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=14 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          make
+          .\BqLogUnitTest.exe
 
   #Linux-ubuntu-X86_64
   ubuntu_test_GCC_cpp11:

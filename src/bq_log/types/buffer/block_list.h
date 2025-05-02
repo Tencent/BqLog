@@ -108,7 +108,7 @@ namespace bq {
 
         bq_forceinline block_node_head& get_block_head_by_index(uint16_t index)
         {
-            return *reinterpret_cast<block_node_head*>(reinterpret_cast<uint8_t*>(this) + static_cast<ptrdiff_t>(offset_) + static_cast<ptrdiff_t>(buffer_size_per_block_ * index));
+            return *reinterpret_cast<block_node_head*>(reinterpret_cast<uint8_t*>(this) + static_cast<ptrdiff_t>(*bq::launder(&offset_)) + static_cast<ptrdiff_t>(*bq::launder(&buffer_size_per_block_) * index));
         }
 
         bq_forceinline uint16_t get_index_by_block_head(const block_node_head* block) const
@@ -116,7 +116,7 @@ namespace bq {
             if (!block) {
                 return static_cast<uint16_t>(-1);
             }
-            ptrdiff_t diff = reinterpret_cast<const uint8_t*>(block) - (reinterpret_cast<const uint8_t*>(this) + static_cast<ptrdiff_t>(offset_));
+            ptrdiff_t diff = reinterpret_cast<const uint8_t*>(block) - (reinterpret_cast<const uint8_t*>(this) + static_cast<ptrdiff_t>(*bq::launder(&offset_)));
 #if BQ_LOG_BUFFER_DEBUG
             assert(((diff % buffer_size_per_block_) == 0) && "invalid block node head address");
 #endif

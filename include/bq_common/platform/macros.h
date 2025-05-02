@@ -66,6 +66,10 @@
 #define BQ_GCC 1
 #endif
 
+#if defined(_MSC_VER)
+#define BQ_VISUAL_STUDIO 1
+#endif
+
 #if defined(_M_ARM64) || defined(__aarch64__)
 #define BQ_ARM 1
 #define BQ_ARM_64 1
