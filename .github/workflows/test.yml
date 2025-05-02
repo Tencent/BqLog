@@ -236,9 +236,9 @@ jobs:
           update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
 
-      - name: Remove runner's default MinGW from PATH
+      - name: Remove conflicting MinGW paths
         run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -246,6 +246,8 @@ jobs:
         run: |
           $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
+          dir "C:\tools\msys64\mingw64\bin"
+          dir "C:\msys64\mingw64\bin"
         shell: powershell
 
       - name: Build for Windows
