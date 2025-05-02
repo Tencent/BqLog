@@ -529,15 +529,6 @@ jobs:
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
-      - name: Verify Tools
-        run: |
-          clang --version
-          lld --version
-          make --version
-          where mingw32-make
-          where ld.lld
-        shell: powershell
-
       - name: Build for Windows
         run: |
           cd build\test\win64  
