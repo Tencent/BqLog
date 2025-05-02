@@ -314,7 +314,7 @@ jobs:
           cd build\test\win64  
           mkdir build_folder
           cd build_folder
-          cmake ..\..\..\..\test --G "Visual Studio 17 2022" -A ARM64 -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23
+          cmake ..\..\..\..\test -G "Visual Studio 17 2022" -A ARM64 -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23
           cmake --build . --config Debug
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
