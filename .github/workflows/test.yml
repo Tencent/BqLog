@@ -277,10 +277,10 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug `
             -DCMAKE_C_COMPILER=clang `
             -DCMAKE_CXX_COMPILER=clang++ `
-            -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32" `
             -DCMAKE_C_FLAGS="-target aarch64-w64-mingw32" `
-            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,-target:arm64-windows" `
-            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,-target:arm64-windows"
+            -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32" `
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld --target=aarch64-w64-mingw32" `
+            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld --target=aarch64-w64-mingw32"
           make
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
@@ -290,11 +290,35 @@ jobs:
             -DCMAKE_BUILD_TYPE=RelWithDebInfo `
             -DCMAKE_C_COMPILER=clang `
             -DCMAKE_CXX_COMPILER=clang++ `
-            -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32" `
             -DCMAKE_C_FLAGS="-target aarch64-w64-mingw32" `
-            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,-target:arm64-windows" `
-            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,-target:arm64-windows"
+            -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32" `
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld --target=aarch64-w64-mingw32" `
+            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld --target=aarch64-w64-mingw32"
           make -j4
+          .\BqLogUnitTest.exe
+
+  win64_arm64_test_Clang_cpp23_2:
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Runner Architecture
+        run: |
+          Get-CimInstance Win32_Processor | Select-Object Name, Architecture
+          Write-Output "PROCESSOR_ARCHITECTURE: $env:PROCESSOR_ARCHITECTURE"
+        shell: powershell
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          mkdir build_folder
+          cd build_folder
+          cmake ..\..\..\..\test --G "Visual Studio 17 2022" -A ARM64 -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23
+          cmake --build . --config Debug
+          objdump -f BqLogUnitTest.exe
+          .\BqLogUnitTest.exe
+          cmake --build . --config RelWithDebInfo
           .\BqLogUnitTest.exe
 
   #Linux-ubuntu-X86_64
