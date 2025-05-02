@@ -239,6 +239,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check Runner Architecture
+        run: |
+          Get-CimInstance Win32_Processor | Select-Object Name, Architecture
+          Write-Output "PROCESSOR_ARCHITECTURE: $env:PROCESSOR_ARCHITECTURE"
+        shell: powershell
+
       - name: Install Clang
         run: |
           choco uninstall -y llvm --all-versions
@@ -256,7 +262,8 @@ jobs:
           clang --version
           lld --version
           make --version
-          dir "$env:JAVA_HOME\include"
+          where mingw32-make
+          where ld.lld
         shell: powershell
 
       - name: Build for Windows
@@ -264,11 +271,11 @@ jobs:
           cd build\test\win64  
           mkdir build_folder
           cd build_folder
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -CMAKE_LINKER=ld.lld -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32"
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_LINKER=C:/Program/Files/LLVM/bin/ld.lld -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32"
           make
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -CMAKE_LINKER=ld.lld -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32"
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_LINKER=C:/Program/Files/LLVM/bin/ld.lld -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32"
           make -j4
           .\BqLogUnitTest.exe
 
