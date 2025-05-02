@@ -247,7 +247,6 @@ jobs:
 
       - name: Add LLVM to PATH and Remove MinGW from Path
         run: |
-          $env:Path = ($env:Path.Split(';') | Where-Object { $_ -notlike '*MinGW*' }) -join ';'
           $env:Path += ";C:\Program Files\LLVM\bin"
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
