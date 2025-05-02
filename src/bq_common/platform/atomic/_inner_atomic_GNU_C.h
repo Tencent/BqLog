@@ -19,7 +19,7 @@
  * Bq atomic implementation for posix platform
  * both arm and Intel architecture is supported for all memory order semantic.
  */
-#ifdef __GNUC__
+#if defined(BQ_GCC) || defined(BQ_CLANG)
 #include "bq_common/types/type_traits.h"
 namespace bq {
     namespace platform {

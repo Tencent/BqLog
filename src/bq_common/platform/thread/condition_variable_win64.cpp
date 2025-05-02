@@ -22,16 +22,17 @@ namespace bq {
 
         condition_variable::condition_variable()
         {
-#pragma warning(push)
-#pragma warning(disable : 6011)
             platform_data_ = (condition_variable_platform_def*)malloc(sizeof(condition_variable_platform_def));
-            new (platform_data_, bq::enum_new_dummy::dummy) condition_variable_platform_def();
-            if (!platform_data_->condition_variable_handle) {
-                bq::util::log_device_console(log_level::fatal, "%s : %d : create condition_variable failed, error code:%d", __FILE__, __LINE__, GetLastError());
-                assert(false && "create condition_variable failed, see the device log output for more information");
-                return;
+            if (platform_data_) {
+                new (platform_data_, bq::enum_new_dummy::dummy) condition_variable_platform_def();
+                if (!platform_data_->condition_variable_handle) {
+                    bq::util::log_device_console(log_level::fatal, "%s : %d : create condition_variable failed, error code:%d", __FILE__, __LINE__, GetLastError());
+                    assert(false && "create condition_variable failed, see the device log output for more information");
+                    return;
+                }
+            } else {
+                assert(false && "not enough memory for condition_variable");
             }
-#pragma warning(pop)
         }
 
         condition_variable::~condition_variable()
@@ -39,7 +40,9 @@ namespace bq {
             if (platform_data_->condition_variable_handle) {
                 CloseHandle(platform_data_->condition_variable_handle);
             }
-            free(platform_data_);
+            if (platform_data_) {
+                free(platform_data_);
+            }
             platform_data_ = nullptr;
         }
 

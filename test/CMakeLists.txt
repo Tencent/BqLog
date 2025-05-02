@@ -127,8 +127,10 @@ elseif(TARGET_PLATFORM STREQUAL "unix")
         target_link_libraries(BqLogUnitTest PRIVATE ${EXECINFO_LIBRARY})
     endif()
 elseif(TARGET_PLATFORM STREQUAL "win64")
-    # set VS startup project
-    # todo : how to set XCode startup project(schema)?
+    if (MSVC)
+    else()
+        target_link_libraries(BqLogUnitTest PRIVATE -ldbghelp)
+    endif()
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogUnitTest)
 endif()
 

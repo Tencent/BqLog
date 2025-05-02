@@ -66,18 +66,28 @@
 #define BQ_GCC 1
 #endif
 
-#if defined(_M_ARM) || defined(__arm__) || defined(__thumb__)
+#if defined(_M_ARM64) || defined(__aarch64__)
 #define BQ_ARM 1
+#define BQ_ARM_64 1
+#define BQ_ARM_V8 1 // ARMv8-A
+#elif defined(_M_ARM) || defined(__arm__)
+#define BQ_ARM 1
+#define BQ_ARM_32 1
+#if defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7__)
 #define BQ_ARM_V7 1
-#elif defined(_M_ARM64) || defined(__aarch64__)
-#define BQ_ARM 1
-#define BQ_ARM_V8 1
-#elif defined(_M_IX86) || defined(__i386__) || defined(_X86_)
+#elif defined(__ARM_ARCH_6__)
+#define BQ_ARM_V6 1
+#else
+#define BQ_ARM_UNKNOWN 1 
+#endif
+#elif defined(_M_IX86) || defined(__i386__)
 #define BQ_X86 1
 #define BQ_X86_32 1
 #elif defined(_M_X64) || defined(__amd64__) || defined(__x86_64__)
 #define BQ_X86 1
 #define BQ_X86_64 1
+#else
+#define BQ_UNKNOWN_ARCH 1 
 #endif
 
 #ifdef BQ_MSVC

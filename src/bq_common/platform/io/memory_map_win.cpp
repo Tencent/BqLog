@@ -11,7 +11,6 @@
  */
 #include "bq_common/bq_common.h"
 #if BQ_WIN
-#include <corecrt_io.h>
 #include <Windows.h>
 
 namespace bq {

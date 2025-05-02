@@ -236,11 +236,13 @@ namespace bq {
 
         void thread::apply_name_raise()
         {
+#if BQ_MSVC
             THREADNAME_INFO info;
             info.dwType = 0x1000;
             info.szName = thread_name_.c_str();
             info.dwThreadID = (DWORD)-1;
             info.dwFlags = 0;
+
 #pragma warning(push)
 #pragma warning(disable : 6320 6322)
             __try {
@@ -248,6 +250,9 @@ namespace bq {
             } __except (EXCEPTION_EXECUTE_HANDLER) {
             }
 #pragma warning(pop)
+#else
+            bq::util::log_device_console(bq::log_level::warning, "Set thread name is only support Windows 10 or later, or compiled with MSVC");
+#endif
         }
 
         void thread::apply_thread_name()

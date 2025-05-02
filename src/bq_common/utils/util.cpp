@@ -71,7 +71,7 @@ namespace bq {
     bool util::get_local_time_by_epoch(uint64_t epoch, struct tm& result)
     {
         time_t epoch_sec = (time_t)(epoch / 1000);
-#if defined(_MSC_VER)
+#if defined(BQ_WIN)
         return localtime_s(&result, &epoch_sec) == 0;
 #else
         return localtime_r(&epoch_sec, &result) != NULL;
@@ -81,7 +81,7 @@ namespace bq {
     bool util::get_gmt_time_by_epoch(uint64_t epoch, struct tm& result)
     {
         time_t epoch_sec = (time_t)(epoch / 1000);
-#if defined(_MSC_VER)
+#if defined(BQ_WIN)
         return gmtime_s(&result, &epoch_sec) == 0;
 #else
         return gmtime_r(&epoch_sec, &result) != NULL;

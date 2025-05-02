@@ -20,7 +20,7 @@
  *  64bit atomic type is not supported on 32bit windows
  *  both arm and Intel architecture is supported for all memory order semantic.
  */
-#ifdef BQ_WIN
+#ifdef BQ_MSVC
 // although <winsock2.h> does nothing help to atomic, but we must include it before <Windows.h> to avoid compiling error when develop net socket functionalities.
 #include <winsock2.h>
 #include <Windows.h>

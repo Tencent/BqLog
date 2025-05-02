@@ -17,14 +17,17 @@
 #include <direct.h>
 #include <stdio.h>
 #include <fileapi.h>
-#include <corecrt_io.h>
 #include <stdint.h>
 #include <string.h>
 #include <DbgHelp.h>
 #include <wchar.h>
 #include <inttypes.h>
 
+#if BQ_MSVC
 #pragma comment(lib, "dbghelp.lib")
+#else
+#pragma message("Warning: DbgHelp.a is not linked without MSVC automatically. Please link it manually by -ldbghelp. ")
+#endif
 
 namespace bq {
     namespace platform {
@@ -558,18 +561,41 @@ namespace bq {
 
             STACKFRAME64 stack;
             memset(&stack, 0, sizeof(STACKFRAME64));
+            DWORD machine_type;
+
+#ifdef BQ_ARM_64
+            machine_type = IMAGE_FILE_MACHINE_ARM64;
+            stack.AddrPC.Offset = context.Pc;
+            stack.AddrPC.Mode = AddrModeFlat;
+            stack.AddrStack.Offset = context.Sp;
+            stack.AddrStack.Mode = AddrModeFlat;
+            stack.AddrFrame.Offset = context.Fp;
+            stack.AddrFrame.Mode = AddrModeFlat;
+#elif defined(BQ_ARM_32)
+            machine_type = IMAGE_FILE_MACHINE_ARM;
+            stack.AddrPC.Offset = context.Pc;
+            stack.AddrPC.Mode = AddrModeFlat;
+            stack.AddrStack.Offset = context.Sp;
+            stack.AddrStack.Mode = AddrModeFlat;
+            stack.AddrFrame.Offset = context.R11; 
+            stack.AddrFrame.Mode = AddrModeFlat;
+#elif defined(BQ_X86_64)
+            machine_type = IMAGE_FILE_MACHINE_AMD64;
             stack.AddrPC.Offset = context.Rip;
             stack.AddrPC.Mode = AddrModeFlat;
             stack.AddrStack.Offset = context.Rsp;
             stack.AddrStack.Mode = AddrModeFlat;
             stack.AddrFrame.Offset = context.Rbp;
             stack.AddrFrame.Mode = AddrModeFlat;
+#else
+            static_assert(false, "Unsupported architecture on Windows");
+#endif
 
             bool sym_refreshed = false;
             bool effective_stack_started = false;
             uint32_t current_frame_idx = 0;
             while (StackWalk64(
-                IMAGE_FILE_MACHINE_AMD64,
+                machine_type, 
                 common_global_vars::get().stack_trace_process_,
                 thread,
                 &stack,

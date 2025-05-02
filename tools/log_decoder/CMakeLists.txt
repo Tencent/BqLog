@@ -68,6 +68,10 @@ add_executable(BqLog_LogDecoder
 
 # set start up project
 if(TARGET_PLATFORM STREQUAL "win64")
+    if (MSVC)
+    else()
+        target_link_libraries(BqLogUnitTest PRIVATE -ldbghelp)
+    endif()
    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLog_LogDecoder)
 elseif(TARGET_PLATFORM STREQUAL "linux")
     target_link_libraries(BqLog_LogDecoder PRIVATE pthread)

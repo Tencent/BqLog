@@ -5,10 +5,6 @@
 #include "test_base.h"
 #include "bq_common/bq_common.h"
 
-#ifdef BQ_WIN
-#pragma warning(push)
-#pragma warning(disable : 4324)
-#endif
 
 struct test_struct {
     char b;
@@ -233,6 +229,3 @@ namespace bq {
         };
     }
 }
-#ifdef BQ_WIN
-#pragma warning(pop)
-#endif

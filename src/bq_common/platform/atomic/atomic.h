@@ -36,9 +36,9 @@ namespace bq {
     }
 }
 
-#ifdef BQ_WIN
+#ifdef BQ_MSVC
 #include "bq_common/platform/atomic/_inner_atomic_windows.h"
-#elif defined(__GNUC__)
+#elif defined(BQ_CLANG) || defined(BQ_GCC)
 #include "bq_common/platform/atomic/_inner_atomic_GNU_C.h"
 #else
 static_assert(false, "bq::platform::atomic is not supported in your compiler");

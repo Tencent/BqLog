@@ -174,6 +174,11 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
             SOVERSION 1.0.0
         )
     endif()
+elseif(TARGET_PLATFORM STREQUAL "win64")
+    if (MSVC)
+    else()
+        target_link_libraries(BqLogUnitTest PRIVATE -ldbghelp)
+    endif()
 endif()
 
 add_custom_command(TARGET BqLog POST_BUILD
