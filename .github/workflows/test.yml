@@ -244,9 +244,8 @@ jobs:
 
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
-          dir "C:\tools\msys64\mingw64\bin"
           dir "C:\msys64\mingw64\bin"
         shell: powershell
 
