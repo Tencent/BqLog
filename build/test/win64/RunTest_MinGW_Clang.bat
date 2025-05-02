@@ -5,7 +5,7 @@ if "%CPP_VER_PARAM%"=="" set CPP_VER_PARAM=17
 md MinGWProj_Clang
 cd MinGWProj_Clang
 
-cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER="C:\Program Files\LLVM\bin\clang.exe" -DCMAKE_CXX_COMPILER="C:\Program Files\LLVM\bin\clang++.exe"
+cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER="C:\Program Files\LLVM\bin\clang.exe" -DCMAKE_CXX_COMPILER="C:\Program Files\LLVM\bin\clang++.exe" -DCMAKE_BUILD_TYPE=Debug
 cmake --build . --config Debug
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
@@ -18,6 +18,7 @@ IF %exitcode% NEQ 0 (
     exit /b %exitcode%
 )
 
+cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER="C:\Program Files\LLVM\bin\clang.exe" -DCMAKE_CXX_COMPILER="C:\Program Files\LLVM\bin\clang++.exe" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build . --config RelWithDebInfo
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%

@@ -5,7 +5,7 @@ if "%CPP_VER_PARAM%"=="" set CPP_VER_PARAM=17
 md VSProj
 cd VSProj
 
-cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=%CPP_VER_PARAM% -T ClangCl
+cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=%CPP_VER_PARAM% -T ClangCl -DCMAKE_BUILD_TYPE=Debug
 cmake --build . --config Debug
 .\Debug\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
@@ -18,6 +18,7 @@ IF %exitcode% NEQ 0 (
     exit /b %exitcode%
 )
 
+cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=%CPP_VER_PARAM% -T ClangCl -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build . --config RelWithDebInfo
 .\RelWithDebInfo\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
