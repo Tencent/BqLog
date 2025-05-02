@@ -158,7 +158,7 @@ jobs:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
   #Windows ARM64
-  win64_arm64_test_MSVC_cpp14:
+  win64_arm64_test_Clang_cpp14:
     runs-on: windows-11-arm
     steps:
       - name: Checkout repository
@@ -177,8 +177,84 @@ jobs:
           cd build_folder
           cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           make
+          objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
           cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          make -j$(nproc)
+          .\BqLogUnitTest.exe
+
+  win64_arm64_test_Clang_cpp17:
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Clang
+        run: |
+          choco uninstall -y llvm --all-versions
+          choco install -y llvm
+        shell: powershell
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          mkdir build_folder
+          cd build_folder
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=17 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          make
+          objdump -f BqLogUnitTest.exe
+          .\BqLogUnitTest.exe
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=17 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          make -j$(nproc)
+          .\BqLogUnitTest.exe
+
+  win64_arm64_test_Clang_cpp20:
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Clang
+        run: |
+          choco uninstall -y llvm --all-versions
+          choco install -y llvm
+        shell: powershell
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          mkdir build_folder
+          cd build_folder
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=20 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          make
+          objdump -f BqLogUnitTest.exe
+          .\BqLogUnitTest.exe
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          make -j$(nproc)
+          .\BqLogUnitTest.exe
+
+  win64_arm64_test_Clang_cpp23:
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Clang
+        run: |
+          choco uninstall -y llvm --all-versions
+          choco install -y llvm
+        shell: powershell
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          mkdir build_folder
+          cd build_folder
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          make
+          objdump -f BqLogUnitTest.exe
+          .\BqLogUnitTest.exe
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           make -j$(nproc)
           .\BqLogUnitTest.exe
 
