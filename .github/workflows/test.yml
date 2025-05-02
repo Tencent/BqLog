@@ -243,6 +243,22 @@ jobs:
         run: |
           choco uninstall -y llvm --all-versions
           choco install -y llvm
+          choco uninstall -y mingw --all-versions
+        shell: powershell
+
+      - name: Add LLVM to PATH and Remove MinGW from Path
+        run: |
+          $env:Path = ($env:Path.Split(';') | Where-Object { $_ -notlike '*MinGW*' }) -join ';'
+          $env:Path += ";C:\Program Files\LLVM\bin"
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Verify Tools
+        run: |
+          clang --version
+          lld --version
+          make --version
+          dir "$env:JAVA_HOME\include"
         shell: powershell
 
       - name: Build for Windows
@@ -250,11 +266,11 @@ jobs:
           cd build\test\win64  
           mkdir build_folder
           cd build_folder
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -CMAKE_LINKER=ld.lld -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32"
           make
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -CMAKE_LINKER=ld.lld -DCMAKE_CXX_FLAGS="-target aarch64-w64-mingw32"
           make -j4
           .\BqLogUnitTest.exe
 
