@@ -48,23 +48,23 @@ namespace bq {
 #define BQ_ATOMIC_CONCATX(x, y) x##y
 
 #if defined(_M_IX86) || (defined(_M_X64) && !defined(_M_ARM64EC))
-#define _INTRIN_RELAXED(x) x
-#define _INTRIN_ACQUIRE(x) x
-#define _INTRIN_RELEASE(x) x
+#define (x) x
+#define _BQ_INTRIN_ACQUIRE(x) x
+#define _BQ_INTRIN_RELEASE(x) x
 #elif defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
-#define _INTRIN_RELAXED(x) BQ_ATOMIC_CONCATX(x, _nf)
-#define _INTRIN_ACQUIRE(x) BQ_ATOMIC_CONCATX(x, _acq)
-#define _INTRIN_RELEASE(x) BQ_ATOMIC_CONCATX(x, _rel)
+#define _BQ_INTRIN_RELAXED(x) BQ_ATOMIC_CONCATX(x, _nf)
+#define _BQ_INTRIN_ACQUIRE(x) BQ_ATOMIC_CONCATX(x, _acq)
+#define _BQ_INTRIN_RELEASE(x) BQ_ATOMIC_CONCATX(x, _rel)
 #endif
 
 #define BQ_ATOMIC_INTRINSIC_RELAXED(_Result, _Intrinsic, ...) \
-    _Result = _INTRIN_RELAXED(_Intrinsic)(__VA_ARGS__);
+    _Result = _BQ_INTRIN_RELAXED(_Intrinsic)(__VA_ARGS__);
 
 #define BQ_ATOMIC_INTRINSIC_ACQUIRE(_Result, _Intrinsic, ...) \
-    _Result = _INTRIN_ACQUIRE(_Intrinsic)(__VA_ARGS__);
+    _Result = _BQ_INTRIN_ACQUIRE(_Intrinsic)(__VA_ARGS__);
 
 #define BQ_ATOMIC_INTRINSIC_RELEASE(_Result, _Intrinsic, ...) \
-    _Result = _INTRIN_RELEASE(_Intrinsic)(__VA_ARGS__);
+    _Result = _BQ_INTRIN_RELEASE(_Intrinsic)(__VA_ARGS__);
 
 #define BQ_ATOMIC_INTRINSIC_ACQ_REL(_Result, _Intrinsic, ...) \
     _Result = _Intrinsic(__VA_ARGS__);
@@ -75,13 +75,13 @@ namespace bq {
 #define BQ_ATOMIC_CHOOSE_INTRINSIC(_Order, _Result, _Intrinsic, ...) \
     switch (_Order) {                                                \
     case memory_order::relaxed:                                      \
-        _Result = _INTRIN_RELAXED(_Intrinsic)(__VA_ARGS__);          \
+        _Result = _BQ_INTRIN_RELAXED(_Intrinsic)(__VA_ARGS__);          \
         break;                                                       \
     case memory_order::acquire:                                      \
-        _Result = _INTRIN_ACQUIRE(_Intrinsic)(__VA_ARGS__);          \
+        _Result = _BQ_INTRIN_ACQUIRE(_Intrinsic)(__VA_ARGS__);          \
         break;                                                       \
     case memory_order::release:                                      \
-        _Result = _INTRIN_RELEASE(_Intrinsic)(__VA_ARGS__);          \
+        _Result = _BQ_INTRIN_RELEASE(_Intrinsic)(__VA_ARGS__);          \
         break;                                                       \
     case memory_order::acq_rel:                                      \
         _Result = _Intrinsic(__VA_ARGS__);                           \
@@ -679,9 +679,7 @@ namespace bq {
         SPECIALIZED_ATOMIC_BASE(1);
         SPECIALIZED_ATOMIC_BASE(2);
         SPECIALIZED_ATOMIC_BASE(4);
-#ifdef _M_X64
         SPECIALIZED_ATOMIC_BASE(8);
-#endif
 #pragma warning(pop)
 
         inline void atomic_thread_fence(memory_order order)

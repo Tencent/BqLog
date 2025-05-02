@@ -37,7 +37,7 @@ namespace bq {
 }
 
 #ifdef BQ_MSVC
-#include "bq_common/platform/atomic/_inner_atomic_windows.h"
+#include "bq_common/platform/atomic/_inner_atomic_msvc.h"
 #elif defined(BQ_CLANG) || defined(BQ_GCC)
 #include "bq_common/platform/atomic/_inner_atomic_GNU_C.h"
 #else
