@@ -52,22 +52,33 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Install MSYS2 and MinGW-w64 x64
+
+
+      - name: Install MSYS2
         uses: msys2/setup-msys2@v2
+        id: msys2
         with:
           msystem: MINGW64
-          update: true
+          release: true
+          path-type: inherit
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          update: true
 
-      - name: Remove runner's default MinGW from PATH
+      - name: Ensure MSYS2 packages
+        shell: msys2 {0}
         run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Remove conflicting MinGW paths
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
-
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -141,22 +152,33 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Install MSYS2 and MinGW-w64 x64
+
+
+      - name: Install MSYS2
         uses: msys2/setup-msys2@v2
+        id: msys2
         with:
           msystem: MINGW64
-          update: true
+          release: true
+          path-type: inherit
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          update: true
 
-      - name: Remove runner's default MinGW from PATH
+      - name: Ensure MSYS2 packages
+        shell: msys2 {0}
         run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Remove conflicting MinGW paths
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
-
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -246,40 +268,21 @@ jobs:
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
-
-      - name: Find MSYS2 Installation
-        run: |
-          echo "MSYS2 Location: ${{ steps.msys2.outputs.msys2-location }}"
-          dir "C:\tools\msys64" -ErrorAction SilentlyContinue
-          dir "C:\msys64" -ErrorAction SilentlyContinue
-          dir "D:\a\_temp\msys64" -ErrorAction SilentlyContinue
-          dir "C:\tools\msys64\mingw64\bin" -ErrorAction SilentlyContinue
-          dir "C:\tools\msys64\mingw64\bin\gcc.exe" -ErrorAction SilentlyContinue
-          dir "C:\tools\msys64\mingw64\bin\mingw32-make.exe" -ErrorAction SilentlyContinue
-          where gcc
-          where mingw32-make
-        shell: powershell
-
       - name: Remove conflicting MinGW paths
         run: |
           $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
-
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
-      - name: Verify MSYS2 Tools
+      - name: Build for Windows
         run: |
-          dir "C:\tools\msys64\mingw64\bin\gcc.exe" -ErrorAction SilentlyContinue
-          dir "C:\tools\msys64\mingw64\bin\mingw32-make.exe" -ErrorAction SilentlyContinue
-          gcc --version  # 期望 GCC 15.1.0
-          as --version   # 期望 binutils 2.44
-          mingw32-make --version
-        shell: powershell
+          cd build\test\win64  
+          .\RunTest_MinGW_GCC.bat 20
 
   win64_test_MinGW_Clang_cpp20:
     runs-on: windows-latest
@@ -345,22 +348,31 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Install MSYS2 and MinGW-w64 x64
+      - name: Install MSYS2
         uses: msys2/setup-msys2@v2
+        id: msys2
         with:
           msystem: MINGW64
-          update: true
+          release: true
+          path-type: inherit
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          update: true
 
-      - name: Remove runner's default MinGW from PATH
+      - name: Ensure MSYS2 packages
+        shell: msys2 {0}
         run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Remove conflicting MinGW paths
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
-
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -388,7 +400,7 @@ jobs:
           .\RunTest_MinGW_Clang.bat 23      
 
   #Windows ARM64
-  win64_arm64_test_Clang_cpp14:
+  win_arm64_test_MinGW_Clang_cpp14:
     runs-on: windows-11-arm
     steps:
       - name: Checkout repository
@@ -413,7 +425,7 @@ jobs:
           make -j4
           .\BqLogUnitTest.exe
 
-  win64_arm64_test_Clang_cpp17:
+  win_arm64_test_MinGW_Clang_cpp17:
     runs-on: windows-11-arm
     steps:
       - name: Checkout repository
@@ -438,7 +450,7 @@ jobs:
           make -j4
           .\BqLogUnitTest.exe
 
-  win64_arm64_test_Clang_cpp20:
+  win_arm64_test_MinGW_Clang_cpp20:
     runs-on: windows-11-arm
     steps:
       - name: Checkout repository
@@ -463,7 +475,7 @@ jobs:
           make -j4
           .\BqLogUnitTest.exe
 
-  win64_arm64_test_Clang_cpp23:
+  win_arm64_test_MinGW_Clang_cpp23:
     runs-on: windows-11-arm
     steps:
       - name: Checkout repository
@@ -475,22 +487,33 @@ jobs:
           Write-Output "PROCESSOR_ARCHITECTURE: $env:PROCESSOR_ARCHITECTURE"
         shell: powershell
 
-      - name: Install MSYS2 and MinGW-w64 x64
+
+
+      - name: Install MSYS2
         uses: msys2/setup-msys2@v2
+        id: msys2
         with:
           msystem: MINGW64
+          release: true
+          path-type: inherit
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
           update: true
-          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-binutils mingw-w64-x86_64-make
 
-      - name: Remove runner's default MinGW from PATH
+      - name: Ensure MSYS2 packages
+        shell: msys2 {0}
         run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Remove conflicting MinGW paths
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
-
       - name: Add MSYS2 to PATH
         run: |
-          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -500,7 +523,7 @@ jobs:
           choco install -y llvm
         shell: powershell
 
-      - name: Add LLVM to PATH and Remove MinGW from Path
+      - name: Add LLVM to PATH
         run: |
           $env:Path += ";C:\Program Files\LLVM\bin"
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
