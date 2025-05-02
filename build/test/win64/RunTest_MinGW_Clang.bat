@@ -2,12 +2,12 @@
 set CPP_VER_PARAM=%1
 if "%CPP_VER_PARAM%"=="" set CPP_VER_PARAM=17
 
-md VSProj
-cd VSProj
+md MinGWProj_Clang
+cd MinGWProj_Clang
 
-cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=%CPP_VER_PARAM% -T ClangCl
+cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER="C:\Program Files\LLVM\bin\clang.exe" -DCMAKE_CXX_COMPILER="C:\Program Files\LLVM\bin\clang++.exe"
 cmake --build . --config Debug
-.\Debug\BqLogUnitTest.exe
+.\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
 
 echo "If your did not see output with color, and there are some strange characters like \033, please run Terminal Windows With Administrative Privileges, then type command below, and run script again"
@@ -19,7 +19,7 @@ IF %exitcode% NEQ 0 (
 )
 
 cmake --build . --config RelWithDebInfo
-.\RelWithDebInfo\BqLogUnitTest.exe
+.\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
 
 echo "If your did not see output with color, and there are some strange characters like \033, please run Terminal Windows With Administrative Privileges, then type command below, and run script again"

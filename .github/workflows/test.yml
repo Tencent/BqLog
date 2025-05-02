@@ -21,10 +21,9 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_MSVC.bat 14
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-  
-  win64_test_Clang_cpp14:
+        
+
+  win64_test_MSVC_Clang_cpp14:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -40,8 +39,41 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_Clang.bat 14
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+        
+  win64_test_MinGW_GCC_cpp14:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_GCC.bat 14
+  
+
+  win64_test_MinGW_Clang_cpp14:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_Clang.bat 14
 
   win64_test_MSVC_cpp17:
     runs-on: windows-latest
@@ -59,10 +91,9 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_MSVC.bat 17
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+        
 
-  win64_test_Clang_cpp17:
+  win64_test_MSVC_Clang_cpp17:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -78,8 +109,41 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_Clang.bat 17
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+        
+  win64_test_MinGW_GCC_cpp17:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_GCC.bat 17
+  
+
+  win64_test_MinGW_Clang_cpp17:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_Clang.bat 17
 
   win64_test_MSVC_cpp20:
     runs-on: windows-latest
@@ -97,10 +161,8 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_MSVC.bat 20
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
-  win64_test_Clang_cpp20:
+  win64_test_MSVC_Clang_cpp20:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -116,8 +178,40 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_Clang.bat 20
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+        
+  win64_test_MinGW_GCC_cpp20:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_GCC.bat 20
+
+  win64_test_MinGW_Clang_cpp20:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_Clang.bat 20
 
   win64_test_MSVC_cpp23:
     runs-on: windows-latest
@@ -135,10 +229,9 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_MSVC.bat 23
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+        
 
-  win64_test_Clang_cpp23:
+  win64_test_MSVC_Clang_cpp23:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -154,8 +247,41 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_Clang.bat 23
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  win64_test_MinGW_GCC_cpp23:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_GCC.bat 23
+  
+
+  win64_test_MinGW_Clang_cpp23:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\test\win64  
+          .\RunTest_MinGW_Clang.bat 23      
 
   #Windows ARM64
   win64_arm64_test_Clang_cpp14:
@@ -318,9 +444,9 @@ jobs:
           cd build_folder
           cmake ..\..\..\..\test -G "Visual Studio 17 2022" -A ARM64 -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14
           cmake --build . --config Debug
-          .\BqLogUnitTest.exe
+          .\Debug\BqLogUnitTest.exe
           cmake --build . --config RelWithDebInfo
-          .\BqLogUnitTest.exe
+          .\RelWithDebInfo\BqLogUnitTest.exe
 
 
   win64_arm64_test_MSVC_cpp17:
@@ -342,9 +468,9 @@ jobs:
           cd build_folder
           cmake ..\..\..\..\test -G "Visual Studio 17 2022" -A ARM64 -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=17
           cmake --build . --config Debug
-          .\BqLogUnitTest.exe
+          .\Debug\BqLogUnitTest.exe
           cmake --build . --config RelWithDebInfo
-          .\BqLogUnitTest.exe
+          .\RelWithDebInfo\BqLogUnitTest.exe
 
 
   win64_arm64_test_MSVC_cpp20:
@@ -366,9 +492,9 @@ jobs:
           cd build_folder
           cmake ..\..\..\..\test -G "Visual Studio 17 2022" -A ARM64 -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=20
           cmake --build . --config Debug
-          .\BqLogUnitTest.exe
+          .\Debug\BqLogUnitTest.exe
           cmake --build . --config RelWithDebInfo
-          .\BqLogUnitTest.exe
+          .\RelWithDebInfo\BqLogUnitTest.exe
 
   win64_arm64_test_MSVC_cpp23:
     runs-on: windows-11-arm
@@ -389,9 +515,9 @@ jobs:
           cd build_folder
           cmake ..\..\..\..\test -G "Visual Studio 17 2022" -A ARM64 -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23
           cmake --build . --config Debug
-          .\BqLogUnitTest.exe
+          .\Debug\BqLogUnitTest.exe
           cmake --build . --config RelWithDebInfo
-          .\BqLogUnitTest.exe
+          .\RelWithDebInfo\BqLogUnitTest.exe
 
   #Linux-ubuntu-X86_64
   ubuntu_test_GCC_cpp11:
