@@ -180,7 +180,7 @@ jobs:
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
           cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make -j$(nproc)
+          make -j4
           .\BqLogUnitTest.exe
 
   win64_arm64_test_Clang_cpp17:
@@ -205,7 +205,7 @@ jobs:
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
           cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=17 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make -j$(nproc)
+          make -j4
           .\BqLogUnitTest.exe
 
   win64_arm64_test_Clang_cpp20:
@@ -230,7 +230,7 @@ jobs:
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
           cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make -j$(nproc)
+          make -j4
           .\BqLogUnitTest.exe
 
   win64_arm64_test_Clang_cpp23:
@@ -255,7 +255,7 @@ jobs:
           objdump -f BqLogUnitTest.exe
           .\BqLogUnitTest.exe
           cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=23 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make -j$(nproc)
+          make -j4
           .\BqLogUnitTest.exe
 
   #Linux-ubuntu-X86_64
