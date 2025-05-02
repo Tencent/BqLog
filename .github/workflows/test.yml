@@ -243,7 +243,6 @@ jobs:
         run: |
           choco uninstall -y llvm --all-versions
           choco install -y llvm
-          choco uninstall -y mingw --all-versions
         shell: powershell
 
       - name: Add LLVM to PATH and Remove MinGW from Path
