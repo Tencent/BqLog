@@ -374,7 +374,7 @@ namespace bq {
 
     template <typename T>
     bq_forceinline T* launder (T* p) noexcept {
-#if defined(BQ_MSVC) || defined(BQ_CLANG)
+#if (defined(BQ_MSVC) && defined(BQ_CPP_17)) || defined(BQ_CLANG)
         return __builtin_launder(p);
 #elif defined(BQ_GCC)
         if (__has_builtin(__builtin_launder)) {
