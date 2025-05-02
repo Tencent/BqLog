@@ -17,8 +17,6 @@ cd VSProj
 cmake ..\..\..\..\test -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=%CPP_VER_PARAM% -T ClangCl
 
 echo "%VS_PATH%\devenv.com"
-call "%VS_PATH%\devenv.com" /?
-"%VS_PATH%\devenv.com" /?
 call "%VS_PATH%\devenv.com" ./BqLogUnitTest.sln /Rebuild "Debug" /Project "./BqLogUnitTest.vcxproj" /Out Build.log
 
 .\Debug\BqLogUnitTest.exe

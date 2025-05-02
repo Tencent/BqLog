@@ -163,15 +163,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'adopt'
           
       - name: Install Clang
         run: |
+          choco uninstall -y llvm --all-versions
           choco install -y llvm
         shell: powershell
 
@@ -180,10 +175,10 @@ jobs:
           cd build\test\win64  
           mkdir build_folder
           cd build_folder
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=14 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           make
           .\BqLogUnitTest.exe
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DJAVA_SUPPORT=ON -DCPP_VER=14 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           make -j$(nproc)
           .\BqLogUnitTest.exe
 
