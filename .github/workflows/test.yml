@@ -59,6 +59,18 @@ jobs:
           update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
 
+      - name: Remove runner's default MinGW from PATH
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Add MSYS2 to PATH
+        run: |
+          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
       - name: Build for Windows
         run: |
           cd build\test\win64  
@@ -136,6 +148,18 @@ jobs:
           update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
 
+      - name: Remove runner's default MinGW from PATH
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Add MSYS2 to PATH
+        run: |
+          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
       - name: Build for Windows
         run: |
           cd build\test\win64  
@@ -212,6 +236,18 @@ jobs:
           update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
 
+      - name: Remove runner's default MinGW from PATH
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Add MSYS2 to PATH
+        run: |
+          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
       - name: Build for Windows
         run: |
           cd build\test\win64  
@@ -287,6 +323,18 @@ jobs:
           msystem: MINGW64
           update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+
+      - name: Remove runner's default MinGW from PATH
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Add MSYS2 to PATH
+        run: |
+          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
 
       - name: Build for Windows
         run: |
@@ -405,6 +453,18 @@ jobs:
           msystem: MINGW64
           update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-clang mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+
+      - name: Remove runner's default MinGW from PATH
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;',''
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Add MSYS2 to PATH
+        run: |
+          $env:Path = "C:\tools\msys64\mingw64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
 
       - name: Install Clang
         run: |
