@@ -48,7 +48,7 @@ namespace bq {
 #define BQ_ATOMIC_CONCATX(x, y) x##y
 
 #if defined(_M_IX86) || (defined(_M_X64) && !defined(_M_ARM64EC))
-#define (x) x
+#define _BQ_INTRIN_RELAXED(x) x
 #define _BQ_INTRIN_ACQUIRE(x) x
 #define _BQ_INTRIN_RELEASE(x) x
 #elif defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
