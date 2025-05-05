@@ -190,7 +190,7 @@ namespace bq {
             return tmp;
         }
 
-        static BQ_TLS thread::thread_id current_thread_id_ = 0;
+        static BQ_TLS thread::thread_id current_thread_id_;
         thread::thread_id thread::get_current_thread_id()
         {
             if (!current_thread_id_) {

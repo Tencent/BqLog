@@ -35,6 +35,10 @@
 #endif
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS)
 #include <execinfo.h>
+namespace bq {
+    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);
+    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_);
+}
 #endif
 
 namespace bq {
@@ -522,12 +526,16 @@ namespace bq {
         }
 
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS)
-        static BQ_TLS_NON_POD bq::string stack_trace_current_str_;
-        static BQ_TLS_NON_POD bq::u16string stack_trace_current_str_u16_;
         static constexpr size_t max_stack_size_ = 128;
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
-            stack_trace_current_str_.clear();
+            if (!bq::stack_trace_current_str_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
+            stack_trace_str_ref.clear();
             int32_t stack_count;
             void* buffer[max_stack_size_];
             char** stacks;
@@ -547,27 +555,33 @@ namespace bq {
                         continue;
                     }
                     auto str_len = strlen(stacks[i]);
-                    stack_trace_current_str_.push_back('\n');
-                    stack_trace_current_str_.insert_batch(stack_trace_current_str_.end(), stacks[i], (size_t)str_len);
+                    stack_trace_str_ref.push_back('\n');
+                    stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], (size_t)str_len);
                 }
             }
             free(stacks);
-            out_str_ptr = stack_trace_current_str_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_.size();
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count)
         {
+            if (!bq::stack_trace_current_str_u16_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::u16string& stack_trace_str_ref = bq::stack_trace_current_str_u16_.get();
             const char* u8_str;
             uint32_t u8_char_count;
             get_stack_trace(skip_frame_count, u8_str, u8_char_count);
-            stack_trace_current_str_u16_.clear();
-            stack_trace_current_str_u16_.fill_uninitialized((u8_char_count << 1) + 1);
-            size_t encoded_size = (size_t)bq::util::utf8_to_utf16(u8_str, u8_char_count, stack_trace_current_str_u16_.begin(), (uint32_t)stack_trace_current_str_u16_.size());
-            assert(encoded_size < stack_trace_current_str_u16_.size());
-            stack_trace_current_str_u16_.erase(stack_trace_current_str_u16_.begin() + encoded_size, stack_trace_current_str_u16_.size() - encoded_size);
-            out_str_ptr = stack_trace_current_str_u16_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
+            stack_trace_str_ref.clear();
+            stack_trace_str_ref.fill_uninitialized((u8_char_count << 1) + 1);
+            size_t encoded_size = (size_t)bq::util::utf8_to_utf16(u8_str, u8_char_count, stack_trace_str_ref.begin(), (uint32_t)stack_trace_str_ref.size());
+            assert(encoded_size < stack_trace_str_ref.size());
+            stack_trace_str_ref.erase(stack_trace_str_ref.begin() + encoded_size, stack_trace_str_ref.size() - encoded_size);
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 #endif
 

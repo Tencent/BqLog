@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/platform/build_type.h"
-
+#include <stddef.h>
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define BQ_WIN 1
 #ifdef _WIN64
@@ -121,12 +121,38 @@
 #ifdef _MSC_VER
 #define BQ_STDCALL __stdcall
 #define BQ_TLS __declspec(thread)
-#define BQ_TLS_NON_POD thread_local
 #else
 #define BQ_STDCALL
 #define BQ_TLS __thread
-#define BQ_TLS_NON_POD thread_local
 #endif
+
+// thread_local has use-after-free issue on MinGW GCC
+// use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
+namespace bq {
+    template<size_t ID, typename T>
+    struct __bq_non_pod_holder_type { };
+}
+#define BQ_TLS_DEFINE(Type, Name, ID) BQ_TLS Type * ____BQ_TLS_##Name##_ptr; \
+                                        template<> \
+                                        struct __bq_non_pod_holder_type<ID, Type> { \
+                                        __bq_non_pod_holder_type() \
+                                        { \
+                                            if (!____BQ_TLS_##Name##_ptr) { \
+                                                ____BQ_TLS_##Name##_ptr = new Type(); \
+                                            } \
+                                        } \
+                                        ~__bq_non_pod_holder_type() \
+                                        { \
+                                            if (____BQ_TLS_##Name##_ptr) { \
+                                                delete ____BQ_TLS_##Name##_ptr; \
+                                            ____BQ_TLS_##Name##_ptr = nullptr; \
+                                            } \
+                                        }                                                                      \
+                                        bq_forceinline operator bool() { return ____BQ_TLS_##Name##_ptr; } \
+                                        bq_forceinline Type& get() { return *____BQ_TLS_##Name##_ptr; } \
+                                    }; \
+                                    thread_local __bq_non_pod_holder_type<ID, Type> Name;
+#define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name, __COUNTER__)
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define BQ_PACK_BEGIN __pragma(pack(push, 1))

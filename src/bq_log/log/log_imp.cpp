@@ -74,7 +74,7 @@ namespace bq {
             return used_data_size_;
         }
     };
-    BQ_TLS_NON_POD sync_buffer sync_buffer_;
+    BQ_TLS_NON_POD(sync_buffer, sync_buffer_);
 
     log_imp::log_imp()
         : id_(0)
@@ -385,11 +385,11 @@ namespace bq {
     {
         bq::platform::scoped_spin_lock lock(spin_lock_);
         uint64_t current_epoch_ms = 0;
-        if (!sync_buffer_.is_empty()) {
-            bq::log_entry_handle log_item(sync_buffer_.get_aligned_data(), sync_buffer_.get_used_data_size());
+        if (!sync_buffer_.get().is_empty()) {
+            bq::log_entry_handle log_item(sync_buffer_.get().get_aligned_data(), sync_buffer_.get().get_used_data_size());
             current_epoch_ms = log_item.get_log_head().timestamp_epoch;
             process_log_chunk(log_item);
-            sync_buffer_.recycle_data();
+            sync_buffer_.get().recycle_data();
         } else {
             current_epoch_ms = bq::platform::high_performance_epoch_ms();
         }
@@ -408,7 +408,7 @@ namespace bq {
 
     uint8_t* log_imp::get_sync_buffer(uint32_t data_size)
     {
-        return sync_buffer_.alloc_data(data_size);
+        return sync_buffer_.get().alloc_data(data_size);
     }
 
     const bq::layout& log_imp::get_layout() const

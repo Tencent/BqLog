@@ -60,7 +60,7 @@ namespace bq {
             cur_buffer_info_ = nullptr;
         }
     };
-    static BQ_TLS_NON_POD miso_tls_info miso_tls_info_;
+    BQ_TLS_NON_POD(miso_tls_info, miso_tls_info_);
 
     /**
      *
@@ -128,12 +128,20 @@ namespace bq {
         }
         uint32_t need_block_count = need_block_count_tmp;
         uint32_t current_write_cursor = cursors_.write_cursor_.load_relaxed();
-        auto& tls_info = miso_tls_info_.get_buffer_info(this);
-        if (tls_info.is_new_created) {
-            tls_info.is_new_created = false;
-            tls_info.wt_read_cursor_cache_ = cursors_.read_cursor_.load_acquire();
+        uint32_t read_cursor_tmp_when_tls_recycled;
+        uint32_t* read_cursor_ptr = nullptr;
+        if (miso_tls_info_) {
+            auto& tls_info = miso_tls_info_.get().get_buffer_info(this);
+            if (tls_info.is_new_created) {
+                tls_info.is_new_created = false;
+                tls_info.wt_read_cursor_cache_ = cursors_.read_cursor_.load_acquire();
+            }
+            read_cursor_ptr = &tls_info.wt_read_cursor_cache_;
+        } else {
+            read_cursor_ptr = &read_cursor_tmp_when_tls_recycled;
+            read_cursor_tmp_when_tls_recycled = cursors_.read_cursor_.load_acquire();
         }
-        uint32_t& read_cursor_ref = tls_info.wt_read_cursor_cache_;
+        uint32_t& read_cursor_ref = *read_cursor_ptr;
 
         uint32_t used_blocks_count = static_cast<uint32_t>(current_write_cursor - read_cursor_ref);
         while(true) {

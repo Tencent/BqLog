@@ -208,11 +208,19 @@ namespace bq {
 
         
         static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
-        BQ_TLS_NON_POD struct{
+        struct bq_log_api_thread_info_tls_type{
             bq::platform::thread::thread_id thread_id_ = 0;
             uint8_t thread_name_len_ = 0;
             char thread_name_[MAX_THREAD_NAME_LEN] = { '\0' };
-        } thread_info;
+        } ;
+
+        static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
+        struct bq_log_api_thread_info_tls_type {
+            bq::platform::thread::thread_id thread_id_;
+            uint8_t thread_name_len_;
+            char thread_name_[MAX_THREAD_NAME_LEN];
+        };
+        BQ_TLS bq_log_api_thread_info_tls_type thread_info_tls_;
 
         BQ_API bq::_api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length)
         {
@@ -222,15 +230,15 @@ namespace bq {
                 handle.result = enum_buffer_result_code::err_buffer_not_inited;
                 return handle;
             }
-            if (thread_info.thread_id_ == 0) {
-                thread_info.thread_id_ = bq::platform::thread::get_current_thread_id();
+            if (thread_info_tls_.thread_id_ == 0) {
+                thread_info_tls_.thread_id_ = bq::platform::thread::get_current_thread_id();
                 bq::string thread_name_tmp = bq::platform::thread::get_current_thread_name();
-                thread_info.thread_name_len_ = (uint8_t)bq::min_value((size_t)MAX_THREAD_NAME_LEN, thread_name_tmp.size());
-                if (thread_info.thread_name_len_ > 0) {
-                    memcpy(thread_info.thread_name_, thread_name_tmp.c_str(), thread_info.thread_name_len_);
+                thread_info_tls_.thread_name_len_ = (uint8_t)bq::min_value((size_t)MAX_THREAD_NAME_LEN, thread_name_tmp.size());
+                if (thread_info_tls_.thread_name_len_ > 0) {
+                    memcpy(thread_info_tls_.thread_name_, thread_name_tmp.c_str(), thread_info_tls_.thread_name_len_);
                 }
             }
-            uint32_t ext_info_length = sizeof(ext_log_entry_info_head) + thread_info.thread_name_len_;
+            uint32_t ext_info_length = sizeof(ext_log_entry_info_head) + thread_info_tls_.thread_name_len_;
             auto total_length = length + ext_info_length;
             auto epoch_ms = bq::platform::high_performance_epoch_ms();
 
@@ -264,9 +272,9 @@ namespace bq {
                 head->timestamp_epoch = epoch_ms;
                 head->ext_info_offset = length;
                 bq::ext_log_entry_info_head* ext_info = (bq::ext_log_entry_info_head*)(handle.data_addr + length);
-                BQ_PACK_ACCESS(ext_info->thread_id_) = thread_info.thread_id_;
-                ext_info->thread_name_len_ = thread_info.thread_name_len_;
-                memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info.thread_name_, thread_info.thread_name_len_);
+                BQ_PACK_ACCESS(ext_info->thread_id_) = thread_info_tls_.thread_id_;
+                ext_info->thread_name_len_ = thread_info_tls_.thread_name_len_;
+                memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
             }
             return handle;
         }

@@ -30,6 +30,8 @@
 #endif
 
 namespace bq {
+    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);
+    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_);
     namespace platform {
         static bq::u16string trans_to_windows_wide_string(const bq::string utf8_str)
         {
@@ -530,32 +532,41 @@ namespace bq {
             return reinterpret_cast<int64_t>(result) > 32;
         }
 
-        static BQ_TLS_NON_POD bq::string stack_trace_current_str_;
-        static BQ_TLS_NON_POD bq::u16string stack_trace_current_str_u16_;
-
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
+            if (!bq::stack_trace_current_str_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
             const char16_t* u16_str;
             uint32_t u16_str_len;
             get_stack_trace_utf16(skip_frame_count, u16_str, u16_str_len);
-            stack_trace_current_str_.clear();
-            stack_trace_current_str_.fill_uninitialized(((u16_str_len * 3) >> 1) + 1);
-            size_t encoded_size = (size_t)bq::util::utf16_to_utf8(u16_str, u16_str_len, stack_trace_current_str_.begin(), (uint32_t)stack_trace_current_str_.size());
-            assert(encoded_size < stack_trace_current_str_.size());
-            stack_trace_current_str_.erase(stack_trace_current_str_.begin() + encoded_size, stack_trace_current_str_.size() - encoded_size);
-            out_str_ptr = stack_trace_current_str_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_.size();
+           stack_trace_str_ref.clear();
+           stack_trace_str_ref.fill_uninitialized(((u16_str_len * 3) >> 1) + 1);
+            size_t encoded_size = (size_t)bq::util::utf16_to_utf8(u16_str, u16_str_len,stack_trace_str_ref.begin(), (uint32_t)stack_trace_current_str_.get().size());
+            assert(encoded_size <stack_trace_str_ref.size());
+           stack_trace_str_ref.erase(stack_trace_current_str_.get().begin() + encoded_size,stack_trace_str_ref.size() - encoded_size);
+            out_str_ptr =stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_current_str_.get().size();
         }
 
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count)
         {
+            if (!bq::stack_trace_current_str_u16_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::u16string& stack_trace_str_ref = bq::stack_trace_current_str_u16_.get();
             HANDLE thread = GetCurrentThread();
             CONTEXT context;
 
             if (!common_global_vars::get().stack_trace_sym_initialized_.exchange(true, bq::platform::memory_order::relaxed)) {
                 SymInitialize(common_global_vars::get().stack_trace_process_, NULL, TRUE);
             }
-            stack_trace_current_str_u16_.clear();
+            stack_trace_str_ref.clear();
             bq::platform::scoped_mutex lock(common_global_vars::get().stack_trace_mutex_);
             RtlCaptureContext(&context);
 
@@ -633,11 +644,11 @@ namespace bq {
                     continue;
                 }
 
-                stack_trace_current_str_u16_.push_back(u'\n');
-                stack_trace_current_str_u16_.fill_uninitialized(16);
+                stack_trace_str_ref.push_back(u'\n');
+                stack_trace_str_ref.fill_uninitialized(16);
                 static_assert(sizeof(wchar_t) == sizeof(WCHAR) && sizeof(WCHAR) == sizeof(char16_t), "windows wchar_t should be 2 bytes");
-                swprintf((wchar_t*)(char16_t*)stack_trace_current_str_u16_.end() - 16, 16 + 1, L"%016" PRIx64 "", (uintptr_t)address);
-                stack_trace_current_str_u16_.push_back(L'\t');
+                swprintf((wchar_t*)(char16_t*)stack_trace_str_ref.end() - 16, 16 + 1, L"%016" PRIx64 "", (uintptr_t)address);
+                stack_trace_str_ref.push_back(L'\t');
 
                 DWORD64 module_base = SymGetModuleBase64(common_global_vars::get().stack_trace_process_, address);
                 if (!module_base && !sym_refreshed) {
@@ -663,34 +674,34 @@ namespace bq {
                         if (last_slash != nullptr) {
                             module_file_name_ptr = last_slash + 1;
                         }
-                        stack_trace_current_str_u16_ += (const char16_t*)module_file_name_ptr;
-                        stack_trace_current_str_u16_.push_back(u'\t');
+                        stack_trace_str_ref += (const char16_t*)module_file_name_ptr;
+                        stack_trace_str_ref.push_back(u'\t');
                     }
                 } else {
-                    stack_trace_current_str_u16_ += u"unknown module\t";
+                    stack_trace_str_ref += u"unknown module\t";
                 }
 
                 if (symbo_found) {
-                    stack_trace_current_str_u16_ += (const char16_t*)symbol->Name;
-                    stack_trace_current_str_u16_.push_back(u' ');
+                    stack_trace_str_ref += (const char16_t*)symbol->Name;
+                    stack_trace_str_ref.push_back(u' ');
                     DWORD displacement = 0;
                     IMAGEHLP_LINEW64 line;
                     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
                     if (SymGetLineFromAddrW64(common_global_vars::get().stack_trace_process_, address, &displacement, &line)) {
-                        stack_trace_current_str_u16_.push_back(u'(');
-                        stack_trace_current_str_u16_ += (const char16_t*)line.FileName;
-                        stack_trace_current_str_u16_.push_back(u':');
+                        stack_trace_str_ref.push_back(u'(');
+                        stack_trace_str_ref += (const char16_t*)line.FileName;
+                        stack_trace_str_ref.push_back(u':');
                         char16_t tmp[32];
                         swprintf((wchar_t*)tmp, 32, L"%d", line.LineNumber);
-                        stack_trace_current_str_u16_ += tmp;
-                        stack_trace_current_str_u16_.push_back(u')');
+                        stack_trace_str_ref += tmp;
+                        stack_trace_str_ref.push_back(u')');
                     }
                 } else {
-                    stack_trace_current_str_u16_ += u"(unknown function and file)";
+                    stack_trace_str_ref += u"(unknown function and file)";
                 }
             }
-            out_str_ptr = stack_trace_current_str_u16_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 
         void* aligned_alloc(size_t alignment, size_t size)
