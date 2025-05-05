@@ -206,14 +206,6 @@ namespace bq {
             return log_manager::instance().reset_config(log_name_utf8, config_content_utf8);
         }
 
-        
-        static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
-        struct bq_log_api_thread_info_tls_type{
-            bq::platform::thread::thread_id thread_id_ = 0;
-            uint8_t thread_name_len_ = 0;
-            char thread_name_[MAX_THREAD_NAME_LEN] = { '\0' };
-        } ;
-
         static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
         struct bq_log_api_thread_info_tls_type {
             bq::platform::thread::thread_id thread_id_;
