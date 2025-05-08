@@ -130,18 +130,18 @@
 // use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
 namespace bq {
     template<size_t ID, typename T>
-    struct __bq_non_pod_holder_type { };
+    struct _bq_non_pod_holder_type { };
 }
 #define BQ_TLS_DEFINE(Type, Name, ID) BQ_TLS Type * ____BQ_TLS_##Name##_ptr; \
                                         template<> \
-                                        struct __bq_non_pod_holder_type<ID, Type> { \
-                                        __bq_non_pod_holder_type() \
+                                        struct _bq_non_pod_holder_type<ID, Type> { \
+                                        _bq_non_pod_holder_type() \
                                         { \
                                             if (!____BQ_TLS_##Name##_ptr) { \
                                                 ____BQ_TLS_##Name##_ptr = new Type(); \
                                             } \
                                         } \
-                                        ~__bq_non_pod_holder_type() \
+                                        ~_bq_non_pod_holder_type() \
                                         { \
                                             if (____BQ_TLS_##Name##_ptr) { \
                                                 delete ____BQ_TLS_##Name##_ptr; \
@@ -151,7 +151,7 @@ namespace bq {
                                         bq_forceinline operator bool() { return ____BQ_TLS_##Name##_ptr; } \
                                         bq_forceinline Type& get() { return *____BQ_TLS_##Name##_ptr; } \
                                     }; \
-                                    thread_local __bq_non_pod_holder_type<ID, Type> Name;
+                                    thread_local _bq_non_pod_holder_type<ID, Type> Name;
 #define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name, __COUNTER__)
 
 #if defined(_MSC_VER) && !defined(__clang__)
