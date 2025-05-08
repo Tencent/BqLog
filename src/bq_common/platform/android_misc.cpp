@@ -529,7 +529,7 @@ namespace bq {
                     continue;
                 }
                 char tmp[64];
-                snprintf(tmp, "\n#%d %p ", idx, addr);
+                snprintf(tmp, sizeof(tmp), "\n#%d %p ", idx, addr);
                 stack_trace_str_ref += tmp;
                 stack_trace_str_ref += symbol;
             }
