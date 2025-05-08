@@ -56,11 +56,7 @@ namespace bq {
     appender_console::console_buffer::~console_buffer()
     {
         auto real_buffer = buffer_.exchange_seq_cst(nullptr);
-#if BQ_ALIGNAS_NEW
-        delete real_buffer;
-#else
         bq::util::aligned_delete(real_buffer);
-#endif
     }
 
     void appender_console::console_buffer::insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
@@ -79,18 +75,10 @@ namespace bq {
                 config.need_recovery = false;
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = UINT64_MAX;
-#if BQ_ALIGNAS_NEW
-                buffer = new bq::log_buffer(config);
-#else
-                buffer = bq::util::aligned_new<bq::log_buffer>(64, config);
-#endif
+                buffer = bq::util::aligned_new<bq::log_buffer>(CACHE_LINE_SIZE, config);
                 log_buffer* expected = nullptr;
                 if (!buffer_.compare_exchange_strong(expected, buffer, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-#if BQ_ALIGNAS_NEW
-                    delete buffer;
-#else
                     bq::util::aligned_delete(buffer);
-#endif
                     buffer = expected;
                 }
             }

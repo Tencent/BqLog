@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/platform/build_type.h"
-#include <stddef.h>
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define BQ_WIN 1
 #ifdef _WIN64
@@ -127,11 +127,9 @@
 #endif
 
 // thread_local has use-after-free issue on MinGW GCC
-// use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
-namespace bq {
-    template<size_t ID, typename T>
-    struct __bq_non_pod_holder_type { };
-}
+template<size_t ID, typename T>
+struct __bq_non_pod_holder_type { };
+
 #define BQ_TLS_DEFINE(Type, Name, ID) BQ_TLS Type * ____BQ_TLS_##Name##_ptr; \
                                         template<> \
                                         struct __bq_non_pod_holder_type<ID, Type> { \
@@ -193,10 +191,6 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(char* from)
 #endif
 
 
-#if defined(BQ_CPP17)
-#if defined(BQ_IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
+#if defined(__cpp_aligned_new)
 #define BQ_ALIGNAS_NEW 1
-#else
-#define BQ_ALIGNAS_NEW 1
-#endif
 #endif

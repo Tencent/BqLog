@@ -174,11 +174,7 @@ namespace bq {
                     }
                 }
             }
-#if BQ_ALIGNAS_NEW
-            buffer_ = new bq::log_buffer(buffer_config);
-#else
             buffer_ = bq::util::aligned_new<bq::log_buffer>(CACHE_LINE_SIZE, buffer_config);
-#endif
         }
         worker_.init(thread_mode_, this);
         if (thread_mode_ == log_thread_mode::independent) {
@@ -285,11 +281,7 @@ namespace bq {
         name_.clear();
         merged_log_level_bitmap_.clear();
         if (buffer_) {
-#if BQ_ALIGNAS_NEW
-            delete buffer_;
-#else
             bq::util::aligned_delete(buffer_);
-#endif
         }
         delete snapshot_;
         snapshot_ = nullptr;
