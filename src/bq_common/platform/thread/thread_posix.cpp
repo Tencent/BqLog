@@ -197,13 +197,8 @@ namespace bq {
             if (id == 0) {
                 return false;
             }
-            int result = pthread_kill((pthread_t)id, 0);
-            if (result == ESRCH) {
-                return false; // thread does not exist
-            } else if (result == EINVAL) {
-                return false; // invalid thread id
-            }
-            return true; // thread is alive
+            int32_t result = pthread_kill((pthread_t)id, 0);
+            return result == 0;
         }
 
         thread::~thread()

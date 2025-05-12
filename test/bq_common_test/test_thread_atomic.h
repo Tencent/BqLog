@@ -388,11 +388,11 @@ namespace bq {
                         thread2.cancel();
                         thread3.cancel();
                         thread1.join();
-                        result.add_result(!bq::platform::thread::is_thread_alive(thread1.thread_id_), "thread alive test failed");
+                        result.add_result(!bq::platform::thread::is_thread_alive(thread1.thread_id_), "thread dead test failed");
                         thread2.join();
-                        result.add_result(!bq::platform::thread::is_thread_alive(thread2.thread_id_), "thread alive test failed");
+                        result.add_result(!bq::platform::thread::is_thread_alive(thread2.thread_id_), "thread dead test failed");
                         thread3.join();
-                        result.add_result(!bq::platform::thread::is_thread_alive(thread3.thread_id_), "thread alive test failed");
+                        result.add_result(!bq::platform::thread::is_thread_alive(thread3.thread_id_), "thread dead test failed");
                     }
                 }
                 test_output_dynamic(bq::log_level::info, "thread alive check test is finished, now begin the cas test, please wait...                \r");
