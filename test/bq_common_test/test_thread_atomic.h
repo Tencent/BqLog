@@ -72,7 +72,7 @@ namespace bq {
                         if (i_ptr->i.compare_exchange_strong(value, value + 1, platform::memory_order::release)) {
                             a_ptr->push_back(value);
                         } else {
-                            a_ptr->push_back(MAGIC_NUMBER); // imposible branch
+                            a_ptr->push_back(MAGIC_NUMBER); // impossible branch
                         }
                     }
                     i_ptr->i.store(MAGIC_NUMBER, platform::memory_order::release);
@@ -365,6 +365,7 @@ namespace bq {
                 }
                 test_output_dynamic(bq::log_level::info, "atomic add test is finished, now begin the thread alive check test, please wait...                \r");
                 {
+#if !(defined(BQ_LINUX) || defined(BQ_ANDROID))
                     for (int32_t i = 0; i < 1024; ++i) {
                         test_thread_exist thread1;
                         test_thread_exist thread2;
@@ -394,6 +395,7 @@ namespace bq {
                         thread3.join();
                         result.add_result(!bq::platform::thread::is_thread_alive(thread3.thread_id_), "thread dead test failed");
                     }
+#endif
                 }
                 test_output_dynamic(bq::log_level::info, "thread alive check test is finished, now begin the cas test, please wait...                \r");
                 {

@@ -198,6 +198,9 @@ namespace bq {
             if (id == 0) {
                 return false;
             }
+#if BQ_LINUX || BQ_ANDROID
+            assert(false && "is_thread_alive is reliable implemented on Linux");
+#endif
             int32_t result = pthread_kill((pthread_t)id, 0);
             return result == 0;
         }
