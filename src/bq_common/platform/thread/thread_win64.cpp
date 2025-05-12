@@ -199,6 +199,24 @@ namespace bq {
             return current_thread_id_;
         }
 
+        bool thread::is_thread_alive(thread_id id)
+        {
+            if (id == 0) {
+                return false;
+            }
+            HANDLE thread_handle = OpenThread(THREAD_QUERY_INFORMATION, FALSE, static_cast<DWORD>(id));
+            if (thread_handle == NULL) {
+                return false;
+            }
+            DWORD exit_code;
+            if (GetExitCodeThread(thread_handle, &exit_code)) {
+                CloseHandle(thread_handle);
+                return exit_code == STILL_ACTIVE; // STILL_ACTIVE (259) indicates the thread is still running
+            }
+            CloseHandle(thread_handle);
+            return false; // Failed to get exit code, assume the thread has terminated
+        }
+
         thread::~thread()
         {
             DWORD exitCode = 0;

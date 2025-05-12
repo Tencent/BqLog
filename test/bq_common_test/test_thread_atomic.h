@@ -12,6 +12,20 @@ namespace bq {
         constexpr uint32_t TEST_THREAD_ATOMIC_LOOP_TIMES = 1000000;
         constexpr uint32_t MAGIC_NUMBER = 0x4323;
 
+        class test_thread_exist : public bq::platform::thread {
+        public:
+            bq::platform::thread::thread_id thread_id_ = 0;
+            bq::platform::atomic<bool> is_started;
+        protected:
+            virtual void run() override {
+                thread_id_ = bq::platform::thread::get_current_thread_id();
+                is_started.store(true, bq::platform::memory_order::release);
+                while (!is_cancelled()) {
+                    bq::platform::thread::yield();
+                }
+            }
+        };
+
         class test_thread_add : public bq::platform::thread {
         public:
             test_atomic_struct<uint32_t>* i_ptr = nullptr;
@@ -315,7 +329,7 @@ namespace bq {
         public:
             virtual test_result test() override
             {
-                test_output_dynamic(bq::log_level::info, "doing multi thread test, this may take some time, please wait....                \r");
+                test_output_dynamic(bq::log_level::info, "doing multi thread atomic add test, this may take some time, please wait....                \r");
                 test_result result;
                 {
                     // atomic test
@@ -349,7 +363,39 @@ namespace bq {
                     auto i_result = i_value.i.load(platform::memory_order::acquire);
                     result.add_result(i_result == TEST_THREAD_ATOMIC_LOOP_TIMES * 5, "atomic add test 1, final value:%d", i_result);
                 }
-                test_output_dynamic(bq::log_level::info, "atomic add test is finished, now begin the cas test, please wait...                \r");
+                test_output_dynamic(bq::log_level::info, "atomic add test is finished, now begin the thread alive check test, please wait...                \r");
+                {
+                    for (int32_t i = 0; i < 1024; ++i) {
+                        test_thread_exist thread1;
+                        test_thread_exist thread2;
+                        test_thread_exist thread3;
+                        thread1.start();
+                        thread2.start();
+                        thread3.start();
+                        while (!thread1.is_started.load(bq::platform::memory_order::acquire)) {
+                            bq::platform::thread::yield();
+                        }
+                        result.add_result(bq::platform::thread::is_thread_alive(thread1.thread_id_), "thread alive test failed");
+                        while (!thread2.is_started.load(bq::platform::memory_order::acquire)) {
+                            bq::platform::thread::yield();
+                        }
+                        result.add_result(bq::platform::thread::is_thread_alive(thread2.thread_id_), "thread alive test failed");
+                        while (!thread3.is_started.load(bq::platform::memory_order::acquire)) {
+                            bq::platform::thread::yield();
+                        }
+                        result.add_result(bq::platform::thread::is_thread_alive(thread3.thread_id_), "thread alive test failed");
+                        thread1.cancel();
+                        thread2.cancel();
+                        thread3.cancel();
+                        thread1.join();
+                        result.add_result(!bq::platform::thread::is_thread_alive(thread1.thread_id_), "thread alive test failed");
+                        thread2.join();
+                        result.add_result(!bq::platform::thread::is_thread_alive(thread2.thread_id_), "thread alive test failed");
+                        thread3.join();
+                        result.add_result(!bq::platform::thread::is_thread_alive(thread3.thread_id_), "thread alive test failed");
+                    }
+                }
+                test_output_dynamic(bq::log_level::info, "thread alive check test is finished, now begin the cas test, please wait...                \r");
                 {
                     // CAS test
                     constexpr uint32_t cas_times_per_loop = 5;

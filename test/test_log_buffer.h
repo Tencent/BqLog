@@ -21,8 +21,79 @@
 
 namespace bq {
     namespace test {
+        static bq::platform::atomic<int32_t> linked_list_test_number_generator_ = 0;
         static bq::platform::atomic<int32_t> log_buffer_test_total_write_count_ = 0;
         constexpr int32_t log_buffer_total_task = 5;
+        constexpr int32_t linked_list_test_number_per_thread = 2000000;
+
+
+        class miso_linked_list_test_insert_task {
+        private:
+            bq::miso_linked_list<int32_t>& linked_list_;
+            test_result& result_;
+        public:
+            miso_linked_list_test_insert_task(bq::miso_linked_list<int32_t>& linked_list, test_result& result)
+                : linked_list_(linked_list)
+                , result_(result)
+            {
+                (void)result_;
+            }
+            void operator()()
+            {
+                for (uint32_t i = 0; i < linked_list_test_number_per_thread; ++i) {
+                    int32_t number = linked_list_test_number_generator_.fetch_add_release(1);
+                    auto iter = linked_list_.insert(number);
+                    (void)iter;
+                }
+                while (linked_list_test_number_generator_.load_acquire() < linked_list_test_number_per_thread * log_buffer_total_task) {
+                    bq::platform::thread::yield();
+                }
+                linked_list_test_number_generator_.fetch_add_release(1);
+            }
+        };
+
+        class miso_linked_list_test_remove_task {
+        private:
+            bq::miso_linked_list<int32_t>& linked_list_;
+            test_result& result_;
+
+        public:
+            miso_linked_list_test_remove_task(bq::miso_linked_list<int32_t>& linked_list, test_result& result)
+                : linked_list_(linked_list)
+                , result_(result)
+            {
+            }
+
+            void operator()()
+            {
+                int32_t max_value = linked_list_test_number_per_thread * log_buffer_total_task;
+                bq::array<bool> mark_array;
+                mark_array.fill_uninitialized((size_t)max_value);
+                memset(mark_array.begin(), 0, (size_t)max_value);
+                int32_t total_read_number = 0;
+                while (true) {
+                    bool all_insert_done = (linked_list_test_number_generator_.load_acquire() == max_value + log_buffer_total_task);
+                    auto iter = linked_list_.first();
+                    uint32_t idx = 0;
+                    while (iter) {
+                        if (all_insert_done || ((++idx) % 2 == 0)) {
+                            mark_array[iter.value()] = true;
+                            iter = linked_list_.remove(iter);
+                            ++total_read_number;
+                            continue;
+                        }
+                        iter = linked_list_.next(iter);
+                    }
+                    if (all_insert_done) {
+                        break;
+                    }
+                }
+                result_.add_result(total_read_number == max_value, "linked list remove test total number failed");
+                for (size_t i = 0; i < mark_array.size(); ++i) {
+                    result_.add_result(mark_array[i], "linked list remove test failed, %zu", i);
+                }
+            }
+        };
 
         class memory_pool_test_obj_aligned : public bq::memory_pool_obj_base<memory_pool_test_obj_aligned, true> {
         public :
@@ -169,6 +240,22 @@ namespace bq {
 
         class test_log_buffer : public test_base {
         private:
+            void do_linked_list_test(test_result& result)
+            {
+                test_output_dynamic(bq::log_level::info, "[memory pool] miso linked list test begin\n");
+                bq::miso_linked_list<int32_t> linked_list;
+                std::vector<std::thread> insert_tasks;
+                for (int32_t i = 0; i < log_buffer_total_task; ++i) {
+                    insert_tasks.emplace_back(miso_linked_list_test_insert_task(linked_list, result));
+                }
+                std::thread remove_task(miso_linked_list_test_remove_task(linked_list, result));
+                remove_task.join();
+                for (auto& task : insert_tasks) {
+                    task.join();
+                }
+                test_output_dynamic(bq::log_level::info, "[memory pool] miso linked list test end\n");
+            }
+
             void do_memory_pool_test(test_result& result)
             {
                 {
@@ -179,13 +266,8 @@ namespace bq {
                     bq::memory_pool<memory_pool_test_obj_not_aligned> pool_not_aligned_form, pool_not_aligned_to;
 
                     for (int32_t i = 0; i < OBJ_COUNT; ++i) {
-#if BQ_CPP_17
-                        pool_aligned_form.push(new memory_pool_test_obj_aligned(i));
-                        pool_aligned_to.push(new memory_pool_test_obj_aligned(i));
-#else
                         pool_aligned_form.push(bq::util::aligned_new<memory_pool_test_obj_aligned>(CACHE_LINE_SIZE, i));
                         pool_aligned_to.push(util::aligned_new<memory_pool_test_obj_aligned>(CACHE_LINE_SIZE, i));
-#endif
                         pool_not_aligned_form.push(new memory_pool_test_obj_not_aligned(i));
                         pool_not_aligned_to.push(new memory_pool_test_obj_not_aligned(i));
                     }
@@ -208,19 +290,11 @@ namespace bq {
                     memset((int32_t*)marks.begin(), 0, sizeof(decltype(marks)::value_type) * marks.size());
                     while (auto obj = pool_aligned_form.pop()) {
                         marks[obj->id_]++;
-#if BQ_CPP_17
-                        delete obj;
-#else
                         bq::util::aligned_delete(obj);
-#endif
                     }
                     while (auto obj = pool_aligned_to.pop()) {
                         marks[obj->id_]++;
-#if BQ_CPP_17
-                        delete obj;
-#else
                         bq::util::aligned_delete(obj);
-#endif
                     }
                     for (int32_t i = 0; i < OBJ_COUNT; ++i) {
                         result.add_result(marks[i] == 2, "memory pool aligned test %d", i);
@@ -629,8 +703,8 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-
-                //do_memory_pool_test(result);
+                do_linked_list_test(result);
+                do_memory_pool_test(result);
 
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";

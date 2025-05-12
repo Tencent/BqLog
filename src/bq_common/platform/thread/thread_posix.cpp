@@ -192,6 +192,20 @@ namespace bq {
             return current_thread_id_;
         }
 
+        bool thread::is_thread_alive(thread_id id)
+        {
+            if (id == 0) {
+                return false;
+            }
+            int result = pthread_kill((pthread_t)id, 0);
+            if (result == ESRCH) {
+                return false; // thread does not exist
+            } else if (result == EINVAL) {
+                return false; // invalid thread id
+            }
+            return true; // thread is alive
+        }
+
         thread::~thread()
         {
             // auto current_status = status_.load();
