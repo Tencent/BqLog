@@ -12,6 +12,7 @@
 #include "bq_common/bq_common.h"
 #ifdef BQ_POSIX
 #include <pthread.h>
+#include <signal.h>
 
 // Modern BSDs need these to compile properly
 #if !defined(BQ_APPLE) && !defined(BQ_PS) && defined(BQ_UNIX)
