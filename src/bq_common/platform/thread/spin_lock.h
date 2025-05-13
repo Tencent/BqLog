@@ -248,7 +248,12 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 write_lock_thread_id_.store_seq_cst(0);
 #endif
-                counter_.get().store_release(0);
+                while (true) {
+                    counter_type expected_counter = write_lock_mark_value;
+                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
+                        break;
+                    }
+                }
             }
         };
 
