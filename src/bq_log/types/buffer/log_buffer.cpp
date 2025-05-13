@@ -462,8 +462,9 @@ namespace bq {
             // for new data
             if (context.is_thread_finished_) {
                 bq::util::aligned_delete(context.get_tls_info());
+            } else {
+                ++context.get_tls_info()->rt_data_.current_read_seq_;
             }
-            ++context.get_tls_info()->rt_data_.current_read_seq_;
         } else {
             // for recovering data
             auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
