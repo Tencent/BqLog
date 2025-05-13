@@ -202,18 +202,25 @@ namespace bq {
 
             inline void read_lock()
             {
+                int64_t ttt = 0;
                 while (true) {
                     counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
                     }
-                    counter_.get().fetch_sub_relaxed(1);
+                    auto new_value = counter_.get().fetch_sub_relaxed(1);
+                    if (++ttt > 10000000) {
+                       printf("Value 1 : %lld\n", (int64_t)new_value);
+                    }
                     while (true) {
                         yield();
                         counter_type current_counter = counter_.get().load_acquire();
                         if (current_counter >= 0) {
                             break;
+                        }
+                        if (++ttt > 10000000) {
+                            printf("Value 2 : %lld\n", (int64_t)new_value);
                         }
                     }
                 }
@@ -235,12 +242,16 @@ namespace bq {
                 assert(bq::platform::thread::get_current_thread_id() != write_lock_thread_id_.load_seq_cst() && "spin_lock is not reentrant");
                 write_lock_thread_id_.store_seq_cst(bq::platform::thread::get_current_thread_id());
 #endif
+                int64_t ttt = 0;
                 while (true) {
                     counter_type expected_counter = 0;
                     if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::relaxed)) {
                         break;
                     }
                     yield();
+                    if (++ttt > 10000000) {
+                       printf("Value 3 : %lld\n", (int64_t)expected_counter);
+                    }
                 }
             }
 
@@ -249,10 +260,14 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 write_lock_thread_id_.store_seq_cst(0);
 #endif
+                int64_t ttt = 0;
                 while (true) {
                     counter_type expected_counter = write_lock_mark_value;
                     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
                         break;
+                    }
+                    if (++ttt > 10000000) {
+                        printf("Value 4 : %lld\n", (int64_t)expected_counter);
                     }
                 }
             }
