@@ -266,7 +266,7 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 write_lock_thread_id_.store_seq_cst(0);
 #endif
-                uint64_t start_epoch = get_epoch();
+                //uint64_t start_epoch = get_epoch();
                 counter_.get().store_release(0);
                 // while (true) {
                 //     counter_type expected_counter = write_lock_mark_value;
