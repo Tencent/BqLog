@@ -125,7 +125,6 @@ namespace bq {
 #endif
         private:
             void yield();
-
         public:
             spin_lock()
                 : value_(false)
@@ -186,7 +185,7 @@ namespace bq {
 #endif
         private:
             void yield();
-
+            uint64_t get_epoch();
         public:
             spin_lock_rw_crazy()
                 : counter_(0)
@@ -203,7 +202,7 @@ namespace bq {
 
             inline void read_lock()
             {
-                int64_t ttt = 0;
+                uint64_t start_epoch = get_epoch();
                 while (true) {
                     counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
@@ -211,8 +210,9 @@ namespace bq {
                         break;
                     }
                     auto new_value = counter_.get().fetch_sub_relaxed(1);
-                    if (++ttt > 10000000) {
-                       printf("Value 1 : %" PRId64 "\n", (int64_t)new_value);
+                    if (get_epoch() > start_epoch + 5000) {
+                        printf("Value 1 : %" PRId64 "\n", (int64_t)new_value);
+                        fflush(stdout);
                        assert(false);
                     }
                     while (true) {
@@ -221,8 +221,9 @@ namespace bq {
                         if (current_counter >= 0) {
                             break;
                         }
-                        if (++ttt > 10000000) {
+                        if (get_epoch() > start_epoch + 5000) {
                             printf("Value 2 : %" PRId64 "\n", (int64_t)new_value);
+                            fflush(stdout);
                             assert(false);
                         }
                     }
@@ -245,15 +246,16 @@ namespace bq {
                 assert(bq::platform::thread::get_current_thread_id() != write_lock_thread_id_.load_seq_cst() && "spin_lock is not reentrant");
                 write_lock_thread_id_.store_seq_cst(bq::platform::thread::get_current_thread_id());
 #endif
-                int64_t ttt = 0;
+                uint64_t start_epoch = get_epoch();
                 while (true) {
                     counter_type expected_counter = 0;
                     if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::relaxed)) {
                         break;
                     }
                     yield();
-                    if (++ttt > 10000000) {
+                    if (get_epoch() > start_epoch + 5000) {
                         printf("Value 3 : %" PRId64 "\n", (int64_t)expected_counter);
+                        fflush(stdout);
                         assert(false);
                     }
                 }
@@ -264,14 +266,15 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 write_lock_thread_id_.store_seq_cst(0);
 #endif
-                int64_t ttt = 0;
+                uint64_t start_epoch = get_epoch();
                 while (true) {
                     counter_type expected_counter = write_lock_mark_value;
                     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
                         break;
                     }
-                    if (++ttt > 10000000) {
+                    if (get_epoch() > start_epoch + 5000) {
                         printf("Value 4 : %" PRId64 "\n", (int64_t)expected_counter);
+                        fflush(stdout);
                         assert(false);
                     }
                 }

@@ -36,5 +36,10 @@ namespace bq {
         {
             bq::platform::thread::cpu_relax();
         }
+
+        uint64_t spin_lock_rw_crazy::get_epoch()
+        {
+            return bq::platform::high_performance_epoch_ms();
+        }
     }
 }
