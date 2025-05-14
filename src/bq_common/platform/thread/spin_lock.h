@@ -21,6 +21,7 @@
  *
  */
 #include <stdint.h>
+#include <inttypes.h>
 #include "bq_common/utils/utility_types.h"
 #include "bq_common/bq_common.h"
 
@@ -211,7 +212,8 @@ namespace bq {
                     }
                     auto new_value = counter_.get().fetch_sub_relaxed(1);
                     if (++ttt > 10000000) {
-                       printf("Value 1 : %lld\n", (int64_t)new_value);
+                       printf("Value 1 : %" PRId64 "\n", (int64_t)new_value);
+                       assert(false);
                     }
                     while (true) {
                         yield();
@@ -220,7 +222,8 @@ namespace bq {
                             break;
                         }
                         if (++ttt > 10000000) {
-                            printf("Value 2 : %lld\n", (int64_t)new_value);
+                            printf("Value 2 : %" PRId64 "\n", (int64_t)new_value);
+                            assert(false);
                         }
                     }
                 }
@@ -250,7 +253,8 @@ namespace bq {
                     }
                     yield();
                     if (++ttt > 10000000) {
-                       printf("Value 3 : %lld\n", (int64_t)expected_counter);
+                        printf("Value 3 : %" PRId64 "\n", (int64_t)expected_counter);
+                        assert(false);
                     }
                 }
             }
@@ -267,7 +271,8 @@ namespace bq {
                         break;
                     }
                     if (++ttt > 10000000) {
-                        printf("Value 4 : %lld\n", (int64_t)expected_counter);
+                        printf("Value 4 : %" PRId64 "\n", (int64_t)expected_counter);
+                        assert(false);
                     }
                 }
             }
