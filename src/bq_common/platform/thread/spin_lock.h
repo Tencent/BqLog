@@ -222,7 +222,7 @@ namespace bq {
                             break;
                         }
                         if (get_epoch() > start_epoch + 5000) {
-                            printf("Value 2 : %" PRId64 "\n", (int64_t)new_value);
+                            printf("Value 2 : %" PRId64 "\n", (int64_t)current_counter);
                             fflush(stdout);
                             assert(false);
                         }
