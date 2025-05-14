@@ -209,9 +209,9 @@ namespace bq {
                         // read lock success.
                         break;
                     }
-                    auto new_value = counter_.get().fetch_sub_relaxed(1);
+                    //auto new_value = counter_.get().fetch_sub_relaxed(1);
                     if (get_epoch() > start_epoch + 5000) {
-                        printf("Value 1 : %" PRId64 "\n", (int64_t)new_value);
+                        printf("Value 1 : %" PRId64 "\n", (int64_t)counter_.get().load_seq_cst());
                         fflush(stdout);
                        assert(false);
                     }
@@ -267,17 +267,18 @@ namespace bq {
                 write_lock_thread_id_.store_seq_cst(0);
 #endif
                 uint64_t start_epoch = get_epoch();
-                while (true) {
-                    counter_type expected_counter = write_lock_mark_value;
-                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
-                        break;
-                    }
-                    if (get_epoch() > start_epoch + 5000) {
-                        printf("Value 4 : %" PRId64 "\n", (int64_t)expected_counter);
-                        fflush(stdout);
-                        assert(false);
-                    }
-                }
+                counter_.get().store_release(0);
+                // while (true) {
+                //     counter_type expected_counter = write_lock_mark_value;
+                //     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
+                //         break;
+                //     }
+                //     if (get_epoch() > start_epoch + 5000) {
+                //         printf("Value 4 : %" PRId64 "\n", (int64_t)expected_counter);
+                //         fflush(stdout);
+                //         assert(false);
+                //     }
+                // }
             }
         };
 
