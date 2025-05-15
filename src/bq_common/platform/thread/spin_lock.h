@@ -24,6 +24,9 @@
 #include <inttypes.h>
 #include "bq_common/utils/utility_types.h"
 #include "bq_common/bq_common.h"
+#if BQ_CPP_17
+#include <shared_mutex>
+#endif
 
 namespace bq {
     namespace platform {
@@ -117,6 +120,7 @@ namespace bq {
             }
         };
 
+
         class spin_lock {
         private:
             bq::cache_friendly_type<bq::platform::atomic<bool>> value_;
@@ -175,6 +179,47 @@ namespace bq {
         /// by pippocao
         /// 2024/7/8
         /// </summary>
+        /// 
+#if BQ_CPP_17
+        class spin_lock_rw_crazy {
+        private:
+            
+            std::shared_mutex mutex_;
+        private:
+            void yield();
+            uint64_t get_epoch();
+
+        public:
+            spin_lock_rw_crazy()
+            {
+            }
+
+            spin_lock_rw_crazy(const spin_lock_rw_crazy&) = delete;
+            spin_lock_rw_crazy(spin_lock_rw_crazy&&) noexcept = delete;
+            spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
+            spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
+
+            inline void read_lock()
+            {
+                mutex_.lock_shared();
+            }
+
+            inline void read_unlock()
+            {
+                mutex_.unlock_shared();
+            }
+
+            inline void write_lock()
+            {
+                mutex_.lock();
+            }
+
+            inline void write_unlock()
+            {
+                mutex_.unlock();
+            }
+        };
+#else
         class spin_lock_rw_crazy {
         private:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
@@ -281,6 +326,7 @@ namespace bq {
                 // }
             }
         };
+ #endif
 
         class scoped_mcs_spin_lock {
         private:
