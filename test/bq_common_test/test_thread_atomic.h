@@ -175,13 +175,15 @@ namespace bq {
             }
             virtual void run() override
             {
+                uint32_t error_count = 0;
                 for (uint32_t i = 0; i < 1000000; ++i) {
                     {
                         bq::platform::scoped_spin_lock_read_crazy lock(spin_lock_);
-                        result_.add_result(counter_ % 10 == 0, "spin_lock_rw_crazy test");
+                        error_count += (counter_ % 10 == 0) ? 0 : 1;
                     }
                     bq::platform::thread::yield();
                 }
+                result_.add_result(error_count == 0, "spin_lock_rw_crazy test");
             }
         };
 
