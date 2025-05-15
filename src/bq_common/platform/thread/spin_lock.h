@@ -204,7 +204,7 @@ namespace bq {
             {
                 uint64_t start_epoch = get_epoch();
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                    counter_type previous_counter = counter_.get().fetch_add_seq_cst(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
@@ -217,7 +217,7 @@ namespace bq {
                     }
                     while (true) {
                         yield();
-                        counter_type current_counter = counter_.get().load_acquire();
+                        counter_type current_counter = counter_.get().load_seq_cst();
                         if (current_counter >= 0) {
                             break;
                         }
@@ -232,7 +232,7 @@ namespace bq {
 
             inline void read_unlock()
             {
-                counter_type previous_counter = counter_.get().fetch_sub_acq_rel(1);
+                counter_type previous_counter = counter_.get().fetch_sub_seq_cst(1);
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
 #else
@@ -249,7 +249,7 @@ namespace bq {
                 uint64_t start_epoch = get_epoch();
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
                         break;
                     }
                     yield();
@@ -267,7 +267,7 @@ namespace bq {
                 write_lock_thread_id_.store_seq_cst(0);
 #endif
                 //uint64_t start_epoch = get_epoch();
-                counter_.get().store_release(0);
+                counter_.get().store_seq_cst(0);
                 // while (true) {
                 //     counter_type expected_counter = write_lock_mark_value;
                 //     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
