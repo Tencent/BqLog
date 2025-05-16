@@ -398,7 +398,7 @@ namespace bq {
                         // read lock success.
                         break;
                     }
-                    //auto new_value = counter_.get().fetch_sub_relaxed(1);
+                    counter_.get().fetch_sub_relaxed(1);
                     if (get_epoch() > start_epoch + 600000) {
                         debug_output(1);
                        assert(false);
@@ -487,19 +487,16 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 write_lock_thread_id_.store_seq_cst(0);
 #endif
-                //uint64_t start_epoch = get_epoch();
-                counter_.get().store_seq_cst(0);
-                // while (true) {
-                //     counter_type expected_counter = write_lock_mark_value;
-                //     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
-                //         break;
-                //     }
-                //     if (get_epoch() > start_epoch + 600000) {
-                //         printf("Value 4 : %" PRId64 "\n", (int64_t)expected_counter);
-                //         fflush(stdout);
-                //         assert(false);
-                //     }
-                // }
+                uint64_t start_epoch = get_epoch();
+                 while (true) {
+                     counter_type expected_counter = write_lock_mark_value;
+                     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
+                         break;
+                     }
+                     if (get_epoch() > start_epoch + 600000) {
+                         debug_output(4);
+                     }
+                 }
 
                 lock_.lock();
                 iter = record_.find({id, true, 2});
