@@ -24,8 +24,10 @@
 #include <inttypes.h>
 #include "bq_common/utils/utility_types.h"
 #include "bq_common/bq_common.h"
-#if BQ_CPP_17
-#include <shared_mutex>
+#if BQ_WIN
+#include <windows.h>
+#else
+#include <pthread.h>
 #endif
 
 namespace bq {
@@ -180,11 +182,14 @@ namespace bq {
         /// 2024/7/8
         /// </summary>
         /// 
-#if BQ_CPP_17
+#if 1
         class spin_lock_rw_crazy {
         private:
-            
-            std::shared_mutex mutex_;
+#if BQ_WIN
+            SWRLOCCK rwlock_;
+#else
+            pthread_rwlock_t rwlock_;
+#endif
         private:
             void yield();
             uint64_t get_epoch();
@@ -192,6 +197,23 @@ namespace bq {
         public:
             spin_lock_rw_crazy()
             {
+#if BQ_WIN
+                InitializeSRWLock(&rwlock_);
+#else
+                if (0 != pthread_rwlock_init(&rwlock_, NULL)) {
+                    assert(false);
+                }
+#endif
+            }
+
+            ~spin_lock_rw_crazy()
+            {
+#if BQ_WIN
+#else
+                if (0 != pthread_rwlock_destroy(&rwlock_)) {
+                    assert(false);
+                }
+#endif
             }
 
             spin_lock_rw_crazy(const spin_lock_rw_crazy&) = delete;
@@ -201,22 +223,38 @@ namespace bq {
 
             inline void read_lock()
             {
-                mutex_.lock_shared();
+#if BQ_WIN
+                AcquireSRWLockShared(&rwlock_);
+#else
+                pthread_rwlock_rdlock(&rwlock_);
+#endif
             }
 
             inline void read_unlock()
             {
-                mutex_.unlock_shared();
+#if BQ_WIN
+                ReleaseSRWLockShared(&rwlock_);
+#else
+                pthread_rwlock_unlock(&rwlock_);
+#endif
             }
 
             inline void write_lock()
             {
-                mutex_.lock();
+#if BQ_WIN
+                AcquireSRWLockExclusive(&rwlock_);
+#else
+                pthread_rwlock_wrlock(&rwlock_);
+#endif
             }
 
             inline void write_unlock()
             {
-                mutex_.unlock();
+#if BQ_WIN
+                ReleaseSRWLockExclusive(&rwlock_);
+#else
+                pthread_rwlock_unlock(&rwlock_);
+#endif
             }
         };
 #else
