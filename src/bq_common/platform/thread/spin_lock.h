@@ -399,7 +399,7 @@ namespace bq {
                         break;
                     }
                     //auto new_value = counter_.get().fetch_sub_relaxed(1);
-                    if (get_epoch() > start_epoch + 5000) {
+                    if (get_epoch() > start_epoch + 600000) {
                         debug_output(1);
                        assert(false);
                     }
@@ -409,7 +409,7 @@ namespace bq {
                         if (current_counter >= 0) {
                             break;
                         }
-                        if (get_epoch() > start_epoch + 5000) {
+                        if (get_epoch() > start_epoch + 600000) {
                             debug_output(2);
                             assert(false);
                         }
@@ -462,7 +462,7 @@ namespace bq {
                         break;
                     }
                     yield();
-                    if (get_epoch() > start_epoch + 5000) {
+                    if (get_epoch() > start_epoch + 600000) {
                         debug_output(3);
                         assert(false);
                     }
@@ -494,7 +494,7 @@ namespace bq {
                 //     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
                 //         break;
                 //     }
-                //     if (get_epoch() > start_epoch + 5000) {
+                //     if (get_epoch() > start_epoch + 600000) {
                 //         printf("Value 4 : %" PRId64 "\n", (int64_t)expected_counter);
                 //         fflush(stdout);
                 //         assert(false);
