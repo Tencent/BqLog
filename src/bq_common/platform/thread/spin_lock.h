@@ -186,7 +186,7 @@ namespace bq {
         class spin_lock_rw_crazy {
         private:
 #if BQ_WIN
-            SWRLOCCK rwlock_;
+            SRWLOCK rwlock_ = RTL_SRWLOCK_INIT;
 #else
             pthread_rwlock_t rwlock_;
 #endif
