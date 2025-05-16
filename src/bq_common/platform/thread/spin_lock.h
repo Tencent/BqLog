@@ -376,8 +376,8 @@ namespace bq {
             spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
             spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
 
-            void debug_output(){
-                printf("record:[\n");
+            void debug_output(int32_t pos){
+                printf("record pos:%d, %" PRId64 ":[\n", pos, (int64_t)counter_.get().load_seq_cst());
                 for (auto item : record_) {
                     printf("\t%" PRIu64 ", %s, %d\n", (uint64_t)item.tid_, item.is_write_ ? "true" : "false", item.phase_);
                 }
@@ -400,7 +400,7 @@ namespace bq {
                     }
                     //auto new_value = counter_.get().fetch_sub_relaxed(1);
                     if (get_epoch() > start_epoch + 5000) {
-                        debug_output();
+                        debug_output(1);
                        assert(false);
                     }
                     while (true) {
@@ -410,7 +410,7 @@ namespace bq {
                             break;
                         }
                         if (get_epoch() > start_epoch + 5000) {
-                            debug_output();
+                            debug_output(2);
                             assert(false);
                         }
                     }
@@ -463,7 +463,7 @@ namespace bq {
                     }
                     yield();
                     if (get_epoch() > start_epoch + 5000) {
-                        debug_output();
+                        debug_output(3);
                         assert(false);
                     }
                 }
