@@ -167,7 +167,6 @@ namespace bq {
             }
         };
 
-
         /// <summary>
         /// This is an crazy optimized read-write spin lock,
         /// betting that you won't have more than INT32_MAX(32 bit) or INT64_MAX(64 bit) threads waiting to acquire the read lock.
@@ -177,197 +176,30 @@ namespace bq {
         /// 2024/7/8
         /// </summary>
         /// 
-#if 0
-        class spin_lock_rw_crazy {
-        private:
-#if BQ_WIN
-            SRWLOCK rwlock_ = RTL_SRWLOCK_INIT;
-#else
-            pthread_rwlock_t rwlock_;
-            pthread_rwlock_t rwlock_cpy_;
-            bool inited_;
-#endif
-            bq::platform::spin_lock lock_;
-            struct AA {
-                uint64_t tid_;
-                bool is_write_;
-                int phase_;
-            };
-            std::vector<AA> record_;
-        private:
-            void yield();
-            uint64_t get_epoch();
 
-        public:
-            spin_lock_rw_crazy()
-            {
-#if BQ_WIN
-                InitializeSRWLock(&rwlock_);
-#else
-                auto result = pthread_rwlock_init(&rwlock_, NULL);
-                if (0 != result) {
-                    printf("pthread_rwlock_init failed:%d\n", result);
-                    assert(false);
-                }
-                memcpy(&rwlock_cpy_, &rwlock_, sizeof(pthread_rwlock_t));
-                inited_ = true;
-#endif
-            }
-
-            ~spin_lock_rw_crazy()
-            {
-#if BQ_WIN
-#else
-                auto result = pthread_rwlock_destroy(&rwlock_);
-                inited_ = false;
-                if (0 != result) {
-                    printf("pthread_rwlock_destroy failed:%d\n", result);
-                    assert(false);
-                }
-#endif
-            }
-
-            spin_lock_rw_crazy(const spin_lock_rw_crazy&) = delete;
-            spin_lock_rw_crazy(spin_lock_rw_crazy&&) noexcept = delete;
-            spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
-            spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
-
-            inline void read_lock()
-            {
-                uint64_t id = 0;
-                pthread_threadid_np(NULL, &id);
-                lock_.lock();
-                record_.push_back({ id, false , 0});
-                lock_.unlock();
-#if BQ_WIN
-                AcquireSRWLockShared(&rwlock_);
-#else
-                auto result = pthread_rwlock_rdlock(&rwlock_);
-                if (0 != result) {
-                    printf("pthread_rwlock_rdlock failed:%d\n", result);
-                    assert(false);
-                }
-#endif
-                lock_.lock();
-                auto iter = std::find_if(record_.begin(), record_.end(),[id](const AA& item) {
-                    return item.tid_ == id && !item.is_write_ && item.phase_ == 0;
-                });
-                assert(iter != record_.end());
-                iter->phase_ = 1;
-                lock_.unlock();
-            }
-
-            inline void read_unlock()
-            {
-                uint64_t id = 0;
-                pthread_threadid_np(NULL, &id);
-                lock_.lock();
-                auto iter = std::find_if(record_.begin(), record_.end(),[id](const AA& item) {
-                    return item.tid_ == id && !item.is_write_ && item.phase_ == 1;
-                });
-                assert(iter != record_.end());
-                iter->phase_ = 2;
-                lock_.unlock();
-#if BQ_WIN
-                ReleaseSRWLockShared(&rwlock_);
-#else
-                auto result = pthread_rwlock_unlock(&rwlock_);
-                if (0 != result) {
-                    printf("pthread_rwlock_unlock failed:%d\n", result);
-                    assert(false);
-                }
-#endif
-                lock_.lock();
-                iter = std::find_if(record_.begin(), record_.end(),[id](const AA& item) {
-                    return item.tid_ == id && !item.is_write_ && item.phase_ == 2;
-                });
-                assert(iter != record_.end());
-                record_.erase(iter);
-                lock_.unlock();
-            }
-
-            inline void write_lock()
-            {
-                uint64_t id = 0;
-                pthread_threadid_np(NULL, &id);
-                lock_.lock();
-                record_.push_back({ id, true, 0 });
-                lock_.unlock();
-#if BQ_WIN
-                AcquireSRWLockExclusive(&rwlock_);
-#else
-                auto result = pthread_rwlock_wrlock(&rwlock_);
-                if (0 != result) {
-                    printf("pthread_rwlock_wrlock failed:%d\n", result);
-                    assert(false);
-                }
-#endif
-                lock_.lock();
-                auto iter = std::find_if(record_.begin(), record_.end(),[id](const AA& item) {
-                    return item.tid_ == id && item.is_write_ && item.phase_ == 0;
-                });
-                assert(iter != record_.end());
-                iter->phase_ = 1;
-                lock_.unlock();
-            }
-
-            inline void write_unlock()
-            {
-                uint64_t id = 0;
-                pthread_threadid_np(NULL, &id);
-                lock_.lock();
-                auto iter = std::find_if(record_.begin(), record_.end(),[id](const AA& item) {
-                    return item.tid_ == id && item.is_write_ && item.phase_ == 1;
-                });
-                assert(iter != record_.end());
-                iter->phase_ = 2;
-                lock_.unlock();
-#if BQ_WIN
-                ReleaseSRWLockExclusive(&rwlock_);
-#else
-                auto result = pthread_rwlock_unlock(&rwlock_);
-                if (0 != result) {
-                    printf("pthread_rwlock_unlock failed:%d\n", result);
-                    assert(false);
-                }
-#endif
-                lock_.lock();
-                iter = std::find_if(record_.begin(), record_.end(),[id](const AA& item) {
-                    return item.tid_ == id && item.is_write_ && item.phase_ == 2;
-                });
-                assert(iter != record_.end());
-                record_.erase(iter);
-                lock_.unlock();
-            }
-        };
-#else
         class spin_lock_rw_crazy {
         private:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
             static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-            bq::platform::atomic<bq::platform::thread::thread_id> write_lock_thread_id_;
-#endif
             bq::platform::spin_lock lock_;
-            struct AA {
+            struct debug_record {
                 bq::platform::thread::thread_id tid_;
                 bool is_write_;
                 int phase_;
-                bool operator==(const AA& other) const {
+                bool operator==(const debug_record& other) const {
                     return tid_ == other.tid_ && is_write_ == other.is_write_ && phase_ == other.phase_;
                 }
             };
-            bq::array<AA> record_;
+            bq::array<debug_record> record_;
+#endif
         private:
             void yield();
             uint64_t get_epoch();
         public:
             spin_lock_rw_crazy()
                 : counter_(0)
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                , write_lock_thread_id_(0)
-#endif
             {
             }
 
@@ -376,6 +208,7 @@ namespace bq {
             spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
             spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
 
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
             void debug_output(int32_t pos){
                 printf("record pos:%d, %" PRId64 ":[\n", pos, (int64_t)counter_.get().load_seq_cst());
                 for (auto item : record_) {
@@ -384,128 +217,143 @@ namespace bq {
                 printf("]n");
                 fflush(stdout);
             }
+#endif
 
             inline void read_lock()
             {
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 uint64_t start_epoch = get_epoch();
                 auto id = bq::platform::thread::thread_id();
                 lock_.lock();
-                record_.push_back(AA{id, false , 0});
+                record_.push_back(debug_record{id, false , 0});
                 lock_.unlock();
+#endif
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_seq_cst(1);
+                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
                     }
                     counter_.get().fetch_sub_relaxed(1);
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                     if (get_epoch() > start_epoch + 600000) {
                         debug_output(1);
                        assert(false);
                     }
+#endif
                     while (true) {
                         yield();
-                        counter_type current_counter = counter_.get().load_seq_cst();
+                        counter_type current_counter = counter_.get().load_acquire();
                         if (current_counter >= 0) {
                             break;
                         }
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                         if (get_epoch() > start_epoch + 600000) {
                             debug_output(2);
                             assert(false);
                         }
+#endif
                     }
                 }
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 lock_.lock();
-                auto iter = record_.find(AA{id, false, 0});
+                auto iter = record_.find(debug_record{id, false, 0});
                 assert(iter != record_.end());
                 iter->phase_ = 1;
                 lock_.unlock();
+#endif
             }
 
             inline void read_unlock()
             {
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 auto id = bq::platform::thread::thread_id();
                 lock_.lock();
                 auto iter = record_.find({id, false, 1});
                 assert(iter != record_.end());
                 iter->phase_ = 2;
                 lock_.unlock();
-
-                counter_type previous_counter = counter_.get().fetch_sub_seq_cst(1);
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
-#else
-                (void)previous_counter;
 #endif
 
+                counter_type previous_counter = counter_.get().fetch_sub_release(1);
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
                 lock_.lock();
                 iter = record_.find({id, false, 2});
                 assert(iter != record_.end());
                 record_.erase(iter);
                 lock_.unlock();
+#else
+                (void)previous_counter;
+#endif
+
             }
 
             inline void write_lock()
             {
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
-                record_.push_back(AA{id, true , 0});
+                record_.push_back(debug_record{id, true , 0});
                 lock_.unlock();
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                assert(bq::platform::thread::get_current_thread_id() != write_lock_thread_id_.load_seq_cst() && "spin_lock is not reentrant");
-                write_lock_thread_id_.store_seq_cst(bq::platform::thread::get_current_thread_id());
-#endif
                 uint64_t start_epoch = get_epoch();
+#endif
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                         break;
                     }
                     yield();
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                     if (get_epoch() > start_epoch + 600000) {
                         debug_output(3);
                         assert(false);
                     }
+#endif
                 }
-
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 lock_.lock();
                 auto iter = record_.find({id, true, 0});
                 assert(iter != record_.end());
                 iter->phase_ = 1;
                 lock_.unlock();
+#endif
             }
 
             inline void write_unlock()
             {
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
                 auto iter = record_.find({id, true, 1});
                 assert(iter != record_.end());
                 iter->phase_ = 2;
                 lock_.unlock();
-
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                write_lock_thread_id_.store_seq_cst(0);
-#endif
                 uint64_t start_epoch = get_epoch();
+#endif
+
                  while (true) {
                      counter_type expected_counter = write_lock_mark_value;
                      if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
                          break;
                      }
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                      if (get_epoch() > start_epoch + 600000) {
                          debug_output(4);
+                         assert(false);
                      }
+#endif
                  }
 
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 lock_.lock();
                 iter = record_.find({id, true, 2});
                 assert(iter != record_.end());
                 record_.erase(iter);
                 lock_.unlock();
+#endif
             }
         };
- #endif
 
         class scoped_mcs_spin_lock {
         private:
