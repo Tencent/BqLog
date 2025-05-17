@@ -236,7 +236,7 @@ namespace bq {
                     }
                     counter_.get().fetch_sub_relaxed(1);
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                    if (get_epoch() > start_epoch + 600000) {
+                    if (get_epoch() > start_epoch + 60000) {
                         debug_output(1);
                        assert(false);
                     }
@@ -248,7 +248,7 @@ namespace bq {
                             break;
                         }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                        if (get_epoch() > start_epoch + 600000) {
+                        if (get_epoch() > start_epoch + 60000) {
                             debug_output(2);
                             assert(false);
                         }
@@ -305,7 +305,7 @@ namespace bq {
                     }
                     yield();
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                    if (get_epoch() > start_epoch + 600000) {
+                    if (get_epoch() > start_epoch + 60000) {
                         debug_output(3);
                         assert(false);
                     }
@@ -338,7 +338,7 @@ namespace bq {
                          break;
                      }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                     if (get_epoch() > start_epoch + 600000) {
+                     if (get_epoch() > start_epoch + 60000) {
                          debug_output(4);
                          assert(false);
                      }
