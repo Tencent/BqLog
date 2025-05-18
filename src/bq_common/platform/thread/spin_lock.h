@@ -182,7 +182,7 @@ namespace bq {
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
             static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
             bq::platform::spin_lock lock_;
             struct debug_record {
                 bq::platform::thread::thread_id tid_;
@@ -208,7 +208,7 @@ namespace bq {
             spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
             spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
 
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
             void debug_output(int32_t pos){
                 printf("record pos:%d, %" PRId64 ":[\n", pos, (int64_t)counter_.get().load_seq_cst());
                 for (auto item : record_) {
@@ -221,7 +221,7 @@ namespace bq {
 
             inline void read_lock()
             {
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                 uint64_t start_epoch = get_epoch();
                 auto id = bq::platform::thread::thread_id();
                 lock_.lock();
@@ -229,13 +229,13 @@ namespace bq {
                 lock_.unlock();
 #endif
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                    counter_type previous_counter = counter_.get().fetch_add_seq_cst(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
                     }
                     counter_.get().fetch_sub_relaxed(1);
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                     if (get_epoch() > start_epoch + 60000) {
                         debug_output(1);
                        assert(false);
@@ -247,7 +247,7 @@ namespace bq {
                         if (current_counter >= 0) {
                             break;
                         }
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                         if (get_epoch() > start_epoch + 60000) {
                             debug_output(2);
                             assert(false);
@@ -255,7 +255,7 @@ namespace bq {
 #endif
                     }
                 }
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                 lock_.lock();
                 auto iter = record_.find(debug_record{id, false, 0});
                 assert(iter != record_.end());
@@ -266,7 +266,7 @@ namespace bq {
 
             inline void read_unlock()
             {
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                 auto id = bq::platform::thread::thread_id();
                 lock_.lock();
                 auto iter = record_.find({id, false, 1});
@@ -275,8 +275,8 @@ namespace bq {
                 lock_.unlock();
 #endif
 
-                counter_type previous_counter = counter_.get().fetch_sub_release(1);
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                counter_type previous_counter = counter_.get().fetch_sub_seq_cst(1);
+#if !defined(NDEBUG)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
                 lock_.lock();
                 iter = record_.find({id, false, 2});
@@ -291,7 +291,7 @@ namespace bq {
 
             inline void write_lock()
             {
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                 auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
                 record_.push_back(debug_record{id, true , 0});
@@ -300,18 +300,18 @@ namespace bq {
 #endif
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::seq_cst, bq::platform::memory_order::acquire)) {
                         break;
                     }
                     yield();
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                     if (get_epoch() > start_epoch + 60000) {
                         debug_output(3);
                         assert(false);
                     }
 #endif
                 }
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                 lock_.lock();
                 auto iter = record_.find({id, true, 0});
                 assert(iter != record_.end());
@@ -322,7 +322,7 @@ namespace bq {
 
             inline void write_unlock()
             {
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                 auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
                 auto iter = record_.find({id, true, 1});
@@ -334,10 +334,10 @@ namespace bq {
 
                  while (true) {
                      counter_type expected_counter = write_lock_mark_value;
-                     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::release, bq::platform::memory_order::relaxed)) {
+                     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::seq_cst, bq::platform::memory_order::acquire)) {
                          break;
                      }
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                      if (get_epoch() > start_epoch + 60000) {
                          debug_output(4);
                          assert(false);
@@ -345,7 +345,7 @@ namespace bq {
 #endif
                  }
 
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+#if !defined(NDEBUG)
                 lock_.lock();
                 iter = record_.find({id, true, 2});
                 assert(iter != record_.end());
