@@ -115,7 +115,7 @@ namespace bq {
                     result.add_result(last_modified_time0 == 0, "last_modified_time test 0");
                     auto current_epoch = bq::platform::high_performance_epoch_ms();
                     auto last_modified_time1 = bq::file_manager::get_file_last_modified_epoch_ms(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", in_sand_box));
-                    result.add_result(last_modified_time1 < current_epoch && (current_epoch - last_modified_time1) < 60000, "last_modified_time test 1");
+                    result.add_result(last_modified_time1 < current_epoch && (current_epoch - last_modified_time1) < 60000, "last_modified_time test 1， last_modified_time1：%" PRIu64 ", current_epoch:%" PRIu64 "", last_modified_time1, current_epoch);
                 }
 
                 {
