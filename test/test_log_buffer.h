@@ -523,7 +523,7 @@ namespace bq {
                 }
                 constexpr uint32_t WRITE_VERSION_COUNT = 5;
                 constexpr uint32_t MESSAGE_PER_VERSION = 100000;
-                test_output_dynamic(bq::log_level::info, "=======================\n[log buffer] do recovery test begin...");
+                test_output_dynamic(bq::log_level::info, "=======================\n[log buffer] do recovery test begin...\n");
                 
                 //Single Thread Test
                 for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
