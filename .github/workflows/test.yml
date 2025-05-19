@@ -1111,8 +1111,9 @@ jobs:
             export PATH="$JAVA_HOME/bin:$PATH"
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/test/unix_like  
+            cd build/test/unix_like
             chmod +x *.sh
+            ls -l
             ./RunTest_GCC.sh 
   
   freeBSD_test_Clang_cpp17:
@@ -1138,4 +1139,5 @@ jobs:
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/test/unix_like  
             chmod +x *.sh
+            ls -l
             ./RunTest_Clang.sh 
