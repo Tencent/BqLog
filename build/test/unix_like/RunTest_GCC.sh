@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 CPP_VER_PARAM=${1:-17}
 mkdir -p CMakeFiles
