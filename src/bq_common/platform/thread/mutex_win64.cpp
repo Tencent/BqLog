@@ -17,10 +17,15 @@
 namespace bq {
     namespace platform {
         struct mutex_platform_def {
-            HANDLE mutex_handle = NULL;
-            bq::platform::atomic<thread::thread_id> owner_thread_id; // windows platform mutex is always Reentrant lock, we have to simulate the non-recursive mutex by ourself.
+            CRITICAL_SECTION cs_;
+            bq::platform::atomic<thread::thread_id> owner_thread_id_; // windows platform mutex is always Reentrant lock, we have to simulate the non-recursive mutex by ourself.
                                                                      // it's working because no thread id is 0 on windows.
                                                                      // refer to:https://docs.microsoft.com/en-us/windows/win32/procthread/thread-handles-and-identifiers
+            mutex_platform_def()
+                : cs_(CRITICAL_SECTION())
+                , owner_thread_id_(0)
+            {
+            }
         };
 
         mutex::mutex()
@@ -29,12 +34,8 @@ namespace bq {
             platform_data_ = (mutex_platform_def*)malloc(sizeof(mutex_platform_def));
             if (platform_data_) {
                 new (platform_data_, bq::enum_new_dummy::dummy) mutex_platform_def();
-                platform_data_->owner_thread_id.store_seq_cst(0);
-                platform_data_->mutex_handle = CreateMutex(NULL, false, NULL);
-                if (!platform_data_->mutex_handle) {
-                    bq::util::log_device_console(log_level::fatal, "%s : %d : create mutex failed, error code:%d", __FILE__, __LINE__, GetLastError());
-                    assert(false && "create mutex failed, see the device log output for more information");
-                }
+                platform_data_->owner_thread_id_.store_seq_cst(0);
+                InitializeCriticalSection(&platform_data_->cs_);
             } else {
                 assert(false && "not enough memory for mutex");
             }
@@ -46,12 +47,8 @@ namespace bq {
             platform_data_ = (mutex_platform_def*)malloc(sizeof(mutex_platform_def));
             if (platform_data_) {
                 new (platform_data_, bq::enum_new_dummy::dummy) mutex_platform_def();
-                platform_data_->owner_thread_id.store_seq_cst(0);
-                platform_data_->mutex_handle = CreateMutex(NULL, false, NULL);
-                if (!platform_data_->mutex_handle) {
-                    bq::util::log_device_console(log_level::fatal, "%s : %d : create mutex failed, error code:%d", __FILE__, __LINE__, GetLastError());
-                    assert(false && "create mutex failed, see the device log output for more information");
-                }
+                platform_data_->owner_thread_id_.store_seq_cst(0);
+                InitializeCriticalSection(&platform_data_->cs_);
             } else {
                 assert(false && "not enough memory for mutex");
             }
@@ -59,19 +56,17 @@ namespace bq {
 
         mutex::~mutex()
         {
-            if (platform_data_->mutex_handle) {
-                CloseHandle(platform_data_->mutex_handle);
-            }
+            DeleteCriticalSection(&platform_data_->cs_);
             free(platform_data_);
             platform_data_ = nullptr;
         }
 
         void mutex::lock()
         {
-            WaitForSingleObjectEx(platform_data_->mutex_handle, INFINITE, true);
+            EnterCriticalSection(&platform_data_->cs_);
             if (!reentrant_) {
                 thread::thread_id current_thread_id = thread::get_current_thread_id();
-                if (platform_data_->owner_thread_id.exchange_relaxed(current_thread_id) == current_thread_id) {
+                if (platform_data_->owner_thread_id_.exchange_relaxed(current_thread_id) == current_thread_id) {
                     bq::util::log_device_console(log_level::error, "%s : %d : you're try to reenter a non-recursive mutex", __FILE__, __LINE__);
                     //assert(false && "mutex recursive lock");
                 }
@@ -80,11 +75,10 @@ namespace bq {
 
         bool mutex::try_lock()
         {
-            auto result = WaitForSingleObjectEx(platform_data_->mutex_handle, 0, true);
-            if (result == WAIT_OBJECT_0) {
+            if (TryEnterCriticalSection(&platform_data_->cs_)) {
                 if (!reentrant_) {
                     thread::thread_id current_thread_id = thread::get_current_thread_id();
-                    if (platform_data_->owner_thread_id.exchange_relaxed(current_thread_id) == current_thread_id) {
+                    if (platform_data_->owner_thread_id_.exchange_relaxed(current_thread_id) == current_thread_id) {
                         bq::util::log_device_console(log_level::error, "%s : %d : you're try to reenter a non-recursive mutex", __FILE__, __LINE__);
                         // assert(false && "mutex recursive lock");
                     }
@@ -97,16 +91,14 @@ namespace bq {
 
         bool mutex::unlock()
         {
-            if (ReleaseMutex(platform_data_->mutex_handle)) {
-                platform_data_->owner_thread_id.store(0, memory_order::release);
-                return true;
-            }
-            return false;
+            platform_data_->owner_thread_id_.store(0, memory_order::release);
+            LeaveCriticalSection(&platform_data_->cs_);
+            return true;
         }
 
         void* mutex::get_platform_handle()
         {
-            return (void*)(&platform_data_->mutex_handle);
+            return (void*)(&platform_data_->cs_);
         }
     }
 }

@@ -12,7 +12,7 @@
 #include "bq_common/bq_common.h"
 #ifdef BQ_WIN
 #include <processthreadsapi.h>
-#include <Windows.h>
+#include <windows.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -40,14 +40,10 @@ namespace bq {
             }
         };
 
-        static HMODULE hKernel32 = 0;
         thread::thread(thread_attr attr)
             : attr_(attr)
             , status_(enum_thread_status::init)
         {
-            if (!hKernel32) {
-                hKernel32 = LoadLibrary(TEXT("kernel32.dll"));
-            }
             thread_id_ = 0;
             platform_data_ = (thread_platform_def*)malloc(sizeof(thread_platform_def));
             new (platform_data_, bq::enum_new_dummy::dummy) thread_platform_def();
@@ -128,48 +124,31 @@ namespace bq {
             SleepEx((DWORD)millsec, true);
         }
 
-        NTSTATUS(WINAPI* GetRtlGetVersion)
-        (PRTL_OSVERSIONINFOW) = nullptr;
-        void InitializeRtlGetVersion()
-        {
-            HMODULE module = GetModuleHandle("ntdll.dll");
-            if (module) {
-                GetRtlGetVersion = reinterpret_cast<decltype(GetRtlGetVersion)>((void*)GetProcAddress(module, "RtlGetVersion"));
-            }
-        }
 
-        bool IsWindows10OrGreaterRtl()
-        {
-            if (!GetRtlGetVersion) {
-                InitializeRtlGetVersion();
+        static bool is_thread_name_supported_tested_; // false by zero initialization
+        static HRESULT(WINAPI* get_thread_desc_func_)(HANDLE hThread, PWSTR* ppszThreadDescription);
+        static HRESULT(WINAPI* set_thread_desc_func_)(HANDLE hThread, PCWSTR ppszThreadDescription);
+
+        static void init_thread_apis() {
+            const auto& os_ver_info = bq::platform::get_windows_version_info();
+            if (os_ver_info.dwMajorVersion > 10 
+                || (os_ver_info.dwMajorVersion == 10 && os_ver_info.dwBuildNumber >= 14393)) {
+                get_thread_desc_func_ = bq::platform::get_sys_api<decltype(get_thread_desc_func_)>("kernel32.dll", "GetThreadDescription");
+                set_thread_desc_func_ = bq::platform::get_sys_api<decltype(set_thread_desc_func_)>("kernel32.dll", "SetThreadDescription");
             }
-            if (!GetRtlGetVersion) {
-                return false;
-            }
-            RTL_OSVERSIONINFOW os_ver_info = {};
-            os_ver_info.dwOSVersionInfoSize = sizeof(os_ver_info);
-            NTSTATUS status = GetRtlGetVersion(&os_ver_info);
-            if (status == 0 /*STATUS_SUCCESS*/) {
-                return os_ver_info.dwMajorVersion > 10 || (os_ver_info.dwMajorVersion == 10 && os_ver_info.dwBuildNumber >= 14393);
-            }
-            return false;
+            is_thread_name_supported_tested_ = true;
         }
 
         bq::string thread::get_current_thread_name()
         {
-            if (IsWindows10OrGreaterRtl()) {
-                if (!hKernel32)
-                    return "";
-                typedef HRESULT(WINAPI * GetThreadDescriptionFunc)(HANDLE hThread, PWSTR * ppszThreadDescription);
-                GetThreadDescriptionFunc pGetThreadDescription = reinterpret_cast<GetThreadDescriptionFunc>((void*)GetProcAddress(hKernel32, "GetThreadDescription"));
-                if (!pGetThreadDescription) {
-                    return "";
-                }
-
+            if (!is_thread_name_supported_tested_) {
+                init_thread_apis();
+            }
+            if (get_thread_desc_func_) {
                 HANDLE current_thread_handle = GetCurrentThread();
                 PWSTR raw_thread_name;
 
-                HRESULT result = pGetThreadDescription(current_thread_handle, &raw_thread_name); // GetThreadDescription(current_thread_handle, &raw_thread_name);//
+                HRESULT result = get_thread_desc_func_(current_thread_handle, &raw_thread_name); // GetThreadDescription(current_thread_handle, &raw_thread_name);//
                 if (SUCCEEDED(result)) {
                     int32_t utf8_len = WideCharToMultiByte(CP_UTF8, 0, raw_thread_name, -1, nullptr, 0, nullptr, nullptr);
                     assert(utf8_len >= 1);
@@ -275,9 +254,10 @@ namespace bq {
 
         void thread::apply_thread_name()
         {
-            if (IsWindows10OrGreaterRtl()) {
-                if (!hKernel32)
-                    return;
+            if (!is_thread_name_supported_tested_) {
+                init_thread_apis();
+            }
+            if (set_thread_desc_func_) {
                 HANDLE current_thread_handle = GetCurrentThread();
                 int required_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int>(thread_name_.size()), nullptr, 0);
                 bq::array<wchar_t> wide_str;
@@ -285,11 +265,7 @@ namespace bq {
                 wide_str[required_size] = 0;
                 int converted_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int>(thread_name_.size()), &wide_str[0], required_size);
                 if (converted_size == required_size) {
-                    typedef HRESULT(WINAPI * SetThreadDescriptionFunc)(HANDLE hThread, PCWSTR ppszThreadDescription);
-                    SetThreadDescriptionFunc pGetThreadDescription = reinterpret_cast<SetThreadDescriptionFunc>((void*)GetProcAddress(hKernel32, "SetThreadDescription"));
-                    if (pGetThreadDescription) {
-                        pGetThreadDescription(current_thread_handle, &wide_str[0]);
-                    }
+                    set_thread_desc_func_(current_thread_handle, &wide_str[0]);
                 }
             } else {
                 apply_name_raise();

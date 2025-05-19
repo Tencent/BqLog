@@ -718,6 +718,23 @@ namespace bq {
             return bq::util::get_hash_64(this, sizeof(file_node_info));
         }
 
+        static RTL_OSVERSIONINFOW win_version_info_;
+        const RTL_OSVERSIONINFOW& get_windows_version_info()
+        {
+            bq::platform::scoped_mutex lock(common_global_vars::get().win_api_mutex_);
+            if (win_version_info_.dwMajorVersion == 0) {
+                NTSTATUS(WINAPI * get_rtl_get_version)(PRTL_OSVERSIONINFOW) = nullptr;
+                get_rtl_get_version = get_sys_api<decltype(get_rtl_get_version)>("ntdll.dll", "RtlGetVersion");
+                if (get_rtl_get_version) {
+                    NTSTATUS status = get_rtl_get_version(&win_version_info_);
+                    if (status == 0) {
+                        return win_version_info_;
+                    }
+                } 
+                win_version_info_.dwMajorVersion = 0;
+            }
+            return win_version_info_;
+        }
     }
 }
 #endif

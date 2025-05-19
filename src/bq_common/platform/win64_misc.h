@@ -44,6 +44,18 @@ namespace bq {
             }
         }
         BQ_PACK_END
+
+        const RTL_OSVERSIONINFOW& get_windows_version_info();
+
+        template<typename API_DEC_TYPE>
+        API_DEC_TYPE get_sys_api(const char* module_name, const char* api_name)
+        {
+            HMODULE module = GetModuleHandle(module_name);
+            if (module) {
+                return reinterpret_cast<API_DEC_TYPE>((void*)GetProcAddress(module, api_name));
+            }
+            return nullptr;
+        }
     }
 }
 #endif

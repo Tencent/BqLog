@@ -263,7 +263,7 @@ namespace bq {
                 while (i_ptr->i.load(platform::memory_order::acquire) < 10) {
                     mutex_ptr_->lock();
                     condition_variable_ptr_->wait(*mutex_ptr_, [&]() {
-                        return (i_ptr->i.load(platform::memory_order::release) % 2) == 0;
+                        return (i_ptr->i.load(platform::memory_order::acquire) % 2) == 0;
                     });
                     result_ptr_->add_result(i_ptr->i.load(platform::memory_order::acquire) == current_value, "condition variable test %d", current_value);
                     current_value += 2;
@@ -613,7 +613,7 @@ namespace bq {
                     while (i_value.i.load(platform::memory_order::acquire) < 10) {
                         test_mutex.lock();
                         test_cond.wait(test_mutex, [&]() {
-                            return (i_value.i.load(platform::memory_order::release) % 2) == 1;
+                            return (i_value.i.load(platform::memory_order::acquire) % 2) == 1;
                         });
                         result.add_result(i_value.i.load(platform::memory_order::acquire) == current_value, "condition variable test %d", current_value);
                         current_value += 2;
