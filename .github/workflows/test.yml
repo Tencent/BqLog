@@ -1093,132 +1093,375 @@ jobs:
   #Unix-FreeBSD AMD64 GCC
   freeBSD_test_GCC_cpp17:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-      options: --privileged  # Required for running QEMU inside container
     steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create test script
+      - name: Pull FreeBSD container
+        run: docker pull ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+
+      - name: Run FreeBSD tests with GCC
         run: |
-          # Create the test script that will run in FreeBSD
-          cat > /tmp/freebsd_test.sh << 'EOF'
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Create test script
+          cat > run_test.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          # Start FreeBSD VM
+          qemu-system-x86_64 -m 16G -smp 2 -nographic \
+            -device virtio-net,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
+            -daemonize
+          
+          # Generate SSH key
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          
+          # Wait for VM to boot with robust retry logic
+          echo "Waiting for FreeBSD VM to boot..."
+          MAX_ATTEMPTS=30
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS"
+            if nc -z -w 5 localhost 2222; then
+              echo "VM is up!"
+              break
+            fi
+          
+            if [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+          
+            sleep 10
+          done
+          
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Create FreeBSD test script
+          cat > freebsd_test.sh << 'EOT'
           #!/bin/sh
           set -e
           
-          # Install needed packages
+          # Install required packages
           pkg update -f
           pkg install -y gcc cmake bash openjdk11
           
-          # Copy GitHub workspace to a working directory
-          cp -R /mnt/workspace /tmp/workspace
-          
-          # Set up Java environment
+          # Setup Java environment
           export JAVA_HOME="/usr/local/openjdk11"
           export PATH="$JAVA_HOME/bin:$PATH"
           
-          # Run the test
-          cd /tmp/workspace/build/test/unix_like
+          # Run tests
+          cd /root/workspace/build/test/unix_like
           chmod +x *.sh
           ./RunTest_GCC.sh
           
-          # Exit with proper status
+          # Return exit code
           exit $?
+          EOT
+          
+          # Copy script to VM
+          scp -P 2222 -o StrictHostKeyChecking=no freebsd_test.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
+          
+          # Copy workspace to VM
+          scp -P 2222 -r $PWD root@localhost:/root/workspace
+          
+          # Run test and capture exit code
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
+          EXIT_CODE=$?
+          
+          # Shutdown VM
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "shutdown -p now" || true
+          
+          # Return test exit code
+          exit $EXIT_CODE
           EOF
           
-          chmod +x /tmp/freebsd_test.sh
-
-      - name: Run FreeBSD test
-        run: |
-          # Create a 1GB temporary disk to share files with the VM
-          dd if=/dev/zero of=/tmp/shared.img bs=1M count=1024
-          mkfs.ext2 /tmp/shared.img
-          
-          # Mount the temporary disk and copy the workspace
-          mkdir -p /tmp/mount
-          mount -o loop /tmp/shared.img /tmp/mount
-          cp -R $GITHUB_WORKSPACE /tmp/mount/workspace
-          cp /tmp/freebsd_test.sh /tmp/mount/
-          umount /tmp/mount
-          
-          # Verify FreeBSD image exists
-          ls -la /freebsd/
-          
-          # Run FreeBSD with direct execution of test script
-          echo "Starting FreeBSD VM with direct execution..."
-          qemu-system-x86_64 -m 16G -smp 2 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
-            -drive file=/tmp/shared.img,if=virtio \
-            -display none \
-            -serial stdio \
-            -no-reboot \
-            -kernel /freebsd/boot/kernel/kernel \
-            -append "console=ttyS0 -v vfs.root.mountfrom=ufs:/dev/vtbd0s1a init=/bin/sh"
-          
-          # Note: The VM will boot, mount the shared drive, execute the script, 
-          # and exit. The test script will print its output to the console,
-          # and the exit code will propagate back to GitHub Actions.
+          # Run test in privileged Docker container with access to QEMU
+          docker run --rm --privileged \
+            -v $(pwd):/github/workspace \
+            -v $(pwd)/run_test.sh:/run_test.sh \
+            -w /github/workspace \
+            ghcr.io/pippocao/bqlog/freebsd_amd64:latest \
+            bash /run_test.sh
 
   #Unix-FreeBSD AMD64 Clang
   freeBSD_test_Clang_cpp17:
     runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Pull FreeBSD container
+        run: docker pull ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+
+      - name: Run FreeBSD tests with Clang
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Create test script
+          cat > run_test.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          # Start FreeBSD VM
+          qemu-system-x86_64 -m 16G -smp 2 -nographic \
+            -device virtio-net,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
+            -daemonize
+          
+          # Generate SSH key
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          
+          # Wait for VM to boot with robust retry logic
+          echo "Waiting for FreeBSD VM to boot..."
+          MAX_ATTEMPTS=30
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS"
+            if nc -z -w 5 localhost 2222; then
+              echo "VM is up!"
+              break
+            fi
+          
+            if [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+          
+            sleep 10
+          done
+          
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Create FreeBSD test script
+          cat > freebsd_test.sh << 'EOT'
+          #!/bin/sh
+          set -e
+          
+          # Install required packages
+          pkg update -f
+          pkg install -y gcc cmake bash openjdk11
+          
+          # Setup Java environment
+          export JAVA_HOME="/usr/local/openjdk11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          
+          # Run tests
+          cd /root/workspace/build/test/unix_like
+          chmod +x *.sh
+          ./RunTest_Clang.sh
+          
+          # Return exit code
+          exit $?
+          EOT
+          
+          # Copy script to VM
+          scp -P 2222 -o StrictHostKeyChecking=no freebsd_test.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
+          
+          # Copy workspace to VM
+          scp -P 2222 -r $PWD root@localhost:/root/workspace
+          
+          # Run test and capture exit code
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
+          EXIT_CODE=$?
+          
+          # Shutdown VM
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "shutdown -p now" || true
+          
+          # Return test exit code
+          exit $EXIT_CODE
+          EOF
+          
+          # Run test in privileged Docker container with access to QEMU
+          docker run --rm --privileged \
+            -v $(pwd):/github/workspace \
+            -v $(pwd)/run_test.sh:/run_test.sh \
+            -w /github/workspace \
+            ghcr.io/pippocao/bqlog/freebsd_amd64:latest \
+            bash /run_test.sh
+
+  #Unix-FreeBSD ARM64 GCC
+  freeBSD_arm64_test_GCC_cpp17:
+    runs-on: ubuntu-24.04-arm
     container:
-      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-      options: --privileged  # Required for running QEMU inside container
+      image: ghcr.io/pippocao/bqlog/freebsd_arm64:latest
+      options: --privileged
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create test script
+      - name: Start FreeBSD VM and run tests
         run: |
-          # Create the test script that will run in FreeBSD
+          # Create SSH directory with proper permissions
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Create test script for FreeBSD
           cat > /tmp/freebsd_test.sh << 'EOF'
           #!/bin/sh
           set -e
           
-          # Install needed packages
+          # Install required packages
           pkg update -f
           pkg install -y gcc cmake bash openjdk11
           
-          # Copy GitHub workspace to a working directory
-          cp -R /mnt/workspace /tmp/workspace
-          
-          # Set up Java environment
+          # Setup Java environment
           export JAVA_HOME="/usr/local/openjdk11"
           export PATH="$JAVA_HOME/bin:$PATH"
           
-          # Run the test
-          cd /tmp/workspace/build/test/unix_like
+          # Run tests
+          cd /root/workspace/build/test/unix_like
           chmod +x *.sh
-          ./RunTest_Clang.sh
+          ./RunTest_GCC.sh
           
-          # Exit with proper status
+          # Return exit code
           exit $?
           EOF
           
-          chmod +x /tmp/freebsd_test.sh
+          # List available FreeBSD images
+          echo "Available FreeBSD images:"
+          ls -la /freebsd/
+          
+          # Start FreeBSD ARM64 VM with QEMU
+          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -nographic \
+            -device virtio-net-pci,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
+            -device virtio-blk-pci,drive=drive0 \
+            -daemonize
+          
+          # Generate SSH key
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          
+          # Wait for VM to boot with robust retry logic
+          echo "Waiting for FreeBSD ARM64 VM to boot..."
+          MAX_ATTEMPTS=40  # More attempts for ARM
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS"
+            if nc -z -w 5 localhost 2222; then
+              echo "VM is up!"
+              break
+            fi
+          
+            if [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+          
+            sleep 10
+          done
+          
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Copy test script to VM
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
+          
+          # Copy workspace to VM
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
+          
+          # Run test and capture exit code
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
+          EXIT_CODE=$?
+          
+          echo "Test completed with exit code: $EXIT_CODE"
+          exit $EXIT_CODE
 
-      - name: Run FreeBSD test
+  #Unix-FreeBSD ARM64 Clang
+  freeBSD_arm64_test_Clang_cpp17:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/pippocao/bqlog/freebsd_arm64:latest
+      options: --privileged
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start FreeBSD VM and run tests
         run: |
-          # Create a 1GB temporary disk to share files with the VM
-          dd if=/dev/zero of=/tmp/shared.img bs=1M count=1024
-          mkfs.ext2 /tmp/shared.img
+          # Create SSH directory with proper permissions
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           
-          # Mount the temporary disk and copy the workspace
-          mkdir -p /tmp/mount
-          mount -o loop /tmp/shared.img /tmp/mount
-          cp -R $GITHUB_WORKSPACE /tmp/mount/workspace
-          cp /tmp/freebsd_test.sh /tmp/mount/
-          umount /tmp/mount
+          # Create test script for FreeBSD
+          cat > /tmp/freebsd_test.sh << 'EOF'
+          #!/bin/sh
+          set -e
           
-          # Run FreeBSD with direct execution of test script
-          echo "Starting FreeBSD VM with direct execution..."
-          qemu-system-x86_64 -m 16G -smp 2 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
-            -drive file=/tmp/shared.img,if=virtio \
-            -display none \
-            -serial stdio \
-            -no-reboot \
-            -kernel /freebsd/boot/kernel/kernel \
-            -append "console=ttyS0 -v vfs.root.mountfrom=ufs:/dev/vtbd0s1a init=/bin/sh"
+          # Install required packages
+          pkg update -f
+          pkg install -y gcc cmake bash openjdk11
+          
+          # Setup Java environment
+          export JAVA_HOME="/usr/local/openjdk11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          
+          # Run tests
+          cd /root/workspace/build/test/unix_like
+          chmod +x *.sh
+          ./RunTest_Clang.sh
+          
+          # Return exit code
+          exit $?
+          EOF
+          
+          # List available FreeBSD images
+          echo "Available FreeBSD images:"
+          ls -la /freebsd/
+          
+          # Start FreeBSD ARM64 VM with QEMU
+          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -nographic \
+            -device virtio-net-pci,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
+            -device virtio-blk-pci,drive=drive0 \
+            -daemonize
+          
+          # Generate SSH key
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          
+          # Wait for VM to boot with robust retry logic
+          echo "Waiting for FreeBSD ARM64 VM to boot..."
+          MAX_ATTEMPTS=40  # More attempts for ARM
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS"
+            if nc -z -w 5 localhost 2222; then
+              echo "VM is up!"
+              break
+            fi
+          
+            if [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+          
+            sleep 10
+          done
+          
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Copy test script to VM
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
+          
+          # Copy workspace to VM
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
+          
+          # Run test and capture exit code
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
+          EXIT_CODE=$?
+          
+          echo "Test completed with exit code: $EXIT_CODE"
+          exit $EXIT_CODE
