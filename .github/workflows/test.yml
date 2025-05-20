@@ -1124,6 +1124,9 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
+          # Verify FreeBSD image exists
+          ls -la /freebsd/
+          
           # Start FreeBSD VM with QEMU - using -display none instead of -nographic
           qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
             -device virtio-net,netdev=net0 \
@@ -1131,13 +1134,32 @@ jobs:
             -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
             -daemonize
           
-          # Wait for VM to boot
+          # Wait for VM to boot with improved waiting logic
           echo "Waiting for FreeBSD VM to boot..."
-          sleep 30
-          until nc -z localhost 2222; do sleep 5; done
+          sleep 60  # Initial wait
           
-          # Create SSH directory if it doesn't exist
+          # Check if VM is running
+          ps aux | grep qemu
+          
+          # More robust waiting for SSH
+          RETRY=0
+          MAX_RETRY=20
+          until nc -z localhost 2222 || [ $RETRY -eq $MAX_RETRY ]; do
+            echo "Attempt $RETRY: Waiting for SSH to become available..."
+            sleep 10
+            RETRY=$((RETRY+1))
+          done
+          
+          if [ $RETRY -eq $MAX_RETRY ]; then
+            echo "Failed to connect to VM after multiple attempts"
+            exit 1
+          fi
+          
+          echo "SSH is available, proceeding with tests"
+          
+          # Create SSH directory
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
@@ -1151,10 +1173,10 @@ jobs:
           scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
           
           # Run the tests in VM (don't use set -e here to allow getting the exit code)
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
           
           # Retrieve exit code from VM
-          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          EXIT_CODE=$(ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
           
           # Exit with the same code as the test script
           echo "Test script exited with code: $EXIT_CODE"
@@ -1194,6 +1216,9 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
+          # Verify FreeBSD image exists
+          ls -la /freebsd/
+          
           # Start FreeBSD VM with QEMU - using -display none instead of -nographic
           qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
             -device virtio-net,netdev=net0 \
@@ -1201,13 +1226,32 @@ jobs:
             -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
             -daemonize
           
-          # Wait for VM to boot
+          # Wait for VM to boot with improved waiting logic
           echo "Waiting for FreeBSD VM to boot..."
-          sleep 30
-          until nc -z localhost 2222; do sleep 5; done
+          sleep 60  # Initial wait
           
-          # Create SSH directory if it doesn't exist
+          # Check if VM is running
+          ps aux | grep qemu
+          
+          # More robust waiting for SSH
+          RETRY=0
+          MAX_RETRY=20
+          until nc -z localhost 2222 || [ $RETRY -eq $MAX_RETRY ]; do
+            echo "Attempt $RETRY: Waiting for SSH to become available..."
+            sleep 10
+            RETRY=$((RETRY+1))
+          done
+          
+          if [ $RETRY -eq $MAX_RETRY ]; then
+            echo "Failed to connect to VM after multiple attempts"
+            exit 1
+          fi
+          
+          echo "SSH is available, proceeding with tests"
+          
+          # Create SSH directory
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
@@ -1221,10 +1265,10 @@ jobs:
           scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
           
           # Run the tests in VM (don't use set -e here to allow getting the exit code)
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
           
           # Retrieve exit code from VM
-          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          EXIT_CODE=$(ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
           
           # Exit with the same code as the test script
           echo "Test script exited with code: $EXIT_CODE"
@@ -1264,6 +1308,9 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
+          # Verify FreeBSD image exists
+          ls -la /freebsd/
+          
           # Start FreeBSD ARM64 VM with QEMU - using -display none instead of -nographic
           qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
@@ -1274,11 +1321,30 @@ jobs:
           
           # Wait for VM to boot (ARM64 might take longer)
           echo "Waiting for FreeBSD ARM64 VM to boot..."
-          sleep 30
-          until nc -z localhost 2222; do sleep 10; done
+          sleep 90  # Longer initial wait for ARM
           
-          # Create SSH directory if it doesn't exist
+          # Check if VM is running
+          ps aux | grep qemu
+          
+          # More robust waiting for SSH
+          RETRY=0
+          MAX_RETRY=30  # More retries for ARM
+          until nc -z localhost 2222 || [ $RETRY -eq $MAX_RETRY ]; do
+            echo "Attempt $RETRY: Waiting for SSH to become available..."
+            sleep 10
+            RETRY=$((RETRY+1))
+          done
+          
+          if [ $RETRY -eq $MAX_RETRY ]; then
+            echo "Failed to connect to VM after multiple attempts"
+            exit 1
+          fi
+          
+          echo "SSH is available, proceeding with tests"
+          
+          # Create SSH directory
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
@@ -1292,10 +1358,10 @@ jobs:
           scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
           
           # Run the tests in VM (don't use set -e here to allow getting the exit code)
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
           
           # Retrieve exit code from VM
-          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          EXIT_CODE=$(ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
           
           # Exit with the same code as the test script
           echo "Test script exited with code: $EXIT_CODE"
@@ -1335,6 +1401,9 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
+          # Verify FreeBSD image exists
+          ls -la /freebsd/
+          
           # Start FreeBSD ARM64 VM with QEMU - using -display none instead of -nographic
           qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
@@ -1345,11 +1414,30 @@ jobs:
           
           # Wait for VM to boot (ARM64 might take longer)
           echo "Waiting for FreeBSD ARM64 VM to boot..."
-          sleep 30
-          until nc -z localhost 2222; do sleep 10; done
+          sleep 90  # Longer initial wait for ARM
           
-          # Create SSH directory if it doesn't exist
+          # Check if VM is running
+          ps aux | grep qemu
+          
+          # More robust waiting for SSH
+          RETRY=0
+          MAX_RETRY=30  # More retries for ARM
+          until nc -z localhost 2222 || [ $RETRY -eq $MAX_RETRY ]; do
+            echo "Attempt $RETRY: Waiting for SSH to become available..."
+            sleep 10
+            RETRY=$((RETRY+1))
+          done
+          
+          if [ $RETRY -eq $MAX_RETRY ]; then
+            echo "Failed to connect to VM after multiple attempts"
+            exit 1
+          fi
+          
+          echo "SSH is available, proceeding with tests"
+          
+          # Create SSH directory
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
@@ -1363,10 +1451,10 @@ jobs:
           scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
           
           # Run the tests in VM (don't use set -e here to allow getting the exit code)
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
           
           # Retrieve exit code from VM
-          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          EXIT_CODE=$(ssh -P 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
           
           # Exit with the same code as the test script
           echo "Test script exited with code: $EXIT_CODE"
