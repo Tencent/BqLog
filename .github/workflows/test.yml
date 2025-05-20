@@ -1124,10 +1124,12 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
-          # Start FreeBSD VM with QEMU
-          qemu-system-x86_64 -m 2G -smp 2 -nographic -device virtio-net,netdev=net0 \
+          # Start FreeBSD VM with QEMU - using -display none instead of -nographic
+          qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
+            -device virtio-net,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.0-RELEASE-amd64.qcow2,if=virtio -daemonize
+            -drive file=/freebsd/FreeBSD-14.0-RELEASE-amd64.qcow2,if=virtio \
+            -daemonize
           
           # Wait for VM to boot
           echo "Waiting for FreeBSD VM to boot..."
@@ -1189,10 +1191,12 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
-          # Start FreeBSD VM with QEMU
-          qemu-system-x86_64 -m 2G -smp 2 -nographic -device virtio-net,netdev=net0 \
+          # Start FreeBSD VM with QEMU - using -display none instead of -nographic
+          qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
+            -device virtio-net,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.0-RELEASE-amd64.qcow2,if=virtio -daemonize
+            -drive file=/freebsd/FreeBSD-14.0-RELEASE-amd64.qcow2,if=virtio \
+            -daemonize
           
           # Wait for VM to boot
           echo "Waiting for FreeBSD VM to boot..."
@@ -1254,8 +1258,8 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
-          # Start FreeBSD ARM64 VM with QEMU
-          qemu-system-aarch64 -m 2G -smp 2 -M virt -cpu cortex-a57 -nographic \
+          # Start FreeBSD ARM64 VM with QEMU - using -display none instead of -nographic
+          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -drive file=/freebsd/FreeBSD-14.0-RELEASE-aarch64.qcow2,if=none,id=drive0 \
@@ -1322,8 +1326,8 @@ jobs:
           echo $? > /root/exit_code
           EOF
           
-          # Start FreeBSD ARM64 VM with QEMU
-          qemu-system-aarch64 -m 2G -smp 2 -M virt -cpu cortex-a57 -nographic \
+          # Start FreeBSD ARM64 VM with QEMU - using -display none instead of -nographic
+          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -drive file=/freebsd/FreeBSD-14.0-RELEASE-aarch64.qcow2,if=none,id=drive0 \
