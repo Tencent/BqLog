@@ -1277,44 +1277,49 @@ jobs:
           # Create SSH directory with proper permissions
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          
+
           # Create test script for FreeBSD
           cat > /tmp/freebsd_test.sh << 'EOF'
           #!/bin/sh
           set -e
-          
+
           # Install required packages
           pkg update -f
           pkg install -y gcc cmake bash openjdk11
-          
+
           # Setup Java environment
           export JAVA_HOME="/usr/local/openjdk11"
           export PATH="$JAVA_HOME/bin:$PATH"
-          
+
           # Run tests
           cd /root/workspace/build/test/unix_like
           chmod +x *.sh
           ./RunTest_GCC.sh
-          
+
           # Return exit code
           exit $?
           EOF
-          
+
           # List available FreeBSD images
           echo "Available FreeBSD images:"
           ls -la /freebsd/
-          
-          # Start FreeBSD ARM64 VM with QEMU - use display none instead of nographic
+
+          # Start FreeBSD ARM64 VM with QEMU
+          echo "Starting FreeBSD ARM64 VM..."
           qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
             -device virtio-blk-pci,drive=drive0 \
             -daemonize
-          
+
+          # Check QEMU process
+          echo "QEMU process status:"
+          ps aux | grep qemu
+
           # Generate SSH key
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-          
+
           # Wait for VM to boot with robust retry logic
           echo "Waiting for FreeBSD ARM64 VM to boot..."
           MAX_ATTEMPTS=40  # More attempts for ARM
@@ -1324,30 +1329,58 @@ jobs:
               echo "VM is up!"
               break
             fi
-          
+
             if [ $i -eq $MAX_ATTEMPTS ]; then
               echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
               exit 1
             fi
-          
+
             sleep 10
           done
-          
-          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
-          
-          # Copy test script to VM
-          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
-          
-          # Copy workspace to VM
-          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
-          
-          # Run test and capture exit code
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
-          EXIT_CODE=$?
-          
+
+          echo "Adding VM to known hosts..."
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts || echo "ssh-keyscan failed"
+
+          echo "Enabling password authentication for root..."
+          # We're trying to SSH without key authentication first, using the default root password
+          # Most FreeBSD VM images use 'root' as the default password
+          sshpass -p "root" ssh -o StrictHostKeyChecking=no -p 2222 root@localhost "echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && service sshd restart" || echo "Failed to configure sshd - continuing anyway"
+
+          echo "Copying test script to VM..."
+          scp -v -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/ || {
+            echo "scp failed with code $?"
+            echo "Trying alternative connection method..."
+            cat /tmp/freebsd_test.sh | ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat > /root/freebsd_test.sh && chmod +x /root/freebsd_test.sh"
+          }
+
+          echo "Making script executable..."
+          ssh -v -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh" || echo "chmod failed with code $?"
+
+          echo "Copying workspace to VM..."
+          scp -v -r -P 2222 -o StrictHostKeyChecking=no $GITHUB_WORKSPACE root@localhost:/root/workspace || {
+            echo "workspace copy failed with code $?"
+            echo "Creating workspace directory..."
+            ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "mkdir -p /root/workspace"
+
+            echo "Copying files individually..."
+            find $GITHUB_WORKSPACE -type f -name "*.sh" -o -name "*.cpp" -o -name "*.h" -o -name "CMakeLists.txt" | 
+            while read file; do
+              rel_path=${file#$GITHUB_WORKSPACE/}
+              dir_path=$(dirname "$rel_path")
+              ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "mkdir -p /root/workspace/$dir_path"
+              scp -P 2222 -o StrictHostKeyChecking=no "$file" root@localhost:"/root/workspace/$rel_path" || echo "Failed to copy $file"
+            done
+          }
+
+          echo "Running test script..."
+          ssh -v -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh || true" || echo "SSH command failed with code $?"
+
+          # Try to get exit code regardless of SSH connection issues
+          echo "Getting test result..."
+          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "if [ -f /root/exit_code ]; then cat /root/exit_code; else echo 1; fi") || EXIT_CODE=1
+
           echo "Test completed with exit code: $EXIT_CODE"
-          exit $EXIT_CODE
+          exit $EXIT_CODE #Unix-FreeBSD ARM64 GCC
 
   #Unix-FreeBSD ARM64 Clang
   freeBSD_arm64_test_Clang_cpp17:
