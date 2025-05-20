@@ -1093,58 +1093,21 @@ jobs:
   #Unix-FreeBSD AMD64 GCC
   freeBSD_test_GCC_cpp17:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+      options: --privileged  # Required for running QEMU inside container
     steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Pull FreeBSD container
-        run: docker pull ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-
-      - name: Run FreeBSD tests with GCC
+      - name: Start FreeBSD VM and run tests
         run: |
+          # Create SSH directory with proper permissions
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           
-          # Create test script
-          cat > run_test.sh << 'EOF'
-          #!/bin/bash
-          set -e
-          
-          # Start FreeBSD VM
-          qemu-system-x86_64 -m 16G -smp 2 -nographic \
-            -device virtio-net,netdev=net0 \
-            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
-            -daemonize
-          
-          # Generate SSH key
-          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-          
-          # Wait for VM to boot with robust retry logic
-          echo "Waiting for FreeBSD VM to boot..."
-          MAX_ATTEMPTS=30
-          for i in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $i/$MAX_ATTEMPTS"
-            if nc -z -w 5 localhost 2222; then
-              echo "VM is up!"
-              break
-            fi
-          
-            if [ $i -eq $MAX_ATTEMPTS ]; then
-              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
-              exit 1
-            fi
-          
-            sleep 10
-          done
-          
-          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
-          
-          # Create FreeBSD test script
-          cat > freebsd_test.sh << 'EOT'
+          # Create test script for FreeBSD
+          cat > /tmp/freebsd_test.sh << 'EOF'
           #!/bin/sh
           set -e
           
@@ -1163,59 +1126,14 @@ jobs:
           
           # Return exit code
           exit $?
-          EOT
-          
-          # Copy script to VM
-          scp -P 2222 -o StrictHostKeyChecking=no freebsd_test.sh root@localhost:/root/
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
-          
-          # Copy workspace to VM
-          scp -P 2222 -r $PWD root@localhost:/root/workspace
-          
-          # Run test and capture exit code
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
-          EXIT_CODE=$?
-          
-          # Shutdown VM
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "shutdown -p now" || true
-          
-          # Return test exit code
-          exit $EXIT_CODE
           EOF
           
-          # Run test in privileged Docker container with access to QEMU
-          docker run --rm --privileged \
-            -v $(pwd):/github/workspace \
-            -v $(pwd)/run_test.sh:/run_test.sh \
-            -w /github/workspace \
-            ghcr.io/pippocao/bqlog/freebsd_amd64:latest \
-            bash /run_test.sh
-
-  #Unix-FreeBSD AMD64 Clang
-  freeBSD_test_Clang_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Pull FreeBSD container
-        run: docker pull ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-
-      - name: Run FreeBSD tests with Clang
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          # List available FreeBSD images
+          echo "Available FreeBSD images:"
+          ls -la /freebsd/
           
-          # Create test script
-          cat > run_test.sh << 'EOF'
-          #!/bin/bash
-          set -e
-          
-          # Start FreeBSD VM
-          qemu-system-x86_64 -m 16G -smp 2 -nographic \
+          # Start FreeBSD VM with QEMU - use display none instead of nographic
+          qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
             -device virtio-net,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
@@ -1244,8 +1162,38 @@ jobs:
           
           ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
           
-          # Create FreeBSD test script
-          cat > freebsd_test.sh << 'EOT'
+          # Copy test script to VM
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
+          
+          # Copy workspace to VM
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
+          
+          # Run test and capture exit code
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
+          EXIT_CODE=$?
+          
+          echo "Test completed with exit code: $EXIT_CODE"
+          exit $EXIT_CODE
+
+  #Unix-FreeBSD AMD64 Clang
+  freeBSD_test_Clang_cpp17:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+      options: --privileged  # Required for running QEMU inside container
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start FreeBSD VM and run tests
+        run: |
+          # Create SSH directory with proper permissions
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Create test script for FreeBSD
+          cat > /tmp/freebsd_test.sh << 'EOF'
           #!/bin/sh
           set -e
           
@@ -1264,33 +1212,55 @@ jobs:
           
           # Return exit code
           exit $?
-          EOT
+          EOF
           
-          # Copy script to VM
-          scp -P 2222 -o StrictHostKeyChecking=no freebsd_test.sh root@localhost:/root/
+          # List available FreeBSD images
+          echo "Available FreeBSD images:"
+          ls -la /freebsd/
+          
+          # Start FreeBSD VM with QEMU - use display none instead of nographic
+          qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
+            -device virtio-net,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
+            -daemonize
+          
+          # Generate SSH key
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          
+          # Wait for VM to boot with robust retry logic
+          echo "Waiting for FreeBSD VM to boot..."
+          MAX_ATTEMPTS=30
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS"
+            if nc -z -w 5 localhost 2222; then
+              echo "VM is up!"
+              break
+            fi
+          
+            if [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+          
+            sleep 10
+          done
+          
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Copy test script to VM
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
           ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
           
           # Copy workspace to VM
-          scp -P 2222 -r $PWD root@localhost:/root/workspace
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
           
           # Run test and capture exit code
           ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
           EXIT_CODE=$?
           
-          # Shutdown VM
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "shutdown -p now" || true
-          
-          # Return test exit code
+          echo "Test completed with exit code: $EXIT_CODE"
           exit $EXIT_CODE
-          EOF
-          
-          # Run test in privileged Docker container with access to QEMU
-          docker run --rm --privileged \
-            -v $(pwd):/github/workspace \
-            -v $(pwd)/run_test.sh:/run_test.sh \
-            -w /github/workspace \
-            ghcr.io/pippocao/bqlog/freebsd_amd64:latest \
-            bash /run_test.sh
 
   #Unix-FreeBSD ARM64 GCC
   freeBSD_arm64_test_GCC_cpp17:
@@ -1334,8 +1304,8 @@ jobs:
           echo "Available FreeBSD images:"
           ls -la /freebsd/
           
-          # Start FreeBSD ARM64 VM with QEMU
-          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -nographic \
+          # Start FreeBSD ARM64 VM with QEMU - use display none instead of nographic
+          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
@@ -1421,8 +1391,8 @@ jobs:
           echo "Available FreeBSD images:"
           ls -la /freebsd/
           
-          # Start FreeBSD ARM64 VM with QEMU
-          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -nographic \
+          # Start FreeBSD ARM64 VM with QEMU - use display none instead of nographic
+          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
