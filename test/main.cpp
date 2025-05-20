@@ -87,8 +87,14 @@ int32_t main()
     monitor_thread.cancel();
     monitor_thread.join();
     if (test_result) {
+        bq::util::set_log_device_console_min_level(bq::log_level::verbose);
+        bq::test::add_to_test_output_str(false, bq::log_level::info, "\n--------------------------------\nCONGRATULATION!!! ALL TEST CASES IS PASSED!\n--------------------------------\n");
+        bq::util::log_device_console(bq::log_level::info, "\n--------------------------------\nCONGRATULATION!!! ALL TEST CASES IS PASSED!\n--------------------------------\n");
+        bq::util::set_log_device_console_min_level(bq::log_level::error);
         return 0;
     } else {
+        bq::test::add_to_test_output_str(false, bq::log_level::fatal, "\n--------------------------------\nSORRY!!! TEST CASES FAILED!\n--------------------------------\n");
+        bq::util::log_device_console(bq::log_level::fatal, "\n--------------------------------\nSORRY!!! TEST CASES FAILED!\n--------------------------------\n");
         return -1;
     }
 }
