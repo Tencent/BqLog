@@ -619,7 +619,7 @@ namespace bq {
     {
         if (reverse_find) {
             for (size_type i = size(); i >= 1; --i) {
-                if (data_[i - i] == value) {
+                if (data_[i - 1] == value) {
                     return begin() + i - 1;
                 }
             }
@@ -638,13 +638,53 @@ namespace bq {
     {
         if (reverse_find) {
             for (size_type i = size(); i >= 1; --i) {
-                if (data_[i - i] == value) {
+                if (data_[i - 1] == value) {
                     return begin() + i - 1;
                 }
             }
         } else {
             for (size_type i = 0; i < size(); ++i) {
                 if (data_[i] == value) {
+                    return begin() + i;
+                }
+            }
+        }
+        return end();
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename Predicate>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::find_if(Predicate predicate, bool reverse_find /* = false*/)
+    {
+        if (reverse_find) {
+            for (size_type i = size(); i >= 1; --i) {
+                if (predicate(data_[i - 1])) {
+                    return begin() + i - 1;
+                }
+            }
+        } else {
+            for (size_type i = 0; i < size(); ++i) {
+                if (predicate(data_[i])) {
+                    return begin() + i;
+                }
+            }
+        }
+        return end();
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename Predicate>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::const_iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::find_if(Predicate predicate, bool reverse_find /* = false*/) const
+    {
+        if (reverse_find) {
+            for (size_type i = size(); i >= 1; --i) {
+                if (predicate(data_[i - 1])) {
+                    return begin() + i - 1;
+                }
+            }
+        } else {
+            for (size_type i = 0; i < size(); ++i) {
+                if (predicate(data_[i])) {
                     return begin() + i;
                 }
             }

@@ -313,13 +313,21 @@ namespace bq {
                         snprintf(tmp, sizeof(tmp), "%d", i);
                         auto iter = find_test_array.find(tmp);
                         result.add_result(iter == (find_test_array.begin() + i), "array find test %d", i);
+                        iter = find_test_array.find(tmp, true);
+                        result.add_result(iter == (find_test_array.begin() + i), "array reverse find test %d", i);
                     }
                     for (int32_t i = 10000; i < 20000; ++i) {
                         char tmp[10];
                         snprintf(tmp, sizeof(tmp), "%d", i);
                         auto iter = find_test_array.find(tmp);
-                        result.add_result(iter == find_test_array.end(), "array find test %d", i);
+                        result.add_result(iter == find_test_array.end(), "array find none exist test %d", i);
                     }
+                    auto find_if1 = find_test_array.find_if([](const bq::string& str) { return str == "1234"; });
+                    result.add_result(find_if1 == find_test_array.begin() + 1234, "array find_if test 1");
+                    auto find_if2 = find_test_array.find_if([](const bq::string& str) { return str.size() == 3; }, true);
+                    result.add_result(find_if2 == find_test_array.begin() + 999, "array find_if test 2");
+                    auto find_if3 = find_test_array.find_if([](const bq::string& str) { return str.size() == 5; });
+                    result.add_result(find_if3 == find_test_array.end(), "array find_if test 3");
                 }
 
                 {

@@ -187,6 +187,12 @@ namespace bq {
 
         const_iterator find(const value_type& value, bool reverse_find = false) const;
 
+        template <typename Predicate>
+        iterator find_if(Predicate predicate, bool reverse_find = false);
+
+        template <typename Predicate>
+        const_iterator find_if(Predicate predicate, bool reverse_find = false) const;
+
     protected:
         template <typename... V>
         void construct(iterator iter, V&&... args);
