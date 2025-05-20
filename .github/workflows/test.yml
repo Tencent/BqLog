@@ -1136,6 +1136,9 @@ jobs:
           sleep 30
           until nc -z localhost 2222; do sleep 5; done
           
+          # Create SSH directory if it doesn't exist
+          mkdir -p ~/.ssh
+          
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
           ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
@@ -1203,6 +1206,9 @@ jobs:
           sleep 30
           until nc -z localhost 2222; do sleep 5; done
           
+          # Create SSH directory if it doesn't exist
+          mkdir -p ~/.ssh
+          
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
           ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
@@ -1262,14 +1268,17 @@ jobs:
           qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64--aarch64.qcow2,if=none,id=drive0 \
+            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
             -device virtio-blk-pci,drive=drive0 \
             -daemonize
           
           # Wait for VM to boot (ARM64 might take longer)
           echo "Waiting for FreeBSD ARM64 VM to boot..."
-          sleep 60
+          sleep 30
           until nc -z localhost 2222; do sleep 10; done
+          
+          # Create SSH directory if it doesn't exist
+          mkdir -p ~/.ssh
           
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
@@ -1330,14 +1339,17 @@ jobs:
           qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
             -device virtio-net-pci,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64--aarch64.qcow2,if=none,id=drive0 \
+            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
             -device virtio-blk-pci,drive=drive0 \
             -daemonize
           
           # Wait for VM to boot (ARM64 might take longer)
           echo "Waiting for FreeBSD ARM64 VM to boot..."
-          sleep 60
+          sleep 30
           until nc -z localhost 2222; do sleep 10; done
+          
+          # Create SSH directory if it doesn't exist
+          mkdir -p ~/.ssh
           
           # Setup SSH key for passwordless access
           ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
