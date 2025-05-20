@@ -1090,114 +1090,268 @@ jobs:
           ./RunTest.sh 23
 
   #Unix-FreeBSD
+  #Unix-FreeBSD AMD64 GCC
   freeBSD_test_GCC_cpp17:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+      options: --privileged  # Required for running QEMU inside container
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install necessary tools (gcc and clang)
+      - name: Start FreeBSD VM and run tests
         run: |
+          # Create startup script for FreeBSD
+          cat > /tmp/run_tests.sh << 'EOF'
+          #!/bin/sh
+          set -e  # Exit immediately if a command exits with non-zero status
+          
+          # Install required packages
+          pkg update -f
           pkg install -y gcc cmake bash openjdk11
-
-      - name: Set up
-        run: |
-          set -e -x
-          pkg info -l openjdk11 | grep 'bin/java'
+          
+          # Setup Java environment
           export JAVA_HOME="/usr/local/openjdk11"
           export PATH="$JAVA_HOME/bin:$PATH"
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "PATH=$PATH" >> $GITHUB_ENV
-
-      - name: Build for FreeBSD
-        run: |
-          cd build/test/unix_like  
+          
+          # Run tests
+          cd /root/workspace/build/test/unix_like
           chmod +x *.sh
-          ls -l
-          ./RunTest_GCC.sh 
-  
+          ./RunTest_GCC.sh
+          
+          # Store exit code in a file to retrieve it later
+          echo $? > /root/exit_code
+          EOF
+          
+          # Start FreeBSD VM with QEMU
+          qemu-system-x86_64 -m 2G -smp 2 -nographic -device virtio-net,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.0-RELEASE-amd64.qcow2,if=virtio -daemonize
+          
+          # Wait for VM to boot
+          echo "Waiting for FreeBSD VM to boot..."
+          sleep 30
+          until nc -z localhost 2222; do sleep 5; done
+          
+          # Setup SSH key for passwordless access
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Copy script to VM and make it executable
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/run_tests.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/run_tests.sh"
+          
+          # Copy the repository to VM
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
+          
+          # Run the tests in VM (don't use set -e here to allow getting the exit code)
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          
+          # Retrieve exit code from VM
+          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          
+          # Exit with the same code as the test script
+          echo "Test script exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
+
+  #Unix-FreeBSD AMD64 Clang
   freeBSD_test_Clang_cpp17:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+      options: --privileged  # Required for running QEMU inside container
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install necessary tools (gcc and clang)
+      - name: Start FreeBSD VM and run tests
         run: |
+          # Create startup script for FreeBSD
+          cat > /tmp/run_tests.sh << 'EOF'
+          #!/bin/sh
+          set -e  # Exit immediately if a command exits with non-zero status
+          
+          # Install required packages
+          pkg update -f
           pkg install -y gcc cmake bash openjdk11
-
-      - name: Set up
-        run: |
-          set -e -x
-          pkg info -l openjdk11 | grep 'bin/java'
+          
+          # Setup Java environment
           export JAVA_HOME="/usr/local/openjdk11"
           export PATH="$JAVA_HOME/bin:$PATH"
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "PATH=$PATH" >> $GITHUB_ENV
-
-      - name: Build for FreeBSD
-        run: |
-          cd build/test/unix_like  
+          
+          # Run tests
+          cd /root/workspace/build/test/unix_like
           chmod +x *.sh
-          ls -l
-          ./RunTest_Clang.sh 
+          ./RunTest_Clang.sh
+          
+          # Store exit code in a file to retrieve it later
+          echo $? > /root/exit_code
+          EOF
+          
+          # Start FreeBSD VM with QEMU
+          qemu-system-x86_64 -m 2G -smp 2 -nographic -device virtio-net,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.0-RELEASE-amd64.qcow2,if=virtio -daemonize
+          
+          # Wait for VM to boot
+          echo "Waiting for FreeBSD VM to boot..."
+          sleep 30
+          until nc -z localhost 2222; do sleep 5; done
+          
+          # Setup SSH key for passwordless access
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Copy script to VM and make it executable
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/run_tests.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/run_tests.sh"
+          
+          # Copy the repository to VM
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
+          
+          # Run the tests in VM (don't use set -e here to allow getting the exit code)
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          
+          # Retrieve exit code from VM
+          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          
+          # Exit with the same code as the test script
+          echo "Test script exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
 
+  #Unix-FreeBSD ARM64 GCC
   freeBSD_arm64_test_GCC_cpp17:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_arm64:latest
+      options: --privileged  # Required for running QEMU inside container
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install necessary tools (gcc and clang)
+      - name: Start FreeBSD VM and run tests
         run: |
+          # Create startup script for FreeBSD
+          cat > /tmp/run_tests.sh << 'EOF'
+          #!/bin/sh
+          set -e  # Exit immediately if a command exits with non-zero status
+          
+          # Install required packages
+          pkg update -f
           pkg install -y gcc cmake bash openjdk11
-
-      - name: Set up
-        run: |
-          set -e -x
-          pkg info -l openjdk11 | grep 'bin/java'
+          
+          # Setup Java environment
           export JAVA_HOME="/usr/local/openjdk11"
           export PATH="$JAVA_HOME/bin:$PATH"
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "PATH=$PATH" >> $GITHUB_ENV
-
-      - name: Build for FreeBSD
-        run: |
-          cd build/test/unix_like  
+          
+          # Run tests
+          cd /root/workspace/build/test/unix_like
           chmod +x *.sh
-          ls -l
-          ./RunTest_GCC.sh 
+          ./RunTest_GCC.sh
+          
+          # Store exit code in a file to retrieve it later
+          echo $? > /root/exit_code
+          EOF
+          
+          # Start FreeBSD ARM64 VM with QEMU
+          qemu-system-aarch64 -m 2G -smp 2 -M virt -cpu cortex-a57 -nographic \
+            -device virtio-net-pci,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.0-RELEASE-aarch64.qcow2,if=none,id=drive0 \
+            -device virtio-blk-pci,drive=drive0 \
+            -daemonize
+          
+          # Wait for VM to boot (ARM64 might take longer)
+          echo "Waiting for FreeBSD ARM64 VM to boot..."
+          sleep 60
+          until nc -z localhost 2222; do sleep 10; done
+          
+          # Setup SSH key for passwordless access
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Copy script to VM and make it executable
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/run_tests.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/run_tests.sh"
+          
+          # Copy the repository to VM
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
+          
+          # Run the tests in VM (don't use set -e here to allow getting the exit code)
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          
+          # Retrieve exit code from VM
+          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          
+          # Exit with the same code as the test script
+          echo "Test script exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
 
+  #Unix-FreeBSD ARM64 Clang
   freeBSD_arm64_test_Clang_cpp17:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_arm64:latest
+      options: --privileged  # Required for running QEMU inside container
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install necessary tools (gcc and clang)
+      - name: Start FreeBSD VM and run tests
         run: |
+          # Create startup script for FreeBSD
+          cat > /tmp/run_tests.sh << 'EOF'
+          #!/bin/sh
+          set -e  # Exit immediately if a command exits with non-zero status
+          
+          # Install required packages
+          pkg update -f
           pkg install -y gcc cmake bash openjdk11
-
-      - name: Set up
-        run: |
-          set -e -x
-          pkg info -l openjdk11 | grep 'bin/java'
+          
+          # Setup Java environment
           export JAVA_HOME="/usr/local/openjdk11"
           export PATH="$JAVA_HOME/bin:$PATH"
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "PATH=$PATH" >> $GITHUB_ENV
-
-      - name: Build for FreeBSD
-        run: |
-          cd build/test/unix_like  
+          
+          # Run tests
+          cd /root/workspace/build/test/unix_like
           chmod +x *.sh
-          ls -l
-          ./RunTest_Clang.sh 
+          ./RunTest_Clang.sh
+          
+          # Store exit code in a file to retrieve it later
+          echo $? > /root/exit_code
+          EOF
+          
+          # Start FreeBSD ARM64 VM with QEMU
+          qemu-system-aarch64 -m 2G -smp 2 -M virt -cpu cortex-a57 -nographic \
+            -device virtio-net-pci,netdev=net0 \
+            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+            -drive file=/freebsd/FreeBSD-14.0-RELEASE-aarch64.qcow2,if=none,id=drive0 \
+            -device virtio-blk-pci,drive=drive0 \
+            -daemonize
+          
+          # Wait for VM to boot (ARM64 might take longer)
+          echo "Waiting for FreeBSD ARM64 VM to boot..."
+          sleep 60
+          until nc -z localhost 2222; do sleep 10; done
+          
+          # Setup SSH key for passwordless access
+          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
+          
+          # Copy script to VM and make it executable
+          scp -P 2222 -o StrictHostKeyChecking=no /tmp/run_tests.sh root@localhost:/root/
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/run_tests.sh"
+          
+          # Copy the repository to VM
+          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
+          
+          # Run the tests in VM (don't use set -e here to allow getting the exit code)
+          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/run_tests.sh || true"
+          
+          # Retrieve exit code from VM
+          EXIT_CODE=$(ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "cat /root/exit_code")
+          
+          # Exit with the same code as the test script
+          echo "Test script exited with code: $EXIT_CODE"
+          exit $EXIT_CODE
