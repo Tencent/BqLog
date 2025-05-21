@@ -1377,6 +1377,18 @@ jobs:
             echo "FreeBSD login failed"
             exit 1
           fi
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: /github/workspace
+
+      - name: Run tests in FreeBSD
+        run: /usr/local/bin/start-freebsd.sh
 
   #Unix-FreeBSD ARM64 Clang
   freeBSD_arm64_test_Clang_cpp17:
