@@ -1293,6 +1293,7 @@ jobs:
 
           # 保存退出代码
           echo $? > /tmp/exit_code
+          shutdown -p now
           EOF
           chmod +x /tmp/shared/run_tests.sh
 
@@ -1301,46 +1302,81 @@ jobs:
 
       - name: Run FreeBSD ARM64 tests
         run: |
-          # 启动FreeBSD VM并等待完成
-          # 使用expect自动化控制台交互
-          apt-get update && apt-get install -y expect
-
-          # 创建expect脚本
+          # 调整expect脚本，增加更多超时和灵活匹配
           cat > /tmp/freebsd_test.exp << 'EOF'
           #!/usr/bin/expect
 
-          set timeout 1800
-          spawn qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -nographic \
+          # 增大超时时间和更宽松的匹配
+          set timeout 300
+
+          # 启动QEMU
+          spawn qemu-system-aarch64 -m 8G -smp 2 -M virt -cpu cortex-a57 -nographic \
             -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
             -device virtio-blk-pci,drive=drive0 \
             -virtfs local,path=/tmp/shared,mount_tag=host0,security_model=none,id=host0
 
-          # 等待登录提示
-          expect "login:" { send "root\r" }
-          expect "Password:" { send "root\r" }  # 假定默认密码是root
+          # 更灵活的登录匹配
+          expect {
+            "login:" { send "root\r" }
+            timeout { puts "Timeout waiting for login prompt"; exit 1 }
+          }
 
-          # 挂载共享目录并运行测试
-          expect "# " { send "mkdir -p /github\r" }
-          expect "# " { send "mount_9p host0 /github\r" }
-          expect "# " { send "mkdir -p /github/workspace\r" }
-          expect "# " { send "cp -r /github/shared/workspace/* /github/workspace/\r" }
-          expect "# " { send "sh /github/shared/run_tests.sh\r" }
+          # 可能的密码提示
+          expect {
+            "Password:" { send "root\r" }
+            "password:" { send "root\r" }
+            "# " { puts "Already at shell prompt" }
+            timeout { puts "Timeout waiting for password/shell prompt"; exit 1 }
+          }
 
-          # 等待测试完成并获取退出代码
-          expect "# " { send "cat /tmp/exit_code\r" }
-          expect "# " { send "shutdown -p now\r" }
+          # 更灵活的shell提示符匹配
+          expect {
+            "# " { puts "Login successful" }
+            "root@*# " { puts "Login successful" }
+            "root@*:~# " { puts "Login successful" }
+            timeout { puts "Timeout waiting for shell prompt"; exit 1 }
+          }
 
-          # 等待关机
-          expect eof
+          # 执行测试
+          send "mkdir -p /github\r"
+          expect "# "
+          send "mount_9p host0 /github || mount -t 9p host0 /github\r"
+          expect "# "
+          send "sh /github/shared/run_tests.sh\r"
+
+          # 等待关机或超时
+          expect {
+            eof { puts "FreeBSD shutdown complete" }
+            timeout { puts "Timeout waiting for shutdown"; exit 1 }
+          }
           EOF
 
           chmod +x /tmp/freebsd_test.exp
           /tmp/freebsd_test.exp | tee /tmp/test_output.log
 
-          # 从输出日志中提取退出代码
-          EXIT_CODE=$(grep -A 1 "cat /tmp/exit_code" /tmp/test_output.log | tail -1 | tr -d '\r\n')
-          echo "Test completed with exit code: $EXIT_CODE"
-          exit $EXIT_CODE
+          # 从输出中提取结果
+          if grep -q "Login successful" /tmp/test_output.log; then
+            echo "FreeBSD login was successful"
+            # 检查是否完成测试
+            if grep -q "shutdown complete" /tmp/test_output.log; then
+              echo "Tests completed and VM shutdown"
+              # 试图提取退出代码
+              if [ -f "/tmp/shared/exit_code" ]; then
+                EXIT_CODE=$(cat /tmp/shared/exit_code)
+                echo "Test exit code: $EXIT_CODE"
+                exit $EXIT_CODE
+              else
+                echo "Could not find exit code file"
+                exit 1
+              fi
+            else
+              echo "VM did not shutdown properly"
+              exit 1
+            fi
+          else
+            echo "FreeBSD login failed"
+            exit 1
+          fi
 
   #Unix-FreeBSD ARM64 Clang
   freeBSD_arm64_test_Clang_cpp17:
