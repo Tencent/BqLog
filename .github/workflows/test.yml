@@ -1381,11 +1381,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
+      options: --pull=always
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          path: /github/workspace
 
       - name: Run tests in FreeBSD
         run: /usr/local/bin/start-freebsd.sh
