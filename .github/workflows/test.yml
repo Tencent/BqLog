@@ -1383,10 +1383,16 @@ jobs:
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
       options: --privileged
+      entrypoint: /bin/bash
     steps:
+      - name: Start FreeBSD VM
+        run: /usr/local/bin/start-freebsd.sh
+      - name: Fix workspace permissions
+        run: |
+          sudo mkdir -p /__w/_temp
+          sudo chown -R $(whoami):$(whoami) /__w
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Wait for FreeBSD VM
         run: |
           timeout 300 bash -c "until nc -z localhost 2222; do sleep 5; echo 'Checking SSH...'; done"
@@ -1408,6 +1414,11 @@ jobs:
             ./RunTest_GCC.sh
             exit $?
           EOF
+      - name: Debug logs
+        if: failure()
+        run: |
+          cat expect.log
+          cat qemu.log
 
   #Unix-FreeBSD ARM64 Clang
   freeBSD_arm64_test_Clang_cpp17:
