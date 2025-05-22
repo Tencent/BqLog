@@ -1383,7 +1383,6 @@ jobs:
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
       options: --privileged
-      entrypoint: /bin/bash
     steps:
       - name: Start FreeBSD VM
         run: /usr/local/bin/start-freebsd.sh
