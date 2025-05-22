@@ -1377,17 +1377,37 @@ jobs:
             echo "FreeBSD login failed"
             exit 1
           fi
+
   test:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-      options: --pull=always
+      options: --privileged
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Wait for FreeBSD VM
+        run: |
+          timeout 300 bash -c "until nc -z localhost 2222; do sleep 5; echo 'Checking SSH...'; done"
+          timeout 60 bash -c "until ssh -p 2222 -i /tmp/id_rsa root@localhost whoami; do sleep 5; echo 'Checking SSH...'; done"
+      - name: Copy code to FreeBSD
+        run: |
+          echo WorkSpace
+          echo $GITHUB_WORKSPACE
+          scp -P 2222 -i /tmp/id_rsa -r $GITHUB_WORKSPACE root@localhost:/root/workspace
       - name: Run tests in FreeBSD
-        run: /usr/local/bin/start-freebsd.sh
+        run: |
+          ssh -p 2222 -i /tmp/id_rsa root@localhost << 'EOF'
+            pkg update -f
+            pkg install -y bash gcc g++ cmake openjdk17 gdb sudo
+            export JAVA_HOME=/usr/local/openjdk17
+            export PATH=$JAVA_HOME/bin:$PATH
+            cd /root/workspace/build/test/unix_like
+            chmod +x RunTest_GCC.sh
+            ./RunTest_GCC.sh
+            exit $?
+          EOF
 
   #Unix-FreeBSD ARM64 Clang
   freeBSD_arm64_test_Clang_cpp17:
