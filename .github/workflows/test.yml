@@ -21,7 +21,7 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_MSVC.bat 14
-        
+  
 
   win64_test_MSVC_Clang_cpp14:
     runs-on: windows-latest
@@ -39,7 +39,7 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_Clang.bat 14
-        
+
   win64_test_MinGW_GCC_cpp14:
     runs-on: windows-latest
     steps:
@@ -121,7 +121,7 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_MSVC.bat 17
-        
+  
 
   win64_test_MSVC_Clang_cpp17:
     runs-on: windows-latest
@@ -139,7 +139,7 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_Clang.bat 17
-        
+
   win64_test_MinGW_GCC_cpp17:
     runs-on: windows-latest
     steps:
@@ -238,7 +238,7 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_Clang.bat 20
-        
+
   win64_test_MinGW_GCC_cpp20:
     runs-on: windows-latest
     steps:
@@ -317,7 +317,7 @@ jobs:
         run: |
           cd build\test\win64  
           .\RunTest_MSVC.bat 23
-        
+  
 
   win64_test_MSVC_Clang_cpp23:
     runs-on: windows-latest
@@ -405,7 +405,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-          
+
       - name: Install Clang
         run: |
           choco uninstall -y llvm --all-versions
@@ -656,7 +656,7 @@ jobs:
           cd build/test/linux  
           chmod +x *.sh
           ./RunTest_Clang.sh 23
-          
+
   #Linux-ubuntu-ARM64
   ubuntu_arm64_test_GCC_cpp11:
     runs-on: ubuntu-24.04-arm
@@ -891,7 +891,7 @@ jobs:
   #linux-debian
   debian_test_GCC_cpp17:
     runs-on: ubuntu-latest
-    container: 
+    container:
       image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
@@ -913,13 +913,13 @@ jobs:
 
       - name: Build for Debian
         run: |
-            cd build/test/linux  
-            chmod +x *.sh
-            ./RunTest_GCC.sh 
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 
   
   debian_test_Clang_cpp17:
     runs-on: ubuntu-latest
-    container: 
+    container:
       image: ghcr.io/pippocao/bqlog/debian:latest
     steps:
       - name: Checkout repository
@@ -941,13 +941,13 @@ jobs:
 
       - name: Build for Debian
         run: |
-            cd build/test/linux  
-            chmod +x *.sh
-            ./RunTest_Clang.sh 
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 
 
   debian32_test_GCC_cpp17:
     runs-on: ubuntu-latest
-    container: 
+    container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
       - name: Checkout repository
@@ -960,13 +960,13 @@ jobs:
 
       - name: Build for Debian 32
         run: |
-            cd build/test/linux  
-            chmod +x *.sh
-            ./RunTest_GCC.sh 
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_GCC.sh 
 
   debian32_test_Clang_cpp17:
     runs-on: ubuntu-latest
-    container: 
+    container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
       - name: Checkout repository
@@ -979,9 +979,9 @@ jobs:
 
       - name: Build for Debian 32
         run: |
-            cd build/test/linux  
-            chmod +x *.sh
-            ./RunTest_Clang.sh 
+          cd build/test/linux  
+          chmod +x *.sh
+          ./RunTest_Clang.sh 
 
   #Mac
   mac_apple_silicon_test_cpp11:
@@ -1090,418 +1090,112 @@ jobs:
           ./RunTest.sh 23
 
   #Unix-FreeBSD
-  #Unix-FreeBSD AMD64 GCC
   freeBSD_test_GCC_cpp17:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-      options: --privileged  # Required for running QEMU inside container
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Start FreeBSD VM and run tests
-        run: |
-          # Create SSH directory with proper permissions
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # Create test script for FreeBSD
-          cat > /tmp/freebsd_test.sh << 'EOF'
-          #!/bin/sh
-          set -e
-          
-          # Install required packages
-          pkg update -f
-          pkg install -y gcc cmake bash openjdk11
-          
-          # Setup Java environment
-          export JAVA_HOME="/usr/local/openjdk11"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          
-          # Run tests
-          cd /root/workspace/build/test/unix_like
-          chmod +x *.sh
-          ./RunTest_GCC.sh
-          
-          # Return exit code
-          exit $?
-          EOF
-          
-          # List available FreeBSD images
-          echo "Available FreeBSD images:"
-          ls -la /freebsd/
-          
-          # Start FreeBSD VM with QEMU - use display none instead of nographic
-          qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
-            -device virtio-net,netdev=net0 \
-            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
-            -daemonize
-          
-          # Generate SSH key
-          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-          
-          # Wait for VM to boot with robust retry logic
-          echo "Waiting for FreeBSD VM to boot..."
-          MAX_ATTEMPTS=30
-          for i in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $i/$MAX_ATTEMPTS"
-            if nc -z -w 5 localhost 2222; then
-              echo "VM is up!"
-              break
-            fi
-          
-            if [ $i -eq $MAX_ATTEMPTS ]; then
-              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
-              exit 1
-            fi
-          
-            sleep 10
-          done
-          
-          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
-          
-          # Copy test script to VM
-          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
-          
-          # Copy workspace to VM
-          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
-          
-          # Run test and capture exit code
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
-          EXIT_CODE=$?
-          
-          echo "Test completed with exit code: $EXIT_CODE"
-          exit $EXIT_CODE
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
 
-  #Unix-FreeBSD AMD64 Clang
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/unix_like
+            chmod +x *.sh
+            ls -l
+            ./RunTest_GCC.sh 
+
   freeBSD_test_Clang_cpp17:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-      options: --privileged  # Required for running QEMU inside container
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Start FreeBSD VM and run tests
-        run: |
-          # Create SSH directory with proper permissions
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # Create test script for FreeBSD
-          cat > /tmp/freebsd_test.sh << 'EOF'
-          #!/bin/sh
-          set -e
-          
-          # Install required packages
-          pkg update -f
-          pkg install -y gcc cmake bash openjdk11
-          
-          # Setup Java environment
-          export JAVA_HOME="/usr/local/openjdk11"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          
-          # Run tests
-          cd /root/workspace/build/test/unix_like
-          chmod +x *.sh
-          ./RunTest_Clang.sh
-          
-          # Return exit code
-          exit $?
-          EOF
-          
-          # List available FreeBSD images
-          echo "Available FreeBSD images:"
-          ls -la /freebsd/
-          
-          # Start FreeBSD VM with QEMU - use display none instead of nographic
-          qemu-system-x86_64 -m 16G -smp 2 -display none -serial null \
-            -device virtio-net,netdev=net0 \
-            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-amd64.qcow2,if=virtio \
-            -daemonize
-          
-          # Generate SSH key
-          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-          
-          # Wait for VM to boot with robust retry logic
-          echo "Waiting for FreeBSD VM to boot..."
-          MAX_ATTEMPTS=30
-          for i in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $i/$MAX_ATTEMPTS"
-            if nc -z -w 5 localhost 2222; then
-              echo "VM is up!"
-              break
-            fi
-          
-            if [ $i -eq $MAX_ATTEMPTS ]; then
-              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
-              exit 1
-            fi
-          
-            sleep 10
-          done
-          
-          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
-          
-          # Copy test script to VM
-          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
-          
-          # Copy workspace to VM
-          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
-          
-          # Run test and capture exit code
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
-          EXIT_CODE=$?
-          
-          echo "Test completed with exit code: $EXIT_CODE"
-          exit $EXIT_CODE
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
 
-  #Unix-FreeBSD ARM64 GCC
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./RunTest_Clang.sh 
+
   freeBSD_arm64_test_GCC_cpp17:
     runs-on: ubuntu-24.04-arm
-    container:
-      image: ghcr.io/pippocao/bqlog/freebsd_arm64:latest
-      options: --privileged
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create test script
-        run: |
-          mkdir -p /tmp/shared
-          # 创建测试脚本
-          cat > /tmp/shared/run_tests.sh << 'EOF'
-          #!/bin/sh
-          # 安装所需软件包
-          pkg update -f
-          pkg install -y gcc cmake bash openjdk11
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          arch: aarch64
+          mem: 8192
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
 
-          # 设置Java环境
-          export JAVA_HOME="/usr/local/openjdk11" 
-          export PATH="$JAVA_HOME/bin:$PATH"
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/unix_like
+            chmod +x *.sh
+            ls -l
+            ./RunTest_GCC.sh 
 
-          # 运行测试
-          cd /github/workspace/build/test/unix_like
-          chmod +x *.sh
-          ./RunTest_GCC.sh
-
-          # 保存退出代码
-          echo $? > /tmp/exit_code
-          shutdown -p now
-          EOF
-          chmod +x /tmp/shared/run_tests.sh
-
-          # 复制GitHub工作区到共享目录
-          cp -r $GITHUB_WORKSPACE /tmp/shared/workspace
-
-      - name: Run FreeBSD ARM64 tests
-        run: |
-          # 调整expect脚本，增加更多超时和灵活匹配
-          cat > /tmp/freebsd_test.exp << 'EOF'
-          #!/usr/bin/expect
-
-          # 增大超时时间和更宽松的匹配
-          set timeout 300
-
-          # 启动QEMU
-          spawn qemu-system-aarch64 -m 8G -smp 2 -M virt -cpu cortex-a57 -nographic \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
-            -device virtio-blk-pci,drive=drive0 \
-            -virtfs local,path=/tmp/shared,mount_tag=host0,security_model=none,id=host0
-
-          # 更灵活的登录匹配
-          expect {
-            "login:" { send "root\r" }
-            timeout { puts "Timeout waiting for login prompt"; exit 1 }
-          }
-
-          # 可能的密码提示
-          expect {
-            "Password:" { send "root\r" }
-            "password:" { send "root\r" }
-            "# " { puts "Already at shell prompt" }
-            timeout { puts "Timeout waiting for password/shell prompt"; exit 1 }
-          }
-
-          # 更灵活的shell提示符匹配
-          expect {
-            "# " { puts "Login successful" }
-            "root@*# " { puts "Login successful" }
-            "root@*:~# " { puts "Login successful" }
-            timeout { puts "Timeout waiting for shell prompt"; exit 1 }
-          }
-
-          # 执行测试
-          send "mkdir -p /github\r"
-          expect "# "
-          send "mount_9p host0 /github || mount -t 9p host0 /github\r"
-          expect "# "
-          send "sh /github/shared/run_tests.sh\r"
-
-          # 等待关机或超时
-          expect {
-            eof { puts "FreeBSD shutdown complete" }
-            timeout { puts "Timeout waiting for shutdown"; exit 1 }
-          }
-          EOF
-
-          chmod +x /tmp/freebsd_test.exp
-          /tmp/freebsd_test.exp | tee /tmp/test_output.log
-
-          # 从输出中提取结果
-          if grep -q "Login successful" /tmp/test_output.log; then
-            echo "FreeBSD login was successful"
-            # 检查是否完成测试
-            if grep -q "shutdown complete" /tmp/test_output.log; then
-              echo "Tests completed and VM shutdown"
-              # 试图提取退出代码
-              if [ -f "/tmp/shared/exit_code" ]; then
-                EXIT_CODE=$(cat /tmp/shared/exit_code)
-                echo "Test exit code: $EXIT_CODE"
-                exit $EXIT_CODE
-              else
-                echo "Could not find exit code file"
-                exit 1
-              fi
-            else
-              echo "VM did not shutdown properly"
-              exit 1
-            fi
-          else
-            echo "FreeBSD login failed"
-            exit 1
-          fi
-
-  test:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pippocao/bqlog/freebsd_amd64:latest
-      options: --privileged
-    steps:
-      - name: Start FreeBSD VM
-        run: /usr/local/bin/start-freebsd.sh
-      - name: Fix workspace permissions
-        run: |
-          sudo mkdir -p /__w/_temp
-          sudo chown -R $(whoami):$(whoami) /__w
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Wait for FreeBSD VM
-        run: |
-          timeout 300 bash -c "until nc -z localhost 2222; do sleep 5; echo 'Checking SSH...'; done"
-          timeout 60 bash -c "until ssh -p 2222 -i /tmp/id_rsa root@localhost whoami; do sleep 5; echo 'Checking SSH...'; done"
-      - name: Copy code to FreeBSD
-        run: |
-          echo WorkSpace
-          echo $GITHUB_WORKSPACE
-          scp -P 2222 -i /tmp/id_rsa -r $GITHUB_WORKSPACE root@localhost:/root/workspace
-      - name: Run tests in FreeBSD
-        run: |
-          ssh -p 2222 -i /tmp/id_rsa root@localhost << 'EOF'
-            pkg update -f
-            pkg install -y bash gcc g++ cmake openjdk17 gdb sudo
-            export JAVA_HOME=/usr/local/openjdk17
-            export PATH=$JAVA_HOME/bin:$PATH
-            cd /root/workspace/build/test/unix_like
-            chmod +x RunTest_GCC.sh
-            ./RunTest_GCC.sh
-            exit $?
-          EOF
-      - name: Debug logs
-        if: failure()
-        run: |
-          cat expect.log
-          cat qemu.log
-
-  #Unix-FreeBSD ARM64 Clang
   freeBSD_arm64_test_Clang_cpp17:
     runs-on: ubuntu-24.04-arm
-    container:
-      image: ghcr.io/pippocao/bqlog/freebsd_arm64:latest
-      options: --privileged
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Start FreeBSD VM and run tests
-        run: |
-          # Create SSH directory with proper permissions
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # Create test script for FreeBSD
-          cat > /tmp/freebsd_test.sh << 'EOF'
-          #!/bin/sh
-          set -e
-          
-          # Install required packages
-          pkg update -f
-          pkg install -y gcc cmake bash openjdk11
-          
-          # Setup Java environment
-          export JAVA_HOME="/usr/local/openjdk11"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          
-          # Run tests
-          cd /root/workspace/build/test/unix_like
-          chmod +x *.sh
-          ./RunTest_Clang.sh
-          
-          # Return exit code
-          exit $?
-          EOF
-          
-          # List available FreeBSD images
-          echo "Available FreeBSD images:"
-          ls -la /freebsd/
-          
-          # Start FreeBSD ARM64 VM with QEMU - use display none instead of nographic
-          qemu-system-aarch64 -m 16G -smp 2 -M virt -cpu cortex-a57 -display none -serial null \
-            -device virtio-net-pci,netdev=net0 \
-            -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            -drive file=/freebsd/FreeBSD-14.2-RELEASE-arm64-aarch64.qcow2,if=none,id=drive0 \
-            -device virtio-blk-pci,drive=drive0 \
-            -daemonize
-          
-          # Generate SSH key
-          ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-          
-          # Wait for VM to boot with robust retry logic
-          echo "Waiting for FreeBSD ARM64 VM to boot..."
-          MAX_ATTEMPTS=40  # More attempts for ARM
-          for i in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $i/$MAX_ATTEMPTS"
-            if nc -z -w 5 localhost 2222; then
-              echo "VM is up!"
-              break
-            fi
-          
-            if [ $i -eq $MAX_ATTEMPTS ]; then
-              echo "Failed to connect to VM after $MAX_ATTEMPTS attempts"
-              exit 1
-            fi
-          
-            sleep 10
-          done
-          
-          ssh-keyscan -p 2222 localhost >> ~/.ssh/known_hosts
-          
-          # Copy test script to VM
-          scp -P 2222 -o StrictHostKeyChecking=no /tmp/freebsd_test.sh root@localhost:/root/
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "chmod +x /root/freebsd_test.sh"
-          
-          # Copy workspace to VM
-          scp -P 2222 -r $GITHUB_WORKSPACE root@localhost:/root/workspace
-          
-          # Run test and capture exit code
-          ssh -p 2222 -o StrictHostKeyChecking=no root@localhost "/root/freebsd_test.sh"
-          EXIT_CODE=$?
-          
-          echo "Test completed with exit code: $EXIT_CODE"
-          exit $EXIT_CODE
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          arch: aarch64
+          mem: 8192
+          prepare: |
+            pkg install -y gcc cmake bash openjdk11
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./RunTest_Clang.sh 
