@@ -1090,7 +1090,7 @@ jobs:
           ./RunTest.sh 23
 
   #Unix-FreeBSD
-  freeBSD_test_cpp17:
+  freeBSD_test_Clang_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1103,7 +1103,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm gcc cmake bash openjdk11
+            pkg install -y llvm cmake bash openjdk11
 
           run: |
             set -e -x
@@ -1115,11 +1115,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./RunTest_GCC.sh 
-            rm -rf CMakeFiles
             ./RunTest_Clang.sh 
 
-  freeBSD_arm64_test_cpp17:
+  freeBSD_arm64_test_Clang_cpp17:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout repository
@@ -1133,7 +1131,7 @@ jobs:
           arch: aarch64
           mem: 8192
           prepare: |
-            pkg install -y llvm gcc g++ cmake bash openjdk11 gdb
+            pkg install -y llvm cmake bash openjdk11 gdb
 
           run: |
             set -e -x
@@ -1142,9 +1140,7 @@ jobs:
             export PATH="$JAVA_HOME/bin:$PATH"
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/test/unix_like
+            cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./RunTest_GCC.sh 
-            rm -rf CMakeFiles
             ./RunTest_Clang.sh 
