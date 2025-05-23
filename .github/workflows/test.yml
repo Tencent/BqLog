@@ -1158,7 +1158,7 @@ jobs:
           arch: aarch64
           mem: 8192
           prepare: |
-            pkg install -y gcc cmake bash openjdk11
+            pkg install -y gcc g++ cmake bash openjdk11 gdb
 
           run: |
             set -e -x
@@ -1186,7 +1186,7 @@ jobs:
           arch: aarch64
           mem: 8192
           prepare: |
-            pkg install -y gcc cmake bash openjdk11
+            pkg install -y clang clang++ cmake bash openjdk11 gdb
 
           run: |
             set -e -x
