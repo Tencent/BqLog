@@ -538,6 +538,8 @@ namespace bq {
                         continue;
                     }
                 }
+            } else if (c == '\0') {
+                break;
             }
             format_content[format_content_cursor++] = c;
         }
@@ -567,7 +569,9 @@ namespace bq {
         while (++i <= wchar_len) {
             uint32_t cursor = i - 1;
             char16_t c = format_data_ptr[cursor];
-
+            if (c == u'\0') {
+                break;
+            }
             if (surrogate) {
                 if (c >= 0xDC00 && c <= 0xDFFF) {
                     codepoint = 0x10000 + (c - 0xDC00) + ((surrogate - 0xD800) << 10);

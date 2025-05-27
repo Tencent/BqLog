@@ -894,17 +894,31 @@ namespace bq {
         };
 
         template <size_t PARAM_COUNT>
-        void
-        
-        
-        
-        
-        
-        
-        log_param_test()
+        void log_param_test()
         {
             std::tuple<> empty_tuple = std::make_tuple();
             log_param_test_level1<PARAM_COUNT>()(empty_tuple);
+        }
+
+        static void invalid_utf16_test(test_result& result, const test_category_log& log_inst)
+        {
+            bq::u16string invalid_utf16_str = u"#";
+            for (size_t i = 0; i < 17 * 1024; ++i) {
+                invalid_utf16_str.push_back(u'1');
+            }
+            invalid_utf16_str[1] = u'\0';
+            bq::log::force_flush_all_logs();
+            log_inst.error(log_inst.cat.ModuleA.SystemA.ClassA, invalid_utf16_str);
+            bq::log::force_flush_all_logs();
+            log_inst.error(log_inst.cat.ModuleA.SystemA.ClassA, "{}", invalid_utf16_str);
+            bq::log::force_flush_all_logs();
+            const bq::string raw_item1 = decode_raw_item();
+            const bq::string compressed_item1 = decode_compressed_item();
+            const bq::string raw_item2 = decode_raw_item();
+            const bq::string compressed_item2 = decode_compressed_item();
+            result.add_result(raw_item1.end_with("#"), "invalid utf16 raw test:%s", raw_item1.c_str());
+            result.add_result(compressed_item1.end_with("#"), "invalid utf16 compressed test:%s", compressed_item1.c_str());
+            result.add_result(raw_item2.end_with("#"), "invalid utf16 raw test:%s", raw_item2.c_str());
         }
 
         void test_log::test_3(test_result& result, const test_category_log& log_inst)
@@ -919,6 +933,7 @@ namespace bq {
             result_ptr = &result;
             log_inst_ptr = &log_inst;
             output_str_ptr = &test_log::log_str;
+            invalid_utf16_test(result, log_inst);
             test_3_phase = test_log_3_phase::calculate_count;
             log_param_test<MAX_PARAM>();
             test_3_phase = test_log_3_phase::do_test;

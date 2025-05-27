@@ -333,42 +333,53 @@ namespace bq {
         // write format template
         if (format_template_iter == format_templates_hash_cache_.end()) {
             constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
-            size_t fmt_max_size = (handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type ? format_data_len : ((size_t)(format_data_len * 3) >> 1) + 1);
-            auto max_format_template_data_size = (uint32_t)(sizeof(uint8_t) + sizeof(uint8_t) + VLQ_MAX_SIZE + fmt_max_size); // level(1 byte), category_idx(VLQ), fmt
+            uint32_t fmt_size_calculated = 0;
+            bool success = true;
+            do {
+                size_t fmt_max_size = (fmt_size_calculated) ? (size_t)fmt_size_calculated : ((handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type ? format_data_len : ((size_t)(format_data_len * 3) >> 1) + 1));
+                auto max_format_template_data_size = (uint32_t)(sizeof(uint8_t) + sizeof(uint8_t) + VLQ_MAX_SIZE + fmt_max_size); // level(1 byte), category_idx(VLQ), fmt
 
-            auto data_len_min_size = get_vlq_min_bytes_length_of_item_header(max_format_template_data_size);
-            auto prealloc_head_size = 1 + data_len_min_size;
-            auto write_handle = write_with_cache_alloc(max_format_template_data_size + prealloc_head_size);
+                auto data_len_min_size = get_vlq_min_bytes_length_of_item_header(max_format_template_data_size);
+                auto prealloc_head_size = 1 + data_len_min_size;
+                auto write_handle = write_with_cache_alloc(max_format_template_data_size + prealloc_head_size);
 
-            // write format template body first to get the real length, then write header back.
-            uint32_t format_template_data_cursor = prealloc_head_size;
-            write_handle.data()[format_template_data_cursor++] = (uint8_t)template_sub_type::format_template;
-            write_handle.data()[format_template_data_cursor++] = (uint8_t)handle.get_level();
-            format_template_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(handle.get_log_head().category_idx, write_handle.data() + format_template_data_cursor, VLQ_MAX_SIZE);
-            if (handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type) {
-                memcpy(write_handle.data() + format_template_data_cursor, format_data_ptr, (size_t)format_data_len);
-                format_template_data_cursor += format_data_len;
-            } else {
-                format_template_data_cursor += bq::util::utf16_to_utf8((const char16_t*)format_data_ptr, format_data_len >> 1, (char*)(uint8_t*)(write_handle.data() + format_template_data_cursor), ((format_data_len * 3) >> 1) + 1);
-            }
-            uint32_t real_total_len = format_template_data_cursor;
-            write_handle.reset_used_len(real_total_len);
-
-            // write back head
-            uint32_t real_body_len = real_total_len - prealloc_head_size;
-            uint32_t data_len_real_size = bq::log_utils::vlq::get_vlq_encode_length((uint64_t)real_body_len);
-            if (data_len_real_size != data_len_min_size) {
-                if (data_len_real_size != 1 + data_len_min_size) {
-                    assert(false && "error while encoding compressed file format template header");
+                // write format template body first to get the real length, then write header back.
+                uint32_t format_template_data_cursor = prealloc_head_size;
+                write_handle.data()[format_template_data_cursor++] = (uint8_t)template_sub_type::format_template;
+                write_handle.data()[format_template_data_cursor++] = (uint8_t)handle.get_level();
+                format_template_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(handle.get_log_head().category_idx, write_handle.data() + format_template_data_cursor, VLQ_MAX_SIZE);
+                if (handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type) {
+                    fmt_size_calculated = format_data_len;
+                    memcpy(write_handle.data() + format_template_data_cursor, format_data_ptr, (size_t)format_data_len);
+                    format_template_data_cursor += format_data_len;
+                } else {
+                    fmt_size_calculated = bq::util::utf16_to_utf8((const char16_t*)format_data_ptr, format_data_len >> 1, (char*)(uint8_t*)(write_handle.data() + format_template_data_cursor), ((format_data_len * 3) >> 1) + 1);
+                    format_template_data_cursor += fmt_size_calculated;
                 }
-                bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data(), data_len_real_size);
-                *write_handle.data() |= (uint8_t)item_type::log_template;
-            } else {
-                bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, data_len_real_size);
-                *write_handle.data() = (uint8_t)item_type::log_template;
-            }
+                uint32_t real_total_len = format_template_data_cursor;
+                write_handle.reset_used_len(real_total_len);
 
-            write_with_cache_commit(write_handle);
+                // write back head
+                uint32_t real_body_len = real_total_len - prealloc_head_size;
+                uint32_t data_len_real_size = bq::log_utils::vlq::get_vlq_encode_length((uint64_t)real_body_len);
+                if (data_len_real_size != data_len_min_size) {
+                    if (data_len_real_size != 1 + data_len_min_size) {
+                        assert(success == true && "utf16 compress error");
+                        success = false;
+                        write_handle.reset_used_len(0);
+                        write_with_cache_commit(write_handle);
+                        continue;
+                    }
+                    bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data(), data_len_real_size);
+                    *write_handle.data() |= (uint8_t)item_type::log_template;
+                } else {
+                    bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, data_len_real_size);
+                    *write_handle.data() = (uint8_t)item_type::log_template;
+                }
+                write_with_cache_commit(write_handle);
+                success = true;
+            } while (!success);
+            
             format_templates_hash_cache_[format_template_hash] = current_format_template_max_index_;
             format_template_idx = current_format_template_max_index_;
             ++current_format_template_max_index_;

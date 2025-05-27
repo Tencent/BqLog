@@ -54,7 +54,7 @@ namespace bq {
             }
 
             {
-                const uint64_t seconds = 0;
+                const uint64_t seconds = 10;
                 test_output_dynamic_param(bq::log_level::info, "testing multithread string log. wait for %" PRIu64 " seconds please...\n if error exist, an assert will be triggered\n", seconds);
 
 

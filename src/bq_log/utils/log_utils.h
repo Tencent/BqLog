@@ -96,6 +96,10 @@ namespace bq {
 
             bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR uint32_t get_vlq_encode_length(uint64_t value);
 
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR uint64_t get_vlq_data_min_size_by_encode_length(uint32_t encode_length);
+
+            bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR uint64_t get_vlq_data_max_size_by_encode_length(uint32_t encode_length);
+
             template <typename T>
             bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR size_t vlq_encode(T value, void* target_data, size_t data_len);
 
@@ -159,6 +163,39 @@ namespace bq {
         return 9;
     }
 
+    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint64_t log_utils::vlq::get_vlq_data_min_size_by_encode_length(uint32_t encode_length)
+    {
+        constexpr uint64_t min_value_of_length_[9] = {
+            min_value_of_length<1>::value
+            , min_value_of_length<2>::value
+            , min_value_of_length<3>::value
+            , min_value_of_length<4>::value
+            , min_value_of_length<5>::value
+            , min_value_of_length<6>::value
+            , min_value_of_length<7>::value
+            , min_value_of_length<8>::value
+            , min_value_of_length<9>::value
+        };
+        assert(encode_length <= 9);
+        return min_value_of_length_[encode_length - 1];
+    }
+
+    bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint64_t log_utils::vlq::get_vlq_data_max_size_by_encode_length(uint32_t encode_length)
+    {
+        constexpr uint64_t max_value_of_length_[9] = {
+            min_value_of_length<2>::value - 1
+            , min_value_of_length<3>::value - 1
+            , min_value_of_length<4>::value - 1
+            , min_value_of_length<5>::value - 1
+            , min_value_of_length<6>::value - 1
+            , min_value_of_length<7>::value - 1
+            , min_value_of_length<8>::value - 1
+            , min_value_of_length<9>::value - 1
+            , UINT64_MAX
+        };
+        assert(encode_length <= 9);
+        return max_value_of_length_[encode_length - 1];
+    }
 
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_decode_length(uint8_t prefix_byte)
     {
