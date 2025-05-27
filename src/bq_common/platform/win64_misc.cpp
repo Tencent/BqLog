@@ -480,6 +480,31 @@ namespace bq {
             return static_cast<int32_t>(GetLastError());
         }
 
+        uint64_t get_file_last_modified_epoch_ms(const char* path)
+        {
+            bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(path)));
+            WIN32_FILE_ATTRIBUTE_DATA attr_data;
+            if (!GetFileAttributesExW((LPCWSTR)file_path_w.c_str(), GetFileExInfoStandard, &attr_data)) {
+                return 0; // Failed to get attributes
+            }
+
+            // Check if file exists and is accessible
+            if (attr_data.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
+                return 0; // File doesn't exist or is inaccessible
+            }
+
+            // Convert FILETIME to epoch milliseconds
+            ULARGE_INTEGER uli;
+            uli.LowPart = attr_data.ftLastWriteTime.dwLowDateTime;
+            uli.HighPart = attr_data.ftLastWriteTime.dwHighDateTime;
+
+            // FILETIME is in 100-nanosecond intervals since Jan 1, 1601 (UTC)
+            // Convert to milliseconds since Unix epoch (Jan 1, 1970)
+            uint64_t epoch_ms = uli.QuadPart / 10000; // Convert to milliseconds
+            epoch_ms -= 11644473600000ULL; // Subtract milliseconds from 1601 to 1970
+            return epoch_ms;
+        }
+
         int32_t truncate_file(const platform_file_handle& file_handle, size_t offset)
         {
             LONG offset_low = (LONG)(static_cast<int64_t>(offset) & 0xFFFFFFFF);

@@ -210,14 +210,7 @@ namespace bq {
 
     uint64_t file_manager::get_file_last_modified_epoch_ms(const bq::string& path)
     {
-        bq::string real_path = get_lexically_path(path);
-        struct stat buf;
-        int32_t result = stat(real_path.c_str(), &buf);
-        if (result == 0) {
-            return (uint64_t)buf.st_mtime * 1000;
-        }
-        FILE_MANAGER_LOG(bq::log_level::info, "get_file_last_modified_epoch_seconds \"%s\" failed, errorno:%d", real_path.c_str(), errno);
-        return (uint64_t)0;
+        return bq::platform::get_file_last_modified_epoch_ms(path.c_str());
     }
 
     size_t file_manager::get_file_size(const bq::string& path)

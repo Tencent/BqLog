@@ -104,6 +104,8 @@ namespace bq {
 
         int32_t flush_file(const platform_file_handle& file_handle);
 
+        uint64_t get_file_last_modified_epoch_ms(const char* path);
+
         bq::array<bq::string> get_all_sub_names(const char* path);
 
         bool lock_file(const platform_file_handle& file_handle); // make file write exclusive

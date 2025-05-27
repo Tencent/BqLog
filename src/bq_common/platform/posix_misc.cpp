@@ -498,6 +498,17 @@ namespace bq {
             }
             return errno;
         }
+        
+        uint64_t get_file_last_modified_epoch_ms(const char* path)
+        {
+            bq::string abs_path = get_lexically_path(path);
+            struct stat buf;
+            int32_t result = stat(abs_path.c_str(), &buf);
+            if (result == 0) {
+                return (uint64_t)buf.st_mtime * 1000;
+            }
+            return (uint64_t)0;
+        }
 
         bq::array<bq::string> get_all_sub_names(const char* path)
         {
