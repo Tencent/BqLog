@@ -68,7 +68,7 @@ namespace bq {
     } _time_zone_str_initer_inst_;
 
     static struct _digit_str_initer {
-        const char digit3_array[3000 + 1] = {};
+        const char digit3_array[3000 + 16] = {};
         _digit_str_initer()
         {
             for (uint32_t i = 0; i < 1000; ++i) {
