@@ -1,4 +1,7 @@
 # Changelog
+## [v1.4.8] - 2025-05-29
+- **Bug fix**: [能帮忙看一下这个crash是怎么回事吗？libsystem_kernel.dylib ___pthread_kill](https://github.com/Tencent/BqLog/issues/43), crash fix: crash caused by array overflow.
+
 ## [v1.4.8] - 2024-12-30
 - **Bug fix**: [Support for multi-byte character paths on Windows and long paths across platforms](https://github.com/Tencent/BqLog/issues/37), resolving issues with paths exceeding 256 bytes on all platforms.
 
