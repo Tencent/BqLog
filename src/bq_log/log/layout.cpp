@@ -432,6 +432,7 @@ namespace bq {
         } else {
             python_style_format_content_utf16(log_entry);
         }
+        expand_format_content_buff_size(format_content_cursor + 1);
         format_content[format_content_cursor] = '\0';
         assert(format_content_cursor < format_content.size());
     }
