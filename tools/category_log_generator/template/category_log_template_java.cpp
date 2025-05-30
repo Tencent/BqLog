@@ -171,29 +171,29 @@ public class ${CLASS_NAME} extends category_log{
 
     ///Core log functions with category param, there are 6 log levels:
     ///verbose, debug, info, warning, error, fatal
-    public boolean verbose(${CLASS_NAME}_category_base cat, String log_format_content, Object... args)
+    public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
-        return do_log(cat, log_level.verbose, log_format_content, args);
+        return do_log(category, log_level.verbose, log_format_content, args);
     }
-    public boolean debug(${CLASS_NAME}_category_base cat, String log_format_content, Object... args)
+    public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
-        return do_log(cat, log_level.debug, log_format_content, args);
+        return do_log(category, log_level.debug, log_format_content, args);
     }
-    public boolean info(${CLASS_NAME}_category_base cat, String log_format_content, Object... args)
+    public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
-        return do_log(cat, log_level.info, log_format_content, args);
+        return do_log(category, log_level.info, log_format_content, args);
     }
-    public boolean warning(${CLASS_NAME}_category_base cat, String log_format_content, Object... args)
+    public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
-        return do_log(cat, log_level.warning, log_format_content, args);
+        return do_log(category, log_level.warning, log_format_content, args);
     }
-    public boolean error(${CLASS_NAME}_category_base cat, String log_format_content, Object... args)
+    public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
-        return do_log(cat, log_level.error, log_format_content, args);
+        return do_log(category, log_level.error, log_format_content, args);
     }
-    public boolean fatal(${CLASS_NAME}_category_base cat, String log_format_content, Object... args)
+    public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
-        return do_log(cat, log_level.fatal, log_format_content, args);
+        return do_log(category, log_level.fatal, log_format_content, args);
     }
     
     
