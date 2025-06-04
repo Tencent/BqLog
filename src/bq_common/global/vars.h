@@ -53,10 +53,10 @@ namespace bq {
     /// Example:
     /// ```cpp
     /// struct HighPriorityVars : global_vars_base<HighPriorityVars> { 
-    ///     int value; 
+    ///     int32_t value; 
     /// };
     /// struct LowPriorityVars : global_vars_base<LowPriorityVars, HighPriorityVars> {
-    ///     int otherValue;
+    ///     int32_t otherValue;
     /// };
     /// ```
     /// Here, HighPriorityVars initializes before LowPriorityVars and destructs after it, with safe nested calls.
@@ -133,16 +133,16 @@ namespace bq {
         bq::hash_map<bq::platform::file_node_info, bq::platform::file_open_mode_enum> file_exclusive_cache_;
         bq::platform::mutex file_exclusive_mutex_;
         bq::platform::mutex stack_trace_mutex_;
-#if BQ_WIN
+#if defined(BQ_WIN)
         bq::platform::mutex win_api_mutex_;
 #endif
         bq::array<char> device_console_buffer_ = { '\0' };
         bq::platform::mutex console_mutex_;
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         bq::array<void (*)()> jni_onload_callbacks_inst_;
 #endif
-#if BQ_ANDROID
+#if defined(BQ_ANDROID)
         jobject android_asset_manager_java_instance_ = nullptr;
         AAssetManager* android_asset_manager_inst_ = nullptr;
         bq::string android_id_;
@@ -150,7 +150,7 @@ namespace bq {
         bq::string apk_path_;
         bq::platform::spin_lock apk_path_spin_lock_;
 #endif
-#if BQ_WIN
+#if defined(BQ_WIN)
         HANDLE stack_trace_process_ = GetCurrentProcess();
         bq::platform::atomic<bool> stack_trace_sym_initialized_ = false;
 #endif

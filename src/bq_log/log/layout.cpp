@@ -51,13 +51,13 @@ namespace bq {
         const auto& head = log_entry.get_log_head();
         auto result = insert_time(log_entry);
         if (result != enum_layout_result::finished) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_time", "");
+            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_time, result:%" PRId32, result);
             return result;
         }
 
         result = insert_thread_info(log_entry);
         if (result != enum_layout_result::finished) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_thread_info", "");
+            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_thread_info, result:%" PRId32, result);
             return result;
         }
 
@@ -95,8 +95,8 @@ namespace bq {
             } else {
                 bq::util::get_local_time_by_epoch(epoch, time_st);
             }
-            time_cache_len_ = snprintf(time_cache_, sizeof(time_cache_),
-                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? log_global_vars::get().utc_time_zone_str_ : log_global_vars::get().time_zone_str_, time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec);
+            time_cache_len_ = static_cast<size_t>(snprintf(time_cache_, sizeof(time_cache_),
+                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? log_global_vars::get().utc_time_zone_str_ : log_global_vars::get().time_zone_str_, time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec));
             last_time_epoch_cache_ = epoch;
         }
         memcpy(&format_content[format_content_cursor], time_cache_, time_cache_len_);
@@ -118,8 +118,8 @@ namespace bq {
         auto iter = thread_names_cache_.find(BQ_PACK_ACCESS(ext_info.thread_id_));
         if (iter == thread_names_cache_.end()) {
             char tmp[256];
-            uint32_t cursor = snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", BQ_PACK_ACCESS(ext_info.thread_id_));
-            memcpy(tmp + cursor, (uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), ext_info.thread_name_len_);
+            uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", BQ_PACK_ACCESS(ext_info.thread_id_)));
+            memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), ext_info.thread_name_len_);
             cursor += ext_info.thread_name_len_;
             tmp[cursor++] = ']';
             tmp[cursor++] = '\t';
@@ -147,7 +147,7 @@ namespace bq {
         if (style[0] != ':')
             return fi;
 
-        int index = 0;
+        int32_t index = 0;
         bool precision = false;
         bool align = false;
         bool fill = false;
@@ -166,7 +166,7 @@ namespace bq {
                 fi.width = 0;
                 break;
             } else if (c == '}') {
-                fi.offset = index;
+                fi.offset = static_cast<uint32_t>(index);
                 break;
             }
             // Dynamic width not currently supported
@@ -223,7 +223,7 @@ namespace bq {
                 break;
             case '.':
                 precision = true;
-                fi.width = atoi(width);
+                fi.width = static_cast<uint32_t>(atoi(width));
                 width[0] = '0';
                 width[1] = 0;
                 break;
@@ -245,9 +245,9 @@ namespace bq {
             }
         }
         if (precision) {
-            fi.precision = atoi(width);
+            fi.precision = static_cast<uint32_t>(atoi(width));
         } else {
-            fi.width = atoi(width);
+            fi.width = static_cast<uint32_t>(atoi(width));
         }
         if (fi.type == ' ')
             fi.type = 'd';
@@ -265,7 +265,7 @@ namespace bq {
             uint32_t fill_count = format_info_.width - dis;
             // alignment right
             if (format_info_.align == '>') {
-                int32_t ignore = 0;
+                uint32_t ignore = 0;
                 uint32_t ignore_index = 0;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
@@ -332,19 +332,19 @@ namespace bq {
         }
     }
 
-    void layout::fill_e_style(uint32_t eCount, uint32_t begin_cursor)
+    void layout::fill_e_style(uint32_t e_count, uint32_t begin_cursor)
     {
-        int32_t bitcount = 0;
-        auto temp = eCount;
+        uint32_t bitcount = 0;
+        auto temp = e_count;
         do {
             temp /= 10;
             bitcount++;
         } while (temp != 0);
         expand_format_content_buff_size(format_content_cursor + bitcount + 3); // 3->e+0
         // 1.000000 -> 1.0000
-        int32_t jump = format_content_cursor - (begin_cursor + format_info_.width - bitcount - 2); // 2->e+
+        int32_t jump = static_cast<int32_t>(format_content_cursor) - (static_cast<int32_t>(begin_cursor + format_info_.width - bitcount) - 2); // 2->e+
         if (jump > 0) {
-            format_content_cursor -= jump;
+            format_content_cursor -= static_cast<uint32_t>(jump);
             if (format_content_cursor == begin_cursor)
                 format_content_cursor++;
         }
@@ -355,13 +355,13 @@ namespace bq {
             format_content[format_content_cursor++] = 'e';
         format_content[format_content_cursor++] = '+';
         begin_cursor = format_content_cursor;
-        temp = eCount;
+        temp = e_count;
         // 1.0000e+ -> 1.0000e+60
         do {
-            int32_t digit = eCount % 10;
+            int32_t digit = static_cast<int32_t>(e_count % 10);
             format_content[format_content_cursor++] = '0' + (char)digit;
-            eCount /= 10;
-        } while (eCount != 0);
+            e_count /= 10;
+        } while (e_count != 0);
         if (temp <= 9)
             format_content[format_content_cursor++] = '0';
         // 1.0000e+60 -> 1.0000e+06
@@ -385,7 +385,7 @@ namespace bq {
         const uint8_t* args_data_ptr = log_entry.get_log_args_data();
         uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char* format_data_ptr = log_entry.get_format_string_data();
-        uint32_t format_data_len = *((uint32_t*)format_data_ptr);
+        uint32_t format_data_len = *((const uint32_t*)format_data_ptr);
         format_data_ptr += sizeof(uint32_t);
 
         if (args_data_len == 0) {
@@ -431,7 +431,7 @@ namespace bq {
                     case bq::log_arg_type_enum::pointer_type:
                         assert(sizeof(void*) >= 4);
                         {
-                            const void* arg_data_ptr = *((const void**)(args_data_ptr + args_data_cursor + 4));
+                            const void* arg_data_ptr = *((const void* const*)(args_data_ptr + args_data_cursor + 4));
                             insert_pointer(arg_data_ptr);
                             args_data_cursor += 4 + sizeof(uint64_t); // use 64bit pointer for serialize
                         }
@@ -529,7 +529,7 @@ namespace bq {
                 }
             } else if (is_arg) {
                 if (args_data_cursor < args_data_len) {
-                    format_info_ = c20_format(&format_data_ptr[cursor], format_data_len - cursor);
+                    format_info_ = c20_format(&format_data_ptr[cursor], static_cast<int32_t>(format_data_len) - static_cast<int32_t>(cursor));
                     if (format_info_.offset == 0) {
                         if (!isdigit((int32_t)(uint8_t)c) && !isspace((int32_t)(uint8_t)c)) {
                             is_arg = false;
@@ -551,7 +551,7 @@ namespace bq {
         const uint8_t* args_data_ptr = log_entry.get_log_args_data();
         uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char16_t* format_data_ptr = (const char16_t*)log_entry.get_format_string_data();
-        uint32_t format_data_len = *((uint32_t*)format_data_ptr);
+        uint32_t format_data_len = *((const uint32_t*)format_data_ptr);
         format_data_ptr += sizeof(uint32_t) / sizeof(char16_t);
 
         // (* 3 / 2 + 1) make sure enough space, maybe waste
@@ -623,7 +623,7 @@ namespace bq {
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
                             {
-                                const void* ptr_data = *((const void**)(args_data_ptr + args_data_cursor + 4));
+                                const void* ptr_data = *((const void* const*)(args_data_ptr + args_data_cursor + 4));
                                 insert_pointer(ptr_data);
                                 args_data_cursor += 4 + sizeof(uint64_t); // use 64bit pointer for serialize
                             }
@@ -711,7 +711,7 @@ namespace bq {
                     }
                 } else if (is_arg) {
                     if (args_data_cursor < args_data_len) {
-                        format_info_ = c20_format(&format_data_ptr[cursor], format_data_len - cursor);
+                        format_info_ = c20_format(&format_data_ptr[cursor], static_cast<int32_t>(format_data_len) - static_cast<int32_t>(cursor));
                         if (format_info_.offset == 0) {
                             if (!isdigit((int32_t)(uint8_t)c) && !isspace((int32_t)(uint8_t)c)) {
                                 is_arg = false;
@@ -925,9 +925,9 @@ namespace bq {
         }
 
         auto begin_cursor = format_content_cursor;
-        int32_t eCount = 0;
+        uint32_t e_count = 0;
         do {
-            int32_t digit = value % base;
+            int32_t digit = static_cast<int32_t>(value % base);
             if (digit < 0xA) {
                 format_content[format_content_cursor] = '0' + (char)digit;
             } else {
@@ -939,7 +939,7 @@ namespace bq {
             value /= base;
             ++format_content_cursor;
             if (value > base)
-                eCount++;
+                e_count++;
         } while (value != 0);
 
         if (format_info_.type == 'e') {
@@ -951,7 +951,7 @@ namespace bq {
             // 000000.1 -> 1.000000
             reverse(begin_cursor, format_content_cursor - 1);
 
-            fill_e_style(eCount, begin_cursor);
+            fill_e_style(e_count, begin_cursor);
         } else
             reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
@@ -1007,9 +1007,9 @@ namespace bq {
 
         auto begin_cursor = format_content_cursor;
         // Scientific Counting Check
-        int32_t eCount = 0;
+        uint32_t e_count = 0;
         do {
-            char digit = static_cast<char>(abs((int32_t)(value % base)));
+            char digit = static_cast<char>(abs(static_cast<int32_t>(value % static_cast<int32_t>(base))));
             if (digit < 0xA) {
                 format_content[format_content_cursor] = '0' + digit;
             } else {
@@ -1020,7 +1020,7 @@ namespace bq {
             }
             value /= base;
             if (value > base)
-                eCount++; // Counting
+                e_count++; // Counting
             ++format_content_cursor;
         } while (value != 0);
         if (format_info_.type == 'e') {
@@ -1032,7 +1032,7 @@ namespace bq {
             // 000000.1 -> 1.000000
             reverse(begin_cursor, format_content_cursor - 1);
 
-            fill_e_style(eCount, begin_cursor);
+            fill_e_style(e_count, begin_cursor);
         } else
             reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
@@ -1042,7 +1042,7 @@ namespace bq {
     {
         if (format_info_.type == 'e')
             format_info_.type = 'Z';
-        int int_width = 0;
+        uint32_t int_width = 0;
         auto precision = (int32_t)((format_info_.precision != 0xFFFFFFFF) ? format_info_.precision : 7);
         auto begin_cursor = format_content_cursor;
         if (value >= 0) {
@@ -1054,12 +1054,12 @@ namespace bq {
             int_width = insert_integral_signed(i_part, 10);
             value -= static_cast<float>(i_part);
         }
-        if (format_info_.width > 0 && format_info_.width < (uint32_t)precision + 1 + int_width) {
-            precision = (format_info_.width - int_width - 1);
+        if (format_info_.width > 0 && format_info_.width < static_cast<uint32_t>(precision) + 1 + int_width) {
+            precision = static_cast<int32_t>(format_info_.width - int_width - 1);
         }
 
         value = fabsf(value);
-        expand_format_content_buff_size(format_content_cursor + precision + 5); // more 5 maybe use in e style
+        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(precision) + 5); // more 5 maybe use in e style
         uint32_t point_index = 0;
         if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
             point_index = format_content_cursor;
@@ -1097,7 +1097,7 @@ namespace bq {
     {
         if (format_info_.type == 'e')
             format_info_.type = 'Z';
-        int int_width = 0;
+        uint32_t int_width = 0;
         auto precision = (int32_t)((format_info_.precision != 0xFFFFFFFF) ? format_info_.precision : 15);
         auto begin_cursor = format_content_cursor;
         if (value >= 0) {
@@ -1109,14 +1109,14 @@ namespace bq {
             int_width = insert_integral_signed(i_part, 10);
             value -= static_cast<double>(i_part);
         }
-        if (format_info_.width > 0 && format_info_.width < (uint32_t)precision + 1 + int_width) {
-            precision = (format_info_.width - int_width - 1);
+        if (format_info_.width > 0 && format_info_.width < static_cast<uint32_t>(precision) + 1 + int_width) {
+            precision = (static_cast<int32_t>(format_info_.width) - static_cast<int32_t>(int_width) - 1);
             if (precision < 0)
                 precision = 0;
         }
 
         value = fabs(value);
-        expand_format_content_buff_size(format_content_cursor + precision + 5); // more 5 maybe use for e-style
+        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(precision) + 5); // more 5 maybe use for e-style
         uint32_t point_index = 0;
         if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
             point_index = format_content_cursor;

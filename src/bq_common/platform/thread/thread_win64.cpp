@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <stringapiset.h>
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #endif
 
@@ -25,7 +25,7 @@ namespace bq {
     namespace platform {
         struct thread_platform_def {
             bq::platform::atomic<HANDLE> thread_handle = INVALID_HANDLE_VALUE;
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             JavaVM* jvm = nullptr;
             JNIEnv* jenv = nullptr;
 #endif
@@ -49,7 +49,7 @@ namespace bq {
             new (platform_data_, bq::enum_new_dummy::dummy) thread_platform_def();
         }
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         void thread::attach_to_jvm()
         {
             assert(status_.load() == enum_thread_status::init && "attach_to_jvm can only be called before thread is running!");
@@ -88,7 +88,7 @@ namespace bq {
             platform_data_->thread_handle = CreateThread(NULL, attr_.max_stack_size, &thread_platform_processor::thread_process, this, STACK_SIZE_PARAM_IS_A_RESERVATION, (DWORD*)&thread_id_);
             if (!platform_data_->thread_handle.load()) {
                 status_.store_seq_cst(enum_thread_status::error);
-                bq::util::log_device_console(log_level::fatal, "create thread \"%s\" failed, error code:%d", thread_name_.c_str(), GetLastError());
+                bq::util::log_device_console(log_level::fatal, "create thread \"%s\" failed, error code:%" PRId32, thread_name_.c_str(), static_cast<int32_t>(GetLastError()));
                 assert(false && "create thread failed, see the device log output for more information");
                 return;
             }
@@ -105,7 +105,7 @@ namespace bq {
             }
             DWORD wait_result = WaitForSingleObjectEx(platform_data_->thread_handle.load(), INFINITE, true);
             if (wait_result != WAIT_OBJECT_0) {
-                bq::util::log_device_console(log_level::error, "join thread \"%s\" failed, thread_id:%" PRIu64 ", error code : %d, return value : %d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), GetLastError(), wait_result);
+                bq::util::log_device_console(log_level::error, "join thread \"%s\" failed, thread_id:%" PRIu64 ", error code : %" PRId32 ", return value : %" PRId32, thread_name_.c_str(), static_cast<uint64_t>(thread_id_), static_cast<int32_t>(GetLastError()), static_cast<int32_t>(wait_result));
             }
         }
 
@@ -158,7 +158,7 @@ namespace bq {
                     }
                     bq::string thread_name_utf8;
                     thread_name_utf8.fill_uninitialized((size_t)utf8_len);
-                    if (!WideCharToMultiByte(CP_UTF8, 0, raw_thread_name, static_cast<int>(wcslen(raw_thread_name)), &thread_name_utf8[0], utf8_len, nullptr, nullptr)) {
+                    if (!WideCharToMultiByte(CP_UTF8, 0, raw_thread_name, static_cast<int32_t>(wcslen(raw_thread_name)), &thread_name_utf8[0], utf8_len, nullptr, nullptr)) {
                         return "";
                     }
                     return thread_name_utf8;
@@ -210,10 +210,10 @@ namespace bq {
                         assert(false && "thread instance is destructed but thread is still running");
                     }
                 } else {
-                    bq::util::log_device_console(bq::log_level::fatal, "GetExitCodeThread failed, GetLastError=%d", GetLastError());
+                    bq::util::log_device_console(bq::log_level::fatal, "GetExitCodeThread failed, GetLastError=%" PRId32, static_cast<int32_t>(GetLastError()));
                 }
                 if (!CloseHandle(platform_data_->thread_handle.load())) {
-                    bq::util::log_device_console(bq::log_level::error, "Win64 Thread CloseHandle failed, GetLastError=%d, thread name:%s, thread_id:%" PRIu64, GetLastError(), thread_name_.c_str(), thread_id_);
+                    bq::util::log_device_console(bq::log_level::error, "Win64 Thread CloseHandle failed, GetLastError=%" PRId32 ", thread name:%s, thread_id:%" PRIu64, static_cast<int32_t>(GetLastError()), thread_name_.c_str(), thread_id_);
                 }
             }
             platform_data_->~thread_platform_def();
@@ -259,11 +259,11 @@ namespace bq {
             }
             if (set_thread_desc_func_) {
                 HANDLE current_thread_handle = GetCurrentThread();
-                int required_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int>(thread_name_.size()), nullptr, 0);
+                int32_t required_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int32_t>(thread_name_.size()), nullptr, 0);
                 bq::array<wchar_t> wide_str;
                 wide_str.fill_uninitialized(required_size + 1);
                 wide_str[required_size] = 0;
-                int converted_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int>(thread_name_.size()), &wide_str[0], required_size);
+                int32_t converted_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int32_t>(thread_name_.size()), &wide_str[0], required_size);
                 if (converted_size == required_size) {
                     set_thread_desc_func_(current_thread_handle, &wide_str[0]);
                 }
@@ -274,12 +274,12 @@ namespace bq {
 
         void thread::internal_run()
         {
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             if (platform_data_->jvm) {
                 using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThread), 0>;
                 jint result = platform_data_->jvm->AttachCurrentThread(reinterpret_cast<attach_param_type>(&platform_data_->jenv), NULL);
                 if (result != JNI_OK) {
-                    bq::util::log_device_console(bq::log_level::error, "failed to JavaVM AttachCurrentThread, result code %d", result);
+                    bq::util::log_device_console(bq::log_level::error, "failed to JavaVM AttachCurrentThread, result code %" PRId32, static_cast<int32_t>(result));
                     assert(false && "failed to JavaVM AttachCurrentThread");
                     return;
                 }
@@ -300,7 +300,7 @@ namespace bq {
 
             thread_id_ = 0;
             bq::util::log_device_console(log_level::info, "thread cancel success");
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             if (platform_data_->jvm) {
                 platform_data_->jvm->DetachCurrentThread();
             }

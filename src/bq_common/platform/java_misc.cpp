@@ -11,10 +11,10 @@
  */
 #include "bq_common/bq_common.h"
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #include <sys/types.h>
-#if BQ_ANDROID
+#if defined(BQ_ANDROID)
 #include <android/log.h>
 #endif
 
@@ -33,7 +33,7 @@ namespace bq {
             assert(java_vm != NULL && "invoke functions on java_vm before it is initialized");
             jint get_env_result = java_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
             if (!(JNI_OK == get_env_result || JNI_EDETACHED == get_env_result)) {
-                bq::util::log_device_console(log_level::fatal, "JVM GetEnv error, error code:%d", get_env_result);
+                bq::util::log_device_console(log_level::fatal, "JVM GetEnv error, error code:%" PRIu32, static_cast<int32_t>(get_env_result));
                 assert(false && "JVM GetEnv error");
             }
             if (jni_attacher_counter == 0) {
@@ -41,13 +41,13 @@ namespace bq {
             }
             if (JNI_EDETACHED == get_env_result) {
                 if (0 != jni_attacher_counter) {
-                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, jni_attacher_counter:%d", jni_attacher_counter);
+                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, jni_attacher_counter:%" PRIu32, jni_attacher_counter);
                     assert(false && "jni_env attach error");
                 }
                 using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThread), 0>;
                 jint attach_result = java_vm->AttachCurrentThread(reinterpret_cast<attach_param_type>(&env), nullptr);
                 if (JNI_OK != attach_result) {
-                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, AttachCurrentThread error code:%d", attach_result);
+                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, AttachCurrentThread error code:%" PRId32, static_cast<int32_t>(attach_result));
                     assert(false && "AttachCurrentThread error");
                 }
             }
@@ -62,7 +62,7 @@ namespace bq {
                 if (!attached_in_init) {
                     jint detach_result = java_vm->DetachCurrentThread();
                     if (JNI_OK != detach_result) {
-                        bq::util::log_device_console(log_level::fatal, "jni_env attach error, DetachCurrentThread error code:%d", detach_result);
+                        bq::util::log_device_console(log_level::fatal, "jni_env attach error, DetachCurrentThread error code:%" PRId32, static_cast<int32_t>(detach_result));
                         assert(false && "AttachCurrentThread error");
                     }
                 }
@@ -87,7 +87,7 @@ namespace bq {
         {
             (void)reserved;
             java_vm = vm;
-#if BQ_ANDROID
+#if defined(BQ_ANDROID)
             __android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
             android_jni_onload();
 #elif BQ_IOS

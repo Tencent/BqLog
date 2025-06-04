@@ -97,7 +97,7 @@ namespace bq {
         default:
             break;
         }
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         total_write_bytes_ = 0;
         total_read_bytes_ = 0;
         for (int32_t i = 0; i < (int32_t)enum_buffer_result_code::result_code_count; ++i) {
@@ -120,7 +120,7 @@ namespace bq {
         uint32_t size_required = size + (uint32_t)data_block_offset;
         uint32_t need_block_count_tmp = (size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2;
         if (need_block_count_tmp > aligned_blocks_count_ || need_block_count_tmp == 0 || need_block_count_tmp > block::MAX_BLOCK_NUM_PER_CHUNK) {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
 #endif
             handle.result = enum_buffer_result_code::err_alloc_size_invalid;
@@ -150,7 +150,7 @@ namespace bq {
                 read_cursor_ref = cursors_.read_cursor_.load_acquire();
                 if (static_cast<uint32_t>(new_cursor - read_cursor_ref) > aligned_blocks_count_) {
                     // not enough space
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                     ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_not_enough_space];
 #endif
                     handle.result = enum_buffer_result_code::err_not_enough_space;
@@ -169,7 +169,7 @@ namespace bq {
                         uint32_t expected = next_write_cursor;
                         if (cursors_.write_cursor_.compare_exchange_strong(expected, current_write_cursor, platform::memory_order::relaxed, platform::memory_order::relaxed)) {
                             // not enough space
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_not_enough_space];
 #endif
                             handle.result = enum_buffer_result_code::err_not_enough_space;
@@ -184,7 +184,7 @@ namespace bq {
             if ((current_write_cursor & (aligned_blocks_count_ - 1)) + need_block_count > aligned_blocks_count_) {
                 // data must be guaranteed to be contiguous in memory
                 handle.result = enum_buffer_result_code::err_data_not_contiguous;
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_data_not_contiguous];
 #endif
                 BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(new_block.chunk_head.status, block_status).store_release(bq::miso_ring_buffer::block_status::invalid);
@@ -195,7 +195,7 @@ namespace bq {
             handle.data_addr = new_block.chunk_head.data;
             used_blocks_count += need_block_count;
             handle.low_space_flag = ((used_blocks_count << 1) >= aligned_blocks_count_);
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::success];
 #endif
             return handle;
@@ -210,14 +210,14 @@ namespace bq {
         }
         block* block_ptr = (block*)(handle.data_addr - data_block_offset);
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block_ptr->chunk_head.status, block_status).store_release(bq::miso_ring_buffer::block_status::used);
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         total_write_bytes_ += block_ptr->chunk_head.get_block_num() * sizeof(block);
 #endif
     }
 
     log_buffer_read_handle miso_ring_buffer::read_chunk()
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
         if (check_thread_) {
             if (0 == read_thread_id_) {
@@ -235,7 +235,7 @@ namespace bq {
             auto block_count = block_ref.chunk_head.get_block_num();
             switch (status) {
             case block_status::invalid:
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert((head_->read_cursor_cache_ & (aligned_blocks_count_ - 1)) + block_count > aligned_blocks_count_);
                 assert(block_count <= aligned_blocks_count_);
 #endif
@@ -247,7 +247,7 @@ namespace bq {
                 handle.result = enum_buffer_result_code::err_empty_log_buffer;
                 break;
             case block_status::used:
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert((head_->read_cursor_cache_ & (aligned_blocks_count_ - 1)) + block_count <= aligned_blocks_count_);
 #endif
                 handle.result = enum_buffer_result_code::success;
@@ -261,7 +261,7 @@ namespace bq {
             break;
         }
 
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         ++result_code_statistics_[(int32_t)handle.result];
 #endif
         return handle;
@@ -269,7 +269,7 @@ namespace bq {
 
     log_buffer_read_handle miso_ring_buffer::read_an_empty_chunk()
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
         if (check_thread_) {
             if (0 == read_thread_id_) {
@@ -287,7 +287,7 @@ namespace bq {
 
     void miso_ring_buffer::discard_read_chunk(log_buffer_read_handle& handle)
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert(is_read_chunk_waiting_for_return_ && "You cant discard a chunk has not been read yet");
         is_read_chunk_waiting_for_return_ = false;
         if (check_thread_) {
@@ -300,11 +300,11 @@ namespace bq {
 
     void miso_ring_buffer::return_read_chunk(const log_buffer_read_handle& handle)
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert(is_read_chunk_waiting_for_return_ && "You cant return a chunk has not been read yet");
         is_read_chunk_waiting_for_return_ = false;
 #endif
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
@@ -330,7 +330,7 @@ namespace bq {
             for (uint32_t i = 0; i < block_count; ++i) {
                 cursor_to_block(start_cursor + i).chunk_head.status = block_status::unused;
             }
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
             total_read_bytes_ += block_count * sizeof(block);
 #endif
             head_->read_cursor_start_cache_ = head_->read_cursor_cache_;
@@ -341,7 +341,7 @@ namespace bq {
     
     void miso_ring_buffer::data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data)
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         if (check_thread_) {
             if (0 == read_thread_id_) {
                 read_thread_id_ = bq::platform::thread::get_current_thread_id();
@@ -358,7 +358,7 @@ namespace bq {
             auto block_count = block_ref.chunk_head.get_block_num();
             switch (status) {
             case block_status::invalid:
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert((current_read_cursor & (aligned_blocks_count_ - 1)) + block_count > aligned_blocks_count_);
                 assert(block_count <= aligned_blocks_count_);
 #endif
@@ -367,7 +367,7 @@ namespace bq {
                 finished = true;
                 break;
             case block_status::used:
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert((current_read_cursor & (aligned_blocks_count_ - 1)) + block_count <= aligned_blocks_count_);
 #endif
                 in_callback(block_ref.chunk_head.data, block_ref.chunk_head.data_size, in_user_data); 
@@ -464,8 +464,8 @@ namespace bq {
                 if ((current_cursor & (aligned_blocks_count_ - 1)) + block_num > aligned_blocks_count_) {
                     return false;
                 }
-                if ((size_t)data_size > (block_num * sizeof(block) - data_block_offset)
-                    || (size_t)data_size <= (block_num == 1 ? 0 : (block_num * sizeof(block) - sizeof(block) - data_block_offset))) {
+                if ((size_t)data_size > static_cast<size_t>(static_cast<intptr_t>(block_num * sizeof(block)) - data_block_offset)
+                    || (size_t)data_size <= (block_num == 1 ? 0 : static_cast<size_t>((static_cast<intptr_t>(block_num * sizeof(block)) - static_cast<ptrdiff_t>(sizeof(block)) - data_block_offset)))) {
                     return false;
                 }
                 current_cursor += block_num;

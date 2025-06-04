@@ -193,12 +193,12 @@ namespace bq {
         log_entry_cache_.insert_batch(log_entry_cache_.end(), text_log_data, log_text_len);
         auto level = handle.get_level();
 
-#if !BQ_UNIT_TEST
+#if !defined(BQ_UNIT_TEST)
         util::log_device_console_plain_text(level, log_entry_cache_.c_str());
 #endif
         auto& console_misc = get_console_misc();
-        console_misc.callback().call(parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
-        console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), handle.get_category_idx(), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        console_misc.callback().call(parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
     }
 
     appender_console::console_static_misc& appender_console::get_console_misc()

@@ -10,7 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/bq_common.h"
-#if BQ_WIN
+#if defined(BQ_WIN)
 #include <Windows.h>
 
 namespace bq {

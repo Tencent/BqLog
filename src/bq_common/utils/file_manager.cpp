@@ -301,10 +301,10 @@ namespace bq {
         handle.handle_ptr_ = handle_ptr;
         handle.file_path_ = real_path;
         if (first_empty_idx >= 0) {
-            handle.idx_ = first_empty_idx;
+            handle.idx_ = static_cast<uint32_t>(first_empty_idx);
         } else {
             file_descriptors.emplace_back(file_descriptor());
-            handle.idx_ = (int32_t)file_descriptors.size() - 1;
+            handle.idx_ = static_cast<uint32_t>(file_descriptors.size() - 1);
         }
         auto& desc = file_descriptors[handle.idx_];
         assert(desc.is_empty());
@@ -507,7 +507,7 @@ namespace bq {
             FILE_MANAGER_LOG(bq::log_level::error, "get_file_size path invalid: %s", handle.file_path_.c_str());
             break;
         default:
-            FILE_MANAGER_LOG(bq::log_level::error, "get_file_size path failed: %s, error code:", handle.file_path_.c_str(), err_code);
+            FILE_MANAGER_LOG(bq::log_level::error, "get_file_size path failed: %s, error code:%" PRId32 "", handle.file_path_.c_str(), err_code);
             break;
         }
         return 0;
@@ -524,7 +524,7 @@ namespace bq {
             // FILE_MANAGER_LOG(bq::log_level::error, "get_file_descriptor_index_by_handle failed, invalid handle idx:%d, seq:%d, real seq:%d", handle.idx, handle.seq, file_descriptors[handle.idx].seq);
             return -1;
         }
-        return handle.idx_;
+        return static_cast<int32_t>(handle.idx_);
     }
 
     void file_manager::inc_ref(const file_handle& handle)

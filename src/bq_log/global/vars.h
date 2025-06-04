@@ -47,7 +47,7 @@ namespace bq {
         const char* utc_time_zone_str_ = "UTC0 ";
         const int32_t utc_time_zone_str_len = (int32_t)strlen(utc_time_zone_str_);
         const char digit3_array[3000 + 16] = {};
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         jclass cls_bq_log_ = nullptr;
         jmethodID mid_native_console_callbck_ = nullptr;
         jmethodID mid_native_console_buffer_fetch_and_remove_callbck_ = nullptr;
@@ -57,7 +57,7 @@ namespace bq {
         appender_decoder_manager* appender_decoder_manager_inst_ = new appender_decoder_manager();
 
     private:
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         static void jni_onload_callback();
 #endif
     void init_layout_values();
@@ -74,7 +74,7 @@ namespace bq {
     public:
         log_global_vars()
         {
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             platform::jni_onload_register register_(&log_global_vars::jni_onload_callback);
 #endif
             init_layout_values();

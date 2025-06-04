@@ -43,26 +43,26 @@
 #endif
 #endif
 
-#if BQ_APPLE
+#if defined(BQ_APPLE)
 pid_t bq_gettid()
 {
-    return 0;
+    return static_cast<int32_t>(pid_t);
 }
 
-int bq_tgkill(pid_t tgid, pid_t tid, int sig)
+int32_t bq_tgkill(pid_t tgid, pid_t tid, int32_t sig)
 {
     (void)tid;
-    return kill(tgid, sig);
+    return static_cast<int32_t>(kill(tgid, sig));
 }
 #else
 pid_t bq_gettid()
 {
-    return syscall(__NR_gettid);
+    return static_cast<pid_t>(syscall(__NR_gettid));
 }
 
-int bq_tgkill(pid_t tgid, pid_t tid, int sig)
+int32_t bq_tgkill(pid_t tgid, pid_t tid, int32_t sig)
 {
-    return syscall(__NR_tgkill, tgid, tid, sig);
+    return static_cast<int32_t>(syscall(__NR_tgkill, tgid, tid, sig));
 }
 #endif
 
@@ -77,7 +77,7 @@ namespace bq {
             return "1.4.7";
         }
 
-#if BQ_POSIX
+#if defined(BQ_POSIX)
 
         // compatible to siginfo_t or siginfo
         static struct sigaction tmp_action_static;
@@ -95,10 +95,10 @@ namespace bq {
             }
         } signal_stack_holder;
 
-        template <int SIG>
+        template <int32_t SIG>
         class log_signal_handler {
         public:
-            typedef void (*sigaction_func_type)(int, siginfo_ptr_type, void*);
+            typedef void (*sigaction_func_type)(int32_t, siginfo_ptr_type, void*);
 
         private:
             static bool registered;
@@ -106,7 +106,7 @@ namespace bq {
             static sigaction_func_type handler;
 
         private:
-            static void on_signal(int sig, siginfo_ptr_type info, void* context)
+            static void on_signal(int32_t sig, siginfo_ptr_type info, void* context)
             {
 #ifdef BQ_PS
                 // TODO
@@ -116,7 +116,7 @@ namespace bq {
                 sigaction(SIG, &original_sigaction, &tmp);
                 registered = false;
                 handler(sig, info, context);
-#if BQ_APPLE
+#if defined(BQ_APPLE)
                 kill(getpid(), sig);
 #else
                 bq_tgkill(getpid(), bq_gettid(), sig);
@@ -143,7 +143,7 @@ namespace bq {
                 new_sig.sa_flags = SA_RESTART | SA_SIGINFO | SA_ONSTACK;
                 sigemptyset(&new_sig.sa_mask);
 
-                int result = 0;
+                int32_t result = 0;
                 if (registered) {
                     struct sigaction tmp;
                     result = sigaction(SIG, &new_sig, &tmp);
@@ -158,14 +158,14 @@ namespace bq {
             }
         };
 
-        template <int SIG>
+        template <int32_t SIG>
         bool log_signal_handler<SIG>::registered; // false (according to C++ Zero Initialization);
-        template <int SIG>
+        template <int32_t SIG>
         struct sigaction log_signal_handler<SIG>::original_sigaction;
-        template <int SIG>
+        template <int32_t SIG>
         typename log_signal_handler<SIG>::sigaction_func_type log_signal_handler<SIG>::handler; // nullptr (according to C++ Zero Initialization);
 
-        static void log_crash_handler(int signal, siginfo_ptr_type info, void*)
+        static void log_crash_handler(int32_t signal, siginfo_ptr_type info, void*)
         {
             (void)info;
             bq::util::log_device_console(log_level::error, "crash occurred, signal:%d, now try to force flush logs", signal);
@@ -175,7 +175,7 @@ namespace bq {
 
         BQ_API void __api_enable_auto_crash_handler()
         {
-#if BQ_POSIX
+#if defined(BQ_POSIX)
             log_signal_handler<SIGSEGV>::set_handler(log_crash_handler);
             log_signal_handler<SIGABRT>::set_handler(log_crash_handler);
             log_signal_handler<SIGFPE>::set_handler(log_crash_handler);
@@ -257,7 +257,7 @@ namespace bq {
 
             if (handle.result == enum_buffer_result_code::success) {
                 bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 // 8 bytes alignment to ensure best performance and avoid SIG_BUS on some platforms
                 assert((((uintptr_t)(&(head->timestamp_epoch))) & 0x7) == 0 && "log buffer alignment error");
 #endif

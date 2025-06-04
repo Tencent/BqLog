@@ -21,7 +21,7 @@
 namespace bq {
     log_global_vars* log_global_var_default_initer_ = &log_global_vars::get();
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
     void log_global_vars::jni_onload_callback()
     {
         bq::platform::jni_env env_holder;

@@ -21,7 +21,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/bq_common.h"
-#if BQ_POSIX
+#if defined(BQ_POSIX)
 #include <pthread.h>
 #include <errno.h>
 #include <unistd.h>

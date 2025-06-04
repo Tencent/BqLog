@@ -35,14 +35,14 @@
 #if !defined(BQ_APPLE) && !defined(BQ_PS) && !defined(BQ_UNIX)
 #include <sys/prctl.h>
 #endif
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #endif
 namespace bq {
     namespace platform {
         struct thread_platform_def {
             pthread_t thread_handle;
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             JavaVM* jvm = nullptr;
             JNIEnv* jenv = nullptr;
 #endif
@@ -68,7 +68,7 @@ namespace bq {
             new (platform_data_, bq::enum_new_dummy::dummy) thread_platform_def();
         }
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         void thread::attach_to_jvm()
         {
             assert(status_.load() == enum_thread_status::init && "attach_to_jvm can only be called before thread is running!");
@@ -145,8 +145,8 @@ namespace bq {
 
         void thread::cpu_relax()
         {
-#if BQ_ARM
-#if BQ_CLANG
+#if defined(BQ_ARM)
+#if defined(BQ_CLANG)
             __builtin_arm_yield();
 #else
             __asm__ __volatile__("yield" : : : "memory");
@@ -173,9 +173,9 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "failed to get current thread name, error code:%d", result_code);
                 return "";
             }
-#elif BQ_PS
+#elif defined(BQ_PS)
             // TODO
-#elif BQ_UNIX
+#elif defined(BQ_UNIX)
             pthread_getname_np(PR_GET_NAME, name_temp, sizeof(name_temp));
 #else
             prctl(PR_GET_NAME, name_temp);
@@ -198,7 +198,7 @@ namespace bq {
             if (id == 0) {
                 return false;
             }
-#if BQ_LINUX || BQ_ANDROID
+#if defined(BQ_LINUX) || defined(BQ_ANDROID)
             assert(false && "is_thread_alive is reliable implemented on Linux");
 #endif
             int32_t result = pthread_kill((pthread_t)id, 0);
@@ -219,9 +219,9 @@ namespace bq {
         {
 #ifdef BQ_APPLE
             pthread_setname_np(thread_name_.c_str());
-#elif BQ_PS
+#elif defined(BQ_PS)
             // TODO
-#elif BQ_UNIX
+#elif defined(BQ_UNIX)
             pthread_setname_np(PR_SET_NAME, thread_name_.c_str());
 #else
             prctl(PR_SET_NAME, thread_name_.c_str());
@@ -230,7 +230,7 @@ namespace bq {
 
         void thread::internal_run()
         {
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             if (platform_data_->jvm) {
                 using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThread), 0>;
                 jint result = platform_data_->jvm->AttachCurrentThread(reinterpret_cast<attach_param_type>(&platform_data_->jenv), NULL);
@@ -256,7 +256,7 @@ namespace bq {
             thread_id_ = 0;
 
             bq::util::log_device_console(log_level::info, "thread cancel success");
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             if (platform_data_->jvm) {
                 platform_data_->jvm->DetachCurrentThread();
             }

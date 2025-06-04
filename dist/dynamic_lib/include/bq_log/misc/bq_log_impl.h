@@ -153,11 +153,6 @@ namespace bq {
         api::__api_force_flush(0);
     }
 
-    inline void log::uninit()
-    {
-        api::__api_uninit();
-    }
-
     inline void log::register_console_callback(bq::type_func_ptr_console_callback callback)
     {
         bq::api::__api_register_console_callbacks(callback);
@@ -211,24 +206,22 @@ namespace bq {
         return result;
     }
 
-    template <typename STR>
-    bq_forceinline bq::enable_if_t<bq::tools::_get_log_param_type_enum<STR>() == log_arg_type_enum::string_utf8_type, bq::tuple<const char*, uint32_t>> get_stack_trace()
+    template<typename STR>
+    bq_forceinline bq::tuple<const char*, uint32_t> get_stack_trace()
     {
-        bq::_api_string_def str;
-        bq::api::__api_get_stack_trace(&str, 0);
-        const char* trace_str = str.str;
-        uint32_t trace_len = str.len;
-        return bq::make_tuple(trace_str, trace_len);
-    }
-
-    template <typename STR>
-    bq_forceinline bq::enable_if_t<bq::tools::_get_log_param_type_enum<STR>() == log_arg_type_enum::string_utf16_type, bq::tuple<const char*, uint32_t>> get_stack_trace()
-    {
-        bq::_api_u16string_def str;
-        bq::api::__api_get_stack_trace_utf16(&str, 0);
-        const char* trace_str = (const char*)str.str;
-        uint32_t trace_len = str.len << 1;
-        return bq::make_tuple(trace_str, trace_len);
+        if (bq::tools::_get_log_param_type_enum<STR>() == log_arg_type_enum::string_utf8_type) {
+            bq::_api_string_def str;
+            bq::api::__api_get_stack_trace(&str, 0);
+            const char* trace_str = str.str;
+            uint32_t trace_len = str.len;
+            return bq::make_tuple(trace_str, trace_len);
+        }else {
+            bq::_api_u16string_def str;
+            bq::api::__api_get_stack_trace_utf16(&str, 0);
+            const char* trace_str = (const char*)str.str;
+            uint32_t trace_len = str.len << 1;
+            return bq::make_tuple(trace_str, trace_len);
+        }
     }
 
     template <typename STR>

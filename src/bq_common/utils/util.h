@@ -22,8 +22,6 @@ namespace bq {
         static void bq_assert(bool cond, bq::string msg);
         static void bq_record(bq::string msg, string file_name = "__bq_assert.log");
 
-        static string format(const char* fmt, ...);
-
         static string get_current_gmt_time_string();
 
         static string get_current_local_time_string();
@@ -32,11 +30,15 @@ namespace bq {
 
         static bool get_gmt_time_by_epoch(uint64_t epoch, struct tm& result);
 
-#if BQ_TOOLS || BQ_UNIT_TEST
+#if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
         static void set_log_device_console_min_level(bq::log_level level);
 #endif
         // this function is signal-safety but has limit buffer, the log content exceed buffer size will be truncated
-        static void log_device_console(bq::log_level level, const char* format, ...);
+        static void log_device_console(bq::log_level level, const char* format, ...) 
+#if defined(BQ_GCC) || defined(BQ_CLANG)
+        __attribute__((format(printf, 2, 3)))
+#endif
+        ;
 
         static void log_device_console_plain_text(bq::log_level level, const char* text);
 

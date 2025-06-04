@@ -30,7 +30,7 @@
 namespace bq {
     class alignas(CACHE_LINE_SIZE) log_buffer {
     public:
-#if BQ_ANDROID || BQ_IOS
+#if defined(BQ_ANDROID) || defined(BQ_IOS)
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 8;
 #else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
@@ -55,7 +55,7 @@ namespace bq {
             block_node_head* cur_block_ = nullptr; // nullptr means using lp_buffer.
             log_buffer* buffer_ = nullptr;
             bq::shared_ptr<destruction_mark> destruction_mark_;
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             jobjectArray buffer_obj_for_lp_buffer_ = NULL; // miso_ring_buffer shared between low frequency threads;
             jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
             block_node_head* buffer_ref_block_ = nullptr;
@@ -75,7 +75,7 @@ namespace bq {
         static_assert(sizeof(log_tls_buffer_info) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
 
         struct log_tls_info {
-#if !BQ_LOG_BUFFER_DEBUG
+#if !defined(BQ_LOG_BUFFER_DEBUG)
         private:
 #endif
             bq::hash_map_inline<uint64_t, log_tls_buffer_info*>* log_map_ = nullptr;
@@ -137,7 +137,7 @@ namespace bq {
         log_buffer_read_handle read_chunk();
 
         void return_read_chunk(const log_buffer_read_handle& handle);
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         struct java_buffer_info {
             jobjectArray buffer_array_obj_;
             int32_t* offset_store_;
@@ -146,7 +146,7 @@ namespace bq {
         java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
 
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
         uint32_t get_groups_count() const { return hp_buffer_.get_groups_count();}
         void garbage_collect() { hp_buffer_.garbage_collect(); }
         size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
@@ -206,7 +206,7 @@ namespace bq {
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
 
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         alignas(CACHE_LINE_SIZE) bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;
 #endif
@@ -236,7 +236,7 @@ namespace bq {
 
     bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info_directly(const log_buffer* buffer)
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert(buffer->id_ == cur_log_buffer_id_ && "log_buffer::alloc and log_buffer::commit must use in pair");
 #endif
         (void)buffer;

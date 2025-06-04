@@ -40,7 +40,7 @@ bq::appender_decode_result bq::appender_decoder_base::init(const bq::file_handle
             bq::util::log_device_console(log_level::error, "read category name length failed");
             return appender_decode_result::failed_io_error;
         }
-        name_len = *(uint32_t*)read_handle.data();
+        name_len = *(const uint32_t*)read_handle.data();
         if (name_len > 0) {
             name.fill_uninitialized((size_t)name_len);
             read_handle = read_with_cache((size_t)name_len);
@@ -74,12 +74,12 @@ void bq::appender_decoder_base::seek_read_file_offset(int32_t offset)
 {
     int64_t final_cursor = (int64_t)cache_read_cursor_ + offset;
     if (final_cursor >= 0 && final_cursor <= (int64_t)cache_read_.size()) {
-        cache_read_cursor_ += offset;
+        cache_read_cursor_ = static_cast<size_t>(static_cast<size_t_to_int_t>(cache_read_cursor_) + offset);
     } else {
         clear_read_cache();
         file_manager::instance().seek(file_, file_manager::seek_option::current, offset);
     }
-    current_file_cursor_ += offset;
+    current_file_cursor_ = static_cast<size_t>(static_cast<size_t_to_int_t>(current_file_cursor_) + offset);
 }
 
 size_t bq::appender_decoder_base::get_current_file_size()

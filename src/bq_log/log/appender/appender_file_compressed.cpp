@@ -19,7 +19,7 @@ namespace bq {
     struct data_value_helper {
         static T get_data_value(const void* data)
         {
-            return *(T*)data;
+            return *(const T*)data;
         }
     };
 
@@ -78,7 +78,7 @@ namespace bq {
         return hash;
     }
 
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
     bool appender_file_compressed::is_addr_8_aligned_test(const void* data)
     {
         return is_addr_8_aligned(data);
@@ -208,8 +208,8 @@ namespace bq {
         if (offset == 0) {
             first_byte |= (uint8_t)type;
         }
-        context.parsed_size += size_len + offset;
-        seek_read_file_offset((int32_t)(size_len + offset) - (int32_t)read_handle.len());
+        context.parsed_size = static_cast<size_t>(static_cast<int64_t>(context.parsed_size) + static_cast<int64_t>(size_len) + offset);
+        seek_read_file_offset(static_cast<int32_t>(size_len) + offset - static_cast<int32_t>(read_handle.len()));
         read_handle = read_with_cache(data_size);
         context.parsed_size += read_handle.len();
         if (read_handle.len() != (size_t)data_size || data_size < 2) {
@@ -231,7 +231,7 @@ namespace bq {
             return false;
         }
         const int64_t epoch_offset = bq::log_utils::zigzag::decode(epoch_offset_zigzag);
-        last_log_entry_epoch_ += epoch_offset;
+        last_log_entry_epoch_ = static_cast<uint64_t>(static_cast<int64_t>(last_log_entry_epoch_) + epoch_offset);
         return true;
     }
 
@@ -323,7 +323,7 @@ namespace bq {
         appender_file_binary::log_impl(handle);
 
         const char* format_data_ptr = handle.get_format_string_data();
-        uint32_t format_data_len = *((uint32_t*)format_data_ptr);
+        uint32_t format_data_len = *((const uint32_t*)format_data_ptr);
         format_data_ptr += sizeof(uint32_t);
         uint64_t fmt_hash = calculate_hash_64_for_compressed_appender<false>(format_data_ptr, (size_t)format_data_len);
         uint64_t format_template_hash = get_format_template_hash(handle.get_level(), handle.get_log_head().category_idx, fmt_hash);
@@ -407,7 +407,7 @@ namespace bq {
             write_handle.data()[thread_info_data_cursor++] = (uint32_t)template_sub_type::thread_info_template;
             thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(current_thread_info_max_index_, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE);
             thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(BQ_PACK_ACCESS(ext_info.thread_id_), write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE_64);
-            memcpy(write_handle.data() + thread_info_data_cursor, (uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), (size_t)ext_info.thread_name_len_);
+            memcpy(write_handle.data() + thread_info_data_cursor, (const uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), (size_t)ext_info.thread_name_len_);
             thread_info_data_cursor += ext_info.thread_name_len_;
             write_handle.reset_used_len(thread_info_data_cursor);
             *(uint8_t*)write_handle.data() = (uint8_t)item_type::log_template;
@@ -477,20 +477,20 @@ namespace bq {
                         break;
                     case bq::log_arg_type_enum::char16_type:
                     case bq::log_arg_type_enum::uint16_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(uint16_t*)(args_data_ptr + args_data_cursor + 2), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint16_t*)(args_data_ptr + args_data_cursor + 2), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
                         args_data_cursor += 4;
                         break;
                     case bq::log_arg_type_enum::int16_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(int16_t*)(args_data_ptr + args_data_cursor + 2)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int16_t*)(args_data_ptr + args_data_cursor + 2)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
                         args_data_cursor += 4;
                         break;
                     case bq::log_arg_type_enum::char32_type:
                     case bq::log_arg_type_enum::uint32_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(uint32_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint32_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
                         args_data_cursor += (4 + sizeof(int32_t));
                         break;
                     case bq::log_arg_type_enum::int32_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(int32_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int32_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
                         args_data_cursor += (4 + sizeof(int32_t));
                         break;
                     case bq::log_arg_type_enum::float_type:
@@ -499,11 +499,11 @@ namespace bq {
                         args_data_cursor += (4 + sizeof(int32_t));
                         break;
                     case bq::log_arg_type_enum::uint64_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(uint64_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint64_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
                         args_data_cursor += (4 + sizeof(int64_t));
                         break;
                     case bq::log_arg_type_enum::int64_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(int64_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
+                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int64_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
                         args_data_cursor += (4 + sizeof(int64_t));
                         break;
                     case bq::log_arg_type_enum::double_type:

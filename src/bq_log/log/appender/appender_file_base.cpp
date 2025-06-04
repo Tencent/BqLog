@@ -157,7 +157,7 @@ namespace bq {
     {
         int64_t final_cursor = (int64_t)cache_read_cursor_ + offset;
         if (final_cursor >= 0 && final_cursor <= (int64_t)cache_read_.size()) {
-            cache_read_cursor_ += offset;
+            cache_read_cursor_ = static_cast<size_t>(static_cast<size_t_to_int_t>(cache_read_cursor_) + offset);
         } else {
             assert(false && "not implemented");
             // TODO: The following implementation is incorrect.
@@ -249,14 +249,14 @@ namespace bq {
         if (need_create_new_file) {
             auto current_time_epoch = (handle.get_log_head()).timestamp_epoch;
             uint64_t ms_per_day = 60 * 60 * 24 * 1000;
-            current_file_expire_time_epoch_ms_ = current_time_epoch + time_zone_diff_to_gmt_ms_;
+            current_file_expire_time_epoch_ms_ = static_cast<uint64_t>(static_cast<int64_t>(current_time_epoch) + time_zone_diff_to_gmt_ms_);
             // get next day ms
             uint64_t check_ms_ = (current_file_expire_time_epoch_ms_ / ms_per_day + 1) * ms_per_day;
             current_file_expire_time_epoch_ms_ = current_file_expire_time_epoch_ms_ - (current_file_expire_time_epoch_ms_ % ms_per_day) + ms_per_day;
             if (check_ms_ != current_file_expire_time_epoch_ms_) {
                 bq::util::log_device_console(bq::log_level::error, "exception: set expire_time in refresh_file_handle!!!");
             }
-            current_file_expire_time_epoch_ms_ -= time_zone_diff_to_gmt_ms_;
+            current_file_expire_time_epoch_ms_ = static_cast<uint64_t>(static_cast<int64_t>(current_file_expire_time_epoch_ms_) - time_zone_diff_to_gmt_ms_);
             if (file_) {
                 flush_cache();
                 flush_io();

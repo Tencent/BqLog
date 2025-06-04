@@ -74,7 +74,7 @@ namespace bq {
         if (errno == ERANGE && (number <= -HUGE_VAL || number >= HUGE_VAL)) {
             return false;
         }
-        if ((errno && errno != ERANGE) || !is_decimal(str, end - str)) {
+        if ((errno && errno != ERANGE) || !is_decimal(str, static_cast<size_t>(end - str))) {
             return false;
         }
         out = number;

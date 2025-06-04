@@ -296,7 +296,7 @@ namespace bq {
                 result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;
                 head_.node_ = src_node;
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
                 groups_count_.fetch_add_seq_cst(1);
 #endif
             }

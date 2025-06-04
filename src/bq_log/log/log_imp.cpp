@@ -51,7 +51,7 @@ namespace bq {
                     free(real_data_);
                 }
                 real_data_ = static_cast<uint8_t*>(malloc(size + 8));
-                aligned_data_ = reinterpret_cast<uint8_t*>((reinterpret_cast<uintptr_t>(real_data_) + 7) & ~7);
+                aligned_data_ = reinterpret_cast<uint8_t*>((reinterpret_cast<uintptr_t>(real_data_) + 7) & ~static_cast<uintptr_t>(7));
                 aligned_size_ = size;
             }
             used_data_size_ = size;

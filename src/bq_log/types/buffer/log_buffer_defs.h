@@ -20,19 +20,17 @@
 #include <stddef.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_api.h"
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #endif
 
 #ifndef NDEBUG
 #define BQ_LOG_BUFFER_DEBUG 1
-#else
-#define BQ_LOG_BUFFER_DEBUG 0
 #endif
 
-#if BQ_GCC
-#elif BQ_CLANG
-#elif BQ_MSVC
+#if defined(BQ_GCC)
+#elif defined(BQ_CLANG)
+#elif defined(BQ_MSVC)
 #pragma warning(disable : 4324)
 #endif
 
@@ -75,7 +73,7 @@ namespace bq {
         /// <summary>The initial size of the buffer in bytes. Depending on the type, this can signify the total buffer
         /// size(normal) or the size per thread(high_performance). In some cases, the actual size might be adjusted to be larger than
         /// this initial value.</summary>
-#if BQ_ANDROID || BQ_IOS
+#if defined(BQ_ANDROID) || defined(BQ_IOS)
         uint32_t default_buffer_size = 1024 * 32;
 #else
         uint32_t default_buffer_size = 1024 * 64;

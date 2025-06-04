@@ -237,7 +237,7 @@ namespace bq {
 
     log_buffer_read_handle log_buffer::read_chunk()
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         if (empty_thread_id_ == read_thread_id_) {
             read_thread_id_ = bq::platform::thread::get_current_thread_id();
         }
@@ -293,7 +293,7 @@ namespace bq {
                 rt_reading.state_ = read_state::next_block_finding;
                 break;
             case read_state::next_block_finding: {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_group_);
 #endif
                 const auto processing_block_snapshot = rt_reading.cur_block_;
@@ -312,7 +312,7 @@ namespace bq {
                     rt_reading.state_ = read_state::next_group_finding;
                     break;
                 }
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_block_);
 #endif
                 if (context_verify_result::valid == verify_result) {
@@ -348,7 +348,7 @@ namespace bq {
 
     void log_buffer::return_read_chunk(const log_buffer_read_handle& handle)
     {
-#if BQ_LOG_BUFFER_DEBUG 
+#if defined(BQ_LOG_BUFFER_DEBUG) 
         bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
         assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
@@ -371,7 +371,7 @@ namespace bq {
 #if BQ_JAVA
     log_buffer::java_buffer_info log_buffer::get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert((this->id_ == log_tls_info_.get().cur_log_buffer_id_) && "tls cur_log_buffer_ check failed");
 #endif
         auto& current_buffer_info = log_tls_info_.get().get_buffer_info_directly(this);
@@ -384,7 +384,7 @@ namespace bq {
                 current_buffer_info.buffer_obj_for_hp_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
                 env->NewGlobalRef(current_buffer_info.buffer_obj_for_hp_buffer_);
                 auto offset_obj = env->GetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1);
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(offset_obj && "offset obj should not be null when jni hp alloc");
 #endif
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, offset_obj); 
@@ -437,7 +437,7 @@ namespace bq {
             } else {
                 //for recovering
                 auto iter = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)].find(context.get_tls_info());
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert((iter != rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)].end()) && "unknowing thread found in recovering");
 #endif
                 if (iter->value() == context.seq_) {
@@ -455,7 +455,7 @@ namespace bq {
 
     void log_buffer::deregister_seq(const context_head& context)
     {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert(context.version_ == rt_cache_.current_reading_.version_ && "invalid deregister_version");
 #endif
         if (context.version_ == version_) {
@@ -468,7 +468,7 @@ namespace bq {
         } else {
             // for recovering data
             auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
             assert((recover_map.find(context.get_tls_info()) != recover_map.end()) && "unregister none exist seq");
 #endif
             ++recover_map[context.get_tls_info()];
@@ -531,7 +531,7 @@ namespace bq {
 
         //Process traversed block
         bool block_removed = false;
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         if (is_cur_block_in_group) {
             assert (rt_reading.cur_group_.value().get_data_head().used_.is_include(rt_reading.cur_block_));
         }
@@ -553,7 +553,7 @@ namespace bq {
                 ++mem_opt.cur_group_using_blocks_num_;
             }
         }
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         assert(mem_opt.cur_group_using_blocks_num_ <= hp_buffer_.get_max_block_count_per_group());
 #endif
         if ((!block_removed && is_cur_block_in_group) || rt_reading.cur_block_ == nullptr) {

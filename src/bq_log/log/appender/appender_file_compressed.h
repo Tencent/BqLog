@@ -67,7 +67,7 @@ namespace bq {
     public:
         static constexpr uint32_t format_version = 7;
 
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
         static bool is_addr_8_aligned_test(const void* data);
         static uint64_t calculate_data_hash_test(bool is_8_aligned, const void* data, size_t size);
 #endif

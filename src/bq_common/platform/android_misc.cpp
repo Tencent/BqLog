@@ -11,7 +11,7 @@
  */
 #include "bq_common/bq_common.h"
 
-#if BQ_ANDROID
+#if defined(BQ_ANDROID)
 
 #include <pthread.h>
 #include <sys/prctl.h>
@@ -510,9 +510,9 @@ namespace bq {
             void* buffer[max_stack_size_];
             android_backtrace_state state = { buffer, buffer + max_stack_size_ };
             _Unwind_Backtrace(unwindCallback, &state);
-            size_t stack_count = state.current - buffer;
+            size_t stack_count = static_cast<size_t>(state.current - buffer);
             uint32_t valid_frame_count = 0;
-            for (int32_t idx = skip_frame_count; idx < (int32_t)stack_count; ++idx) {
+            for (int32_t idx = static_cast<int32_t>(skip_frame_count); idx < static_cast<int32_t>(stack_count); ++idx) {
                 const void* addr = buffer[idx];
                 const char* symbol = "(unknown symbol)";
                 Dl_info info;

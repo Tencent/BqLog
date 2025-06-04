@@ -47,7 +47,7 @@ namespace bq {
         appender_decode_result decode_single_item(uint32_t handle, const bq::string*& out_decoded_log_text);
 
     private:
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
         // tools are running in single thread, performance will benefit from removing mutex
         bq::platform::mutex mutex_;
 #endif

@@ -28,7 +28,7 @@ namespace bq {
         , wait_flag_(false)
         , awake_flag_(false)
     {
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         attach_to_jvm();
 #endif
     }

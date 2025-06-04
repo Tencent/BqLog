@@ -10,7 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/bq_common.h"
-#if BQ_LINUX
+#if defined(BQ_LINUX)
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/types.h>

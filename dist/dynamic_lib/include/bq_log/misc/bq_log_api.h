@@ -61,14 +61,14 @@ namespace bq {
         /// </summary>
         /// <param name="lengsh"></param>
         /// <returns>chunk handle, please check result code first</returns>
-        BQ_API _api_ring_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length);
+        BQ_API _api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length);
 
         /// <summary>
         /// commit write handle after you finished writing log data
         /// </summary>
         /// <param name="write_handle"></param>
         /// <returns></returns>
-        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_ring_buffer_chunk_write_handle write_handle);
+        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_log_buffer_chunk_write_handle write_handle);
 
         /// <summary>
         /// toggle of all console appenders,
@@ -254,11 +254,6 @@ namespace bq {
         BQ_API void __api_get_stack_trace(bq::_api_string_def* out_name_ptr, uint32_t skip_frame_count);
         BQ_API void __api_get_stack_trace_utf16(bq::_api_u16string_def* out_name_ptr, uint32_t skip_frame_count);
 
-        /// <summary>
-        /// Uninitialize BqLog, please invoke this function before your program exist.
-        /// </summary>
-        /// <returns></returns>
-        BQ_API void __api_uninit();
-        /////////////////////////////////////////////////////////////DYNAMIC LIB APIS END///////////////////////////////////////////////////////
+
     }
 }

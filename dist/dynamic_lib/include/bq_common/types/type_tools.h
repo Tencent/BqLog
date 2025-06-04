@@ -91,6 +91,9 @@ namespace bq {
     constexpr T condition_value_v = condition_value<COND, T, TRUE_VALUE, FALSE_VALUE>::value;
 #endif
 
+    using size_t_to_int_t = bq::condition_type<sizeof(size_t) == sizeof(int32_t), int32_t, int64_t>::type;
+    using size_t_to_uint_t = bq::condition_type<sizeof(size_t) == sizeof(uint32_t), uint32_t, uint64_t>::type;
+
     inline constexpr size_t align_4(size_t n)
     {
         return n == 0 ? n : (((n - 1) & (~((size_t)4 - 1))) + 4);
@@ -401,6 +404,16 @@ namespace bq {
         return static_cast<const ValueType&&>(static_cast<const ElementValueType&>(input_tuple).get());
     }
 
+    template <typename Tuple>
+    struct tuple_size {
+        static constexpr size_t value = 0;
+    };
+
+    template <typename... Types>
+    struct tuple_size <tuple<Types...>> {
+        static constexpr size_t value = sizeof...(Types);
+    };
+
     template <typename... Types>
     inline tuple<typename bq::decay<Types>::type...> make_tuple(Types&&... args)
     {
@@ -433,9 +446,23 @@ namespace bq {
         using type = Ret;
     };
     template <typename Ret, typename ClassType, typename... Args>
+    struct function_return_type<Ret (ClassType::*)(Args...)> {
+        using type = Ret;
+    };
+    template <typename Ret, typename ClassType, typename... Args>
     struct function_return_type<Ret (ClassType::*)(Args...) const> {
         using type = Ret;
     };
+    #if BQ_CPP_17
+    template <typename Ret, typename ClassType, typename... Args>
+    struct function_return_type<Ret (ClassType::*)(Args...) noexcept> {
+        using type = Ret;
+    };
+    template <typename Ret, typename ClassType, typename... Args>
+    struct function_return_type<Ret (ClassType::*)(Args...) const noexcept> {
+        using type = Ret;
+    };
+    #endif
     template <typename FuncType>
     using function_return_type_t = typename function_return_type<FuncType>::type;
 }

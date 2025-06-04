@@ -97,7 +97,7 @@ bq::tuple<bq::appender_decode_result, bq::appender_file_compressed::item_type, b
     if (offset == 0) {
         first_byte |= (uint8_t)type;
     }
-    seek_read_file_offset((int32_t)(size_len + offset) - (int32_t)read_handle.len());
+    seek_read_file_offset(static_cast<int32_t>(size_len) + offset - static_cast<int32_t>(read_handle.len()));
     read_handle = read_with_cache(data_size);
     if (read_handle.len() != (size_t)data_size || data_size < 2) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, read data item head failed");
@@ -131,7 +131,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_formate_templa
         return appender_decode_result::failed_decode_error;
     }
     if (cursor < read_handle.len()) {
-        info.fmt_string.insert_batch(info.fmt_string.begin(), (char*)(uint8_t*)read_handle.data() + cursor, (read_handle.len() - cursor));
+        info.fmt_string.insert_batch(info.fmt_string.begin(), (const char*)(const uint8_t*)read_handle.data() + cursor, (read_handle.len() - cursor));
     }
     return appender_decode_result::success;
 }
@@ -220,7 +220,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, log entry thread_info_idx vlq decode error");
         return appender_decode_result::failed_decode_error;
     }
-    last_log_entry_epoch_ += epoch_offset;
+    last_log_entry_epoch_ = static_cast<uint64_t>((static_cast<int64_t>(last_log_entry_epoch_) + epoch_offset));
     auto& formate_template = log_templates_array_[formate_template_idx];
 
     raw_data_.clear();
@@ -370,7 +370,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             uint32_t string_section_len = (uint32_t)bq::align_4((size_t)len);
             raw_data_.fill_uninitialized(string_section_len);
             bool has_place_holder = len && !read_handle.data()[cursor];
-            uint8_t* str_begin_pos = has_place_holder ? (uint8_t*)(read_handle.data() + cursor + 1) : (uint8_t*)(read_handle.data() + cursor);
+            const uint8_t* str_begin_pos = has_place_holder ? (const uint8_t*)(read_handle.data() + cursor + 1) : (const uint8_t*)(read_handle.data() + cursor);
             memcpy((uint8_t*)(raw_data_.begin() + raw_cursor), str_begin_pos, (size_t)len);
             cursor += has_place_holder ? (len + 1) : (len);
             raw_cursor += string_section_len;

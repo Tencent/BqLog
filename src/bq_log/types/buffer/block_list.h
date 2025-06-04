@@ -117,10 +117,10 @@ namespace bq {
                 return static_cast<uint16_t>(-1);
             }
             ptrdiff_t diff = reinterpret_cast<const uint8_t*>(block) - (reinterpret_cast<const uint8_t*>(this) + static_cast<ptrdiff_t>(*bq::launder(&offset_)));
-#if BQ_LOG_BUFFER_DEBUG
-            assert(((diff % buffer_size_per_block_) == 0) && "invalid block node head address");
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            assert(((static_cast<size_t>(diff) % buffer_size_per_block_) == 0) && "invalid block node head address");
 #endif
-            return static_cast<uint16_t>(diff / buffer_size_per_block_);
+            return static_cast<uint16_t>(static_cast<size_t>(diff) / buffer_size_per_block_);
         }
 
         bq_forceinline bool is_range_include(const block_node_head* block) const
@@ -132,7 +132,7 @@ namespace bq {
                 && (reinterpret_cast<const uint8_t*>(block) < data_range_end_);
         }
 
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         bq_forceinline bool is_include(const block_node_head* block_node)
         {
             if (!block_node) {
@@ -206,7 +206,7 @@ namespace bq {
         /// <returns></returns>
         bq_forceinline void push_after_thread_unsafe(block_node_head* prev_block_node, block_node_head* new_block_node)
         {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
             uint16_t new_index = get_index_by_block_head(new_block_node);
             uint16_t prev_index = get_index_by_block_head(prev_block_node);
             assert(new_index >= 0 && new_index < max_blocks_count_ && "push_after_thread_unsafe assert failed, invalid new_block_node!");
@@ -222,7 +222,7 @@ namespace bq {
 #endif
             auto& prev_pointer = (prev_block_node ? prev_block_node->next_ : head_);
             new_block_node->next_ = prev_pointer;
-            prev_pointer.index() = (uint16_t)(((const uint8_t*)new_block_node - ((const uint8_t*)this + (ptrdiff_t)offset_)) / buffer_size_per_block_);
+            prev_pointer.index() = static_cast<uint16_t>(((const uint8_t*)new_block_node - ((const uint8_t*)this + static_cast<ptrdiff_t>(offset_))) / static_cast<ptrdiff_t>(buffer_size_per_block_));
         }
 
         /// <summary>
@@ -233,7 +233,7 @@ namespace bq {
         /// <returns></returns>
         bq_forceinline void remove_thread_unsafe(block_node_head* prev_block_node, block_node_head* remove_block_node)
         {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
             uint16_t remove_index = get_index_by_block_head(remove_block_node);
             assert(remove_index >= 0 && remove_index < max_blocks_count_ && "remove assert failed, invalid remove_block_node!");
             uint16_t prev_index = get_index_by_block_head(prev_block_node);
@@ -249,12 +249,12 @@ namespace bq {
             assert(found_prev || !prev_block_node);
 #endif
             if (!prev_block_node) {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(head_.index() == remove_index && "remove assert failed!");
 #endif
                 head_ = remove_block_node->next_;
             } else {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(prev_index >= 0 && prev_index < max_blocks_count_ && "remove assert failed, invalid prev_block_node!");
                 assert(prev_block_node->next_.index() == remove_index);
 #endif

@@ -10,7 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/bq_common.h"
-#if BQ_IOS
+#if defined(BQ_IOS)
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #include <pthread.h>

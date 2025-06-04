@@ -21,7 +21,7 @@
  * \date 2024/12/17
  */
 #include <stddef.h>
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #endif
 #include "bq_common/bq_common.h"
@@ -65,7 +65,7 @@ namespace bq {
         group_data_head* head_ptr_ = nullptr;
         uint64_t in_pool_epoch_ms_ = 0;
         class group_list* parent_list_ = nullptr;
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         jobject java_buffer_obj_ = nullptr;
 #endif
     public:
@@ -120,7 +120,7 @@ namespace bq {
 
         bq_forceinline uint16_t get_max_block_count_per_group() const { return max_block_count_per_group_;}
 
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
         bq_forceinline int32_t get_groups_count() const { return groups_count_.load_seq_cst(); }
 #endif
 
@@ -229,7 +229,7 @@ namespace bq {
             }
             current.value().set_in_pool_epoch_ms(bq::platform::high_performance_epoch_ms());
             pool_.push(&current.value());
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
             groups_count_.fetch_add_seq_cst(-1);
 #endif
         }
@@ -239,7 +239,7 @@ namespace bq {
     private:
         const log_buffer_config& config_;
         uint16_t max_block_count_per_group_;
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
         bq::platform::atomic<int32_t> groups_count_ = 0;
 #endif
         alignas(CACHE_LINE_SIZE) bq::platform::atomic<uint32_t> current_group_index_;

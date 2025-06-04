@@ -317,6 +317,10 @@ namespace bq {
         {
             return ptr;
         }
+        bq::enable_if_t<!bq::is_const<T>::value, const T*> get() const
+        {
+            return ptr;
+        }
         template <typename D>
         void swap(unique_ptr<D>& rhs)
         {
@@ -372,7 +376,7 @@ namespace bq {
         shared_ptr(const shared_ptr& rhs) noexcept
         {
             if (rhs.ref_count_) {
-                uint64_t prev_value = rhs.ref_count_->fetch_add_seq_cst(1);
+                int64_t prev_value = rhs.ref_count_->fetch_add_seq_cst(1);
                 if ((prev_value >> 32) == 0) {
                     ptr_ = rhs.ptr_;
                     ref_count_ = rhs.ref_count_;
@@ -402,7 +406,7 @@ namespace bq {
             if (this != &rhs) {
                 release();
                 if (rhs.ref_count_) {
-                    uint64_t prev_value = rhs.ref_count_->fetch_add_seq_cst(1);
+                    int64_t prev_value = rhs.ref_count_->fetch_add_seq_cst(1);
                     if ((prev_value >> 32) == 0) {
                         ptr_ = rhs.ptr_;
                         ref_count_ = rhs.ref_count_;

@@ -11,7 +11,7 @@
  */
 
 #include "bq_common/bq_common.h"
-#if BQ_UNIX
+#if defined(BQ_UNIX)
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/types.h>

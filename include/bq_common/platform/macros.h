@@ -19,37 +19,37 @@
 #else
 #define BQ_WIN64 0
 #endif
-#elif __APPLE__
+#elif defined(__APPLE__)
 #include <TargetConditionals.h>
 #define BQ_POSIX 1
 #define BQ_APPLE 1
-#if TARGET_IPHONE_SIMULATOR
+#if defined(TARGET_IPHONE_SIMULATOR)
 #define BQ_IOS 1
-#elif TARGET_OS_IPHONE
+#elif defined(TARGET_OS_IPHONE)
 #define BQ_IOS 1
-#elif TARGET_OS_MAC
+#elif defined(TARGET_OS_MAC)
 #define BQ_MAC 1
-#elif TARGET_OS_MACCATALYST
+#elif defined(TARGET_OS_MACCATALYST)
 // Mac's Catalyst (ports iOS API into Mac, like UIKit).
 #else
 #endif
-#elif __ANDROID__
+#elif defined(__ANDROID__)
 #define BQ_ANDROID 1
 #define BQ_POSIX 1
 #define BQ_JAVA 1
 #ifndef BQ_UNIT_TEST
 #define BQ_NO_LIBCPP 1
 #endif
-#elif __ORBIS__
+#elif defined(__ORBIS__)
 #define BQ_PS 1
 #define BQ_POSIX 1
-#elif __Prospero__
+#elif defined(__Prospero__)
 #define BQ_PS 1
 #define BQ_POSIX 1
-#elif __linux__
+#elif defined(__linux__)
 #define BQ_LINUX 1
 #define BQ_POSIX 1
-#elif __unix__
+#elif defined(__unix__)
 #define BQ_POSIX 1
 #define BQ_UNIX 1
 #elif defined(_POSIX_VERSION)
@@ -167,28 +167,28 @@ namespace bq {
 // We avoid performing reinterpret_cast directly in the macro to allow the compiler to potentially inline and optimize
 // the code more effectively, rather than embedding the cast in a less predictable macro expansion.
 template <typename TO>
-bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(char* from)
+bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* from)
 {
-    return *reinterpret_cast<TO*>(from);
+    return *reinterpret_cast<TO*>(const_cast<char*>(from));
 }
 // Macro designed to generate high-performance code by accessing a variable Var through a forced cast.
 // CAUTION: Use carefully! This bypasses alignment checks for `speed ensure` Var is properly aligned for its type,
 // as misalignment can cause undefined behavior. No alignment verification is performed here.
-#define BQ_PACK_ACCESS_BY_TYPE(Var, Type) __bq_macro_force_cast_ignore_alignment_warning<Type>((char*)&Var)
-#define BQ_PACK_ACCESS(Var) __bq_macro_force_cast_ignore_alignment_warning<decltype(Var)>((char*)&Var)
+#define BQ_PACK_ACCESS_BY_TYPE(Var, Type) __bq_macro_force_cast_ignore_alignment_warning<Type>((const char*)&Var)
+#define BQ_PACK_ACCESS(Var) __bq_macro_force_cast_ignore_alignment_warning<decltype(Var)>((const char*)&Var)
 
-#if __cplusplus >= 201402L
+#if defined(__cplusplus) && (__cplusplus >= 201402L)
 #define BQ_CPP_14 1
 #define BQ_FUNC_RETURN_CONSTEXPR constexpr
 #else
 #define BQ_FUNC_RETURN_CONSTEXPR
 #endif
 
-#if __cplusplus >= 201703L
+#if defined(__cplusplus) && (__cplusplus >= 201703L)
 #define BQ_CPP_17 1
 #endif
 
-#if __cplusplus >= 202002L
+#if defined(__cplusplus) && (__cplusplus >= 202002L)
 #define BQ_CPP_20 1
 #endif
 

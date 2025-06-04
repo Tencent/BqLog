@@ -13,7 +13,7 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/global/vars.h"
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include "bq_common/bq_common.h"
 #include "bq_log/api/bq_impl_log_invoker.h"
 #include "bq_log/log/log_manager.h"
@@ -99,9 +99,9 @@ static BQ_TLS struct{
  */
 JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JNIEnv* env, jclass, jlong log_id, jlong length, jshort level, jlong category_index, jstring format_content, jlong utf16_str_bytes_len)
 {
-    auto handle = bq::api::__api_log_buffer_alloc(log_id, (uint32_t)length);
+    auto handle = bq::api::__api_log_buffer_alloc(static_cast<uint64_t>(log_id), (uint32_t)length);
     if (handle.result != bq::enum_buffer_result_code::success) {
-        bq::api::__api_log_buffer_commit(log_id, handle);
+        bq::api::__api_log_buffer_commit(static_cast<uint64_t>(log_id), handle);
         return nullptr;
     }
     tls_write_handle_.write_handle_ = handle;
@@ -120,7 +120,7 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     bq::impl::_do_log_args_fill<false>(log_format_content_addr, seq, format_str);
     env->ReleaseStringCritical(format_content, (const jchar*)format_str);
 
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
+    bq::log_imp* log = bq::log_manager::get_log_by_id(static_cast<uint64_t>(log_id));
     auto& ring_buffer = log->get_buffer();
     bq::log_buffer_write_handle inner_handle;
     inner_handle.data_addr = handle.data_addr;
@@ -161,7 +161,7 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_
  */
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit(JNIEnv*, jclass, jlong log_id)
 {
-    bq::api::__api_log_buffer_commit(log_id, tls_write_handle_.write_handle_);
+    bq::api::__api_log_buffer_commit(static_cast<uint64_t>(log_id), tls_write_handle_.write_handle_);
 }
 
 /*
@@ -397,7 +397,7 @@ static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_id
         return;
     }
     jstring message = env->NewStringUTF(content);
-    env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int)log_level, message);
+    env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int32_t)log_level, message);
 }
 /*
  * Class:     bq_impl_log_invoker
@@ -438,7 +438,7 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
         return;
     }
     jstring message = env->NewStringUTF(content);
-    env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int)log_level, message);
+    env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int32_t)log_level, message);
 }
 /*
  * Class:     bq_impl_log_invoker

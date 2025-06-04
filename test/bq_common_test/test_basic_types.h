@@ -67,7 +67,7 @@ namespace bq {
                 bq::aligned_type<char, 64> type_char = 'a';
                 result.add_result((size_t)&type_char.get() % 64 == 0, "bq::aligned_type<char, 64> on stack");
 
-                for (int i = 0; i < 1024; ++i) {
+                for (int32_t i = 0; i < 1024; ++i) {
                     bq::aligned_type<char, 64>* p_char = new bq::aligned_type<char, 64>();
                     result.add_result((size_t)&p_char->get() % 64 == 0, "bq::aligned_type<char, 64> on heap");
                     delete p_char;

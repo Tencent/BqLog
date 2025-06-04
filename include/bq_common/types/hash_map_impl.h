@@ -618,7 +618,7 @@ namespace bq {
     template <typename K, typename V>
     BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::alloc_node_by_key(const_key_type_ref key)
     {
-        uint32_t expected_bucket_size = (uint32_t)((size() + 1) * expand_rate_) + 1;
+        uint32_t expected_bucket_size = static_cast<uint32_t>((static_cast<float>((size() + 1)) * expand_rate_)) + 1;
         if (expected_bucket_size > buckets_size()) {
             expand_buckets(expected_bucket_size);
         }

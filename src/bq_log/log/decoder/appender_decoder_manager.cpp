@@ -18,7 +18,7 @@
 
 bq::appender_decoder_manager::appender_decoder_manager()
     :
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
     mutex_(true)
     ,
 #endif
@@ -63,7 +63,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
         return result;
     }
     out_handle = idx_seq_.add_fetch_seq_cst(1);
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
     bq::platform::scoped_mutex lock(mutex_);
 #endif
     decoders_map_.add(out_handle, bq::move(decoder));
@@ -73,7 +73,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
 
 void bq::appender_decoder_manager::destroy_decoder(uint32_t handle)
 {
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
     bq::platform::scoped_mutex lock(mutex_);
 #endif
     decoders_map_.erase(handle);
@@ -81,7 +81,7 @@ void bq::appender_decoder_manager::destroy_decoder(uint32_t handle)
 
 bq::appender_decode_result bq::appender_decoder_manager::decode_single_item(uint32_t handle, const bq::string*& out_decoded_log_text)
 {
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
     bq::platform::scoped_mutex lock(mutex_);
 #endif
     auto iter = decoders_map_.find(handle);

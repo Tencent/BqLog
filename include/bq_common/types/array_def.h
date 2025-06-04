@@ -123,9 +123,11 @@ namespace bq {
 
         bool is_empty() const;
 
-        value_type& operator[](size_type idx);
+        template <typename IDX_TYPE>
+        value_type& operator[](IDX_TYPE idx);
 
-        const value_type& operator[](size_type idx) const;
+        template <typename IDX_TYPE>
+        const value_type& operator[](IDX_TYPE idx) const;
 
         template <typename T1, typename T2, size_t S1, size_t S2>
         friend bool operator==(const BQ_ARRAY_CLS_NAME<T1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, S2>& array2);

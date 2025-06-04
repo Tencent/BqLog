@@ -14,7 +14,7 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include "bq_common/bq_common.h"
-#if BQ_ANDROID
+#if defined(BQ_ANDROID)
 #include <android/log.h>
 #endif
 #include <time.h>
@@ -34,16 +34,6 @@ namespace bq {
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
         string path = TO_ABSOLUTE_PATH(file_name, true);
         bq::file_manager::instance().append_all_text(path, msg);
-    }
-
-    bq::string util::format(const char* fmt, ...)
-    {
-        char buffer[1024];
-        va_list args;
-        va_start(args, fmt);
-        vsnprintf(buffer, sizeof(buffer), fmt, args);
-        va_end(args);
-        return buffer;
     }
 
     bq::string util::get_current_gmt_time_string()
@@ -88,7 +78,7 @@ namespace bq {
 #endif
     }
 
-#if BQ_TOOLS || BQ_UNIT_TEST
+#if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
     static bq::log_level log_device_min_level = bq::log_level::error;
     void util::set_log_device_console_min_level(bq::log_level level)
     {
@@ -98,7 +88,7 @@ namespace bq {
 
     void util::log_device_console(bq::log_level level, const char* format, ...)
     {
-#if BQ_TOOLS || BQ_UNIT_TEST
+#if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
         if (level < log_device_min_level) {
             return;
         }
@@ -127,14 +117,14 @@ namespace bq {
 
     void util::log_device_console_plain_text(bq::log_level level, const char* text)
     {
-#if BQ_TOOLS || BQ_UNIT_TEST
+#if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
         if (level < log_device_min_level) {
             return;
         }
 #endif
-#if BQ_ANDROID
+#if defined(BQ_ANDROID)
         __android_log_write(ANDROID_LOG_VERBOSE + ((int32_t)level - (int32_t)bq::log_level::verbose), "Bq", text);
-#elif BQ_IOS
+#elif defined(BQ_IOS)
         (void)level;
         bq::platform::ios_print(text);
 #else
@@ -169,7 +159,7 @@ namespace bq {
         fputs("\033[0m", output_target);
         fputs("\n", output_target);
         fflush(output_target);
-#if _MSC_VER
+#if defined(BQ_MSVC)
         OutputDebugStringA(text);
         OutputDebugStringA("\n");
 #endif
@@ -288,7 +278,7 @@ namespace bq {
         uint32_t codepoint;
 
         const char* p = (const char*)src_utf8_str;
-        while (((uint32_t)(p - src_utf8_str) < src_character_num) && (c = *p++) != 0) {
+        while (((uint32_t)(p - src_utf8_str) < src_character_num) && (c = static_cast<char16_t>(*p++)) != 0) {
             if (mb_size == 0) {
                 if (c < 0x80) {
                     target_utf16_str[result_len++] = c;

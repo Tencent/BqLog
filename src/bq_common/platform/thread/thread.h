@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include "bq_common/types/string.h"
 #include "bq_common/platform/atomic/atomic.h"
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #endif
 
@@ -58,7 +58,7 @@ namespace bq {
 
             thread(thread&& rhs) = delete;
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
             void attach_to_jvm();
             JNIEnv* get_jni_env();
 #endif

@@ -119,7 +119,7 @@ namespace bq {
     bq::string property::serialize() const
     {
         string lines;
-        hash_type::iterator itr = properties.begin();
+        auto itr = properties.begin();
         for (; itr != properties.end(); itr++) {
             string value = itr->value();
             value = value.replace("\n", "\\n");

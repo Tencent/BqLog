@@ -60,7 +60,7 @@ namespace bq {
                     platform_data_->handle_.condition_variable_handle_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
                     // Check if creation was successful
                     if (!platform_data_->handle_.condition_variable_handle_) {
-                        bq::util::log_device_console(log_level::fatal, "%s : %d : create condition_variable failed, error code:%d", __FILE__, __LINE__, GetLastError());
+                        bq::util::log_device_console(log_level::fatal, "%s : %d : create condition_variable failed, error code:%d", __FILE__, __LINE__, static_cast<int32_t>(GetLastError()));
                         assert(false && "create condition_variable failed, see the device log output for more information");
                         return;
                     }

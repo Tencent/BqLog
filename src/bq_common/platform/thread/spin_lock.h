@@ -187,7 +187,7 @@ namespace bq {
             struct debug_record {
                 bq::platform::thread::thread_id tid_;
                 bool is_write_;
-                int phase_;
+                int32_t phase_;
                 bool operator==(const debug_record& other) const {
                     return tid_ == other.tid_ && is_write_ == other.is_write_ && phase_ == other.phase_;
                 }

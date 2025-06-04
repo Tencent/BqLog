@@ -84,44 +84,74 @@ namespace bq {
         bq::aligned_type<char[size_], 8> data_;
 
 #ifndef NDEBUG
-        bool* _bool_ptr_debug;
-        decimal_type* _decimal_ptr_debug;
-        int64_t* _integral_ptr_debug;
-        string_type* _string_ptr_debug;
-        array_type* _array_ptr_debug;
-        object_type* _object_ptr_debug;
+        const bool* _bool_ptr_debug;
+        const decimal_type* _decimal_ptr_debug;
+        const int64_t* _integral_ptr_debug;
+        const string_type* _string_ptr_debug;
+        const array_type* _array_ptr_debug;
+        const object_type* _object_ptr_debug;
 #endif
     private:
         void clear_data();
         void copy_data_from(const property_value& rhs);
         void copy_data_from(property_value&& rhs);
 
-        bool_type& as_bool(bool skip_check_type = false) const
+        const bool_type& as_bool(bool skip_check_type = false) const
+        {
+            assert(skip_check_type || type_ == enum_property_value_type::boolean);
+            return *(const bool_type*)(data_.get());
+        }
+        bool_type& as_bool(bool skip_check_type = false)
         {
             assert(skip_check_type || type_ == enum_property_value_type::boolean);
             return *(bool_type*)(data_.get());
         }
-        decimal_type& as_decimal(bool skip_check_type = false) const
+        const decimal_type& as_decimal(bool skip_check_type = false) const
+        {
+            assert(skip_check_type || type_ == enum_property_value_type::decimal);
+            return *(const decimal_type*)(data_.get());
+        }
+        decimal_type& as_decimal(bool skip_check_type = false)
         {
             assert(skip_check_type || type_ == enum_property_value_type::decimal);
             return *(decimal_type*)(data_.get());
         }
-        int64_t& as_integral(bool skip_check_type = false) const
+        const int64_t& as_integral(bool skip_check_type = false) const
+        {
+            assert(skip_check_type || type_ == enum_property_value_type::integral);
+            return *(const int64_t*)(data_.get());
+        }
+        int64_t& as_integral(bool skip_check_type = false)
         {
             assert(skip_check_type || type_ == enum_property_value_type::integral);
             return *(int64_t*)(data_.get());
         }
-        string_type& as_string(bool skip_check_type = false) const
+        const string_type& as_string(bool skip_check_type = false) const
+        {
+            assert(skip_check_type || type_ == enum_property_value_type::string);
+            return *(const string_type*)(data_.get());
+        }
+        string_type& as_string(bool skip_check_type = false)
         {
             assert(skip_check_type || type_ == enum_property_value_type::string);
             return *(string_type*)(data_.get());
         }
-        array_type& as_array(bool skip_check_type = false) const
+        const array_type& as_array(bool skip_check_type = false) const
+        {
+            assert(skip_check_type || type_ == enum_property_value_type::array);
+            return *(const array_type*)(data_.get());
+        }
+        array_type& as_array(bool skip_check_type = false)
         {
             assert(skip_check_type || type_ == enum_property_value_type::array);
             return *(array_type*)(data_.get());
         }
-        object_type& as_object(bool skip_check_type = false) const
+        const object_type& as_object(bool skip_check_type = false) const
+        {
+            assert(skip_check_type || type_ == enum_property_value_type::object);
+            return *(const object_type*)(data_.get());
+        }
+        object_type& as_object(bool skip_check_type = false)
         {
             assert(skip_check_type || type_ == enum_property_value_type::object);
             return *(object_type*)(data_.get());

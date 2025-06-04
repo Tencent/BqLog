@@ -10,7 +10,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #include <errno.h>
 #include <stdarg.h>

@@ -10,7 +10,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#if BQ_ANDROID
+#if defined(BQ_ANDROID)
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>

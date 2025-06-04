@@ -120,7 +120,7 @@ namespace bq {
         constexpr auto int32_params = test_make_array<int32_t>((int32_t)-22123, (int32_t)0xffff3223);
         constexpr auto uint32_params = test_make_array<uint32_t>((uint32_t)0x324242fa, (uint32_t)0xffffffff);
         constexpr auto int64_params = test_make_array<int64_t>((int64_t)288888880, (int64_t)-5);
-        constexpr auto uint64_params = test_make_array<uint64_t>((uint64_t)1, (uint64_t)0xffaaeeff33333333);
+        constexpr auto uint64_params = test_make_array<uint64_t>((uint64_t)1, (uint64_t)0xffaaeeff33333333ULL);
         constexpr auto float_params = test_make_array<float>((float)-484323233.323234f);
         constexpr auto double_params = test_make_array<double>((double)324248284.8, (double)-484323233.323234);
         constexpr auto utf8_params = test_make_array<const char*>(nullptr, "ab", "utf8测试代码看看呢");

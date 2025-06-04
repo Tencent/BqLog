@@ -91,6 +91,9 @@ namespace bq {
     constexpr T condition_value_v = condition_value<COND, T, TRUE_VALUE, FALSE_VALUE>::value;
 #endif
 
+    using size_t_to_int_t = bq::condition_type<sizeof(size_t) == sizeof(int32_t), int32_t, int64_t>::type;
+    using size_t_to_uint_t = bq::condition_type<sizeof(size_t) == sizeof(uint32_t), uint32_t, uint64_t>::type;
+
     inline constexpr size_t align_4(size_t n)
     {
         return n == 0 ? n : (((n - 1) & (~((size_t)4 - 1))) + 4);

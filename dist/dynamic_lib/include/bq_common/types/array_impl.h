@@ -291,21 +291,23 @@ namespace bq {
     }
 
     template <typename T, size_t TAIL_BUFFER_SIZE>
-    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator[](size_type idx)
+    template <typename IDX_TYPE>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator[](IDX_TYPE idx)
     {
 #ifndef NDEBUG
-        assert(idx < size_);
+        assert(static_cast<size_type>(idx) < size_);
 #endif
-        return data_[idx];
+        return data_[static_cast<size_type>(idx)];
     }
 
     template <typename T, size_t TAIL_BUFFER_SIZE>
-    BQ_ARRAY_INLINE const typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator[](size_type idx) const
+    template <typename IDX_TYPE>
+    BQ_ARRAY_INLINE const typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type& BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::operator[](IDX_TYPE idx) const
     {
 #ifndef NDEBUG
-        assert(idx < size_);
+        assert(static_cast<size_type>(idx) < size_);
 #endif
-        return data_[idx];
+        return data_[static_cast<size_type>(idx)];
     }
 
     template <typename T1, typename T2, size_t S1, size_t S2>
@@ -380,7 +382,7 @@ namespace bq {
     BQ_ARRAY_INLINE typename bq::enable_if<!(bq::is_trivially_copy_constructible<T>::value && bq::is_trivially_move_constructible<T>::value), void>::type
     BQ_ARRAY_INLINE_MACRO(_inner_forward_move)(T* dest, T* src, size_t move_count)
     {
-        size_t diff = dest - src;
+        size_t diff = static_cast<size_t>(dest - src);
         for (size_t i = move_count; i > 0; --i) {
             size_t index = i - 1;
             if (index + diff < move_count) {
@@ -420,9 +422,9 @@ namespace bq {
     {
         assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
         constexpr size_type count = 1;
-        size_type move_count = (end() - dest_it);
+        size_type move_count = static_cast<size_type>((end() - dest_it));
         size_type new_size = size_ + count;
-        size_type diff = dest_it - begin();
+        size_type diff = static_cast<size_type>(dest_it - begin());
         set_capacity(new_size);
         dest_it = begin() + diff;
         memmove((void*)(end() + count), (void*)(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
@@ -441,9 +443,9 @@ namespace bq {
             return;
         }
         assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
-        size_type move_count = (end() - dest_it);
+        size_type move_count = static_cast<size_type>((end() - dest_it));
         size_type new_size = size_ + count;
-        size_type diff = dest_it - begin();
+        size_type diff = static_cast<size_type>(dest_it - begin());
         set_capacity(new_size);
         dest_it = begin() + diff;
         memmove((void*)(end() + count), (void*)(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
@@ -533,7 +535,7 @@ namespace bq {
         if (real_remove_count == 0) {
             return;
         }
-        BQ_ARRAY_INLINE_MACRO(_inner_backward_move)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(where_it, where_it + real_remove_count, end() - (where_it + real_remove_count));
+        BQ_ARRAY_INLINE_MACRO(_inner_backward_move)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(where_it, where_it + real_remove_count, static_cast<size_type>(end() - (where_it + real_remove_count)));
         bq::object_array_destructor<T>::destruct(data_ + size_ - real_remove_count, real_remove_count);
         memmove((void*)(end().operator->() - real_remove_count), (void*)(end().operator->()), TAIL_BUFFER_SIZE * sizeof(value_type));
         size_ -= real_remove_count;
@@ -619,7 +621,7 @@ namespace bq {
     {
         if (reverse_find) {
             for (size_type i = size(); i >= 1; --i) {
-                if (data_[i - i] == value) {
+                if (data_[i - 1] == value) {
                     return begin() + i - 1;
                 }
             }
@@ -638,13 +640,53 @@ namespace bq {
     {
         if (reverse_find) {
             for (size_type i = size(); i >= 1; --i) {
-                if (data_[i - i] == value) {
+                if (data_[i - 1] == value) {
                     return begin() + i - 1;
                 }
             }
         } else {
             for (size_type i = 0; i < size(); ++i) {
                 if (data_[i] == value) {
+                    return begin() + i;
+                }
+            }
+        }
+        return end();
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename Predicate>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::find_if(Predicate predicate, bool reverse_find /* = false*/)
+    {
+        if (reverse_find) {
+            for (size_type i = size(); i >= 1; --i) {
+                if (predicate(data_[i - 1])) {
+                    return begin() + i - 1;
+                }
+            }
+        } else {
+            for (size_type i = 0; i < size(); ++i) {
+                if (predicate(data_[i])) {
+                    return begin() + i;
+                }
+            }
+        }
+        return end();
+    }
+
+    template <typename T, size_t TAIL_BUFFER_SIZE>
+    template <typename Predicate>
+    BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::const_iterator BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::find_if(Predicate predicate, bool reverse_find /* = false*/) const
+    {
+        if (reverse_find) {
+            for (size_type i = size(); i >= 1; --i) {
+                if (predicate(data_[i - 1])) {
+                    return begin() + i - 1;
+                }
+            }
+        } else {
+            for (size_type i = 0; i < size(); ++i) {
+                if (predicate(data_[i])) {
                     return begin() + i;
                 }
             }

@@ -42,7 +42,7 @@ namespace bq {
 
         bq_forceinline _log_entry_head_def& get_log_head()
         {
-            return *(_log_entry_head_def*)data_ptr;
+            return *const_cast<_log_entry_head_def*>((const _log_entry_head_def*)data_ptr);
         }
 
         bq_forceinline const _log_entry_head_def& get_log_head() const
@@ -52,12 +52,12 @@ namespace bq {
 
         bq_forceinline const struct ext_log_entry_info_head& get_ext_head() const
         {
-            return *(struct ext_log_entry_info_head*)(data_ptr + get_log_head().ext_info_offset);
+            return *(const struct ext_log_entry_info_head*)(data_ptr + get_log_head().ext_info_offset);
         }
 
         bq_forceinline uint32_t get_log_args_data_size() const
         {
-            return (int32_t)(get_log_head().ext_info_offset - get_log_head().log_args_offset);
+            return static_cast<uint32_t>(get_log_head().ext_info_offset - get_log_head().log_args_offset);
         }
 
         bq_forceinline const uint8_t* get_log_args_data() const

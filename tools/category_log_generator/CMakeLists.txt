@@ -11,9 +11,25 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
 
-if(WIN32)
-	#VS为了兼容性__cplusplus宏一直是199711，这里我们需要正确的值来判断c++版本
-	string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /utf-8")
+#make __cplusplus correct in Visual Studio
+if (MSVC)
+    string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /utf-8 /bigobj")
+    add_compile_options(/W4 /WX)
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(EXTRA_FLAGS "-Wshorten-64-to-32")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(EXTRA_FLAGS "-Wlogical-op -Wduplicated-branches -Warray-bounds")
+    endif()
+
+    add_compile_options(
+            -Wall -Wextra -pedantic -Werror
+            -Wundef -Wshadow -Wstrict-aliasing
+            -Wcast-qual -Wconversion -Wsign-conversion
+            -Wnull-dereference -Wformat=2 -Wuninitialized
+            ${EXTRA_FLAGS}
+    )
 endif()
 
 ############################################################

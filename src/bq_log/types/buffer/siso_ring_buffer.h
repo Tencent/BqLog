@@ -47,7 +47,7 @@ namespace bq {
         union block {
         public:
             BQ_PACK_BEGIN
-            struct alignas(4) chunk_head_def { //alignas(4) can make sure compiler generate more effective code when access int fields
+            struct alignas(4) chunk_head_def { //alignas(4) can make sure compiler generate more effective code when access int32_t fields
                 uint32_t block_num;
                 uint32_t data_size;
                 uint8_t data[1];
@@ -94,7 +94,7 @@ namespace bq {
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bool is_memory_recovery_;
 
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
         char padding_[CACHE_LINE_SIZE];
         bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
@@ -180,7 +180,7 @@ namespace bq {
         /// <param name="in_enable"></param>
         void set_thread_check_enable(bool in_enable)
         {
-#if BQ_LOG_BUFFER_DEBUG
+#if defined(BQ_LOG_BUFFER_DEBUG)
             check_thread_ = in_enable;
             if (!check_thread_) {
                 read_thread_id_ = empty_thread_id_;
