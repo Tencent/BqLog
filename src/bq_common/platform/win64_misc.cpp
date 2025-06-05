@@ -23,7 +23,7 @@
 #include <wchar.h>
 #include <inttypes.h>
 
-#if BQ_VISUAL_STUDIO
+#ifdef BQ_VISUAL_STUDIO
 #pragma comment(lib, "dbghelp.lib")
 #else
 #pragma message("Warning: DbgHelp.a is not linked without MSVC automatically. Please link it manually by -ldbghelp. ")

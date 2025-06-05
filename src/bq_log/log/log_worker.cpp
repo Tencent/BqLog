@@ -12,7 +12,7 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/log_worker.h"
-#if BQ_POSIX
+#ifdef BQ_POSIX
 #ifndef BQ_PS
 #include <signal.h>
 #endif
@@ -76,7 +76,7 @@ namespace bq {
     void log_worker::run()
     {
         assert(thread_mode_ != log_thread_mode::sync && "log_worker started without init");
-#if BQ_POSIX
+#ifdef BQ_POSIX
         // we need flush ring_buffer in signal handler.
         // but handler can not be called in worker thread.(the flush operation is not re-entrant)
         // so we have to block signals for this thread.

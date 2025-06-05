@@ -22,7 +22,7 @@
 #include "bq_log/log/decoder/appender_decoder_helper.h"
 #include "bq_log/types/buffer/log_buffer.h"
 
-#if BQ_POSIX
+#ifdef BQ_POSIX
 #ifdef BQ_PS
 // TODO
 #else
