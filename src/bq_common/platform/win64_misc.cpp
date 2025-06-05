@@ -79,10 +79,10 @@ namespace bq {
             /* Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (ANSI UTC) and copy it
              * to a LARGE_INTEGER structure. */
             GetSystemTimeAsFileTime(&ft);
-            li.LowPart = ft.dwLowDateTime;
-            li.HighPart = ft.dwHighDateTime;
+            li.LowPart = static_cast<decltype(li.LowPart)>(ft.dwLowDateTime);
+            li.HighPart = static_cast<decltype(li.HighPart)>(ft.dwHighDateTime);
 
-            uint64_t ret = li.QuadPart;
+            uint64_t ret = static_cast<uint64_t>(li.QuadPart);
             const uint64_t UNIX_TIME_START = 0x019DB1DED53E8000; // January 1, 1970 (start of Unix epoch) in "ticks", difference from ANSI UTC to Unix Epoch.
             const uint64_t TICKS_PER_SECOND = 10000; // a tick is 100ns
 
@@ -274,7 +274,7 @@ namespace bq {
             if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
             {
                 DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
-                attr &= ~FILE_ATTRIBUTE_READONLY;
+                attr &= static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY);
                 SetFileAttributesW((LPCWSTR)path.c_str(), attr);
                 int32_t result = _wremove((LPCWSTR)path.c_str());
                 if (result != 0) {
@@ -318,7 +318,7 @@ namespace bq {
                     }
                 }
                 DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
-                attr &= ~FILE_ATTRIBUTE_READONLY;
+                attr &= static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY);
                 SetFileAttributesW((LPCWSTR)path.c_str(), attr);
                 if (!RemoveDirectoryW((LPCWSTR)path.c_str())) {
                     return static_cast<int32_t>(GetLastError());
@@ -650,7 +650,7 @@ namespace bq {
                 DWORD64 displacement64 = 0;
                 bool symbo_found = SymFromAddrW(common_global_vars::get().stack_trace_process_, address, &displacement64, symbol);
                 if (!symbo_found && !sym_refreshed) {
-                    int32_t error_code = GetLastError();
+                    int32_t error_code = static_cast<int32_t>(GetLastError());
                     (void)error_code;
                     sym_refreshed = true;
                     SymRefreshModuleList(common_global_vars::get().stack_trace_process_);
