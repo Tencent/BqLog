@@ -46,7 +46,7 @@
 #if defined(BQ_APPLE)
 pid_t bq_gettid()
 {
-    return static_cast<int32_t>(pid_t);
+    return static_cast<pid_t>(0);
 }
 
 int32_t bq_tgkill(pid_t tgid, pid_t tid, int32_t sig)

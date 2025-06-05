@@ -61,7 +61,7 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                bq::aligned_type<uint32_t, 64> type_uint32_t = 50;
+                bq::aligned_type<uint32_t, 64> type_uint32_t = static_cast<uint32_t>(50);
                 result.add_result((size_t)&type_uint32_t.get() % 64 == 0, "bq::aligned_type<uint32_t, 64> on stack");
 
                 bq::aligned_type<char, 64> type_char = 'a';

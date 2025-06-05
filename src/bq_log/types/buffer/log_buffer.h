@@ -147,7 +147,7 @@ namespace bq {
 #endif
 
 #if defined(BQ_UNIT_TEST)
-        uint32_t get_groups_count() const { return hp_buffer_.get_groups_count();}
+        int32_t get_groups_count() const { return hp_buffer_.get_groups_count();}
         void garbage_collect() { hp_buffer_.garbage_collect(); }
         size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
 #endif

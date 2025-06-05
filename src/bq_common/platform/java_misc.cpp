@@ -90,7 +90,7 @@ namespace bq {
 #if defined(BQ_ANDROID)
             __android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
             android_jni_onload();
-#elif BQ_IOS
+#elif defined(BQ_IOS)
             bq::platform::ios_print("Bq JNI_Onload is called");
 #else
             printf("Bq JNI_Onload is called");

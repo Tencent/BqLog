@@ -191,7 +191,7 @@ namespace bq {
             free(node_data_);
             node_data_ = nullptr;
         }
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         if (java_buffer_obj_) {
             bq::platform::jni_env env;
             env.env->DeleteGlobalRef(java_buffer_obj_);

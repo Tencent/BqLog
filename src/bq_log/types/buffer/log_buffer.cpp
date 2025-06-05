@@ -17,7 +17,7 @@
  */
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #endif
 
@@ -49,7 +49,7 @@ namespace bq {
 
     log_buffer::log_tls_buffer_info::~log_tls_buffer_info()
     {
-#if BQ_JAVA
+#if defined(BQ_JAVA)
         if (buffer_obj_for_lp_buffer_
             || buffer_obj_for_hp_buffer_) {
             bq::platform::jni_env env;
@@ -368,7 +368,7 @@ namespace bq {
         }
     }
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
     log_buffer::java_buffer_info log_buffer::get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)

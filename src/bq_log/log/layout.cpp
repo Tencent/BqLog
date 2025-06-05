@@ -51,22 +51,22 @@ namespace bq {
         const auto& head = log_entry.get_log_head();
         auto result = insert_time(log_entry);
         if (result != enum_layout_result::finished) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_time, result:%" PRId32, result);
+            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_time, result:%" PRId32, static_cast<int32_t>(result));
             return result;
         }
 
         result = insert_thread_info(log_entry);
         if (result != enum_layout_result::finished) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_thread_info, result:%" PRId32, result);
+            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_thread_info, result:%" PRId32, static_cast<int32_t>(result));
             return result;
         }
 
         auto level = log_entry.get_level();
         if (level < log_level::verbose || level > log_level::fatal) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, log_level %d, maybe header file or struct mismatch in include", level);
+            bq::util::log_device_console(log_level::error, "layout_prefix error, log_level %" PRId32 ", maybe header file or struct mismatch in include", static_cast<int32_t>(level));
             return enum_layout_result::parse_error;
         }
-        const auto& level_str = log_global_vars::get().log_level_str_[(int32_t)log_entry.get_level()];
+        const auto& level_str = log_global_vars::get().log_level_str_[static_cast<int32_t>(log_entry.get_level())];
         insert_str_utf8(level_str, sizeof(level_str));
         insert_char('\t');
 

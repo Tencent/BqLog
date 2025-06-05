@@ -23,13 +23,13 @@
 #include <TargetConditionals.h>
 #define BQ_POSIX 1
 #define BQ_APPLE 1
-#if defined(TARGET_IPHONE_SIMULATOR)
+#if defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR != 0
 #define BQ_IOS 1
-#elif defined(TARGET_OS_IPHONE)
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE != 0
 #define BQ_IOS 1
-#elif defined(TARGET_OS_MAC)
+#elif defined(TARGET_OS_MAC) && TARGET_OS_MAC != 0
 #define BQ_MAC 1
-#elif defined(TARGET_OS_MACCATALYST)
+#elif defined(TARGET_OS_MACCATALYST) && TARGET_OS_MACCATALYST != 0
 // Mac's Catalyst (ports iOS API into Mac, like UIKit).
 #else
 #endif

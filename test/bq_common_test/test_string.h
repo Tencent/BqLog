@@ -188,7 +188,7 @@ namespace bq {
                     test_insert1.insert_batch(test_insert1.end(), test_insert2.begin(), test_insert2.size());
                     result.add_result(test_insert1 == test_insert2, "string insert batch test 0");
                     result.add_result(bq::___string_len(test_insert1.c_str()) == test_insert1.size(), "string insert batch test1");
-                    test_insert1.insert(test_insert1.begin(), 'a');
+                    test_insert1.insert(test_insert1.begin(), u'a');
                     result.add_result(test_insert1 == u"ainsert2", "string insert test 0");
                     test_insert1.erase(test_insert1.begin());
                     result.add_result(test_insert1 == test_insert2, "string erase test 0");

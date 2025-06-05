@@ -28,7 +28,7 @@ namespace bq {
         {
             struct timeval tv;
             gettimeofday(&tv, NULL);
-            uint64_t ret = tv.tv_usec;
+            uint64_t ret = static_cast<uint64_t>(tv.tv_usec);
             ret /= 1000;
             ret += ((uint64_t)tv.tv_sec * 1000);
             return ret;
@@ -38,7 +38,7 @@ namespace bq {
         {
             bq::array<char> tmp;
 			tmp.fill_uninitialized(1024);
-			while (getcwd(&tmp[0], (int32_t)tmp.size()) == NULL)
+			while (getcwd(&tmp[0], tmp.size()) == NULL)
 			{
 				tmp.fill_uninitialized(1024);
 			}

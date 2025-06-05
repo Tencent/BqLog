@@ -57,7 +57,7 @@ namespace bq {
                     assert(handle.result == bq::enum_buffer_result_code::success);
                     *(int32_t*)(handle.data_addr) = id;
                     *((int32_t*)(handle.data_addr) + 1) = left_write_count;
-                    int32_t count = (int32_t)alloc_size / sizeof(int32_t);
+                    int32_t count = (int32_t)alloc_size / static_cast<int32_t>(sizeof(int32_t));
                     int32_t* begin = (int32_t*)(handle.data_addr) + 2;
                     int32_t* end = (int32_t*)(handle.data_addr) + count;
                     std::fill(begin, end, (int32_t)alloc_size);
@@ -80,7 +80,7 @@ namespace bq {
                 bq::miso_ring_buffer ring_buffer(config);
                 int32_t chunk_count_per_task = 1024000;
                 bq::platform::atomic<int32_t> counter(miso_total_task);
-                std::vector<int32_t> task_check_vector;
+                bq::array<int32_t> task_check_vector;
                 for (int32_t i = 0; i < miso_total_task; ++i) {
                     task_check_vector.push_back(0);
                     miso_write_task task(i, chunk_count_per_task, &ring_buffer, counter);
@@ -132,16 +132,16 @@ namespace bq {
                     result.add_result(task_check_vector[id] + left_count == chunk_count_per_task, "[miso ring buffer]chunk left task check error, real: %d, expected:%d", left_count, chunk_count_per_task - task_check_vector[id]);
                     task_check_vector[id] = chunk_count_per_task - left_count; // error adjust
                     bool content_check = true;
-                    for (size_t i = 2; i < size / sizeof(int32_t); ++i) {
-                        if (*((int32_t*)handle.data_addr + i) != size) {
+                    for (size_t i = 2; i < static_cast<size_t>(size) / sizeof(int32_t); ++i) {
+                        if (*(reinterpret_cast<int32_t*>(handle.data_addr) + i) != size) {
                             content_check = false;
                             continue;
                         }
                     }
                     result.add_result(content_check, "[miso ring buffer]content check error");
                 }
-                for (size_t i = 0; i < task_check_vector.size(); ++i) {
-                    result.add_result(task_check_vector[i] == chunk_count_per_task, "[miso ring buffer]chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
+                for (int i : task_check_vector) {
+                    result.add_result(i == chunk_count_per_task, "[miso ring buffer]chunk count check error, real:%d , expected:%d", i, chunk_count_per_task);
                 }
                 test_output_dynamic_param(bq::log_level::info, "\n[miso ring buffer] test %s finished\n", with_mmap ? "with mmap" : "without mmap");
                 result.add_result(total_chunk == miso_ring_buffer_test_total_write_count_.load(), "%s total write count error, real:%d , expected:%d", with_mmap ? "with mmap" : "without mmap", miso_ring_buffer_test_total_write_count_.load(), total_chunk);

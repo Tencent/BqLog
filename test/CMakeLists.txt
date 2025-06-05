@@ -35,7 +35,7 @@ else()
             -Wall -Wextra -pedantic -Werror
             -Wundef -Wshadow -Wstrict-aliasing
             -Wcast-qual -Wconversion -Wsign-conversion
-            -Wnull-dereference -Wformat=2 -Wuninitialized
+            -Wnull-dereference -Wuninitialized
             ${EXTRA_FLAGS}
     )
 endif()

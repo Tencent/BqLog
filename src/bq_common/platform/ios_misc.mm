@@ -29,7 +29,7 @@ namespace bq {
         {
             struct timeval tv;
             gettimeofday(&tv, NULL);
-            uint64_t ret = tv.tv_usec;
+            uint64_t ret = static_cast<uint64_t>(tv.tv_usec);
             ret /= 1000;
             ret += ((uint64_t)tv.tv_sec * 1000);
             return ret;
@@ -53,11 +53,6 @@ namespace bq {
             NSString* home_directory = NSHomeDirectory();
             return [home_directory UTF8String];
         }
-
-		void ios_vprintf(const char* __restrict format, va_list args)
-		{
-			NSLogv([NSString stringWithUTF8String : format], args);
-		}
 
 		void ios_print(const char* __restrict content)
 		{

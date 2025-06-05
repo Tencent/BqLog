@@ -91,7 +91,7 @@ namespace bq {
                     add_test_result(loop_map.size() == 0);
 
                     int32_t count_erase_test = 0;
-                    loop_map.add(5, 5);
+                    loop_map.add(5U, 5U);
                     for (auto iter = loop_map.begin(); iter != loop_map.end(); ++iter) {
                         count_erase_test += 1;
                     }

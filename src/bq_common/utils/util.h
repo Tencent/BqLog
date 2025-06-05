@@ -96,7 +96,7 @@ namespace bq {
         template <typename T, typename... V>
         static T* aligned_new(const size_t alignment, V&&... args)
         {
-#if BQ_ALIGNAS_NEW
+#if defined(BQ_ALIGNAS_NEW)
             (void)alignment;
             return new T(bq::forward<V>(args)...);
 #else
@@ -111,7 +111,7 @@ namespace bq {
         template <typename T, typename... V>
         static void aligned_delete(T* ptr)
         {
-#if BQ_ALIGNAS_NEW
+#if defined(BQ_ALIGNAS_NEW)
             delete ptr; 
 #else
             bq::object_destructor<T>::destruct(static_cast<T*>(ptr));

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 /*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -20,7 +20,6 @@
 
 namespace bq {
     namespace platform {
-        void ios_vprintf(const char* __restrict format, va_list args);
         void ios_print(const char* __restrict content);
         // get the read only programe home path: /var/mobile/Containers/Data/Application/XXXXXX/
         bq::string get_programe_home_path();

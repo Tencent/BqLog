@@ -215,7 +215,7 @@ namespace bq {
                 std::minstd_rand linear_ran(sd());
                 std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
                 while (left_write_count > 0) {
-                    uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
+                    uint32_t alloc_size = static_cast<uint32_t>(rand_seq(linear_ran));
                     auto handle = log_buffer_ptr->alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited
@@ -225,12 +225,12 @@ namespace bq {
                     }
                     --left_write_count;
                     assert(handle.result == bq::enum_buffer_result_code::success);
-                    *(int32_t*)(handle.data_addr) = id;
-                    *((int32_t*)(handle.data_addr) + 1) = left_write_count;
-                    int32_t count = (int32_t)alloc_size / sizeof(int32_t);
-                    int32_t* begin = (int32_t*)(handle.data_addr) + 2;
-                    int32_t* end = (int32_t*)(handle.data_addr) + count;
-                    std::fill(begin, end, (int32_t)alloc_size);
+                    *reinterpret_cast<int32_t*>(handle.data_addr) = id;
+                    *(reinterpret_cast<int32_t*>(handle.data_addr) + 1) = left_write_count;
+                    int32_t count = static_cast<int32_t>(alloc_size / sizeof(int32_t));
+                    int32_t* begin = reinterpret_cast<int32_t*>(handle.data_addr) + 2;
+                    int32_t* end = reinterpret_cast<int32_t*>(handle.data_addr) + count;
+                    std::fill(begin, end, static_cast<int32_t>(alloc_size));
                     log_buffer_ptr->commit_write_chunk(handle);
                     ++log_buffer_test_total_write_count_;
                 }
@@ -330,21 +330,21 @@ namespace bq {
             }
 
 
-            void do_block_list_test(test_result& result, log_buffer_config config)
+            static void do_block_list_test(test_result& result, log_buffer_config config)
             {
                 config.default_buffer_size = bq::roundup_pow_of_two(config.default_buffer_size);
                 constexpr size_t BLOCK_COUNT = 16;
-                size_t size = sizeof(block_list) * 2 + config.default_buffer_size * BLOCK_COUNT + CACHE_LINE_SIZE;
+                const size_t size = sizeof(block_list) * 2 + config.default_buffer_size * BLOCK_COUNT + CACHE_LINE_SIZE;
                 bq::array<uint8_t> buffer;
                 buffer.fill_uninitialized(size);
-                uintptr_t base_addr = (uintptr_t)(uint8_t*)buffer.begin();
-                uintptr_t aligned_addr = (base_addr + (uintptr_t)(CACHE_LINE_SIZE - 1)) & ~((uintptr_t)CACHE_LINE_SIZE - 1);
-                uintptr_t buffer_addr = aligned_addr + 2 * sizeof(block_list);
-                new ((void*)aligned_addr, bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, (uint8_t*)buffer_addr, size - (ptrdiff_t)(buffer_addr - base_addr), config.need_recovery);
-                block_list& list_from = *(block_list*)aligned_addr;
+                const uintptr_t base_addr = reinterpret_cast<uintptr_t>(static_cast<uint8_t*>(buffer.begin()));
+                uintptr_t aligned_addr = (base_addr + (uintptr_t)(CACHE_LINE_SIZE - 1)) & ~(static_cast<uintptr_t>(CACHE_LINE_SIZE) - 1);
+                const uintptr_t buffer_addr = aligned_addr + 2 * sizeof(block_list);
+                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
+                block_list& list_from = *reinterpret_cast<block_list*>(aligned_addr);
                 aligned_addr += sizeof(block_list);
-                new ((void*)aligned_addr, bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, (uint8_t*)buffer_addr, size - (ptrdiff_t)(buffer_addr - base_addr), config.need_recovery);
-                block_list& list_to = *(block_list*)aligned_addr;
+                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
+                block_list& list_to = *reinterpret_cast<block_list*>(aligned_addr);
 
                 if (config.need_recovery) {
                     while (true) {
@@ -360,9 +360,9 @@ namespace bq {
                 }
 
                 for (uint16_t i = 0; i < BLOCK_COUNT; ++i) {
-                    uint8_t* block_head_addr = (uint8_t*)(buffer_addr + i * config.default_buffer_size);
-                    new ((void*)block_head_addr, bq::enum_new_dummy::dummy) block_node_head(block_head_addr + block_node_head::get_buffer_data_offset(), config.default_buffer_size - (size_t)block_node_head::get_buffer_data_offset(), config.need_recovery);
-                    block_node_head* block = (block_node_head*)block_head_addr;
+                    auto* block_head_addr = reinterpret_cast<uint8_t*>(buffer_addr + i * config.default_buffer_size);
+                    new (static_cast<void*>(block_head_addr), bq::enum_new_dummy::dummy) block_node_head(block_head_addr + block_node_head::get_buffer_data_offset(), config.default_buffer_size - static_cast<size_t>(block_node_head::get_buffer_data_offset()), config.need_recovery);
+                    auto* block = reinterpret_cast<block_node_head*>(block_head_addr);
                     list_from.push(block);
                 }
                 constexpr int32_t LOOP_COUNT = 1000000;
@@ -373,13 +373,12 @@ namespace bq {
                 
                 int32_t percent = 0;
                 test_output_dynamic_param(bq::log_level::info, "[block list] recovery:%s, test progress:%d%%, time cost:%dms\r", config.need_recovery ? "Y" : "-",  percent, 0);
-                auto start_time = bq::platform::high_performance_epoch_ms();
+                const auto start_time = bq::platform::high_performance_epoch_ms();
                 while (task1.get_left_count() + task2.get_left_count() > 0) {
-                    int32_t current_left_count = 2 * LOOP_COUNT - task1.get_left_count() - task2.get_left_count();
-                    int32_t new_percent = current_left_count * 100 / (2 * LOOP_COUNT);
-                    if (new_percent != percent) {
+                    const int32_t current_left_count = 2 * LOOP_COUNT - task1.get_left_count() - task2.get_left_count();
+                    if (const int32_t new_percent = current_left_count * 100 / (2 * LOOP_COUNT); new_percent != percent) {
                         percent = new_percent;
-                        auto current_time = bq::platform::high_performance_epoch_ms();
+                        const auto current_time = bq::platform::high_performance_epoch_ms();
                         test_output_dynamic_param(bq::log_level::info, "[block list] recovery:%s, test progress:%d%%, time cost:%dms              \r", config.need_recovery ? "Y" : "-", percent, (int32_t)(current_time - start_time));
                     }
                     bq::platform::thread::yield();
@@ -387,7 +386,7 @@ namespace bq {
                 task1.join();
                 task2.join();
                 percent = 100;
-                auto current_time = bq::platform::high_performance_epoch_ms();
+                const auto current_time = bq::platform::high_performance_epoch_ms();
                 test_output_dynamic_param(bq::log_level::info, "[block list] recovery:%s, test progress:%d%%, time cost:%dms              \r", config.need_recovery ? "Y" : "-", percent, (int32_t)(current_time - start_time));
                 test_output_dynamic_param(bq::log_level::info, "\n[block list] recovery:%s, test finished, time cost:%dms\n", config.need_recovery ? "Y" : "-", (int32_t)(current_time - start_time));
                 result.add_result(list_to.pop() == nullptr, "block list test 1");
@@ -401,21 +400,21 @@ namespace bq {
 
                 
                 for (uint16_t i = 0; i < BLOCK_COUNT; ++i) {
-                    uint8_t* block_head_addr = (uint8_t*)(buffer_addr + i * config.default_buffer_size);
-                    block_node_head* block = (block_node_head*)block_head_addr;
+                    auto* block_head_addr = reinterpret_cast<uint8_t*>(buffer_addr + i * config.default_buffer_size);
+                    auto* block = reinterpret_cast<block_node_head*>(block_head_addr);
                     block->~block_node_head();
                 }
-                (&list_from)->~block_list();
-                (&list_to)->~block_list();
+                list_from.~block_list();
+                list_to.~block_list();
             }
 
-            void do_basic_test(test_result& result, log_buffer_config config)
+            static void do_basic_test(test_result& result, log_buffer_config config)
             {
                 log_buffer_test_total_write_count_.store_seq_cst(0);
                 bq::log_buffer test_buffer(config);
                 int32_t chunk_count_per_task = 1024000;
                 bq::platform::atomic<int32_t> counter(log_buffer_total_task);
-                std::vector<int32_t> task_check_vector;
+                bq::array<int32_t> task_check_vector;
                 std::vector<std::thread> task_thread_vector; 
                 for (int32_t i = 0; i < log_buffer_total_task; ++i) {
                     task_check_vector.push_back(0);
@@ -475,8 +474,8 @@ namespace bq {
                     result.add_result(task_check_vector[id] + left_count == chunk_count_per_task, "[log buffer]chunk left task check error, real: %d, expected:%d", left_count, chunk_count_per_task - task_check_vector[id]);
                     task_check_vector[id] = chunk_count_per_task - left_count; // error adjust
                     bool content_check = true;
-                    for (size_t i = 2; i < size / sizeof(int32_t); ++i) {
-                        if (*((int32_t*)handle.data_addr + i) != size) {
+                    for (size_t i = 2; i < static_cast<size_t>(size) / sizeof(int32_t); ++i) {
+                        if (*(reinterpret_cast<int32_t*>(handle.data_addr) + i) != size) {
                             content_check = false;
                             continue;
                         }
