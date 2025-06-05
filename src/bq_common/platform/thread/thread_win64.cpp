@@ -232,7 +232,7 @@ namespace bq {
 
         void thread::apply_name_raise()
         {
-#if BQ_MSVC
+#if defined(BQ_MSVC)
             THREADNAME_INFO info;
             info.dwType = 0x1000;
             info.szName = thread_name_.c_str();
@@ -261,7 +261,7 @@ namespace bq {
                 HANDLE current_thread_handle = GetCurrentThread();
                 int32_t required_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int32_t>(thread_name_.size()), nullptr, 0);
                 bq::array<wchar_t> wide_str;
-                wide_str.fill_uninitialized(required_size + 1);
+                wide_str.fill_uninitialized(static_cast<size_t>(required_size + 1));
                 wide_str[required_size] = 0;
                 int32_t converted_size = MultiByteToWideChar(CP_UTF8, 0, thread_name_.c_str(), static_cast<int32_t>(thread_name_.size()), &wide_str[0], required_size);
                 if (converted_size == required_size) {

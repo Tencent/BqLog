@@ -550,12 +550,13 @@ namespace bq {
             size_t stack_count;
             void* buffer[max_stack_size_];
             char** stacks;
-
-            stack_count = backtrace(buffer, max_stack_size_);
-            stacks = backtrace_symbols(buffer, stack_count);
+            using backtrace_stack_size_type = function_argument_type_t<decltype(&backtrace), 1>;
+            using backtrace_symbols_stack_count_type = function_argument_type_t<decltype(&backtrace_symbols), 1>;
+            auto stack_count = backtrace(buffer, static_cast<backtrace_stack_size_type>(max_stack_size_));
+            stacks = backtrace_symbols(buffer, static_cast<backtrace_symbols_stack_count_type>(stack_count));
             uint32_t valid_frame_count = 0;
             if (stacks) {
-                for (size_t i = 0; i < stack_count; i++) {
+                for (decltype(stack_count) i = 0; i < stack_count; i++) {
                     if (valid_frame_count == 0) {
                         if (strstr(stacks[i], "get_stack_trace")) {
                             continue;

@@ -34,7 +34,7 @@ inline void* operator new[](size_t, void* p, bq::enum_new_dummy) noexcept { retu
 inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept { }
 inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept { }
 
-#ifdef _MSC_VER
+#ifdef BQ_VISUAL_STUDIO
 #define EBCO __declspec(empty_bases) // in some MSVC compilers, EBCO(empty base class optimization) is not enabled by default
 #else
 #define EBCO

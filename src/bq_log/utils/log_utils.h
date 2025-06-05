@@ -202,7 +202,7 @@ namespace bq {
         /*
         if (prefix_byte == 0)
             return 9;
-#if BQ_MSVC
+#if defined(BQ_MSVC)
         uint32_t zero_count = _lzcnt_u32(static_cast<uint32_t>(prefix_byte));
 #else
         uint32_t zero_count = __builtin_clz(static_cast<uint32_t>(prefix_byte));
