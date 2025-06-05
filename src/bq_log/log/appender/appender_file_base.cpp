@@ -437,7 +437,7 @@ namespace bq {
 
     void appender_file_base::parse_file_context::log_parse_fail_reason(const char* msg) const
     {
-        bq::util::log_device_console(log_level::error, "failed to parse log file :\"%s\" at offset %zu, msg: %s", file_name_.c_str(), parsed_size, msg);
+        bq::util::log_device_console(log_level::error, "failed to parse log file :\"%s\" at offset %" PRIu64 ", msg: %s", file_name_.c_str(), static_cast<uint64_t>(parsed_size), msg);
     }
 
 }
