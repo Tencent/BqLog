@@ -537,7 +537,6 @@ namespace bq {
         }
 
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS)
-        static constexpr size_t max_stack_size_ = 128;
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
             if (!bq::stack_trace_current_str_) {
@@ -547,13 +546,10 @@ namespace bq {
             }
             bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
             stack_trace_str_ref.clear();
-            size_t stack_count;
-            void* buffer[max_stack_size_];
+            void* buffer[128];
             char** stacks;
-            using backtrace_stack_size_type = function_argument_type_t<decltype(&backtrace), 1>;
-            using backtrace_symbols_stack_count_type = function_argument_type_t<decltype(&backtrace_symbols), 1>;
-            auto stack_count = backtrace(buffer, static_cast<backtrace_stack_size_type>(max_stack_size_));
-            stacks = backtrace_symbols(buffer, static_cast<backtrace_symbols_stack_count_type>(stack_count));
+            auto stack_count = backtrace(buffer, 128);
+            stacks = backtrace_symbols(buffer, stack_count);
             uint32_t valid_frame_count = 0;
             if (stacks) {
                 for (decltype(stack_count) i = 0; i < stack_count; i++) {

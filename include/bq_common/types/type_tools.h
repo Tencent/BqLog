@@ -436,6 +436,20 @@ namespace bq {
     struct function_argument_type<Ret (ClassType::*)(Args...) const, Index> {
         using type = tuple_element_t<Index, tuple<Args...>>;
     };
+#if defined(BQ_CPP_17)
+    template <typename Ret, typename... Args, size_t Index>
+    struct function_argument_type<Ret (*)(Args...) noexcept, Index> {
+        using type = tuple_element_t<Index, tuple<Args...>>;
+    };
+    template <typename Ret, typename ClassType, typename... Args, size_t Index>
+    struct function_argument_type<Ret (ClassType::*)(Args...) noexcept, Index> {
+        using type = tuple_element_t<Index, tuple<Args...>>;
+    };
+    template <typename Ret, typename ClassType, typename... Args, size_t Index>
+    struct function_argument_type<Ret (ClassType::*)(Args...) const noexcept, Index> {
+        using type = tuple_element_t<Index, tuple<Args...>>;
+    };
+#endif
     template <typename FuncType, size_t Index>
     using function_argument_type_t = typename function_argument_type<FuncType, Index>::type;
 
@@ -453,7 +467,7 @@ namespace bq {
     struct function_return_type<Ret (ClassType::*)(Args...) const> {
         using type = Ret;
     };
-    #if defined(BQ_CPP_17)
+#if defined(BQ_CPP_17)
     template <typename Ret, typename ClassType, typename... Args>
     struct function_return_type<Ret (ClassType::*)(Args...) noexcept> {
         using type = Ret;
@@ -462,7 +476,7 @@ namespace bq {
     struct function_return_type<Ret (ClassType::*)(Args...) const noexcept> {
         using type = Ret;
     };
-    #endif
+#endif
     template <typename FuncType>
     using function_return_type_t = typename function_return_type<FuncType>::type;
 }
