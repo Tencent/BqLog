@@ -62,7 +62,7 @@ namespace bq {
                 if (check_index > 0 && c == '.') {
                     continue;
                 }
-                bq::util::log_device_console(bq::log_level::error, "category config file format error at line %ze, content is :%s", line_num, line.c_str());
+                bq::util::log_device_console(bq::log_level::error, "category config file format error at line %" PRIu64 ", content is :%s", static_cast<uint64_t>(line_num), line.c_str());
                 output_config_file_format(std::cerr);
                 return false;
             }

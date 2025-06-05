@@ -120,10 +120,10 @@ namespace bq {
     }
 
     template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>::string_base(typename string_base<CHAR_TYPE>::size_type capacity)
+    inline string_base<CHAR_TYPE>::string_base(typename string_base<CHAR_TYPE>::size_type init_capacity)
         : array<typename string_base<CHAR_TYPE>::char_type, 1>()
     {
-        array<typename string_base<CHAR_TYPE>::char_type, 1>::set_capacity(capacity);
+        array<typename string_base<CHAR_TYPE>::char_type, 1>::set_capacity(init_capacity);
     }
 
     template <typename CHAR_TYPE>
@@ -447,8 +447,8 @@ namespace bq {
         if (size() != str.size()) {
             return false;
         }
-        size_type size = this->size();
-        for (size_type i = 0; i < size; ++i) {
+        size_type this_size = this->size();
+        for (size_type i = 0; i < this_size; ++i) {
             if (operator[](i) != str[i] && toupper(operator[](i)) != toupper(str[i])) {
                 return false;
             }

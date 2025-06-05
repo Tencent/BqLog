@@ -517,7 +517,7 @@ namespace bq {
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(str_len, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
                         memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t), str_len);
                         log_data_cursor += str_len;
-                        args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                     } break;
                     case bq::log_arg_type_enum::string_utf16_type: {
                         // trans to utf-8 to save storage space
@@ -541,7 +541,7 @@ namespace bq {
                             write_handle.data()[log_data_cursor + real_len_size] = 0; // 0 placeholder, if the pre-estimated size is not accurate
                         }
                         log_data_cursor += (pre_len_size + utf8_len);
-                        args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                     } break;
                     default:
                         break;

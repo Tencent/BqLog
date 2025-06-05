@@ -33,7 +33,7 @@ namespace bq {
         {
             bq::array<char> tmp;
             tmp.fill_uninitialized(1024);
-            while (getcwd(&tmp[0], (int32_t)tmp.size()) == NULL) {
+            while (getcwd(&tmp[0], tmp.size()) == NULL) {
                 tmp.fill_uninitialized(1024);
             }
             base_dir_0_ = &tmp[0];

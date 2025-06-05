@@ -613,7 +613,7 @@ namespace bq {
             }
         }
         if (rt_reading.cur_group_ && !group_removed) {
-            mem_opt.left_holes_num_ += hp_buffer_.get_max_block_count_per_group() - mem_opt.cur_group_using_blocks_num_;
+            mem_opt.left_holes_num_ += static_cast<uint32_t>(hp_buffer_.get_max_block_count_per_group() - mem_opt.cur_group_using_blocks_num_);
         }
         mem_opt.cur_group_using_blocks_num_ = 0;
         if (!group_removed) {

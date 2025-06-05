@@ -183,7 +183,7 @@ namespace bq {
                     }
 
                     std::vector<std::thread> test_threads;
-                    for (uint32_t i = 0; i < 8; ++i) {
+                    for (uint32_t idx = 0; idx < 8; ++idx) {
                         test_threads.push_back(std::thread([&vec]() {
                             std::vector<bq::shared_ptr<shared_ptr_test_struct>> local_vec;
                             for (uint32_t loop = 0; loop < 16; ++loop) {

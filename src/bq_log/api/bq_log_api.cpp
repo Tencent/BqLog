@@ -87,7 +87,7 @@ namespace bq {
             char* signal_stack = NULL;
             signal_stack_holder_type()
             {
-                signal_stack = (char*)malloc(SIGSTKSZ);
+                signal_stack = (char*)malloc(static_cast<size_t>(SIGSTKSZ));
             }
             ~signal_stack_holder_type()
             {
@@ -133,7 +133,7 @@ namespace bq {
                 stack_t ss;
 
                 ss.ss_sp = signal_stack_holder.signal_stack;
-                ss.ss_size = SIGSTKSZ;
+                ss.ss_size = static_cast<size_t>(SIGSTKSZ);
                 ss.ss_flags = 0;
                 if (sigaltstack(&ss, NULL) == -1) {
                     bq::util::log_device_console(log_level::error, "sigaltstack failed");

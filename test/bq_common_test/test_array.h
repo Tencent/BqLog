@@ -332,14 +332,14 @@ namespace bq {
 
                 {
                     bq::array<uint8_t> insert_test_array;
-                    uint8_t test_array[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-                    insert_test_array.insert_batch(insert_test_array.end(), test_array, sizeof(test_array));
+                    uint8_t tmp_test_array[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+                    insert_test_array.insert_batch(insert_test_array.end(), tmp_test_array, sizeof(tmp_test_array));
                     for (decltype(insert_test_array)::size_type i = 0; i < insert_test_array.size(); ++i) {
-                        result.add_result(insert_test_array[i] == ((i % sizeof(test_array)) + 1), "array insert test %d", i);
+                        result.add_result(insert_test_array[i] == ((i % sizeof(tmp_test_array)) + 1), "array insert test %d", i);
                     }
-                    insert_test_array.insert_batch(insert_test_array.end(), test_array, sizeof(test_array));
+                    insert_test_array.insert_batch(insert_test_array.end(), tmp_test_array, sizeof(tmp_test_array));
                     for (decltype(insert_test_array)::size_type i = 0; i < insert_test_array.size(); ++i) {
-                        result.add_result(insert_test_array[i] == ((i % sizeof(test_array)) + 1), "array insert test %d", i);
+                        result.add_result(insert_test_array[i] == ((i % sizeof(tmp_test_array)) + 1), "array insert test %d", i);
                     }
                 }
 

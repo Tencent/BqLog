@@ -67,7 +67,7 @@ namespace bq {
         log_buffer_write_handle handle;
 
         uint32_t size_required = size + (uint32_t)data_block_offset;
-        uint32_t need_block_count = (size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2;
+        uint32_t need_block_count = static_cast<uint32_t>((size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
         if (need_block_count > aligned_blocks_count_ || need_block_count == 0) {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
@@ -79,7 +79,7 @@ namespace bq {
         uint32_t left_blocks_to_tail = static_cast<uint32_t>(aligned_blocks_count_ - (uint32_t)(&new_block - aligned_blocks_));
         if (left_blocks_to_tail < need_block_count) {
             size_required = size;
-            need_block_count = (size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2;
+            need_block_count = static_cast<uint32_t>((size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
             need_block_count += left_blocks_to_tail;
             handle.data_addr = (uint8_t*)aligned_blocks_;
         } else {
@@ -350,9 +350,9 @@ namespace bq {
 
             if (is_split) {
                 uint32_t left_blocks_to_tail = static_cast<uint32_t>(aligned_blocks_count_ - (uint32_t)(&current_block - aligned_blocks_));
-                expected_block_count = left_blocks_to_tail + ((data_size + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
+                expected_block_count = left_blocks_to_tail + static_cast<uint32_t>((data_size + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
             } else {
-                expected_block_count = ((data_size + (uint32_t)data_block_offset + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
+                expected_block_count = static_cast<uint32_t>((data_size + (uint32_t)data_block_offset + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
             } 
             if (expected_block_count != block_count) {
                 return false;

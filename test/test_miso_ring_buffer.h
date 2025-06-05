@@ -25,20 +25,20 @@ namespace bq {
 
         class miso_write_task {
         private:
-            int32_t id;
-            bq::miso_ring_buffer* ring_buffer_ptr;
-            int32_t left_write_count;
-            bq::platform::atomic<int32_t>& counter_ref;
+            int32_t id_;
+            bq::miso_ring_buffer* ring_buffer_ptr_;
+            int32_t left_write_count_;
+            bq::platform::atomic<int32_t>& counter_ref_;
 
         public:
             const static int32_t min_chunk_size = 12;
             const static int32_t max_chunk_size = 1024;
             miso_write_task(int32_t id, int32_t left_write_count, bq::miso_ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
-                : counter_ref(counter)
+                : counter_ref_(counter)
             {
-                this->id = id;
-                this->left_write_count = left_write_count;
-                this->ring_buffer_ptr = ring_buffer_ptr;
+                this->id_ = id;
+                this->left_write_count_ = left_write_count;
+                this->ring_buffer_ptr_ = ring_buffer_ptr;
             }
 
             void operator()()
@@ -46,25 +46,25 @@ namespace bq {
                 std::random_device sd;
                 std::minstd_rand linear_ran(sd());
                 std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
-                while (left_write_count > 0) {
+                while (left_write_count_ > 0) {
                     uint32_t alloc_size = (uint32_t)rand_seq(linear_ran);
-                    auto handle = ring_buffer_ptr->alloc_write_chunk(alloc_size);
+                    auto handle = ring_buffer_ptr_->alloc_write_chunk(alloc_size);
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited) {
                         continue;
                     }
-                    --left_write_count;
+                    --left_write_count_;
                     assert(handle.result == bq::enum_buffer_result_code::success);
-                    *(int32_t*)(handle.data_addr) = id;
-                    *((int32_t*)(handle.data_addr) + 1) = left_write_count;
+                    *(int32_t*)(handle.data_addr) = id_;
+                    *((int32_t*)(handle.data_addr) + 1) = left_write_count_;
                     int32_t count = (int32_t)alloc_size / static_cast<int32_t>(sizeof(int32_t));
                     int32_t* begin = (int32_t*)(handle.data_addr) + 2;
                     int32_t* end = (int32_t*)(handle.data_addr) + count;
                     std::fill(begin, end, (int32_t)alloc_size);
-                    ring_buffer_ptr->commit_write_chunk(handle);
+                    ring_buffer_ptr_->commit_write_chunk(handle);
                     ++miso_ring_buffer_test_total_write_count_;
                 }
-                counter_ref.fetch_add(-1, bq::platform::memory_order::release);
+                counter_ref_.fetch_add(-1, bq::platform::memory_order::release);
             }
         };
 
@@ -179,9 +179,9 @@ namespace bq {
                 }
                 auto user_data = bq::make_tuple(&ring_buffer1, &result);
                 using user_data_type = decltype(user_data);
-                ring_buffer2.data_traverse([](uint8_t* data, uint32_t size, void* user_data) {
+                ring_buffer2.data_traverse([](uint8_t* data, uint32_t size, void* user_data_input) {
                     // do nothing
-                    user_data_type& user_data_ref = *(user_data_type*)user_data;
+                    user_data_type& user_data_ref = *(user_data_type*)user_data_input;
                     auto& ring_buffer1_ref = *bq::get<0>(user_data_ref);
                     auto& result_ref = *bq::get<1>(user_data_ref);
                     auto handle = ring_buffer1_ref.read_chunk();

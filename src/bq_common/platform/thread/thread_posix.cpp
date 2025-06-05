@@ -78,8 +78,8 @@ namespace bq {
         JNIEnv* thread::get_jni_env()
         {
             auto current_thread_id = get_current_thread_id();
-            auto thread_id = get_thread_id();
-            assert(current_thread_id == thread_id && "bq_thread::get_jni_env can only be called in the thread which is created by bq_thread instance!");
+            auto jni_init_thread_id = get_thread_id();
+            assert(current_thread_id == jni_init_thread_id && "bq_thread::get_jni_env can only be called in the thread which is created by bq_thread instance!");
             return platform_data_->jenv;
         }
 #endif

@@ -118,7 +118,7 @@ namespace bq {
         log_buffer_write_handle handle;
 
         uint32_t size_required = size + (uint32_t)data_block_offset;
-        uint32_t need_block_count_tmp = (size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2;
+        uint32_t need_block_count_tmp = static_cast<uint32_t>((size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
         if (need_block_count_tmp > aligned_blocks_count_ || need_block_count_tmp == 0 || need_block_count_tmp > block::MAX_BLOCK_NUM_PER_CHUNK) {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];

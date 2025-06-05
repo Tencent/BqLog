@@ -228,9 +228,9 @@ namespace bq {
                 }
                 auto user_data = bq::make_tuple(&ring_buffer1, &result);
                 using user_data_type = decltype(user_data);
-                ring_buffer2.data_traverse([](uint8_t* data, uint32_t size, void* user_data) {
+                ring_buffer2.data_traverse([](uint8_t* data, uint32_t size, void* user_data_input) {
                     // do nothing
-                    user_data_type& user_data_ref = *(user_data_type*)user_data;
+                    user_data_type& user_data_ref = *(user_data_type*)user_data_input;
                     auto& ring_buffer1_ref = *bq::get<0>(user_data_ref);
                     auto& result_ref = *bq::get<1>(user_data_ref);
                     auto handle = ring_buffer1_ref.read_chunk();

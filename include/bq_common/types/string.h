@@ -114,7 +114,7 @@ namespace bq {
     public:
         string_base();
 
-        explicit string_base(typename string_base<CHAR_TYPE>::size_type capacity);
+        explicit string_base(typename string_base<CHAR_TYPE>::size_type init_capacity);
 
         string_base(const string_base<CHAR_TYPE>& rhs);
 

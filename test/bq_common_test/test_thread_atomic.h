@@ -435,13 +435,13 @@ namespace bq {
 
                     result.add_result(test_array.size() == TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5, "atomic CAS test 1, final size:%d", test_array.size());
                     bool check_result = true;
-                    uint32_t test_base = 0;
+                    uint32_t test_base_value = 0;
                     for (uint32_t i = 0; i < test_array.size(); ++i) {
                         uint32_t add_value = i % cas_times_per_loop;
                         if (add_value == 0) {
-                            test_base = test_array[i];
+                            test_base_value = test_array[i];
                         }
-                        if (test_array[i] - test_base != add_value) {
+                        if (test_array[i] - test_base_value != add_value) {
                             check_result = false;
                             break;
                         }
@@ -506,13 +506,13 @@ namespace bq {
 
                     result.add_result(test_array.size() == TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5, "atomic mutex test 1, final size:%d", test_array.size());
                     bool check_result = true;
-                    uint32_t test_base = 0;
+                    uint32_t test_base_value = 0;
                     for (uint32_t i = 0; i < test_array.size(); ++i) {
                         uint32_t add_value = i % cas_times_per_loop;
                         if (add_value == 0) {
-                            test_base = test_array[i];
+                            test_base_value = test_array[i];
                         }
-                        if (test_array[i] - test_base != add_value) {
+                        if (test_array[i] - test_base_value != add_value) {
                             check_result = false;
                             break;
                         }
@@ -555,13 +555,13 @@ namespace bq {
 
                     result.add_result(test_array.size() == TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5, "atomic mutex test 1, final size:%d", test_array.size());
                     bool check_result = true;
-                    uint32_t test_base = 0;
+                    uint32_t test_base_value = 0;
                     for (uint32_t i = 0; i < test_array.size(); ++i) {
                         uint32_t add_value = i % cas_times_per_loop;
                         if (add_value == 0) {
-                            test_base = test_array[i];
+                            test_base_value = test_array[i];
                         }
-                        if (test_array[i] - test_base != add_value) {
+                        if (test_array[i] - test_base_value != add_value) {
                             check_result = false;
                             break;
                         }

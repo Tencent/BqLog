@@ -22,7 +22,7 @@ namespace bq {
     public:
         log_level_bitmap& operator=(const log_level_bitmap& rhs);
         void clear();
-        bool have_level(bq::log_level level);
+        bool have_level(bq::log_level level) const;
         void add_level(bq::log_level level);
         void add_level(const bq::string& level_string);
         void del_level(bq::log_level level);

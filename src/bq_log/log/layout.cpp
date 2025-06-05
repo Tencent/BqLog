@@ -497,14 +497,14 @@ namespace bq {
                         const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
                         uint32_t str_len = *len_ptr;
                         insert_str_utf8(str, str_len);
-                        args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                     } break;
                     case bq::log_arg_type_enum::string_utf16_type: {
                         const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
                         const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
                         uint32_t str_len = *len_ptr;
                         insert_str_utf16(str, str_len);
-                        args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
 
                     } break;
                     default:
@@ -689,14 +689,14 @@ namespace bq {
                             const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
                             uint32_t str_len = *len_ptr;
                             insert_str_utf8(str, str_len);
-                            args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                         } break;
                         case bq::log_arg_type_enum::string_utf16_type: {
                             const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
                             const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
                             uint32_t str_len = *len_ptr;
                             insert_str_utf16(str, str_len);
-                            args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                         } break;
                         default:
                             break;

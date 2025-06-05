@@ -26,9 +26,11 @@ if (MSVC)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        set(EXTRA_FLAGS "-Wshorten-64-to-32")
+        list(APPEND EXTRA_FLAGS -Wshorten-64-to-32)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        set(EXTRA_FLAGS "-Wlogical-op -Wduplicated-branches -Warray-bounds")
+        list(APPEND EXTRA_FLAGS -Wlogical-op)
+        list(APPEND EXTRA_FLAGS -Wduplicated-branches)
+        list(APPEND EXTRA_FLAGS -Warray-bounds)
     endif()
 
     add_compile_options(

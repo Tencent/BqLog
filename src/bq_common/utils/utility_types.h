@@ -67,9 +67,14 @@ namespace bq {
             }
         }
 
-        void* get_addr() const
+        const void* get_addr() const
         {
-            return (void*)(padding_ + offset());
+            return static_cast<const void*>(padding_ + offset());
+        }
+
+        void* get_addr()
+        {
+            return static_cast<void*>(padding_ + offset());
         }
 
     public:

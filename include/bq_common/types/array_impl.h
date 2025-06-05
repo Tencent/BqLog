@@ -443,12 +443,14 @@ namespace bq {
             return;
         }
         assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
-        size_type move_count = static_cast<size_type>((end() - dest_it));
-        size_type new_size = size_ + count;
-        size_type diff = static_cast<size_type>(dest_it - begin());
+        auto move_count = static_cast<size_type>((end() - dest_it));
+        const size_type new_size = size_ + count;
+        auto diff = static_cast<size_type>(dest_it - begin());
         set_capacity(new_size);
         dest_it = begin() + diff;
-        memmove((void*)(end() + count), (void*)(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        if (static_cast<void*>(end())) {
+            memmove(static_cast<void*>(end() + count), static_cast<void*>(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        }
         BQ_ARRAY_INLINE_MACRO(_inner_forward_move)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(dest_it + count, dest_it, move_count);
         BQ_ARRAY_INLINE_MACRO(_inner_backward_copy)<typename BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>::value_type>(dest_it, src_it, count, move_count);
         size_ = new_size;

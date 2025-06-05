@@ -32,16 +32,16 @@ namespace bq {
         return false;
     }
 
-    static bool is_decimal(const char* string, size_t length)
+    static bool is_decimal(const char* input_string, size_t length)
     {
-        if (length > 1 && string[0] == '0' && string[1] != '.') {
+        if (length > 1 && input_string[0] == '0' && input_string[1] != '.') {
             return false;
         }
-        if (length > 2 && !strncmp(string, "-0", 2) && string[2] != '.') {
+        if (length > 2 && !strncmp(input_string, "-0", 2) && input_string[2] != '.') {
             return false;
         }
         while (length--) {
-            if (strchr("xX", string[length])) {
+            if (strchr("xX", input_string[length])) {
                 return false;
             }
         }
@@ -112,12 +112,12 @@ namespace bq {
         if (parse_array_key(key.c_str())) {
             key = key.substr(0, key.size() - 2); // remove []
             if (!root[key].is_array())
-                root[key] = property_value(enum_property_value_type::array);
+                root[key] = property_value(enum_property_value_type::array_type);
             root[key].add_array_item(parse_to_property_value(root, "", value));
-            pv = property_value(enum_property_value_type::array);
+            pv = property_value(enum_property_value_type::array_type);
         } else if (parse_array_value(value.c_str())) {
             if (!root[key].is_array())
-                root[key] = property_value(enum_property_value_type::array);
+                root[key] = property_value(enum_property_value_type::array_type);
 
             if (value.size() >= 3) {
                 string new_value = value.substr(1, value.size() - 2);
@@ -126,7 +126,7 @@ namespace bq {
                     root[key].add_array_item(parse_to_property_value(root, "", cell_value));
                 }
             }
-            pv = property_value(enum_property_value_type::array);
+            pv = property_value(enum_property_value_type::array_type);
         } else if (parse_number_value(dvalue, value.c_str())) {
             if (fmod(dvalue, 1.0) == 0.0) {
                 ivalue = (int64_t)(dvalue);
@@ -137,7 +137,7 @@ namespace bq {
         } else if (parse_boolean_value(bvalue, value.c_str())) {
             pv = bvalue;
         } else if (parse_null_value(value.c_str())) {
-            pv = property_value(enum_property_value_type::null);
+            pv = property_value(enum_property_value_type::null_type);
         } else {
             pv = value;
         }
@@ -238,44 +238,44 @@ namespace bq {
     void property_value::clear_data()
     {
         switch (type_) {
-        case enum_property_value_type::boolean:
+        case enum_property_value_type::boolean_type:
             break;
-        case enum_property_value_type::decimal:
+        case enum_property_value_type::decimal_type:
             break;
-        case enum_property_value_type::integral:
+        case enum_property_value_type::integral_type:
             break;
-        case enum_property_value_type::string:
+        case enum_property_value_type::string_type:
             (&as_string())->~string_type();
             break;
-        case enum_property_value_type::array:
+        case enum_property_value_type::array_type:
             (&as_array())->~array_type();
             break;
-        case enum_property_value_type::object:
+        case enum_property_value_type::object_type:
             (&as_object())->~object_type();
             break;
         default:
             break;
         }
-        type_ = enum_property_value_type::null;
+        type_ = enum_property_value_type::null_type;
     }
 
     void property_value::copy_data_from(const property_value& rhs)
     {
         type_ = rhs.type_;
         switch (type_) {
-        case enum_property_value_type::boolean:
+        case enum_property_value_type::boolean_type:
             *this = (bool_type)rhs;
             break;
-        case enum_property_value_type::decimal:
+        case enum_property_value_type::decimal_type:
             *this = (decimal_type)rhs;
             break;
-        case enum_property_value_type::integral:
+        case enum_property_value_type::integral_type:
             *this = (integral_type)rhs;
             break;
-        case enum_property_value_type::string:
+        case enum_property_value_type::string_type:
             *this = (string_type)rhs;
             break;
-        case enum_property_value_type::array: {
+        case enum_property_value_type::array_type: {
             auto& src_array = rhs.as_array(true);
             auto& dest_array = as_array();
             new (&dest_array, bq::enum_new_dummy::dummy) array_type();
@@ -285,7 +285,7 @@ namespace bq {
             }
             break;
         }
-        case enum_property_value_type::object: {
+        case enum_property_value_type::object_type: {
             auto& src_obj = rhs.as_object(true);
             auto& dest_obj = as_object();
             new (&dest_obj, bq::enum_new_dummy::dummy) object_type();
@@ -305,22 +305,22 @@ namespace bq {
     {
         type_ = rhs.type_;
         switch (type_) {
-        case enum_property_value_type::boolean:
+        case enum_property_value_type::boolean_type:
             as_bool() = bq::move(rhs.as_bool());
             break;
-        case enum_property_value_type::decimal:
+        case enum_property_value_type::decimal_type:
             as_decimal() = bq::move(rhs.as_decimal());
             break;
-        case enum_property_value_type::integral:
+        case enum_property_value_type::integral_type:
             as_integral() = bq::move(rhs.as_integral());
             break;
-        case enum_property_value_type::string:
+        case enum_property_value_type::string_type:
             new (&as_string(), bq::enum_new_dummy::dummy) string_type(bq::move(rhs.as_string()));
             break;
-        case enum_property_value_type::array:
+        case enum_property_value_type::array_type:
             new (&as_array(), bq::enum_new_dummy::dummy) array_type(bq::move(rhs.as_array()));
             break;
-        case enum_property_value_type::object:
+        case enum_property_value_type::object_type:
             new (&as_object(), bq::enum_new_dummy::dummy) object_type(bq::move(rhs.as_object()));
             break;
         default:
@@ -330,7 +330,7 @@ namespace bq {
 
     bool property_value::check_and_switch_type(enum_property_value_type type, bool skip_check_type)
     {
-        assert(skip_check_type || type_ == enum_property_value_type::boolean);
+        assert(skip_check_type || type_ == enum_property_value_type::boolean_type);
         if (type_ != type) {
             clear_data();
             type_ = type;
@@ -362,22 +362,22 @@ namespace bq {
     {
         init_debug_ptrs();
         switch (type_) {
-        case enum_property_value_type::boolean:
+        case enum_property_value_type::boolean_type:
             as_bool() = false;
             break;
-        case enum_property_value_type::decimal:
+        case enum_property_value_type::decimal_type:
             as_decimal() = 0.0f;
             break;
-        case enum_property_value_type::integral:
+        case enum_property_value_type::integral_type:
             as_integral() = 0;
             break;
-        case enum_property_value_type::string:
+        case enum_property_value_type::string_type:
             new (&as_string(), bq::enum_new_dummy::dummy) string_type("");
             break;
-        case enum_property_value_type::array:
+        case enum_property_value_type::array_type:
             new (&as_array(), bq::enum_new_dummy::dummy) array_type();
             break;
-        case enum_property_value_type::object:
+        case enum_property_value_type::object_type:
             new (&as_object(), bq::enum_new_dummy::dummy) object_type();
             break;
         default:
@@ -418,7 +418,7 @@ namespace bq {
     property_value& property_value::operator[](const bq::string& name)
     {
         if (!is_object()) {
-            check_and_set_template(bq::move(object_type()), as_object(true), true, enum_property_value_type::object);
+            check_and_set_template(bq::move(object_type()), as_object(true), true, enum_property_value_type::object_type);
             return *as_object().add(name, new property_value())->value();
         }
         auto iter = as_object().find(name);
@@ -477,7 +477,7 @@ namespace bq {
     property_value& property_value::operator[](typename array_type::size_type idx)
     {
         if (!is_array()) {
-            check_and_set_template(bq::move(array_type()), as_array(true), true, enum_property_value_type::array);
+            check_and_set_template(bq::move(array_type()), as_array(true), true, enum_property_value_type::array_type);
         }
         as_array().set_capacity(idx + 1);
         for (typename array_type::size_type i = as_array().size(); i <= idx; ++i) {
@@ -539,7 +539,7 @@ namespace bq {
 
     property_value& property_value::operator=(bool_type value)
     {
-        check_and_set_template(value, as_bool(true), true, enum_property_value_type::boolean);
+        check_and_set_template(value, as_bool(true), true, enum_property_value_type::boolean_type);
         return *this;
     }
 
@@ -549,7 +549,7 @@ namespace bq {
     }
     property_value& property_value::operator=(decimal_type value)
     {
-        check_and_set_template(value, as_decimal(true), true, enum_property_value_type::decimal);
+        check_and_set_template(value, as_decimal(true), true, enum_property_value_type::decimal_type);
         return *this;
     }
 
@@ -559,7 +559,7 @@ namespace bq {
     }
     property_value& property_value::operator=(integral_type value)
     {
-        check_and_set_template(value, as_integral(true), true, enum_property_value_type::integral);
+        check_and_set_template(value, as_integral(true), true, enum_property_value_type::integral_type);
         return *this;
     }
 
@@ -570,17 +570,17 @@ namespace bq {
     property_value& property_value::operator=(const char* value)
     {
         string str = value;
-        check_and_set_template(move(str), as_string(true), true, enum_property_value_type::string);
+        check_and_set_template(move(str), as_string(true), true, enum_property_value_type::string_type);
         return *this;
     }
     property_value& property_value::operator=(const string_type& value)
     {
-        check_and_set_template(value, as_string(true), true, enum_property_value_type::string);
+        check_and_set_template(value, as_string(true), true, enum_property_value_type::string_type);
         return *this;
     }
     property_value& property_value::operator=(string_type&& value)
     {
-        check_and_set_template(bq::move(value), as_string(true), true, enum_property_value_type::string);
+        check_and_set_template(bq::move(value), as_string(true), true, enum_property_value_type::string_type);
         return *this;
     }
 }
