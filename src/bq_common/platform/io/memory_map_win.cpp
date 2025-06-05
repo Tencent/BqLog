@@ -68,7 +68,7 @@ namespace bq {
 
         memory_map_handle = CreateFileMapping(file_handle, NULL, PAGE_READWRITE, new_size_high, new_size_low, NULL);
         if (!memory_map_handle) {
-            result.error_code_ = GetLastError();
+            result.error_code_ = static_cast<int32_t>(GetLastError());
             bq::util::log_device_console(log_level::error, "create_memory_map file failed, path:%s, error_code:%d", map_file.abs_file_path().c_str(), result.error_code_);
             return result;
         }
@@ -77,7 +77,7 @@ namespace bq {
         if (!result.real_data_) {
             CloseHandle(memory_map_handle);
             memory_map_handle = 0;
-            result.error_code_ = GetLastError();
+            result.error_code_ = static_cast<int32_t>(GetLastError());
             bq::util::log_device_console(log_level::error, "map_to_memory file failed, path:%s, error_code:%d", map_file.abs_file_path().c_str(), result.error_code_);
         }
         result.mapped_data_ = (void*)((uint8_t*)result.real_data_ + alignment_offset);
@@ -91,7 +91,7 @@ namespace bq {
 #ifndef NDEBUG
         assert(handle.has_been_mapped() && "flush_memory_map can not be called without create_memory_map and map_to_memory");
 #endif
-        FlushViewOfFile(handle.real_data_, handle.size_ + ((uint8_t*)handle.mapped_data_ - (uint8_t*)handle.real_data_));
+        FlushViewOfFile(handle.real_data_, handle.size_ + static_cast<size_t>((uint8_t*)handle.mapped_data_ - (uint8_t*)handle.real_data_));
     }
 
     void memory_map::release_memory_map(memory_map_handle& handle)

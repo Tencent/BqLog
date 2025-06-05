@@ -376,7 +376,8 @@ namespace bq {
                 const auto start_time = bq::platform::high_performance_epoch_ms();
                 while (task1.get_left_count() + task2.get_left_count() > 0) {
                     const int32_t current_left_count = 2 * LOOP_COUNT - task1.get_left_count() - task2.get_left_count();
-                    if (const int32_t new_percent = current_left_count * 100 / (2 * LOOP_COUNT); new_percent != percent) {
+                    const int32_t new_percent = current_left_count * 100 / (2 * LOOP_COUNT);
+                    if (new_percent != percent) {
                         percent = new_percent;
                         const auto current_time = bq::platform::high_performance_epoch_ms();
                         test_output_dynamic_param(bq::log_level::info, "[block list] recovery:%s, test progress:%d%%, time cost:%dms              \r", config.need_recovery ? "Y" : "-", percent, (int32_t)(current_time - start_time));

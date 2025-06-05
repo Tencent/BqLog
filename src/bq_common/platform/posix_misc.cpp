@@ -547,7 +547,7 @@ namespace bq {
             }
             bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
             stack_trace_str_ref.clear();
-            int32_t stack_count;
+            size_t stack_count;
             void* buffer[max_stack_size_];
             char** stacks;
 
@@ -555,7 +555,7 @@ namespace bq {
             stacks = backtrace_symbols(buffer, stack_count);
             uint32_t valid_frame_count = 0;
             if (stacks) {
-                for (int32_t i = 0; i < stack_count; i++) {
+                for (size_t i = 0; i < stack_count; i++) {
                     if (valid_frame_count == 0) {
                         if (strstr(stacks[i], "get_stack_trace")) {
                             continue;
