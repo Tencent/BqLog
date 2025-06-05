@@ -996,9 +996,6 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
       - name: Build for macOS
         run: |
           cd build/test/mac  
@@ -1016,9 +1013,6 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
 
       - name: Build for macOS
         run: |
@@ -1038,9 +1032,6 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
       - name: Build for macOS
         run: |
           cd build/test/mac  
@@ -1059,9 +1050,6 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
-
       - name: Build for macOS
         run: |
           cd build/test/mac  
@@ -1079,9 +1067,6 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
-
-      - name: Set up XCode
-        run: sudo xcode-select --switch /Applications/Xcode.app
 
       - name: Build for macOS
         run: |
