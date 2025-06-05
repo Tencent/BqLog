@@ -2,7 +2,7 @@
 #include "test_base.h"
 #include "bq_common/bq_common.h"
 #include <string>
-#if BQ_CPP_17
+#if defined(BQ_CPP_17)
 #include <string_view>
 #endif
 
@@ -208,7 +208,7 @@ namespace bq {
                     result.add_result(!test_str.end_with(u"BBBB"), "string end_with test 2");
                 }
 
-#if BQ_CPP_17
+#if defined(BQ_CPP_17)
                 // test std::string and std::string_view
                 {
                     std::string std_str_src = "Part1";

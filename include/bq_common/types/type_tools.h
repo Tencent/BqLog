@@ -453,7 +453,7 @@ namespace bq {
     struct function_return_type<Ret (ClassType::*)(Args...) const> {
         using type = Ret;
     };
-    #if BQ_CPP_17
+    #if defined(BQ_CPP_17)
     template <typename Ret, typename ClassType, typename... Args>
     struct function_return_type<Ret (ClassType::*)(Args...) noexcept> {
         using type = Ret;
