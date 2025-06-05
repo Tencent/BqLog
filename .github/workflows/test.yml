@@ -987,6 +987,10 @@ jobs:
   mac_apple_silicon_test_cpp11:
     runs-on: macos-latest
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -1005,6 +1009,10 @@ jobs:
   mac_apple_silicon_test_cpp14:
     runs-on: macos-latest
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -1023,6 +1031,10 @@ jobs:
   mac_apple_silicon_test_cpp17:
     runs-on: macos-latest
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -1041,6 +1053,10 @@ jobs:
   mac_apple_silicon_test_cpp20:
     runs-on: macos-latest
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -1059,6 +1075,10 @@ jobs:
   mac_apple_silicon_test_cpp23:
     runs-on: macos-latest
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
