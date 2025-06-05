@@ -144,9 +144,9 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_thread_info_te
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, parse_thread_info_template  thread_info_idx vlq decode error");
         return appender_decode_result::failed_decode_error;
     }
-    uint32_t read_cursor = (uint32_t)thread_info_idx_len;
+    auto read_cursor = static_cast<uint32_t>(thread_info_idx_len);
     if (read_cursor >= read_handle.len()) {
-        bq::util::log_device_console(log_level::error, "decode compressed log file failed, parse_thread_info_template vlq decode error, index length exceed data length: index length:%d, data length:%zu", read_cursor, read_handle.len());
+        bq::util::log_device_console(log_level::error, "decode compressed log file failed, parse_thread_info_template vlq decode error, index length exceed data length: index length:%" PRIu32 ", data length:%" PRIu64, read_cursor, static_cast<uint64_t>(read_handle.len()));
         return appender_decode_result::failed_decode_error;
     }
     uint64_t thread_id = 0;
@@ -157,7 +157,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_thread_info_te
     }
     read_cursor += (uint32_t)thread_id_len;
     if (read_cursor > read_handle.len()) {
-        bq::util::log_device_console(log_level::error, "decode compressed log file failed, parse_thread_info_template vlq decode error, thread id length exceed data length: thread id data to:%d, data length:%zu", read_cursor, read_handle.len());
+        bq::util::log_device_console(log_level::error, "decode compressed log file failed, parse_thread_info_template vlq decode error, thread id length exceed data length: thread id data to:%" PRIu32 ", data length:%" PRIu64, read_cursor, static_cast<uint64_t>(read_handle.len()));
         return appender_decode_result::failed_decode_error;
     }
     decoder_thread_info_template& info = thread_info_templates_map_[thread_info_idx];
