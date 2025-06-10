@@ -249,7 +249,7 @@ namespace bq {
             && "please don't return a read handle not belongs to this siso_ring_buffer");
 #endif
         block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_)
-            ? &cursor_to_block(head_->rt_reading_cursor_cache_) // splited
+            ? &cursor_to_block(head_->rt_reading_cursor_cache_) // split
             : (block*)(handle.data_addr - data_block_offset);
 
 #if defined(BQ_LOG_BUFFER_DEBUG)
