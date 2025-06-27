@@ -245,6 +245,13 @@ namespace bq {
         assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
+        if (rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success) {
+            if (rt_reading.hp_handle_cache_.has_next()) {
+                return rt_reading.hp_handle_cache_.next();
+            } else {
+                rt_reading.hp_handle_cache_.result = enum_buffer_result_code::err_empty_log_buffer;
+            }
+        }
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
@@ -284,12 +291,13 @@ namespace bq {
                 rt_reading.state_ = read_state::next_group_finding;
                 break;
             case read_state::hp_block_reading:
-                read_handle = rt_reading.cur_block_->get_buffer().read_chunk();
-                if (enum_buffer_result_code::err_empty_log_buffer != read_handle.result) {
+                rt_reading.hp_handle_cache_ = rt_reading.cur_block_->get_buffer().batch_read();
+                if (enum_buffer_result_code::success == rt_reading.hp_handle_cache_.result) {
+                    read_handle = rt_reading.hp_handle_cache_.next();
                     loop_finished = true;
                     break;
                 }
-                rt_reading.cur_block_->get_buffer().return_read_chunk(read_handle);
+                rt_reading.cur_block_->get_buffer().return_batch_read_chunks(rt_reading.hp_handle_cache_);
                 rt_reading.state_ = read_state::next_block_finding;
                 break;
             case read_state::next_block_finding: {
@@ -352,19 +360,40 @@ namespace bq {
         bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
         assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
-        if (rt_cache_.current_reading_.cur_block_) {
-            rt_cache_.current_reading_.cur_block_->get_buffer().return_read_chunk(handle);
-        } else {
-            if (enum_buffer_result_code::success == handle.result) {
-                log_buffer_read_handle handle_cpy = handle;
-                handle_cpy.data_addr -= sizeof(context_head);
-                handle_cpy.data_size += (uint32_t)sizeof(context_head);
-                const auto& context = *reinterpret_cast<const context_head*>(handle_cpy.data_addr);
-                deregister_seq(context);
-                lp_buffer_.return_read_chunk(handle_cpy);
-            } else {
-                lp_buffer_.return_read_chunk(handle);
+        if (rt_cache_.current_reading_.hp_handle_cache_.result == enum_buffer_result_code::success) {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            assert(rt_cache_.current_reading_.hp_handle_cache_.verify_chunk(handle) && "log_buffer::return_read_chunk hp chunk return verify failed");
+#endif
+            if (!rt_cache_.current_reading_.hp_handle_cache_.has_next()) {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+                assert(rt_cache_.current_reading_.cur_block_);
+#endif
+                rt_cache_.current_reading_.cur_block_->get_buffer().return_batch_read_chunks(rt_cache_.current_reading_.hp_handle_cache_);
             }
+            return;
+        }
+        if (rt_cache_.current_reading_.cur_block_) {
+            if (rt_cache_.current_reading_.hp_handle_cache_.result == enum_buffer_result_code::success) {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+                assert(rt_cache_.current_reading_.hp_handle_cache_.verify_chunk(handle) && "log_buffer::return_read_chunk hp chunk return verify failed");
+#endif
+                if (!rt_cache_.current_reading_.hp_handle_cache_.has_next()) {
+                    rt_cache_.current_reading_.cur_block_->get_buffer().return_batch_read_chunks(rt_cache_.current_reading_.hp_handle_cache_);
+                }
+                return;
+            } else {
+                rt_cache_.current_reading_.cur_block_->get_buffer().return_batch_read_chunks(rt_cache_.current_reading_.hp_handle_cache_);
+            }
+            
+        } else if (enum_buffer_result_code::success == handle.result) {
+            log_buffer_read_handle handle_cpy = handle;
+            handle_cpy.data_addr -= sizeof(context_head);
+            handle_cpy.data_size += (uint32_t)sizeof(context_head);
+            const auto& context = *reinterpret_cast<const context_head*>(handle_cpy.data_addr);
+            deregister_seq(context);
+            lp_buffer_.return_read_chunk(handle_cpy);
+        } else {
+            lp_buffer_.return_read_chunk(handle);
         }
     }
 

@@ -195,6 +195,7 @@ namespace bq {
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data    
                 read_state state_ = read_state::lp_buffer_reading;
                 block_node_head* traverse_end_block_ = nullptr;
+                siso_ring_buffer::siso_buffer_batch_read_handle hp_handle_cache_;
             } current_reading_;
 
             // memory fragmentation optimize

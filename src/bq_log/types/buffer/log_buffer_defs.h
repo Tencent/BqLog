@@ -41,21 +41,17 @@ namespace bq {
 
     #define BQ_POD_RUNTIME_OFFSET_OF(Type, Field) (((size_t)&(((Type*)0x10000)->Field)) - (size_t)0x10000)
     
-    BQ_PACK_BEGIN
-    struct alignas(16) log_buffer_write_handle{
+    struct log_buffer_write_handle{
         uint8_t* data_addr;
         enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
         bool low_space_flag = false; // just approximate because of multi-thread
-    } 
-    BQ_PACK_END 
+    }; 
 
-    BQ_PACK_BEGIN 
-    struct alignas(16) log_buffer_read_handle {
+    struct log_buffer_read_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
         uint32_t data_size;
-    } 
-    BQ_PACK_END
+    };
 
     enum create_memory_map_result {
         failed,
