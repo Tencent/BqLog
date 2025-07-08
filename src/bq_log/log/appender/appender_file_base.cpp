@@ -37,6 +37,9 @@ namespace bq {
 
     void appender_file_base::flush_cache()
     {
+        if (!file_) {
+            return;
+        }
         size_t real_write_size = 0;
         size_t need_write_size = cache_write_.size();
         int32_t error_code = bq::platform::write_file(file_.platform_handle(), (const void*)cache_write_.begin(), need_write_size, real_write_size);
