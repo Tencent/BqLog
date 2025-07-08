@@ -459,9 +459,9 @@ namespace bq {
                     }
                     return errno;
                 }
-                out_real_write_size += written;
-                current_src += written;
-                remaining -= written;
+                out_real_write_size += static_cast<size_t>(written);
+                current_src += static_cast<size_t>(written);
+                remaining -= static_cast<size_t>(written);
 
                 if (written == 0) {
                     // Maybe EOF
