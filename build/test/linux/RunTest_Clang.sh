@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 CPP_VER_PARAM=${1:-17}
 mkdir CMakeFiles;
 cd CMakeFiles;

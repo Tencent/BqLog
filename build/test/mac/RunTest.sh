@@ -1,5 +1,5 @@
 #!/bin/zsh
-
+set -e
 CPP_VER_PARAM=${1:-17}
 mkdir XCodeProj
 cd XCodeProj
