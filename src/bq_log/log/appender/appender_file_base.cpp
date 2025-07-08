@@ -12,7 +12,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
-#if BQ_POSIX
+#if defined(BQ_POSIX)
 #include <errno.h>
 #else
 #endif
