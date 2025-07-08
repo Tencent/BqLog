@@ -430,21 +430,26 @@ namespace bq {
         int32_t write_file(const platform_file_handle& file_handle, const void* src_addr, size_t write_size, size_t& out_real_write_size)
         {
             out_real_write_size = 0;
-            size_t max_size_pertime = static_cast<size_t>(UINT32_MAX);
-            size_t max_write_size_current = 0;
-            while (out_real_write_size < write_size) {
-                size_t need_write_size_this_time = bq::min_value(max_size_pertime, write_size - max_write_size_current);
-                DWORD out_size = 0;
-                bool result = WriteFile(file_handle, src_addr, static_cast<DWORD>(need_write_size_this_time), &out_size, NULL);
+            const char* current_src = static_cast<const char*>(src_addr);
+            size_t remaining = write_size;
+
+            while (remaining > 0) {
+                DWORD chunk_size = static_cast<DWORD>(bq::min_value(remaining, static_cast<size_t>(UINT32_MAX)));
+                DWORD bytes_written = 0;
+                BOOL result = WriteFile(file_handle, current_src, chunk_size, &bytes_written, NULL);
                 if (!result) {
                     return static_cast<int32_t>(GetLastError());
                 }
-                out_real_write_size += static_cast<size_t>(out_size);
-                if (out_size != need_write_size_this_time) {
-                    return 0;
+                out_real_write_size += bytes_written;
+                current_src += bytes_written;
+                remaining -= bytes_written;
+
+                if (bytes_written == 0) {
+                    // Maybe EOF
+                    break;
                 }
             }
-            return 0;
+            return 0; 
         }
 
         int32_t seek_file(const platform_file_handle& file_handle, file_seek_option opt, int64_t offset)

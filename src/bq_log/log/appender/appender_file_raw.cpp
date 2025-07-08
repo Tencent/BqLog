@@ -16,15 +16,10 @@ namespace bq {
     void appender_file_raw::log_impl(const log_entry_handle& handle)
     {
         appender_file_base::log_impl(handle);
-        size_t item_size = handle.data_size();
-        if (item_size > 0xFFFFFFFF) {
-            util::log_device_console(bq::log_level::warning, "log length exceed MAX_UINT32, skipped");
-            return;
-        }
-        uint32_t item_size_uint32 = static_cast<uint32_t>(item_size);
-        auto write_handle = write_with_cache_alloc(sizeof(item_size_uint32) + item_size_uint32);
-        *(decltype(item_size_uint32)*)write_handle.data() = item_size_uint32;
-        memcpy(write_handle.data() + sizeof(item_size_uint32), handle.data(), item_size);
+        uint32_t item_size = handle.data_size();
+        auto write_handle = write_with_cache_alloc(sizeof(item_size) + item_size);
+        *(decltype(item_size)*)write_handle.data() = item_size;
+        memcpy(write_handle.data() + sizeof(item_size), handle.data(), item_size);
         write_with_cache_commit(write_handle);
     }
 

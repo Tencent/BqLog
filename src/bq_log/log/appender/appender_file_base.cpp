@@ -12,6 +12,10 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#if BQ_POSIX
+#include <errno.h>
+#else
+#endif
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/appender/appender_file_base.h"
@@ -35,38 +39,38 @@ namespace bq {
     {
         size_t real_write_size = 0;
         size_t need_write_size = cache_write_.size();
-        for (int32_t i = 0; i < 10; ++i) {
-            // try 10 times;
-            real_write_size += file_manager::instance().write_file(file_, cache_write_.begin() + real_write_size, need_write_size - real_write_size);
-            if (real_write_size >= need_write_size) {
-                break;
+        int32_t error_code = bq::platform::write_file(file_.platform_handle(), (const void*)cache_write_.begin(), need_write_size, real_write_size);
+        if (real_write_size == cache_write_.size()) {
+            cache_write_.clear();
+            if (cache_write_.capacity() > (CACHE_WRITE_DEFAULT_SIZE << 1)) {
+                cache_write_.shrink();
             }
-            bq::platform::thread::yield();
+        } else {
+            cache_write_.erase(cache_write_.begin(), real_write_size);
         }
-        cache_write_.clear();
-        if (cache_write_.capacity() > (CACHE_WRITE_DEFAULT_SIZE << 1)) {
-            cache_write_.shrink();
-        }
-        if (real_write_size != need_write_size) {
-            int32_t err_code = file_manager::instance().get_and_clear_last_file_error();
-
-            if (err_code != 0 && err_code != 28) {
-                char error_text[256] = { 0 };
-                auto epoch = bq::platform::high_performance_epoch_ms();
-                struct tm time_st;
-                if (is_gmt_time_) {
-                    bq::util::get_gmt_time_by_epoch(epoch, time_st);
-                } else {
-                    bq::util::get_local_time_by_epoch(epoch, time_st);
-                }
-                snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file ecode:%d, trying open new file real_write_size:%d,need_write_size:%d\n",
-                    is_gmt_time_ ? "UTC0" : "LOCAL",
-                    time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
-                    err_code, (int32_t)real_write_size, (int32_t)need_write_size);
-                string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
-                bq::file_manager::append_all_text(path, error_text);
-                bq::util::log_device_console_plain_text(log_level::warning, error_text);
+        if (error_code != 0 && error_code != 
+#if BQ_POSIX
+            ENOSPC
+#else
+            ERROR_DISK_FULL
+#endif
+            ) 
+        {
+            char error_text[256] = { 0 };
+            auto epoch = bq::platform::high_performance_epoch_ms();
+            struct tm time_st;
+            if (is_gmt_time_) {
+                bq::util::get_gmt_time_by_epoch(epoch, time_st);
+            } else {
+                bq::util::get_local_time_by_epoch(epoch, time_st);
             }
+            snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file error code:%d, trying open new file real_write_size:%zu,need_write_size:%zu\n",
+                is_gmt_time_ ? "UTC0" : "LOCAL",
+                time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
+                error_code, real_write_size, need_write_size);
+            string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
+            bq::file_manager::append_all_text(path, error_text);
+            bq::util::log_device_console_plain_text(log_level::warning, error_text);
             open_new_indexed_file_by_name();
         }
     }

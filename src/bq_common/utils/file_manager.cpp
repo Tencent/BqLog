@@ -328,20 +328,13 @@ namespace bq {
         if (!seek(handle, opt, seek_offset)) {
             return 0;
         }
-        int32_t max_try_count = 10;
         size_t total_written_count = 0;
-        while (max_try_count-- > 0 && total_written_count < length) {
-            size_t need_write_count = length - total_written_count;
-            size_t tmp_count;
-            int32_t error_code = bq::platform::write_file(handle.platform_handle(), (const uint8_t*)data + total_written_count, need_write_count, tmp_count);
-            if (error_code != 0) {
-                file_manager_file_error_no_ = error_code;
-                FILE_MANAGER_LOG(bq::log_level::error, "write file failed, errno:%d, path:%s, need_write_count:%zu, real_write_count:%zu",
-                    error_code, handle.file_path_.c_str(), length, total_written_count);
-                break;
-            }
-            assert(tmp_count <= need_write_count && "write_count <= length");
-            total_written_count += tmp_count;
+        int32_t error_code = bq::platform::write_file(handle.platform_handle(), data, length, total_written_count);
+        if (error_code != 0) {
+            file_manager_file_error_no_ = error_code;
+            FILE_MANAGER_LOG(bq::log_level::error, "write file failed, errno:%d, path:%s, need_write_count:%zu, real_write_count:%zu",
+                error_code, handle.file_path_.c_str(), length, total_written_count);
+            return total_written_count;
         }
         return total_written_count;
     }

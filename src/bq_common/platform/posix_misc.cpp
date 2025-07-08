@@ -446,19 +446,26 @@ namespace bq {
 
         int32_t write_file(const platform_file_handle& file_handle, const void* src_addr, size_t write_size, size_t& out_real_write_size)
         {
-
             out_real_write_size = 0;
-            size_t max_size_pertime = static_cast<size_t>(SSIZE_MAX);
-            size_t max_write_size_current = 0;
-            while (out_real_write_size < write_size) {
-                size_t need_write_size_this_time = bq::min_value(max_size_pertime, write_size - max_write_size_current);
-                ssize_t out_size = write(file_handle, src_addr, need_write_size_this_time);
-                if (out_size < 0) {
+            const char* current_src = static_cast<const char*>(src_addr);
+            size_t remaining = write_size;
+
+            while (remaining > 0) {
+                size_t chunk_size = bq::min_value(remaining, static_cast<size_t>(SSIZE_MAX));
+                ssize_t written = write(file_handle, current_src, chunk_size);
+                if (written < 0) {
+                    if (errno == EINTR) {
+                        continue;
+                    }
                     return errno;
                 }
-                out_real_write_size += static_cast<size_t>(out_size);
-                if (out_size < static_cast<ssize_t>(need_write_size_this_time)) {
-                    return 0;
+                out_real_write_size += written;
+                current_src += written;
+                remaining -= written;
+
+                if (written == 0) {
+                    // Maybe EOF
+                    break;
                 }
             }
             return 0;
