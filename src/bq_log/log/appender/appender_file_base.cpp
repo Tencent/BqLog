@@ -49,7 +49,7 @@ namespace bq {
             cache_write_.erase(cache_write_.begin(), real_write_size);
         }
         if (error_code != 0 && error_code != 
-#if BQ_POSIX
+#if defined(BQ_POSIX)
             ENOSPC
 #else
             ERROR_DISK_FULL
