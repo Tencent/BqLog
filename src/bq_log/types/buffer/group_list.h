@@ -74,8 +74,19 @@ namespace bq {
 
         bq_forceinline pointer_type& get_next_ptr() { return next_; }
         bq_forceinline group_data_head& get_data_head() { 
-            BQ_ASSUME(head_ptr_ != nullptr);
+#if defined(BQ_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference" 
+#elif defined(BQ_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-dereference"
+#endif
             return *head_ptr_;
+#if defined(BQ_GCC)
+#pragma GCC diagnostic pop 
+#elif defined(BQ_CLANG)
+#pragma clang diagnostic pop
+#endif
         }
         bq_forceinline uint64_t get_in_pool_epoch_ms() const { return in_pool_epoch_ms_; }
         bq_forceinline void set_in_pool_epoch_ms(uint64_t epoch_ms) { in_pool_epoch_ms_ = epoch_ms; }
