@@ -81,6 +81,9 @@ namespace bq {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnull-dereference"
 #endif
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            assert(head_ptr_ && "head_ptr_ is null, group_node has not been initialized");      
+#endif
             return *head_ptr_;
 #if defined(BQ_GCC)
 #pragma GCC diagnostic pop 
