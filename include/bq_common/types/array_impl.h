@@ -357,7 +357,9 @@ namespace bq {
     {
         constexpr size_t item_size = sizeof(T);
         // simply copy memory for non-trivial constructible type to optimize performance.
-        memcpy((void*)dest, (void*)src, item_size * count);
+        if (dest && src && count) {
+            memcpy((void*)dest, (void*)src, item_size * count);
+        }
     }
 
     template <typename T>
@@ -400,7 +402,9 @@ namespace bq {
     {
         (void)constructed_count;
         // simply copy memory for non-trivial constructible type to optimize performance.
-        memcpy(dest, src, count * sizeof(T));
+        if (dest && src && count) {
+            memcpy(dest, src, count * sizeof(T));
+        }
     }
 
     template <typename T>
