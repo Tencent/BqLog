@@ -73,7 +73,7 @@ namespace bq {
         ~group_node();
 
         bq_forceinline pointer_type& get_next_ptr() { return next_; }
-        bq_forceinline group_data_head& get_data_head() { assert(head_ptr_); return *head_ptr_;}
+        bq_forceinline group_data_head* get_data_head() { return head_ptr_;}
         bq_forceinline uint64_t get_in_pool_epoch_ms() const { return in_pool_epoch_ms_; }
         bq_forceinline void set_in_pool_epoch_ms(uint64_t epoch_ms) { in_pool_epoch_ms_ = epoch_ms; }
         bq_forceinline bool is_range_include(const block_node_head* block) const

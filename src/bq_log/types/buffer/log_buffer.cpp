@@ -545,12 +545,12 @@ namespace bq {
         bool is_cur_block_in_group = rt_reading.cur_group_.value().is_range_include(rt_reading.cur_block_);
         //Find new block
         block_node_head* next_block = is_cur_block_in_group
-                        ? rt_reading.cur_group_.value().get_data_head().used_.next(rt_reading.cur_block_)
-                        : rt_reading.cur_group_.value().get_data_head().used_.first();
+                        ? rt_reading.cur_group_.value().get_data_head()->used_.next(rt_reading.cur_block_)
+                        : rt_reading.cur_group_.value().get_data_head()->used_.first();
         if (!next_block) {
-            next_block = rt_reading.cur_group_.value().get_data_head().stage_.pop();
+            next_block = rt_reading.cur_group_.value().get_data_head()->stage_.pop();
             if (next_block) {
-                rt_reading.cur_group_.value().get_data_head().used_.push_after_thread_unsafe(is_cur_block_in_group ? rt_reading.cur_block_ : nullptr, next_block);
+                rt_reading.cur_group_.value().get_data_head()->used_.push_after_thread_unsafe(is_cur_block_in_group ? rt_reading.cur_block_ : nullptr, next_block);
             }
         }
 
@@ -562,7 +562,7 @@ namespace bq {
         bool block_removed = false;
 #if defined(BQ_LOG_BUFFER_DEBUG)
         if (is_cur_block_in_group) {
-            assert (rt_reading.cur_group_.value().get_data_head().used_.is_include(rt_reading.cur_block_));
+            assert (rt_reading.cur_group_.value().get_data_head()->used_.is_include(rt_reading.cur_block_));
         }
 #endif
         if (is_cur_block_in_group) {
@@ -630,8 +630,8 @@ namespace bq {
                 }
             }
             assert(current_lock_iterator == rt_reading.cur_group_ && "try lock removing group failed");
-            if ((!current_lock_iterator.value().get_data_head().used_.first())
-                && (!current_lock_iterator.value().get_data_head().stage_.first())) {
+            if ((!current_lock_iterator.value().get_data_head()->used_.first())
+                && (!current_lock_iterator.value().get_data_head()->stage_.first())) {
                 // remove it
                 group_removed = true;
                 assert(!rt_reading.cur_group_.value().is_range_include(rt_reading.last_block_));
@@ -694,7 +694,7 @@ namespace bq {
         
         auto group = hp_buffer_.first(group_list::lock_type::no_lock);
         while (group) {
-            auto block = group.value().get_data_head().used_.first();
+            auto block = group.value().get_data_head()->used_.first();
             while (block) {
                 auto& context = block->get_misc_data<block_misc_data>().context_;
                 if (context.version_ == version_) {
@@ -708,9 +708,9 @@ namespace bq {
                         iter->value() = bq::min_value(iter->value(), context.seq_);
                     }
                 }
-                block = group.value().get_data_head().used_.next(block);
+                block = group.value().get_data_head()->used_.next(block);
             }
-            block = group.value().get_data_head().stage_.first();
+            block = group.value().get_data_head()->stage_.first();
             while (block) {
                 auto& context = block->get_misc_data<block_misc_data>().context_;
                 if (context.version_ == version_) {
@@ -724,7 +724,7 @@ namespace bq {
                         iter->value() = bq::min_value(iter->value(), context.seq_);
                     }
                 }
-                block = group.value().get_data_head().stage_.next(block);
+                block = group.value().get_data_head()->stage_.next(block);
             }
             group = hp_buffer_.next(group, group_list::lock_type::no_lock);
         }
