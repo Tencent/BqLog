@@ -196,3 +196,15 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #if defined(__cpp_aligned_new)
 #define BQ_ALIGNAS_NEW 1
 #endif
+
+#if defined(BQ_GCC) || defined(BQ_CLANG)
+#define BQ_ASSUME(cond)              \
+    do {                             \
+        if (!(cond))                 \
+            __builtin_unreachable(); \
+    } while (0)
+#elif defined(BQ_MSVC)
+#define BQ_ASSUME(cond) __assume(cond)
+#else
+#define BQ_ASSUME(cond) ((void)0) // 其他编译器无操作
+#endif
