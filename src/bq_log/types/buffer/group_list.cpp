@@ -177,7 +177,7 @@ namespace bq {
             bool need_remove_mmap_file = false;
             if (!parent_list_->get_config().need_recovery) {
                 need_remove_mmap_file = true;
-            } else if (memory_map_file_ && !get_data_head()->used_.first() && !get_data_head()->stage_.first()) {
+            } else if (memory_map_file_ && !get_data_head().used_.first() && !get_data_head().stage_.first()) {
                 need_remove_mmap_file = true;
             }
             node_data_ = nullptr;
@@ -267,11 +267,11 @@ namespace bq {
         group_node* src_node = nullptr;
         while (!current_read_pointer->is_empty()) {
             src_node = current_read_pointer->node_;
-            result = src_node->get_data_head()->free_.pop();
+            result = src_node->get_data_head().free_.pop();
             if (result) {
                 result->set_misc_data(misc_data_src, misc_data_size);
                 result->get_buffer().set_thread_check_enable(true);
-                src_node->get_data_head()->stage_.push(result);
+                src_node->get_data_head().stage_.push(result);
                 break;
             }
             src_node->get_next_ptr().lock_.read_lock();
@@ -286,14 +286,14 @@ namespace bq {
             // double check
             if (!head_.is_empty()) {
                 src_node = head_.node_;
-                result = src_node->get_data_head()->free_.pop();
+                result = src_node->get_data_head().free_.pop();
             }
             if (!result) {
                 src_node = pool_.pop();
                 if (!src_node) {
                     src_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
                 }
-                result = src_node->get_data_head()->free_.pop();
+                result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;
                 head_.node_ = src_node;
 #if defined(BQ_UNIT_TEST)
@@ -302,7 +302,7 @@ namespace bq {
             }
             result->set_misc_data(misc_data_src, misc_data_size);
             result->get_buffer().set_thread_check_enable(true);
-            src_node->get_data_head()->stage_.push(result);
+            src_node->get_data_head().stage_.push(result);
             head_.lock_.write_unlock();
         }
         return result;
@@ -312,8 +312,8 @@ namespace bq {
     void group_list::recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block)
     {
         recycle_block->get_buffer().set_thread_check_enable(false);
-        group.value().get_data_head()->used_.remove_thread_unsafe(prev_block, recycle_block);
-        group.value().get_data_head()->free_.push(recycle_block);
+        group.value().get_data_head().used_.remove_thread_unsafe(prev_block, recycle_block);
+        group.value().get_data_head().free_.push(recycle_block);
     }
 
     void group_list::garbage_collect()
