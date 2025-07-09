@@ -198,13 +198,19 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #endif
 
 #if defined(BQ_GCC) || defined(BQ_CLANG)
-#define BQ_ASSUME(cond)              \
-    do {                             \
-        if (!(cond))                 \
-            __builtin_unreachable(); \
-    } while (0)
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN()                                      \
+    _Pragma("GCC diagnostic push")                                          \
+    _Pragma("GCC diagnostic ignored \"-Wnull-dereference\"")
+#define BQ_SUPPRESS_NULL_DEREF_END()                                        \
+    _Pragma("GCC diagnostic pop")
 #elif defined(BQ_MSVC)
-#define BQ_ASSUME(cond) __assume(cond)
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN()                                      \
+    __pragma(warning(push))                                                 \
+    __pragma(warning(disable : 6011)) /* C6011: Dereference Null Pointer */ \
+    __pragma(warning(disable : 6387)) /* C6387: 'Maybe NULL' */
+#define BQ_SUPPRESS_NULL_DEREF_END()                                        \
+    __pragma(warning(pop))
 #else
-#define BQ_ASSUME(cond) ((void)0) // 其他编译器无操作
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN()
+#define BQ_SUPPRESS_NULL_DEREF_END()
 #endif
