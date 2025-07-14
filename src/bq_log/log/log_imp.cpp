@@ -62,7 +62,7 @@ namespace bq {
         }
         bq_forceinline uint32_t get_used_data_size() const
         {
-            return buffer_.size();
+            return static_cast<uint32_t>(buffer_.size());
         }
     };
     BQ_TLS_NON_POD(sync_buffer, sync_buffer_);
