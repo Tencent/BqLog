@@ -103,7 +103,7 @@ namespace bq {
         public:
             uint16_t version_;
             bool is_thread_finished_;
-            char padding_;
+            bool is_external_ref_;  //only works in lp_buffer when alloc size is larger than buffer size.
             uint32_t seq_;
             bq::condition_type_t<sizeof(void*) == 8, pointer_8_bytes_for_64_bits_system, pointer_8_bytes_for_32_bits_system> tls_info_; // Only meaningful when get_ver() equals the current version of log_buffer.
 

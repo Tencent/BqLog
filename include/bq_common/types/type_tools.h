@@ -176,6 +176,17 @@ namespace bq {
     };
 
     template <typename T>
+    struct object_constructor {
+    public:
+        template <typename... Args>
+        static inline void construct(T* _ptr, Args&&... _args)
+        {
+            new (_ptr, bq::enum_new_dummy::dummy) T(bq::forward<Args>(_args)...);
+        }
+    };
+
+
+    template <typename T>
     struct object_destructor {
     private:
         struct trivial_destructor_type { };
@@ -186,9 +197,8 @@ namespace bq {
 
         template <typename U>
         struct destructor_impl<U, trivial_destructor_type> {
-            static inline void destruct(U* _ptr)
+            static inline void destruct(U*)
             {
-                (void)_ptr;
             }
         };
 
@@ -224,10 +234,8 @@ namespace bq {
 
         template <typename U>
         struct destructor_impl<U, trivial_destructor_type> {
-            static inline void destruct(U* _ptr, size_t _count)
+            static inline void destruct(U*, size_t)
             {
-                (void)_ptr;
-                (void)_count;
             }
         };
 

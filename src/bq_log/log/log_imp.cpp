@@ -22,56 +22,47 @@ namespace bq {
 
     class sync_buffer {
     private:
-        uint8_t* real_data_;
-        uint8_t* aligned_data_;   //8 bytes aligned
-        uint32_t aligned_size_;
-        uint32_t used_data_size_;
+        bq::array<uint8_t, bq::aligned_allocator<uint8_t, 8>> buffer_;
+        size_t default_buffer_size_;
     public:
         sync_buffer()
-            : real_data_(nullptr)
-            , aligned_data_(nullptr)
-            , aligned_size_(0)
-            , used_data_size_(0)
+            : default_buffer_size_(16 * 1024)
         {
         }
         ~sync_buffer()
         {
-            if (real_data_) {
-                free(real_data_);
-            }
-            real_data_ = nullptr;
-            aligned_data_ = nullptr;
-            aligned_size_ = 0;
-            used_data_size_ = 0;
+        }
+        void set_default_buffer_size(size_t default_buffer_size)
+        {
+            default_buffer_size_ = default_buffer_size;
         }
         bq_forceinline uint8_t* alloc_data(uint32_t size)
         {
-            if (aligned_size_ < size) {
-                if (real_data_) {
-                    free(real_data_);
-                }
-                real_data_ = static_cast<uint8_t*>(malloc(size + 8));
-                aligned_data_ = reinterpret_cast<uint8_t*>((reinterpret_cast<uintptr_t>(real_data_) + 7) & ~static_cast<uintptr_t>(7));
-                aligned_size_ = size;
-            }
-            used_data_size_ = size;
-            return aligned_data_;
+            buffer_.fill_uninitialized(static_cast<size_t>(size));
+            return buffer_.begin();
         }
         const bq_forceinline uint8_t* get_aligned_data() const
         {
-            return aligned_data_;
+            return buffer_.begin();
         }
         bq_forceinline void recycle_data()
         {
-            used_data_size_ = 0;
+            if (buffer_.capacity() > default_buffer_size_) {
+                buffer_.clear();
+                buffer_.fill_uninitialized(default_buffer_size_);
+                buffer_.shrink();
+                buffer_.clear();
+            } else {
+                buffer_.clear();
+            }
         }
         bq_forceinline bool is_empty() const
         {
-            return used_data_size_ == 0;
+            return buffer_.is_empty();
         }
         bq_forceinline uint32_t get_used_data_size() const
         {
-            return used_data_size_;
+            return buffer_.size();
         }
     };
     BQ_TLS_NON_POD(sync_buffer, sync_buffer_);

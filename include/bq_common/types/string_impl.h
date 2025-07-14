@@ -12,7 +12,7 @@
  */
 /*!
  * \file array.h
- * substitute of STL string_base<CHAR_TYPE>, we exclude STL and libc++ to reduce the final executable and library file size
+ * substitute of STL string_base<CHAR_TYPE, Allocator>, we exclude STL and libc++ to reduce the final executable and library file size
  * IMPORTANT: It is not thread-safe!!!
  *
  * \author pippocao
@@ -30,8 +30,7 @@ namespace bq {
 #else
     bq_forceinline
 #endif
-        size_t
-        ___string_len(const CHAR_TYPE* str)
+    size_t ___string_len(const CHAR_TYPE* str)
     {
         if (!str) {
             return 0;
@@ -113,34 +112,34 @@ namespace bq {
     }
 }
 namespace bq {
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>::string_base()
-        : array<typename string_base<CHAR_TYPE>::char_type, 1>()
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>::string_base()
+        : array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>()
     {
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>::string_base(typename string_base<CHAR_TYPE>::size_type init_capacity)
-        : array<typename string_base<CHAR_TYPE>::char_type, 1>()
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>::string_base(typename string_base<CHAR_TYPE, Allocator>::size_type init_capacity)
+        : array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>()
     {
-        array<typename string_base<CHAR_TYPE>::char_type, 1>::set_capacity(init_capacity);
+        array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>::set_capacity(init_capacity);
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>::string_base(const string_base<CHAR_TYPE>& rhs)
-        : array<typename string_base<CHAR_TYPE>::char_type, 1>(rhs)
-    {
-    }
-
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>::string_base(string_base<CHAR_TYPE>&& rhs) noexcept
-        : array<typename string_base<CHAR_TYPE>::char_type, 1>(bq::forward<string_base<CHAR_TYPE>>(rhs))
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>::string_base(const string_base<CHAR_TYPE, Allocator>& rhs)
+        : array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>(rhs)
     {
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>::string_base(const typename string_base<CHAR_TYPE>::char_type* str)
-        : array<typename string_base<CHAR_TYPE>::char_type, 1>()
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>::string_base(string_base<CHAR_TYPE, Allocator>&& rhs) noexcept
+        : array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>(bq::forward<string_base<CHAR_TYPE, Allocator>>(rhs))
+    {
+    }
+
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>::string_base(const typename string_base<CHAR_TYPE, Allocator>::char_type* str)
+        : array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>()
     {
         size_t str_length = str ? ___string_len(str) : 0;
         if (str_length == 0) {
@@ -149,9 +148,9 @@ namespace bq {
         insert_batch(begin(), const_iterator(str, nullptr), str_length);
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>::string_base(const typename string_base<CHAR_TYPE>::char_type* str, size_t char_count)
-        : array<typename string_base<CHAR_TYPE>::char_type, 1>()
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>::string_base(const typename string_base<CHAR_TYPE, Allocator>::char_type* str, size_t char_count)
+        : array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>()
     {
         if (char_count == 0) {
             return;
@@ -159,15 +158,15 @@ namespace bq {
         insert_batch(begin(), const_iterator(str, nullptr), char_count);
     }
 
-    template <typename CHAR_TYPE>
+    template <typename CHAR_TYPE, typename Allocator>
     template <typename S, typename>
-    inline bq::string_base<CHAR_TYPE>::string_base(const S& rhs)
+    inline bq::string_base<CHAR_TYPE, Allocator>::string_base(const S& rhs)
         : string_base(rhs.size() > 0 ? __bq_string_compatible_class_get_data(rhs) : nullptr, rhs.size())
     {
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>& string_base<CHAR_TYPE>::operator=(const string_base<CHAR_TYPE>& rhs)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>& string_base<CHAR_TYPE, Allocator>::operator=(const string_base<CHAR_TYPE, Allocator>& rhs)
     {
         clear();
         if (rhs.size() != 0) {
@@ -176,8 +175,8 @@ namespace bq {
         return *this;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>& string_base<CHAR_TYPE>::operator=(string_base<CHAR_TYPE>&& rhs) noexcept
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>& string_base<CHAR_TYPE, Allocator>::operator=(string_base<CHAR_TYPE, Allocator>&& rhs) noexcept
     {
         reset();
         data_ = rhs.data_;
@@ -189,8 +188,8 @@ namespace bq {
         return *this;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>& string_base<CHAR_TYPE>::operator=(const typename string_base<CHAR_TYPE>::char_type* str)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>& string_base<CHAR_TYPE, Allocator>::operator=(const typename string_base<CHAR_TYPE, Allocator>::char_type* str)
     {
         clear();
         size_t str_length = str ? ___string_len(str) : 0;
@@ -200,16 +199,16 @@ namespace bq {
         return *this;
     }
 
-    template <typename CHAR_TYPE>
+    template <typename CHAR_TYPE, typename Allocator>
     template <typename S, typename>
-    inline string_base<CHAR_TYPE>& string_base<CHAR_TYPE>::operator=(const S& rhs)
+    inline string_base<CHAR_TYPE, Allocator>& string_base<CHAR_TYPE, Allocator>::operator=(const S& rhs)
     {
         this->operator=(__bq_string_compatible_class_get_data(rhs));
         return *this;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE>& string_base<CHAR_TYPE>::operator+=(const string_base<CHAR_TYPE>& rhs)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator>& string_base<CHAR_TYPE, Allocator>::operator+=(const string_base<CHAR_TYPE, Allocator>& rhs)
     {
         size_t origin_size = size();
         size_t total_length = origin_size + rhs.size();
@@ -221,10 +220,10 @@ namespace bq {
         return *this;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE> string_base<CHAR_TYPE>::operator+(const string_base<CHAR_TYPE>& rhs) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator> string_base<CHAR_TYPE, Allocator>::operator+(const string_base<CHAR_TYPE, Allocator>& rhs) const
     {
-        string_base<CHAR_TYPE> result;
+        string_base<CHAR_TYPE, Allocator> result;
         size_t origin_size = size();
         size_t total_length = origin_size + rhs.size();
         if (total_length == 0) {
@@ -236,10 +235,10 @@ namespace bq {
         return result;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE> string_base<CHAR_TYPE>::operator+(const char* rhs) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator> string_base<CHAR_TYPE, Allocator>::operator+(const char* rhs) const
     {
-        string_base<CHAR_TYPE> result;
+        string_base<CHAR_TYPE, Allocator> result;
         size_t origin_size = size();
         size_t rhs_size = strlen(rhs);
         size_t total_length = origin_size + rhs_size;
@@ -252,22 +251,22 @@ namespace bq {
         return result;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE> operator+(string_base<CHAR_TYPE>&& lhs, const char* rhs) noexcept
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator> operator+(string_base<CHAR_TYPE, Allocator>&& lhs, const char* rhs) noexcept
     {
         lhs.insert_batch(lhs.end(), rhs, strlen(rhs));
         return move(lhs);
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE> operator+(string_base<CHAR_TYPE>&& lhs, const string_base<CHAR_TYPE>& rhs) noexcept
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator> operator+(string_base<CHAR_TYPE, Allocator>&& lhs, const string_base<CHAR_TYPE, Allocator>& rhs) noexcept
     {
         lhs.insert_batch(lhs.end(), rhs.begin(), rhs.size());
         return move(lhs);
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::operator==(const typename string_base<CHAR_TYPE>::char_type* str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::operator==(const typename string_base<CHAR_TYPE, Allocator>::char_type* str) const
     {
         size_t compare_size = str ? ___string_len(str) : 0;
         if (compare_size != size()) {
@@ -283,8 +282,8 @@ namespace bq {
         return str[size()] == '\0';
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::operator==(const string_base<CHAR_TYPE>& str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::operator==(const string_base<CHAR_TYPE, Allocator>& str) const
     {
         if (size() != str.size()) {
             return false;
@@ -295,39 +294,39 @@ namespace bq {
         return (memcmp(c_str(), str.c_str(), size() * sizeof(CHAR_TYPE)) == 0);
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::operator!=(const typename string_base<CHAR_TYPE>::char_type* str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::operator!=(const typename string_base<CHAR_TYPE, Allocator>::char_type* str) const
     {
         return !operator==(str);
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::operator!=(const string_base<CHAR_TYPE>& str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::operator!=(const string_base<CHAR_TYPE, Allocator>& str) const
     {
         return !operator==(str);
     }
 
-    template <typename CHAR_TYPE>
+    template <typename CHAR_TYPE, typename Allocator>
     template <typename S, typename>
-    inline string_base<CHAR_TYPE>::operator S() const
+    inline string_base<CHAR_TYPE, Allocator>::operator S() const
     {
         return c_str();
     }
 
-    template <typename CHAR_TYPE>
-    inline typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE>>::hash_value_type string_base<CHAR_TYPE>::hash_code() const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE, Allocator>>::hash_value_type string_base<CHAR_TYPE, Allocator>::hash_code() const
     {
-        return static_cast<typename bq::generic_type_hash_calculator<bq::string_base<CHAR_TYPE>>::hash_value_type>(get_hash(*this));
+        return static_cast<typename bq::generic_type_hash_calculator<bq::string_base<CHAR_TYPE, Allocator>>::hash_value_type>(get_hash(*this));
     }
 
-    template <typename CHAR_TYPE>
-    inline typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE>>::hash_value_type string_base<CHAR_TYPE>::hash_code_ignore_case() const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE, Allocator>>::hash_value_type string_base<CHAR_TYPE, Allocator>::hash_code_ignore_case() const
     {
-        return static_cast<typename bq::generic_type_hash_calculator<bq::string_base<CHAR_TYPE>>::hash_value_type>(get_hash_ignore_case(*this));
+        return static_cast<typename bq::generic_type_hash_calculator<bq::string_base<CHAR_TYPE, Allocator>>::hash_value_type>(get_hash_ignore_case(*this));
     }
 
-    template <typename CHAR_TYPE>
-    inline const typename string_base<CHAR_TYPE>::char_type* string_base<CHAR_TYPE>::c_str() const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline const typename string_base<CHAR_TYPE, Allocator>::char_type* string_base<CHAR_TYPE, Allocator>::c_str() const
 
     {
         if (size() == 0) {
@@ -336,17 +335,17 @@ namespace bq {
         return begin().operator->();
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::is_empty() const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::is_empty() const
     {
         return size() == 0;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE> string_base<CHAR_TYPE>::substr(typename string_base<CHAR_TYPE>::size_type pos, typename string_base<CHAR_TYPE>::size_type count /* = npos*/) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator> string_base<CHAR_TYPE, Allocator>::substr(typename string_base<CHAR_TYPE, Allocator>::size_type pos, typename string_base<CHAR_TYPE, Allocator>::size_type count /* = npos*/) const
     {
-        assert(pos < size() && "string_base<CHAR_TYPE> substr pos error, exceed the string_base<CHAR_TYPE> length!");
-        string_base<CHAR_TYPE> result;
+        assert(pos < size() && "string_base<CHAR_TYPE, Allocator> substr pos error, exceed the string_base<CHAR_TYPE, Allocator> length!");
+        string_base<CHAR_TYPE, Allocator> result;
         if (count == npos || pos + count > size()) {
             count = size() - pos;
         }
@@ -358,34 +357,34 @@ namespace bq {
         return result;
     }
 
-    template <typename CHAR_TYPE>
-    inline typename string_base<CHAR_TYPE>::size_type string_base<CHAR_TYPE>::find(const bq::string_base<CHAR_TYPE>& str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline typename string_base<CHAR_TYPE, Allocator>::size_type string_base<CHAR_TYPE, Allocator>::find(const bq::string_base<CHAR_TYPE, Allocator>& str) const
     {
         if (size() == 0) {
-            return string_base<CHAR_TYPE>::npos;
+            return string_base<CHAR_TYPE, Allocator>::npos;
         }
         const char_type* found_ptr = ___strstr(c_str(), str.c_str());
         if (!found_ptr) {
-            return string_base<CHAR_TYPE>::npos;
+            return string_base<CHAR_TYPE, Allocator>::npos;
         }
         return (size_type)(found_ptr - begin().operator->());
     }
 
-    template <typename CHAR_TYPE>
-    inline typename string_base<CHAR_TYPE>::size_type string_base<CHAR_TYPE>::find(const bq::string_base<CHAR_TYPE>& str, typename string_base<CHAR_TYPE>::size_type search_start_pos) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline typename string_base<CHAR_TYPE, Allocator>::size_type string_base<CHAR_TYPE, Allocator>::find(const bq::string_base<CHAR_TYPE, Allocator>& str, typename string_base<CHAR_TYPE, Allocator>::size_type search_start_pos) const
     {
         if (size() <= search_start_pos) {
-            return string_base<CHAR_TYPE>::npos;
+            return string_base<CHAR_TYPE, Allocator>::npos;
         }
         const char_type* found_ptr = ___strstr(c_str() + search_start_pos, str.c_str());
         if (!found_ptr) {
-            return string_base<CHAR_TYPE>::npos;
+            return string_base<CHAR_TYPE, Allocator>::npos;
         }
         return (size_type)(found_ptr - begin().operator->());
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::begin_with(const bq::string_base<CHAR_TYPE>& str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::begin_with(const bq::string_base<CHAR_TYPE, Allocator>& str) const
     {
         if (size() < str.size()) {
             return false;
@@ -393,8 +392,8 @@ namespace bq {
         return memcmp(c_str(), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::end_with(const bq::string_base<CHAR_TYPE>& str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::end_with(const bq::string_base<CHAR_TYPE, Allocator>& str) const
     {
         if (size() < str.size()) {
             return false;
@@ -402,11 +401,11 @@ namespace bq {
         return memcmp(c_str() + (size() - str.size()), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
     }
 
-    template <typename CHAR_TYPE>
-    inline typename string_base<CHAR_TYPE>::size_type string_base<CHAR_TYPE>::find_last(const bq::string_base<CHAR_TYPE>& str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline typename string_base<CHAR_TYPE, Allocator>::size_type string_base<CHAR_TYPE, Allocator>::find_last(const bq::string_base<CHAR_TYPE, Allocator>& str) const
     {
         if (size() == 0 || str.size() == 0 || size() < str.size()) {
-            return string_base<CHAR_TYPE>::npos;
+            return string_base<CHAR_TYPE, Allocator>::npos;
         }
         const size_type str_len = str.size();
         size_type pos = size() - str_len;
@@ -419,11 +418,11 @@ namespace bq {
         return npos;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE> string_base<CHAR_TYPE>::replace(const bq::string_base<CHAR_TYPE>& from, const bq::string_base<CHAR_TYPE>& to) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator> string_base<CHAR_TYPE, Allocator>::replace(const bq::string_base<CHAR_TYPE, Allocator>& from, const bq::string_base<CHAR_TYPE, Allocator>& to) const
     {
-        assert(!from.is_empty() && "replace from string_base<CHAR_TYPE> must no be empty!");
-        bq::string_base<CHAR_TYPE> result;
+        assert(!from.is_empty() && "replace from string_base<CHAR_TYPE, Allocator> must no be empty!");
+        bq::string_base<CHAR_TYPE, Allocator> result;
 
         result.set_capacity(capacity()); // it accelerate for most of time
         size_type pos = 0;
@@ -441,8 +440,8 @@ namespace bq {
         return result;
     }
 
-    template <typename CHAR_TYPE>
-    inline bool string_base<CHAR_TYPE>::equals_ignore_case(const bq::string_base<CHAR_TYPE>& str) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool string_base<CHAR_TYPE, Allocator>::equals_ignore_case(const bq::string_base<CHAR_TYPE, Allocator>& str) const
     {
         if (size() != str.size()) {
             return false;
@@ -456,21 +455,21 @@ namespace bq {
         return true;
     }
 
-    template <typename CHAR_TYPE>
-    inline bq::array<bq::string_base<CHAR_TYPE>> string_base<CHAR_TYPE>::split(const bq::string_base<CHAR_TYPE>& delimiter) const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bq::array<bq::string_base<CHAR_TYPE, Allocator>> string_base<CHAR_TYPE, Allocator>::split(const bq::string_base<CHAR_TYPE, Allocator>& delimiter) const
     {
-        bq::array<bq::string_base<CHAR_TYPE>> result;
+        bq::array<bq::string_base<CHAR_TYPE, Allocator>> result;
         size_type last_offset = 0;
         while (last_offset < size()) {
             size_type new_offset = find(delimiter, last_offset);
             if (new_offset == npos) {
-                bq::string_base<CHAR_TYPE> lastStr = substr(last_offset);
+                bq::string_base<CHAR_TYPE, Allocator> lastStr = substr(last_offset);
                 if (!lastStr.is_empty()) {
                     result.emplace_back(lastStr);
                 }
                 break;
             } else {
-                bq::string_base<CHAR_TYPE> lastStr = substr(last_offset, new_offset - last_offset);
+                bq::string_base<CHAR_TYPE, Allocator> lastStr = substr(last_offset, new_offset - last_offset);
                 if (!lastStr.is_empty()) {
                     result.emplace_back(lastStr);
                 }
@@ -480,8 +479,8 @@ namespace bq {
         return result;
     }
 
-    template <typename CHAR_TYPE>
-    inline string_base<CHAR_TYPE> string_base<CHAR_TYPE>::trim() const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline string_base<CHAR_TYPE, Allocator> string_base<CHAR_TYPE, Allocator>::trim() const
     {
         size_type start_pos = 0;
         while (start_pos < size()) {
@@ -503,8 +502,8 @@ namespace bq {
         return substr(start_pos, end_pos - start_pos + 1);
     }
 
-    template <typename CHAR_TYPE>
-    inline uint64_t string_base<CHAR_TYPE>::get_hash(const bq::string_base<CHAR_TYPE>& str)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline uint64_t string_base<CHAR_TYPE, Allocator>::get_hash(const bq::string_base<CHAR_TYPE, Allocator>& str)
     {
         uint64_t hash = 0;
         for (size_type i = 0; i < str.size(); i++) {
@@ -514,8 +513,8 @@ namespace bq {
         return hash;
     }
 
-    template <typename CHAR_TYPE>
-    inline uint64_t string_base<CHAR_TYPE>::get_hash_ignore_case(const bq::string_base<CHAR_TYPE>& str)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline uint64_t string_base<CHAR_TYPE, Allocator>::get_hash_ignore_case(const bq::string_base<CHAR_TYPE, Allocator>& str)
     {
         uint64_t hash = 0;
         for (size_type i = 0; i < str.size(); i++) {
@@ -525,8 +524,8 @@ namespace bq {
         return hash;
     }
 
-    template <typename CHAR_TYPE>
-    inline const typename string_base<CHAR_TYPE>::char_type* string_base<CHAR_TYPE>::empty_str() const
+    template <typename CHAR_TYPE, typename Allocator>
+    inline const typename string_base<CHAR_TYPE, Allocator>::char_type* string_base<CHAR_TYPE, Allocator>::empty_str() const
     {
         assert(false && "unimplemented CHAR_TYPE!");
         return nullptr;
@@ -550,24 +549,24 @@ namespace bq {
         return U"";
     }
 
-    template <typename CHAR_TYPE>
-    inline bq::string_base<CHAR_TYPE> operator+(const typename string_base<CHAR_TYPE>::char_type* str1, const bq::string_base<CHAR_TYPE>& str2)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bq::string_base<CHAR_TYPE, Allocator> operator+(const typename string_base<CHAR_TYPE, Allocator>::char_type* str1, const bq::string_base<CHAR_TYPE, Allocator>& str2)
     {
-        bq::string_base<CHAR_TYPE> result;
+        bq::string_base<CHAR_TYPE, Allocator> result;
         result.set_capacity(___string_len(str1) + str2.size());
         result += str1;
         result += str2;
         return result;
     }
 
-    template <typename CHAR_TYPE>
-    inline bool operator==(const typename string_base<CHAR_TYPE>::char_type* str1, const bq::string_base<CHAR_TYPE>& str2)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool operator==(const typename string_base<CHAR_TYPE, Allocator>::char_type* str1, const bq::string_base<CHAR_TYPE, Allocator>& str2)
     {
         return str2 == str1;
     }
 
-    template <typename CHAR_TYPE>
-    inline bool operator!=(const typename string_base<CHAR_TYPE>::char_type* str1, const bq::string_base<CHAR_TYPE>& str2)
+    template <typename CHAR_TYPE, typename Allocator>
+    inline bool operator!=(const typename string_base<CHAR_TYPE, Allocator>::char_type* str1, const bq::string_base<CHAR_TYPE, Allocator>& str2)
     {
         return str2 != str1;
     }

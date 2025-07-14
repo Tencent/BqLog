@@ -23,10 +23,10 @@
 #include "bq_common/types/type_tools.h"
 
 namespace bq {
-    template <typename CHAR_TYPE>
-    class string_base : public array<CHAR_TYPE, 1> {
+    template <typename CHAR_TYPE, typename Allocator = bq::default_allocator<CHAR_TYPE>>
+    class string_base : public array<CHAR_TYPE, Allocator, 1> {
     public:
-        typedef array<CHAR_TYPE, 1> container_type;
+        typedef array<CHAR_TYPE, Allocator, 1> container_type;
         using container_type::begin;
         using container_type::capacity;
         using container_type::clear;
@@ -39,11 +39,12 @@ namespace bq {
         typedef typename container_type::size_type size_type;
         typedef typename container_type::iterator iterator;
         typedef typename container_type::const_iterator const_iterator;
+        typedef typename container_type::allocator_type allocator_type;
         using container_type::capacity_;
         using container_type::data_;
         using container_type::size_;
 
-        static constexpr typename array<CHAR_TYPE, 1>::size_type npos = static_cast<typename string_base<CHAR_TYPE>::size_type>(-1);
+        static constexpr typename array<CHAR_TYPE, Allocator, 1>::size_type npos = static_cast<typename string_base<CHAR_TYPE, Allocator>::size_type>(-1);
         typedef typename container_type::value_type char_type;
 
     private:
@@ -114,33 +115,33 @@ namespace bq {
     public:
         string_base();
 
-        explicit string_base(typename string_base<CHAR_TYPE>::size_type init_capacity);
+        explicit string_base(typename string_base<CHAR_TYPE, Allocator>::size_type init_capacity);
 
-        string_base(const string_base<CHAR_TYPE>& rhs);
+        string_base(const string_base<CHAR_TYPE, Allocator>& rhs);
 
-        string_base(string_base<CHAR_TYPE>&& rhs) noexcept;
+        string_base(string_base<CHAR_TYPE, Allocator>&& rhs) noexcept;
 
         string_base(const char_type* str);
 
         string_base(const char_type* str, size_t char_count);
 
-        template <typename S, typename = bq::enable_if_t<(is_std_string_compatible<S>::value || is_std_string_view_compatible<S>::value) && !bq::is_same<S, string_base<CHAR_TYPE>>::value, void>>
+        template <typename S, typename = bq::enable_if_t<(is_std_string_compatible<S>::value || is_std_string_view_compatible<S>::value) && !bq::is_same<S, string_base<CHAR_TYPE, Allocator>>::value, void>>
         string_base(const S& rhs);
 
-        string_base& operator=(const string_base<CHAR_TYPE>& rhs);
+        string_base& operator=(const string_base<CHAR_TYPE, Allocator>& rhs);
 
-        string_base& operator=(string_base<CHAR_TYPE>&& rhs) noexcept;
+        string_base& operator=(string_base<CHAR_TYPE, Allocator>&& rhs) noexcept;
 
         string_base& operator=(const char_type* str);
 
-        template <typename S, typename = bq::enable_if_t<(is_std_string_compatible<S>::value || is_std_string_view_compatible<S>::value) && !bq::is_same<S, string_base<CHAR_TYPE>>::value>>
+        template <typename S, typename = bq::enable_if_t<(is_std_string_compatible<S>::value || is_std_string_view_compatible<S>::value) && !bq::is_same<S, string_base<CHAR_TYPE, Allocator>>::value>>
         string_base& operator=(const S& rhs);
 
-        string_base operator+(const string_base<CHAR_TYPE>& rhs) const;
+        string_base operator+(const string_base<CHAR_TYPE, Allocator>& rhs) const;
 
         string_base operator+(const char* rhs) const;
 
-        string_base& operator+=(const string_base<CHAR_TYPE>& rhs);
+        string_base& operator+=(const string_base<CHAR_TYPE, Allocator>& rhs);
 
         bool operator==(const char_type* str) const;
 
@@ -150,53 +151,53 @@ namespace bq {
 
         bool operator!=(const string_base& str) const;
 
-        template <typename S, typename = bq::enable_if_t<(is_std_string_compatible<S>::value || is_std_string_view_compatible<S>::value) && !bq::is_same<S, string_base<CHAR_TYPE>>::value>>
+        template <typename S, typename = bq::enable_if_t<(is_std_string_compatible<S>::value || is_std_string_view_compatible<S>::value) && !bq::is_same<S, string_base<CHAR_TYPE, Allocator>>::value>>
         operator S() const;
 
-        typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE>>::hash_value_type hash_code() const;
+        typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE, Allocator>>::hash_value_type hash_code() const;
 
-        typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE>>::hash_value_type hash_code_ignore_case() const;
+        typename bq::generic_type_hash_calculator<typename bq::string_base<CHAR_TYPE, Allocator>>::hash_value_type hash_code_ignore_case() const;
 
         const char_type* c_str() const;
 
         bool is_empty() const;
 
-        string_base substr(typename string_base<CHAR_TYPE>::size_type pos, typename string_base<CHAR_TYPE>::size_type count = npos) const;
+        string_base substr(typename string_base<CHAR_TYPE, Allocator>::size_type pos, typename string_base<CHAR_TYPE, Allocator>::size_type count = npos) const;
 
-        typename string_base<CHAR_TYPE>::size_type find(const bq::string_base<CHAR_TYPE>& str) const;
+        typename string_base<CHAR_TYPE, Allocator>::size_type find(const bq::string_base<CHAR_TYPE, Allocator>& str) const;
 
-        typename string_base<CHAR_TYPE>::size_type find(const bq::string_base<CHAR_TYPE>& str, typename string_base<CHAR_TYPE>::size_type search_start_pos) const;
+        typename string_base<CHAR_TYPE, Allocator>::size_type find(const bq::string_base<CHAR_TYPE, Allocator>& str, typename string_base<CHAR_TYPE, Allocator>::size_type search_start_pos) const;
 
-        bool begin_with(const bq::string_base<CHAR_TYPE>& str) const;
+        bool begin_with(const bq::string_base<CHAR_TYPE, Allocator>& str) const;
 
-        bool end_with(const bq::string_base<CHAR_TYPE>& str) const;
+        bool end_with(const bq::string_base<CHAR_TYPE, Allocator>& str) const;
 
-        typename string_base<CHAR_TYPE>::size_type find_last(const bq::string_base<CHAR_TYPE>& str) const;
+        typename string_base<CHAR_TYPE, Allocator>::size_type find_last(const bq::string_base<CHAR_TYPE, Allocator>& str) const;
 
-        string_base replace(const bq::string_base<CHAR_TYPE>& from, const bq::string_base<CHAR_TYPE>& to) const;
+        string_base replace(const bq::string_base<CHAR_TYPE, Allocator>& from, const bq::string_base<CHAR_TYPE, Allocator>& to) const;
 
-        bool equals_ignore_case(const bq::string_base<CHAR_TYPE>& str) const;
+        bool equals_ignore_case(const bq::string_base<CHAR_TYPE, Allocator>& str) const;
 
-        bq::array<typename bq::string_base<CHAR_TYPE>> split(const bq::string_base<CHAR_TYPE>& delimiter) const;
+        bq::array<typename bq::string_base<CHAR_TYPE, Allocator>> split(const bq::string_base<CHAR_TYPE, Allocator>& delimiter) const;
 
         string_base trim() const;
 
     private:
-        static uint64_t get_hash(const bq::string_base<CHAR_TYPE>& str);
+        static uint64_t get_hash(const bq::string_base<CHAR_TYPE, Allocator>& str);
 
-        static uint64_t get_hash_ignore_case(const bq::string_base<CHAR_TYPE>& str);
+        static uint64_t get_hash_ignore_case(const bq::string_base<CHAR_TYPE, Allocator>& str);
 
         const char_type* empty_str() const;
     };
 
-    template <typename CHAR_TYPE>
-    bq::string_base<CHAR_TYPE> operator+(const typename bq::string_base<CHAR_TYPE>::char_type* str1, const bq::string_base<CHAR_TYPE>& str2);
+    template <typename CHAR_TYPE, typename Allocator>
+    bq::string_base<CHAR_TYPE, Allocator> operator+(const typename bq::string_base<CHAR_TYPE, Allocator>::char_type* str1, const bq::string_base<CHAR_TYPE, Allocator>& str2);
 
-    template <typename CHAR_TYPE>
-    bool operator==(const typename bq::string_base<CHAR_TYPE>::char_type* str1, const bq::string_base<CHAR_TYPE>& str2);
+    template <typename CHAR_TYPE, typename Allocator>
+    bool operator==(const typename bq::string_base<CHAR_TYPE, Allocator>::char_type* str1, const bq::string_base<CHAR_TYPE, Allocator>& str2);
 
-    template <typename CHAR_TYPE>
-    bool operator!=(const typename bq::string_base<CHAR_TYPE>::char_type* str1, const bq::string_base<CHAR_TYPE>& str2);
+    template <typename CHAR_TYPE, typename Allocator>
+    bool operator!=(const typename bq::string_base<CHAR_TYPE, Allocator>::char_type* str1, const bq::string_base<CHAR_TYPE, Allocator>& str2);
 
     typedef string_base<char> string;
     typedef string_base<char16_t> u16string;

@@ -33,6 +33,7 @@
 #include "bq_common/platform/thread/spin_lock.h"
 #include "bq_common/platform/thread/condition_variable.h"
 #include "bq_common/platform/io/memory_map.h"
+#include "bq_common/utils/aligned_allocator.h"
 #include "bq_common/utils/util.h"
 #include "bq_common/utils/property.h"
 #include "bq_common/utils/property_ex.h"

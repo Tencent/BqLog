@@ -279,7 +279,7 @@ namespace bq {
                 return;
             }
             if (log->get_thread_mode() == log_thread_mode::sync) {
-                log->sync_process(false);
+                log->sync_process(true);
             }else {
                 bq::log_buffer_write_handle handle;
                 handle.data_addr = write_handle.data_addr;

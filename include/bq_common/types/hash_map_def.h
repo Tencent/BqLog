@@ -23,15 +23,21 @@
 #include "bq_common/misc/assert.h"
 #include "bq_common/types/type_traits.h"
 #include "bq_common/types/type_tools.h"
+#include "bq_common/types/allocator.h"
 
 namespace bq {
-    template <typename K, typename V>
+    template <typename K, typename V, typename Allocator>
     class BQ_HASH_MAP_CLS_NAME;
 
     template <typename K, typename V>
     struct BQ_HASH_MAP_KV_CLS_NAME {
+    public:
+        using first_type = K;   //compatible with std libc++
+        using second_type = V;  //compatible with std libc++
+        using key_type = K;
+        using value_type = V;
     private:
-        template <typename K_, typename V_>
+        template <typename K_, typename V_, typename Allocator_>
         friend class BQ_HASH_MAP_CLS_NAME;
         K key_;
         V value_;
@@ -60,17 +66,17 @@ namespace bq {
         }
     };
 
-    template <typename K, typename V, bool C>
+    template <typename K, typename V, typename Allocator, bool C>
     class BQ_HASH_MAP_ITER_CLS_NAME {
     public:
-        friend class BQ_HASH_MAP_ITER_CLS_NAME<K, V, true>;
-        friend class BQ_HASH_MAP_ITER_CLS_NAME<K, V, false>;
-        friend class BQ_HASH_MAP_CLS_NAME<K, V>;
+        friend class BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, true>;
+        friend class BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, false>;
+        friend class BQ_HASH_MAP_CLS_NAME<K, V, Allocator>;
         typedef K key_type;
         typedef V value_type;
-        typedef typename bq::condition_type<C, const BQ_HASH_MAP_CLS_NAME<K, V>*, BQ_HASH_MAP_CLS_NAME<K, V>*>::type container_type_ptr;
-        typedef typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type size_type;
-        typedef typename BQ_HASH_MAP_CLS_NAME<K, V>::pair_type pair_type;
+        typedef typename bq::condition_type<C, const BQ_HASH_MAP_CLS_NAME<K, V, Allocator>*, BQ_HASH_MAP_CLS_NAME<K, V, Allocator>*>::type container_type_ptr;
+        typedef typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type size_type;
+        typedef typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::pair_type pair_type;
         typedef typename bq::condition_type<C, const pair_type*, pair_type*>::type pair_type_ptr;
         typedef typename bq::condition_type<C, const pair_type&, pair_type&>::type pair_type_ref;
         typedef const pair_type* const_pair_type_ptr;
@@ -94,7 +100,7 @@ namespace bq {
 
     public:
         template <bool C_>
-        BQ_HASH_MAP_ITER_CLS_NAME(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs)
+        BQ_HASH_MAP_ITER_CLS_NAME(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C_>& rhs)
             : parent_((container_type_ptr)rhs.parent_)
             , node_index_(rhs.node_index_)
             , bucket_idx_(rhs.bucket_idx_)
@@ -102,16 +108,16 @@ namespace bq {
         }
 
         template <bool C_>
-        BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>& operator=(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs);
+        BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>& operator=(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C_>& rhs);
 
-        template <typename K_, typename V_, bool C1, bool C2>
-        friend bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2);
-        template <typename K_, typename V_, bool C1, bool C2>
-        friend bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2);
+        template <typename K_, typename V_, typename Allocator1, typename Allocator2, bool C1, bool C2>
+        friend bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator1, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator2, C2>& map2);
+        template <typename K_, typename V_, typename Allocator1, typename Allocator2, bool C1, bool C2>
+        friend bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator1, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator2, C2>& map2);
 
-        BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>& operator++();
+        BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>& operator++();
 
-        BQ_HASH_MAP_ITER_CLS_NAME<K, V, C> operator++(int32_t);
+        BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C> operator++(int32_t);
 
         explicit operator bool() const;
 
@@ -124,15 +130,16 @@ namespace bq {
         const_pair_type_ptr operator->() const;
     };
 
-    template <typename K, typename V>
+    template <typename K, typename V, typename Allocator = bq::default_allocator<BQ_HASH_MAP_KV_CLS_NAME<K, V>>>
     class BQ_HASH_MAP_CLS_NAME {
     public:
         typedef typename bq::remove_reference<K>::type key_type;
         typedef typename bq::remove_reference<V>::type value_type;
         typedef const key_type& const_key_type_ref;
         typedef uint32_t size_type;
-        typedef BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, false> iterator;
-        typedef BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, true> const_iterator;
+        typedef BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, Allocator, false> iterator;
+        typedef BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, Allocator, true> const_iterator;
+        typedef Allocator allocator_type;
         typedef typename bq::condition_type<
             bq::is_pointer<key_type>::value,
             typename bq::pointer_type_hash_calculator<key_type>,
@@ -141,21 +148,21 @@ namespace bq {
                 typename bq::number_type_hash_calculator<key_type>,
                 typename bq::generic_type_hash_calculator<key_type>>::type>::type hash_calculate_type;
         typedef BQ_HASH_MAP_KV_CLS_NAME<key_type, value_type> pair_type;
-        friend class BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, true>;
-        friend class BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, false>;
+        friend class BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, Allocator, true>;
+        friend class BQ_HASH_MAP_ITER_CLS_NAME<key_type, value_type, Allocator, false>;
 
     protected:
         struct value_node {
-            BQ_HASH_MAP_CLS_NAME<K, V>::size_type prev;
-            BQ_HASH_MAP_CLS_NAME<K, V>::size_type next;
-            BQ_HASH_MAP_CLS_NAME<K, V>::size_type bucket_idx;
+            BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type prev;
+            BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type next;
+            BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type bucket_idx;
             typename iterator::pair_type entry;
         };
 
         template <typename T>
         struct value_node_buffer_head {
             typedef T value_type;
-            typedef BQ_HASH_MAP_CLS_NAME<K, V>::size_type size_type;
+            typedef BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type size_type;
             T* data_;
             size_type size_;
             value_node_buffer_head()
@@ -163,13 +170,13 @@ namespace bq {
                 , size_(0)
             {
             }
-            BQ_HASH_MAP_CLS_NAME<K, V>::size_type size() const { return size_; }
-            T& operator[](BQ_HASH_MAP_CLS_NAME<K, V>::size_type idx)
+            BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type size() const { return size_; }
+            T& operator[](BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type idx)
             {
                 assert(idx < size_);
                 return data_[idx];
             }
-            const T& operator[](BQ_HASH_MAP_CLS_NAME<K, V>::size_type idx) const
+            const T& operator[](BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type idx) const
             {
                 assert(idx < size_);
                 return data_[idx];
@@ -177,9 +184,13 @@ namespace bq {
         };
 
         typedef value_node node_type;
+        typedef typename allocator_traits<default_allocator<char>>::template rebind_alloc<size_type> bucket_allocator_type;
+        typedef typename allocator_traits<default_allocator<char>>::template rebind_alloc<node_type> node_allocator_type;
         value_node_buffer_head<size_type> buckets_;
         // we need manually control the destructive behaviour of every node item. bq::array didn't meets our needs because it has its own destructive logic.
         value_node_buffer_head<node_type> nodes_;
+        bucket_allocator_type buckets_allocator_;
+        node_allocator_type nodes_allocator_;
 
         constexpr static size_type BQ_HASH_MAP_INVALID_INDEX = (size_type)-1;
         size_type size_;
@@ -193,9 +204,9 @@ namespace bq {
 
         ~BQ_HASH_MAP_CLS_NAME();
 
-        BQ_HASH_MAP_CLS_NAME(const BQ_HASH_MAP_CLS_NAME<K, V>& rhs);
+        BQ_HASH_MAP_CLS_NAME(const BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& rhs);
 
-        BQ_HASH_MAP_CLS_NAME(BQ_HASH_MAP_CLS_NAME<K, V>&& rhs);
+        BQ_HASH_MAP_CLS_NAME(BQ_HASH_MAP_CLS_NAME<K, V, Allocator>&& rhs);
 
         size_type size() const;
 
@@ -216,9 +227,9 @@ namespace bq {
         template <typename V_>
         iterator add(const_key_type_ref key, V_&& value);
 
-        BQ_HASH_MAP_CLS_NAME<K, V>& operator=(const BQ_HASH_MAP_CLS_NAME<K, V>& rhs);
+        BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& operator=(const BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& rhs);
 
-        BQ_HASH_MAP_CLS_NAME<K, V>& operator=(BQ_HASH_MAP_CLS_NAME<K, V>&& rhs);
+        BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& operator=(BQ_HASH_MAP_CLS_NAME<K, V, Allocator>&& rhs);
 
         bool erase(iterator where_it);
 

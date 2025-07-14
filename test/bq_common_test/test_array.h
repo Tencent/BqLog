@@ -349,6 +349,30 @@ namespace bq {
                     result.add_result(insert_test_array.size() == 500, "fill_uninitialized test 1");
                 }
 
+                {
+                    for (int32_t i = 0; i < 100000; ++i) {
+                        bq::array<char, bq::aligned_allocator<char, 64>> alignement_test_array;
+                        std::mt19937 random_seed((uint32_t)bq::platform::high_performance_epoch_ms());
+                        size_t random_size = (size_t)(random_seed()) % 10000 + 1;
+                        alignement_test_array.fill_uninitialized(random_size);
+                        result.add_result(((uintptr_t)(&alignement_test_array[0])) % 64 == 0, "Array Alignment 64 test %d", i);
+                    }
+                    for (int32_t i = 0; i < 100000; ++i) {
+                        bq::array<char, bq::aligned_allocator<char, 32>> alignement_test_array;
+                        std::mt19937 random_seed((uint32_t)bq::platform::high_performance_epoch_ms());
+                        size_t random_size = (size_t)(random_seed()) % 10000 + 1;
+                        alignement_test_array.fill_uninitialized(random_size);
+                        result.add_result(((uintptr_t)(&alignement_test_array[0])) % 32 == 0, "Array Alignment 32 test %d", i);
+                    }
+                    for (int32_t i = 0; i < 100000; ++i) {
+                        bq::array<char, bq::aligned_allocator<char, 16>> alignement_test_array;
+                        std::mt19937 random_seed((uint32_t)bq::platform::high_performance_epoch_ms());
+                        size_t random_size = (size_t)(random_seed()) % 10000 + 1;
+                        alignement_test_array.fill_uninitialized(random_size);
+                        result.add_result(((uintptr_t)(&alignement_test_array[0])) % 16 == 0, "Array Alignment 16 test %d", i);
+                    }
+                }
+
                 return result;
             }
         };
