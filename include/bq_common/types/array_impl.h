@@ -358,7 +358,9 @@ namespace bq {
         constexpr size_t item_size = sizeof(T);
         // simply copy memory for non-trivial constructible type to optimize performance.
         if (dest && src && count) {
+            BQ_SUPPRESS_NULL_DEREF_BEGIN();
             memcpy((void*)dest, (void*)src, item_size * count);
+            BQ_SUPPRESS_NULL_DEREF_END();
         }
     }
 
@@ -403,7 +405,9 @@ namespace bq {
         (void)constructed_count;
         // simply copy memory for non-trivial constructible type to optimize performance.
         if (dest && src && count) {
+            BQ_SUPPRESS_NULL_DEREF_BEGIN();
             memcpy(dest, src, count * sizeof(T));
+            BQ_SUPPRESS_NULL_DEREF_END();
         }
     }
 
@@ -609,7 +613,9 @@ namespace bq {
             }
             if (data_) {
                 BQ_ARRAY_INLINE_MACRO(_inner_mem_copy)<value_type, allocator_type>(allocator_, new_data, data_, size_);
+                BQ_SUPPRESS_NULL_DEREF_BEGIN();
                 memcpy((void*)(new_data + size_), (void*)(data_ + size_), item_size * TAIL_BUFFER_SIZE);
+                BQ_SUPPRESS_NULL_DEREF_END();
             } else {
                 memset((void*)new_data, 0, TAIL_BUFFER_SIZE * sizeof(value_type));
             }
