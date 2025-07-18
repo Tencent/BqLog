@@ -192,6 +192,11 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #define BQ_CPP_20 1
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 202302L)
+#define BQ_CPP_23 1
+#endif
+ 
+
 
 #if defined(__cpp_aligned_new)
 #define BQ_ALIGNAS_NEW 1
@@ -213,4 +218,20 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #else
 #define BQ_SUPPRESS_NULL_DEREF_BEGIN()
 #define BQ_SUPPRESS_NULL_DEREF_END()
+#endif
+
+#if defined(BQ_CPP_20)
+#define BQ_LIKELY_IF(expr) if (expr) [[likely]]
+#define BQ_UNLIKELY_IF(expr) if (expr) [[unlikely]]
+#elif defined(BQ_CLANG) || defined(BQ_GCC)
+#if defined(__has_builtin) && __has_builtin(__builtin_expect)
+#define BQ_LIKELY_IF(expr) if (__builtin_expect(!!(expr), 1))
+#define BQ_UNLIKELY_IF(expr) if (__builtin_expect(!!(expr), 0))
+#else
+#define BQ_LIKELY_IF(expr) if (expr)
+#define BQ_UNLIKELY_IF(expr) if (expr)
+#endif
+#else
+#define BQ_LIKELY_IF(expr) if (expr)
+#define BQ_UNLIKELY_IF(expr) if (expr)
 #endif

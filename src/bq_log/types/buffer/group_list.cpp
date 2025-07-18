@@ -59,14 +59,16 @@ namespace bq {
         return total_size_of_block_datas;
     }
 
-    create_memory_map_result group_node::create_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group, uint32_t index)
+    create_memory_map_result group_node::create_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group, uint64_t index)
     {
         if (!bq::memory_map::is_platform_support() || !config.need_recovery) {
             return create_memory_map_result::failed;
         }
         char tmp[32];
-        snprintf(tmp, sizeof(tmp), "_%" PRIu32 "", index);
-        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/hp/" + config.log_name + tmp + ".mmap", true);
+        snprintf(tmp, sizeof(tmp), "_%" PRIu64 "", index);
+        bq::string path = config.recovery_file_abs_path.is_empty() ? 
+            TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/hp/" + config.log_name + tmp + ".mmap", true)
+            : config.recovery_file_abs_path + "_" +  tmp;
         memory_map_file_ = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         if (!memory_map_file_.is_valid()) {
             bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
@@ -152,7 +154,7 @@ namespace bq {
         head_ptr_ = (group_data_head*)node_head_addr;
     }
 
-    group_node::group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint32_t index)
+    group_node::group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index)
     {
         parent_list_ = parent_list;
         // This high-frequency memory should be kept from being swapped to the swap partition or LLC as much as possible, 
@@ -229,23 +231,20 @@ namespace bq {
             char* end_ptr = nullptr;
             errno = 0;
             bq::string file_name_cpy = file_name.substr(config_.log_name.size() + 1);
-            auto ul_value = strtoul(file_name_cpy.c_str(), &end_ptr, 10);
+            uint64_t u64_value = strtoull(file_name_cpy.c_str(), &end_ptr, 10);
             if (errno == ERANGE 
-                || end_ptr != file_name_cpy.c_str() + (file_name_cpy.size() - strlen(".mmap")) 
-                || ul_value > UINT32_MAX) {
+                || end_ptr != file_name_cpy.c_str() + (file_name_cpy.size() - strlen(".mmap"))) {
                 bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
                 bq::file_manager::remove_file_or_dir(full_path);
                 continue;
             }
-            uint32_t index_value = (uint32_t)ul_value;
-            if (index_value > current_group_index_.load(bq::platform::memory_order::relaxed)) {
-                current_group_index_.store(index_value, bq::platform::memory_order::relaxed);
+            if (u64_value > current_group_index_.load(bq::platform::memory_order::relaxed)) {
+                current_group_index_.store(u64_value, bq::platform::memory_order::seq_cst);
             }
-            auto* new_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, index_value);
+            auto* new_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, u64_value);
             new_node->get_next_ptr().node_ = head_.node_;
             head_.node_ = new_node;
         }
-
     }
 
     group_list::~group_list()
@@ -291,7 +290,7 @@ namespace bq {
             if (!result) {
                 src_node = pool_.pop();
                 if (!src_node) {
-                    src_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1u, bq::platform::memory_order::relaxed));
+                    src_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1, bq::platform::memory_order::relaxed));
                 }
                 result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;

@@ -80,6 +80,12 @@ namespace bq {
         ///  be lost in most cases and can be recovered when program is relaunched.</summary>
         bool need_recovery = false;
 
+        /// <summary>
+        /// Specifies the absolute path of memory-mapped file.
+        /// If empty string, the memory-mapped file path will be determined by log_name.
+        /// </summary>
+        bq::string recovery_file_abs_path;
+
         /// <summary>Memory policy when space is not enough.</summary>
         bq::log_memory_policy policy = log_memory_policy::block_when_full;
 

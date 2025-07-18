@@ -171,7 +171,6 @@ namespace bq {
     template <typename T>
     struct cache_friendly_type {
     private:
-        static constexpr size_t CACHE_LINE_SIZE = 64;
         uint8_t padding_left_[CACHE_LINE_SIZE];
         T value_;
         uint8_t padding_right_[CACHE_LINE_SIZE];
@@ -231,6 +230,8 @@ namespace bq {
     // which can handle the vast majority of cases.
     template <typename T>
     class unique_ptr {
+    public:
+        using value_type = T;
     public:
         unique_ptr()
             : ptr(nullptr)

@@ -57,7 +57,6 @@ namespace bq {
 
     class alignas(CACHE_LINE_SIZE) miso_ring_buffer {
     private:
-        static constexpr size_t CACHE_LINE_SIZE = 64;
         static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
         static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
         enum class block_status : uint8_t{

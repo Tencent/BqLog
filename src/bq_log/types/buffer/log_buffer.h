@@ -36,7 +36,8 @@ namespace bq {
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 #endif
         static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 10;
-        static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL_ = 1000; 
+        static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL = 1000;
+        static constexpr uint64_t OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS = 1000;
     public:
         BQ_PACK_BEGIN
         struct lp_buffer_head_misc {
@@ -159,6 +160,7 @@ namespace bq {
             version_waiting,
             version_invalid,
             seq_pending,
+            seq_invalid
         };
 
         enum class read_state {
@@ -172,11 +174,19 @@ namespace bq {
         context_verify_result verify_context(const context_head& context);
         void deregister_seq(const context_head& context);
         void prepare_and_fix_recovery_data();
+        void clear_recovery_data();
 
         //For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
         bool rt_try_traverse_to_next_group();
+
+        //For oversize data.
+        log_buffer_write_handle wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms);
+        void wt_commit_oversize_write_chunk(const log_buffer_write_handle& oversize_handle);
+        bool rt_read_oversize_chunk(const log_buffer_read_handle& parent_handle, log_buffer_read_handle& out_oversize_handle);
+        void rt_return_oversize_read_chunk(const log_buffer_read_handle& oversize_handle);
+        void rt_recycle_oversize_buffers();
     private:
         friend struct log_tls_info;
         log_buffer_config config_;
@@ -185,6 +195,21 @@ namespace bq {
         miso_ring_buffer lp_buffer_; // used to save memory for low frequency threads.
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
+        struct alignas(CACHE_LINE_SIZE) {
+            struct buffer_def {
+                bq::miso_ring_buffer buffer_;
+                bq::platform::spin_lock_rw_crazy buffer_lock_;
+                uint64_t last_used_epoch_ms_;
+                buffer_def(const log_buffer_config& config)
+                    : buffer_(config)
+                    , last_used_epoch_ms_(0)
+                {
+                }
+            };
+            bq::platform::spin_lock_rw_crazy array_lock_;
+            bq::array<bq::unique_ptr<buffer_def>> buffers_array_;
+            uint64_t last_recycle_epoch_ms_ = 0;
+        } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
         struct alignas(CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator last_group_;     //empty means read from lp_buffer
@@ -206,7 +231,7 @@ namespace bq {
                 context_verify_result verify_result;
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
-
+        bq::platform::atomic<uint64_t> current_oversize_buffer_index_;
 #if defined(BQ_LOG_BUFFER_DEBUG)
         alignas(CACHE_LINE_SIZE) bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;

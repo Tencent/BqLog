@@ -519,14 +519,18 @@ namespace bq {
     template <typename T>
     BQ_ARRAY_INLINE typename bq::enable_if<bq::is_trivially_move_assignable<T>::value && bq::is_trivially_copy_assignable<T>::value, void>::type BQ_ARRAY_INLINE_MACRO(_inner_backward_move)(T* _dest, T* _src, size_t count)
     {
-        memmove(_dest, _src, sizeof(T) * count);
+        if (_dest != _src && count > 0) {
+            memmove(_dest, _src, sizeof(T) * count);
+        }
     }
 
     template <typename T>
     BQ_ARRAY_INLINE typename bq::enable_if<!(bq::is_trivially_move_assignable<T>::value && bq::is_trivially_copy_assignable<T>::value), void>::type BQ_ARRAY_INLINE_MACRO(_inner_backward_move)(T* _dest, T* _src, size_t count)
     {
-        for (size_t i = 0; i < count; ++i) {
-            _dest[i] = bq::move(_src[i]);
+        if (_dest != _src) {
+            for (size_t i = 0; i < count; ++i) {
+                _dest[i] = bq::move(_src[i]);
+            }
         }
     }
 

@@ -53,7 +53,7 @@ namespace bq {
     private:
         size_t get_group_meta_size(const log_buffer_config& config);
         size_t get_group_data_size(const log_buffer_config& config, uint16_t max_block_count_per_group);
-        create_memory_map_result create_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group, uint32_t index);
+        create_memory_map_result create_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group, uint64_t index);
         bool try_recover_from_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group);
         void init_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group);
         void init_memory(const log_buffer_config& config, uint16_t max_block_count_per_group);
@@ -69,7 +69,7 @@ namespace bq {
         jobject java_buffer_obj_ = nullptr;
 #endif
     public:
-        group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint32_t index);
+        group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index);
         ~group_node();
 
         bq_forceinline pointer_type& get_next_ptr() { return next_; }
@@ -249,7 +249,7 @@ namespace bq {
 #if defined(BQ_UNIT_TEST)
         bq::platform::atomic<int32_t> groups_count_ = 0;
 #endif
-        alignas(CACHE_LINE_SIZE) bq::platform::atomic<uint32_t> current_group_index_;
+        alignas(CACHE_LINE_SIZE) bq::platform::atomic<uint64_t> current_group_index_;
         alignas(CACHE_LINE_SIZE) group_node::pointer_type head_;
         alignas(CACHE_LINE_SIZE) memory_pool<group_node> pool_;
     };
