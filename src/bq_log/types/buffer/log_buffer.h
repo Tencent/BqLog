@@ -208,7 +208,6 @@ namespace bq {
             };
             bq::platform::spin_lock_rw_crazy array_lock_;
             bq::array<bq::unique_ptr<buffer_def>> buffers_array_;
-            uint64_t last_recycle_epoch_ms_ = 0;
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
         struct alignas(CACHE_LINE_SIZE) {
             struct {

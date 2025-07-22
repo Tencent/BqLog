@@ -158,6 +158,20 @@ namespace bq {
                 }
             }
 
+            inline bool try_lock() 
+            {
+                if (!value_.get().exchange(true, bq::platform::memory_order::acquire)) {
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                    thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
+#endif
+                    return true;
+                }
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                assert(bq::platform::thread::get_current_thread_id() != thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
+#endif
+                return false;
+            }
+
             inline void unlock()
             {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
@@ -266,6 +280,39 @@ namespace bq {
 #endif
             }
 
+            inline bool try_read_lock()
+            {
+#if !defined(NDEBUG)
+                auto id = bq::platform::thread::thread_id();
+                lock_.lock();
+                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && item.is_write_; });
+                assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
+                record_.push_back(debug_record { id, false, 0 });
+                lock_.unlock();
+#endif
+                counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                if (previous_counter >= 0) {
+                    // read lock success.
+#if !defined(NDEBUG)
+                    lock_.lock();
+                    auto iter = record_.find(debug_record { id, false, 0 });
+                    assert(iter != record_.end());
+                    iter->phase_ = 1;
+                    lock_.unlock();
+#endif
+                    return true;
+                }
+                counter_.get().fetch_sub_relaxed(1);
+#if !defined(NDEBUG)
+                lock_.lock();
+                auto iter = record_.find(debug_record { id, false, 0 });
+                assert(iter != record_.end());
+                record_.erase(iter);
+                lock_.unlock();
+#endif
+                return false;
+            }
+
             inline void read_unlock()
             {
 #if !defined(NDEBUG)
@@ -322,6 +369,37 @@ namespace bq {
                 iter->phase_ = 1;
                 lock_.unlock();
 #endif
+            }
+
+            inline bool try_write_lock()
+            {
+#if !defined(NDEBUG)
+                auto id = bq::platform::thread::get_current_thread_id();
+                lock_.lock();
+                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id; });
+                assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
+                record_.push_back(debug_record { id, true, 0 });
+                lock_.unlock();
+#endif
+                counter_type expected_counter = 0;
+                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+#if !defined(NDEBUG)
+                    lock_.lock();
+                    auto iter = record_.find({ id, true, 0 });
+                    assert(iter != record_.end());
+                    iter->phase_ = 1;
+                    lock_.unlock();
+#endif 
+                    return true;
+                }
+#if !defined(NDEBUG)
+                lock_.lock();
+                auto iter = record_.find({ id, true, 0 });
+                assert(iter != record_.end());
+                record_.erase(iter);
+                lock_.unlock();
+#endif
+                return false;
             }
 
             inline void write_unlock()
@@ -397,6 +475,32 @@ namespace bq {
             }
         };
 
+        class scoped_try_spin_lock {
+        private:
+            spin_lock& lock_;
+            bool locked_;
+        public:
+            scoped_try_spin_lock() = delete;
+
+            explicit scoped_try_spin_lock(spin_lock& lock)
+                : lock_(lock)
+            {
+                locked_ = lock_.try_lock();
+            }
+
+            bool owns_lock() const
+            {
+                return locked_;
+            }
+
+            ~scoped_try_spin_lock()
+            {
+                if (locked_) {
+                    lock_.unlock();
+                }
+            }
+        };
+
         class scoped_spin_lock_read_crazy {
         private:
             spin_lock_rw_crazy& lock_;
@@ -416,6 +520,33 @@ namespace bq {
             }
         };
 
+        class scoped_try_spin_lock_read_crazy {
+        private:
+            spin_lock_rw_crazy& lock_;
+            bool locked_;
+
+        public:
+            scoped_try_spin_lock_read_crazy() = delete;
+
+            explicit scoped_try_spin_lock_read_crazy(spin_lock_rw_crazy& lock)
+                : lock_(lock)
+            {
+                locked_ = lock_.try_read_lock();
+            }
+
+            bool owns_lock() const
+            {
+                return locked_;
+            }
+
+            ~scoped_try_spin_lock_read_crazy()
+            {
+                if (locked_) {
+                    lock_.read_unlock();
+                }
+            }
+        };
+
         class scoped_spin_lock_write_crazy {
         private:
             spin_lock_rw_crazy& lock_;
@@ -432,6 +563,33 @@ namespace bq {
             ~scoped_spin_lock_write_crazy()
             {
                 lock_.write_unlock();
+            }
+        };
+
+        class scoped_try_spin_lock_write_crazy {
+        private:
+            spin_lock_rw_crazy& lock_;
+            bool locked_;
+
+        public:
+            scoped_try_spin_lock_write_crazy() = delete;
+
+            explicit scoped_try_spin_lock_write_crazy(spin_lock_rw_crazy& lock)
+                : lock_(lock)
+            {
+                locked_ = lock_.try_write_lock();
+            }
+
+            bool owns_lock() const
+            {
+                return locked_;
+            }
+
+            ~scoped_try_spin_lock_write_crazy()
+            {
+                if (locked_) {
+                    lock_.write_unlock();
+                }
             }
         };
     }

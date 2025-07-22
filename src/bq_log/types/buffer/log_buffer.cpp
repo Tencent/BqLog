@@ -243,7 +243,8 @@ namespace bq {
             log_buffer_write_handle handle_copy = handle;
             handle_copy.data_addr -= sizeof(context_head);
             auto* context = reinterpret_cast<context_head*>(handle_copy.data_addr);
-            BQ_UNLIKELY_IF(context->is_external_ref_)
+            bool is_external_ref_ = context->is_external_ref_ && handle.result == enum_buffer_result_code::success;
+            BQ_UNLIKELY_IF(is_external_ref_)
             {
                 wt_commit_oversize_write_chunk(handle_copy);
             }
@@ -309,6 +310,7 @@ namespace bq {
                     }
                 }
                 rt_reading.state_ = read_state::next_group_finding;
+                rt_recycle_oversize_buffers();
                 break;
             case read_state::hp_block_reading:
                 rt_reading.hp_handle_cache_ = rt_reading.cur_block_->get_buffer().batch_read();
@@ -521,6 +523,7 @@ namespace bq {
                 bq::util::aligned_delete(context.get_tls_info());
             } else {
                 ++context.get_tls_info()->rt_data_.current_read_seq_;
+                rt_cache_.current_reading_.traverse_end_block_ = rt_cache_.current_reading_.last_block_;
             }
         } else {
             // for recovering data
@@ -762,8 +765,10 @@ namespace bq {
         }
         auto* oversize_context = reinterpret_cast<context_head*>(over_size_handle.data_addr);
         oversize_context->version_ = version_;
+        oversize_context->is_thread_finished_ = false;
         oversize_context->seq_ = parent_context->seq_;
         oversize_context->is_external_ref_ = true;
+        oversize_context->set_tls_info(&tls_buffer);
         over_size_handle.data_addr += sizeof(context_head);
         wt_oversize_parent_handle_.get() = parent_result;
         return over_size_handle;
@@ -831,67 +836,75 @@ namespace bq {
 
     void log_buffer::rt_recycle_oversize_buffers()
     {
-        if (temprorary_oversize_buffer_.buffers_array_.is_empty()) {
+        BQ_LIKELY_IF (temprorary_oversize_buffer_.buffers_array_.is_empty()) {
             return;
         }
         auto current_epoch_ms = bq::platform::high_performance_epoch_ms();
-        if (current_epoch_ms < temprorary_oversize_buffer_.last_recycle_epoch_ms_ + OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS) {
-            return;
-        }
         bool need_recycle = false;
         {
-            bq::platform::scoped_spin_lock_read_crazy r_lock(temprorary_oversize_buffer_.array_lock_);
-            for (auto iter = temprorary_oversize_buffer_.buffers_array_.begin(); iter != temprorary_oversize_buffer_.buffers_array_.end();) {
-                auto& oversize_buffer = *iter;
-                if (current_epoch_ms >= oversize_buffer->last_used_epoch_ms_ + OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS) {
-                    need_recycle = true;
-                    break;
-                } 
-            }
-        }
-        if (need_recycle)
-        {
-            bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
-            for (size_t i = temprorary_oversize_buffer_.buffers_array_.size(); i > 0; --i) {
-                auto index = i - 1;
-                auto& oversize_buffer = *temprorary_oversize_buffer_.buffers_array_[index];
-                bq::platform::scoped_spin_lock_write_crazy w_buffer_lock(oversize_buffer.buffer_lock_);
-                bool is_empty = false;
-                bool loop_finished = false;
-                while (!loop_finished) {
-                    auto read_handle = oversize_buffer.buffer_.read_chunk();
-                    if (read_handle.result == enum_buffer_result_code::err_empty_log_buffer) {
-                        oversize_buffer.buffer_.return_read_chunk(read_handle);
-                        is_empty= true;
-                        loop_finished = true;
-                        break;
-                    }else if (read_handle.result == enum_buffer_result_code::success) {
-                        const auto& context = *reinterpret_cast<const context_head*>(read_handle.data_addr);
-                        auto verify_result = verify_context(context);
-                        switch (verify_result) {
-                        case bq::log_buffer::context_verify_result::valid:
-                        case bq::log_buffer::context_verify_result::version_waiting:
-                        case bq::log_buffer::context_verify_result::seq_pending:
-                            oversize_buffer.buffer_.discard_read_chunk(read_handle);
-                            loop_finished = true;
-                            break;
-                        case bq::log_buffer::context_verify_result::version_invalid:
-                        case bq::log_buffer::context_verify_result::seq_invalid:
-                            oversize_buffer.buffer_.return_read_chunk(read_handle);
-                            break;
-                        default:
-                            assert(false && "unexpected context verify result in rt_read_oversize_chunk");
-                            break;
-                        }
-                    }else {
-                        assert(false && "impossible oversize buffer read result");
+            bq::platform::scoped_try_spin_lock_read_crazy array_read_try_lock(temprorary_oversize_buffer_.array_lock_);
+            if (array_read_try_lock.owns_lock()) {
+                for (auto iter = temprorary_oversize_buffer_.buffers_array_.begin(); iter != temprorary_oversize_buffer_.buffers_array_.end(); ++iter) {
+                    auto& oversize_buffer = *iter;
+                    if (current_epoch_ms >= oversize_buffer->last_used_epoch_ms_ + OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS) {
+                        need_recycle = true;
                         break;
                     }
                 }
-                if (is_empty) {
-                    temprorary_oversize_buffer_.buffers_array_.erase_replace(temprorary_oversize_buffer_.buffers_array_.begin() + index);
+            }
+        }
+
+        if (need_recycle) 
+        {
+            bq::platform::scoped_try_spin_lock_write_crazy array_write_try_lock(temprorary_oversize_buffer_.array_lock_);
+            if (array_write_try_lock.owns_lock()) {
+                for (size_t i = temprorary_oversize_buffer_.buffers_array_.size(); i > 0; --i) {
+                    auto index = i - 1;
+                    auto& oversize_buffer = *temprorary_oversize_buffer_.buffers_array_[index];
+                    bool is_empty = false;
+                    {
+                        bq::platform::scoped_try_spin_lock_write_crazy buffer_write_try_lock(oversize_buffer.buffer_lock_);
+
+                        if (buffer_write_try_lock.owns_lock()) {
+                            bool loop_finished = false;
+                            while (!loop_finished) {
+                                auto read_handle = oversize_buffer.buffer_.read_chunk();
+                                if (read_handle.result == enum_buffer_result_code::err_empty_log_buffer) {
+                                    oversize_buffer.buffer_.return_read_chunk(read_handle);
+                                    is_empty = true;
+                                    loop_finished = true;
+                                    break;
+                                } else if (read_handle.result == enum_buffer_result_code::success) {
+                                    const auto& context = *reinterpret_cast<const context_head*>(read_handle.data_addr);
+                                    auto verify_result = verify_context(context);
+                                    switch (verify_result) {
+                                    case bq::log_buffer::context_verify_result::valid:
+                                    case bq::log_buffer::context_verify_result::version_waiting:
+                                    case bq::log_buffer::context_verify_result::seq_pending:
+                                        oversize_buffer.buffer_.discard_read_chunk(read_handle);
+                                        loop_finished = true;
+                                        break;
+                                    case bq::log_buffer::context_verify_result::version_invalid:
+                                    case bq::log_buffer::context_verify_result::seq_invalid:
+                                        oversize_buffer.buffer_.return_read_chunk(read_handle);
+                                        break;
+                                    default:
+                                        assert(false && "unexpected context verify result in rt_read_oversize_chunk");
+                                        break;
+                                    }
+                                } else {
+                                    assert(false && "impossible oversize buffer read result");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (is_empty) {
+                        temprorary_oversize_buffer_.buffers_array_.erase_replace(temprorary_oversize_buffer_.buffers_array_.begin() + index);
+                    }
                 }
             }
+            
         }
     }
 

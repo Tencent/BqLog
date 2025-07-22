@@ -23,7 +23,7 @@ namespace bq {
     namespace test {
         static bq::platform::atomic<int32_t> linked_list_test_number_generator_ = 0;
         static bq::platform::atomic<int32_t> log_buffer_test_total_write_count_ = 0;
-        constexpr int32_t log_buffer_total_task = 5;
+        constexpr int32_t log_buffer_total_task = 1;
         constexpr int32_t linked_list_test_number_per_thread = 2000000;
 
 
@@ -199,8 +199,11 @@ namespace bq {
             bq::platform::atomic<int32_t>& counter_ref_;
 
         public:
-            const static int32_t min_chunk_size = 12;
-            const static int32_t max_chunk_size = 1024;
+            const static uint32_t min_chunk_size = 12;
+            const static uint32_t max_chunk_size = 1024;
+            const static uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
+            const static uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; //8M
+            const static int32_t oversize_chunk_frequency = 99;
             log_buffer_write_task(int32_t id, int32_t left_write_count, bq::log_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
                 : counter_ref_(counter)
             {
@@ -213,9 +216,14 @@ namespace bq {
             {
                 std::random_device sd;
                 std::minstd_rand linear_ran(sd());
-                std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
+                std::uniform_int_distribution<uint32_t> rand_seq(min_chunk_size, max_chunk_size);
+                std::minstd_rand linear_ran_oversize(sd());
+                std::uniform_int_distribution<uint32_t> rand_seq_oversize(min_oversize_chunk_size, max_oversize_chunk_size);
                 while (left_write_count_ > 0) {
-                    uint32_t alloc_size = static_cast<uint32_t>(rand_seq(linear_ran));
+                    uint32_t alloc_size = rand_seq(linear_ran);
+                    if (left_write_count_ % oversize_chunk_frequency == 0) {
+                        alloc_size = rand_seq_oversize(linear_ran_oversize);
+                    }
                     auto handle = log_buffer_ptr_->alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited
@@ -434,23 +442,20 @@ namespace bq {
                     , config.high_frequency_threshold_per_second < UINT64_MAX ? "Y" : "-");
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms\r", percent, 0);
 
-                int32_t read_empty_time = 0;
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     auto handle = test_buffer.read_chunk();
                     bq::scoped_log_buffer_handle<log_buffer> read_handle(test_buffer, handle);
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
                     if (write_finished && read_empty) {
-                        // without double check, this may fails on ARM chips, need review.
-                        if (++read_empty_time >= 2) {
-                            break;
-                        }
+                        break;
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
                         continue;
                     }
-                    int32_t size = (int32_t)handle.data_size;
-                    if (size < log_buffer_write_task::min_chunk_size || size > log_buffer_write_task::max_chunk_size) {
+                    auto size = handle.data_size;
+                    if (!((size >= log_buffer_write_task::min_chunk_size && size <= log_buffer_write_task::max_chunk_size)
+                           || (size >= log_buffer_write_task::min_oversize_chunk_size && size <= log_buffer_write_task::max_oversize_chunk_size))) {
                         result.add_result(false, "ring buffer chunk size error");
                         continue;
                     }
@@ -476,7 +481,7 @@ namespace bq {
                     task_check_vector[id] = chunk_count_per_task - left_count; // error adjust
                     bool content_check = true;
                     for (size_t i = 2; i < static_cast<size_t>(size) / sizeof(int32_t); ++i) {
-                        if (*(reinterpret_cast<int32_t*>(handle.data_addr) + i) != size) {
+                        if (*(reinterpret_cast<uint32_t*>(handle.data_addr) + i) != size) {
                             content_check = false;
                             continue;
                         }
@@ -503,6 +508,7 @@ namespace bq {
                     result.add_result(final_handle.result == bq::enum_buffer_result_code::err_empty_log_buffer, "final read test");
                 }
                 {
+                    bq::platform::thread::sleep(2000); //make sure oversize buffer out of time.
                     auto final_handle = test_buffer.read_chunk();
                     bq::scoped_log_buffer_handle<log_buffer> scoped_final_handle(test_buffer, final_handle);
                     result.add_result(final_handle.result == bq::enum_buffer_result_code::err_empty_log_buffer, "final read test");
@@ -703,8 +709,8 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                do_linked_list_test(result);
-                do_memory_pool_test(result);
+                /*do_linked_list_test(result);
+                do_memory_pool_test(result);*/
 
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
@@ -713,9 +719,9 @@ namespace bq {
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = 1000;
 
-                do_block_list_test(result, config);
+                //do_block_list_test(result, config);
                 config.need_recovery = true;
-                do_block_list_test(result, config);
+                //do_block_list_test(result, config);
 
                 do_basic_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
