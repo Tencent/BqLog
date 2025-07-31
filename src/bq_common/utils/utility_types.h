@@ -249,18 +249,9 @@ namespace bq {
             rhs.ptr = nullptr;
         }
 
-        unique_ptr(const unique_ptr&)
-        {
-            assert(false);
-        }
-		unique_ptr& operator=(T*)
-		{
-			assert(false);
-		}
-		unique_ptr& operator=(const unique_ptr&)
-		{
-			assert(false);
-		}
+        unique_ptr(const unique_ptr&) = delete
+		unique_ptr& operator=(T*) = delete
+		unique_ptr& operator=(const unique_ptr&) = delete
 
         template <typename D>
         unique_ptr& operator=(unique_ptr<D>&& rhs)

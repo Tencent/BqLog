@@ -19,6 +19,7 @@
  */
 #include <string.h>
 #include <stdint.h>
+#include <type_traits>
 #include "bq_common/types/type_traits.h"
 
 // we must supply a custom placement new, because we can compile without libc++.
@@ -181,7 +182,7 @@ namespace bq {
         template <typename... Args>
         static inline void construct(T* _ptr, Args&&... _args)
         {
-            new (_ptr, bq::enum_new_dummy::dummy) T(bq::forward<Args>(_args)...);
+            new (_ptr, bq::enum_new_dummy::dummy) T(std::forward<Args>(_args)...);
         }
     };
 
