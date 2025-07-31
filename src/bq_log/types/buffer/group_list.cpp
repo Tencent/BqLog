@@ -66,9 +66,7 @@ namespace bq {
         }
         char tmp[32];
         snprintf(tmp, sizeof(tmp), "_%" PRIu64 "", index);
-        bq::string path = config.recovery_file_abs_path.is_empty() ? 
-            TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/hp/" + config.log_name + tmp + ".mmap", true)
-            : config.recovery_file_abs_path + "_" +  tmp;
+        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/hp/" + config.log_name + tmp + ".mmap", true);
         memory_map_file_ = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         if (!memory_map_file_.is_valid()) {
             bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());

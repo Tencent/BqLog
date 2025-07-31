@@ -361,6 +361,7 @@ namespace bq {
     void siso_ring_buffer::init_with_memory_map(void* buffer, size_t buffer_size)
     {
         init_with_memory(buffer, buffer_size);
+        mmap_buffer_state_ = memory_map_buffer_state::init_with_memmap;
     }
 
     bool siso_ring_buffer::try_recover_from_exist_memory_map(void* buffer, size_t buffer_size)
@@ -412,6 +413,7 @@ namespace bq {
         head_->wt_reading_cursor_cache_ = head_->rt_reading_cursor_cache_;
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(head_->rt_reading_cursor_cache_);
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).store_release(head_->wt_writing_cursor_cache_);
+        mmap_buffer_state_ = memory_map_buffer_state::recover_from_memory_map;
         return true;
     }
 
@@ -432,6 +434,7 @@ namespace bq {
         head_->aligned_blocks_count_cache_ = aligned_blocks_count_;
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(0);
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).store_release(0);
+        mmap_buffer_state_ = memory_map_buffer_state::init_with_memory;
     }
 
 }

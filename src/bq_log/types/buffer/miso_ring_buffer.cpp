@@ -68,7 +68,6 @@ namespace bq {
      */
     miso_ring_buffer::miso_ring_buffer(const log_buffer_config& config)
         : config_(config)
-        , real_buffer_(nullptr)
         , head_(nullptr)
         , aligned_blocks_(nullptr)
         , aligned_blocks_count_(0)
@@ -109,7 +108,8 @@ namespace bq {
     miso_ring_buffer::~miso_ring_buffer()
     {
         if (!uninit_memory_map()) {
-            free(real_buffer_);
+            bq::platform::aligned_free(head_);
+            head_ = nullptr;
         }
     }
 
@@ -388,9 +388,7 @@ namespace bq {
         if (!bq::memory_map::is_platform_support() || !config_.need_recovery) {
             return create_memory_map_result::failed;
         }
-        bq::string path = config_.recovery_file_abs_path.is_empty() ? 
-            TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/" + config_.log_name + ".mmap", true)
-            : config_.recovery_file_abs_path;
+        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/" + config_.log_name + ".mmap", true);
         memory_map_file_ = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         if (!memory_map_file_.is_valid()) {
             bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
@@ -417,17 +415,18 @@ namespace bq {
         memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, map_size);
         if (!memory_map_handle_.has_been_mapped()) {
             bq::util::log_device_console(log_level::warning, "ring buffer create memory map failed from file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
+            bq::file_manager::instance().close_file(memory_map_file_);
             return create_memory_map_result::failed;
         }
 
         if (((uintptr_t)memory_map_handle_.get_mapped_data() & (CACHE_LINE_SIZE - 1)) != 0) {
             bq::util::log_device_console(log_level::warning, "ring buffer memory map file \"%s\" memory address is not aligned, use memory instead.", memory_map_file_.abs_file_path().c_str());
             bq::memory_map::release_memory_map(memory_map_handle_);
+            bq::file_manager::instance().close_file(memory_map_file_);
             return create_memory_map_result::failed;
         }
-        real_buffer_ = (uint8_t*)memory_map_handle_.get_mapped_data();
-        head_ = (head*)real_buffer_;
-        aligned_blocks_ = (miso_ring_buffer::block*)(real_buffer_ + head_size);
+        head_ = (head*)memory_map_handle_.get_mapped_data();
+        aligned_blocks_ = (miso_ring_buffer::block*)(head_ + 1);
         return result;
     }
 
@@ -443,6 +442,7 @@ namespace bq {
 
         cursors_.write_cursor_.store_release(0);
         cursors_.read_cursor_.store_release(0);
+        mmap_buffer_state_ = memory_map_buffer_state::init_with_memory;
     }
 
     bool miso_ring_buffer::try_recover_from_exist_memory_map()
@@ -502,6 +502,7 @@ namespace bq {
         for (uint32_t i = current_cursor; i < head_->read_cursor_cache_ + aligned_blocks_count_; ++i) {
             BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursor_to_block(i).chunk_head.status, block_status).store_release(block_status::unused);
         }
+        mmap_buffer_state_ = memory_map_buffer_state::recover_from_memory_map;
         return true;
     }
 
@@ -511,14 +512,10 @@ namespace bq {
 
         size_t head_size = sizeof(head);
 
-        size_t alloc_size = (uint32_t)(config_.default_buffer_size + head_size + CACHE_LINE_SIZE);
-        real_buffer_ = (uint8_t*)malloc(sizeof(uint8_t) * alloc_size);
+        size_t alloc_size = (uint32_t)(config_.default_buffer_size + head_size);
+        head_ = (head*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, sizeof(uint8_t) * alloc_size);
 
-        size_t align_unit = CACHE_LINE_SIZE;
-        uintptr_t aligned_addr = (uintptr_t)real_buffer_;
-        aligned_addr = (aligned_addr + align_unit - 1) & (~(align_unit - 1));
-        head_ = (head*)aligned_addr;
-        aligned_blocks_ = (miso_ring_buffer::block*)(aligned_addr + head_size);
+        aligned_blocks_ = (miso_ring_buffer::block*)(head_ + 1);
         for (uint32_t i = 0; i < aligned_blocks_count_; ++i) {
             BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(aligned_blocks_[i].chunk_head.status, block_status).store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
         }
@@ -529,6 +526,7 @@ namespace bq {
 
         cursors_.write_cursor_.store_release(0);
         cursors_.read_cursor_.store_release(0);
+        mmap_buffer_state_ = memory_map_buffer_state::init_with_memory;
     }
 
     bool miso_ring_buffer::uninit_memory_map()

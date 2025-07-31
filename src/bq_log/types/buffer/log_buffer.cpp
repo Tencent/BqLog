@@ -22,7 +22,6 @@
 #endif
 
 namespace bq {
-
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
     {
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block->get_misc_data<log_buffer::block_misc_data>().is_removed_, bool).store_release(removed);
@@ -240,17 +239,21 @@ namespace bq {
         if (is_high_frequency) {
             block_cache->get_buffer().commit_write_chunk(handle);
         } else {
-            log_buffer_write_handle handle_copy = handle;
-            handle_copy.data_addr -= sizeof(context_head);
-            auto* context = reinterpret_cast<context_head*>(handle_copy.data_addr);
-            bool is_external_ref_ = context->is_external_ref_ && handle.result == enum_buffer_result_code::success;
-            BQ_UNLIKELY_IF(is_external_ref_)
-            {
-                wt_commit_oversize_write_chunk(handle_copy);
-            }
-            else
-            {
-                lp_buffer_.commit_write_chunk(handle_copy);
+            if (handle.result == enum_buffer_result_code::success) {
+                log_buffer_write_handle handle_copy = handle;
+                handle_copy.data_addr -= sizeof(context_head);
+                auto* context = reinterpret_cast<context_head*>(handle_copy.data_addr);
+                bool is_external_ref_ = context->is_external_ref_ && handle.result == enum_buffer_result_code::success;
+                BQ_UNLIKELY_IF(is_external_ref_)
+                {
+                    wt_commit_oversize_write_chunk(handle_copy);
+                }
+                else
+                {
+                    lp_buffer_.commit_write_chunk(handle_copy);
+                }
+            } else {
+                lp_buffer_.commit_write_chunk(handle);
             }
         }
     }
@@ -481,7 +484,7 @@ namespace bq {
         return new_node;
     }
 
-    bq::log_buffer::context_verify_result log_buffer::verify_context(const context_head& context)
+    log_buffer::context_verify_result log_buffer::verify_context(const context_head& context)
     {
         if (context.version_ == rt_cache_.current_reading_.version_) {
             //This is the most common scenario.
@@ -505,11 +508,39 @@ namespace bq {
                 }
                 return context.seq_ < expected_seq ? context_verify_result::seq_invalid : context_verify_result::seq_pending;
             }
-        }else if (static_cast<uint16_t>(version_ - context.version_) > static_cast<uint16_t>(version_ - rt_cache_.current_reading_.version_)) {
+        } else if (!is_version_valid(context.version_)) {
             // need discard.
             return context_verify_result::version_invalid;
         }
-        return context_verify_result::version_waiting;
+        return context_verify_result::version_pending;
+    }
+
+    log_buffer::context_verify_result log_buffer::verify_oversize_context(const log_buffer::context_head& parent_context, const log_buffer::context_head& oversize_context)
+    {
+        BQ_LIKELY_IF (parent_context.version_ == oversize_context.version_) {
+            if (parent_context.seq_ == oversize_context.seq_) {
+                return context_verify_result::valid;
+            } else if (parent_context.seq_ < oversize_context.seq_) {
+                return context_verify_result::seq_pending;
+            } else {
+                assert(parent_context.version_ != version_ && "seq_invalid only occurs when recovering");
+                return context_verify_result::seq_invalid;
+            }
+        }
+        else if (parent_context.version_ < oversize_context.version_)
+        {
+            BQ_UNLIKELY_IF(!is_version_valid(oversize_context.version_))
+            {
+                return context_verify_result::version_invalid;
+            } else {
+                return context_verify_result::version_pending;
+            }
+        }
+        else
+        {
+            return context_verify_result::version_invalid;
+        }
+
     }
 
     void log_buffer::deregister_seq(const context_head& context)
@@ -555,10 +586,7 @@ namespace bq {
                             if (rt_read_oversize_chunk(read_handle, oversize_handle)) {
                                 out_handle = oversize_handle;
                                 return true;
-                            } else {
-                                lp_buffer_.return_read_chunk(read_handle);
-                                break;
-                            }
+                            } 
                         }
                     }
                     deregister_seq(context);
@@ -568,7 +596,7 @@ namespace bq {
                 case context_verify_result::seq_invalid:
                     lp_buffer_.return_read_chunk(read_handle);
                     break;
-                case context_verify_result::version_waiting:
+                case context_verify_result::version_pending:
                 case context_verify_result::seq_pending:
                     lp_buffer_.discard_read_chunk(read_handle);
                     return false;
@@ -719,6 +747,9 @@ namespace bq {
         }
         auto parent_result = lp_buffer_.alloc_write_chunk(sizeof(context_head));
         if (enum_buffer_result_code::success != parent_result.result) {
+            // TODO: Even log_memory_policy::auto_expand_when_full is enabled,
+            // allocation may still failed by "not enough space" error when
+            // allocating oversize chunk.
             return parent_result;
         }
         auto* parent_context = reinterpret_cast<context_head*>(parent_result.data_addr);
@@ -733,6 +764,11 @@ namespace bq {
         {
             bq::platform::scoped_spin_lock_read_crazy r_lock(temprorary_oversize_buffer_.array_lock_);
             for (auto& over_size_buffer : temprorary_oversize_buffer_.buffers_array_) {
+                const auto& oversize_buffer_context = over_size_buffer->buffer_.get_misc_data<context_head>();
+                if (oversize_buffer_context.version_ != parent_context->version_
+                    || oversize_buffer_context.get_tls_info() != parent_context->get_tls_info()) {
+                    continue;
+                }
                 over_size_buffer->buffer_lock_.read_lock();
                 over_size_handle = over_size_buffer->buffer_.alloc_write_chunk(size + sizeof(context_head));
                 if (enum_buffer_result_code::success == over_size_handle.result) {
@@ -745,19 +781,25 @@ namespace bq {
         }
         // try to alloc a new oversize buffer
         if (enum_buffer_result_code::success != over_size_handle.result) {
-            auto new_config = config_;
-            new_config.default_buffer_size = (size < (UINT32_MAX >> 1)) ? (size << 1) : UINT32_MAX;
-            if (new_config.need_recovery) {
+            uint32_t default_buffer_size = (size < (UINT32_MAX >> 1)) ? (size << 1) : UINT32_MAX;
+            bq::string abs_recovery_file_path;
+            if (config_.need_recovery) {
                 auto new_index = current_oversize_buffer_index_.add_fetch(1, bq::platform::memory_order::relaxed);
                 char tmp[32];
                 snprintf(tmp, sizeof(tmp), "_%" PRIu64 "", new_index);
-                new_config.recovery_file_abs_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + "_" + tmp + ".mmap", true);
+                abs_recovery_file_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + tmp + ".mmap", true);
             }
             using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
-            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_type>(new_config));
+            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_type>(default_buffer_size, config_.need_recovery, abs_recovery_file_path));
             auto& new_buffer = *(temprorary_oversize_buffer_.buffers_array_.end() - 1);
             new_buffer->buffer_lock_.read_lock();
+            auto& oversize_buffer_context = new_buffer->buffer_.get_misc_data<context_head>();
+            oversize_buffer_context.version_ = version_;
+            oversize_buffer_context.is_thread_finished_ = false;
+            oversize_buffer_context.seq_ = UINT32_MAX;
+            oversize_buffer_context.is_external_ref_ = true;
+            oversize_buffer_context.set_tls_info(&tls_buffer);
             over_size_handle = new_buffer->buffer_.alloc_write_chunk(size + sizeof(context_head));
             assert(enum_buffer_result_code::success == over_size_handle.result && "New created oversize buffer shouldn't fail when allocating");
             new_buffer->last_used_epoch_ms_ = current_epoch_ms;
@@ -791,12 +833,17 @@ namespace bq {
         const auto& parent_context = *reinterpret_cast<const context_head*>(parent_handle.data_addr);
         bq::platform::scoped_spin_lock_read_crazy r_lock(temprorary_oversize_buffer_.array_lock_);
         for (auto& buffer : temprorary_oversize_buffer_.buffers_array_) {
+            const auto& oversize_buffer_context = buffer->buffer_.get_misc_data<context_head>();
+            if (oversize_buffer_context.version_ != parent_context.version_
+                || oversize_buffer_context.get_tls_info() != parent_context.get_tls_info()) {
+                continue;
+            }
             bool read_done = false;
             while (!read_done) {
                 auto read_handle = buffer->buffer_.read_chunk();
                 if (enum_buffer_result_code::success == read_handle.result) {
-                    const auto& context = *reinterpret_cast<const context_head*>(read_handle.data_addr);
-                    auto verify_result = verify_context(context);
+                    const auto& oversize_context = *reinterpret_cast<const context_head*>(read_handle.data_addr);
+                    auto verify_result = verify_oversize_context(parent_context, oversize_context);
                     switch (verify_result) {
                     case bq::log_buffer::context_verify_result::valid:
                         rt_oversize_target_buffer_ = buffer.operator->();
@@ -807,7 +854,7 @@ namespace bq {
                     case bq::log_buffer::context_verify_result::seq_invalid:
                         buffer->buffer_.return_read_chunk(read_handle);
                         break;
-                    case bq::log_buffer::context_verify_result::version_waiting:
+                    case bq::log_buffer::context_verify_result::version_pending:
                     case bq::log_buffer::context_verify_result::seq_pending:
                         buffer->buffer_.discard_read_chunk(read_handle);
                         read_done = true;
@@ -879,7 +926,7 @@ namespace bq {
                                     auto verify_result = verify_context(context);
                                     switch (verify_result) {
                                     case bq::log_buffer::context_verify_result::valid:
-                                    case bq::log_buffer::context_verify_result::version_waiting:
+                                    case bq::log_buffer::context_verify_result::version_pending:
                                     case bq::log_buffer::context_verify_result::seq_pending:
                                         oversize_buffer.buffer_.discard_read_chunk(read_handle);
                                         loop_finished = true;
@@ -900,7 +947,11 @@ namespace bq {
                         }
                     }
                     if (is_empty) {
+                        bq::string abs_mmap_file_path = temprorary_oversize_buffer_.buffers_array_[index]->buffer_.get_mmap_file_path();;
                         temprorary_oversize_buffer_.buffers_array_.erase_replace(temprorary_oversize_buffer_.buffers_array_.begin() + index);
+                        if (bq::file_manager::is_file(abs_mmap_file_path)) {
+                            bq::file_manager::remove_file_or_dir(abs_mmap_file_path); 
+                        }    
                     }
                 }
             }
@@ -999,20 +1050,17 @@ namespace bq {
                     continue;
                 }
                 using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
-                auto config_cpy = config_;
-                config_cpy.recovery_file_abs_path = full_path;
                 size_t file_size = bq::file_manager::get_file_size(full_path);
-                config_cpy.default_buffer_size = CACHE_LINE_SIZE;
-                size_t head_size = CACHE_LINE_SIZE;  //equals to sizeof(miso_ring_buffer::head)
-                while (config_cpy.default_buffer_size < UINT32_MAX) {
-                    size_t map_size = (uint32_t)(config_cpy.default_buffer_size + head_size);
+                uint32_t default_buffer_size = static_cast<uint32_t>(CACHE_LINE_SIZE);
+                while (default_buffer_size < UINT32_MAX) {
+                    uint32_t map_size = normal_buffer::calculate_size_of_memory(default_buffer_size);
                     size_t desired_file_size = bq::memory_map::get_min_size_of_memory_map_file(0, map_size);
                     if (desired_file_size == file_size) {
                         break;
                     }
-                    config_cpy.default_buffer_size <<= 1;
+                    default_buffer_size <<= 1;
                 }
-                if (config_cpy.default_buffer_size == UINT32_MAX) {
+                if (default_buffer_size == UINT32_MAX) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s, invalid size:%zu", full_path.c_str(), file_size);
                     bq::file_manager::remove_file_or_dir(full_path);
                     continue;
@@ -1020,7 +1068,16 @@ namespace bq {
                 if (u64_value > current_oversize_buffer_index_.load(bq::platform::memory_order::relaxed)) {
                     current_oversize_buffer_index_.store(u64_value, bq::platform::memory_order::seq_cst);
                 }
-                temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_type>(config_cpy));
+                auto recovery_buffer = bq::make_unique<oversize_buffer_type>(default_buffer_size, true, full_path);
+                const auto& oversize_buffer_context = recovery_buffer->buffer_.get_misc_data<context_head>();
+                if (oversize_buffer_context.seq_ != UINT32_MAX
+                    || oversize_buffer_context.is_external_ref_ != true
+                    || !is_version_valid(oversize_buffer_context.version_)) {
+                    bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file when recovery:%s, invalid context", full_path.c_str());
+                    bq::file_manager::remove_file_or_dir(full_path);
+                } else {
+                    temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::move(recovery_buffer));
+                }
             }
         }
     }

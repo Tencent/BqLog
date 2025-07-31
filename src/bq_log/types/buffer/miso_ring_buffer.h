@@ -117,9 +117,9 @@ namespace bq {
         static_assert(sizeof(cursors_set) == CACHE_LINE_SIZE * 2, "invalid cursors_set size");
 
         log_buffer_config config_;
+        memory_map_buffer_state mmap_buffer_state_;
         cursors_set cursors_; // make sure it is aligned to cache line size even in placement new.
 
-        uint8_t* real_buffer_;
         head* head_;
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
@@ -209,6 +209,16 @@ namespace bq {
 #else
             (void)in_enable;
 #endif
+        }
+
+        bq_forceinline const log_buffer_config& get_config() const
+        {
+            return config_;
+        }
+
+        bq_forceinline memory_map_buffer_state get_memory_map_buffer_state() const
+        {
+            return mmap_buffer_state_;
         }
 
         bq_forceinline const uint8_t* get_buffer_addr() const

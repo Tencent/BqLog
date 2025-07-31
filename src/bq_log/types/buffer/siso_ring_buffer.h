@@ -94,6 +94,7 @@ namespace bq {
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bool is_memory_recovery_;
+        memory_map_buffer_state mmap_buffer_state_;
 
 #if defined(BQ_LOG_BUFFER_DEBUG)
         char padding_[CACHE_LINE_SIZE];
@@ -255,6 +256,11 @@ namespace bq {
 #else
             (void)in_enable;
 #endif
+        }
+
+        bq_forceinline memory_map_buffer_state get_memory_map_buffer_state() const
+        {
+            return mmap_buffer_state_;
         }
 
         bq_forceinline const uint8_t* get_buffer_addr() const

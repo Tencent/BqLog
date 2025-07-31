@@ -24,8 +24,10 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/types/buffer/log_buffer_defs.h"
 #include "bq_log/types/buffer/miso_linked_list.h"
+#include "bq_log/types/buffer/siso_ring_buffer.h"
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 #include "bq_log/types/buffer/group_list.h"
+#include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
     class alignas(CACHE_LINE_SIZE) log_buffer {
@@ -157,10 +159,10 @@ namespace bq {
 
         enum class context_verify_result {
             valid,
-            version_waiting,
+            version_pending,
             version_invalid,
             seq_pending,
-            seq_invalid
+            seq_invalid,
         };
 
         enum class read_state {
@@ -171,7 +173,13 @@ namespace bq {
             traversal_completed
         };
 
+        bq_forceinline bool is_version_valid(uint16_t version)
+        {
+            return static_cast<uint16_t>(version_ - version) <= static_cast<uint16_t>(version_ - rt_cache_.current_reading_.version_);
+        }
+
         context_verify_result verify_context(const context_head& context);
+        context_verify_result verify_oversize_context(const context_head& parent_context, const context_head& oversize_context);
         void deregister_seq(const context_head& context);
         void prepare_and_fix_recovery_data();
         void clear_recovery_data();
@@ -197,11 +205,11 @@ namespace bq {
         bq::shared_ptr<destruction_mark> destruction_mark_;
         struct alignas(CACHE_LINE_SIZE) {
             struct buffer_def {
-                bq::miso_ring_buffer buffer_;
+                bq::normal_buffer buffer_;
                 bq::platform::spin_lock_rw_crazy buffer_lock_;
                 uint64_t last_used_epoch_ms_;
-                buffer_def(const log_buffer_config& config)
-                    : buffer_(config)
+                buffer_def(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
+                    : buffer_(size, need_recovery, mmap_file_abs_path)
                     , last_used_epoch_ms_(0)
                 {
                 }
