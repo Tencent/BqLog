@@ -791,7 +791,8 @@ namespace bq {
             }
             using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
-            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_type>(default_buffer_size, config_.need_recovery, abs_recovery_file_path));
+            auto oversize_buffer_ptr = bq::make_unique<oversize_buffer_type>(default_buffer_size, config_.need_recovery, abs_recovery_file_path);
+            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::move(oversize_buffer_ptr));
             auto& new_buffer = *(temprorary_oversize_buffer_.buffers_array_.end() - 1);
             new_buffer->buffer_lock_.read_lock();
             auto& oversize_buffer_context = new_buffer->buffer_.get_misc_data<context_head>();
