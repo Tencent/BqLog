@@ -67,10 +67,10 @@ namespace bq {
             } else {
                 bq::util::get_local_time_by_epoch(epoch, time_st);
             }
-            snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file error code:%d, trying open new file real_write_size:%zu,need_write_size:%zu\n",
+            snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file error code:%" PRId32 ", trying open new file real_write_size : %" PRIu64 ", need_write_size : " PRIu64 "\n",
                 is_gmt_time_ ? "UTC0" : "LOCAL",
                 time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
-                error_code, real_write_size, need_write_size);
+                error_code, static_cast<uint64_t>(real_write_size), static_cast<uint64_t>(need_write_size));
             string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
             bq::file_manager::append_all_text(path, error_text);
             bq::util::log_device_console_plain_text(log_level::warning, error_text);

@@ -1061,7 +1061,7 @@ namespace bq {
                     default_buffer_size <<= 1;
                 }
                 if (default_buffer_size == UINT32_MAX) {
-                    bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s, invalid size:%zu", full_path.c_str(), file_size);
+                    bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s, invalid size:%" PRIu64, full_path.c_str(), static_cast<uint64_t>(file_size));
                     bq::file_manager::remove_file_or_dir(full_path);
                     continue;
                 }

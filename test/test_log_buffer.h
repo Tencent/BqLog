@@ -90,7 +90,7 @@ namespace bq {
                 }
                 result_.add_result(total_read_number == max_value, "linked list remove test total number failed");
                 for (size_t i = 0; i < mark_array.size(); ++i) {
-                    result_.add_result(mark_array[i], "linked list remove test failed, %zu", i);
+                    result_.add_result(mark_array[i], "linked list remove test failed, %" PRIu64, static_cast<uint64_t>(i));
                 }
             }
         };

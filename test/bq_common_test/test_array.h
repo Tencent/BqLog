@@ -211,7 +211,7 @@ namespace bq {
                                 total_value++;
                             }
                         }
-                        result.add_result(total_value == rvalue_target_array.size(), "rvalue_test_array back insert test for size:%zu", push_size);
+                        result.add_result(total_value == rvalue_target_array.size(), "rvalue_test_array back insert test for size:%" PRIu64, static_cast<uint64_t>(push_size));
                     }
                 }
 

@@ -130,7 +130,8 @@ namespace bq {
                         for (size_t offset_inner = 1; offset_inner < 128; ++offset_inner) {
                             memmove(cache + offset_outter + offset_inner, cache + offset_outter + offset_inner - 1, size);
                             uint64_t new_hash_value = bq::appender_file_compressed::calculate_data_hash_test(false, cache + offset_outter + offset_inner, size);
-                            result.add_result(hash_value == new_hash_value, "appender_file_compressed::calculate_data_hash_test, size:%zu, offset_outter:%zu, offset_inner:%ze", size, offset_outter, offset_inner);
+                            result.add_result(hash_value == new_hash_value, "appender_file_compressed::calculate_data_hash_test, size:%" PRIu64 ", offset_outter: %" PRIu64 ", offset_inner : %" PRIu64 
+                            , static_cast<uint64_t>(size), static_cast<uint64_t>(offset_outter), static_cast<uint64_t>(offset_inner));
                         }
                     }
                 }

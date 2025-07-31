@@ -141,7 +141,7 @@ namespace bq {
                     size_t buffer_size = (size_t)(1024 * (4 << i) + 64 + 64); // 1024 blocks and 64 bytes for mmap head, 64 redundant bytes for alignment.
                     if (with_mmap) {
                         char mmap_file_name[128];
-                        snprintf(mmap_file_name, sizeof(mmap_file_name), "test_siso_%zu.mmap", i);
+                        snprintf(mmap_file_name, sizeof(mmap_file_name), "test_siso_%" PRIu64 ".mmap", static_cast<uint64_t>(i));
                         mmap_file_handles[i] = bq::file_manager::instance().open_file(TO_ABSOLUTE_PATH(mmap_file_name, false), bq::file_open_mode_enum::auto_create | bq::file_open_mode_enum::read_write | bq::file_open_mode_enum::exclusive);
                         if (!mmap_file_handles[i]) {
                             result.add_result(false, "[siso_test] failed to create mmap file");
