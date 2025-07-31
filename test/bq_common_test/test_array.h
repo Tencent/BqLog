@@ -53,8 +53,18 @@ struct test_rvalue_struct1 {
         value++;
         rhs.value--;
     }
-    test_rvalue_struct1& operator=(const test_rvalue_struct1& rhs) = default;
-    test_rvalue_struct1& operator=(test_rvalue_struct1&& rhs) = default;
+    test_rvalue_struct1& operator=(const test_rvalue_struct1& rhs)
+    {
+        (void)rhs;
+        value++;
+        return *this;
+    }
+    test_rvalue_struct1& operator=(test_rvalue_struct1&& rhs)
+    {
+        value++;
+        rhs.value--;
+        return *this;
+    }
 };
 
 struct test_array_position_move_struct1 {
@@ -178,7 +188,31 @@ namespace bq {
                             && rvalue_test_array[2].value == 1
                             && rvalue_test_array[3].value == 1,
                         "rvalue_test_array construct test");
-                    result.add_result(rvalue_test_obj.value == 0, "rvalue_test_array test");
+                    result.add_result(rvalue_test_obj.value == 1, "rvalue_test_array test");
+
+
+                    bq::array<test_rvalue_struct1> rvalue_src_array;
+                    constexpr size_t src_array_size = 1024;
+                    for (size_t i = 0; i < src_array_size; ++i) {
+                        rvalue_src_array.push_back(test_rvalue_struct1());
+                    }
+                    for (size_t push_size = 0; push_size < src_array_size; push_size += 13) {
+                        bq::array<test_rvalue_struct1> rvalue_target_array;
+                        std::random_device sd;
+                        std::minstd_rand linear_ran(sd());
+                        for (size_t i = 0; i < 1024; ++i) {
+                            std::uniform_int_distribution<size_t> rand_seq(0, rvalue_target_array.size());
+                            size_t insert_pos = rand_seq(linear_ran); 
+                            rvalue_target_array.insert_batch(rvalue_target_array.begin() + insert_pos, rvalue_src_array.begin(), push_size);
+                        }
+                        size_t total_value = 0;
+                        for (const auto& item : rvalue_target_array) {
+                            if (item.value == 1) {
+                                total_value++;
+                            }
+                        }
+                        result.add_result(total_value == rvalue_target_array.size(), "rvalue_test_array back insert test for size:%zu", push_size);
+                    }
                 }
 
                 {

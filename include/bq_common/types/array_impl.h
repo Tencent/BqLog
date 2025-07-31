@@ -390,10 +390,10 @@ namespace bq {
         for (size_t i = move_count; i > 0; --i) {
             size_t index = i - 1;
             if (index + diff < move_count) {
-                *(dest + index) = bq::forward<T>(*(src + index));
+                *(dest + index) = bq::move(*(src + index));
             } else {
                 auto ptr = (dest + index);
-                allocator.construct(ptr, bq::forward<T>(*(src + index)));
+                allocator.construct(ptr, bq::move(*(src + index)));
             }
         }
     }
@@ -476,14 +476,14 @@ namespace bq {
     template <typename... V>
     BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::size_type BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::emplace(iterator where_it, V&&... args)
     {
-        return insert(where_it, bq::move(args)...);
+        return insert(where_it, bq::forward<V>(args)...);
     }
 
     template <typename T, typename Allocator, size_t TAIL_BUFFER_SIZE>
     template <typename... V>
     BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::size_type BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::emplace_back(V&&... args)
     {
-        return push_back(bq::move(args)...);
+        return push_back(bq::forward<V>(args)...);
     }
 
     template <typename T, typename Allocator, size_t TAIL_BUFFER_SIZE>
