@@ -369,8 +369,8 @@ namespace bq {
             int32_t error_code = bq::platform::read_file(handle.platform_handle(), (uint8_t*)dest_data + total_read_count, need_read_count, tmp_count);
             if (error_code != 0) {
                 file_manager_file_error_no_ = error_code;
-                FILE_MANAGER_LOG(bq::log_level::error, "read file failed, errno:%d, path:%s, need_read_count:%" PRIu64 ", real_read_count:%" PRIu64,
-                    error_code, handle.file_path_.c_str(), static_cast<uint64_t>(length), static_cast<uint64_t>(total_read_count);
+                FILE_MANAGER_LOG(bq::log_level::error, "read file failed, errno:%d, path:%s, need_read_count:%" PRIu64 ", real_read_count:%" PRIu64 "",
+                    error_code, handle.file_path_.c_str(), static_cast<uint64_t>(length), static_cast<uint64_t>(total_read_count));
                 break;
             }
             assert(tmp_count <= need_read_count && "read_count <= length");
