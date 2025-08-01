@@ -202,7 +202,7 @@ namespace bq {
             static constexpr uint32_t max_chunk_size = 1024;
             static constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
             static constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
-            static constexpr int32_t oversize_chunk_frequency = 677;
+            static constexpr int32_t oversize_chunk_frequency = 1677;
         public:
             log_buffer_write_task(int32_t id, int32_t left_write_count, bq::log_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
                 : counter_ref_(counter)
@@ -545,7 +545,7 @@ namespace bq {
                      constexpr uint32_t max_chunk_size = 1024;
                      constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
                      constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
-                     constexpr int32_t oversize_chunk_frequency = 677;
+                     constexpr int32_t oversize_chunk_frequency = 1677;
                      std::random_device sd;
                      std::minstd_rand linear_ran(sd());
                      std::uniform_int_distribution<uint32_t> rand_seq(min_chunk_size, max_chunk_size);

@@ -792,7 +792,7 @@ namespace bq {
             using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
             auto oversize_buffer_ptr = bq::make_unique<oversize_buffer_type>(default_buffer_size, config_.need_recovery, abs_recovery_file_path);
-            temprorary_oversize_buffer_.buffers_array_.push_back(bq::move(oversize_buffer_ptr));
+            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::move(oversize_buffer_ptr));
             auto& new_buffer = *(temprorary_oversize_buffer_.buffers_array_.end() - 1);
             new_buffer->buffer_lock_.read_lock();
             auto& oversize_buffer_context = new_buffer->buffer_.get_misc_data<context_head>();
@@ -1077,7 +1077,7 @@ namespace bq {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file when recovery:%s, invalid context", full_path.c_str());
                     bq::file_manager::remove_file_or_dir(full_path);
                 } else {
-                    temprorary_oversize_buffer_.buffers_array_.push_back(bq::move(recovery_buffer));
+                    temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::move(recovery_buffer));
                 }
             }
         }
