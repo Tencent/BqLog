@@ -203,20 +203,23 @@ namespace bq {
         miso_ring_buffer lp_buffer_; // used to save memory for low frequency threads.
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
+
+		struct oversize_buffer_obj_def {
+			bq::normal_buffer buffer_;
+			bq::platform::spin_lock_rw_crazy buffer_lock_;
+			uint64_t last_used_epoch_ms_;
+			oversize_buffer_obj_def(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
+				: buffer_(size, need_recovery, mmap_file_abs_path)
+				, last_used_epoch_ms_(0)
+			{
+			}
+		};
         struct alignas(CACHE_LINE_SIZE) {
-            struct buffer_def {
-                bq::normal_buffer buffer_;
-                bq::platform::spin_lock_rw_crazy buffer_lock_;
-                uint64_t last_used_epoch_ms_;
-                buffer_def(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
-                    : buffer_(size, need_recovery, mmap_file_abs_path)
-                    , last_used_epoch_ms_(0)
-                {
-                }
-            };
+            
             bq::platform::spin_lock_rw_crazy array_lock_;
-            bq::array<bq::unique_ptr<buffer_def>> buffers_array_;
+            bq::array<bq::unique_ptr<oversize_buffer_obj_def>> buffers_array_;
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
+        
         struct alignas(CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator last_group_;     //empty means read from lp_buffer

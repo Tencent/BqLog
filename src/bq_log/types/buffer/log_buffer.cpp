@@ -789,10 +789,8 @@ namespace bq {
                 snprintf(tmp, sizeof(tmp), "_%" PRIu64 "", new_index);
                 abs_recovery_file_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + tmp + ".mmap", true);
             }
-            using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
-            auto oversize_buffer_ptr = bq::make_unique<oversize_buffer_type>(default_buffer_size, config_.need_recovery, abs_recovery_file_path);
-            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::move(oversize_buffer_ptr));
+            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, config_.need_recovery, abs_recovery_file_path));
             auto& new_buffer = *(temprorary_oversize_buffer_.buffers_array_.end() - 1);
             new_buffer->buffer_lock_.read_lock();
             auto& oversize_buffer_context = new_buffer->buffer_.get_misc_data<context_head>();
@@ -819,8 +817,7 @@ namespace bq {
 
     void log_buffer::wt_commit_oversize_write_chunk(const log_buffer_write_handle& oversize_handle)
     {
-        using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
-        auto oversize_buffer = ((oversize_buffer_type*)wt_oversize_target_buffer_);
+        auto oversize_buffer = ((oversize_buffer_obj_def*)wt_oversize_target_buffer_);
         oversize_buffer->buffer_.commit_write_chunk(oversize_handle);
         oversize_buffer->buffer_lock_.read_unlock();
         lp_buffer_.commit_write_chunk(wt_oversize_parent_handle_.get());
@@ -876,8 +873,7 @@ namespace bq {
 
     void log_buffer::rt_return_oversize_read_chunk(const log_buffer_read_handle& oversize_handle)
     {
-        using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
-        auto oversize_buffer = ((oversize_buffer_type*)rt_oversize_target_buffer_);
+        auto oversize_buffer = ((oversize_buffer_obj_def*)rt_oversize_target_buffer_);
         oversize_buffer->buffer_.return_read_chunk(oversize_handle);
         lp_buffer_.return_read_chunk(rt_oversize_parent_handle_.get());
     }
@@ -1050,7 +1046,6 @@ namespace bq {
                     bq::file_manager::remove_file_or_dir(full_path);
                     continue;
                 }
-                using oversize_buffer_type = decltype(temprorary_oversize_buffer_.buffers_array_)::value_type::value_type;
                 size_t file_size = bq::file_manager::get_file_size(full_path);
                 uint32_t default_buffer_size = static_cast<uint32_t>(CACHE_LINE_SIZE);
                 while (default_buffer_size < UINT32_MAX) {
@@ -1069,7 +1064,7 @@ namespace bq {
                 if (u64_value > current_oversize_buffer_index_.load(bq::platform::memory_order::relaxed)) {
                     current_oversize_buffer_index_.store(u64_value, bq::platform::memory_order::seq_cst);
                 }
-                auto recovery_buffer = bq::make_unique<oversize_buffer_type>(default_buffer_size, true, full_path);
+                auto recovery_buffer = bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, true, full_path);
                 const auto& oversize_buffer_context = recovery_buffer->buffer_.get_misc_data<context_head>();
                 if (oversize_buffer_context.seq_ != UINT32_MAX
                     || oversize_buffer_context.is_external_ref_ != true

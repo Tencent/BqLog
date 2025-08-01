@@ -181,7 +181,7 @@ namespace bq {
         template <typename... Args>
         static inline void construct(T* _ptr, Args&&... _args)
         {
-            new (_ptr, bq::enum_new_dummy::dummy) T(bq::move(_args)...);
+            new (_ptr, bq::enum_new_dummy::dummy) T(bq::forward<Args>(_args)...);
         }
     };
 
