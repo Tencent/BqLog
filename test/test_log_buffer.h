@@ -421,7 +421,7 @@ namespace bq {
             {
                 log_buffer_test_total_write_count_.store_seq_cst(0);
                 bq::log_buffer test_buffer(config);
-                int32_t chunk_count_per_task = 1024000;
+                int32_t chunk_count_per_task = 1024 * 128;
                 bq::platform::atomic<int32_t> counter(log_buffer_total_task);
                 bq::array<int32_t> task_check_vector;
                 std::vector<std::thread> task_thread_vector; 
