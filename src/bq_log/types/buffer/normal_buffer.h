@@ -93,6 +93,21 @@ namespace bq {
         {
             return memory_map_file_.abs_file_path();
         }
+
+        bq_forceinline const uint8_t* get_buffer_addr() const
+        {
+            return get_buffer().get_buffer_addr();
+        }
+
+        bq_forceinline uint32_t get_block_size() const
+        {
+            return get_buffer().get_block_size();
+        }
+
+        bq_forceinline uint32_t get_total_blocks_count() const
+        {
+            return get_buffer().get_total_blocks_count();
+        }
     private:
 
         void init_buffer_data();
@@ -100,6 +115,8 @@ namespace bq {
         create_memory_map_result create_memory_map();
 
         bq_forceinline siso_ring_buffer& get_buffer() { return *(siso_ring_buffer*)siso_buffer_obj_; }
+
+        bq_forceinline const siso_ring_buffer& get_buffer() const { return *(const siso_ring_buffer*)siso_buffer_obj_; }
 
         bool try_recover_from_exist_memory_map();
 

@@ -65,9 +65,6 @@ namespace bq {
         group_data_head* head_ptr_ = nullptr;
         uint64_t in_pool_epoch_ms_ = 0;
         class group_list* parent_list_ = nullptr;
-#if defined(BQ_JAVA)
-        jobject java_buffer_obj_ = nullptr;
-#endif
     public:
         group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index);
         ~group_node();

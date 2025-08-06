@@ -52,16 +52,32 @@ namespace bq {
             bool is_destructed_ = false;
         };
 
+        struct oversize_buffer_obj_def {
+            bq::normal_buffer buffer_;
+            bq::platform::spin_lock_rw_crazy buffer_lock_;
+            uint64_t last_used_epoch_ms_;
+            oversize_buffer_obj_def(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
+            : buffer_(size, need_recovery, mmap_file_abs_path)
+            , last_used_epoch_ms_(0)
+            {
+            }
+        };
+
         struct alignas(CACHE_LINE_SIZE) log_tls_buffer_info {
             uint64_t last_update_epoch_ms_ = 0;
             uint64_t update_times_ = 0;
             block_node_head* cur_block_ = nullptr; // nullptr means using lp_buffer.
             log_buffer* buffer_ = nullptr;
+            log_buffer_write_handle oversize_parent_handle_;
+            oversize_buffer_obj_def* oversize_target_buffer_;
             bq::shared_ptr<destruction_mark> destruction_mark_;
 #if defined(BQ_JAVA)
             jobjectArray buffer_obj_for_lp_buffer_ = NULL; // miso_ring_buffer shared between low frequency threads;
             jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
+            jobjectArray buffer_obj_for_oversize_buffer_ = NULL; // oversize buffer;
             block_node_head* buffer_ref_block_ = nullptr;
+            normal_buffer* buffer_ref_oversize = nullptr;
+            uint32_t size_ref_oversize = 0;
             int32_t buffer_offset_ = 0;
 #endif
             // Fields frequently accessed by write(produce) thread.
@@ -204,22 +220,15 @@ namespace bq {
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
 
-		struct oversize_buffer_obj_def {
-			bq::normal_buffer buffer_;
-			bq::platform::spin_lock_rw_crazy buffer_lock_;
-			uint64_t last_used_epoch_ms_;
-			oversize_buffer_obj_def(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
-				: buffer_(size, need_recovery, mmap_file_abs_path)
-				, last_used_epoch_ms_(0)
-			{
-			}
-		};
         struct alignas(CACHE_LINE_SIZE) {
-            
             bq::platform::spin_lock_rw_crazy array_lock_;
             bq::array<bq::unique_ptr<oversize_buffer_obj_def>> buffers_array_;
+#if defined(BQ_JAVA)
+            jobject java_buffer_obj_ = nullptr;
+#endif
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
-        
+        bq::platform::atomic<uint64_t> current_oversize_buffer_index_;
+
         struct alignas(CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator last_group_;     //empty means read from lp_buffer
@@ -241,7 +250,6 @@ namespace bq {
                 context_verify_result verify_result;
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
-        bq::platform::atomic<uint64_t> current_oversize_buffer_index_;
 #if defined(BQ_LOG_BUFFER_DEBUG)
         alignas(CACHE_LINE_SIZE) bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;

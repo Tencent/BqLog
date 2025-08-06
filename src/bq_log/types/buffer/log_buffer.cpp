@@ -50,7 +50,8 @@ namespace bq {
     {
 #if defined(BQ_JAVA)
         if (buffer_obj_for_lp_buffer_
-            || buffer_obj_for_hp_buffer_) {
+            || buffer_obj_for_hp_buffer_
+            || buffer_obj_for_oversize_buffer_) {
             bq::platform::jni_env env;
             if (buffer_obj_for_lp_buffer_) {
                 env.env->DeleteGlobalRef(buffer_obj_for_lp_buffer_);
@@ -59,6 +60,10 @@ namespace bq {
             if (buffer_obj_for_hp_buffer_) {
                 env.env->DeleteGlobalRef(buffer_obj_for_hp_buffer_);
                 buffer_obj_for_hp_buffer_ = NULL;
+            }
+            if (buffer_obj_for_oversize_buffer_) {
+                env.env->DeleteGlobalRef(buffer_obj_for_oversize_buffer_);
+                buffer_obj_for_oversize_buffer_ = NULL;
             }
         }
 #endif
@@ -438,15 +443,30 @@ namespace bq {
         java_buffer_info result;
         result.offset_store_ = &current_buffer_info.buffer_offset_;
 
-        if (current_buffer_info.cur_block_) {
+        BQ_UNLIKELY_IF(current_buffer_info.oversize_target_buffer_)
+        {
+            if (!current_buffer_info.buffer_obj_for_oversize_buffer_) {
+                current_buffer_info.buffer_obj_for_oversize_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
+                env->NewGlobalRef(current_buffer_info.buffer_obj_for_oversize_buffer_);
+                auto offset_obj = env->NewDirectByteBuffer(&current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_));
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_oversize_buffer_, 1, offset_obj);
+            }
+            auto& over_size_buffer_ref = current_buffer_info.oversize_target_buffer_->buffer_;
+            if (current_buffer_info.buffer_ref_oversize != &over_size_buffer_ref
+                || current_buffer_info.size_ref_oversize != over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count()) {
+                current_buffer_info.buffer_ref_oversize = &over_size_buffer_ref;
+                current_buffer_info.size_ref_oversize = over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count();
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_oversize_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(over_size_buffer_ref.get_buffer_addr()), (jlong)current_buffer_info.size_ref_oversize));
+            }
+            result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_oversize_buffer_;
+            result.buffer_base_addr_ = over_size_buffer_ref.get_buffer_addr();
+            *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
+        }else if (current_buffer_info.cur_block_) {
             auto& ring_buffer = current_buffer_info.cur_block_->get_buffer();
             if (!current_buffer_info.buffer_obj_for_hp_buffer_) {
                 current_buffer_info.buffer_obj_for_hp_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
                 env->NewGlobalRef(current_buffer_info.buffer_obj_for_hp_buffer_);
-                auto offset_obj = env->GetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1);
-#if defined(BQ_LOG_BUFFER_DEBUG)
-                assert(offset_obj && "offset obj should not be null when jni hp alloc");
-#endif
+                auto offset_obj = env->NewDirectByteBuffer(&current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_));
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, offset_obj); 
             }
             if (current_buffer_info.buffer_ref_block_ != current_buffer_info.cur_block_) {
@@ -735,8 +755,6 @@ namespace bq {
         return next_group;
     }
 
-    BQ_TLS_NON_POD(log_buffer_write_handle, wt_oversize_parent_handle_);
-    BQ_TLS void* wt_oversize_target_buffer_;
     log_buffer_write_handle log_buffer::wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms)
     {
         auto& tls_buffer = log_tls_info_.get().get_buffer_info(this);
@@ -773,7 +791,7 @@ namespace bq {
                 over_size_handle = over_size_buffer->buffer_.alloc_write_chunk(size + sizeof(context_head));
                 if (enum_buffer_result_code::success == over_size_handle.result) {
                     over_size_buffer->last_used_epoch_ms_ = current_epoch_ms;
-                    wt_oversize_target_buffer_ = over_size_buffer.operator->();
+                    tls_buffer.oversize_target_buffer_ = over_size_buffer.operator->();
                     break;
                 }
                 over_size_buffer->buffer_lock_.read_unlock();
@@ -802,7 +820,7 @@ namespace bq {
             over_size_handle = new_buffer->buffer_.alloc_write_chunk(size + sizeof(context_head));
             assert(enum_buffer_result_code::success == over_size_handle.result && "New created oversize buffer shouldn't fail when allocating");
             new_buffer->last_used_epoch_ms_ = current_epoch_ms;
-            wt_oversize_target_buffer_ = new_buffer.operator->();
+            tls_buffer.oversize_target_buffer_ = new_buffer.operator->();
         }
         auto* oversize_context = reinterpret_cast<context_head*>(over_size_handle.data_addr);
         oversize_context->version_ = version_;
@@ -811,16 +829,17 @@ namespace bq {
         oversize_context->is_external_ref_ = true;
         oversize_context->set_tls_info(&tls_buffer);
         over_size_handle.data_addr += sizeof(context_head);
-        wt_oversize_parent_handle_.get() = parent_result;
+        tls_buffer.oversize_parent_handle_ = parent_result;
         return over_size_handle;
     }
 
     void log_buffer::wt_commit_oversize_write_chunk(const log_buffer_write_handle& oversize_handle)
     {
-        auto oversize_buffer = ((oversize_buffer_obj_def*)wt_oversize_target_buffer_);
-        oversize_buffer->buffer_.commit_write_chunk(oversize_handle);
-        oversize_buffer->buffer_lock_.read_unlock();
-        lp_buffer_.commit_write_chunk(wt_oversize_parent_handle_.get());
+        auto& tls_buffer_info = log_tls_info_.get().get_buffer_info_directly(this);
+        tls_buffer_info.oversize_target_buffer_->buffer_.commit_write_chunk(oversize_handle);
+        tls_buffer_info.oversize_target_buffer_->buffer_lock_.read_unlock();
+        tls_buffer_info.oversize_target_buffer_ = nullptr;
+        lp_buffer_.commit_write_chunk(tls_buffer_info.oversize_parent_handle_);
     }
 
     BQ_TLS_NON_POD(log_buffer_read_handle, rt_oversize_parent_handle_);
