@@ -558,10 +558,8 @@ namespace bq {
                              alloc_size = rand_seq_oversize(linear_ran_oversize);
                          }
                          auto handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
-                         if (handle.result == enum_buffer_result_code::err_not_enough_space) {
-                             // TODO: Even log_memory_policy::auto_expand_when_full is enabled,
-                             // allocation may still failed by "not enough space" error when
-                             // allocating oversize chunk.
+                         if (handle.result == enum_buffer_result_code::err_not_enough_space
+                             || handle.result == enum_buffer_result_code::err_wait_and_retry) {
                              test_recovery_buffer.commit_write_chunk(handle);
                              alloc_size = rand_seq(linear_ran);
                              handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
@@ -641,10 +639,8 @@ namespace bq {
                                     alloc_size = rand_seq_oversize(linear_ran_oversize);
                                 }
                                 auto handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
-                                if (handle.result == enum_buffer_result_code::err_not_enough_space) {
-                                    // TODO: Even log_memory_policy::auto_expand_when_full is enabled,
-                                    // allocation may still failed by "not enough space" error when
-                                    // allocating oversize chunk.
+                                if (handle.result == enum_buffer_result_code::err_not_enough_space
+                                    || handle.result == enum_buffer_result_code::err_wait_and_retry) {
                                     test_recovery_buffer.commit_write_chunk(handle);
                                     alloc_size = rand_seq(linear_ran);
                                     handle = test_recovery_buffer.alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
