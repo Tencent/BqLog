@@ -191,7 +191,7 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
 elseif(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(BqLogUnitTest PRIVATE -ldbghelp)
+        target_link_libraries(BqLog PRIVATE -ldbghelp)
     endif()
 endif()
 

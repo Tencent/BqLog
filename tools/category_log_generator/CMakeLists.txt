@@ -86,7 +86,7 @@ add_executable(BqLog_CategoryLogGenerator
 if(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(BqLogUnitTest PRIVATE -ldbghelp)
+        target_link_libraries(BqLog_CategoryLogGenerator PRIVATE -ldbghelp)
     endif()
    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLog_CategoryLogGenerator)
 elseif(TARGET_PLATFORM STREQUAL "linux")
