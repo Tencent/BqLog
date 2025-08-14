@@ -113,8 +113,7 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     jboolean is_cpy = false;
     bq::tools::size_seq<false, const char16_t*> seq;
     seq.get_element().value = sizeof(uint32_t) + (size_t)utf16_str_bytes_len;
-    assert(sizeof(bq::_log_entry_head_def) + seq.get_total() <= UINT16_MAX && "log format string too long");
-    head->log_args_offset = static_cast<uint16_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
+    head->log_args_offset = static_cast<uint32_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
     uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
     const char16_t* format_str = (const char16_t*)env->GetStringCritical(format_content, &is_cpy);
     bq::impl::_do_log_args_fill<false>(log_format_content_addr, seq, format_str);
@@ -126,14 +125,7 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     inner_handle.data_addr = handle.data_addr;
     inner_handle.result = handle.result;
     tls_write_handle_.java_info_ = log_buffer.get_java_buffer_info(env, inner_handle);
-    int32_t final_offset = *tls_write_handle_.java_info_.offset_store_ + (int32_t)head->log_args_offset;
-    uint8_t* final_offset_little_endian = (uint8_t*)&final_offset;
-    //to big endian
-    *tls_write_handle_.java_info_.offset_store_ = ((int32_t)final_offset_little_endian[0]) 
-                        | (((int32_t)final_offset_little_endian[1]) << 8) 
-                        | (((int32_t)final_offset_little_endian[2]) << 16) 
-                        | (((int32_t)final_offset_little_endian[3]) << 24);
-
+    *tls_write_handle_.java_info_.offset_store_ += (int32_t)head->log_args_offset;
     return tls_write_handle_.java_info_.buffer_array_obj_;
 }
 
@@ -243,7 +235,7 @@ JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
 JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1merged_1log_1level_1bitmap_1by_1log_1id(JNIEnv* env, jclass, jlong log_id)
 {
     const uint32_t* bitmap_ptr = bq::api::__api_get_log_merged_log_level_bitmap_by_log_id((uint64_t)log_id);
-    jobject buffer = env->NewDirectByteBuffer(const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t));
+    jobject buffer = bq::platform::create_new_direct_byte_buffer(env, const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t), false);
     return buffer;
 }
 
@@ -256,7 +248,7 @@ JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
 {
     uint32_t count = bq::api::__api_get_log_categories_count((uint64_t)log_id);
     const uint8_t* mask_array_ptr = bq::api::__api_get_log_category_masks_array_by_log_id((uint64_t)log_id);
-    jobject buffer = env->NewDirectByteBuffer(const_cast<uint8_t*>(mask_array_ptr), count * sizeof(uint8_t));
+    jobject buffer = bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(mask_array_ptr), count * sizeof(uint8_t), false);
     return buffer;
 }
 
@@ -268,7 +260,7 @@ JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
 JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1print_1stack_1level_1bitmap_1by_1log_1id(JNIEnv* env, jclass, jlong log_id)
 {
     const uint32_t* bitmap_ptr = bq::api::__api_get_log_print_stack_level_bitmap_by_log_id((uint64_t)log_id);
-    jobject buffer = env->NewDirectByteBuffer(const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t));
+    jobject buffer = bq::platform::create_new_direct_byte_buffer(env, const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t), false);
     return buffer;
 }
 
@@ -397,7 +389,11 @@ static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_id
         return;
     }
     jstring message = env->NewStringUTF(content);
-    env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int32_t)log_level, message);
+	env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int32_t)log_level, message); 
+    if (env->ExceptionCheck()) {
+		env->ExceptionDescribe();
+		env->ExceptionClear();
+	}
 }
 /*
  * Class:     bq_impl_log_invoker
@@ -439,6 +435,10 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
     }
     jstring message = env->NewStringUTF(content);
     env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int32_t)log_level, message);
+	if (env->ExceptionCheck()) {
+		env->ExceptionDescribe();
+		env->ExceptionClear();
+	}
 }
 /*
  * Class:     bq_impl_log_invoker

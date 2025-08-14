@@ -446,9 +446,9 @@ namespace bq {
         BQ_UNLIKELY_IF(current_buffer_info.oversize_target_buffer_)
         {
             if (!current_buffer_info.buffer_obj_for_oversize_buffer_) {
-                current_buffer_info.buffer_obj_for_oversize_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
-                env->NewGlobalRef(current_buffer_info.buffer_obj_for_oversize_buffer_);
-                auto offset_obj = env->NewDirectByteBuffer(&current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_));
+                 jobject byte_array_obj = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
+                 current_buffer_info.buffer_obj_for_oversize_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
+                auto offset_obj = bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_), false);
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_oversize_buffer_, 1, offset_obj);
             }
             auto& over_size_buffer_ref = current_buffer_info.oversize_target_buffer_->buffer_;
@@ -456,7 +456,7 @@ namespace bq {
                 || current_buffer_info.size_ref_oversize != over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count()) {
                 current_buffer_info.buffer_ref_oversize = &over_size_buffer_ref;
                 current_buffer_info.size_ref_oversize = over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count();
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_oversize_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(over_size_buffer_ref.get_buffer_addr()), (jlong)current_buffer_info.size_ref_oversize));
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_oversize_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(over_size_buffer_ref.get_buffer_addr()), current_buffer_info.size_ref_oversize, false));
             }
             result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_oversize_buffer_;
             result.buffer_base_addr_ = over_size_buffer_ref.get_buffer_addr();
@@ -464,13 +464,13 @@ namespace bq {
         }else if (current_buffer_info.cur_block_) {
             auto& ring_buffer = current_buffer_info.cur_block_->get_buffer();
             if (!current_buffer_info.buffer_obj_for_hp_buffer_) {
-                current_buffer_info.buffer_obj_for_hp_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
-                env->NewGlobalRef(current_buffer_info.buffer_obj_for_hp_buffer_);
-                auto offset_obj = env->NewDirectByteBuffer(&current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_));
+                jobject byte_array_obj = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
+                current_buffer_info.buffer_obj_for_hp_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
+                auto offset_obj = bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_), false);
                 env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, offset_obj); 
             }
             if (current_buffer_info.buffer_ref_block_ != current_buffer_info.cur_block_) {
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(ring_buffer.get_buffer_addr()), (jlong)(ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count())));
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(ring_buffer.get_buffer_addr()), ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count(), false));
                 current_buffer_info.buffer_ref_block_ = current_buffer_info.cur_block_;
             }
             result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_hp_buffer_;
@@ -478,15 +478,15 @@ namespace bq {
             *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
         } else {
             if (!current_buffer_info.buffer_obj_for_lp_buffer_) {
-                current_buffer_info.buffer_obj_for_lp_buffer_ = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
-                env->NewGlobalRef(current_buffer_info.buffer_obj_for_lp_buffer_);
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 0, env->NewDirectByteBuffer(const_cast<uint8_t*>(lp_buffer_.get_buffer_addr()), (jlong)(lp_buffer_.get_block_size() * lp_buffer_.get_total_blocks_count())));
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1, env->NewDirectByteBuffer(&current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_)));
+                jobject byte_array_obj = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
+                current_buffer_info.buffer_obj_for_lp_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(lp_buffer_.get_buffer_addr()), lp_buffer_.get_block_size() * lp_buffer_.get_total_blocks_count(), false));
+                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1, bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_), false));
             }
             result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_lp_buffer_;
             result.buffer_base_addr_ = lp_buffer_.get_buffer_addr();
             *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
-        }
+		}
         return result;
     }
 #endif
@@ -768,6 +768,11 @@ namespace bq {
             // TODO: Even log_memory_policy::auto_expand_when_full is enabled,
             // allocation may still failed by "not enough space" error when
             // allocating oversize chunk.
+            if((config_.policy == log_memory_policy::auto_expand_when_full 
+                || config_.policy == log_memory_policy::block_when_full)
+				&& parent_result.result == enum_buffer_result_code::err_not_enough_space) {
+			}
+            parent_result.result = enum_buffer_result_code::err_wait_and_retry;
             return parent_result;
         }
         auto* parent_context = reinterpret_cast<context_head*>(parent_result.data_addr);

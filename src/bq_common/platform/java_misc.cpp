@@ -23,6 +23,12 @@ namespace bq {
         static JavaVM* java_vm = NULL;
         static BQ_TLS int32_t jni_attacher_counter = 0;
 
+        static jclass cls_byte_buffer_ = nullptr;
+        static jmethodID method_byte_buffer_byte_order_ = nullptr;
+        static jobject jobj_little_endian_value_ = nullptr;
+        static jobject jobj_big_endian_value_ = nullptr;
+
+
         static bq::array<void (*)()>& get_jni_onload_callbacks()
         {
             return common_global_vars::get().jni_onload_callbacks_inst_;
@@ -80,13 +86,39 @@ namespace bq {
             return java_vm;
         }
 
+
+        jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian)
+        {
+			jobject result = env->NewDirectByteBuffer(const_cast<void*>(address), static_cast<jlong>(capacity));
+            if (!is_big_endian) {
+                env->CallVoidMethod(result, method_byte_buffer_byte_order_, jobj_little_endian_value_);
+                if (env->ExceptionCheck()) {
+					env->ExceptionDescribe();
+					env->ExceptionClear();
+                    result = NULL;
+                }
+            }
+            return result;
+        }
+
+		static void init_reflection_variables() {
+			jni_env env_holder;
+			cls_byte_buffer_ = env_holder.env->FindClass("java/nio/ByteBuffer");
+			method_byte_buffer_byte_order_ = env_holder.env->GetMethodID(cls_byte_buffer_, "order", "(Ljava/nio/ByteOrder;)Ljava/nio/ByteBuffer;");
+			jclass cls_byte_order = env_holder.env->FindClass("java/nio/ByteOrder");
+			jfieldID little_endian_field = env_holder.env->GetStaticFieldID(cls_byte_order, "LITTLE_ENDIAN", "Ljava/nio/ByteOrder;");
+			jfieldID big_endian_field = env_holder.env->GetStaticFieldID(cls_byte_order, "BIG_ENDIAN", "Ljava/nio/ByteOrder;");
+			jobj_little_endian_value_ = env_holder.env->GetStaticObjectField(cls_byte_order, little_endian_field);
+			jobj_big_endian_value_ = env_holder.env->GetStaticObjectField(cls_byte_order, big_endian_field);
+        }
+
 #ifdef __cplusplus
         extern "C" {
 #endif
         JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
         {
             (void)reserved;
-            java_vm = vm;
+			java_vm = vm;
 #if defined(BQ_ANDROID)
             __android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
             android_jni_onload();
@@ -95,9 +127,10 @@ namespace bq {
 #else
             printf("Bq JNI_Onload is called");
 #endif
-            for (auto callback : get_jni_onload_callbacks()) {
-                callback();
-            }
+			init_reflection_variables();
+			for (auto callback : get_jni_onload_callbacks()) {
+				callback();
+			}
             return JNI_VERSION_1_6;
         }
 #ifdef __cplusplus

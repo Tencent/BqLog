@@ -43,8 +43,8 @@ namespace bq {
         };
 
         JavaVM* get_jvm();
-        const bq::string& get_android_id();
-        const bq::string& get_package_name();
+
+		jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian);
     }
 }
 #endif

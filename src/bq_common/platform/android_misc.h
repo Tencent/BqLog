@@ -41,7 +41,10 @@ namespace bq {
             {
                 return asset != nullptr;
             }
-        };
+		};
+		const bq::string& get_android_id();
+
+		const bq::string& get_package_name();
 
         jobject get_global_context();
 

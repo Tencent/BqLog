@@ -11,7 +11,6 @@ package bq;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -64,11 +63,8 @@ public class log {
         }
         log.name_ = name;
         log.merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(log_id);
-        log.merged_log_level_bitmap_.order(ByteOrder.LITTLE_ENDIAN);
         log.categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(log_id);
-        log.categories_mask_array_.order(ByteOrder.LITTLE_ENDIAN);
         log.print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(log_id);
-        log.print_stack_level_bitmap_.order(ByteOrder.LITTLE_ENDIAN);
 
         long category_count = log_invoker.__api_get_log_categories_count(log_id);
         log.categories_name_array_ = new ArrayList<String>((int)category_count);
@@ -310,11 +306,8 @@ public class log {
         name_ = rhs.name_;
         log_id_ = rhs.log_id_;
         merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(log_id_);
-        merged_log_level_bitmap_.order(ByteOrder.LITTLE_ENDIAN);
         categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(log_id_);
-        categories_mask_array_.order(ByteOrder.LITTLE_ENDIAN);
         print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(log_id_);
-        print_stack_level_bitmap_.order(ByteOrder.LITTLE_ENDIAN);
 
         long category_count = log_invoker.__api_get_log_categories_count(log_id_);
         categories_name_array_ = new ArrayList<String>((int)category_count);
