@@ -38,7 +38,11 @@
 #define BQ_POSIX 1
 #define BQ_JAVA 1
 #ifndef BQ_UNIT_TEST
+#if defined(__has_include)
+#if !__has_include(<vector>)
 #define BQ_NO_LIBCPP 1
+#endif
+#endif
 #endif
 #elif defined(__ORBIS__)
 #define BQ_PS 1

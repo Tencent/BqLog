@@ -221,10 +221,10 @@ namespace bq {
 		{
 			jni_env env_holder;
 			JNIEnv* env = env_holder.env;
-            cls_android_application_ = env->FindClass("android/app/Application");
-			cls_android_activity_thread_ = env->FindClass("android/app/ActivityThread");
-			cls_android_context_ = env->FindClass("android/content/Context");
-			cls_android_setting_secure_ = env->FindClass("android/provider/Settings$Secure");
+            cls_android_application_ = (jclass)env->NewGlobalRef(env->FindClass("android/app/Application"));
+			cls_android_activity_thread_ = (jclass)env->NewGlobalRef(env->FindClass("android/app/ActivityThread"));
+			cls_android_context_ = (jclass)env->NewGlobalRef(env->FindClass("android/content/Context"));
+			cls_android_setting_secure_ = (jclass)env->NewGlobalRef(env->FindClass("android/provider/Settings$Secure"));
             assert(cls_android_application_ 
                 && cls_android_activity_thread_
                 && cls_android_context_
@@ -506,6 +506,9 @@ namespace bq {
             common_global_vars::get().base_dir_init_inst_.base_dir_0_ = get_files_dir();
             common_global_vars::get().base_dir_init_inst_.base_dir_1_ = get_external_files_dir();
 
+            bq::util::log_device_console(log_level::info, "internal storage path:%s", get_base_dir(true).c_str());
+            bq::util::log_device_console(log_level::info, "external storage path:%s", get_base_dir(false).c_str());
+
             // priority:
             // for sand box dir: internal storage -> external storage -> cache storage
             // for not in sand box dir: external storage -> internal storage -> cache storage
@@ -538,8 +541,6 @@ namespace bq {
                     candidiate_path.c_str());
                 common_global_vars::get().base_dir_init_inst_.base_dir_1_ = candidiate_path;
             }
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "Storage Path In Sand Box:%s", common_global_vars::get().base_dir_init_inst_.base_dir_0_.c_str());
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "Storage Path Out Sand Box:%s", common_global_vars::get().base_dir_init_inst_.base_dir_1_.c_str());
             if (need_alarm) {
                 __android_log_print(ANDROID_LOG_ERROR, "Bq", "If you are using BQ in isolateProcess Android Service, you may not have any I/O read/write permissions, and all file read/write operations will fail.");
             }

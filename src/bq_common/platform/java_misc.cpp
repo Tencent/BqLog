@@ -91,7 +91,7 @@ namespace bq {
         {
 			jobject result = env->NewDirectByteBuffer(const_cast<void*>(address), static_cast<jlong>(capacity));
             if (!is_big_endian) {
-                env->CallVoidMethod(result, method_byte_buffer_byte_order_, jobj_little_endian_value_);
+                env->CallObjectMethod(result, method_byte_buffer_byte_order_, jobj_little_endian_value_);
                 if (env->ExceptionCheck()) {
 					env->ExceptionDescribe();
 					env->ExceptionClear();
@@ -103,13 +103,14 @@ namespace bq {
 
 		static void init_reflection_variables() {
 			jni_env env_holder;
-			cls_byte_buffer_ = env_holder.env->FindClass("java/nio/ByteBuffer");
-			method_byte_buffer_byte_order_ = env_holder.env->GetMethodID(cls_byte_buffer_, "order", "(Ljava/nio/ByteOrder;)Ljava/nio/ByteBuffer;");
-			jclass cls_byte_order = env_holder.env->FindClass("java/nio/ByteOrder");
-			jfieldID little_endian_field = env_holder.env->GetStaticFieldID(cls_byte_order, "LITTLE_ENDIAN", "Ljava/nio/ByteOrder;");
-			jfieldID big_endian_field = env_holder.env->GetStaticFieldID(cls_byte_order, "BIG_ENDIAN", "Ljava/nio/ByteOrder;");
-			jobj_little_endian_value_ = env_holder.env->GetStaticObjectField(cls_byte_order, little_endian_field);
-			jobj_big_endian_value_ = env_holder.env->GetStaticObjectField(cls_byte_order, big_endian_field);
+            auto env = env_holder.env;
+			cls_byte_buffer_ = (jclass)env->NewGlobalRef(env->FindClass("java/nio/ByteBuffer"));
+			method_byte_buffer_byte_order_ = env->GetMethodID(cls_byte_buffer_, "order", "(Ljava/nio/ByteOrder;)Ljava/nio/ByteBuffer;");
+			jclass cls_byte_order = env->FindClass("java/nio/ByteOrder");
+			jfieldID little_endian_field = env->GetStaticFieldID(cls_byte_order, "LITTLE_ENDIAN", "Ljava/nio/ByteOrder;");
+			jfieldID big_endian_field = env->GetStaticFieldID(cls_byte_order, "BIG_ENDIAN", "Ljava/nio/ByteOrder;");
+			jobj_little_endian_value_ = env->NewGlobalRef(env->GetStaticObjectField(cls_byte_order, little_endian_field));
+			jobj_big_endian_value_ = env->NewGlobalRef(env->GetStaticObjectField(cls_byte_order, big_endian_field));
         }
 
 #ifdef __cplusplus

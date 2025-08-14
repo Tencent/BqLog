@@ -47,6 +47,9 @@ else()
             ${EXTRA_FLAGS}
     )
 endif()
+if(ANDROID_STL STREQUAL "none")
+    add_compile_definitions(BQ_NO_LIBCPP=1)
+endif()
 
 
 #make __cplusplus correct in Visual Studio

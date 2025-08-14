@@ -15,11 +15,6 @@
 
 // todo use read-write lock to improve the concurrency performance
 
-#ifndef BQ_UNIT_TEST
-#define FILE_MANAGER_LOG(...) bq::util::log_device_console(__VA_ARGS__)
-#else
-#define FILE_MANAGER_LOG(...)
-#endif
 namespace bq {
     static BQ_TLS int32_t file_manager_file_error_no_ = 0;
 
@@ -27,15 +22,18 @@ namespace bq {
         : mutex(true)
     {
         seq_generator = 0;
-        FILE_MANAGER_LOG(log_level::info, "file_manager is constructed");
-        FILE_MANAGER_LOG(log_level::info, "internal storage path:%s", get_base_dir(true).c_str());
-        FILE_MANAGER_LOG(log_level::info, "external storage path:%s", get_base_dir(false).c_str());
+        bq::util::log_device_console(log_level::info, "file_manager is constructed");
+#if !defined(BQ_ANDROID)
+        //base dir is determined after JNI_Onload() on Android.
+        bq::util::log_device_console(log_level::info, "internal storage path:%s", get_base_dir(true).c_str());
+        bq::util::log_device_console(log_level::info, "external storage path:%s", get_base_dir(false).c_str());
+#endif
     }
 
     file_manager::~file_manager()
     {
         flush_all_opened_files();
-        FILE_MANAGER_LOG(log_level::info, "file_manager is destructed");
+        bq::util::log_device_console(log_level::info, "file_manager is destructed");
     }
 
     file_manager& file_manager::instance()
@@ -87,7 +85,7 @@ namespace bq {
         }
         int32_t error_code = platform::make_dir(path.c_str());
         if (error_code != 0) {
-            FILE_MANAGER_LOG(bq::log_level::error, "create_directory failed, directory:%s, error code:%d", path.c_str(), error_code);
+            bq::util::log_device_console(bq::log_level::error, "create_directory failed, directory:%s, error code:%d", path.c_str(), error_code);
             return false;
         }
         return true;
@@ -176,10 +174,10 @@ namespace bq {
         if (error_code != 0) {
             switch (error_code) {
             case EACCES:
-                FILE_MANAGER_LOG(bq::log_level::error, "remove_file_or_dir failed, directory:%s, error code:%s", real_path.c_str(), "EACCES");
+                bq::util::log_device_console(bq::log_level::error, "remove_file_or_dir failed, directory:%s, error code:%s", real_path.c_str(), "EACCES");
                 break;
             default:
-                FILE_MANAGER_LOG(bq::log_level::error, "remove_file_or_dir failed, directory:%s, error code:%d", real_path.c_str(), error_code);
+                bq::util::log_device_console(bq::log_level::error, "remove_file_or_dir failed, directory:%s, error code:%d", real_path.c_str(), error_code);
                 break;
             }
             return false;
@@ -237,7 +235,7 @@ namespace bq {
         auto& file_manager_inst = bq::file_manager::instance();
         auto file_handle = file_manager_inst.open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
         if (!file_handle.is_valid()) {
-            FILE_MANAGER_LOG(bq::log_level::error, "failed to load file %s", path.c_str());
+            bq::util::log_device_console(bq::log_level::error, "failed to load file %s", path.c_str());
             return;
         }
         file_manager_inst.write_file(file_handle, content.begin(), content.size());
@@ -249,7 +247,7 @@ namespace bq {
         auto& file_manager_inst = bq::file_manager::instance();
         auto file_handle = file_manager_inst.open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
         if (!file_handle.is_valid()) {
-            FILE_MANAGER_LOG(bq::log_level::error, "failed to load file %s", path.c_str());
+            bq::util::log_device_console(bq::log_level::error, "failed to load file %s", path.c_str());
             return;
         }
         file_manager_inst.truncate_file(file_handle, 0);
@@ -291,7 +289,7 @@ namespace bq {
         int32_t open_file_errno = bq::platform::open_file(real_path.c_str(), (bq::platform::file_open_mode_enum)open_mode, platform_handle);
         if ((!bq::platform::is_platform_handle_valid(platform_handle)) || open_file_errno != 0) {
             file_manager_file_error_no_ = open_file_errno;
-            FILE_MANAGER_LOG(bq::log_level::error, "open_or_create_file failed, file:\"%s\", error code:%d", real_path.c_str(), open_file_errno);
+            bq::util::log_device_console(bq::log_level::error, "open_or_create_file failed, file:\"%s\", error code:%d", real_path.c_str(), open_file_errno);
             return handle;
         }
         bq::platform::seek_file(platform_handle, platform::file_seek_option::end, 0);
@@ -315,7 +313,7 @@ namespace bq {
 
         handle.seq_ = file_descriptors[handle.idx_].seq;
 #ifndef NDEBUG
-        FILE_MANAGER_LOG(bq::log_level::info, "open  file:%s success, idx:%" PRIu32 ", seq:%" PRIu32 ", counter:%" PRId32 "", real_path.c_str(), handle.idx_, handle.seq_, desc.ref_cout.load());
+        bq::util::log_device_console(bq::log_level::info, "open  file:%s success, idx:%" PRIu32 ", seq:%" PRIu32 ", counter:%" PRId32 "", real_path.c_str(), handle.idx_, handle.seq_, desc.ref_cout.load());
 #endif
         return handle;
     }
@@ -332,7 +330,7 @@ namespace bq {
         int32_t error_code = bq::platform::write_file(handle.platform_handle(), data, length, total_written_count);
         if (error_code != 0) {
             file_manager_file_error_no_ = error_code;
-            FILE_MANAGER_LOG(bq::log_level::error, "write file failed, errno:%" PRId32 ", path:%s, need_write_count:%" PRIu64 ", real_write_count:%" PRIu64,
+            bq::util::log_device_console(bq::log_level::error, "write file failed, errno:%" PRId32 ", path:%s, need_write_count:%" PRIu64 ", real_write_count:%" PRIu64,
                 error_code, handle.file_path_.c_str(), static_cast<uint64_t>(length), static_cast<uint64_t>(total_written_count));
             return total_written_count;
         }
@@ -344,7 +342,7 @@ namespace bq {
         auto truncate_errno = platform::truncate_file(handle.platform_handle(), offset);
         bool result = (truncate_errno == 0);
         if (truncate_errno != 0) {
-            FILE_MANAGER_LOG(bq::log_level::error, "truncate file failed, file:\"%s\", error code:%d", handle.file_path_.c_str(), truncate_errno);
+            bq::util::log_device_console(bq::log_level::error, "truncate file failed, file:\"%s\", error code:%d", handle.file_path_.c_str(), truncate_errno);
         }
         size_t current_file_size = 0;
         int32_t get_file_size_error_no = bq::platform::get_file_size(handle.platform_handle(), current_file_size);
@@ -369,7 +367,7 @@ namespace bq {
             int32_t error_code = bq::platform::read_file(handle.platform_handle(), (uint8_t*)dest_data + total_read_count, need_read_count, tmp_count);
             if (error_code != 0) {
                 file_manager_file_error_no_ = error_code;
-                FILE_MANAGER_LOG(bq::log_level::error, "read file failed, errno:%d, path:%s, need_read_count:%" PRIu64 ", real_read_count:%" PRIu64 "",
+                bq::util::log_device_console(bq::log_level::error, "read file failed, errno:%d, path:%s, need_read_count:%" PRIu64 ", real_read_count:%" PRIu64 "",
                     error_code, handle.file_path_.c_str(), static_cast<uint64_t>(length), static_cast<uint64_t>(total_read_count));
                 break;
             }
@@ -397,7 +395,7 @@ namespace bq {
         }
         auto result = bq::platform::seek_file(handle.platform_handle(), (bq::platform::file_seek_option)opt, offset);
         if (0 != result) {
-            FILE_MANAGER_LOG(bq::log_level::error, "seek(seek_option::current) file failed, errno:%d, file:%s, offset:%" PRId64 "",
+            bq::util::log_device_console(bq::log_level::error, "seek(seek_option::current) file failed, errno:%d, file:%s, offset:%" PRId64 "",
                 result, handle.file_path_.c_str(), offset);
             return false;
         }
@@ -432,7 +430,7 @@ namespace bq {
             return true;
         }
         file_manager_file_error_no_ = err_code;
-        FILE_MANAGER_LOG(bq::log_level::error, "flush file failed, errno:%d,path:%s",
+        bq::util::log_device_console(bq::log_level::error, "flush file failed, errno:%d,path:%s",
             err_code, file.file_path_.c_str());
         return false;
     }
@@ -449,7 +447,7 @@ namespace bq {
                     continue;
                 }
                 file_manager_file_error_no_ = err_code;
-                FILE_MANAGER_LOG(bq::log_level::error, "flush file failed, errno:%d, path:%s",
+                bq::util::log_device_console(bq::log_level::error, "flush file failed, errno:%d, path:%s",
                     err_code, desc.file_path.c_str());
                 result = false;
             }
@@ -470,7 +468,7 @@ namespace bq {
         }
         auto& desc = file_descriptors[desc_idx];
 #ifndef NDEBUG
-        FILE_MANAGER_LOG(bq::log_level::info, "close file:%s idx:%d, seq:%d, ref_count:%d", desc.file_path.c_str(), desc_idx, handle.seq_, desc.ref_cout.load() - 1);
+        bq::util::log_device_console(bq::log_level::info, "close file:%s idx:%d, seq:%d, ref_count:%d", desc.file_path.c_str(), desc_idx, handle.seq_, desc.ref_cout.load() - 1);
 #endif
         desc.dec_ref();
         handle.clear();
@@ -488,19 +486,19 @@ namespace bq {
         file_manager_file_error_no_ = err_code;
         switch (err_code) {
         case ENOENT:
-            FILE_MANAGER_LOG(bq::log_level::error, "get_file_size file not found: %s", handle.file_path_.c_str());
+            bq::util::log_device_console(bq::log_level::error, "get_file_size file not found: %s", handle.file_path_.c_str());
             break;
         case EACCES:
-            FILE_MANAGER_LOG(bq::log_level::error, "get_file_size permission is denied for: %s", handle.file_path_.c_str());
+            bq::util::log_device_console(bq::log_level::error, "get_file_size permission is denied for: %s", handle.file_path_.c_str());
             break;
         case EISDIR:
-            FILE_MANAGER_LOG(bq::log_level::error, "get_file_size path is dir: %s", handle.file_path_.c_str());
+            bq::util::log_device_console(bq::log_level::error, "get_file_size path is dir: %s", handle.file_path_.c_str());
             break;
         case ENOTDIR:
-            FILE_MANAGER_LOG(bq::log_level::error, "get_file_size path invalid: %s", handle.file_path_.c_str());
+            bq::util::log_device_console(bq::log_level::error, "get_file_size path invalid: %s", handle.file_path_.c_str());
             break;
         default:
-            FILE_MANAGER_LOG(bq::log_level::error, "get_file_size path failed: %s, error code:%" PRId32 "", handle.file_path_.c_str(), err_code);
+            bq::util::log_device_console(bq::log_level::error, "get_file_size path failed: %s, error code:%" PRId32 "", handle.file_path_.c_str(), err_code);
             break;
         }
         return 0;
@@ -510,11 +508,11 @@ namespace bq {
     {
         bq::platform::scoped_mutex lock(const_cast<bq::platform::mutex&>(mutex));
         if ((decltype(file_descriptors)::size_type)handle.idx_ >= file_descriptors.size()) {
-            // FILE_MANAGER_LOG(bq::log_level::error, "get_file_descriptor_index_by_handle failed, invalid handle idx:%d, seq:%d", handle.idx, handle.seq);
+            // bq::util::log_device_console(bq::log_level::error, "get_file_descriptor_index_by_handle failed, invalid handle idx:%d, seq:%d", handle.idx, handle.seq);
             return -1;
         }
         if (handle.seq_ != file_descriptors[handle.idx_].seq) {
-            // FILE_MANAGER_LOG(bq::log_level::error, "get_file_descriptor_index_by_handle failed, invalid handle idx:%d, seq:%d, real seq:%d", handle.idx, handle.seq, file_descriptors[handle.idx].seq);
+            // bq::util::log_device_console(bq::log_level::error, "get_file_descriptor_index_by_handle failed, invalid handle idx:%d, seq:%d, real seq:%d", handle.idx, handle.seq, file_descriptors[handle.idx].seq);
             return -1;
         }
         return static_cast<int32_t>(handle.idx_);
