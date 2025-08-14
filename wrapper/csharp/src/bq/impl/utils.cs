@@ -64,7 +64,7 @@ namespace bq.impl
 
 }
 
-internal class utils
+internal class @utils
 {
     public static uint align4(uint n)
     {

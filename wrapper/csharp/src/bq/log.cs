@@ -17,7 +17,7 @@ using bq.impl;
 
 namespace bq
 {
-    public class log
+    public class @log
     {
         private static log_category_base default_category_ = new log_category_base();
 
@@ -103,7 +103,7 @@ namespace bq
                 sbyte* version_str = log_invoker.__api_get_log_version();
                 if (null == version_str)
                 {
-                    return null;
+                    return "";
                 }
                 int len = get_str_len(version_str);
                 return new string(version_str, 0, len, System.Text.Encoding.UTF8);
@@ -442,14 +442,22 @@ namespace bq
             }
         }
 
+#nullable disable
         public override bool Equals(object obj)
         {
-            if (obj == null || !(obj is log))
+            if (ReferenceEquals(obj, null))
             {
                 return false;
             }
-            return log_id_ == ((log)obj).get_id();
+
+            var other = obj as log;
+            if (ReferenceEquals(other, null))
+            {
+                return false;
+            }
+            return log_id_ == other.get_id();
         }
+#nullable enable
 
         public override int GetHashCode()
         {

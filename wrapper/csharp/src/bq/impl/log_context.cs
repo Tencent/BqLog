@@ -23,7 +23,7 @@ namespace bq.impl
         private uint total_size_;
         private log_category_base category_;
         private log_level level_;
-        private _log_api_log_buffer_write_handle handle_;
+        private _api_log_buffer_chunk_write_handle handle_;
         private byte* log_params_addr_;
         private param_wrapper format_str_;
         private log log_;
@@ -34,7 +34,7 @@ namespace bq.impl
             log_ = log;
             category_ = category;
             level_ = level;
-            handle_ = new _log_api_log_buffer_write_handle();
+            handle_ = new _api_log_buffer_chunk_write_handle();
             log_params_addr_ = null;
             if(null == format_str)
             {
@@ -47,7 +47,7 @@ namespace bq.impl
             format_str_ = format_str;
             format_size_ = format_str_.aligned_size - 4;  //no typeinfo
             params_size_ = params_size;
-            total_size_ = (uint)sizeof(bq.def._log_head_def) + format_size_ + params_size_;
+            total_size_ = (uint)sizeof(bq.def._log_entry_head_def) + format_size_ + params_size_;
         }
 
         
@@ -59,13 +59,13 @@ namespace bq.impl
             {
                 return false;
             }
-            _log_head_def* head = (_log_head_def*)handle_.data_ptr;
+            _log_entry_head_def* head = (_log_entry_head_def*)handle_.data_ptr;
             head->category_idx = log_category_base.get_index(category_);
             //head->category_hash = log_category_base.get_value(category_);
             head->level = (byte)level_;
             head->log_format_str_type = (byte)log_arg_type_enum.string_utf16_type;
-            head->log_args_offset = (ushort)(sizeof(_log_head_def) + format_size_);
-            var log_format_content_addr = handle_.data_ptr + sizeof(_log_head_def);
+            head->log_args_offset = (uint)(sizeof(_log_entry_head_def) + format_size_);
+            var log_format_content_addr = handle_.data_ptr + sizeof(_log_entry_head_def);
             uint str_size = format_str_.storage_size - 4 - sizeof(UInt32);
             *(uint*)(log_format_content_addr) = str_size;
             log_format_content_addr += 4;

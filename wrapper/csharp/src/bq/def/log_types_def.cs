@@ -18,11 +18,12 @@ namespace bq.def
     public enum enum_buffer_result_code
     {
         success = 0,
-		err_empty_log_buffer,                           //no valid data to read in log buffer;
-        err_not_enough_space,                            //not enough space in log buffer to alloc
-        err_alloc_failed_by_race_condition,              //alloc failed caused by multi-thread race condition, you can try again later.
-		err_alloc_size_invalid,                          //invalid alloc size, too big or 0.
-        err_buffer_not_inited,                           //buffer not initialized
+        err_empty_log_buffer,       // no valid data to read in log buffer;
+        err_not_enough_space,       // not enough space in log buffer to alloc
+        err_wait_and_retry,         // need wait and try again
+        err_data_not_contiguous,    // data is not contiguous, this error code is only used for internal statistics within the log_buffer and will not be exposed externally.
+        err_alloc_size_invalid,     // invalid alloc size, too big or 0.
+        err_buffer_not_inited,      // buffer not initialized
         result_code_count
     };
 
@@ -62,42 +63,30 @@ namespace bq.def
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public unsafe struct _log_api_log_buffer_write_handle
+    internal unsafe struct _api_log_buffer_chunk_read_handle
     {
         public byte* data_ptr;
         public enum_buffer_result_code result_code;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    internal unsafe struct _log_api_log_buffer_read_handle
+    public unsafe struct _api_log_buffer_chunk_write_handle
     {
         public byte* data_ptr;
         public enum_buffer_result_code result_code;
     }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    internal unsafe struct _log_api_console_log_data_head
-    {
-        public ulong log_id;
-        public uint category_idx;
-        //public uint category_hash;
-        public int level;
-        public int log_len;
-        public byte log_str;
-    };
 
     [StructLayout(LayoutKind.Sequential, Pack = 8)]
-    internal unsafe struct _log_head_def
+    internal unsafe struct _log_entry_head_def
     {
         public ulong timestamp_epoch;
-        public uint category_idx;
         public uint log_args_offset;
         public uint ext_info_offset;
-        public byte level;
-        public byte log_format_str_type; //log_arg_type_enum.string_utf8_type or log_arg_type_enum.string_utf16_type
         public ushort padding;
+        public byte log_format_str_type;
+        public byte level;
+        public uint category_idx;
     }
-
 
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]

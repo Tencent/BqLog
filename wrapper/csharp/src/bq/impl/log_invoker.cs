@@ -36,10 +36,10 @@ namespace bq.impl
         public static unsafe extern bool __api_log_reset_config(byte* log_name_utf8, byte* config_content_utf8);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern _log_api_log_buffer_write_handle __api_log_buffer_alloc(ulong log_id, uint length);
+        public static unsafe extern _api_log_buffer_chunk_write_handle __api_log_buffer_alloc(ulong log_id, uint length);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern void __api_log_buffer_commit(ulong log_id, _log_api_log_buffer_write_handle write_handle_ptr);
+        public static unsafe extern void __api_log_buffer_commit(ulong log_id, _api_log_buffer_chunk_write_handle write_handle_ptr);
  
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern void __api_set_appenders_enable(ulong log_id, byte* appender_name, bool enable);

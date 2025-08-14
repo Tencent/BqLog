@@ -34,7 +34,6 @@ import bq.utils.param;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.AbstractMap.SimpleEntry;
 
 
 public class log_context {

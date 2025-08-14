@@ -58,14 +58,14 @@ namespace bq {
         uint64_t timestamp_epoch;
         uint32_t log_args_offset;
         uint32_t ext_info_offset;
-        uint16_t padding_;
+        uint16_t padding;
         uint8_t log_format_str_type; // log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type
         uint8_t level;
         uint32_t category_idx;
     } 
     BQ_PACK_END
     static_assert(sizeof(_log_entry_head_def) % 8 == 0
-            && (sizeof(_log_entry_head_def) == sizeof(decltype(_log_entry_head_def::timestamp_epoch)) + sizeof(decltype(_log_entry_head_def::category_idx)) + sizeof(decltype(_log_entry_head_def::level)) + sizeof(decltype(_log_entry_head_def::log_format_str_type)) + sizeof(decltype(_log_entry_head_def::log_args_offset)) + sizeof(decltype(_log_entry_head_def::ext_info_offset)) + sizeof(decltype(_log_entry_head_def::padding_))),
+            && (sizeof(_log_entry_head_def) == sizeof(decltype(_log_entry_head_def::timestamp_epoch)) + sizeof(decltype(_log_entry_head_def::category_idx)) + sizeof(decltype(_log_entry_head_def::level)) + sizeof(decltype(_log_entry_head_def::log_format_str_type)) + sizeof(decltype(_log_entry_head_def::log_args_offset)) + sizeof(decltype(_log_entry_head_def::ext_info_offset)) + sizeof(decltype(_log_entry_head_def::padding))),
         "_log_entry_head_def's memory layout must be packed!");
     static_assert(sizeof(_log_entry_head_def)  == 24,
         "_log_entry_head_def's memory layout must be packed!");
