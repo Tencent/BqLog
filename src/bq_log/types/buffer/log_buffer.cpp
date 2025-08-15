@@ -771,8 +771,9 @@ namespace bq {
             if((config_.policy == log_memory_policy::auto_expand_when_full 
                 || config_.policy == log_memory_policy::block_when_full)
 				&& parent_result.result == enum_buffer_result_code::err_not_enough_space) {
-			}
-            parent_result.result = enum_buffer_result_code::err_wait_and_retry;
+
+                parent_result.result = enum_buffer_result_code::err_wait_and_retry;
+				}
             return parent_result;
         }
         auto* parent_context = reinterpret_cast<context_head*>(parent_result.data_addr);
