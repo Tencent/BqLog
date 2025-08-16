@@ -11,9 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include <iostream>
-#include <string>
-#include <locale>
-#include <stdarg.h>
+#include <thread>
 #include "test_base.h"
 #include "bq_common/encryption/aes.h"
 
@@ -73,9 +71,19 @@ namespace bq {
                 test_result result;
                 
                 test_rsa(result);
-                test_aes(result, bq::aes::enum_key_bits::AES_128);
-                test_aes(result, bq::aes::enum_key_bits::AES_192);
-                test_aes(result, bq::aes::enum_key_bits::AES_256);
+
+                bq::array<std::thread*> aes_threads;
+                for (uint32_t i = 0; i < 4; ++i) {
+                    aes_threads.push_back(new std::thread([&result, this]() {
+                        test_aes(result, bq::aes::enum_key_bits::AES_128);
+                        test_aes(result, bq::aes::enum_key_bits::AES_192);
+                        test_aes(result, bq::aes::enum_key_bits::AES_256);
+                    }));
+                }
+                for (uint32_t i = 0; i < 4; ++i) {
+                    aes_threads[i]->join();
+                    delete aes_threads[i];
+                }
                 return result;
             }
         };
