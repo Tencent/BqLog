@@ -35,7 +35,7 @@ namespace bq {
                 bq::array<uint8_t> decrypted_text;
                 test_output_param(bq::log_level::info, "begin AES_%" PRId32 " test", static_cast<int32_t>(key_bits));
                 for (int32_t i = 0; i < 64; ++i) {
-                    uint32_t size = bq::util::rand() % (64 * 1024) * 16;
+                    uint32_t size = bq::max_value(1u, bq::util::rand() % (64 * 1024)) * 16;
                     plaintext.clear();
                     plaintext.fill_uninitialized(size);
                     for (uint32_t j = 0; j < size / sizeof(uint32_t); ++j) {
