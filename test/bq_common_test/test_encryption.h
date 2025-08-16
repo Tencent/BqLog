@@ -47,7 +47,9 @@ namespace bq {
                     auto key = aes.generate_key();
                     auto iv = aes.generate_iv();
                     bool enc_result = aes.encrypt(key, iv, plaintext, ciphertext);
-                    result.add_result(enc_result, "AES_%" PRId32 " encryption test : %" PRId32 "", static_cast<int32_t>(key_bits), i);
+                    result.add_result(enc_result
+                        && (memcmp((const uint8_t*)ciphertext.begin(), (const uint8_t*)plaintext.begin(), bq::min_value(plaintext.size(), ciphertext.size())) != 0)
+                        , "AES_%" PRId32 " encryption test : %" PRId32 "", static_cast<int32_t>(key_bits), i);
 
                     if (enc_result) {
                         bool dec_result = aes.decrypt(key, iv, ciphertext, decrypted_text);
