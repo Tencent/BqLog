@@ -10,7 +10,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include <iostream>
-#include "bq_common/bq_common_public_include.h"
 #include "bq_common_test/test_basic_types.h"
 #include "bq_common_test/test_utils.h"
 #include "bq_common_test/test_array.h"
@@ -19,11 +18,11 @@
 #include "bq_common_test/test_file_manager.h"
 #include "bq_common_test/test_property.h"
 #include "bq_common_test/test_thread_atomic.h"
+#include "bq_common_test/test_encryption.h"
 #include "test_miso_ring_buffer.h"
 #include "test_siso_ring_buffer.h"
 #include "test_log_buffer.h"
 #include "test_log.h"
-#include "test_encryption.h"
 #include <locale.h>
 #if defined(WIN32)
 #include <Windows.h>
@@ -73,10 +72,10 @@ int32_t main()
 	TEST_GROUP(Bq_Common_Test, bq::test, test_utils);
 	TEST_GROUP(Bq_Common_Test, bq::test, test_file_manager);
 	TEST_GROUP(Bq_Common_Test, bq::test, test_thread_atomic);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_encryption);
     TEST_GROUP_END(Bq_Common_Test);
 
 	TEST_GROUP_BEGIN(Bq_Log_Test);
-	TEST_GROUP(Bq_Log_Test, bq::test, test_encryption);
     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap", true));
     TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);
