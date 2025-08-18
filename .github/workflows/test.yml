@@ -905,6 +905,7 @@ jobs:
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
 
       - name: Set up Java
         run: |
@@ -933,6 +934,7 @@ jobs:
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
 
       - name: Set up Java
         run: |
@@ -953,6 +955,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
       - name: Set up Java
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
@@ -971,6 +983,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
 
       - name: Set up Java
         run: |
