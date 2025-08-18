@@ -35,9 +35,8 @@ namespace bq {
                 bq::string std_out_file = bq::file_manager::combine_path(output_dir, "stdout.txt");
                 bq::string std_err_file = bq::file_manager::combine_path(output_dir, "stderr.txt");
                 for (int32_t i = 0; i < test_count; ++i) {
-                    if (!bq::file_manager::is_dir(output_dir)) {
-                        bq::file_manager::create_directory(output_dir);
-                    }
+                    bq::file_manager::remove_file_or_dir(output_dir);
+                    bq::file_manager::create_directory(output_dir);
                     bq::string cmd = "ssh-keygen -t rsa -b " + bq::string(key_bits_str) + " -m PEM -N \"\" -f \"" + bq::file_manager::combine_path(output_dir, "id_rsa") + "\" >\"" + std_out_file + "\" 2>\"" + std_err_file + "\"";
                     int32_t ret = system(cmd.c_str());
                     if (ret != 0) {
