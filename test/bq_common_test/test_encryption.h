@@ -58,7 +58,7 @@ namespace bq {
 					bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
 					bq::array<uint8_t> plaintext;
 					uint32_t size = bq::max_value(static_cast<uint32_t>(sizeof(uint32_t)), bq::util::rand() % bq::min_value(static_cast<uint32_t>(pub.n_.size()), 1024U));
-					size = (size / sizeof(uint32_t)) * sizeof(uint32_t);
+					size = static_cast<uint32_t>((size / sizeof(uint32_t)) * sizeof(uint32_t));
 					plaintext.clear();
 					plaintext.fill_uninitialized(size);
 					for (uint32_t j = 0; j < size / sizeof(uint32_t); ++j) {
@@ -132,7 +132,7 @@ namespace bq {
             {
                 test_result result;
 
-				test_output_param(bq::log_level::info, "RSA test begin...");
+				test_output(bq::log_level::info, "RSA test begin...");
 				bq::array<std::thread*> rsa_threads;
 				for (uint32_t i = 0; i < 4; ++i) {
 					rsa_threads.push_back(new std::thread([&result, this]() {
@@ -147,7 +147,7 @@ namespace bq {
 					delete rsa_threads[i];
 				}
 
-				test_output_param(bq::log_level::info, "AES test begin...");
+				test_output(bq::log_level::info, "AES test begin...");
                 bq::array<std::thread*> aes_threads;
                 for (uint32_t i = 0; i < 4; ++i) {
                     aes_threads.push_back(new std::thread([&result, this]() {
