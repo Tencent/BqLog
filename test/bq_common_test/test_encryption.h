@@ -34,7 +34,7 @@ namespace bq {
                 bq::string output_dir = bq::file_manager::combine_path(parent_dir, bq::string("rsa_") + key_bits_str + "_tid_" + thread_id_str);
 				bq::string std_out_file = bq::file_manager::combine_path(output_dir, "stdout.txt");
 				bq::string std_err_file = bq::file_manager::combine_path(output_dir, "stderr.txt");
-				for (int32_t i = 0; i < test_count * 1000; ++i) {
+				for (int32_t i = 0; i < test_count; ++i) {
 					if (!bq::file_manager::is_dir(output_dir)) {
 						bq::file_manager::create_directory(output_dir);
                     }

@@ -150,7 +150,11 @@ namespace bq {
             }
             if (mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
                 return 0;
-            }
+			}
+			if (errno == EEXIST) {
+				// Directory already exists
+				return 0;
+			}
             return errno;
         }
 

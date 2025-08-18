@@ -187,6 +187,10 @@ namespace bq {
             if (_wmkdir((LPCWSTR)path) == 0) {
                 return 0;
             }
+			if (errno == EEXIST) {
+				// Directory already exists
+				return 0;
+			}
             return errno;
         }
 
