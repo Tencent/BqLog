@@ -86,7 +86,7 @@
 #elif defined(__ARM_ARCH_6__)
 #define BQ_ARM_V6 1
 #else
-#define BQ_ARM_UNKNOWN 1 
+#define BQ_ARM_UNKNOWN 1
 #endif
 #elif defined(_M_IX86) || defined(__i386__)
 #define BQ_X86 1
@@ -95,7 +95,7 @@
 #define BQ_X86 1
 #define BQ_X86_64 1
 #else
-#define BQ_UNKNOWN_ARCH 1 
+#define BQ_UNKNOWN_ARCH 1
 #endif
 
 #ifdef BQ_MSVC
@@ -133,35 +133,40 @@
 // thread_local has use-after-free issue on MinGW GCC
 // use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
 namespace bq {
-    template<size_t ID, typename T>
+    template <size_t ID, typename T>
     struct _bq_non_pod_holder_type { };
 }
-#define BQ_TLS_DEFINE(Type, Name, ID) BQ_TLS Type * ____BQ_TLS_##Name##_ptr; \
-                                        template<> \
-                                        struct _bq_non_pod_holder_type<ID, Type> { \
-                                        _bq_non_pod_holder_type() \
-                                        { \
-                                            if (!____BQ_TLS_##Name##_ptr) { \
-                                                ____BQ_TLS_##Name##_ptr = new Type(); \
-                                            } \
-                                        } \
-                                        ~_bq_non_pod_holder_type() \
-                                        { \
-                                            if (____BQ_TLS_##Name##_ptr) { \
-                                                delete ____BQ_TLS_##Name##_ptr; \
-                                            ____BQ_TLS_##Name##_ptr = nullptr; \
-                                            } \
-                                        }                                                                      \
-                                        bq_forceinline operator bool() { return ____BQ_TLS_##Name##_ptr; } \
-                                        bq_forceinline Type& get() { return *____BQ_TLS_##Name##_ptr; } \
-                                    }; \
-                                    thread_local _bq_non_pod_holder_type<ID, Type> Name;
+#define BQ_TLS_DEFINE(Type, Name, ID)                                      \
+    BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                  \
+    template <>                                                            \
+    struct _bq_non_pod_holder_type<ID, Type> {                             \
+        _bq_non_pod_holder_type()                                          \
+        {                                                                  \
+            if (!____BQ_TLS_##Name##_ptr) {                                \
+                ____BQ_TLS_##Name##_ptr = new Type();                      \
+            }                                                              \
+        }                                                                  \
+        ~_bq_non_pod_holder_type()                                         \
+        {                                                                  \
+            if (____BQ_TLS_##Name##_ptr) {                                 \
+                delete ____BQ_TLS_##Name##_ptr;                            \
+                ____BQ_TLS_##Name##_ptr = nullptr;                         \
+            }                                                              \
+        }                                                                  \
+        bq_forceinline operator bool() { return ____BQ_TLS_##Name##_ptr; } \
+        bq_forceinline Type& get() { return *____BQ_TLS_##Name##_ptr; }    \
+    };                                                                     \
+    thread_local _bq_non_pod_holder_type<ID, Type> Name;
 #define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name, __COUNTER__)
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define BQ_PACK_BEGIN __pragma(pack(push, 1))
-#define BQ_PACK_END ;__pragma(pack(pop))
-#define BQ_ANONYMOUS_STRUCT_PACK(DECLARATION, NAME) __pragma(pack(push, 1)) struct DECLARATION NAME; __pragma(pack(pop))
+#define BQ_PACK_END \
+    ;               \
+    __pragma(pack(pop))
+#define BQ_ANONYMOUS_STRUCT_PACK(DECLARATION, NAME)  \
+    __pragma(pack(push, 1)) struct DECLARATION NAME; \
+    __pragma(pack(pop))
 #else
 #define BQ_PACK_BEGIN
 #define BQ_PACK_END __attribute__((__packed__));
@@ -199,25 +204,23 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #if defined(__cplusplus) && (__cplusplus >= 202302L)
 #define BQ_CPP_23 1
 #endif
- 
-
 
 #if defined(__cpp_aligned_new)
 #define BQ_ALIGNAS_NEW 1
 #endif
 
 #if defined(BQ_GCC) || defined(BQ_CLANG)
-#define BQ_SUPPRESS_NULL_DEREF_BEGIN()                                      \
-    _Pragma("GCC diagnostic push")                                          \
-    _Pragma("GCC diagnostic ignored \"-Wnull-dereference\"")
-#define BQ_SUPPRESS_NULL_DEREF_END()                                        \
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN() \
+    _Pragma("GCC diagnostic push")     \
+        _Pragma("GCC diagnostic ignored \"-Wnull-dereference\"")
+#define BQ_SUPPRESS_NULL_DEREF_END() \
     _Pragma("GCC diagnostic pop")
 #elif defined(BQ_MSVC)
-#define BQ_SUPPRESS_NULL_DEREF_BEGIN()                                      \
-    __pragma(warning(push))                                                 \
-    __pragma(warning(disable : 6011)) /* C6011: Dereference Null Pointer */ \
-    __pragma(warning(disable : 6387)) /* C6387: 'Maybe NULL' */
-#define BQ_SUPPRESS_NULL_DEREF_END()                                        \
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN()                                          \
+    __pragma(warning(push))                                                     \
+        __pragma(warning(disable : 6011)) /* C6011: Dereference Null Pointer */ \
+        __pragma(warning(disable : 6387)) /* C6387: 'Maybe NULL' */
+#define BQ_SUPPRESS_NULL_DEREF_END() \
     __pragma(warning(pop))
 #else
 #define BQ_SUPPRESS_NULL_DEREF_BEGIN()

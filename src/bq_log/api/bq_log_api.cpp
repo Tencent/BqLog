@@ -238,7 +238,7 @@ namespace bq {
             if (log->get_thread_mode() == log_thread_mode::sync) {
                 handle.result = enum_buffer_result_code::success;
                 handle.data_addr = log->get_sync_buffer(total_length);
-            }else {
+            } else {
                 auto& log_buffer = log->get_buffer();
                 auto write_handle = log_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
                 bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.result == enum_buffer_result_code::err_wait_and_retry || write_handle.low_space_flag);
@@ -280,14 +280,13 @@ namespace bq {
             }
             if (log->get_thread_mode() == log_thread_mode::sync) {
                 log->sync_process(true);
-            }else {
+            } else {
                 bq::log_buffer_write_handle handle;
                 handle.data_addr = write_handle.data_addr;
                 handle.result = write_handle.result;
                 auto& log_buffer = log->get_buffer();
                 log_buffer.commit_write_chunk(handle);
             }
-
         }
 
         BQ_API void __api_set_appenders_enable(uint64_t log_id, const char* appender_name, bool enable)

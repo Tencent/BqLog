@@ -150,11 +150,11 @@ namespace bq {
             }
             if (mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
                 return 0;
-			}
-			if (errno == EEXIST) {
-				// Directory already exists
-				return 0;
-			}
+            }
+            if (errno == EEXIST) {
+                // Directory already exists
+                return 0;
+            }
             return errno;
         }
 
@@ -286,7 +286,6 @@ namespace bq {
             }
             return errno;
         }
-
 
         int32_t remove_dir_or_file_inner(bq::string& path)
         {
@@ -509,7 +508,7 @@ namespace bq {
             }
             return errno;
         }
-        
+
         uint64_t get_file_last_modified_epoch_ms(const char* path)
         {
             bq::string abs_path = get_lexically_path(path);

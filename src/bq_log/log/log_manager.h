@@ -24,8 +24,10 @@ namespace bq {
             uninitialized
         };
         friend struct log_global_vars;
+
     private:
         log_manager();
+
     public:
         ~log_manager();
         static log_manager& instance();

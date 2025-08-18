@@ -131,9 +131,8 @@ namespace bq {
                     result.add_result(group_handle_A_3 && !group_handle_A_4, "exclusive test 3");
                 }
 
-                if (bq::memory_map::is_platform_support())
-                {
-                    //memory map test
+                if (bq::memory_map::is_platform_support()) {
+                    // memory map test
                     constexpr size_t memory_map_file_size = 64 * 1024;
                     auto mmf_handle_src = file_manager.open_file(TO_ABSOLUTE_PATH("cc/mm_map_src.mmp", true), file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
                     bq::file_manager::instance().truncate_file(mmf_handle_src, memory_map_file_size);

@@ -37,15 +37,15 @@
 namespace bq {
     static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
 
-    #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)  
+#define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)
 
-    #define BQ_POD_RUNTIME_OFFSET_OF(Type, Field) (((size_t)&(((Type*)0x10000)->Field)) - (size_t)0x10000)
-    
-    struct log_buffer_write_handle{
+#define BQ_POD_RUNTIME_OFFSET_OF(Type, Field) (((size_t)&(((Type*)0x10000)->Field)) - (size_t)0x10000)
+
+    struct log_buffer_write_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
         bool low_space_flag = false; // just approximate because of multi-thread
-    }; 
+    };
 
     struct log_buffer_read_handle {
         uint8_t* data_addr;
@@ -90,7 +90,7 @@ namespace bq {
         bq::log_memory_policy policy = log_memory_policy::block_when_full;
 
         /// <summary>
-        /// If a thread writes more than this threshold of logs per second on a specific log object, 
+        /// If a thread writes more than this threshold of logs per second on a specific log object,
         /// it will be considered high-frequency logging and will have a dedicated buffer.
         /// </summary>
         uint64_t high_frequency_threshold_per_second = 1000;
@@ -110,13 +110,13 @@ namespace bq {
         }
     };
 
-    
-    template<typename BUFFER_TYPE>
+    template <typename BUFFER_TYPE>
     class scoped_log_buffer_handle {
         enum class destruction_type : uint8_t {
             return_chunk,
             commit_chunk,
         };
+
     private:
         BUFFER_TYPE* buffer_;
         log_buffer_read_handle read_handle_;

@@ -14,7 +14,7 @@
  * \class bq::siso_ring_buffer
  *
  * `siso`("single thread in and single thread out").
- * 
+ *
  * This high-performance ring buffer supports single-threaded writes and single-threaded reads simultaneously.
  * The buffer size is determined during initialization and cannot be changed.
  * Data in the ring buffer chunks are stored contiguously.
@@ -51,9 +51,9 @@ namespace bq {
             uint32_t data_size;
             uint8_t data[1];
             uint8_t padding[3];
-        } BQ_PACK_END 
-        
-        static_assert(sizeof(chunk_head_def) == 12, "the size of chunk_head_def should be equal to 12 bytes");
+        } BQ_PACK_END
+
+            static_assert(sizeof(chunk_head_def) == 12, "the size of chunk_head_def should be equal to 12 bytes");
 
         struct block {
             uint8_t padding[BLOCK_SIZE];
@@ -65,15 +65,13 @@ namespace bq {
         static_assert(sizeof(block) == BLOCK_SIZE, "invalid siso buffer block size");
         const ptrdiff_t data_block_offset = static_cast<ptrdiff_t>(BQ_POD_RUNTIME_OFFSET_OF(chunk_head_def, data));
 
-
         BQ_PACK_BEGIN
-        struct alignas(4) head
-        {
-            uint32_t aligned_blocks_count_cache_;  //This field is used as snapshot when recovering from memory map file .
+        struct alignas(4) head {
+            uint32_t aligned_blocks_count_cache_; // This field is used as snapshot when recovering from memory map file .
 
             // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
             // rt is short name of "read thread", which means this variable is accessed in read thread.
-            uint32_t rt_reading_cursor_cache_;   //This field is used as snapshot when recovering from memory map file .
+            uint32_t rt_reading_cursor_cache_; // This field is used as snapshot when recovering from memory map file .
             uint32_t rt_writing_cursor_cache_;
             char cache_line_padding0_[CACHE_LINE_SIZE - 3 * sizeof(uint32_t)];
             // this cache variable used in writing thread is used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
@@ -87,8 +85,7 @@ namespace bq {
             uint32_t writing_cursor_; // Used to sync data between read thread and write thread in run-time.
             char cache_line_padding3_[CACHE_LINE_SIZE - sizeof(uint32_t)];
 
-        } BQ_PACK_END 
-        static_assert(sizeof(head) == 4 * CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
+        } BQ_PACK_END static_assert(sizeof(head) == 4 * CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
 
         head* head_;
         block* aligned_blocks_;
@@ -111,6 +108,7 @@ namespace bq {
         struct siso_buffer_batch_read_handle {
             friend class siso_ring_buffer;
             enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
+
         private:
             class siso_ring_buffer* parent_;
             uint32_t start_cursor_;
@@ -120,10 +118,12 @@ namespace bq {
             uint32_t last_cursor_ = UINT32_MAX;
 #endif
         public:
-            bool has_next() const {
+            bool has_next() const
+            {
                 return current_cursor_ != end_cursor_;
             }
-            log_buffer_read_handle next() {
+            log_buffer_read_handle next()
+            {
                 log_buffer_read_handle handle;
                 handle.result = result;
                 block& current_block = parent_->cursor_to_block(current_cursor_);
@@ -144,7 +144,8 @@ namespace bq {
             }
 
 #if defined(BQ_LOG_BUFFER_DEBUG)
-            bool verify_chunk(const log_buffer_read_handle& handle) const {
+            bool verify_chunk(const log_buffer_read_handle& handle) const
+            {
                 if (result != enum_buffer_result_code::success) {
                     return false;
                 }
@@ -158,6 +159,7 @@ namespace bq {
 #endif
         };
         friend struct siso_buffer_batch_read_handle;
+
     public:
         siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_recovery);
 
@@ -233,7 +235,7 @@ namespace bq {
         void data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data);
 
         /// <summary>
-        /// Calculates the minimum buffer size required to ensure the final buffer 
+        /// Calculates the minimum buffer size required to ensure the final buffer
         /// has the desired memory available when passed to the constructor.
         /// </summary>
         /// <param name="expected_buffer_size">The desired memory size to be guaranteed</param>

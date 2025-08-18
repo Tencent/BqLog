@@ -379,7 +379,7 @@ namespace bq {
                 write_with_cache_commit(write_handle);
                 success = true;
             } while (!success);
-            
+
             format_templates_hash_cache_[format_template_hash] = current_format_template_max_index_;
             format_template_idx = current_format_template_max_index_;
             ++current_format_template_max_index_;

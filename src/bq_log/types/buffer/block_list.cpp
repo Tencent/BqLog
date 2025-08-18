@@ -13,14 +13,14 @@
  * \class bq::block_list
  *
  * A lock free singly linked list.
- * 
+ *
  * \author pippocao
  * \date 2024/12/06
  */
- 
- #include "bq_log/types/buffer/block_list.h"
 
- namespace bq {
+#include "bq_log/types/buffer/block_list.h"
+
+namespace bq {
 
     block_node_head::block_node_head(void* buffer, size_t buffer_size, bool is_memory_recovery)
     {
@@ -41,7 +41,6 @@
     {
         get_buffer().~siso_ring_buffer();
     }
-
 
     void block_node_head::alignment_assert()
     {
@@ -97,7 +96,7 @@
             if (current_ptr->index() >= prev_max_blocks_count) {
                 return false;
             }
-            const block_node_head& next_block_head = get_block_head_by_index(current_ptr->index()); 
+            const block_node_head& next_block_head = get_block_head_by_index(current_ptr->index());
             current_ptr = &(next_block_head.next_);
         }
         if (current_blocks_count > prev_max_blocks_count) {
@@ -128,10 +127,9 @@
         if (!try_recover_from_memory_map(max_blocks_count, buffers_base_addr, blocks_total_buffer_size)) {
             reset(max_blocks_count, buffers_base_addr, blocks_total_buffer_size);
         }
-
     }
 
     block_list::~block_list()
     {
     }
- }
+}

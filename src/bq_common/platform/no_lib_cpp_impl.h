@@ -34,10 +34,10 @@
 #include <stdint.h>
 
 namespace std {
-	enum class align_val_t : size_t {};
-	struct nothrow_t {
-	};
-	extern const nothrow_t nothrow;
+    enum class align_val_t : size_t { };
+    struct nothrow_t {
+    };
+    extern const nothrow_t nothrow;
     using size_t = ::size_t;
 }
 
@@ -55,9 +55,9 @@ void* operator new(size_t size, std::align_val_t alignment);
 void* operator new[](size_t size, std::align_val_t alignment);
 void operator delete(void* ptr, std::align_val_t alignment) noexcept;
 void operator delete[](void* ptr, std::align_val_t alignment) noexcept;
-void operator delete  ( void* ptr, std::size_t sz ) noexcept;
-void operator delete[]( void* ptr, std::size_t sz ) noexcept;
-void operator delete  ( void* ptr, std::size_t sz, std::align_val_t al ) noexcept;
+void operator delete(void* ptr, std::size_t sz) noexcept;
+void operator delete[](void* ptr, std::size_t sz) noexcept;
+void operator delete(void* ptr, std::size_t sz, std::align_val_t al) noexcept;
 
 void* operator new(size_t size, const std::nothrow_t&) noexcept;
 void* operator new[](size_t size, const std::nothrow_t&) noexcept;

@@ -16,7 +16,6 @@
 
 namespace bq {
 
-    
     struct miso_tls_buffer_info {
         uint32_t wt_read_cursor_cache_;
         bool is_new_created = true;
@@ -28,6 +27,7 @@ namespace bq {
         miso_tls_buffer_map_type* buffer_map_;
         const miso_ring_buffer* cur_buffer_;
         miso_tls_buffer_info* cur_buffer_info_;
+
     public:
         miso_tls_info()
         {
@@ -73,9 +73,8 @@ namespace bq {
         , aligned_blocks_count_(0)
     {
         assert((BQ_POD_RUNTIME_OFFSET_OF(block::chunk_head_def, data) % 8 == 0) && "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
-        
+
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
-        
 
         assert((uintptr_t)&cursors_.write_cursor_ % (uintptr_t)CACHE_LINE_SIZE == 0);
         assert((uintptr_t)&cursors_.read_cursor_ % (uintptr_t)CACHE_LINE_SIZE == 0);
@@ -144,7 +143,7 @@ namespace bq {
         uint32_t& read_cursor_ref = *read_cursor_ptr;
 
         uint32_t used_blocks_count = static_cast<uint32_t>(current_write_cursor - read_cursor_ref);
-        while(true) {
+        while (true) {
             uint32_t new_cursor = current_write_cursor + need_block_count;
             if (static_cast<uint32_t>(new_cursor - read_cursor_ref) > aligned_blocks_count_) {
                 read_cursor_ref = cursors_.read_cursor_.load_acquire();
@@ -338,7 +337,6 @@ namespace bq {
         }
     }
 
-    
     void miso_ring_buffer::data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
@@ -370,7 +368,7 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert((current_read_cursor & (aligned_blocks_count_ - 1)) + block_count <= aligned_blocks_count_);
 #endif
-                in_callback(block_ref.chunk_head.data, block_ref.chunk_head.data_size, in_user_data); 
+                in_callback(block_ref.chunk_head.data, block_ref.chunk_head.data_size, in_user_data);
                 break;
             default:
                 assert(false && "invalid read ring buffer block status");
@@ -497,7 +495,6 @@ namespace bq {
         }
         cursors_.write_cursor_.store_release(current_cursor);
         cursors_.read_cursor_.store_release(head_->read_cursor_cache_);
-        
 
         for (uint32_t i = current_cursor; i < head_->read_cursor_cache_ + aligned_blocks_count_; ++i) {
             BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(cursor_to_block(i).chunk_head.status, block_status).store_release(block_status::unused);

@@ -21,7 +21,6 @@ namespace bq {
         return (size_t)sysInfo.dwAllocationGranularity;
     }
 
-
     bool memory_map::is_platform_support()
     {
         static_assert(sizeof(HANDLE) <= sizeof(memory_map_handle::platform_data_), "memory_map_handle::platform_data_ size not enough");

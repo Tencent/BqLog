@@ -12,10 +12,10 @@
  */
 /*!
  * This is a high-performance asynchronous buffer that balanced between performance and memory usage.
- * 
- * HP = High Performance, LP = Low Performance. 
- * In fact, LP is only considered lower performance relative to HP; 
- * it is still a high-performance multi-producer single-consumer ring buffer. 
+ *
+ * HP = High Performance, LP = Low Performance.
+ * In fact, LP is only considered lower performance relative to HP;
+ * it is still a high-performance multi-producer single-consumer ring buffer.
  * HP has an independent block for each thread, while LP has multiple threads sharing a single ring buffer.
  *
  * \author pippocao
@@ -40,14 +40,14 @@ namespace bq {
         static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 10;
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL = 1000;
         static constexpr uint64_t OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS = 1000;
+
     public:
         BQ_PACK_BEGIN
         struct lp_buffer_head_misc {
             uint16_t saved_version_;
-        } 
-        BQ_PACK_END
+        } BQ_PACK_END
 
-        struct destruction_mark {
+            struct destruction_mark {
             bq::platform::spin_lock lock_;
             bool is_destructed_ = false;
         };
@@ -57,8 +57,8 @@ namespace bq {
             bq::platform::spin_lock_rw_crazy buffer_lock_;
             uint64_t last_used_epoch_ms_;
             oversize_buffer_obj_def(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
-            : buffer_(size, need_recovery, mmap_file_abs_path)
-            , last_used_epoch_ms_(0)
+                : buffer_(size, need_recovery, mmap_file_abs_path)
+                , last_used_epoch_ms_(0)
             {
             }
         };
@@ -100,29 +100,28 @@ namespace bq {
             bq::hash_map_inline<uint64_t, log_tls_buffer_info*>* log_map_ = nullptr;
             uint64_t cur_log_buffer_id_ = 0;
             log_tls_buffer_info* cur_buffer_info_ = nullptr;
+
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
             bq_forceinline log_tls_buffer_info& get_buffer_info_directly(const log_buffer* buffer);
             ~log_tls_info();
         };
 
-        BQ_PACK_BEGIN 
+        BQ_PACK_BEGIN
         struct alignas(8) pointer_8_bytes_for_32_bits_system {
             log_tls_buffer_info* ptr;
             uintptr_t dummy;
         } BQ_PACK_END
 
-        BQ_PACK_BEGIN 
-        struct alignas(8) pointer_8_bytes_for_64_bits_system {
+            BQ_PACK_BEGIN struct alignas(8) pointer_8_bytes_for_64_bits_system {
             log_tls_buffer_info* ptr;
         } BQ_PACK_END
 
-        BQ_PACK_BEGIN 
-        struct alignas(8) context_head {
+            BQ_PACK_BEGIN struct alignas(8) context_head {
         public:
             uint16_t version_;
             bool is_thread_finished_;
-            bool is_external_ref_;  //only works in lp_buffer when alloc size is larger than buffer size.
+            bool is_external_ref_; // only works in lp_buffer when alloc size is larger than buffer size.
             uint32_t seq_;
             bq::condition_type_t<sizeof(void*) == 8, pointer_8_bytes_for_64_bits_system, pointer_8_bytes_for_32_bits_system> tls_info_; // Only meaningful when get_ver() equals the current version of log_buffer.
 
@@ -134,8 +133,7 @@ namespace bq {
             {
                 tls_info_.ptr = tls_info;
             }
-        } BQ_PACK_END 
-        static_assert(sizeof(context_head) == 16, "context_head size must be 16");
+        } BQ_PACK_END static_assert(sizeof(context_head) == 16, "context_head size must be 16");
         static_assert(sizeof(context_head) % 8 == 0, "context_head size must be a multiple of 8");
 
         BQ_PACK_BEGIN
@@ -143,9 +141,7 @@ namespace bq {
             alignas(8) bool is_removed_;
             alignas(8) bool need_reallocate_;
             alignas(8) context_head context_;
-        } BQ_PACK_END
-    public:
-        log_buffer(log_buffer_config& config);
+    } BQ_PACK_END public : log_buffer(log_buffer_config& config);
 
         ~log_buffer();
 
@@ -166,7 +162,7 @@ namespace bq {
 #endif
 
 #if defined(BQ_UNIT_TEST)
-        int32_t get_groups_count() const { return hp_buffer_.get_groups_count();}
+        int32_t get_groups_count() const { return hp_buffer_.get_groups_count(); }
         void garbage_collect() { hp_buffer_.garbage_collect(); }
         size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
 #endif
@@ -200,17 +196,18 @@ namespace bq {
         void prepare_and_fix_recovery_data();
         void clear_recovery_data();
 
-        //For reading thread.
+        // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
         bool rt_try_traverse_to_next_group();
 
-        //For oversize data.
+        // For oversize data.
         log_buffer_write_handle wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms);
         void wt_commit_oversize_write_chunk(const log_buffer_write_handle& oversize_handle);
         bool rt_read_oversize_chunk(const log_buffer_read_handle& parent_handle, log_buffer_read_handle& out_oversize_handle);
         void rt_return_oversize_read_chunk(const log_buffer_read_handle& oversize_handle);
         void rt_recycle_oversize_buffers();
+
     private:
         friend struct log_tls_info;
         log_buffer_config config_;
@@ -231,12 +228,12 @@ namespace bq {
 
         struct alignas(CACHE_LINE_SIZE) {
             struct {
-                group_list::iterator last_group_;     //empty means read from lp_buffer
+                group_list::iterator last_group_; // empty means read from lp_buffer
                 group_list::iterator cur_group_;
                 block_node_head* last_block_ = nullptr;
                 block_node_head* cur_block_ = nullptr;
                 uint16_t version_ = 0;
-                bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data    
+                bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data
                 read_state state_ = read_state::lp_buffer_reading;
                 block_node_head* traverse_end_block_ = nullptr;
                 siso_ring_buffer::siso_buffer_batch_read_handle hp_handle_cache_;
@@ -255,8 +252,6 @@ namespace bq {
         bq::platform::thread::thread_id read_thread_id_ = 0;
 #endif
     };
-
-    
 
     bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info(const log_buffer* buffer)
     {

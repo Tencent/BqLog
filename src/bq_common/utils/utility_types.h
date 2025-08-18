@@ -232,6 +232,7 @@ namespace bq {
     class unique_ptr {
     public:
         using value_type = T;
+
     public:
         unique_ptr()
             : ptr(nullptr)
@@ -250,8 +251,8 @@ namespace bq {
         }
 
         unique_ptr(const unique_ptr&) = delete;
-		unique_ptr& operator=(T*) = delete;
-		unique_ptr& operator=(const unique_ptr&) = delete;
+        unique_ptr& operator=(T*) = delete;
+        unique_ptr& operator=(const unique_ptr&) = delete;
 
         template <typename D>
         unique_ptr& operator=(unique_ptr<D>&& rhs)
@@ -494,21 +495,15 @@ namespace bq {
                 int64_t expected_value = ref_count_->load_relaxed();
                 while (true) {
                     if (expected_value == 1) {
-                        if (ref_count_->compare_exchange_strong(expected_value
-                            , static_cast<int64_t>(1) << 32
-                            , bq::platform::memory_order::seq_cst
-                            , bq::platform::memory_order::seq_cst)) {
+                        if (ref_count_->compare_exchange_strong(expected_value, static_cast<int64_t>(1) << 32, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
                             delete ptr_;
                             delete ref_count_;
                             break;
                         }
-                    }else {
-                        if (ref_count_->compare_exchange_strong(expected_value
-                            , expected_value - 1
-                            , bq::platform::memory_order::seq_cst
-                            , bq::platform::memory_order::seq_cst)) {
+                    } else {
+                        if (ref_count_->compare_exchange_strong(expected_value, expected_value - 1, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
                             break;
-                            }
+                        }
                     }
                 }
             }

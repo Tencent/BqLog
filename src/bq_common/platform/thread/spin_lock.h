@@ -46,12 +46,16 @@ namespace bq {
                 bq::platform::atomic<lock_node*> next_ = nullptr;
                 bq::platform::atomic<bq::platform::thread::thread_id> owner_ = 0;
             };
+
         private:
             bq::platform::atomic<lock_node*> tail_;
+
         private:
             void yield();
+
         public:
-            mcs_spin_lock() : tail_(nullptr)
+            mcs_spin_lock()
+                : tail_(nullptr)
             {
                 assert(false && "mcs_spin_lock is unavailable now, please use spin_lock instead");
             }
@@ -79,11 +83,10 @@ namespace bq {
                     // The acquire and release memory orders provide memory synchronization semantics
                     // for the business logic protected by this lock, ensuring thread safety and data consistency.
                     while (node.lock_counter_.load_acquire() == 0) {
-                        //yield();
+                        // yield();
                     }
-                }
-                else {
-                    node.lock_counter_.fetch_add_raw(1); //only access in self thread in this case, so no need to use atomic operation
+                } else {
+                    node.lock_counter_.fetch_add_raw(1); // only access in self thread in this case, so no need to use atomic operation
                 }
             }
 
@@ -96,7 +99,7 @@ namespace bq {
                 if (old_counter > 1) {
                     return; // reentrant
                 }
-                assert(old_counter >=1 && "mcs_spin_lock unlock time more than lock time");
+                assert(old_counter >= 1 && "mcs_spin_lock unlock time more than lock time");
 
                 lock_node* next = node.next_.load_acquire();
                 if (next == nullptr) {
@@ -107,7 +110,7 @@ namespace bq {
                         return;
                     }
                     while ((next = node.next_.load_acquire()) == nullptr) {
-                        //yield();
+                        // yield();
                     }
                 }
                 // The acquire and release memory orders provide memory synchronization semantics
@@ -117,7 +120,6 @@ namespace bq {
             }
         };
 
-
         class spin_lock {
         private:
             bq::cache_friendly_type<bq::platform::atomic<bool>> value_;
@@ -126,6 +128,7 @@ namespace bq {
 #endif
         private:
             void yield();
+
         public:
             spin_lock()
                 : value_(false)
@@ -158,7 +161,7 @@ namespace bq {
                 }
             }
 
-            inline bool try_lock() 
+            inline bool try_lock()
             {
                 if (!value_.get().exchange(true, bq::platform::memory_order::acquire)) {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
@@ -189,12 +192,12 @@ namespace bq {
         /// by pippocao
         /// 2024/7/8
         /// </summary>
-        /// 
+        ///
 
         class spin_lock_rw_crazy {
         private:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
-            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 #if !defined(NDEBUG)
             bq::platform::spin_lock lock_;
@@ -202,7 +205,8 @@ namespace bq {
                 bq::platform::thread::thread_id tid_;
                 bool is_write_;
                 int32_t phase_;
-                bool operator==(const debug_record& other) const {
+                bool operator==(const debug_record& other) const
+                {
                     return tid_ == other.tid_ && is_write_ == other.is_write_ && phase_ == other.phase_;
                 }
             };
@@ -211,6 +215,7 @@ namespace bq {
         private:
             void yield();
             uint64_t get_epoch();
+
         public:
             spin_lock_rw_crazy()
                 : counter_(0)
@@ -223,7 +228,8 @@ namespace bq {
             spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
 
 #if !defined(NDEBUG)
-            void debug_output(int32_t pos){
+            void debug_output(int32_t pos)
+            {
                 printf("record pos:%d, %" PRId64 ":[\n", pos, (int64_t)counter_.get().load_seq_cst());
                 for (auto item : record_) {
                     printf("\t%" PRIu64 ", %s, %d\n", (uint64_t)item.tid_, item.is_write_ ? "true" : "false", item.phase_);
@@ -241,7 +247,7 @@ namespace bq {
                 lock_.lock();
                 auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && item.is_write_; });
                 assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
-                record_.push_back(debug_record{id, false , 0});
+                record_.push_back(debug_record { id, false, 0 });
                 lock_.unlock();
 #endif
                 while (true) {
@@ -254,7 +260,7 @@ namespace bq {
 #if !defined(NDEBUG)
                     if (get_epoch() > start_epoch + 60000) {
                         debug_output(1);
-                       assert(false);
+                        assert(false);
                     }
 #endif
                     while (true) {
@@ -273,7 +279,7 @@ namespace bq {
                 }
 #if !defined(NDEBUG)
                 lock_.lock();
-                auto iter = record_.find(debug_record{id, false, 0});
+                auto iter = record_.find(debug_record { id, false, 0 });
                 assert(iter != record_.end());
                 iter->phase_ = 1;
                 lock_.unlock();
@@ -318,7 +324,7 @@ namespace bq {
 #if !defined(NDEBUG)
                 auto id = bq::platform::thread::thread_id();
                 lock_.lock();
-                auto iter = record_.find({id, false, 1});
+                auto iter = record_.find({ id, false, 1 });
                 assert(iter != record_.end());
                 iter->phase_ = 2;
                 lock_.unlock();
@@ -328,14 +334,13 @@ namespace bq {
 #if !defined(NDEBUG)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
                 lock_.lock();
-                iter = record_.find({id, false, 2});
+                iter = record_.find({ id, false, 2 });
                 assert(iter != record_.end());
                 record_.erase(iter);
                 lock_.unlock();
 #else
                 (void)previous_counter;
 #endif
-
             }
 
             inline void write_lock()
@@ -343,9 +348,9 @@ namespace bq {
 #if !defined(NDEBUG)
                 auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
-                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id;});
+                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id; });
                 assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
-                record_.push_back(debug_record{id, true , 0});
+                record_.push_back(debug_record { id, true, 0 });
                 lock_.unlock();
                 uint64_t start_epoch = get_epoch();
 #endif
@@ -364,7 +369,7 @@ namespace bq {
                 }
 #if !defined(NDEBUG)
                 lock_.lock();
-                auto iter = record_.find({id, true, 0});
+                auto iter = record_.find({ id, true, 0 });
                 assert(iter != record_.end());
                 iter->phase_ = 1;
                 lock_.unlock();
@@ -389,7 +394,7 @@ namespace bq {
                     assert(iter != record_.end());
                     iter->phase_ = 1;
                     lock_.unlock();
-#endif 
+#endif
                     return true;
                 }
 #if !defined(NDEBUG)
@@ -407,29 +412,29 @@ namespace bq {
 #if !defined(NDEBUG)
                 auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
-                auto iter = record_.find({id, true, 1});
+                auto iter = record_.find({ id, true, 1 });
                 assert(iter != record_.end());
                 iter->phase_ = 2;
                 lock_.unlock();
                 uint64_t start_epoch = get_epoch();
 #endif
 
-                 while (true) {
-                     counter_type expected_counter = write_lock_mark_value;
-                     if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
-                         break;
-                     }
+                while (true) {
+                    counter_type expected_counter = write_lock_mark_value;
+                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                        break;
+                    }
 #if !defined(NDEBUG)
-                     if (get_epoch() > start_epoch + 60000) {
-                         debug_output(4);
-                         assert(false);
-                     }
+                    if (get_epoch() > start_epoch + 60000) {
+                        debug_output(4);
+                        assert(false);
+                    }
 #endif
-                 }
+                }
 
 #if !defined(NDEBUG)
                 lock_.lock();
-                iter = record_.find({id, true, 2});
+                iter = record_.find({ id, true, 2 });
                 assert(iter != record_.end());
                 record_.erase(iter);
                 lock_.unlock();
@@ -441,6 +446,7 @@ namespace bq {
         private:
             mcs_spin_lock& lock_;
             mcs_spin_lock::lock_node node_;
+
         public:
             scoped_mcs_spin_lock() = delete;
 
@@ -479,6 +485,7 @@ namespace bq {
         private:
             spin_lock& lock_;
             bool locked_;
+
         public:
             scoped_try_spin_lock() = delete;
 

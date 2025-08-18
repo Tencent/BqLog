@@ -13,9 +13,9 @@
 /*!
  * \class bq::memory_pool
  *
- * This is a Last-In-First-Out (LIFO) object pool designed to maximize the retention of objects in L1 and L2 caches, 
+ * This is a Last-In-First-Out (LIFO) object pool designed to maximize the retention of objects in L1 and L2 caches,
  * while also providing an LRU (Least Recently Used) mechanism that allows for customizable eviction conditions.
- * 
+ *
  * \author pippocao
  * \date 2024/3/20
  */
@@ -33,6 +33,7 @@ namespace bq {
     class alignas(CACHE_LINE_SIZE) memory_pool_obj_base<T, true> {
     public:
         static constexpr bool is_aligned = true;
+
     private:
         friend memory_pool<T>;
         T* memory_pool_next_;
@@ -43,11 +44,11 @@ namespace bq {
     static_assert(sizeof(memory_pool_obj_base<char, true>) == CACHE_LINE_SIZE, "invalid memory_pool_obj_base struct size");
     static_assert(bq::is_pod<memory_pool_obj_base<char, true>>::value, "invalid memory_pool_obj_base struct type");
 
-    
     template <typename T>
     class memory_pool_obj_base<T, false> {
     public:
         static constexpr bool is_aligned = false;
+
     private:
         friend memory_pool<T>;
         T* memory_pool_next_;
@@ -61,11 +62,12 @@ namespace bq {
     class memory_pool {
     private:
         bq::platform::spin_lock lock_;
-        T* head_; 
-        T* tail_; 
+        T* head_;
+        T* tail_;
 
         static_assert(bq::is_base_of<memory_pool_obj_base<T, T::is_aligned>, T>::value,
             "T must inherit from memory_pool_obj_base");
+
     public:
         memory_pool()
             : head_(nullptr)
@@ -115,13 +117,12 @@ namespace bq {
             return old_head;
         }
 
-
         /// <summary>
         /// Evicts the least recently used object (LRU: removes from the tail) if it meets the condition.
         /// Only the tail is checked; other objects are ignored if the tail doesn't qualify.
         /// </summary>
         /// <param name="evaluate">Function pointer evaluating if the tail should be evicted (true to remove).
-        ///                        *Example : [](const T* obj) { return obj->some_condition(); } 
+        ///                        *Example : [](const T* obj) { return obj->some_condition(); }
         /// </param>
         /// <param name="user_data">Datas passed to the evaluate function.
         /// </param>

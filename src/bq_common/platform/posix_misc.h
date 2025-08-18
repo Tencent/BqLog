@@ -36,8 +36,7 @@ namespace bq {
             {
                 return ino == rhs.ino;
             }
-        }
-        BQ_PACK_END
+        } BQ_PACK_END
     }
 }
 #endif

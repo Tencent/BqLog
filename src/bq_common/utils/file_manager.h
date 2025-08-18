@@ -102,6 +102,7 @@ namespace bq {
     class file_manager {
         friend file_handle;
         friend struct common_global_vars;
+
     private:
         struct file_descriptor {
             bq::platform::platform_file_handle* handle_ptr;

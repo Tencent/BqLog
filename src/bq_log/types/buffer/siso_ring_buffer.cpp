@@ -19,7 +19,7 @@ namespace bq {
     siso_ring_buffer::siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_recovery)
         : is_memory_recovery_(is_memory_recovery)
     {
-        //make sure it's cache line size aligned
+        // make sure it's cache line size aligned
         assert((uintptr_t)buffer % CACHE_LINE_SIZE == 0 && "input buffer of siso_ring_buffer should be cache line size aligned");
         assert(buffer_size >= sizeof(block) * 4 && "input buffer size of siso_ring_buffer must be at least 256 bytes");
         if (is_memory_recovery) {
@@ -43,7 +43,6 @@ namespace bq {
         }
 #endif
         assert(((size_t)data_block_offset % BLOCK_SIZE == 0) && "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
-        
     }
 
     siso_ring_buffer::~siso_ring_buffer()
@@ -52,13 +51,12 @@ namespace bq {
 
     log_buffer_write_handle siso_ring_buffer::alloc_write_chunk(uint32_t size)
     {
-#if defined(BQ_LOG_BUFFER_DEBUG) 
-        if (check_thread_)
-        {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+        if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (write_thread_id_ == empty_thread_id_) {
                 write_thread_id_ = current_thread_id;
-            } else if (current_thread_id != write_thread_id_){
+            } else if (current_thread_id != write_thread_id_) {
                 bq::util::log_device_console(bq::log_level::error, "only single thread writing is supported for siso_ring_buffer! expected:%" PRIu64 ", but:%" PRIu64 "", write_thread_id_, current_thread_id);
                 assert(false && "only single thread writing is supported for siso_ring_buffer!");
             }
@@ -131,9 +129,9 @@ namespace bq {
             }
         }
 #endif
-        block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_) 
-                ? &cursor_to_block(head_->wt_writing_cursor_cache_) // splited
-                : (block*)(handle.data_addr - data_block_offset);
+        block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_)
+            ? &cursor_to_block(head_->wt_writing_cursor_cache_) // splited
+            : (block*)(handle.data_addr - data_block_offset);
 
         head_->wt_writing_cursor_cache_ += block_ptr->to_chunk_head().block_num;
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).store_release(head_->wt_writing_cursor_cache_);
@@ -154,7 +152,7 @@ namespace bq {
                 assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
             }
         }
-#endif 
+#endif
 #if defined(BQ_LOG_BUFFER_DEBUG)
         is_read_chunk_waiting_for_return_ = true;
         assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) <= aligned_blocks_count_);
@@ -205,8 +203,6 @@ namespace bq {
         return handle;
     }
 
-
-
     void siso_ring_buffer::discard_read_chunk(log_buffer_read_handle& handle)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
@@ -245,10 +241,9 @@ namespace bq {
 #endif
 
         head_->rt_reading_cursor_cache_ += block_ptr->to_chunk_head().block_num;
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(head_->rt_reading_cursor_cache_);         
+        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(head_->rt_reading_cursor_cache_);
     }
 
-    
     siso_ring_buffer::siso_buffer_batch_read_handle siso_ring_buffer::batch_read()
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
@@ -316,9 +311,8 @@ namespace bq {
 
     void siso_ring_buffer::data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data)
     {
-#if defined(BQ_LOG_BUFFER_DEBUG) 
-        if (check_thread_)
-        {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+        if (check_thread_) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (read_thread_id_ == empty_thread_id_) {
                 read_thread_id_ = current_thread_id;
@@ -326,7 +320,7 @@ namespace bq {
                 assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
             }
         }
-#endif 
+#endif
         uint32_t current_read_cursor = head_->rt_reading_cursor_cache_;
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
@@ -392,7 +386,7 @@ namespace bq {
                 return false;
             }
             bool is_split = ((uint8_t*)&current_block.to_chunk_head().data + current_block.to_chunk_head().data_size > (uint8_t*)(aligned_blocks_ + aligned_blocks_count_));
-            
+
             uint32_t expected_block_count = 0;
 
             if (is_split) {
@@ -400,7 +394,7 @@ namespace bq {
                 expected_block_count = left_blocks_to_tail + static_cast<uint32_t>((data_size + (BLOCK_SIZE - 1)) >> BLOCK_SIZE_LOG2);
             } else {
                 expected_block_count = static_cast<uint32_t>((data_size + (uint32_t)data_block_offset + (BLOCK_SIZE - 1)) >> BLOCK_SIZE_LOG2);
-            } 
+            }
             if (expected_block_count != block_count) {
                 return false;
             }

@@ -163,7 +163,7 @@ namespace bq {
                     data_src[i] = bq::util::rand();
                 }
                 while (true) {
-                    
+
                     uint32_t size = bq::util::rand() % data_src_size;
                     auto handle1 = ring_buffer1.alloc_write_chunk(size);
                     bq::scoped_log_buffer_handle<miso_ring_buffer> scoped1(ring_buffer1, handle1);
@@ -195,8 +195,8 @@ namespace bq {
 
                 auto handle1 = ring_buffer1.read_chunk();
                 result.add_result(handle1.result == enum_buffer_result_code::err_empty_log_buffer, "miso traverse test, final");
-
             }
+
         public:
             virtual test_result test() override
             {

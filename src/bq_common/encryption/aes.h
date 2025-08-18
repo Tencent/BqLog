@@ -15,56 +15,56 @@
  *
  * \author pippocao
  *
- * \brief 
+ * \brief
  *
  * Simple AES implementation supporting ECB, CBC, CFB, OFB, CTR modes with 128, 192, and 256-bit keys.
  *
-*/
-
+ */
 
 #include "bq_common/bq_common.h"
 
 namespace bq {
 
-	class aes {
-	public:
-	    enum class enum_cipher_mode {
-	        AES_ECB = 0,  // Electronic Codebook
-                AES_CBC = 1,  // Cipher Block Chaining
-                AES_CFB = 2,  // Cipher Feedback
-                AES_OFB = 3,  // Output Feedback
-                AES_CTR = 4   // Counter Mode
-            };
-	    enum class enum_key_bits {
-	        AES_128 = 128,
-                AES_192 = 192,
-                AES_256 = 256
-            };
-	    using key_type = bq::array<uint8_t>;
-	    using iv_type = bq::array<uint8_t>;
-	public:
-	    aes(enum_cipher_mode mode, enum_key_bits key_bits);
+    class aes {
+    public:
+        enum class enum_cipher_mode {
+            AES_ECB = 0, // Electronic Codebook
+            AES_CBC = 1, // Cipher Block Chaining
+            AES_CFB = 2, // Cipher Feedback
+            AES_OFB = 3, // Output Feedback
+            AES_CTR = 4 // Counter Mode
+        };
+        enum class enum_key_bits {
+            AES_128 = 128,
+            AES_192 = 192,
+            AES_256 = 256
+        };
+        using key_type = bq::array<uint8_t>;
+        using iv_type = bq::array<uint8_t>;
 
-	    key_type generate_key() const;
+    public:
+        aes(enum_cipher_mode mode, enum_key_bits key_bits);
 
-	    iv_type generate_iv() const;
+        key_type generate_key() const;
 
-	    bool encrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t>& plaintext, bq::array<uint8_t>& out_ciphertext) const;
-	    bool decrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t>& ciphertext, bq::array<uint8_t>& out_plaintext) const;
-    
-	private:
-	    enum_cipher_mode mode_;
-	    enum_key_bits key_bits_;
-	    size_t key_size_;
-	    size_t iv_size_;
+        iv_type generate_iv() const;
 
+        bool encrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t>& plaintext, bq::array<uint8_t>& out_ciphertext) const;
+        bool decrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t>& ciphertext, bq::array<uint8_t>& out_plaintext) const;
 
-	private:
-		// helper to fill random bytes
-		static void fill_random(bq::array<uint8_t>& data);
+    private:
+        enum_cipher_mode mode_;
+        enum_key_bits key_bits_;
+        size_t key_size_;
+        size_t iv_size_;
 
-		static bool is_block_aligned(size_t n) {
-			return (n % 16u) == 0u;
-		}
-	};
+    private:
+        // helper to fill random bytes
+        static void fill_random(bq::array<uint8_t>& data);
+
+        static bool is_block_aligned(size_t n)
+        {
+            return (n % 16u) == 0u;
+        }
+    };
 }

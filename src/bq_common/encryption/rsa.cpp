@@ -17,7 +17,8 @@
 #include "bq_common/encryption/rsa.h"
 
 namespace bq {
-    static uint32_t load_u32_be(const uint8_t* p) {
+    static uint32_t load_u32_be(const uint8_t* p)
+    {
         uint32_t v = 0;
         v |= static_cast<uint32_t>(p[0]) << 24;
         v |= static_cast<uint32_t>(p[1]) << 16;
@@ -26,7 +27,8 @@ namespace bq {
         return v;
     }
 
-    static void trim_be(const uint8_t* in, size_t in_len, bq::array<uint8_t>& out) {
+    static void trim_be(const uint8_t* in, size_t in_len, bq::array<uint8_t>& out)
+    {
         size_t i = 0;
         while (i < in_len && in[i] == 0) {
             ++i;
@@ -34,8 +36,7 @@ namespace bq {
         size_t n = 0;
         if (i == in_len) {
             n = 1;
-        }
-        else {
+        } else {
             n = in_len - i;
         }
         out.clear();
@@ -43,25 +44,26 @@ namespace bq {
     }
 
     // base64 decode (RFC 4648, ignores whitespace)
-    static bool base64_decode(const uint8_t* in, size_t in_len, bq::array<uint8_t>& out) {
+    static bool base64_decode(const uint8_t* in, size_t in_len, bq::array<uint8_t>& out)
+    {
         static const uint8_t b64_table[256] = {
-            /* 0..15  */ 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x81,0x81,0x80,0x81,0x81,0x80,0x80,
-            /* 16..31 */ 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            /* 32..47 */ 0x81,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,62  ,0x80,62  ,0x80,63  ,
-            /* 48..63 */ 52  ,53  ,54  ,55  ,56  ,57  ,58  ,59  ,60  ,61  ,0x80,0x80,0x80,0x82,0x80,0x80,
-            /* 64..79 */ 0x80,0 ,1 ,2 ,3 ,4 ,5 ,6 ,7 ,8 ,9 ,10 ,11 ,12 ,13 ,14 ,
-            /* 80..95 */ 15 ,16 ,17 ,18 ,19 ,20 ,21 ,22 ,23 ,24 ,25 ,0x80,0x80,0x80,0x80,63  ,
-            /* 96..111*/ 0x80,26 ,27 ,28 ,29 ,30 ,31 ,32 ,33 ,34 ,35 ,36 ,37 ,38 ,39 ,40 ,
-            /*112..127*/ 41 ,42 ,43 ,44 ,45 ,46 ,47 ,48 ,49 ,50 ,51 ,0x80,0x80,0x80,0x80,0x80,
+            /* 0..15  */ 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x81, 0x81, 0x80, 0x81, 0x81, 0x80, 0x80,
+            /* 16..31 */ 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            /* 32..47 */ 0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 62, 0x80, 62, 0x80, 63,
+            /* 48..63 */ 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 0x80, 0x80, 0x80, 0x82, 0x80, 0x80,
+            /* 64..79 */ 0x80, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+            /* 80..95 */ 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0x80, 0x80, 0x80, 0x80, 63,
+            /* 96..111*/ 0x80, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+            /*112..127*/ 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 0x80, 0x80, 0x80, 0x80, 0x80,
             /*128..255*/
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,
-            0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+            0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80
         };
         out.clear();
         uint32_t buf = 0;
@@ -90,7 +92,8 @@ namespace bq {
         return true;
     }
 
-    static bool parse_ssh_wire_rsa(const uint8_t* data, size_t len, bq::array<uint8_t>& e_be, bq::array<uint8_t>& n_be) {
+    static bool parse_ssh_wire_rsa(const uint8_t* data, size_t len, bq::array<uint8_t>& e_be, bq::array<uint8_t>& n_be)
+    {
         if (len < 4) {
             bq::util::log_device_console(bq::log_level::error, "ssh-rsa: truncated key");
             return false;
@@ -148,7 +151,8 @@ namespace bq {
         size_t n_;
         size_t i_;
     };
-    static bool der_next_tlv(der& d, uint8_t& tag, const uint8_t*& val, size_t& vlen) {
+    static bool der_next_tlv(der& d, uint8_t& tag, const uint8_t*& val, size_t& vlen)
+    {
         if (d.i_ >= d.n_) {
             return false;
         }
@@ -162,8 +166,7 @@ namespace bq {
         size_t len = 0;
         if ((l & 0x80) == 0) {
             len = l;
-        }
-        else {
+        } else {
             uint8_t ll = l & 0x7F;
             if (ll == 0 || ll > 4) {
                 return false;
@@ -186,30 +189,36 @@ namespace bq {
         return true;
     }
 
-    static bool der_expect_tag(uint8_t tag, uint8_t expected) {
+    static bool der_expect_tag(uint8_t tag, uint8_t expected)
+    {
         return tag == expected;
     }
 
-    static void der_copy_int_to_be_no_lead(const uint8_t* val, size_t vlen, bq::array<uint8_t>& out) {
+    static void der_copy_int_to_be_no_lead(const uint8_t* val, size_t vlen, bq::array<uint8_t>& out)
+    {
         trim_be(val, vlen, out);
     }
 
     // Big number helpers
-    static size_t limbs_for_bytes(size_t bytes) {
+    static size_t limbs_for_bytes(size_t bytes)
+    {
         return (bytes + 3u) / 4u;
     }
 
-    static void bn_zero(uint32_t* x, size_t l) {
+    static void bn_zero(uint32_t* x, size_t l)
+    {
         memset(x, 0, l * sizeof(uint32_t));
     }
 
-    static void bn_copy(uint32_t* dst, const uint32_t* src, size_t l) {
+    static void bn_copy(uint32_t* dst, const uint32_t* src, size_t l)
+    {
         if (dst != src) {
             memcpy(dst, src, l * sizeof(uint32_t));
         }
     }
 
-    static int32_t bn_ucmp(const uint32_t* a, const uint32_t* b, size_t l) {
+    static int32_t bn_ucmp(const uint32_t* a, const uint32_t* b, size_t l)
+    {
         for (size_t i = 0; i < l; ++i) {
             size_t j = l - 1 - i;
             if (a[j] < b[j]) {
@@ -222,7 +231,8 @@ namespace bq {
         return 0;
     }
 
-    static uint32_t bn_add(uint32_t* r, const uint32_t* a, const uint32_t* b, size_t l) {
+    static uint32_t bn_add(uint32_t* r, const uint32_t* a, const uint32_t* b, size_t l)
+    {
         uint64_t c = 0;
         for (size_t i = 0; i < l; ++i) {
             c = c + (uint64_t)a[i];
@@ -233,7 +243,8 @@ namespace bq {
         return (uint32_t)c;
     }
 
-    static uint32_t bn_sub(uint32_t* r, const uint32_t* a, const uint32_t* b, size_t l) {
+    static uint32_t bn_sub(uint32_t* r, const uint32_t* a, const uint32_t* b, size_t l)
+    {
         uint64_t c = 0;
         for (size_t i = 0; i < l; ++i) {
             uint64_t ai = a[i];
@@ -245,7 +256,8 @@ namespace bq {
         return (uint32_t)c;
     }
 
-    static void bn_from_be_bytes(uint32_t* x, size_t l, const uint8_t* be, size_t be_len) {
+    static void bn_from_be_bytes(uint32_t* x, size_t l, const uint8_t* be, size_t be_len)
+    {
         bn_zero(x, l);
         size_t o = 0;
         for (size_t i = 0; i < be_len; ++i) {
@@ -259,7 +271,8 @@ namespace bq {
         }
     }
 
-    static void bn_to_be_bytes(const uint32_t* x, size_t l, uint8_t* out, size_t out_len) {
+    static void bn_to_be_bytes(const uint32_t* x, size_t l, uint8_t* out, size_t out_len)
+    {
         for (size_t i = 0; i < out_len; ++i) {
             out[i] = 0;
         }
@@ -275,7 +288,8 @@ namespace bq {
         }
     }
 
-    static size_t bn_bitlen(const uint32_t* a, size_t l) {
+    static size_t bn_bitlen(const uint32_t* a, size_t l)
+    {
         for (size_t i = 0; i < l; ++i) {
             size_t j = l - 1 - i;
             uint32_t w = a[j];
@@ -292,7 +306,8 @@ namespace bq {
         return 0;
     }
 
-    static int32_t bn_getbit(const uint32_t* a, size_t l, size_t bit_index) {
+    static int32_t bn_getbit(const uint32_t* a, size_t l, size_t bit_index)
+    {
         size_t wi = bit_index >> 5;
         size_t bo = bit_index & 31u;
         if (wi >= l) {
@@ -301,7 +316,8 @@ namespace bq {
         return (int32_t)((a[wi] >> bo) & 1u);
     }
 
-    static void mod_add(uint32_t* r, const uint32_t* a, const uint32_t* b, const uint32_t* m, size_t l, uint32_t* tmp) {
+    static void mod_add(uint32_t* r, const uint32_t* a, const uint32_t* b, const uint32_t* m, size_t l, uint32_t* tmp)
+    {
         uint32_t carry = bn_add(tmp, a, b, l);
         bool ge = false;
         if (carry != 0) {
@@ -316,7 +332,8 @@ namespace bq {
         bn_copy(r, tmp, l);
     }
 
-    static void mod_double(uint32_t* r, const uint32_t* a, const uint32_t* m, size_t l, uint32_t* tmp) {
+    static void mod_double(uint32_t* r, const uint32_t* a, const uint32_t* m, size_t l, uint32_t* tmp)
+    {
         uint32_t carry = bn_add(tmp, a, a, l);
         bool ge = false;
         if (carry != 0) {
@@ -332,7 +349,8 @@ namespace bq {
     }
 
     static void mod_mul_bin(uint32_t* r, const uint32_t* a, const uint32_t* b, const uint32_t* m, size_t l,
-        uint32_t* acc, uint32_t* cur, uint32_t* tmp) {
+        uint32_t* acc, uint32_t* cur, uint32_t* tmp)
+    {
         bn_zero(acc, l);
         bn_copy(cur, a, l);
         size_t bits = bn_bitlen(b, l);
@@ -346,7 +364,8 @@ namespace bq {
     }
 
     static void mod_pow(uint32_t* r, const uint32_t* a, const uint32_t* e, const uint32_t* m, size_t l,
-        uint32_t* t0, uint32_t* t1, uint32_t* t2, uint32_t* t3) {
+        uint32_t* t0, uint32_t* t1, uint32_t* t2, uint32_t* t3)
+    {
         bn_zero(r, l);
         r[0] = 1u;
         bn_copy(t0, a, l);
@@ -359,18 +378,21 @@ namespace bq {
         }
     }
 
-    static void be_to_fixed_limbs(uint32_t* x, size_t l, const bq::array<uint8_t>& be) {
+    static void be_to_fixed_limbs(uint32_t* x, size_t l, const bq::array<uint8_t>& be)
+    {
         bn_zero(x, l);
         bn_from_be_bytes(x, l, be.begin(), be.size());
     }
 
-    static void fixed_limbs_to_be_bytes(const uint32_t* x, size_t l, size_t k_bytes, bq::array<uint8_t>& out) {
+    static void fixed_limbs_to_be_bytes(const uint32_t* x, size_t l, size_t k_bytes, bq::array<uint8_t>& out)
+    {
         out.clear();
         out.fill_uninitialized(k_bytes);
         bn_to_be_bytes(x, l, out.begin(), k_bytes);
     }
 
-    static void fixed_limbs_to_min_be(const uint32_t* x, size_t l, bq::array<uint8_t>& out) {
+    static void fixed_limbs_to_min_be(const uint32_t* x, size_t l, bq::array<uint8_t>& out)
+    {
         size_t k = l * 4u;
         bq::array<uint8_t> tmp;
         tmp.fill_uninitialized(k);
@@ -382,15 +404,15 @@ namespace bq {
         size_t n = 0;
         if (i == k) {
             n = 1;
-        }
-        else {
+        } else {
             n = k - i;
         }
         out.clear();
         out.insert_batch(out.end(), tmp.begin() + i, n);
     }
 
-    static bool parse_two_tokens(const uint8_t* p, size_t n, const uint8_t*& t1, size_t& l1, const uint8_t*& t2, size_t& l2) {
+    static bool parse_two_tokens(const uint8_t* p, size_t n, const uint8_t*& t1, size_t& l1, const uint8_t*& t2, size_t& l2)
+    {
         size_t i = 0;
         while (i < n && (p[i] == ' ' || p[i] == '\t' || p[i] == '\r' || p[i] == '\n')) {
             ++i;
@@ -418,7 +440,8 @@ namespace bq {
         return true;
     }
 
-    static bool bn_check_nonzero(const bq::array<uint8_t>& x) {
+    static bool bn_check_nonzero(const bq::array<uint8_t>& x)
+    {
         for (size_t i = 0; i < x.size(); ++i) {
             if (x[i] != 0) {
                 return true;
@@ -427,7 +450,8 @@ namespace bq {
         return false;
     }
 
-    bool rsa::parse_public_key_ssh(const bq::string& ssh_pub_text, public_key& out) {
+    bool rsa::parse_public_key_ssh(const bq::string& ssh_pub_text, public_key& out)
+    {
         bq::array<uint8_t> str_bytes;
         str_bytes.clear();
         str_bytes.insert_batch(str_bytes.end(), (const uint8_t*)ssh_pub_text.c_str(), ssh_pub_text.size());
@@ -474,7 +498,8 @@ namespace bq {
         return true;
     }
 
-    bool rsa::parse_private_key_pem(const bq::string& pem, private_key& out) {
+    bool rsa::parse_private_key_pem(const bq::string& pem, private_key& out)
+    {
         bq::string h1 = "-----BEGIN RSA PRIVATE KEY-----";
         bq::string h2 = "-----END RSA PRIVATE KEY-----";
         const uint8_t* p = (const uint8_t*)pem.c_str();
@@ -659,9 +684,10 @@ namespace bq {
         return true;
     }
 
-    bool rsa::encrypt(const public_key& pub, const bq::array<uint8_t>& plaintext, bq::array<uint8_t>& out_ciphertext) {
-		if (plaintext[0] == 0) {
-			bq::util::log_device_console(bq::log_level::error, "rsa::encrypt (raw): plaintext starts with 0x00; unpadded RSA returns minimal big-endian on decrypt and drops leading zeros. ");
+    bool rsa::encrypt(const public_key& pub, const bq::array<uint8_t>& plaintext, bq::array<uint8_t>& out_ciphertext)
+    {
+        if (plaintext[0] == 0) {
+            bq::util::log_device_console(bq::log_level::error, "rsa::encrypt (raw): plaintext starts with 0x00; unpadded RSA returns minimal big-endian on decrypt and drops leading zeros. ");
             return false;
         }
         if (pub.n_.size() == 0) {
@@ -711,7 +737,8 @@ namespace bq {
         return true;
     }
 
-    bool rsa::decrypt(const private_key& pri, const bq::array<uint8_t>& ciphertext, bq::array<uint8_t>& out_plaintext) {
+    bool rsa::decrypt(const private_key& pri, const bq::array<uint8_t>& ciphertext, bq::array<uint8_t>& out_plaintext)
+    {
         if (pri.n_.size() == 0) {
             bq::util::log_device_console(bq::log_level::error, "rsa::decrypt: empty private key (n)");
             return false;
@@ -759,4 +786,4 @@ namespace bq {
         return true;
     }
 
-} 
+}

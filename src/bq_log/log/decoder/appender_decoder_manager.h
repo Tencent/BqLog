@@ -17,6 +17,7 @@ namespace bq {
 
     class appender_decoder_manager {
         friend struct log_global_vars;
+
     private:
         appender_decoder_manager();
         ~appender_decoder_manager();

@@ -56,17 +56,17 @@ void operator delete[](void* ptr, std::align_val_t) noexcept
     bq::platform::aligned_free(ptr);
 }
 
-void operator delete  ( void* ptr, std::size_t) noexcept
+void operator delete(void* ptr, std::size_t) noexcept
 {
     bq::platform::aligned_free(ptr);
 }
 
-void operator delete[]( void* ptr, std::size_t) noexcept
+void operator delete[](void* ptr, std::size_t) noexcept
 {
     bq::platform::aligned_free(ptr);
 }
 
-void operator delete  ( void* ptr, std::size_t, std::align_val_t) noexcept
+void operator delete(void* ptr, std::size_t, std::align_val_t) noexcept
 {
     bq::platform::aligned_free(ptr);
 }

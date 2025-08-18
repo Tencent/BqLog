@@ -88,11 +88,11 @@ namespace bq {
         __test_result_##group_name &= result__##test_type_name.is_all_pass();          \
     }
 
-#define TEST_GROUP_END(group_name)                                                                                                                                                                                                                                \
-    if (__test_result_##group_name) {                                                                                                                                                                                                                             \
-        test_output_param(bq::log_level::info, "--------------------------------ALL TEST CASES OF GROUP %s IS PASSED!--------------------------------\n----------------------------Test %s End------------------------------------", #group_name,  #group_name);  \
-    } else {                                                                                                                                                                                                                                                      \
-        test_output_param(bq::log_level::fatal, "----------------------------------TEST CASES OF GROUP %s IS FAILED!------------------------------\n-----------------------------Test %s End----------------------------------", #group_name, #group_name);       \
+#define TEST_GROUP_END(group_name)                                                                                                                                                                                                                              \
+    if (__test_result_##group_name) {                                                                                                                                                                                                                           \
+        test_output_param(bq::log_level::info, "--------------------------------ALL TEST CASES OF GROUP %s IS PASSED!--------------------------------\n----------------------------Test %s End------------------------------------", #group_name, #group_name); \
+    } else {                                                                                                                                                                                                                                                    \
+        test_output_param(bq::log_level::fatal, "----------------------------------TEST CASES OF GROUP %s IS FAILED!------------------------------\n-----------------------------Test %s End----------------------------------", #group_name, #group_name);     \
     }
 
 #define TEST_GROUP_RESULT(group_name) __test_result_##group_name

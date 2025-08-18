@@ -24,6 +24,7 @@ namespace bq {
     private:
         bq::array<uint8_t, bq::aligned_allocator<uint8_t, 8>> buffer_;
         size_t default_buffer_size_;
+
     public:
         sync_buffer()
             : default_buffer_size_(16 * 1024)
@@ -84,7 +85,7 @@ namespace bq {
 
     bool log_imp::init(const bq::string& name, const property_value& config, const bq::array<bq::string>& category_names)
     {
-        id_ = (uint64_t) reinterpret_cast<uintptr_t>(this);
+        id_ = (uint64_t)reinterpret_cast<uintptr_t>(this);
         id_ ^= log_id_magic_number;
         const auto& log_config = config["log"];
         name_ = name;
@@ -377,7 +378,7 @@ namespace bq {
             current_epoch_ms = bq::platform::high_performance_epoch_ms();
         }
         constexpr uint64_t flush_io_min_interval_ms = 100;
-        
+
         if (is_force_flush) {
             flush_appenders_cache();
             last_flush_io_epoch_ms_ = current_epoch_ms;

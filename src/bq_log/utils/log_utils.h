@@ -139,8 +139,6 @@ namespace bq {
         static constexpr uint64_t value = 0;
     };
 
-
-
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint32_t log_utils::vlq::get_vlq_encode_length(uint64_t value)
     {
         if (value < min_value_of_length<2>::value) {
@@ -166,15 +164,7 @@ namespace bq {
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint64_t log_utils::vlq::get_vlq_data_min_size_by_encode_length(uint32_t encode_length)
     {
         constexpr uint64_t min_value_of_length_[9] = {
-            min_value_of_length<1>::value
-            , min_value_of_length<2>::value
-            , min_value_of_length<3>::value
-            , min_value_of_length<4>::value
-            , min_value_of_length<5>::value
-            , min_value_of_length<6>::value
-            , min_value_of_length<7>::value
-            , min_value_of_length<8>::value
-            , min_value_of_length<9>::value
+            min_value_of_length<1>::value, min_value_of_length<2>::value, min_value_of_length<3>::value, min_value_of_length<4>::value, min_value_of_length<5>::value, min_value_of_length<6>::value, min_value_of_length<7>::value, min_value_of_length<8>::value, min_value_of_length<9>::value
         };
         assert(encode_length <= 9);
         return min_value_of_length_[encode_length - 1];
@@ -183,15 +173,7 @@ namespace bq {
     bq_forceinline BQ_FUNC_RETURN_CONSTEXPR uint64_t log_utils::vlq::get_vlq_data_max_size_by_encode_length(uint32_t encode_length)
     {
         constexpr uint64_t max_value_of_length_[9] = {
-            min_value_of_length<2>::value - 1
-            , min_value_of_length<3>::value - 1
-            , min_value_of_length<4>::value - 1
-            , min_value_of_length<5>::value - 1
-            , min_value_of_length<6>::value - 1
-            , min_value_of_length<7>::value - 1
-            , min_value_of_length<8>::value - 1
-            , min_value_of_length<9>::value - 1
-            , UINT64_MAX
+            min_value_of_length<2>::value - 1, min_value_of_length<3>::value - 1, min_value_of_length<4>::value - 1, min_value_of_length<5>::value - 1, min_value_of_length<6>::value - 1, min_value_of_length<7>::value - 1, min_value_of_length<8>::value - 1, min_value_of_length<9>::value - 1, UINT64_MAX
         };
         assert(encode_length <= 9);
         return max_value_of_length_[encode_length - 1];
@@ -213,17 +195,17 @@ namespace bq {
         constexpr uint8_t vlq_length_lut[256] = {
             9,
             8,
-            7,7,
-            6,6,6,6,
-            5,5,5,5,5,5,5,5, 
-            4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
-            3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
-            2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-            2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+            7, 7,
+            6, 6, 6, 6,
+            5, 5, 5, 5, 5, 5, 5, 5,
+            4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
         };
         return vlq_length_lut[prefix_byte];
     }

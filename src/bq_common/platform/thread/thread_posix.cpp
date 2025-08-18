@@ -242,7 +242,7 @@ namespace bq {
             }
 #endif
             while (status_.load() != enum_thread_status::running
-                    && status_.load() != enum_thread_status::pendding_cancel) {
+                && status_.load() != enum_thread_status::pendding_cancel) {
                 cpu_relax();
             }
             apply_thread_name();

@@ -124,14 +124,14 @@ namespace bq {
             SleepEx((DWORD)millsec, true);
         }
 
-
         static bool is_thread_name_supported_tested_; // false by zero initialization
         static HRESULT(WINAPI* get_thread_desc_func_)(HANDLE hThread, PWSTR* ppszThreadDescription);
         static HRESULT(WINAPI* set_thread_desc_func_)(HANDLE hThread, PCWSTR ppszThreadDescription);
 
-        static void init_thread_apis() {
+        static void init_thread_apis()
+        {
             const auto& os_ver_info = bq::platform::get_windows_version_info();
-            if (os_ver_info.dwMajorVersion > 10 
+            if (os_ver_info.dwMajorVersion > 10
                 || (os_ver_info.dwMajorVersion == 10 && os_ver_info.dwBuildNumber >= 14393)) {
                 get_thread_desc_func_ = bq::platform::get_sys_api<decltype(get_thread_desc_func_)>("kernel32.dll", "GetThreadDescription");
                 set_thread_desc_func_ = bq::platform::get_sys_api<decltype(set_thread_desc_func_)>("kernel32.dll", "SetThreadDescription");
@@ -286,7 +286,7 @@ namespace bq {
             }
 #endif
             while (status_.load() != enum_thread_status::running
-                    && status_.load() != enum_thread_status::pendding_cancel) {
+                && status_.load() != enum_thread_status::pendding_cancel) {
                 cpu_relax();
             }
             apply_thread_name();

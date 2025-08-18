@@ -17,6 +17,7 @@
 namespace bq {
     class appender_console : public appender_base {
         friend struct log_global_vars;
+
     private:
         class console_callbacks {
         private:
@@ -34,6 +35,7 @@ namespace bq {
             bool enable_;
             bq::platform::atomic<log_buffer*> buffer_;
             bq::platform::thread::thread_id fetch_thread_id_;
+
         public:
             console_buffer();
             ~console_buffer();

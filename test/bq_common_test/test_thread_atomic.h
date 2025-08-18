@@ -16,8 +16,10 @@ namespace bq {
         public:
             bq::platform::thread::thread_id thread_id_ = 0;
             bq::platform::atomic<bool> is_started;
+
         protected:
-            virtual void run() override {
+            virtual void run() override
+            {
                 thread_id_ = bq::platform::thread::get_current_thread_id();
                 is_started.store(true, bq::platform::memory_order::release);
                 while (!is_cancelled()) {
@@ -455,7 +457,7 @@ namespace bq {
                     for (uint32_t i = 0; i < 1000; ++i) {
                         bq::array<test_thread_cancel*> test_array;
                         test_array.fill_uninitialized(16);
-                        for (size_t j = 0; j< test_array.size(); ++j) {
+                        for (size_t j = 0; j < test_array.size(); ++j) {
                             test_array[j] = new test_thread_cancel();
                             test_array[j]->start();
                             test_array[j]->cancel();

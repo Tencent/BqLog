@@ -373,7 +373,8 @@ namespace bq {
 #endif
 
     template <typename T>
-    bq_forceinline T* launder (T* p) noexcept {
+    bq_forceinline T* launder(T* p) noexcept
+    {
 #if defined(BQ_MSVC)
 #if defined(BQ_CPP_17)
         return __builtin_launder(p);
@@ -394,6 +395,5 @@ namespace bq {
         __asm__ __volatile__("" : "+r"(result) : : "memory");
         return result;
 #endif
-
     }
 }

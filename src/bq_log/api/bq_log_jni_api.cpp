@@ -88,11 +88,11 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1reset_1config(JNI
     env->ReleaseStringUTFChars(log_config, log_config_c_str);
 }
 
-static BQ_TLS struct{
+static BQ_TLS struct {
     bq::_api_log_buffer_chunk_write_handle write_handle_;
     bq::log_buffer::java_buffer_info java_info_;
-}tls_write_handle_;
-    /*
+} tls_write_handle_;
+/*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_buffer_alloc
  * Signature: (J[J)Z
@@ -389,11 +389,11 @@ static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_id
         return;
     }
     jstring message = env->NewStringUTF(content);
-	env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int32_t)log_level, message); 
+    env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int32_t)log_level, message);
     if (env->ExceptionCheck()) {
-		env->ExceptionDescribe();
-		env->ExceptionClear();
-	}
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
 }
 /*
  * Class:     bq_impl_log_invoker
@@ -435,10 +435,10 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
     }
     jstring message = env->NewStringUTF(content);
     env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int32_t)log_level, message);
-	if (env->ExceptionCheck()) {
-		env->ExceptionDescribe();
-		env->ExceptionClear();
-	}
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
 }
 /*
  * Class:     bq_impl_log_invoker

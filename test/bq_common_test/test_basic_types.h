@@ -5,7 +5,6 @@
 #include "test_base.h"
 #include "bq_common/bq_common.h"
 
-
 struct test_struct {
     char b;
     bq::aligned_type<uint64_t, 64> l;

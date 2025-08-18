@@ -27,26 +27,36 @@ namespace bq {
             bq::platform::atomic<node<U>*> next_;
             U data_;
             template <typename... Args>
-            node(node<U>* next, Args&&... args) : data_(bq::forward<Args>(args)...) {
+            node(node<U>* next, Args&&... args)
+                : data_(bq::forward<Args>(args)...)
+            {
                 next_.store_raw(next);
             }
         };
+
     public:
-        template<typename U>
+        template <typename U>
         struct iterator {
             friend class miso_linked_list<U>;
+
         private:
             bq::platform::atomic<node<U>*>* last_ptr_;
             node<U>* current_node_;
-            iterator(bq::platform::atomic<node<U>*>& last_ptr, node<U>* node) : last_ptr_(&last_ptr), current_node_(node) {}
+            iterator(bq::platform::atomic<node<U>*>& last_ptr, node<U>* node)
+                : last_ptr_(&last_ptr)
+                , current_node_(node)
+            {
+            }
+
         public:
             bq_forceinline operator bool() const { return current_node_ != nullptr; }
-            bq_forceinline U& value() { return current_node_->data_;}
+            bq_forceinline U& value() { return current_node_->data_; }
         };
 
         using iterator_type = iterator<T>;
+
     public:
-        template<typename... Args>
+        template <typename... Args>
         bq_forceinline iterator_type insert(Args&&... args);
         bq_forceinline iterator_type first();
         bq_forceinline iterator_type next(iterator_type& it);
@@ -56,6 +66,7 @@ namespace bq {
         /// <param name="it">iterator you want to delete</param>
         /// <returns>the next iterator</returns>
         bq_forceinline iterator_type remove(iterator_type& it);
+
     private:
         bq::platform::atomic<node<T>*> head_ = nullptr;
     };
@@ -105,7 +116,7 @@ namespace bq {
             while (last_ptr->load_raw() != it.current_node_) {
                 last_ptr = &last_ptr->load_raw()->next_;
             }
-        } 
+        }
         last_ptr->store_raw(next);
         delete it.current_node_;
         return iterator_type(*last_ptr, next);

@@ -26,7 +26,8 @@ namespace bq {
         static bool native_cv_support_tested_;
 
         // Initialize condition variable APIs - called once during startup
-        static void init_apis() {
+        static void init_apis()
+        {
             initialize_cv_func_ = bq::platform::get_sys_api<decltype(initialize_cv_func_)>("kernel32.dll", "InitializeConditionVariable");
             wake_cv_func_ = bq::platform::get_sys_api<decltype(wake_cv_func_)>("kernel32.dll", "WakeConditionVariable");
             wake_all_cv_func_ = bq::platform::get_sys_api<decltype(wake_all_cv_func_)>("kernel32.dll", "WakeAllConditionVariable");
@@ -37,7 +38,7 @@ namespace bq {
 
         // Platform definition that supports both implementations
         struct condition_variable_platform_def {
-            union handle_union{
+            union handle_union {
                 CONDITION_VARIABLE cv_;
                 HANDLE condition_variable_handle_;
             };
@@ -54,7 +55,7 @@ namespace bq {
                 if (initialize_cv_func_) {
                     // Use native condition variable API
                     InitializeConditionVariable(&platform_data_->handle_.cv_);
-                    //initialize_cv_func_(&platform_data_->handle_.cv_);
+                    // initialize_cv_func_(&platform_data_->handle_.cv_);
                 } else {
                     // Fall back to event-based implementation
                     platform_data_->handle_.condition_variable_handle_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);

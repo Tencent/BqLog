@@ -28,7 +28,6 @@ namespace bq {
         static jobject jobj_little_endian_value_ = nullptr;
         static jobject jobj_big_endian_value_ = nullptr;
 
-
         static bq::array<void (*)()>& get_jni_onload_callbacks()
         {
             return common_global_vars::get().jni_onload_callbacks_inst_;
@@ -86,22 +85,22 @@ namespace bq {
             return java_vm;
         }
 
-
         jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian)
         {
-			jobject result = env->NewDirectByteBuffer(const_cast<void*>(address), static_cast<jlong>(capacity));
+            jobject result = env->NewDirectByteBuffer(const_cast<void*>(address), static_cast<jlong>(capacity));
             if (!is_big_endian) {
                 env->CallObjectMethod(result, method_byte_buffer_byte_order_, jobj_little_endian_value_);
                 if (env->ExceptionCheck()) {
-					env->ExceptionDescribe();
-					env->ExceptionClear();
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
                     result = NULL;
                 }
             }
             return result;
         }
 
-        static void init_reflection_variables() {
+        static void init_reflection_variables()
+        {
             jni_env env_holder;
             auto env = env_holder.env;
             cls_byte_buffer_ = (jclass)env->NewGlobalRef(env->FindClass("java/nio/ByteBuffer"));
@@ -118,7 +117,7 @@ namespace bq {
         JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
         {
             (void)reserved;
-			java_vm = vm;
+            java_vm = vm;
 #if defined(BQ_ANDROID)
             __android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
             android_jni_onload();
@@ -127,10 +126,10 @@ namespace bq {
 #else
             printf("Bq JNI_Onload is called");
 #endif
-			init_reflection_variables();
-			for (auto callback : get_jni_onload_callbacks()) {
-				callback();
-			}
+            init_reflection_variables();
+            for (auto callback : get_jni_onload_callbacks()) {
+                callback();
+            }
             return JNI_VERSION_1_6;
         }
 #ifdef __cplusplus

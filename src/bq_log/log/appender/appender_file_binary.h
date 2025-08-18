@@ -29,10 +29,10 @@ namespace bq {
             appender_format_type format;
             bool is_gmt;
             uint32_t category_count;
-        } BQ_PACK_END
+    } BQ_PACK_END
 
-    protected:
-        virtual bool parse_exist_log_file(parse_file_context& context) override;
+        protected : virtual bool
+                    parse_exist_log_file(parse_file_context& context) override;
         virtual void on_file_open(bool is_new_created) override;
         virtual appender_format_type get_appender_format() const = 0;
         virtual uint32_t get_binary_format_version() const = 0;

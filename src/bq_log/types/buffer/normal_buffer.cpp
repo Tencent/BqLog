@@ -18,14 +18,14 @@
  * \author pippocao
  * \date 2025/07/26
  */
- 
- #include "bq_log/types/buffer/normal_buffer.h"
 
- namespace bq {
+#include "bq_log/types/buffer/normal_buffer.h"
+
+namespace bq {
     normal_buffer::normal_buffer(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
-         : required_size_(size)
-         , need_recovery_(need_recovery)
-         , mmap_file_abs_path_(mmap_file_abs_path)
+        : required_size_(size)
+        , need_recovery_(need_recovery)
+        , mmap_file_abs_path_(mmap_file_abs_path)
     {
         init_buffer_data();
     }
@@ -103,7 +103,7 @@
         if (((uintptr_t)memory_map_handle_.get_mapped_data() & (CACHE_LINE_SIZE - 1)) != 0) {
             bq::util::log_device_console(log_level::warning, "normal buffer memory map file \"%s\" memory address is not aligned, use memory instead.", memory_map_file_.abs_file_path().c_str());
             bq::memory_map::release_memory_map(memory_map_handle_);
-            bq::file_manager::instance().close_file(memory_map_file_); 
+            bq::file_manager::instance().close_file(memory_map_file_);
             return create_memory_map_result::failed;
         }
         buffer_data_ = (uint8_t*)memory_map_handle_.get_mapped_data();
@@ -136,5 +136,4 @@
         }
         return false;
     }
- }
-
+}

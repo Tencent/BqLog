@@ -40,7 +40,6 @@ namespace bq {
                     int64_t i_decode = bq::log_utils::zigzag::decode(i_encode);
                     result.add_result(i == i_decode, "zigzag test %d", i);
                 }
-                
 
                 // test vlq
                 uint8_t target_data[16];
@@ -96,7 +95,7 @@ namespace bq {
                     result.add_result(i == i_decode && len == len_decode, "vlq test %d", i);
                 }
 
-                //test vlq + zigzag
+                // test vlq + zigzag
                 {
                     int32_t i = -1;
                     uint32_t ui = bq::log_utils::zigzag::encode(i);
@@ -130,8 +129,7 @@ namespace bq {
                         for (size_t offset_inner = 1; offset_inner < 128; ++offset_inner) {
                             memmove(cache + offset_outter + offset_inner, cache + offset_outter + offset_inner - 1, size);
                             uint64_t new_hash_value = bq::appender_file_compressed::calculate_data_hash_test(false, cache + offset_outter + offset_inner, size);
-                            result.add_result(hash_value == new_hash_value, "appender_file_compressed::calculate_data_hash_test, size:%" PRIu64 ", offset_outter: %" PRIu64 ", offset_inner : %" PRIu64 
-                            , static_cast<uint64_t>(size), static_cast<uint64_t>(offset_outter), static_cast<uint64_t>(offset_inner));
+                            result.add_result(hash_value == new_hash_value, "appender_file_compressed::calculate_data_hash_test, size:%" PRIu64 ", offset_outter: %" PRIu64 ", offset_inner : %" PRIu64, static_cast<uint64_t>(size), static_cast<uint64_t>(offset_outter), static_cast<uint64_t>(offset_inner));
                         }
                     }
                 }

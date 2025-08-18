@@ -32,19 +32,19 @@ namespace bq {
 namespace bq {
     enum class enum_buffer_result_code {
         success = 0,
-        err_empty_log_buffer,       // no valid data to read in log buffer;
-        err_not_enough_space,       // not enough space in log buffer to alloc
-        err_wait_and_retry,         // need wait and try again
-        err_data_not_contiguous,    // data is not contiguous, this error code is only used for internal statistics within the log_buffer and will not be exposed externally.
-        err_alloc_size_invalid,     // invalid alloc size, too big or 0.
-        err_buffer_not_inited,      // buffer not initialized
+        err_empty_log_buffer, // no valid data to read in log buffer;
+        err_not_enough_space, // not enough space in log buffer to alloc
+        err_wait_and_retry, // need wait and try again
+        err_data_not_contiguous, // data is not contiguous, this error code is only used for internal statistics within the log_buffer and will not be exposed externally.
+        err_alloc_size_invalid, // invalid alloc size, too big or 0.
+        err_buffer_not_inited, // buffer not initialized
         result_code_count
     };
 
     enum class log_memory_policy {
-        discard_when_full,      // If the log_buffer is full, incoming logs will be discarded.
-        block_when_full,        // If the log_buffer is full, the logging thread will be blocked until space becomes available.
-        auto_expand_when_full,  // If the log_buffer is full, a new space will be allocated and the log will be written.
+        discard_when_full, // If the log_buffer is full, incoming logs will be discarded.
+        block_when_full, // If the log_buffer is full, the logging thread will be blocked until space becomes available.
+        auto_expand_when_full, // If the log_buffer is full, a new space will be allocated and the log will be written.
     };
 
     enum class log_thread_mode {
@@ -62,47 +62,37 @@ namespace bq {
         uint8_t log_format_str_type; // log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type
         uint8_t level;
         uint32_t category_idx;
-    } 
-    BQ_PACK_END
-    static_assert(sizeof(_log_entry_head_def) % 8 == 0
+    } BQ_PACK_END static_assert(sizeof(_log_entry_head_def) % 8 == 0
             && (sizeof(_log_entry_head_def) == sizeof(decltype(_log_entry_head_def::timestamp_epoch)) + sizeof(decltype(_log_entry_head_def::category_idx)) + sizeof(decltype(_log_entry_head_def::level)) + sizeof(decltype(_log_entry_head_def::log_format_str_type)) + sizeof(decltype(_log_entry_head_def::log_args_offset)) + sizeof(decltype(_log_entry_head_def::ext_info_offset)) + sizeof(decltype(_log_entry_head_def::padding))),
         "_log_entry_head_def's memory layout must be packed!");
-    static_assert(sizeof(_log_entry_head_def)  == 24,
+    static_assert(sizeof(_log_entry_head_def) == 24,
         "_log_entry_head_def's memory layout must be packed!");
 
     BQ_PACK_BEGIN
     struct alignas(4) _api_string_def {
         const char* str;
         uint32_t len;
-    } 
-    BQ_PACK_END
-    static_assert(sizeof(_api_string_def) == sizeof(decltype(_api_string_def::str)) + sizeof(decltype(_api_string_def::len)), "_api_string_def's memory layout must be packed!");
+    } BQ_PACK_END static_assert(sizeof(_api_string_def) == sizeof(decltype(_api_string_def::str)) + sizeof(decltype(_api_string_def::len)), "_api_string_def's memory layout must be packed!");
 
     BQ_PACK_BEGIN
     struct alignas(4) _api_u16string_def {
         const char16_t* str;
         uint32_t len;
-    } 
-    BQ_PACK_END
-    static_assert(sizeof(_api_u16string_def) == sizeof(decltype(_api_u16string_def::str)) + sizeof(decltype(_api_u16string_def::len)), "_api_u16string_def's memory layout must be packed!");
+    } BQ_PACK_END static_assert(sizeof(_api_u16string_def) == sizeof(decltype(_api_u16string_def::str)) + sizeof(decltype(_api_u16string_def::len)), "_api_u16string_def's memory layout must be packed!");
 
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN
     struct alignas(4) _api_log_buffer_chunk_read_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result;
-    } 
-    BQ_PACK_END 
-    static_assert(sizeof(_api_log_buffer_chunk_read_handle) == sizeof(decltype(_api_log_buffer_chunk_read_handle::data_addr)) + sizeof(decltype(_api_log_buffer_chunk_read_handle::result)), "_api_log_buffer_chunk_read_handle's memory layout must be packed!");
+    } BQ_PACK_END static_assert(sizeof(_api_log_buffer_chunk_read_handle) == sizeof(decltype(_api_log_buffer_chunk_read_handle::data_addr)) + sizeof(decltype(_api_log_buffer_chunk_read_handle::result)), "_api_log_buffer_chunk_read_handle's memory layout must be packed!");
 
     // this is C-linkage version of bq::log_buffer_write_handle
     BQ_PACK_BEGIN
     struct alignas(4) _api_log_buffer_chunk_write_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result;
-    } 
-    BQ_PACK_END static_assert(sizeof(_api_log_buffer_chunk_write_handle) == sizeof(decltype(_api_log_buffer_chunk_write_handle::data_addr)) + sizeof(decltype(_api_log_buffer_chunk_write_handle::result)), "_api_log_buffer_chunk_write_handle's memory layout must be packed!");
-
+    } BQ_PACK_END static_assert(sizeof(_api_log_buffer_chunk_write_handle) == sizeof(decltype(_api_log_buffer_chunk_write_handle::data_addr)) + sizeof(decltype(_api_log_buffer_chunk_write_handle::result)), "_api_log_buffer_chunk_write_handle's memory layout must be packed!");
 
     struct _log_level_bitmap_def {
         uint32_t bitmap = 0;

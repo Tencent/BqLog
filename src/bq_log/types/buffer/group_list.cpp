@@ -33,7 +33,7 @@ namespace bq {
             }
             used_.recovery_blocks();
             stage_.recovery_blocks();
-        } 
+        }
 
         for (uint16_t i = 0; i < max_blocks_count; ++i) {
             uint8_t* block_head_addr = (uint8_t*)(&stage_.get_block_head_by_index(i));
@@ -112,7 +112,7 @@ namespace bq {
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
 
         uint8_t* mapped_data_addr = reinterpret_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
-        if(*(uint64_t*)mapped_data_addr != config.calculate_check_sum()) {
+        if (*(uint64_t*)mapped_data_addr != config.calculate_check_sum()) {
             bq::util::log_device_console(bq::log_level::warning, "recover from memory map verify failed, create new memory map, log_name:%s", config.log_name.c_str());
             return false;
         }
@@ -155,7 +155,7 @@ namespace bq {
     group_node::group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index)
     {
         parent_list_ = parent_list;
-        // This high-frequency memory should be kept from being swapped to the swap partition or LLC as much as possible, 
+        // This high-frequency memory should be kept from being swapped to the swap partition or LLC as much as possible,
         // so having a memory map as a backing mechanism is a relatively cost-effective solution.
         const auto& config = parent_list->get_config();
         auto mmap_create_result = create_memory_map(config, max_block_count_per_group, index);
@@ -202,7 +202,7 @@ namespace bq {
         bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/hp", true);
         if (!config_.need_recovery) {
             if (bq::file_manager::is_dir(memory_map_folder) || bq::file_manager::is_file(memory_map_folder))
-            bq::file_manager::remove_file_or_dir(memory_map_folder);
+                bq::file_manager::remove_file_or_dir(memory_map_folder);
             return;
         }
         if (bq::file_manager::is_file(memory_map_folder)) {
@@ -223,7 +223,7 @@ namespace bq {
             errno = 0;
             bq::string file_name_cpy = file_name.substr(config_.log_name.size() + 1);
             uint64_t u64_value = strtoull(file_name_cpy.c_str(), &end_ptr, 10);
-            if (errno == ERANGE 
+            if (errno == ERANGE
                 || end_ptr != file_name_cpy.c_str() + (file_name_cpy.size() - strlen(".mmap"))) {
                 bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
                 bq::file_manager::remove_file_or_dir(full_path);
@@ -250,7 +250,7 @@ namespace bq {
 
     block_node_head* group_list::alloc_new_block(const void* misc_data_src, size_t misc_data_size)
     {
-        //try alloc from current exist groups
+        // try alloc from current exist groups
         group_node::pointer_type* current_read_pointer = &head_;
         current_read_pointer->lock_.read_lock();
         block_node_head* result = nullptr;
@@ -270,7 +270,7 @@ namespace bq {
         }
         current_read_pointer->lock_.read_unlock();
 
-        if (!result) { 
+        if (!result) {
             // alloc new group
             head_.lock_.write_lock();
             // double check
@@ -297,7 +297,6 @@ namespace bq {
         }
         return result;
     }
-
 
     void group_list::recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block)
     {

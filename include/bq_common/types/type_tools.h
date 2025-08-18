@@ -185,7 +185,6 @@ namespace bq {
         }
     };
 
-
     template <typename T>
     struct object_destructor {
     private:
@@ -418,7 +417,7 @@ namespace bq {
     };
 
     template <typename... Types>
-    struct tuple_size <tuple<Types...>> {
+    struct tuple_size<tuple<Types...>> {
         static constexpr size_t value = sizeof...(Types);
     };
 

@@ -69,7 +69,6 @@ namespace bq {
             return true;
         }
 
-
         // TODO optimize use TSC
         uint64_t high_performance_epoch_ms()
         {
@@ -154,8 +153,7 @@ namespace bq {
         {
             WIN32_FILE_ATTRIBUTE_DATA buf;
             if (get_stat_by_path(path, buf)) {
-                if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-                    !(buf.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+                if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !(buf.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
                     return true;
                 }
             }
@@ -164,7 +162,7 @@ namespace bq {
 
         static int32_t make_dir_recursive(char16_t* path)
         {
-            constexpr size_t prefix_size = 2; //u"\\\\?\\"
+            constexpr size_t prefix_size = 2; // u"\\\\?\\"
             if ((wcslen((LPCWSTR)path) == prefix_size + 2) && path[prefix_size + 1] == ':') {
                 return 0;
             }
@@ -187,10 +185,10 @@ namespace bq {
             if (_wmkdir((LPCWSTR)path) == 0) {
                 return 0;
             }
-			if (errno == EEXIST) {
-				// Directory already exists
-				return 0;
-			}
+            if (errno == EEXIST) {
+                // Directory already exists
+                return 0;
+            }
             return errno;
         }
 
@@ -275,8 +273,7 @@ namespace bq {
                 return (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) ? ENOENT : EACCES;
             }
 
-            if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-            {
+            if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                 DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
                 attr &= static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY);
                 SetFileAttributesW((LPCWSTR)path.c_str(), attr);
@@ -292,7 +289,7 @@ namespace bq {
                 WIN32_FIND_DATAW find_data;
                 HANDLE h_file;
                 h_file = FindFirstFileW((LPCWSTR)path.c_str(), &find_data);
-                path.erase(path.end() - 2, 2); //u"\\*"
+                path.erase(path.end() - 2, 2); // u"\\*"
                 if (h_file == INVALID_HANDLE_VALUE) {
                     // it's empty
                 } else {
@@ -334,8 +331,7 @@ namespace bq {
         int32_t remove_dir_or_file(const char* path)
         {
             bq::u16string path_w = trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(path)));
-            if (path_w.is_empty())
-            {
+            if (path_w.is_empty()) {
                 return 0;
             }
             path_w = u"\\\\?\\" + path_w;
@@ -453,7 +449,7 @@ namespace bq {
                     break;
                 }
             }
-            return 0; 
+            return 0;
         }
 
         int32_t seek_file(const platform_file_handle& file_handle, file_seek_option opt, int64_t offset)
@@ -577,12 +573,12 @@ namespace bq {
             const char16_t* u16_str;
             uint32_t u16_str_len;
             get_stack_trace_utf16(skip_frame_count, u16_str, u16_str_len);
-           stack_trace_str_ref.clear();
-           stack_trace_str_ref.fill_uninitialized(((u16_str_len * 3) >> 1) + 1);
-            size_t encoded_size = (size_t)bq::util::utf16_to_utf8(u16_str, u16_str_len,stack_trace_str_ref.begin(), (uint32_t)stack_trace_current_str_.get().size());
-            assert(encoded_size <stack_trace_str_ref.size());
-           stack_trace_str_ref.erase(stack_trace_current_str_.get().begin() + encoded_size,stack_trace_str_ref.size() - encoded_size);
-            out_str_ptr =stack_trace_str_ref.begin();
+            stack_trace_str_ref.clear();
+            stack_trace_str_ref.fill_uninitialized(((u16_str_len * 3) >> 1) + 1);
+            size_t encoded_size = (size_t)bq::util::utf16_to_utf8(u16_str, u16_str_len, stack_trace_str_ref.begin(), (uint32_t)stack_trace_current_str_.get().size());
+            assert(encoded_size < stack_trace_str_ref.size());
+            stack_trace_str_ref.erase(stack_trace_current_str_.get().begin() + encoded_size, stack_trace_str_ref.size() - encoded_size);
+            out_str_ptr = stack_trace_str_ref.begin();
             out_char_count = (uint32_t)stack_trace_current_str_.get().size();
         }
 
@@ -622,7 +618,7 @@ namespace bq {
             stack.AddrPC.Mode = AddrModeFlat;
             stack.AddrStack.Offset = context.Sp;
             stack.AddrStack.Mode = AddrModeFlat;
-            stack.AddrFrame.Offset = context.R11; 
+            stack.AddrFrame.Offset = context.R11;
             stack.AddrFrame.Mode = AddrModeFlat;
 #elif defined(BQ_X86_64)
             machine_type = IMAGE_FILE_MACHINE_AMD64;
@@ -640,7 +636,7 @@ namespace bq {
             bool effective_stack_started = false;
             uint32_t current_frame_idx = 0;
             while (StackWalk64(
-                machine_type, 
+                machine_type,
                 common_global_vars::get().stack_trace_process_,
                 thread,
                 &stack,
@@ -764,7 +760,7 @@ namespace bq {
                     if (status == 0) {
                         return win_version_info_;
                     }
-                } 
+                }
                 win_version_info_.dwMajorVersion = 0;
             }
             return win_version_info_;

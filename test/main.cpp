@@ -28,14 +28,12 @@
 #include <Windows.h>
 #endif
 
-
-
 class time_out_monitor_thread : public bq::platform::thread {
 protected:
     void run() override
     {
         auto start_epoch = bq::platform::high_performance_epoch_ms();
-        constexpr uint64_t time_out = 30 * 60* 1000;
+        constexpr uint64_t time_out = 30 * 60 * 1000;
         while (true) {
             if (is_cancelled()) {
                 break;
@@ -65,17 +63,17 @@ int32_t main()
     monitor_thread.start();
     TEST_GROUP_BEGIN(Bq_Common_Test);
     TEST_GROUP(Bq_Common_Test, bq::test, test_property);
-	TEST_GROUP(Bq_Common_Test, bq::test, test_basic_type);
-	TEST_GROUP(Bq_Common_Test, bq::test, test_array);
-	TEST_GROUP(Bq_Common_Test, bq::test, test_string);
-	TEST_GROUP(Bq_Common_Test, bq::test, test_hash_map);
-	TEST_GROUP(Bq_Common_Test, bq::test, test_utils);
-	TEST_GROUP(Bq_Common_Test, bq::test, test_file_manager);
-	TEST_GROUP(Bq_Common_Test, bq::test, test_thread_atomic);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_basic_type);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_array);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_string);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_hash_map);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_utils);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_file_manager);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_thread_atomic);
     TEST_GROUP(Bq_Common_Test, bq::test, test_encryption);
     TEST_GROUP_END(Bq_Common_Test);
 
-	TEST_GROUP_BEGIN(Bq_Log_Test);
+    TEST_GROUP_BEGIN(Bq_Log_Test);
     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap", true));
     TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);

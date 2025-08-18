@@ -190,7 +190,6 @@ namespace bq {
                         "rvalue_test_array construct test");
                     result.add_result(rvalue_test_obj.value == 1, "rvalue_test_array test");
 
-
                     bq::array<test_rvalue_struct1> rvalue_src_array;
                     constexpr size_t src_array_size = 1024;
                     for (size_t i = 0; i < src_array_size; ++i) {
@@ -202,7 +201,7 @@ namespace bq {
                         std::minstd_rand linear_ran(sd());
                         for (size_t i = 0; i < 1024; ++i) {
                             std::uniform_int_distribution<size_t> rand_seq(0, rvalue_target_array.size());
-                            size_t insert_pos = rand_seq(linear_ran); 
+                            size_t insert_pos = rand_seq(linear_ran);
                             rvalue_target_array.insert_batch(rvalue_target_array.begin() + insert_pos, rvalue_src_array.begin(), push_size);
                         }
                         size_t total_value = 0;

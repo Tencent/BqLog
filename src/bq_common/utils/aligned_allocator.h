@@ -24,7 +24,7 @@
 
 namespace bq {
     template <typename T, size_t Alignment>
-    class aligned_allocator : public default_allocator<T>{
+    class aligned_allocator : public default_allocator<T> {
     public:
         using value_type = T;
         aligned_allocator() = default;

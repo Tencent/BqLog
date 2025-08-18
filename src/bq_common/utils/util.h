@@ -34,11 +34,11 @@ namespace bq {
         static void set_log_device_console_min_level(bq::log_level level);
 #endif
         // this function is signal-safety but has limit buffer, the log content exceed buffer size will be truncated
-        static void log_device_console(bq::log_level level, const char* format, ...) 
+        static void log_device_console(bq::log_level level, const char* format, ...)
 #if defined(BQ_GCC) || defined(BQ_CLANG)
-        __attribute__((format(printf, 2, 3)))
+            __attribute__((format(printf, 2, 3)))
 #endif
-        ;
+            ;
 
         static void log_device_console_plain_text(bq::log_level level, const char* text);
 
@@ -71,7 +71,6 @@ namespace bq {
         /// <param name="target_utf16_character_num"></param>
         /// <returns>length of final utf16 str, it's len of char16_t*, not char*</returns>
         static uint32_t utf8_to_utf16(const char* src_utf8_str, uint32_t src_character_num, char16_t* target_utf16_str, uint32_t target_utf16_character_num);
-
 
         /// <summary>
         /// Allocates and constructs an object of type `T` with the specified alignment.
@@ -112,7 +111,7 @@ namespace bq {
         static void aligned_delete(T* ptr)
         {
 #if defined(BQ_ALIGNAS_NEW)
-            delete ptr; 
+            delete ptr;
 #else
             bq::object_destructor<T>::destruct(static_cast<T*>(ptr));
             bq::platform::aligned_free(ptr);

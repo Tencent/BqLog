@@ -129,7 +129,7 @@ namespace bq {
             {
                 base_type::store_relaxed(value);
             }
-            
+
             bq_forceinline void store_acq_rel(value_type value) noexcept
             {
                 base_type::store_acq_rel(value);
@@ -140,7 +140,7 @@ namespace bq {
                 base_type::store_seq_cst(value);
             }
 
-            //exchange
+            // exchange
             bq_forceinline value_type exchange(value_type value, memory_order order) noexcept
             {
                 return base_type::exchange(value, order);
@@ -221,7 +221,7 @@ namespace bq {
             {
                 return base_type::add_fetch_seq_cst(val);
             }
-            
+
             // fetch_add
             bq_forceinline value_type fetch_add(value_type val, memory_order order) noexcept
             {
@@ -252,7 +252,7 @@ namespace bq {
             {
                 return base_type::fetch_add_acq_rel(val);
             }
-            
+
             bq_forceinline value_type fetch_add_seq_cst(value_type val) noexcept
             {
                 return base_type::fetch_add_seq_cst(val);
@@ -283,7 +283,7 @@ namespace bq {
             {
                 return base_type::sub_fetch_relaxed(val);
             }
-            
+
             bq_forceinline value_type sub_fetch_acq_rel(value_type val) noexcept
             {
                 return base_type::sub_fetch_acq_rel(val);
@@ -314,7 +314,7 @@ namespace bq {
             {
                 return base_type::fetch_sub_release(val);
             }
-            
+
             bq_forceinline value_type fetch_sub_relaxed(value_type val) noexcept
             {
                 return base_type::fetch_sub_relaxed(val);
@@ -355,7 +355,7 @@ namespace bq {
             {
                 return base_type::xor_fetch_relaxed(val);
             }
-            
+
             bq_forceinline value_type xor_fetch_acq_rel(value_type val) noexcept
             {
                 return base_type::xor_fetch_acq_rel(val);
@@ -386,7 +386,7 @@ namespace bq {
             {
                 return base_type::fetch_xor_release(val);
             }
-            
+
             bq_forceinline value_type fetch_xor_relaxed(value_type val) noexcept
             {
                 return base_type::fetch_xor_relaxed(val);
@@ -422,7 +422,7 @@ namespace bq {
             {
                 return base_type::or_fetch_release(val);
             }
-            
+
             bq_forceinline value_type or_fetch_relaxed(value_type val) noexcept
             {
                 return base_type::or_fetch_relaxed(val);
@@ -458,7 +458,7 @@ namespace bq {
             {
                 return base_type::fetch_or_release(val);
             }
-            
+
             bq_forceinline value_type fetch_or_relaxed(value_type val) noexcept
             {
                 return base_type::fetch_or_relaxed(val);
@@ -494,7 +494,7 @@ namespace bq {
             {
                 return base_type::and_fetch_release(val);
             }
-            
+
             bq_forceinline value_type and_fetch_relaxed(value_type val) noexcept
             {
                 return base_type::and_fetch_relaxed(val);
@@ -530,7 +530,7 @@ namespace bq {
             {
                 return base_type::fetch_and_release(val);
             }
-            
+
             bq_forceinline value_type fetch_and_relaxed(value_type val) noexcept
             {
                 return base_type::fetch_and_relaxed(val);

@@ -109,7 +109,7 @@ namespace bq {
         }
         if (fetch_thread_id_ == 0) {
             fetch_thread_id_ = bq::platform::thread::get_current_thread_id();
-        }else if (fetch_thread_id_ != bq::platform::thread::get_current_thread_id()) {
+        } else if (fetch_thread_id_ != bq::platform::thread::get_current_thread_id()) {
             auto output_error = "Don't fetch console buffer in different threads";
             auto length = static_cast<int32_t>(strlen(output_error));
             callback(const_cast<void*>(pass_through_param), 0, 0, static_cast<int32_t>(bq::log_level::error), output_error, length);

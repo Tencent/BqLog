@@ -30,7 +30,8 @@ namespace bq {
 #else
     bq_forceinline
 #endif
-    size_t ___string_len(const CHAR_TYPE* str)
+        size_t
+        ___string_len(const CHAR_TYPE* str)
     {
         if (!str) {
             return 0;

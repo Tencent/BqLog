@@ -25,11 +25,11 @@ namespace bq {
         static bq::platform::atomic<int32_t> siso_ring_buffer_test_alive_write_thread_count = 0;
         static bq::platform::atomic<int32_t> siso_ring_buffer_test_alive_read_thread_count = 0;
 
-
         class siso_write_task {
         private:
             int32_t left_write_count_;
             bq::siso_ring_buffer* ring_buffer_ptr_;
+
         public:
             siso_write_task(int32_t left_write_count, bq::siso_ring_buffer* ring_buffer_ptr)
             {
@@ -69,6 +69,7 @@ namespace bq {
             int32_t left_read_count_;
             bq::siso_ring_buffer* ring_buffer_ptr_;
             test_result* test_result_ptr_;
+
         public:
             siso_read_task(int32_t left_read_count, bq::siso_ring_buffer* ring_buffer_ptr, test_result& result)
             {
@@ -121,7 +122,6 @@ namespace bq {
 
         class test_siso_ring_buffer : public test_base {
         private:
-            
             void do_siso_test(test_result& result, bool with_mmap)
             {
                 siso_ring_buffer_test_total_write_count_.store_seq_cst(0);
@@ -131,7 +131,7 @@ namespace bq {
                 siso_ring_buffer_test_alive_read_thread_count.store_seq_cst((int32_t)task_size);
                 bq::file_handle mmap_file_handles[task_size];
                 bq::memory_map_handle mmap_handles[task_size];
-                uint8_t* buffers[task_size] = {nullptr};
+                uint8_t* buffers[task_size] = { nullptr };
                 bq::siso_ring_buffer* ring_buffers[task_size] = { nullptr };
 
                 test_output_dynamic_param(bq::log_level::info, "[siso ring buffer] test %s\n", with_mmap ? "with mmap" : "without mmap");
@@ -187,7 +187,7 @@ namespace bq {
                     }
                 }
                 test_output_dynamic_param(bq::log_level::info, "\n[siso ring buffer] test %s finished\n", with_mmap ? "with mmap" : "without mmap");
-                
+
                 for (size_t i = 0; i < task_size; ++i) {
                     delete ring_buffers[i];
                     ring_buffers[i] = nullptr;
@@ -246,6 +246,7 @@ namespace bq {
                 bq::platform::aligned_free(buffer_data1);
                 bq::platform::aligned_free(buffer_data2);
             }
+
         public:
             virtual test_result test() override
             {

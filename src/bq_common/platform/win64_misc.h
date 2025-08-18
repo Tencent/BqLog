@@ -42,12 +42,12 @@ namespace bq {
             {
                 return volumn == rhs.volumn && idx_high == rhs.idx_high && idx_low == rhs.idx_low;
             }
-        }
-        BQ_PACK_END
+        } BQ_PACK_END
 
-        const RTL_OSVERSIONINFOW& get_windows_version_info();
+            const RTL_OSVERSIONINFOW&
+            get_windows_version_info();
 
-        template<typename API_DEC_TYPE>
+        template <typename API_DEC_TYPE>
         API_DEC_TYPE get_sys_api(const char* module_name, const char* api_name)
         {
             HMODULE module = GetModuleHandle(module_name);

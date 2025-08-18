@@ -26,22 +26,22 @@
 
 namespace bq {
 
-
     // To ensure these variables can be used at any time without being destroyed, we accept a small amount of memory leakage.
-    struct log_global_vars : public global_vars_base<log_global_vars, common_global_vars>{
+    struct log_global_vars : public global_vars_base<log_global_vars, common_global_vars> {
         const char* log_appender_type_names_[static_cast<int32_t>(appender_base::appender_type::type_count)] = {
-                                                "console",
-                                                "text_file",
-                                                "raw_file",
-                                                "compressed_file" };
+            "console",
+            "text_file",
+            "raw_file",
+            "compressed_file"
+        };
         const char log_level_str_[6][3] = {
-                                                { '[', 'V', ']' }, // VERBOSE
-                                                { '[', 'D', ']' }, // DEBUG
-                                                { '[', 'I', ']' }, // INFO
-                                                { '[', 'W', ']' }, // WARN
-                                                { '[', 'E', ']' }, // ERROR
-                                                { '[', 'F', ']' } // FATAL
-                                            };
+            { '[', 'V', ']' }, // VERBOSE
+            { '[', 'D', ']' }, // DEBUG
+            { '[', 'I', ']' }, // INFO
+            { '[', 'W', ']' }, // WARN
+            { '[', 'E', ']' }, // ERROR
+            { '[', 'F', ']' } // FATAL
+        };
         const char time_zone_str_[32] = { 0 };
         const int32_t time_zone_str_len = 0;
         const char* utc_time_zone_str_ = "UTC0 ";
@@ -60,7 +60,8 @@ namespace bq {
 #if defined(BQ_JAVA)
         static void jni_onload_callback();
 #endif
-    void init_layout_values();
+        void init_layout_values();
+
     protected:
         virtual void partial_destruct() override
         {
@@ -71,6 +72,7 @@ namespace bq {
             delete log_manager_inst_;
             log_manager_inst_ = nullptr;
         }
+
     public:
         log_global_vars()
         {

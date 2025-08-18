@@ -52,7 +52,7 @@ namespace bq {
         return !(map1 == map2);
     }
 
-    template <typename K, typename V, typename Allocator , bool C>
+    template <typename K, typename V, typename Allocator, bool C>
     BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>& BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator++()
     {
         node_index_ = parent_->get_next_node_index(node_index_);

@@ -15,7 +15,7 @@
  *
  * buffer for common use scenarios, for example where data chunks are larger than
  * default buffer size of miso_buffer or siso_buffer.
- * 
+ *
  * \author pippocao
  * \date 2025/07/26
  */
@@ -35,7 +35,8 @@ namespace bq {
         bool need_recovery_;
         bq::string mmap_file_abs_path_;
         alignas(8) char siso_buffer_obj_[sizeof(bq::siso_ring_buffer)];
-    public :
+
+    public:
         normal_buffer(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path);
 
         ~normal_buffer();
@@ -108,8 +109,8 @@ namespace bq {
         {
             return get_buffer().get_total_blocks_count();
         }
-    private:
 
+    private:
         void init_buffer_data();
 
         create_memory_map_result create_memory_map();

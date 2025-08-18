@@ -103,6 +103,7 @@ namespace bq {
         size_type size_;
         size_type capacity_;
         allocator_type allocator_;
+
     public:
         BQ_ARRAY_CLS_NAME();
 

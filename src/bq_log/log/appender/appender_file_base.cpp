@@ -51,14 +51,13 @@ namespace bq {
         } else {
             cache_write_.erase(cache_write_.begin(), real_write_size);
         }
-        if (error_code != 0 && error_code != 
+        if (error_code != 0 && error_code !=
 #if defined(BQ_POSIX)
-            ENOSPC
+                ENOSPC
 #else
-            ERROR_DISK_FULL
+                ERROR_DISK_FULL
 #endif
-            ) 
-        {
+        ) {
             char error_text[256] = { 0 };
             auto epoch = bq::platform::high_performance_epoch_ms();
             struct tm time_st;

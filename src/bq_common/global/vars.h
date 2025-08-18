@@ -20,9 +20,10 @@
 #include "bq_common/bq_common.h"
 
 namespace bq {
-    template<typename P>
+    template <typename P>
     struct _global_vars_priority_var_initializer {
-        static void init() {
+        static void init()
+        {
             P::get();
         }
     };
@@ -52,8 +53,8 @@ namespace bq {
     ///
     /// Example:
     /// ```cpp
-    /// struct HighPriorityVars : global_vars_base<HighPriorityVars> { 
-    ///     int32_t value; 
+    /// struct HighPriorityVars : global_vars_base<HighPriorityVars> {
+    ///     int32_t value;
     /// };
     /// struct LowPriorityVars : global_vars_base<LowPriorityVars, HighPriorityVars> {
     ///     int32_t otherValue;
@@ -61,13 +62,15 @@ namespace bq {
     /// ```
     /// Here, HighPriorityVars initializes before LowPriorityVars and destructs after it, with safe nested calls.
     /// </remarks>
-    template<typename T, typename Priority_Global_Var_Type = void>
+    template <typename T, typename Priority_Global_Var_Type = void>
     struct global_vars_base {
         friend struct global_var_holder;
+
     protected:
         static BQ_TLS T* global_vars_ptr_;
-        alignas(8) static int32_t global_vars_init_flag_;   // 0 not init, 1 initializing, 2 initialized
+        alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
+
     private:
         struct global_var_holder {
             global_var_holder()
@@ -86,12 +89,15 @@ namespace bq {
                 }
             }
         };
-    protected:
-        virtual void partial_destruct() {
 
+    protected:
+        virtual void partial_destruct()
+        {
         }
+
     public:
-        static T& get() {
+        static T& get()
+        {
             if (!T::global_vars_ptr_) {
                 bq::platform::atomic<int32_t>& atomic_status = *reinterpret_cast<bq::platform::atomic<int32_t>*>(&T::global_vars_init_flag_);
                 if (atomic_status.load_acquire() == 0) {
@@ -118,7 +124,7 @@ namespace bq {
         }
     };
 
-    template<typename T, typename Priority_Global_Var_Type>
+    template <typename T, typename Priority_Global_Var_Type>
     BQ_TLS T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_ptr_;
 
     template <typename T, typename Priority_Global_Var_Type>
@@ -127,8 +133,7 @@ namespace bq {
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
 
-
-    struct common_global_vars : public global_vars_base<common_global_vars>{
+    struct common_global_vars : public global_vars_base<common_global_vars> {
         bq::platform::base_dir_initializer base_dir_init_inst_;
         bq::hash_map<bq::platform::file_node_info, bq::platform::file_open_mode_enum> file_exclusive_cache_;
         bq::platform::mutex file_exclusive_mutex_;
@@ -160,6 +165,7 @@ namespace bq {
         common_global_vars()
         {
         }
+
     protected:
         virtual void partial_destruct() override
         {

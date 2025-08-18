@@ -14,7 +14,7 @@
  * \class bq::block_list
  *
  * A lock free singly linked list.
- * 
+ *
  * \author pippocao
  * \date 2024/12/06
  */
@@ -30,10 +30,11 @@ namespace bq {
     public:
         friend class block_list;
 
-        BQ_PACK_BEGIN 
+        BQ_PACK_BEGIN
         struct pointer_type {
         private:
             char value[4];
+
         public:
             bq_forceinline uint32_t& union_value() { return *reinterpret_cast<uint32_t*>(value); }
             bq_forceinline const uint32_t& union_value() const { return *reinterpret_cast<const uint32_t*>(value); }
@@ -42,10 +43,10 @@ namespace bq {
             bq_forceinline uint16_t& aba_mark() { return *reinterpret_cast<uint16_t*>(value + 2); }
             bq_forceinline const uint16_t& aba_mark() const { return *reinterpret_cast<const uint16_t*>(value + 2); }
             bq_forceinline bool is_empty() const { return index() == (uint16_t)-1; }
-        }
-        BQ_PACK_END
+        } BQ_PACK_END
 
-        static_assert(sizeof(pointer_type) == sizeof(uint32_t), "invalid size of pointer_type");    
+            static_assert(sizeof(pointer_type) == sizeof(uint32_t), "invalid size of pointer_type");
+
     private:
         // These members are modified in different threads which will leads to "False Share".
         // So we must modify them in a low frequency
@@ -55,6 +56,7 @@ namespace bq {
         alignas(8) char misc_data_[56];
         // only POD field can be used in packed struct, so we can't use siso_ring_buffer directly.
         char buffer_[sizeof(siso_ring_buffer)];
+
     public:
         /// <summary>
         /// constructor
@@ -68,7 +70,7 @@ namespace bq {
 
         static void alignment_assert();
 
-        template<typename T>
+        template <typename T>
         bq_forceinline T& get_misc_data()
         {
             static_assert(sizeof(T) <= sizeof(misc_data_), "size of T too large");
@@ -77,19 +79,17 @@ namespace bq {
 
         void set_misc_data(const void* data_src, size_t data_size);
 
-        bq_forceinline siso_ring_buffer& get_buffer() {return *(siso_ring_buffer*)buffer_; }
+        bq_forceinline siso_ring_buffer& get_buffer() { return *(siso_ring_buffer*)buffer_; }
 
         static constexpr ptrdiff_t get_buffer_data_offset()
         {
             return (ptrdiff_t)((sizeof(block_node_head) + CACHE_LINE_SIZE - 1) - ((sizeof(block_node_head) + CACHE_LINE_SIZE - 1) % CACHE_LINE_SIZE));
         }
-    } 
-    BQ_PACK_END
+    } BQ_PACK_END
 
-        
-    BQ_PACK_BEGIN
-    class alignas(CACHE_LINE_SIZE) block_list {
+        BQ_PACK_BEGIN class alignas(CACHE_LINE_SIZE) block_list {
         friend struct group_data_head;
+
     private:
         alignas(8) block_node_head::pointer_type head_;
         alignas(8) uint16_t offset_;
@@ -97,10 +97,12 @@ namespace bq {
         alignas(8) size_t buffer_size_per_block_;
         alignas(16) const uint8_t* data_range_start_;
         alignas(16) const uint8_t* data_range_end_;
+
     private:
         void reset(uint16_t max_blocks_count, const uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         bool try_recover_from_memory_map(uint16_t max_blocks_count, const uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         void recovery_blocks();
+
     public:
         block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_recovery);
 
@@ -139,7 +141,7 @@ namespace bq {
                 return false;
             }
             uint16_t index = get_index_by_block_head(block_node);
-            if(index >= max_blocks_count_) {
+            if (index >= max_blocks_count_) {
                 return false;
             }
             block_node_head* test_node = first();
@@ -261,7 +263,5 @@ namespace bq {
                 prev_block_node->next_ = remove_block_node->next_;
             }
         }
-    } 
-    BQ_PACK_END
-    static_assert(sizeof(block_list) == CACHE_LINE_SIZE, "invalid block_list size");
+    } BQ_PACK_END static_assert(sizeof(block_list) == CACHE_LINE_SIZE, "invalid block_list size");
 }

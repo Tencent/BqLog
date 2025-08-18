@@ -32,10 +32,11 @@ namespace bq {
     template <typename K, typename V>
     struct BQ_HASH_MAP_KV_CLS_NAME {
     public:
-        using first_type = K;   //compatible with std libc++
-        using second_type = V;  //compatible with std libc++
+        using first_type = K; // compatible with std libc++
+        using second_type = V; // compatible with std libc++
         using key_type = K;
         using value_type = V;
+
     private:
         template <typename K_, typename V_, typename Allocator_>
         friend class BQ_HASH_MAP_CLS_NAME;

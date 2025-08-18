@@ -568,178 +568,177 @@ namespace bq {
 
         template <bool INCLUDE_TYPE_INFO, typename... TYPES>
         struct EBCO size_seq {
-            size_t get_total() const
-            {
+            size_t get_total() const {
                 return 0;
-            }
-        };
-
-        template <bool INCLUDE_TYPE_INFO, size_t H, size_t V, bool C, typename... TYPES>
-        struct EBCO size_seq_impl : public size_seq_element<H, V, C>, public size_seq<INCLUDE_TYPE_INFO, TYPES...> {
-            using element_type = size_seq_element<H, V, C>;
-        };
-
-        template <bool INCLUDE_TYPE_INFO, typename FIRST, typename... REST>
-        struct EBCO size_seq<INCLUDE_TYPE_INFO, FIRST, REST...> : public size_seq_impl<INCLUDE_TYPE_INFO, sizeof...(REST) + 1,
-                                                                      is_type_constexpr_size<FIRST>::value ? _get_storage_data_size_constexpr<INCLUDE_TYPE_INFO, FIRST>() : 0,
-                                                                      is_type_constexpr_size<FIRST>::value ? true : false,
-                                                                      REST...> {
-            using next_type = size_seq<INCLUDE_TYPE_INFO, REST...>;
-            using impl_type = size_seq_impl<INCLUDE_TYPE_INFO,
-                sizeof...(REST) + 1,
-                is_type_constexpr_size<FIRST>::value ? _get_storage_data_size_constexpr<INCLUDE_TYPE_INFO, FIRST>() : 0,
-                is_type_constexpr_size<FIRST>::value ? true : false,
-                REST...>;
-            using element_type = typename impl_type::element_type;
-            next_type& get_next()
-            {
-                return (*this);
-            }
-            const next_type& get_next() const
-            {
-                return (*this);
-            }
-            element_type& get_element()
-            {
-                return (*this);
-            }
-            const element_type& get_element() const
-            {
-                return (*this);
-            }
-            size_t get_total() const
-            {
-                return get_element().get_aligned_value() + get_next().get_total();
-            }
-        };
-
-        template <typename T, bool INCLUDE_TYPE_INFO, typename... TYPES>
-        void fill_size_seq_impl(size_seq<INCLUDE_TYPE_INFO, TYPES...>& seq, const T& value, const bq::false_type& is_constexpr)
-        {
-            (void)is_constexpr;
-            seq.get_element().value = _get_storage_data_size<INCLUDE_TYPE_INFO>(value);
-        }
-
-        template <typename T, bool INCLUDE_TYPE_INFO, typename... TYPES>
-        void fill_size_seq_impl(size_seq<INCLUDE_TYPE_INFO, TYPES...>& seq, const T& value, const bq::true_type& is_constexpr)
-        {
-            (void)seq;
-            (void)value;
-            (void)is_constexpr;
-        }
-
-        template <bool INCLUDE_TYPE_INFO, typename FIRST>
-        bq::enable_if_t<_get_serialize_func_type<FIRST>() != _serialize_func_type::others, void> fill_size_seq(size_seq<INCLUDE_TYPE_INFO, FIRST>& seq, const FIRST& first)
-        {
-            using element_type = typename bq::remove_reference_t<decltype(seq)>::element_type;
-            constexpr bool is_constexpr = element_type::is_constexpr;
-            fill_size_seq_impl(seq, first, bq::bool_type<is_constexpr> {});
-        }
-
-        template <bool INCLUDE_TYPE_INFO, typename FIRST, typename... REST>
-        bq::enable_if_t<_get_serialize_func_type<FIRST>() != _serialize_func_type::others, void> fill_size_seq(size_seq<INCLUDE_TYPE_INFO, FIRST, REST...>& seq, const FIRST& first, const REST&... rest)
-        {
-            using element_type = typename bq::remove_reference_t<decltype(seq)>::element_type;
-            constexpr bool is_constexpr = element_type::is_constexpr;
-            fill_size_seq_impl(seq, first, bq::bool_type<is_constexpr> {});
-            fill_size_seq(seq.get_next(), rest...);
-        }
-
-        template <bool INCLUDE_TYPE_INFO, typename... PARAMS>
-        bq::enable_if_t<is_params_valid_type_helper<PARAMS...>::value, size_seq<INCLUDE_TYPE_INFO, PARAMS...>> make_size_seq(const PARAMS&... params)
-        {
-            size_seq<INCLUDE_TYPE_INFO, PARAMS...> init_seq;
-            fill_size_seq(init_seq, params...);
-            return init_seq;
-        }
-        //=====================================================================size_seq end=========================================================================================
-
-        //================================================type copy begin========================================
-        // custom type copy
-        template <bool INCLUDE_TYPE_INFO, typename T>
-        bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::custom_type>::value && _custom_type_helper<T>::has_member_func>
-        _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
-        {
-            _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<T>());
-            data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
-            data_size -= (bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t));
-            *(uint32_t*)data_addr = (uint32_t)data_size;
-            data_addr += sizeof(uint32_t);
-            _serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::c_style_string_copy(data_addr, value.bq_log_format_str_chars(), data_size);
-        }
-
-        template <bool INCLUDE_TYPE_INFO, typename T>
-        bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::custom_type>::value && !_custom_type_helper<T>::has_member_func>
-        _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
-        {
-            _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<T>());
-            data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
-            data_size -= (bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t));
-            *(uint32_t*)data_addr = (uint32_t)data_size;
-            data_addr += sizeof(uint32_t);
-            _serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::c_style_string_copy(data_addr, bq_log_format_str_chars(value), data_size);
-        }
-
-        // string type_copy
-        template <bool INCLUDE_TYPE_INFO, typename T>
-        bq_forceinline bq::enable_if_t<_is_bq_log_supported_string_type<T>::value>
-        _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
-        {
-            constexpr _string_type type = bq::condition_value<(_is_bq_string_like<T>::value || _is_std_string_view_like<T>::value),
-                _string_type,
-                _string_type::cls_type,
-                bq::condition_value<bq::is_array<T>::value, _string_type,
-                    _string_type::array_type, _string_type::c_style_type>::value>::value;
-            _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, type>::type_copy(value, data_addr, data_size);
-        }
-
-        // nullptr type_copy
-        template <bool INCLUDE_TYPE_INFO, typename T>
-        bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::null_pointer>::value>
-        _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
-        {
-            (void)value;
-            (void)data_size;
-            _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, log_arg_type_enum::null_type);
-        }
-
-        // pointer type_copy
-        template <bool INCLUDE_TYPE_INFO, typename T>
-        bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::pointer>::value>
-        _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
-        {
-            (void)data_size;
-            _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, log_arg_type_enum::pointer_type);
-            data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
-            uint64_t addr_value = (uint64_t)(value); // 64 bit
-            *(uint64_t*)(data_addr) = addr_value;
-        }
-
-        // pod type_copy
-        template <bool INCLUDE_TYPE_INFO, typename T>
-        bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::pod>::value>
-        _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
-        {
-            (void)data_size;
-            typedef bq::decay_t<T> pod_type;
-            constexpr auto type_enum = _get_log_param_type_enum<T>();
-            _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, type_enum);
-            data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t,
-                bq::condition_value<sizeof(pod_type) <= 2, size_t, 2, 4>::value, 0>::value;
-            *(pod_type*)(data_addr) = (pod_type)value;
-        }
-
-        // other type type_copy
-        template <bool INCLUDE_TYPE_INFO, typename T>
-        bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::others>::value>
-        _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
-        {
-            (void)value;
-            (void)data_addr;
-            (void)data_size;
-            static_assert(_get_serialize_func_type<T>() != _serialize_func_type::others, "unsupported log arg type");
-            return 0;
-        }
-        //================================================type copy end========================================
     }
+};
+
+template <bool INCLUDE_TYPE_INFO, size_t H, size_t V, bool C, typename... TYPES>
+struct EBCO size_seq_impl : public size_seq_element<H, V, C>, public size_seq<INCLUDE_TYPE_INFO, TYPES...> {
+    using element_type = size_seq_element<H, V, C>;
+};
+
+template <bool INCLUDE_TYPE_INFO, typename FIRST, typename... REST>
+struct EBCO size_seq<INCLUDE_TYPE_INFO, FIRST, REST...> : public size_seq_impl<INCLUDE_TYPE_INFO, sizeof...(REST) + 1,
+                                                              is_type_constexpr_size<FIRST>::value ? _get_storage_data_size_constexpr<INCLUDE_TYPE_INFO, FIRST>() : 0,
+                                                              is_type_constexpr_size<FIRST>::value ? true : false,
+                                                              REST...> {
+    using next_type = size_seq<INCLUDE_TYPE_INFO, REST...>;
+    using impl_type = size_seq_impl<INCLUDE_TYPE_INFO,
+        sizeof...(REST) + 1,
+        is_type_constexpr_size<FIRST>::value ? _get_storage_data_size_constexpr<INCLUDE_TYPE_INFO, FIRST>() : 0,
+        is_type_constexpr_size<FIRST>::value ? true : false,
+        REST...>;
+    using element_type = typename impl_type::element_type;
+    next_type& get_next()
+    {
+        return (*this);
+    }
+    const next_type& get_next() const
+    {
+        return (*this);
+    }
+    element_type& get_element()
+    {
+        return (*this);
+    }
+    const element_type& get_element() const
+    {
+        return (*this);
+    }
+    size_t get_total() const
+    {
+        return get_element().get_aligned_value() + get_next().get_total();
+    }
+};
+
+template <typename T, bool INCLUDE_TYPE_INFO, typename... TYPES>
+void fill_size_seq_impl(size_seq<INCLUDE_TYPE_INFO, TYPES...>& seq, const T& value, const bq::false_type& is_constexpr)
+{
+    (void)is_constexpr;
+    seq.get_element().value = _get_storage_data_size<INCLUDE_TYPE_INFO>(value);
+}
+
+template <typename T, bool INCLUDE_TYPE_INFO, typename... TYPES>
+void fill_size_seq_impl(size_seq<INCLUDE_TYPE_INFO, TYPES...>& seq, const T& value, const bq::true_type& is_constexpr)
+{
+    (void)seq;
+    (void)value;
+    (void)is_constexpr;
+}
+
+template <bool INCLUDE_TYPE_INFO, typename FIRST>
+bq::enable_if_t<_get_serialize_func_type<FIRST>() != _serialize_func_type::others, void> fill_size_seq(size_seq<INCLUDE_TYPE_INFO, FIRST>& seq, const FIRST& first)
+{
+    using element_type = typename bq::remove_reference_t<decltype(seq)>::element_type;
+    constexpr bool is_constexpr = element_type::is_constexpr;
+    fill_size_seq_impl(seq, first, bq::bool_type<is_constexpr> {});
+}
+
+template <bool INCLUDE_TYPE_INFO, typename FIRST, typename... REST>
+bq::enable_if_t<_get_serialize_func_type<FIRST>() != _serialize_func_type::others, void> fill_size_seq(size_seq<INCLUDE_TYPE_INFO, FIRST, REST...>& seq, const FIRST& first, const REST&... rest)
+{
+    using element_type = typename bq::remove_reference_t<decltype(seq)>::element_type;
+    constexpr bool is_constexpr = element_type::is_constexpr;
+    fill_size_seq_impl(seq, first, bq::bool_type<is_constexpr> {});
+    fill_size_seq(seq.get_next(), rest...);
+}
+
+template <bool INCLUDE_TYPE_INFO, typename... PARAMS>
+bq::enable_if_t<is_params_valid_type_helper<PARAMS...>::value, size_seq<INCLUDE_TYPE_INFO, PARAMS...>> make_size_seq(const PARAMS&... params)
+{
+    size_seq<INCLUDE_TYPE_INFO, PARAMS...> init_seq;
+    fill_size_seq(init_seq, params...);
+    return init_seq;
+}
+//=====================================================================size_seq end=========================================================================================
+
+//================================================type copy begin========================================
+// custom type copy
+template <bool INCLUDE_TYPE_INFO, typename T>
+bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::custom_type>::value && _custom_type_helper<T>::has_member_func>
+_type_copy(const T& value, uint8_t* data_addr, size_t data_size)
+{
+    _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<T>());
+    data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
+    data_size -= (bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t));
+    *(uint32_t*)data_addr = (uint32_t)data_size;
+    data_addr += sizeof(uint32_t);
+    _serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::c_style_string_copy(data_addr, value.bq_log_format_str_chars(), data_size);
+}
+
+template <bool INCLUDE_TYPE_INFO, typename T>
+bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::custom_type>::value && !_custom_type_helper<T>::has_member_func>
+_type_copy(const T& value, uint8_t* data_addr, size_t data_size)
+{
+    _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<T>());
+    data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
+    data_size -= (bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t));
+    *(uint32_t*)data_addr = (uint32_t)data_size;
+    data_addr += sizeof(uint32_t);
+    _serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::c_style_string_copy(data_addr, bq_log_format_str_chars(value), data_size);
+}
+
+// string type_copy
+template <bool INCLUDE_TYPE_INFO, typename T>
+bq_forceinline bq::enable_if_t<_is_bq_log_supported_string_type<T>::value>
+_type_copy(const T& value, uint8_t* data_addr, size_t data_size)
+{
+    constexpr _string_type type = bq::condition_value<(_is_bq_string_like<T>::value || _is_std_string_view_like<T>::value),
+        _string_type,
+        _string_type::cls_type,
+        bq::condition_value<bq::is_array<T>::value, _string_type,
+            _string_type::array_type, _string_type::c_style_type>::value>::value;
+    _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, type>::type_copy(value, data_addr, data_size);
+}
+
+// nullptr type_copy
+template <bool INCLUDE_TYPE_INFO, typename T>
+bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::null_pointer>::value>
+_type_copy(const T& value, uint8_t* data_addr, size_t data_size)
+{
+    (void)value;
+    (void)data_size;
+    _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, log_arg_type_enum::null_type);
+}
+
+// pointer type_copy
+template <bool INCLUDE_TYPE_INFO, typename T>
+bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::pointer>::value>
+_type_copy(const T& value, uint8_t* data_addr, size_t data_size)
+{
+    (void)data_size;
+    _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, log_arg_type_enum::pointer_type);
+    data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
+    uint64_t addr_value = (uint64_t)(value); // 64 bit
+    *(uint64_t*)(data_addr) = addr_value;
+}
+
+// pod type_copy
+template <bool INCLUDE_TYPE_INFO, typename T>
+bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::pod>::value>
+_type_copy(const T& value, uint8_t* data_addr, size_t data_size)
+{
+    (void)data_size;
+    typedef bq::decay_t<T> pod_type;
+    constexpr auto type_enum = _get_log_param_type_enum<T>();
+    _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, type_enum);
+    data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t,
+        bq::condition_value<sizeof(pod_type) <= 2, size_t, 2, 4>::value, 0>::value;
+    *(pod_type*)(data_addr) = (pod_type)value;
+}
+
+// other type type_copy
+template <bool INCLUDE_TYPE_INFO, typename T>
+bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::others>::value>
+_type_copy(const T& value, uint8_t* data_addr, size_t data_size)
+{
+    (void)value;
+    (void)data_addr;
+    (void)data_size;
+    static_assert(_get_serialize_func_type<T>() != _serialize_func_type::others, "unsupported log arg type");
+    return 0;
+}
+//================================================type copy end========================================
+}
 }

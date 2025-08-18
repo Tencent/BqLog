@@ -206,7 +206,7 @@ namespace bq {
         return result;
     }
 
-    template<typename STR>
+    template <typename STR>
     bq_forceinline bq::tuple<const char*, uint32_t> get_stack_trace()
     {
         if (bq::tools::_get_log_param_type_enum<STR>() == log_arg_type_enum::string_utf8_type) {
@@ -215,7 +215,7 @@ namespace bq {
             const char* trace_str = str.str;
             uint32_t trace_len = str.len;
             return bq::make_tuple(trace_str, trace_len);
-        }else {
+        } else {
             bq::_api_u16string_def str;
             bq::api::__api_get_stack_trace_utf16(&str, 0);
             const char* trace_str = (const char*)str.str;

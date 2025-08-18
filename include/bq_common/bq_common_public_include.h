@@ -21,7 +21,7 @@
 #include "bq_common/platform/macros.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"  // some pragma is not valid for all GCC versions
+#pragma GCC diagnostic ignored "-Wpragmas" // some pragma is not valid for all GCC versions
 #pragma GCC diagnostic ignored "-Wstringop-overflow" // GCC warning check
 #pragma GCC diagnostic ignored "-Warray-bounds" // GCC warning check
 #pragma GCC diagnostic ignored "-Wrestrict" // GCC error check

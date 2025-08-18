@@ -79,7 +79,7 @@ namespace bq {
         {
             return reinterpret_cast<To>(value);
         }
-        
+
         template <typename To, typename AtomicStandardType>
         bq_forceinline bq::enable_if_t<!_atomic_gnu_is_reinterpret_cast_enable<To>::value, To> get_value_type_from_atomic_standard_value(const AtomicStandardType& value)
         {
@@ -136,7 +136,7 @@ namespace bq {
             {
                 return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_RELAXED));
             }
-            
+
             bq_forceinline value_type load_acq_rel() const noexcept
             {
                 return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_SEQ_CST));

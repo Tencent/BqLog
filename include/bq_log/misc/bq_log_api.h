@@ -254,6 +254,5 @@ namespace bq {
         BQ_API void __api_get_stack_trace(bq::_api_string_def* out_name_ptr, uint32_t skip_frame_count);
         BQ_API void __api_get_stack_trace_utf16(bq::_api_u16string_def* out_name_ptr, uint32_t skip_frame_count);
 
-
     }
 }

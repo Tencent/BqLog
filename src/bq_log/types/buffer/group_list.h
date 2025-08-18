@@ -37,12 +37,10 @@ namespace bq {
         block_list used_;
         block_list free_;
         block_list stage_;
-        group_data_head(uint16_t max_blocks_count, uint8_t * group_data_addr, size_t group_data_size, bool is_memory_recovery);
-    } 
-    BQ_PACK_END
-    static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
+        group_data_head(uint16_t max_blocks_count, uint8_t* group_data_addr, size_t group_data_size, bool is_memory_recovery);
+    } BQ_PACK_END static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
 
-    class group_node : public bq::memory_pool_obj_base<group_node, true>{
+    class group_node : public bq::memory_pool_obj_base<group_node, true> {
     public:
         struct pointer_type {
             bq::platform::spin_lock_rw_crazy lock_;
@@ -50,6 +48,7 @@ namespace bq {
 
             bq_forceinline bool is_empty() const { return node_ == nullptr; }
         };
+
     private:
         size_t get_group_meta_size(const log_buffer_config& config);
         size_t get_group_data_size(const log_buffer_config& config, uint16_t max_block_count_per_group);
@@ -57,6 +56,7 @@ namespace bq {
         bool try_recover_from_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group);
         void init_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group);
         void init_memory(const log_buffer_config& config, uint16_t max_block_count_per_group);
+
     private:
         pointer_type next_;
         bq::file_handle memory_map_file_;
@@ -65,15 +65,17 @@ namespace bq {
         group_data_head* head_ptr_ = nullptr;
         uint64_t in_pool_epoch_ms_ = 0;
         class group_list* parent_list_ = nullptr;
+
     public:
         group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index);
         ~group_node();
 
         bq_forceinline pointer_type& get_next_ptr() { return next_; }
-        bq_forceinline group_data_head& get_data_head() { 
+        bq_forceinline group_data_head& get_data_head()
+        {
             BQ_SUPPRESS_NULL_DEREF_BEGIN();
 #if defined(BQ_LOG_BUFFER_DEBUG)
-            assert(head_ptr_ && "head_ptr_ is null, group_node has not been initialized");      
+            assert(head_ptr_ && "head_ptr_ is null, group_node has not been initialized");
 #endif
             return *head_ptr_;
             BQ_SUPPRESS_NULL_DEREF_END();
@@ -94,11 +96,13 @@ namespace bq {
             write_lock
         };
         struct iterator {
-        friend class group_list;
+            friend class group_list;
+
         private:
             group_node::pointer_type* last_pointer_;
             group_node* value_;
             lock_type last_lock_type_;
+
         public:
             iterator()
                 : last_pointer_(nullptr)
@@ -106,11 +110,11 @@ namespace bq {
                 , last_lock_type_(lock_type::no_lock)
             {
             }
-            bq_forceinline operator bool() const { return value_;}
+            bq_forceinline operator bool() const { return value_; }
             bq_forceinline group_node& value() { return *value_; }
             bq_forceinline const group_node& value() const { return *value_; }
-            bq_forceinline bool operator==(const group_list::iterator& rhs) const { return value_ == rhs.value_;}
-            bq_forceinline bool operator!=(const group_list::iterator& rhs) const { return value_ != rhs.value_;}
+            bq_forceinline bool operator==(const group_list::iterator& rhs) const { return value_ == rhs.value_; }
+            bq_forceinline bool operator!=(const group_list::iterator& rhs) const { return value_ != rhs.value_; }
         };
         static constexpr uint64_t GROUP_NODE_GC_LIFE_TIME_MS = 1000; // If a group node has not been used for 1 seconds, it will be deleted. Otherwise it can stay in the memory pool.
     public:
@@ -122,7 +126,7 @@ namespace bq {
 
         void recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block);
 
-        bq_forceinline uint16_t get_max_block_count_per_group() const { return max_block_count_per_group_;}
+        bq_forceinline uint16_t get_max_block_count_per_group() const { return max_block_count_per_group_; }
 
 #if defined(BQ_UNIT_TEST)
         bq_forceinline int32_t get_groups_count() const { return groups_count_.load_seq_cst(); }
@@ -199,7 +203,7 @@ namespace bq {
                     break;
                 }
             }
-            
+
             switch (current.last_lock_type_) {
             case bq::group_list::lock_type::no_lock:
                 break;

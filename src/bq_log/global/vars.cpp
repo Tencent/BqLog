@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *

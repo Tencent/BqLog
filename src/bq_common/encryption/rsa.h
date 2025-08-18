@@ -58,7 +58,7 @@ namespace bq {
         // Decrypt: output minimal big-endian plaintext
         static bool decrypt(const private_key& pri,
             const bq::array<uint8_t>& ciphertext,
-			bq::array<uint8_t>& out_plaintext);
+            bq::array<uint8_t>& out_plaintext);
     };
 
-} 
+}

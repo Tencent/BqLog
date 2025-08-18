@@ -14,7 +14,7 @@
  * \class bq::miso_ring_buffer V3
  *
  * `miso`("multi threads in and single thread out").
- * 
+ *
  * This high-performance ring buffer supports multi-threaded writes and single-threaded reads simultaneously.
  * The buffer size is determined during initialization and cannot be changed.
  * Data in the ring buffer chunks are stored contiguously.
@@ -59,7 +59,7 @@ namespace bq {
     private:
         static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
         static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
-        enum class block_status : uint8_t{
+        enum class block_status : uint8_t {
             unused, // data section begin from this block is unused, can not be read
             used, // data section begin from this block has already finished writing, and can be read.
             invalid // data section begin from this block is invalid, it should be skipped by reading thread.
@@ -67,27 +67,27 @@ namespace bq {
         union block {
         public:
             BQ_PACK_BEGIN
-            struct alignas(4) chunk_head_def { //alignas(4) can make sure compiler generate more effective code when access int32_t fields
+            struct alignas(4) chunk_head_def { // alignas(4) can make sure compiler generate more effective code when access int32_t fields
             private:
                 char block_num_[3]; // 24 bits block number
             public:
-                block_status status; //8 bits status
+                block_status status; // 8 bits status
                 uint32_t data_size;
                 uint8_t data[1];
                 uint8_t padding[3];
+
             public:
-                bq_forceinline uint32_t get_block_num() const {
+                bq_forceinline uint32_t get_block_num() const
+                {
                     return (*(const uint32_t*)block_num_) & (0xFFFFFF);
                 }
                 bq_forceinline void set_block_num(uint32_t num)
                 {
                     *(uint32_t*)block_num_ = num;
                 }
-            }
-            BQ_PACK_END
-        public:
-            static constexpr uint32_t MAX_BLOCK_NUM_PER_CHUNK = 0xFFFFFF;
+        } BQ_PACK_END public : static constexpr uint32_t MAX_BLOCK_NUM_PER_CHUNK = 0xFFFFFF;
             chunk_head_def chunk_head;
+
         private:
             uint8_t data[CACHE_LINE_SIZE];
         };
@@ -100,9 +100,7 @@ namespace bq {
             uint32_t read_cursor_start_cache_;
             uint64_t log_checksum_;
             char mmap_misc_data_[CACHE_LINE_SIZE - sizeof(read_cursor_cache_) - sizeof(log_checksum_) - sizeof(read_cursor_start_cache_)];
-        }
-        BQ_PACK_END 
-        static_assert(sizeof(head) == CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
+        } BQ_PACK_END static_assert(sizeof(head) == CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
 
         static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
