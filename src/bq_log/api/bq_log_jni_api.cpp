@@ -301,14 +301,16 @@ JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1di
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_decoder_create
- * Signature: (Ljava/lang/String;)J
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)J
  */
-JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1create(JNIEnv* env, jclass, jstring path)
+JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1create(JNIEnv* env, jclass, jstring path, jstring priv_key)
 {
     uint32_t handle = 0;
     const char* path_c_str = env->GetStringUTFChars(path, NULL);
-    auto result = bq::api::__api_log_decoder_create(path_c_str, &handle);
+    const char* priv_key_c_str = env->GetStringUTFChars(priv_key, NULL);
+    auto result = bq::api::__api_log_decoder_create(path_c_str, priv_key_c_str, &handle);
     env->ReleaseStringUTFChars(path, path_c_str);
+    env->ReleaseStringUTFChars(priv_key, priv_key_c_str);
     if (result != bq::appender_decode_result::success) {
         return (jlong)(result) * (-1);
     } else {
@@ -351,18 +353,22 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1destroy(
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_decode
- * Signature: (Ljava/lang/String;Ljava/lang/String;)V
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
  */
-JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv* env, jclass, jstring in_path, jstring out_path)
+JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv* env, jclass, jstring in_path, jstring out_path, jstring priv_key)
 {
-    jboolean re = JNI_FALSE;
+    jboolean ret = JNI_FALSE;
     const char* in_path_ = env->GetStringUTFChars(in_path, NULL);
     const char* out_path_ = env->GetStringUTFChars(out_path, NULL);
-    if (bq::api::__api_log_decode(in_path_, out_path_))
-        re = JNI_TRUE;
+    const char* priv_key_c_str = env->GetStringUTFChars(priv_key, NULL);
+
+    if (bq::api::__api_log_decode(in_path_, out_path_, priv_key_c_str)) {
+        ret = JNI_TRUE;
+    }
     env->ReleaseStringUTFChars(in_path, in_path_);
     env->ReleaseStringUTFChars(out_path, out_path_);
-    return re;
+    env->ReleaseStringUTFChars(priv_key, priv_key_c_str);
+    return ret;
 }
 
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jboolean use_gmt_time)

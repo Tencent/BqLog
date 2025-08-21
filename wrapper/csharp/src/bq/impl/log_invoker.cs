@@ -78,7 +78,7 @@ namespace bq.impl
         public unsafe static extern sbyte* __api_get_file_base_dir(bool is_in_sandbox);
         
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public unsafe static extern bq.tools.log_decoder.appender_decode_result __api_log_decoder_create(byte* log_file_path_utf8, uint* out_handle);
+        public unsafe static extern bq.tools.log_decoder.appender_decode_result __api_log_decoder_create(byte* log_file_path_utf8, byte* priv_key_utf8, uint* out_handle);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public unsafe static extern bq.tools.log_decoder.appender_decode_result __api_log_decoder_decode(uint handle, bq.def._api_string_def* out_decoded_log_text);
@@ -87,7 +87,7 @@ namespace bq.impl
         public unsafe static extern void __api_log_decoder_destroy(uint handle);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public unsafe static extern bool __api_log_decode(char* in_file, char* out_file);
+        public unsafe static extern bool __api_log_decode(byte* in_file_utf8, byte* out_file_utf8, byte* priv_key_utf8);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern void __api_register_console_callbacks(type_func_ptr_console_callback on_console_callback);

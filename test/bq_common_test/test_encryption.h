@@ -67,7 +67,7 @@ namespace bq {
                     // Raw RSA (no padding) returns the minimal big-endian form on decrypt; leading 0x00 bytes are not preserved.
                     // To avoid false negatives in tests, we force the first byte to be non-zero here.
                     if (plaintext[0] == 0) {
-                        plaintext[0] = bq::max_value(static_cast<uint8_t>(1), static_cast<uint8_t>(bq::util::rand() % UINT8_MAX));
+                        plaintext[0] = bq::max_value(static_cast<uint8_t>(1), static_cast<uint8_t>(bq::util::rand() & static_cast<uint32_t>(0xff)));
                     }
                     bq::array<uint8_t> ciphertext;
                     bool enc_result = bq::rsa::encrypt(pub, plaintext, ciphertext);

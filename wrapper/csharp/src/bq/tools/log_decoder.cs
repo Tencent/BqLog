@@ -29,23 +29,27 @@ namespace bq.tools
         private appender_decode_result result_ = appender_decode_result.success;
         private uint handle_ = 0xFFFFFFFF;
 
-        public log_decoder(string log_file_absolute_path)
+        public log_decoder(string log_file_absolute_path, string priv_key = "")
         {
             decode_text_ = "";
             byte[] utf8_path_str = utf8_encoder.get_utf8_array(log_file_absolute_path);
+            byte[] utf8_priv_key = utf8_encoder.get_utf8_array(priv_key);
             unsafe
             {
                 fixed (byte* utf8_path_c_str = utf8_path_str)
                 {
-                    uint handle_tmp;
-                    result_ = bq.impl.log_invoker.__api_log_decoder_create(utf8_path_c_str, &handle_tmp);
-                    if (result_ != appender_decode_result.success)
+                    fixed (byte* utf8_priv_key_c_str = utf8_priv_key)
                     {
-                        handle_ = 0xFFFFFFFF;
-                    }
-                    else
-                    {
-                        handle_ = handle_tmp;
+                        uint handle_tmp;
+                        result_ = bq.impl.log_invoker.__api_log_decoder_create(utf8_path_c_str, utf8_priv_key_c_str, & handle_tmp);
+                        if (result_ != appender_decode_result.success)
+                        {
+                            handle_ = 0xFFFFFFFF;
+                        }
+                        else
+                        {
+                            handle_ = handle_tmp;
+                        }
                     }
                 }
             }
@@ -87,6 +91,28 @@ namespace bq.tools
         public string get_last_decoded_log_item()
         {
             return decode_text_;
+        }
+
+        public static bool decode_file(string log_file_path, string output_file, string priv_key = "")
+        {
+            byte[] utf8_in_path_str = utf8_encoder.get_utf8_array(log_file_path);
+            byte[] utf8_out_path_str = utf8_encoder.get_utf8_array(output_file);
+            byte[] utf8_priv_key = utf8_encoder.get_utf8_array(priv_key);
+            bool result = false;
+            unsafe
+            {
+                fixed (byte* utf8_in_path_c_str = utf8_in_path_str)
+                {
+                    fixed (byte* utf8_out_path_c_str = utf8_out_path_str)
+                    {
+                        fixed (byte* utf8_priv_key_c_str = utf8_priv_key)
+                        {
+                            result = bq.impl.log_invoker.__api_log_decode(utf8_in_path_c_str, utf8_out_path_c_str, utf8_priv_key_c_str);
+                        }
+                    }
+                }
+            }
+            return result;
         }
     }
 }

@@ -370,9 +370,9 @@ namespace bq {
     }
 
     namespace tools {
-        inline log_decoder::log_decoder(const bq::string& log_file_path)
+        inline log_decoder::log_decoder(const bq::string& log_file_path, const bq::string& priv_key)
         {
-            result_ = bq::api::__api_log_decoder_create(log_file_path.c_str(), &handle_);
+            result_ = bq::api::__api_log_decoder_create(log_file_path.c_str(), priv_key.c_str(),  &handle_);
             if (result_ != appender_decode_result::success) {
                 handle_ = 0xFFFFFFFF;
             }
@@ -405,6 +405,11 @@ namespace bq {
         inline const bq::string& log_decoder::get_last_decoded_log_entry() const
         {
             return decode_text_;
+        }
+
+        inline bool log_decoder::decode_file(const bq::string& log_file_path, const bq::string& output_file, const bq::string& priv_key)
+        {
+            return bq::api::__api_log_decode(log_file_path.c_str(), output_file.c_str(), priv_key.c_str());
         }
     }
 

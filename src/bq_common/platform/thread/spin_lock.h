@@ -196,6 +196,7 @@ namespace bq {
 
         class spin_lock_rw_crazy {
         private:
+            static constexpr uint32_t timeout_ms = 60000U;
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
             static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
@@ -258,7 +259,7 @@ namespace bq {
                     }
                     counter_.get().fetch_sub_relaxed(1);
 #if !defined(NDEBUG)
-                    if (get_epoch() > start_epoch + 60000) {
+                    if (get_epoch() > start_epoch + timeout_ms) {
                         debug_output(1);
                         assert(false);
                     }
@@ -270,7 +271,7 @@ namespace bq {
                             break;
                         }
 #if !defined(NDEBUG)
-                        if (get_epoch() > start_epoch + 60000) {
+                        if (get_epoch() > start_epoch + timeout_ms) {
                             debug_output(2);
                             assert(false);
                         }
@@ -361,7 +362,7 @@ namespace bq {
                     }
                     yield();
 #if !defined(NDEBUG)
-                    if (get_epoch() > start_epoch + 60000) {
+                    if (get_epoch() > start_epoch + timeout_ms) {
                         debug_output(3);
                         assert(false);
                     }
@@ -425,7 +426,7 @@ namespace bq {
                         break;
                     }
 #if !defined(NDEBUG)
-                    if (get_epoch() > start_epoch + 60000) {
+                    if (get_epoch() > start_epoch + timeout_ms) {
                         debug_output(4);
                         assert(false);
                     }

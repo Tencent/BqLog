@@ -49,8 +49,31 @@ namespace bq {
 
         iv_type generate_iv() const;
 
-        bool encrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t>& plaintext, bq::array<uint8_t>& out_ciphertext) const;
-        bool decrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t>& ciphertext, bq::array<uint8_t>& out_plaintext) const;
+        bq_forceinline size_t get_key_size() const {
+            return key_size_;
+        }
+
+        bq_forceinline size_t get_iv_size() const {
+            return iv_size_;
+        }
+
+        bool encrypt(const key_type& key, const iv_type& iv, const uint8_t* plaintext, size_t plaintext_size, uint8_t* out_ciphertext, size_t out_ciphertext_size) const;
+        bool decrypt(const key_type& key, const iv_type& iv, const uint8_t* ciphertext, size_t ciphertext_size, uint8_t* out_plaintext, size_t out_plaintext_size) const;
+
+        template<typename Allocator>
+        bool encrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t, Allocator>& plaintext, bq::array<uint8_t>& out_ciphertext) const
+        {
+            out_ciphertext.clear();
+            out_ciphertext.fill_uninitialized(plaintext.size());
+            return encrypt(key, iv, plaintext.begin(), plaintext.size(), out_ciphertext.begin(), out_ciphertext.size());
+        }
+        template<typename Allocator>
+        bool decrypt(const key_type& key, const iv_type& iv, const bq::array<uint8_t, Allocator>& ciphertext, bq::array<uint8_t>& out_plaintext) const
+        {
+            out_plaintext.clear();
+            out_plaintext.fill_uninitialized(ciphertext.size());
+            return decrypt(key, iv, ciphertext.begin(), ciphertext.size(), out_plaintext.begin(), out_plaintext.size());
+        }
 
     private:
         enum_cipher_mode mode_;

@@ -35,6 +35,7 @@ namespace bq {
         virtual bool get_enable();
         void clear();
         bool init(const bq::string& name, const bq::property_value& config_obj, const log_imp* parent_log);
+        bool reset(const bq::property_value& config_obj);
         void log(const log_entry_handle& handle);
 
         inline log_level_bitmap get_log_level_bitmap() const
@@ -52,8 +53,14 @@ namespace bq {
             return type_;
         }
 
+    private:
+        void set_basic_configs(const bq::property_value& config_obj);
+
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) = 0;
+
+        virtual bool reset_impl(const bq::property_value& config_obj) = 0;
+
         virtual void log_impl(const log_entry_handle& handle) = 0;
 
     protected:

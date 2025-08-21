@@ -72,12 +72,14 @@ namespace bq {
         bool is_output_file_in_sandbox() const;
 
         // flush appender output data from memory to Operation System IO.
-        void flush_cache();
+        virtual void flush_cache();
         // flush appender file to physical disk.
         void flush_io();
 
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
+
+        virtual bool reset_impl(const bq::property_value& config_obj) override;
 
         virtual void log_impl(const log_entry_handle& handle) override;
 
@@ -103,6 +105,8 @@ namespace bq {
         void write_with_cache_commit(const write_with_cache_handle& handle);
 
     private:
+        void set_basic_configs(const bq::property_value& config_obj);
+
         void open_new_indexed_file_by_name();
 
         bool is_file_oversize();
@@ -126,6 +130,7 @@ namespace bq {
         uint64_t current_file_expire_time_epoch_ms_;
         int64_t time_zone_diff_to_gmt_ms_;
 
+    protected:
         // Cache part
         // Caching can reduce calls to fwrite, enhancing file write performance.
         // Even though fwrite inherently possesses a caching mechanism,
@@ -135,6 +140,6 @@ namespace bq {
 #endif
         bq::array<uint8_t> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
-        bq::array<uint8_t> cache_write_;
+        bq::array<uint8_t, bq::aligned_allocator<uint8_t, sizeof(uint64_t)>> cache_write_;
     };
 }

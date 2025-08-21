@@ -51,13 +51,13 @@ public class log_invoker {
 	
 	public static native String __api_get_file_base_dir(boolean is_in_sandbox);
 
-	public static native long __api_log_decoder_create(String log_file_path);
+	public static native long __api_log_decoder_create(String log_file_path, String priv_key);
 
 	public static native int __api_log_decoder_decode(long handle, bq.def.string_holder out_decoded_text);
 
 	public static native void __api_log_decoder_destroy(long handle);
 	
-	public static native boolean __api_log_decode(String in_file_path, String out_file_path);
+	public static native boolean __api_log_decode(String in_file_path, String out_file_path, String priv_key);
 	
 	public static native String __api_take_snapshot_string(long log_id, boolean use_gmt_time);
 

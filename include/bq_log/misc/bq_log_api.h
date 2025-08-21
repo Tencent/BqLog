@@ -167,9 +167,10 @@ namespace bq {
         /// create a decoder to decode binary log file
         /// </summary>
         /// <param name="log_file_path"></param>
+        /// <param name="priv_key"></param>
         /// <param name="out_handle">will be used in __api_log_decoder_decode and __api_log_decoder_destroy</param>
         /// <returns></returns>
-        BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, uint32_t* out_handle);
+        BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, const char* priv_key, uint32_t* out_handle);
 
         /// <summary>
         /// decode binary log file
@@ -187,11 +188,13 @@ namespace bq {
         BQ_API void __api_log_decoder_destroy(uint32_t handle);
 
         /// <summary>
-        /// parsing interface for log raw
+        /// Directly decode a log file to a text file.
         /// </summary>
-        /// <param name="handle"></param>
+        /// <param name="in_file_path"></param>
+        /// <param name="out_file_path"></param>
+        /// <param name="priv_key"></param>
         /// <returns></returns>
-        BQ_API bool __api_log_decode(const char* in_file_path, const char* out_file_path);
+        BQ_API bool __api_log_decode(const char* in_file_path, const char* out_file_path, const char* priv_key);
 
         /// <summary>
         /// Register a callback which will be invoked when each log entry was written to Console

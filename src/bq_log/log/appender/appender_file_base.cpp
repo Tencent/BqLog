@@ -51,6 +51,7 @@ namespace bq {
         } else {
             cache_write_.erase(cache_write_.begin(), real_write_size);
         }
+        current_file_size_ += real_write_size;
         if (error_code != 0 && error_code !=
 #if defined(BQ_POSIX)
                 ENOSPC
@@ -95,52 +96,16 @@ namespace bq {
 
     bool appender_file_base::init_impl(const bq::property_value& config_obj)
     {
-        if (!config_obj["file_name"].is_string()) {
-            util::log_device_console(bq::log_level::error, "init appender \"%s\" failed, can not find valid \"file_name\" token", ((string)config_obj["name"]).c_str());
-            return false;
-        }
-        if (config_obj["is_in_sandbox"].is_bool()) {
-            is_in_sandbox_ = (bool)config_obj["is_in_sandbox"];
-        }
+        set_basic_configs(config_obj);
+        return !config_file_name_.is_empty();
+    }
 
-        config_file_name_ = ((string)config_obj["file_name"]).trim();
-
-        if (config_obj["always_create_new_file"].is_bool()) {
-            always_create_new_file_ = (bool)config_obj["always_create_new_file"];
-        }
-
-        if (config_obj["max_file_size"].is_integral()) {
-            max_file_size_ = (size_t)(int64_t)config_obj["max_file_size"];
-        } else {
-            max_file_size_ = 0;
-        }
-
-        if (config_obj["expire_time_seconds"].is_integral()) {
-            expire_time_ms_ = (uint64_t)config_obj["expire_time_seconds"] * 1000;
-        } else if (config_obj["expire_time_days"].is_integral()) {
-            expire_time_ms_ = (uint64_t)config_obj["expire_time_days"] * 3600 * 24 * 1000;
-        } else {
-            expire_time_ms_ = 0;
-        }
-
-        if (config_obj["capacity_limit"].is_integral()) {
-            capacity_limit_ = (uint64_t)config_obj["capacity_limit"];
-        }
-
-        // Calculate time difference from UTC time to local time.
-        if (!is_gmt_time_) {
-            uint64_t epoch = bq::platform::high_performance_epoch_ms();
-            struct tm local_st, utc0_st;
-            bq::util::get_local_time_by_epoch(epoch, local_st);
-            time_t local_time = mktime(const_cast<struct tm*>(&local_st));
-            bq::util::get_gmt_time_by_epoch(epoch, utc0_st);
-            time_t utc_time = mktime(const_cast<struct tm*>(&utc0_st));
-            double timezone_offset = difftime(local_time, utc_time);
-            time_zone_diff_to_gmt_ms_ = (int64_t)(timezone_offset) * 1000;
-        } else {
-            time_zone_diff_to_gmt_ms_ = 0;
-        }
-        return true;
+    bool appender_file_base::reset_impl(const bq::property_value& config_obj)
+    {
+        bq::string prev_config_file_name = config_file_name_;
+        bool prev_is_in_sandbox = is_in_sandbox_;
+        set_basic_configs(config_obj);
+        return (prev_config_file_name == config_file_name_) && (prev_is_in_sandbox == is_in_sandbox_);
     }
 
     void appender_file_base::log_impl(const log_entry_handle& handle)
@@ -231,7 +196,6 @@ namespace bq {
         if (handle.used_len_ < handle.alloc_len_) {
             cache_write_.pop_back(handle.alloc_len_ - handle.used_len_);
         }
-        current_file_size_ += handle.used_len_;
         if (cache_write_.size() >= CACHE_WRITE_DEFAULT_SIZE) {
             flush_cache();
         }
@@ -281,6 +245,71 @@ namespace bq {
         }
         current_file_size_ = file_manager::instance().get_file_size(file_);
         return true;
+    }
+
+    void appender_file_base::set_basic_configs(const bq::property_value& config_obj) 
+    {
+        config_file_name_.clear();
+        if (!config_obj["file_name"].is_string()) {
+            util::log_device_console(bq::log_level::error, "init appender \"%s\" failed, can not find valid \"file_name\" token", ((string)config_obj["name"]).c_str());
+            return;
+        }
+        else {
+            config_file_name_ = ((string)config_obj["file_name"]).trim();
+        }
+
+        if (config_obj["is_in_sandbox"].is_bool()) {
+            is_in_sandbox_ = (bool)config_obj["is_in_sandbox"];
+        }
+        else {
+            is_in_sandbox_ = false;
+        }
+
+        if (config_obj["always_create_new_file"].is_bool()) {
+            always_create_new_file_ = (bool)config_obj["always_create_new_file"];
+        }
+        else {
+            always_create_new_file_ = false;
+        }
+
+        if (config_obj["max_file_size"].is_integral()) {
+            max_file_size_ = (size_t)(int64_t)config_obj["max_file_size"];
+        }
+        else {
+            max_file_size_ = 0;
+        }
+
+        if (config_obj["expire_time_seconds"].is_integral()) {
+            expire_time_ms_ = (uint64_t)config_obj["expire_time_seconds"] * 1000;
+        }
+        else if (config_obj["expire_time_days"].is_integral()) {
+            expire_time_ms_ = (uint64_t)config_obj["expire_time_days"] * 3600 * 24 * 1000;
+        }
+        else {
+            expire_time_ms_ = 0;
+        }
+
+        if (config_obj["capacity_limit"].is_integral()) {
+            capacity_limit_ = (uint64_t)config_obj["capacity_limit"];
+        }
+        else {
+            capacity_limit_ = 0;
+        }
+
+        // Calculate time difference from UTC time to local time.
+        if (!is_gmt_time_) {
+            uint64_t epoch = bq::platform::high_performance_epoch_ms();
+            struct tm local_st, utc0_st;
+            bq::util::get_local_time_by_epoch(epoch, local_st);
+            time_t local_time = mktime(const_cast<struct tm*>(&local_st));
+            bq::util::get_gmt_time_by_epoch(epoch, utc0_st);
+            time_t utc_time = mktime(const_cast<struct tm*>(&utc0_st));
+            double timezone_offset = difftime(local_time, utc_time);
+            time_zone_diff_to_gmt_ms_ = (int64_t)(timezone_offset) * 1000;
+        }
+        else {
+            time_zone_diff_to_gmt_ms_ = 0;
+        }
     }
 
     void appender_file_base::open_new_indexed_file_by_name()

@@ -184,7 +184,7 @@ namespace bq {
             bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
         }
 
-        // init appenders
+        // init or reset appenders
         {
             bq::platform::scoped_spin_lock lock(spin_lock_);
             const auto& all_apenders_config = config["appenders_config"];
@@ -194,13 +194,24 @@ namespace bq {
             }
             flush_appenders_cache();
             flush_appenders_io();
-            for (auto appender_ptr : appenders_list_) {
-                delete appender_ptr;
-            }
-            appenders_list_.clear();
             auto appender_names = all_apenders_config.get_object_key_set();
+            decltype(appenders_list_) tmp_list = bq::move(appenders_list_);
+            assert(appenders_list_.size() == 0);
             for (const auto& name_key : appender_names) {
+                auto old_iter = tmp_list.find_if([&name_key](const appender_base* appender) {
+                    return appender->get_name() == name_key;
+                    });
+                if (old_iter != tmp_list.end()) {
+                    if ((*old_iter)->reset(all_apenders_config[name_key])) {
+                        appenders_list_.push_back(*old_iter);
+                        tmp_list.erase(old_iter);
+                        continue;
+                    }
+                }
                 add_appender(name_key, all_apenders_config[name_key]);
+            }
+            for (auto appender_delete : tmp_list) {
+                delete appender_delete;
             }
             refresh_merged_log_level_bitmap();
         }

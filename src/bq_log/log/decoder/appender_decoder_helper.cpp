@@ -16,10 +16,10 @@
 
 #include "appender_decoder_helper.h"
 
-bool bq::appender_decoder_helper::decode(const string& in_file_path, const string& out_file_path)
+bool bq::appender_decoder_helper::decode(const bq::string& in_file_path, const bq::string& out_file_path, const bq::string& priv_key)
 {
     uint32_t handle = 0;
-    auto result = bq::api::__api_log_decoder_create(in_file_path.c_str(), &handle);
+    auto result = bq::api::__api_log_decoder_create(in_file_path.c_str(), priv_key.c_str(), &handle);
     if (result != bq::appender_decode_result::success) {
         bq::util::log_device_console(log_level::error, "create decoder failed:%d %s", result, in_file_path.c_str());
         return false;

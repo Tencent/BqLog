@@ -15,6 +15,6 @@
 namespace bq {
     class appender_decoder_helper {
     public:
-        static bool decode(const string& in_file_path, const string& out_file_path);
+        static bool decode(const bq::string& in_file_path, const bq::string& out_file_path, const bq::string& priv_key = "");
     };
 }

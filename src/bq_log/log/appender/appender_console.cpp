@@ -180,6 +180,12 @@ namespace bq {
         return true;
     }
 
+    bool appender_console::reset_impl(const bq::property_value& config_obj)
+    {
+        (void)config_obj;
+        return true;
+    }
+
     void appender_console::log_impl(const log_entry_handle& handle)
     {
         auto layout_result = layout_ptr_->do_layout(handle, is_gmt_time_, &parent_log_->get_categories_name());

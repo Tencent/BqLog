@@ -65,7 +65,7 @@ namespace bq {
         };
 
     public:
-        static constexpr uint32_t format_version = 7;
+        static constexpr uint32_t format_version = 8;
 
 #if defined(BQ_UNIT_TEST)
         static bool is_addr_8_aligned_test(const void* data);

@@ -322,7 +322,7 @@ namespace bq {
         uint32_t seed = static_cast<uint32_t>(bq::platform::high_performance_epoch_ms() % UINT32_MAX);
         bq::util::srand(seed);
         for (size_t i = 0; i < data.size(); ++i) {
-            data[i] = static_cast<uint8_t>(bq::util::rand() % UINT8_MAX);
+            data[i] = static_cast<uint8_t>(bq::util::rand() & static_cast<uint32_t>(0xff));
         }
     }
 
@@ -342,7 +342,7 @@ namespace bq {
         return iv;
     }
 
-    bool aes::encrypt(const aes::key_type& key, const aes::iv_type& iv, const bq::array<uint8_t>& plaintext, bq::array<uint8_t>& out_ciphertext) const
+    bool aes::encrypt(const aes::key_type& key, const aes::iv_type& iv, const uint8_t* plaintext, size_t plaintext_size, uint8_t* out_ciphertext, size_t out_ciphertext_size) const
     {
         if (key.size() != key_size_) {
             bq::util::log_device_console(bq::log_level::error, "aes::encrypt: key size mismatch");
@@ -352,18 +352,20 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::error, "aes::encrypt: iv size mismatch");
             return false;
         }
-        const size_t n = plaintext.size();
+        if (out_ciphertext_size < plaintext_size) {
+            bq::util::log_device_console(bq::log_level::error, "aes::decrypt: output buffer too small");
+            return false;
+        }
+        const size_t n = plaintext_size;
         if (!is_block_aligned(n)) {
             bq::util::log_device_console(bq::log_level::error, "aes::encrypt: plaintext size mismatch");
             return false; // no padding; caller must align length to 16
         }
-
-        out_ciphertext.clear();
         if (n == 0) {
             return true;
         }
         // in-place over output
-        out_ciphertext.insert_batch(out_ciphertext.end(), plaintext.begin(), plaintext.size());
+        memcpy(out_ciphertext, plaintext, plaintext_size);
 
         // prepare key schedule
         aes_core core(mode_, key_bits_);
@@ -374,7 +376,7 @@ namespace bq {
         chain.fill_uninitialized(iv_size_);
         memcpy(static_cast<uint8_t*>(chain.begin()), iv.begin(), iv_size_);
 
-        uint8_t* buf = out_ciphertext.begin();
+        auto buf = out_ciphertext;
 
         for (size_t i = 0; i < n; i += 16) {
             aes_core::xor_block(buf + i, buf + i, static_cast<const uint8_t*>(chain.begin()));
@@ -384,7 +386,7 @@ namespace bq {
         return true;
     }
 
-    bool aes::decrypt(const aes::key_type& key, const aes::iv_type& iv, const bq::array<uint8_t>& ciphertext, bq::array<uint8_t>& out_plaintext) const
+    bool aes::decrypt(const aes::key_type& key, const aes::iv_type& iv, const uint8_t* ciphertext, size_t ciphertext_size, uint8_t* out_plaintext, size_t out_plaintext_size) const
     {
         if (key.size() != key_size_) {
             bq::util::log_device_console(bq::log_level::error, "aes::decrypt: key size mismatch");
@@ -394,18 +396,21 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::error, "aes::decrypt: iv size mismatch");
             return false;
         }
-        const std::size_t n = ciphertext.size();
+        if (out_plaintext_size < ciphertext_size) {
+            bq::util::log_device_console(bq::log_level::error, "aes::decrypt: output buffer too small");
+            return false;
+        }
+        const size_t n = ciphertext_size;
         if (!is_block_aligned(n)) {
             bq::util::log_device_console(bq::log_level::error, "aes::decrypt: ciphertext size mismatch");
             return false; // no padding; caller must align length to 16
         }
 
-        out_plaintext.clear();
         if (n == 0) {
             return true;
         }
         // in-place over output
-        out_plaintext.insert_batch(out_plaintext.end(), ciphertext.begin(), ciphertext.size());
+        memcpy(out_plaintext, ciphertext, ciphertext_size);
 
         // prepare key schedule
         aes_core core(mode_, key_bits_);
@@ -416,9 +421,8 @@ namespace bq {
         uint8_t cur[16];
         memcpy(prev, iv.begin(), 16);
 
-        uint8_t* buf = out_plaintext.begin();
-
-        for (std::size_t i = 0; i < n; i += 16) {
+        auto buf = out_plaintext;
+        for (size_t i = 0; i < n; i += 16) {
             memcpy(cur, buf + i, 16);
             core.decrypt_block(buf + i);
             aes_core::xor_block(buf + i, buf + i, prev);

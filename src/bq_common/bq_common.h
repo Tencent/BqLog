@@ -39,4 +39,6 @@
 #include "bq_common/utils/property_ex.h"
 #include "bq_common/utils/file_manager.h"
 #include "bq_common/utils/utility_types.h"
+#include "bq_common/encryption/rsa.h"
+#include "bq_common/encryption/aes.h"
 #include "bq_common/global/vars.h"

@@ -98,35 +98,6 @@ namespace bq {
                     + snapshot_config);
         }
 
-        static void create_test_log_3_file_appender(bq::string snapshot_config = "")
-        {
-            test_category_log::create_log("test_log", R"(
-						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
-						appenders_config.ConsoleAppender.levels=[all]
-						
-						appenders_config.CompressedAppender.type=compressed_file
-						appenders_config.CompressedAppender.time_zone=default local time
-						appenders_config.CompressedAppender.levels=[error,fatal]
-						appenders_config.CompressedAppender.file_name=bqLog/UnitTestLog/test3
-						appenders_config.CompressedAppender.is_in_sandbox=false
-						appenders_config.CompressedAppender.max_file_size=100000000
-						appenders_config.CompressedAppender.expire_time_days=2
-						
-						appenders_config.RawAppender.type=raw_file
-						appenders_config.RawAppender.time_zone=default local time
-						appenders_config.RawAppender.levels=[error,fatal]
-						appenders_config.RawAppender.file_name=bqLog/UnitTestLog/test3
-						appenders_config.RawAppender.is_in_sandbox=false
-						appenders_config.RawAppender.max_file_size=100000000
-						appenders_config.RawAppender.expire_time_days=2
-					
-						log.thread_mode=sync
-						log.categories_mask=[ModuleA.SystemA,ModuleB]
-			        )"
-                    + snapshot_config);
-        }
-
         class create_log_thread : public bq::platform::thread {
         protected:
             virtual void run()
@@ -141,31 +112,6 @@ namespace bq {
             }
         };
 
-        class snapshot_thread : public bq::platform::thread {
-        private:
-            bq::log* log_ptr;
-
-        public:
-            snapshot_thread(bq::log& log)
-            {
-                log_ptr = &log;
-            }
-
-        protected:
-            virtual void run()
-            {
-                bq::array<bq::string> snapshot_config = { "",
-                    "snapshot.buffer_size=65536",
-                    "snapshot.buffer_size=120000",
-                    "snapshot.buffer_size=200000" };
-                auto begin_epoch_ms = bq::platform::high_performance_epoch_ms();
-                while (!is_cancelled()) {
-                    bq::test::create_test_log_3_file_appender(snapshot_config[(int32_t)(begin_epoch_ms % 4)]);
-                    log_ptr->take_snapshot(false);
-                    sleep(begin_epoch_ms % 2);
-                }
-            }
-        };
 
         class test_log : public test_base {
             friend class log_test_wrapper;
@@ -211,21 +157,7 @@ namespace bq {
                 thread4.join();
                 thread5.join();
 
-                snapshot_thread snapeshot1(log_inst);
-                snapeshot1.start();
-                snapshot_thread snapeshot2(log_inst);
-                snapeshot2.start();
-
-                create_test_log_3_file_appender("snapshot.buffer_size=65536");
                 test_3(result, log_inst);
-                while (!snapeshot1.cancel()) {
-                    bq::platform::thread::yield();
-                }
-                while (!snapeshot2.cancel()) {
-                    bq::platform::thread::yield();
-                }
-                snapeshot1.join();
-                snapeshot2.join();
 
                 test_4(result, log_inst);
                 return result;

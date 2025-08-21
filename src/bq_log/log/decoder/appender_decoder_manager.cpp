@@ -35,7 +35,7 @@ bq::appender_decoder_manager& bq::appender_decoder_manager::instance()
     return *log_global_vars::get().appender_decoder_manager_inst_;
 }
 
-bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq::string& path, uint32_t& out_handle)
+bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq::string& path, const bq::string& private_key_str, uint32_t& out_handle)
 {
     string path_tmp = TO_ABSOLUTE_PATH(path, false);
     auto handle = bq::file_manager::instance().open_file(path_tmp, file_open_mode_enum::read);
@@ -43,7 +43,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
         bq::util::log_device_console(log_level::error, "decode log file :%s open failed, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
         return appender_decode_result::failed_io_error;
     }
-    bq::appender_file_binary::_binary_appender_head_def head;
+    bq::appender_file_binary::appender_file_header head;
     auto read_size = bq::file_manager::instance().read_file(handle, &head, sizeof(head), file_manager::seek_option::begin, 0);
     if (read_size != sizeof(head)) {
         bq::util::log_device_console(log_level::error, "decode log file :%s failed, size less than appender head", path.c_str());
@@ -58,7 +58,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
         bq::util::log_device_console(log_level::error, "decode log file :%s failed, unrecognized format", path.c_str());
         return appender_decode_result::failed_decode_error;
     }
-    bq::appender_decode_result result = decoder->init(handle);
+    bq::appender_decode_result result = decoder->init(handle, private_key_str);
     if (result != appender_decode_result::success) {
         return result;
     }

@@ -12,45 +12,95 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "bq_common/bq_common.h"
 #include "bq_log/log/appender/appender_file_binary.h"
 #include "bq_log/log/log_imp.h"
 
 namespace bq {
+    bool appender_file_binary::init_impl(const bq::property_value& config_obj)
+    {
+        if (!appender_file_base::init_impl(config_obj)) {
+            return false;
+        }
+        if (config_obj["pub_key"].is_string()) {
+            encryption_type_ = appender_encryption_type::rsa_aes_xor;
+            bq::string pub_key_str = config_obj["pub_key"];
+            if (!rsa::parse_public_key_ssh(pub_key_str, rsa_pub_key_)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool appender_file_binary::reset_impl(const bq::property_value& config_obj)
+    {
+        if (!appender_file_base::reset_impl(config_obj)) {
+            return false;
+        }
+        rsa::public_key prev_pub_key = rsa_pub_key_;
+        auto prev_encryption_type = encryption_type_;
+        if (config_obj["pub_key"].is_string()) {
+            encryption_type_ = appender_encryption_type::rsa_aes_xor;
+            bq::string pub_key_str = config_obj["pub_key"];
+            if (!rsa::parse_public_key_ssh(pub_key_str, rsa_pub_key_)) {
+                return false;
+            }
+        }
+        return (encryption_type_ == prev_encryption_type)
+            && (prev_pub_key == rsa_pub_key_);
+    }
+
     bool appender_file_binary::parse_exist_log_file(parse_file_context& context)
     {
         uint32_t format_version = get_binary_format_version();
-
-        auto size_current = get_current_file_size();
-        if (size_current == 0) {
-            return true;
-        }
-        if (size_current <= sizeof(_binary_appender_head_def)) {
-            context.log_parse_fail_reason("file size to small, it should be larger than binary appender head");
-            return false;
-        }
         seek_read_file_absolute(0);
-        auto read_handle = read_with_cache(sizeof(_binary_appender_head_def));
-        if (read_handle.len() < sizeof(_binary_appender_head_def)) {
-            context.log_parse_fail_reason("read binary appender head failed");
+
+        //parse file type
+        auto read_handle = read_with_cache(sizeof(appender_file_header));
+        if (read_handle.len() < sizeof(appender_file_header)) {
+            context.log_parse_fail_reason("read appender_file_header failed");
             return false;
         }
-        _binary_appender_head_def head;
-        memcpy(&head, read_handle.data(), sizeof(head));
-        if (head.version != format_version) {
+        appender_file_header file_head;
+        memcpy(&file_head, read_handle.data(), sizeof(file_head));
+        if (file_head.version != format_version) {
             context.log_parse_fail_reason("format version incompatible");
             return false;
         }
-        if (head.format != get_appender_format()) {
+        if (file_head.format != get_appender_format()) {
             context.log_parse_fail_reason("format incompatible");
             return false;
         }
-        if (head.category_count != parent_log_->get_categories_count()) {
+        context.parsed_size += sizeof(file_head);
+
+        // parse encryption information
+        read_handle = read_with_cache(sizeof(appender_encryption_header));
+        if (read_handle.len() < sizeof(appender_encryption_header)) {
+            context.log_parse_fail_reason("read appender_encryption_header failed");
+            return false;
+        }
+        appender_encryption_header enc_head;
+        memcpy(&enc_head, read_handle.data(), sizeof(enc_head));
+        if (enc_head.encryption_type != appender_encryption_type::plaintext
+            || enc_head.encryption_type != encryption_type_) {
+            //can not parse encryption type, it's not an error.
+            return false;
+        }
+        context.parsed_size += sizeof(enc_head);
+
+        // parse payload
+        read_handle = read_with_cache(sizeof(appender_payload_metadata));
+        if (read_handle.len() < sizeof(appender_payload_metadata)) {
+            context.log_parse_fail_reason("read appender_payload_metadata failed");
+            return false;
+        }
+        appender_payload_metadata payload_metadata;
+        memcpy(&payload_metadata, read_handle.data(), sizeof(payload_metadata));
+        if (payload_metadata.category_count != parent_log_->get_categories_count()) {
             context.log_parse_fail_reason("category count miss match");
             return false;
         }
-        context.parsed_size = sizeof(head);
-        uint32_t category_count = head.category_count;
+        context.parsed_size += sizeof(payload_metadata);
+        uint32_t category_count = payload_metadata.category_count;
         for (uint32_t i = 0; i < category_count; ++i) {
             read_handle = read_with_cache(sizeof(uint32_t));
             if (read_handle.len() < sizeof(uint32_t)) {
@@ -81,28 +131,156 @@ namespace bq {
     void appender_file_binary::on_file_open(bool is_new_created)
     {
         appender_file_base::on_file_open(is_new_created);
-        if (is_new_created) {
-            write_file_header();
+        encryption_start_pos_ = 0;
+        if (encryption_type_ == appender_encryption_type::rsa_aes_xor) {
+            assert(is_new_created && "encrypted file must be created new");
         }
-    }
+        if (!is_new_created) {
+            return;
+        }
 
-    void appender_file_binary::write_file_header()
-    {
-        _binary_appender_head_def head;
-        head.format = get_appender_format();
-        head.version = get_binary_format_version();
-        head.is_gmt = is_gmt_time_;
-        head.category_count = parent_log_->get_categories_count();
-        auto handle = write_with_cache_alloc(sizeof(head));
-        memcpy(handle.data(), &head, handle.allcoated_len());
+        //write file header and initialize encryption information
+        appender_file_header file_head;
+        file_head.format = get_appender_format();
+        file_head.version = get_binary_format_version();
+        auto handle = write_with_cache_alloc(sizeof(file_head));
+        memcpy(handle.data(), &file_head, handle.allcoated_len());
         write_with_cache_commit(handle);
-        for (uint32_t i = 0; i < head.category_count; ++i) {
+
+        appender_encryption_header enc_head;
+        enc_head.encryption_type = encryption_type_;
+        handle = write_with_cache_alloc(sizeof(enc_head));
+        memcpy(handle.data(), &enc_head, handle.allcoated_len());
+        write_with_cache_commit(handle);
+
+        if (encryption_type_ == appender_encryption_type::rsa_aes_xor) {
+            aes aes_obj(bq::aes::enum_cipher_mode::AES_CBC, bq::aes::enum_key_bits::AES_256);
+            auto aes_key = aes_obj.generate_key();
+            if (aes_key.size() != aes_obj.get_key_size()) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl generate AES key failed");
+                assert(false);
+            }
+            if (aes_key[0] == 0) {
+                bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
+                // make sure the first byte is not zero, because padding is not implemented in BqLog RSA encryption.
+                aes_key[0] = static_cast<uint8_t>((bq::util::rand() % UINT8_MAX) + 1);
+            }
+            auto aes_iv = aes_obj.generate_iv();
+            if (aes_iv.size() != aes_obj.get_iv_size()) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl generate AES iv failed");
+                assert(false);
+            }
+            bq::aes::key_type ciphertext_aes_key;
+            if (!bq::rsa::encrypt(rsa_pub_key_, aes_key, ciphertext_aes_key) || ciphertext_aes_key.size() != rsa_pub_key_.n_.size()) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl RSA encrypt AES key failed");
+                assert(false);
+            }
+            decltype(xor_key_blob_) xor_key_blob_plaintext;
+            xor_key_blob_plaintext.fill_uninitialized(xor_key_blob_size_);
+            bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
+            uint32_t* xor_key_blob_32 = reinterpret_cast<uint32_t*>(&xor_key_blob_plaintext[0]);
+            for (size_t i = 0; i < xor_key_blob_plaintext.size() / sizeof(uint32_t); ++i) {
+                xor_key_blob_32[i] = bq::util::rand();
+            }
+
+            bq::array<uint8_t> xor_key_blob_ciphertext;
+            if (!aes_obj.encrypt(aes_key, aes_iv, xor_key_blob_plaintext, xor_key_blob_ciphertext)) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl AES encrypt XOR key blob failed");
+                assert(false);
+            }
+
+            handle = write_with_cache_alloc(ciphertext_aes_key.size());
+            memcpy(handle.data(), ciphertext_aes_key.begin(), ciphertext_aes_key.size());
+            write_with_cache_commit(handle);
+
+            handle = write_with_cache_alloc(aes_iv.size());
+            memcpy(handle.data(), aes_iv.begin(), aes_iv.size());
+            write_with_cache_commit(handle);
+
+            handle = write_with_cache_alloc(xor_key_blob_ciphertext.size());
+            memcpy(handle.data(), xor_key_blob_ciphertext.begin(), xor_key_blob_ciphertext.size());
+            write_with_cache_commit(handle);
+
+            xor_key_blob_ = bq::move(xor_key_blob_plaintext);
+        }
+
+        appender_payload_metadata payload_matadata;
+        payload_matadata.is_gmt = is_gmt_time_;
+        payload_matadata.magic_number[0] = 2;
+        payload_matadata.magic_number[1] = 2;
+        payload_matadata.magic_number[2] = 7;
+        payload_matadata.category_count = parent_log_->get_categories_count();
+        handle = write_with_cache_alloc(sizeof(payload_matadata));
+        memcpy(handle.data(), &payload_matadata, handle.allcoated_len());
+        write_with_cache_commit(handle);
+        for (uint32_t i = 0; i < payload_matadata.category_count; ++i) {
             const bq::string& category_name = parent_log_->get_categories_name()[i];
             uint32_t name_len = (uint32_t)category_name.size();
             handle = write_with_cache_alloc(sizeof(name_len) + name_len);
             memcpy(handle.data(), &name_len, sizeof(name_len));
             memcpy(handle.data() + sizeof(name_len), category_name.c_str(), name_len);
             write_with_cache_commit(handle);
+        }
+    }
+
+    void appender_file_binary::flush_cache()
+    {
+        if (xor_key_blob_.is_empty() || cache_write_.is_empty()) {
+            appender_file_base::flush_cache();
+            return;
+        }
+
+        static_assert(encryption_base_pos % 8 == 0, "invalid encrypt appender alignment");
+#ifndef NDEBUG
+        static_assert((xor_key_blob_size_ & (xor_key_blob_size_ - 1)) == 0 && "xor_key_blob_size_ must be power of two");
+#endif
+        encryption_start_pos_ = bq::max_value(encryption_start_pos_, encryption_base_pos);
+        size_t need_encrypt_size = get_current_file_size() + cache_write_.size() - encryption_start_pos_;
+        size_t xor_key_blob_start_pos = encryption_start_pos_ - encryption_base_pos;
+        xor_stream_inplace_u64_aligned(
+            cache_write_.end() - need_encrypt_size,
+            need_encrypt_size,
+            xor_key_blob_.begin(),
+            xor_key_blob_size_,
+            xor_key_blob_start_pos
+        );
+        encryption_start_pos_ += need_encrypt_size;
+        appender_file_base::flush_cache();
+    }
+
+    void appender_file_binary::xor_stream_inplace_u64_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset)
+    {
+        if (len == 0) {
+            return;
+        }
+
+#ifndef NDEBUG
+        assert((key_size_pow2 & (key_size_pow2 - 1)) == 0 && "key_size_pow2 must be power of two");
+        assert((key_size_pow2 & 7u) == 0 && "key_size_pow2 should be multiple of 8 for u64 path");
+#endif
+        const size_t key_mask = key_size_pow2 - 1;
+        size_t i = 0;
+        size_t head = (8 - (key_stream_offset & 7)) & 7;
+        head = bq::min_value(head, len);
+        for (; i < head; ++i) {
+            buf[i] ^= key[(key_stream_offset + i) & key_mask];
+        }
+#ifndef NDEBUG
+        assert((key_stream_offset + i) % 8 == 0 && "xor_stream_inplace_u64_aligned: alignment process error");
+#endif
+        size_t n64 = (len - i) / 8;
+        if (n64) {
+            uint64_t* p64 = reinterpret_cast<uint64_t*>(buf + i);
+            const uint64_t* k64 = reinterpret_cast<const uint64_t*>(key);
+            const size_t key64_mask = (key_size_pow2 >> 3) - 1;
+            size_t key64_idx = ((key_stream_offset + i) >> 3);
+            for (size_t j = 0; j < n64; ++j) {
+                p64[j] ^= k64[(key64_idx + j) & key64_mask];
+            }
+            i += n64 * 8;
+        }
+        for (; i < len; ++i) {
+            buf[i] ^= key[(key_stream_offset + i) & key_mask];
         }
     }
 }

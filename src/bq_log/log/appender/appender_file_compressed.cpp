@@ -96,7 +96,9 @@ namespace bq {
 
     bool appender_file_compressed::init_impl(const bq::property_value& config_obj)
     {
-        appender_file_binary::init_impl(config_obj);
+        if (!appender_file_binary::init_impl(config_obj)) {
+            return false;
+        }
         thread_info_hash_cache_.set_expand_rate(4);
         format_templates_hash_cache_.set_expand_rate(4);
         return true;

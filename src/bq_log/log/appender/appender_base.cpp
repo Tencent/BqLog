@@ -56,8 +56,38 @@ namespace bq {
     bool appender_base::init(const bq::string& name, const bq::property_value& config_obj, const log_imp* parent_log)
     {
         clear();
+        parent_log_ = parent_log;
         name_ = name;
+        set_basic_configs(config_obj);
+        return init_impl(config_obj);
+    }
 
+    bool appender_base::reset(const bq::property_value& config_obj)
+    {
+        auto parent_log_backup = parent_log_;
+        auto name_backup = name_;
+        clear();
+        parent_log_ = parent_log_backup;
+        name_ = name_backup;
+        set_basic_configs(config_obj);
+        return reset_impl(config_obj);
+    }
+
+    void appender_base::log(const log_entry_handle& handle)
+    {
+        auto category_idx = handle.get_log_head().category_idx;
+        if (categories_mask_array_.size() <= category_idx || categories_mask_array_[category_idx] == 0) {
+            return;
+        }
+
+        if (log_level_bitmap_.have_level(handle.get_level())) {
+            if (appenders_enable)
+                log_impl(handle);
+        }
+    }
+
+    void appender_base::set_basic_configs(const bq::property_value& config_obj)
+    {
         const auto& levels_array = config_obj["levels"];
         if (!bq::log_utils::get_log_level_bitmap_by_config(levels_array, log_level_bitmap_)) {
             util::log_device_console(bq::log_level::info, "bq log info: no levels config was found in appender type %s, use default level \"all\"", ((string)config_obj["type"]).c_str());
@@ -84,7 +114,6 @@ namespace bq {
                 break;
             }
         }
-        parent_log_ = parent_log;
 
         // init categories mask
         {
@@ -101,13 +130,14 @@ namespace bq {
         }
 
         categories_mask_array_.clear();
-        auto& categories_name_array_ = parent_log->get_categories_name();
+        auto& categories_name_array_ = parent_log_->get_categories_name();
         for (size_t i = 0; i < categories_name_array_.size(); ++i) {
             const auto& category_name = categories_name_array_[i];
             uint8_t mask = 0;
             if (categories_mask_config_.size() == 0) {
                 mask = 1;
-            } else {
+            }
+            else {
                 for (const bq::string& mask_config : categories_mask_config_) {
                     if (mask_config == "*" || category_name.begin_with(mask_config)) {
                         mask = 1;
@@ -119,22 +149,9 @@ namespace bq {
         }
         if (parent_log_->get_thread_mode() == log_thread_mode::async) {
             layout_ptr_ = &log_manager::instance().get_public_layout();
-        } else {
+        }
+        else {
             layout_ptr_ = const_cast<layout*>(&(parent_log_->get_layout()));
-        }
-        return init_impl(config_obj);
-    }
-
-    void appender_base::log(const log_entry_handle& handle)
-    {
-        auto category_idx = handle.get_log_head().category_idx;
-        if (categories_mask_array_.size() <= category_idx || categories_mask_array_[category_idx] == 0) {
-            return;
-        }
-
-        if (log_level_bitmap_.have_level(handle.get_level())) {
-            if (appenders_enable)
-                log_impl(handle);
         }
     }
 }

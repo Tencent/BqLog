@@ -31,6 +31,14 @@ namespace bq {
         struct public_key {
             bq::array<uint8_t> n_;
             bq::array<uint8_t> e_;
+            bool operator==(const public_key& other) const
+            {
+                return n_ == other.n_ && e_ == other.e_;
+            }
+            bool operator!=(const public_key& other) const
+            {
+                return !(*this == other);
+            }
         };
         struct private_key {
             bq::array<uint8_t> n_;
@@ -41,6 +49,16 @@ namespace bq {
             bq::array<uint8_t> dp_;
             bq::array<uint8_t> dq_;
             bq::array<uint8_t> qinv_;
+            bool operator==(const private_key& other) const
+            {
+                return n_ == other.n_ && e_ == other.e_ && d_ == other.d_
+                    && p_ == other.p_ && q_ == other.q_
+                    && dp_ == other.dp_ && dq_ == other.dq_ && qinv_ == other.qinv_;
+            }
+            bool operator!=(const private_key & other) const
+            {
+                return !(*this == other);
+            }
         };
 
     public:

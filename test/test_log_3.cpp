@@ -28,6 +28,8 @@ namespace bq {
         static const test_category_log* log_inst_ptr;
         static bq::string* output_str_ptr;
         static uint32_t snapshot_idx_mode = 1;
+        static bq::string pub_key;
+        static bq::string priv_key;
 
         constexpr uint32_t snapshot_buffer_size = 32 * 1024;
         constexpr size_t fmt_text_count = 1024;
@@ -57,6 +59,7 @@ namespace bq {
         struct param_count_helper<64> {
             constexpr static int32_t MAX_PARAM = 2;
         };
+        static constexpr size_t MAX_PARAM = param_count_helper<sizeof(void*) * 8>::MAX_PARAM;
 
         template <typename T, typename... Ts>
         constexpr std::array<T, sizeof...(Ts)> test_make_array(Ts... ts)
@@ -583,7 +586,7 @@ namespace bq {
                     }
                 }
                 assert(!file_path.is_empty() && "failed to read test output log file");
-                decoder = new bq::tools::log_decoder(file_path);
+                decoder = new bq::tools::log_decoder(file_path, priv_key);
             }
         };
 
@@ -921,34 +924,172 @@ namespace bq {
             result.add_result(raw_item2.end_with("#"), "invalid utf16 raw test:%s", raw_item2.c_str());
         }
 
-        void test_log::test_3(test_result& result, const test_category_log& log_inst)
+        static bq::platform::mutex encript_config_mutex_;
+        static bq::string encript_config_;
+        
+        static bq::string get_encript_config() {
+            bq::platform::scoped_mutex lock(encript_config_mutex_);
+            return encript_config_;
+        }
+        static void set_encript_config(const bq::string& config)
         {
-            test_output(bq::log_level::info, "full log test begin, this will take minutes, and need about 50M free disk space.\n");
-            clear_test_output_folder();
-            constexpr size_t MAX_PARAM = param_count_helper<sizeof(void*) * 8>::MAX_PARAM;
-            init_fmt_strings<MAX_PARAM>();
+            bq::platform::scoped_mutex lock(encript_config_mutex_);
+            encript_config_ = config;
+        }
 
-            log_head = "[" + log_inst.get_name() + "]\t";
+        static void create_test_log_3_file_appender(bq::string extra_config_ = "")
+        {
+            test_category_log::create_log("test_log", R"(
+						appenders_config.ConsoleAppender.type=console
+						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.levels=[all]
+						
+						appenders_config.CompressedAppender.type=compressed_file
+						appenders_config.CompressedAppender.time_zone=default local time
+						appenders_config.CompressedAppender.levels=[error,fatal]
+						appenders_config.CompressedAppender.file_name=bqLog/UnitTestLog/test3
+						appenders_config.CompressedAppender.is_in_sandbox=false
+						appenders_config.CompressedAppender.max_file_size=100000000
+						appenders_config.CompressedAppender.expire_time_days=2
+						
+						appenders_config.RawAppender.type=raw_file
+						appenders_config.RawAppender.time_zone=default local time
+						appenders_config.RawAppender.levels=[error,fatal]
+						appenders_config.RawAppender.file_name=bqLog/UnitTestLog/test3
+						appenders_config.RawAppender.is_in_sandbox=false
+						appenders_config.RawAppender.max_file_size=100000000
+						appenders_config.RawAppender.expire_time_days=2
+					
+						log.thread_mode=sync
+						log.categories_mask=[ModuleA.SystemA,ModuleB]
+			        )"
+                + extra_config_);
+        }
 
-            result_ptr = &result;
-            log_inst_ptr = &log_inst;
-            output_str_ptr = &test_log::log_str;
-            invalid_utf16_test(result, log_inst);
+        class snapshot_thread : public bq::platform::thread {
+        private:
+            const bq::log* log_ptr;
+
+        public:
+            snapshot_thread(const bq::log& log)
+            {
+                log_ptr = &log;
+            }
+
+        protected:
+            virtual void run()
+            {
+                bq::array<bq::string> snapshot_config = { "",
+                    "snapshot.buffer_size=65536",
+                    "snapshot.buffer_size=120000",
+                    "snapshot.buffer_size=200000" };
+                auto begin_epoch_ms = bq::platform::high_performance_epoch_ms();
+                while (!is_cancelled()) {
+                    bq::test::create_test_log_3_file_appender(snapshot_config[(int32_t)(begin_epoch_ms % 4)]
+                        + "\n" 
+                        + get_encript_config());
+                    log_ptr->take_snapshot(false);
+                    sleep(begin_epoch_ms % 2);
+                }
+            }
+        };
+
+        static void full_log_test()
+        {
+            total_test_num = 0;
+            current_tested_num = 0;
+            current_tested_percent = 0;
+            test_log_3_all_console_outputs.clear();
             test_3_phase = test_log_3_phase::calculate_count;
             log_param_test<MAX_PARAM>();
             test_3_phase = test_log_3_phase::do_test;
             log_param_test<MAX_PARAM>();
-
             bq::log::force_flush_all_logs();
 
             // decode test
             for (size_t i = 0; i < test_log_3_all_console_outputs.size(); ++i) {
                 const bq::string& raw_item = decode_raw_item();
-                result_ptr->add_result(test_log_3_all_console_outputs[i] == (raw_item), "test idx:%" PRIu64 ", raw test, \ndecoded: %s, \nconsole: %s", static_cast<uint64_t>(i), raw_item.c_str(), test_log_3_all_console_outputs[i].c_str());
+                result_ptr->add_result(test_log_3_all_console_outputs[i] == (raw_item), "encrypted test idx:%" PRIu64 ", raw test, \ndecoded: %s, \nconsole: %s", static_cast<uint64_t>(i), raw_item.c_str(), test_log_3_all_console_outputs[i].c_str());
                 const bq::string& compressed_item = decode_compressed_item();
-                result_ptr->add_result(test_log_3_all_console_outputs[i] == (compressed_item), "test idx:%" PRIu64 ", compressed test, \ndecoded: %s, \nconsole: %s", static_cast<uint64_t>(i), compressed_item.c_str(), test_log_3_all_console_outputs[i].c_str());
+                result_ptr->add_result(test_log_3_all_console_outputs[i] == (compressed_item), "encrypted idx:%" PRIu64 ", compressed test, \ndecoded: %s, \nconsole: %s", static_cast<uint64_t>(i), compressed_item.c_str(), test_log_3_all_console_outputs[i].c_str());
             }
+        }
 
+
+        void test_log::test_3(test_result& result, const test_category_log& log_inst)
+        {
+            snapshot_thread snapeshot1(log_inst);
+            snapeshot1.start();
+            snapshot_thread snapeshot2(log_inst);
+            snapeshot2.start();
+
+            create_test_log_3_file_appender("snapshot.buffer_size=65536");
+
+            test_output(bq::log_level::info, "full log test begin, this will take minutes, and need about 50M free disk space.\n");
+            clear_test_output_folder();
+            init_fmt_strings<MAX_PARAM>();
+            log_head = "[" + log_inst.get_name() + "]\t";
+            result_ptr = &result;
+            log_inst_ptr = &log_inst;
+            output_str_ptr = &test_log::log_str;
+            invalid_utf16_test(result, log_inst);
+
+
+            test_output(bq::log_level::info, "plaintext log test begin                           \n");
+            full_log_test();
+            test_output(bq::log_level::info, "plaintext log test end                           \n");
+
+
+            pub_key = bq::string("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+FonyOHuS2uC6IZc16bfd6qQk4ykBOt3nTfBFc")
+                + "Nr8ZWvvcf4H0hFkrpMtQ0AJO057GhVTQCCfnvfStSq2Yra+O5VGpI5Q6NLrUuVERimjNgwtxbXt3P8Nw87jEIJiY/8m2FUXhZE"
+                + "PwoA7t+2/953cNE1itJskJtojwaUlMN0dXBJxs4NP8MfBPPZQ5vNV8xgEf1SCQzQBAJsofy1kPHHqJNBXUBsNA44SP5H95JOz+"
+                + "r0oaNkYxT88Zk4tbk5N3hk5aXyZVp49OqhrXCPf5owDa4Lqk4UzVTk9EimxvtSuiUTzr7IJhHYy7jsGnSgq6dH0xlUfxKeX pippocao@PIPPOCAO-PC6";
+            priv_key = bq::string("-----BEGIN RSA PRIVATE KEY-----\n")
+                + "MIIEpAIBAAKCAQEAsL90LQ1wf30DfhaJ8jh7ktrguiGXNem33eqkJOMpATrd503w\n"
+                + "RXDa/GVr73H+B9IRZK6TLUNACTtOexoVU0Agn5730rUqtmK2vjuVRqSOUOjS61Ll\n"
+                + "REYpozYMLcW17dz/DcPO4xCCYmP/JthVF4WRD8KAO7ftv/ed3DRNYrSbJCbaI8Gl\n"
+                + "JTDdHVwScbODT/DHwTz2UObzVfMYBH9UgkM0AQCbKH8tZDxx6iTQV1AbDQOOEj+R\n"
+                + "/eSTs/q9KGjZGMU/PGZOLW5OTd4ZOWl8mVaePTqoa1wj3+aMA2uC6pOFM1U5PRIp\n"
+                + "sb7UrolE86+yCYR2Mu47Bp0oKunR9MZVH8SnlwIDAQABAoIBACtaWpmuYTi0JkYo\n"
+                + "Kx/hoNXtoA+nq5pKwJHLOwXdPjKSCNnycQvnWZ9tFSN/V2r9qMyEUY9ZnnxlMqPZ\n"
+                + "Sv/Hi/j7Ghhx3Y8s+VwB62SPemT4JrwX8ipj91SULjqP80br3Re4PqfNZd3SX0Rc\n"
+                + "7co+Nc2izKdZPxTGHM9leNHMMP2VrVbZeSlQBnqlFVMqi2g9ukMGZG10vPdIJV7z\n"
+                + "5dqWaKuW/2F8dp/o6i/uUDWAH4fITLD1PLqx5/kP8ohOXup8wxYaY8jhKlvswuCh\n"
+                + "qlY773SamnrIGctQWe63Fe9q7hzs3vcCOfciFYsVX2qfHPvGORzd8DgMwe3TFbrM\n"
+                + "nmUijcECgYEA5zyarIPQfbEsmMtKgY7OSz+M1SaOE9r/I0Hl2dz7f0r7JocZ6KUj\n"
+                + "NinbX/zvJ7AMzDUefbptjf9F4vNa0eBZmSZDAiWm3byvMKS5uLboFNrKnYptIc3c\n"
+                + "0CzDzC+nMi4NrPoAZZrUyJw1Emr7gWVVG2FW2NatOVqfPq3XBbk9dncCgYEAw60H\n"
+                + "FqcvrSTAVSk9L+TB8Fn92p5YQtaV7CSZj9GQdvfs+pIkPlq+jYvSH7nYjK2Qlq+h\n"
+                + "sn+3YcVVczbGuhSLuq4bHPd46HOjya3rbAq39RxlpFRFjZ4hici4XIFKnB7Kylta\n"
+                + "Ph6nNq9m5tdFZ1SurgLlOaxg2AwLAia2V5L5/+ECgYAzmhmmP/Ap7HzYSB2DVfwB\n"
+                + "XNgvxN/V3HwtQQprGN5i5LexPFryyM9XyfVzsT0pbScd9wir5AuIsZvF7qqoxVkZ\n"
+                + "TSmM9BwNxYqO32O2rdKSvNSUXYzHC2qoZiT3jvbPwuk4Xb3y7p9neTx6tLcVhCh+\n"
+                + "6LT5xMZ5UxjQYvjmBRWLNwKBgQC5Ta9rzXHB5w7Y1w/hviHHKoHTOabdzPb3RQXD\n"
+                + "g7LqZwkdla4K+sZ/pwybDNU9C9TkTnizYG1agpTUYeg6KeDVLbHxcY4nm/Nct349\n"
+                + "t7zTu0uqHkArx7d9Ev88Yxgz1pk2nuJL951klSC+tNg97Zzqn0VSo6KmlmkKZXzC\n"
+                + "XCayIQKBgQC+hPlGE7T6WLKvsmaH3IJI/TAjbuSu25o+aar7ecPoeax6YnSgyF/8\n"
+                + "Xx7f0BFCYEzprftfqDBcfa6D8GKkcsqAMDeJRz8meD+55o3qdL6LKFkjCKvmRxuv\n"
+                + "OmO+42HqCD4mqxMU1rgcWOn+LLW3HSqbE5kYA9XDwEtxCnMiKqP7sA==\n"
+                + "-----END RSA PRIVATE KEY-----\n";
+            set_encript_config("appenders_config.CompressedAppender.pub_key="
+                + pub_key + "\n"
+                + "appenders_config.RawAppender.pub_key="
+                + pub_key + "\n");
+            create_test_log_3_file_appender("snapshot.buffer_size=65536\n" + get_encript_config());
+
+
+            test_output(bq::log_level::info, "encrypted log test begin\n");
+            full_log_test();
+            test_output(bq::log_level::info, "encrypted log test end                      \n");
+
+            while (!snapeshot1.cancel()) {
+                bq::platform::thread::yield();
+            }
+            while (!snapeshot2.cancel()) {
+                bq::platform::thread::yield();
+            }
+            snapeshot1.join();
+            snapeshot2.join();
             test_output(bq::log_level::info, "full log test finished              \n");
         }
     }

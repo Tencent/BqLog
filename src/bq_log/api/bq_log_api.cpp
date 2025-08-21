@@ -400,9 +400,9 @@ namespace bq {
             return bq::file_manager::get_base_dir(is_in_sandbox).c_str();
         }
 
-        BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, uint32_t* out_handle)
+        BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, const char* priv_key, uint32_t* out_handle)
         {
-            return bq::appender_decoder_manager::instance().create_decoder(log_file_path, *out_handle);
+            return bq::appender_decoder_manager::instance().create_decoder(log_file_path, priv_key, *out_handle);
         }
 
         BQ_API bq::appender_decode_result __api_log_decoder_decode(uint32_t handle, bq::_api_string_def* out_decoded_log_text)
@@ -421,9 +421,9 @@ namespace bq {
             bq::appender_decoder_manager::instance().destroy_decoder(handle);
         }
 
-        BQ_API bool __api_log_decode(const char* in_file_path, const char* out_file_path)
+        BQ_API bool __api_log_decode(const char* in_file_path, const char* out_file_path, const char* priv_key)
         {
-            return appender_decoder_helper::decode(in_file_path, out_file_path);
+            return appender_decoder_helper::decode(in_file_path, out_file_path, priv_key);
         }
 
         BQ_API void __api_register_console_callbacks(bq::type_func_ptr_console_callback on_console_callback)

@@ -40,7 +40,7 @@ namespace bq {
     public:
         virtual ~appender_decoder_base() { }
 
-        appender_decode_result init(const bq::file_handle& file);
+        appender_decode_result init(const bq::file_handle& file, const bq::string& private_key_str);
 
         appender_decode_result decode();
 
@@ -74,14 +74,17 @@ namespace bq {
     protected:
         bq::string decoded_text_;
         bq::layout layout_;
-        bq::appender_file_binary::_binary_appender_head_def head_;
+        bq::appender_file_binary::appender_file_header file_head_;
+        bq::appender_file_binary::appender_encryption_header enc_head_;
+        bq::appender_file_binary::appender_payload_metadata payload_metadata_;
         bq::array<bq::string> category_names_;
 
     private:
         bq::file_handle file_;
         size_t current_file_size_ = 0;
         size_t current_file_cursor_ = 0;
-        bq::array<uint8_t> cache_read_;
+        bq::array<uint8_t, bq::aligned_allocator<uint8_t, sizeof(uint64_t)>> xor_key_blob_;
+        bq::array<uint8_t, bq::aligned_allocator<uint8_t, sizeof(uint64_t)>> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
     };
 }
