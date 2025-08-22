@@ -232,7 +232,7 @@ namespace bq {
 
         static_assert(encryption_base_pos % 8 == 0, "invalid encrypt appender alignment");
 #ifndef NDEBUG
-        static_assert((xor_key_blob_size_ & (xor_key_blob_size_ - 1)) == 0 && "xor_key_blob_size_ must be power of two");
+        static_assert((xor_key_blob_size_ & (xor_key_blob_size_ - 1)) == 0, "xor_key_blob_size_ must be power of two");
 #endif
         encryption_start_pos_ = bq::max_value(encryption_start_pos_, encryption_base_pos);
         size_t need_encrypt_size = get_current_file_size() + cache_write_.size() - encryption_start_pos_;
