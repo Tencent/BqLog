@@ -90,13 +90,19 @@ namespace bq {
             uint32_t category_count;
         } BQ_PACK_END
     public:
-        static constexpr size_t xor_key_blob_size_ = 32 * 1024; // 32 KiB
-        static constexpr size_t encryption_info_size = 256 // size of RSA-2048 ciphertext of AES key
+        bq_forceinline static size_t get_xor_key_blob_size() {
+            return 32 * 1024; // 32 KiB
+        } 
+        bq_forceinline static size_t get_encryption_info_size() {
+            return 256 // size of RSA-2048 ciphertext of AES key
             + 16 // size of AES IV in plaintext
-            + xor_key_blob_size_; // size of AES-encrypted XOR key blob
-        static constexpr size_t encryption_base_pos = sizeof(appender_file_header)
-            + sizeof(appender_encryption_header)
-            + encryption_info_size;
+            + get_xor_key_blob_size(); // size of AES-encrypted XOR key blob
+        } 
+        bq_forceinline static size_t get_encryption_base_pos() {
+            return sizeof(appender_file_header)
+                + sizeof(appender_encryption_header)
+                + get_encryption_info_size();
+        }
     public:
         static void xor_stream_inplace_u64_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset);
     protected : 

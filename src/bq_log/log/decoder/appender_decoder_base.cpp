@@ -43,8 +43,8 @@ bq::appender_decode_result bq::appender_decoder_base::init(const bq::file_handle
             bq::util::log_device_console(log_level::error, "decode log file failed, invalid private key size, only rsa 2048 supported");
             return appender_decode_result::failed_decode_error;
         }
-        read_handle = read_with_cache(appender_file_binary::encryption_info_size);
-        if (read_handle.len() < appender_file_binary::encryption_info_size) {
+        read_handle = read_with_cache(appender_file_binary::get_encryption_info_size());
+        if (read_handle.len() < appender_file_binary::get_encryption_info_size()) {
             bq::util::log_device_console(log_level::error, "decode log file failed, read encryption info failed");
             return appender_decode_result::failed_decode_error;
         }
@@ -61,13 +61,13 @@ bq::appender_decode_result bq::appender_decoder_base::init(const bq::file_handle
             return appender_decode_result::failed_decode_error;
         }
         xor_key_blob_.clear();
-        xor_key_blob_.fill_uninitialized(appender_file_binary::xor_key_blob_size_);
+        xor_key_blob_.fill_uninitialized(appender_file_binary::get_xor_key_blob_size());
         if (!aes_obj.decrypt(aes_key, aes_iv
                             , read_handle.data() + aes_key_ciphertext_size + aes_iv_size
-                            , appender_file_binary::xor_key_blob_size_
+                            , appender_file_binary::get_xor_key_blob_size()
                             , xor_key_blob_.begin()
-                            , appender_file_binary::xor_key_blob_size_)) {
-            bq::util::log_device_console(log_level::error, "decode log file failed, decrypt xor key failed");
+                            , appender_file_binary::get_xor_key_blob_size())) {
+            bq::util::log_device_console(log_level::error, "decode log file failed, decrypt XOR key failed");
             return appender_decode_result::failed_decode_error;
         }
     }
@@ -155,7 +155,7 @@ bq::appender_decoder_base::read_with_cache_handle bq::appender_decoder_base::rea
                                         , read_size
                                         , xor_key_blob_.begin()
                                         , xor_key_blob_.size()
-                                        , current_file_cursor_ - bq::appender_file_binary::encryption_base_pos);
+                                        , current_file_cursor_ - bq::appender_file_binary::get_encryption_base_pos());
         }
         current_file_cursor_ += read_size;
     }

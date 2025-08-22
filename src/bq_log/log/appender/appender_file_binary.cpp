@@ -176,7 +176,7 @@ namespace bq {
                 assert(false);
             }
             decltype(xor_key_blob_) xor_key_blob_plaintext;
-            xor_key_blob_plaintext.fill_uninitialized(xor_key_blob_size_);
+            xor_key_blob_plaintext.fill_uninitialized(get_xor_key_blob_size());
             bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
             uint32_t* xor_key_blob_32 = reinterpret_cast<uint32_t*>(&xor_key_blob_plaintext[0]);
             for (size_t i = 0; i < xor_key_blob_plaintext.size() / sizeof(uint32_t); ++i) {
@@ -230,18 +230,18 @@ namespace bq {
             return;
         }
 
-        static_assert(encryption_base_pos % 8 == 0, "invalid encrypt appender alignment");
 #ifndef NDEBUG
+        assert(get_encryption_base_pos() % 8 == 0 && "invalid encrypt appender alignment");
         static_assert((xor_key_blob_size_ & (xor_key_blob_size_ - 1)) == 0, "xor_key_blob_size_ must be power of two");
 #endif
-        encryption_start_pos_ = bq::max_value(encryption_start_pos_, encryption_base_pos);
+        encryption_start_pos_ = bq::max_value(encryption_start_pos_, get_encryption_base_pos());
         size_t need_encrypt_size = get_current_file_size() + cache_write_.size() - encryption_start_pos_;
-        size_t xor_key_blob_start_pos = encryption_start_pos_ - encryption_base_pos;
+        size_t xor_key_blob_start_pos = encryption_start_pos_ - get_encryption_base_pos();
         xor_stream_inplace_u64_aligned(
             cache_write_.end() - need_encrypt_size,
             need_encrypt_size,
             xor_key_blob_.begin(),
-            xor_key_blob_size_,
+            get_xor_key_blob_size(),
             xor_key_blob_start_pos
         );
         encryption_start_pos_ += need_encrypt_size;
