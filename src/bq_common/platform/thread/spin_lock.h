@@ -274,9 +274,9 @@ namespace bq {
             {
 #if !defined(NDEBUG)
                 uint64_t start_epoch = get_epoch();
-                auto id = bq::platform::thread::thread_id();
+                auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
-                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && item.is_write_; });
+                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && !item.is_write_; });
                 assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
                 record_.push_back(debug_record { id, false, 0 });
                 lock_.unlock();
@@ -324,15 +324,15 @@ namespace bq {
             inline bool try_read_lock()
             {
 #if !defined(NDEBUG)
-                auto id = bq::platform::thread::thread_id();
+                auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
-                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && item.is_write_; });
+                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && !item.is_write_; });
                 assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
                 record_.push_back(debug_record { id, false, 0 });
                 lock_.unlock();
                 assert(get_meta().get_writers_wait_counter().load_relaxed() >= 0 && "invalid writers_wait_counter_.get()");
 #endif
-                while (get_meta().get_writers_wait_counter().load_relaxed() > 0) {
+                while (get_meta().get_writers_wait_counter().load_acquire() > 0) {
                     wait();
                 }
                 int32_t previous_counter = get_meta().get_reader_counter().fetch_add_acq_rel(1);
@@ -361,7 +361,7 @@ namespace bq {
             inline void read_unlock()
             {
 #if !defined(NDEBUG)
-                auto id = bq::platform::thread::thread_id();
+                auto id = bq::platform::thread::get_current_thread_id();
                 lock_.lock();
                 auto iter = record_.find({ id, false, 1 });
                 assert(iter != record_.end());
@@ -393,7 +393,7 @@ namespace bq {
                 lock_.unlock();
                 uint64_t start_epoch = get_epoch();
 #endif
-                get_meta().get_writers_wait_counter().fetch_add_relaxed(1);
+                get_meta().get_writers_wait_counter().fetch_add_release(1);
                 auto my_ticket = ticket_seq_.fetch_add_relaxed(1);
                 while (true) {
                     uint64_t expected_counter =  st_meta::generate_write_counter_value(0, my_ticket);
