@@ -412,6 +412,7 @@ namespace bq {
                     }
 #endif
                 }
+                get_meta().get_writers_wait_counter().fetch_sub_relaxed(1);
 #if !defined(NDEBUG)
                 lock_.lock();
                 auto iter = record_.find({ id, true, 0 });
@@ -492,7 +493,6 @@ namespace bq {
                 record_.erase(iter);
                 lock_.unlock();
 #endif
-                get_meta().get_writers_wait_counter().fetch_sub_relaxed(1);
             }
         };
 
