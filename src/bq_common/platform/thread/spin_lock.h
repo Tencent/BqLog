@@ -220,7 +220,7 @@ namespace bq {
                 {
                     uint64_t result;
                     *static_cast<bq::platform::atomic<int32_t>*>(static_cast<void*>(&result)) = reader_counter;
-                    *(static_cast<bq::platform::atomic<uint32_t>*>(static_cast<void*>(&result)) + 1) = ticket;
+                    *reinterpret_cast<bq::platform::atomic<uint32_t>*>(reinterpret_cast<char*>(&result) + sizeof(int32_t)) = ticket;
                     return result;
                 }
             };
@@ -431,10 +431,9 @@ namespace bq {
                 record_.push_back(debug_record { id, true, 0 });
                 lock_.unlock();
 #endif
-                auto my_ticket = ticket_seq_.fetch_add_relaxed(1);
-                uint64_t expected_counter =  st_meta::generate_write_counter_value(0, my_ticket);
-                uint64_t write_lock_target_value = st_meta::generate_write_counter_value(write_lock_mark_value, my_ticket + 1);
-                if (get_meta().get_writer_counter().compare_exchange_strong(expected_counter
+                int32_t expected_counter =  0;
+                int32_t write_lock_target_value = write_lock_mark_value;
+                if (get_meta().get_reader_counter().compare_exchange_strong(expected_counter
                                                 , write_lock_target_value
                                                 , bq::platform::memory_order::acq_rel
                                                 , bq::platform::memory_order::acquire)) {
