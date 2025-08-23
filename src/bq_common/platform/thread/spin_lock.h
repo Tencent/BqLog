@@ -199,7 +199,8 @@ namespace bq {
             static constexpr uint32_t timeout_ms = 60000U;
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
             static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
-            bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
+            alignas(CACHE_LINE_SIZE) bq::platform::atomic<counter_type> counter_;
+            alignas(CACHE_LINE_SIZE) bq::platform::atomic<counter_type> writers_wait_counter_;
 #if !defined(NDEBUG)
             bq::platform::spin_lock lock_;
             struct debug_record {
@@ -215,11 +216,13 @@ namespace bq {
 #endif
         private:
             void yield();
+            void wait();
             uint64_t get_epoch();
 
         public:
             spin_lock_rw_crazy()
                 : counter_(0)
+                , writers_wait_counter_(0)
             {
             }
 
@@ -231,7 +234,7 @@ namespace bq {
 #if !defined(NDEBUG)
             void debug_output(int32_t pos)
             {
-                printf("record pos:%d, %" PRId64 ":[\n", pos, (int64_t)counter_.get().load_seq_cst());
+                printf("record pos:%d, %" PRId64 ":[\n", pos, (int64_t)counter_.load_seq_cst());
                 for (auto item : record_) {
                     printf("\t%" PRIu64 ", %s, %d\n", (uint64_t)item.tid_, item.is_write_ ? "true" : "false", item.phase_);
                 }
@@ -250,14 +253,18 @@ namespace bq {
                 assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
                 record_.push_back(debug_record { id, false, 0 });
                 lock_.unlock();
+                assert(writers_wait_counter_.load_relaxed() >= 0 && "invalid writers_wait_counter_");
 #endif
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                    while (writers_wait_counter_.load_relaxed() > 0) {
+                        yield();
+                    }
+                    counter_type previous_counter = counter_.fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
                     }
-                    counter_.get().fetch_sub_relaxed(1);
+                    counter_.fetch_sub_relaxed(1);
 #if !defined(NDEBUG)
                     if (get_epoch() > start_epoch + timeout_ms) {
                         debug_output(1);
@@ -266,7 +273,7 @@ namespace bq {
 #endif
                     while (true) {
                         yield();
-                        counter_type current_counter = counter_.get().load_acquire();
+                        counter_type current_counter = counter_.load_acquire();
                         if (current_counter >= 0) {
                             break;
                         }
@@ -296,8 +303,12 @@ namespace bq {
                 assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
                 record_.push_back(debug_record { id, false, 0 });
                 lock_.unlock();
+                assert(writers_wait_counter_.load_relaxed() >= 0 && "invalid writers_wait_counter_");
 #endif
-                counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                while (writers_wait_counter_.load_relaxed() > 0) {
+                    yield();
+                }
+                counter_type previous_counter = counter_.fetch_add_acq_rel(1);
                 if (previous_counter >= 0) {
                     // read lock success.
 #if !defined(NDEBUG)
@@ -309,7 +320,7 @@ namespace bq {
 #endif
                     return true;
                 }
-                counter_.get().fetch_sub_relaxed(1);
+                counter_.fetch_sub_relaxed(1);
 #if !defined(NDEBUG)
                 lock_.lock();
                 auto iter = record_.find(debug_record { id, false, 0 });
@@ -331,7 +342,7 @@ namespace bq {
                 lock_.unlock();
 #endif
 
-                counter_type previous_counter = counter_.get().fetch_sub_release(1);
+                counter_type previous_counter = counter_.fetch_sub_release(1);
 #if !defined(NDEBUG)
                 assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
                 lock_.lock();
@@ -355,9 +366,10 @@ namespace bq {
                 lock_.unlock();
                 uint64_t start_epoch = get_epoch();
 #endif
+                writers_wait_counter_.fetch_add_relaxed(1);
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                    if (counter_.compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                         break;
                     }
                     yield();
@@ -387,8 +399,9 @@ namespace bq {
                 record_.push_back(debug_record { id, true, 0 });
                 lock_.unlock();
 #endif
+                writers_wait_counter_.fetch_add_relaxed(1);
                 counter_type expected_counter = 0;
-                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                if (counter_.compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
 #if !defined(NDEBUG)
                     lock_.lock();
                     auto iter = record_.find({ id, true, 0 });
@@ -405,6 +418,7 @@ namespace bq {
                 record_.erase(iter);
                 lock_.unlock();
 #endif
+                writers_wait_counter_.fetch_add_relaxed(-1);
                 return false;
             }
 
@@ -422,7 +436,7 @@ namespace bq {
 
                 while (true) {
                     counter_type expected_counter = write_lock_mark_value;
-                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                    if (counter_.compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                         break;
                     }
 #if !defined(NDEBUG)
@@ -440,6 +454,7 @@ namespace bq {
                 record_.erase(iter);
                 lock_.unlock();
 #endif
+                writers_wait_counter_.fetch_add_relaxed(-1);
             }
         };
 
