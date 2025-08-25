@@ -21,30 +21,5 @@
 
 namespace bq {
     namespace platform {
-
-        void mcs_spin_lock::yield()
-        {
-            bq::platform::thread::cpu_relax();
-        }
-
-        void spin_lock::yield()
-        {
-            bq::platform::thread::cpu_relax();
-        }
-
-        void spin_lock_rw_crazy::yield()
-        {
-            bq::platform::thread::cpu_relax();
-        }
-
-        void spin_lock_rw_crazy::wait()
-        {
-            bq::platform::thread::sleep(0);
-        }
-
-        uint64_t spin_lock_rw_crazy::get_epoch()
-        {
-            return bq::platform::high_performance_epoch_ms();
-        }
     }
 }

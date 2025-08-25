@@ -50,9 +50,6 @@ namespace bq {
         private:
             bq::platform::atomic<lock_node*> tail_;
 
-        private:
-            void yield();
-
         public:
             mcs_spin_lock()
                 : tail_(nullptr)
@@ -83,7 +80,7 @@ namespace bq {
                     // The acquire and release memory orders provide memory synchronization semantics
                     // for the business logic protected by this lock, ensuring thread safety and data consistency.
                     while (node.lock_counter_.load_acquire() == 0) {
-                        // yield();
+                        // bq::platform::thread::cpu_relax();
                     }
                 } else {
                     node.lock_counter_.fetch_add_raw(1); // only access in self thread in this case, so no need to use atomic operation
@@ -110,7 +107,7 @@ namespace bq {
                         return;
                     }
                     while ((next = node.next_.load_acquire()) == nullptr) {
-                        // yield();
+                        // bq::platform::thread::cpu_relax();
                     }
                 }
                 // The acquire and release memory orders provide memory synchronization semantics
@@ -126,8 +123,6 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
             bq::platform::atomic<bq::platform::thread::thread_id> thread_id_;
 #endif
-        private:
-            void yield();
 
         public:
             spin_lock()
@@ -156,7 +151,7 @@ namespace bq {
                     assert(bq::platform::thread::get_current_thread_id() != thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
 #endif
                     while (value_.get().load(bq::platform::memory_order::relaxed)) {
-                        yield();
+                        bq::platform::thread::cpu_relax();
                     }
                 }
             }
@@ -189,6 +184,7 @@ namespace bq {
         /// betting that you won't have more than INT32_MAX(32 bit) or INT64_MAX(64 bit) threads waiting to acquire the read lock.
         /// This version is designed for extreme performance of read locks when there is no write lock contention.
         /// warning: the write lock is not re-entrant.
+        /// warning: starvation may happen, be aware!
         /// by pippocao
         /// 2024/7/8
         /// </summary>
@@ -196,60 +192,13 @@ namespace bq {
 
         class spin_lock_rw_crazy {
         private:
-            static constexpr uint32_t timeout_ms = 60000U;
-            static constexpr int32_t write_lock_mark_value = INT32_MIN;
-            struct st_meta {
-            private:
-                uint64_t misc_;
-                bq::platform::atomic<int32_t> writers_wait_counter_;
-            public:
-                st_meta() : misc_(0), writers_wait_counter_(0){}
-                bq::platform::atomic<int32_t>& get_reader_counter()
-                {
-                    return *static_cast<bq::platform::atomic<int32_t>*>(static_cast<void*>(&misc_));;
-                }
-                bq::platform::atomic<uint64_t>& get_writer_counter()
-                {
-                    return *static_cast<bq::platform::atomic<uint64_t>*>(static_cast<void*>(&misc_));
-                }
-                bq::platform::atomic<int32_t>& get_writers_wait_counter()
-                {
-                    return writers_wait_counter_;
-                }
-                bq_forceinline static uint64_t generate_write_counter_value(int32_t reader_counter, uint32_t ticket)
-                {
-                    uint64_t result;
-                    *static_cast<bq::platform::atomic<int32_t>*>(static_cast<void*>(&result)) = reader_counter;
-                    *reinterpret_cast<bq::platform::atomic<uint32_t>*>(reinterpret_cast<char*>(&result) + sizeof(int32_t)) = ticket;
-                    return result;
-                }
-            };
-            bq::cache_friendly_type<bq::aligned_type<st_meta, sizeof(uint64_t)>> meta_;
-            bq::platform::atomic<uint32_t> ticket_seq_;
-#if !defined(NDEBUG)
-            bq::platform::spin_lock lock_;
-            struct debug_record {
-                bq::platform::thread::thread_id tid_;
-                bool is_write_;
-                int32_t phase_;
-                bool operator==(const debug_record& other) const
-                {
-                    return tid_ == other.tid_ && is_write_ == other.is_write_ && phase_ == other.phase_;
-                }
-            };
-            bq::array<debug_record> record_;
-#endif
-        private:
-            void yield();
-            void wait();
-            uint64_t get_epoch();
-            bq_forceinline st_meta& get_meta()
-            {
-                return meta_.get().get();
-            }
+            typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
+            bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 
         public:
-            spin_lock_rw_crazy(): meta_(st_meta()), ticket_seq_(0)
+            spin_lock_rw_crazy()
+                : counter_(0)
             {
             }
 
@@ -258,241 +207,73 @@ namespace bq {
             spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
             spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
 
-#if !defined(NDEBUG)
-            void debug_output(int32_t pos)
-            {
-                printf("record pos:%d, %" PRIu32 ":[\n", pos, get_meta().get_writers_wait_counter().load_seq_cst());
-                for (auto item : record_) {
-                    printf("\t%" PRIu64 ", %s, %d\n", static_cast<uint64_t>(item.tid_), item.is_write_ ? "true" : "false", item.phase_);
-                }
-                printf("]n");
-                fflush(stdout);
-            }
-#endif
+
 
             inline void read_lock()
             {
-#if !defined(NDEBUG)
-                uint64_t start_epoch = get_epoch();
-                auto id = bq::platform::thread::get_current_thread_id();
-                lock_.lock();
-                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && !item.is_write_; });
-                assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
-                record_.push_back(debug_record { id, false, 0 });
-                lock_.unlock();
-                assert(get_meta().get_writers_wait_counter().load_relaxed() >= 0 && "invalid writers_wait_counter_.get()");
-#endif
                 while (true) {
-                    while (get_meta().get_writers_wait_counter().load_relaxed() > 0) {
-                        wait();
-                    }
-                    int32_t previous_counter = get_meta().get_reader_counter().fetch_add_acq_rel(1);
+                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
                     }
-                    get_meta().get_reader_counter().fetch_sub_relaxed(1);
-#if !defined(NDEBUG)
-                    if (get_epoch() > start_epoch + timeout_ms) {
-                        debug_output(1);
-                        assert(false);
-                    }
-#endif
+                    counter_.get().fetch_sub_relaxed(1);
                     while (true) {
-                        yield();
-                        int32_t current_counter = get_meta().get_reader_counter().load_acquire();
+                        bq::platform::thread::cpu_relax();
+                        counter_type current_counter = counter_.get().load_acquire();
                         if (current_counter >= 0) {
                             break;
                         }
-#if !defined(NDEBUG)
-                        if (get_epoch() > start_epoch + timeout_ms) {
-                            debug_output(2);
-                            assert(false);
-                        }
-#endif
                     }
                 }
-#if !defined(NDEBUG)
-                lock_.lock();
-                auto iter = record_.find(debug_record { id, false, 0 });
-                assert(iter != record_.end());
-                iter->phase_ = 1;
-                lock_.unlock();
-#endif
             }
 
             inline bool try_read_lock()
             {
-#if !defined(NDEBUG)
-                auto id = bq::platform::thread::get_current_thread_id();
-                lock_.lock();
-                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id && !item.is_write_; });
-                assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
-                record_.push_back(debug_record { id, false, 0 });
-                lock_.unlock();
-                assert(get_meta().get_writers_wait_counter().load_relaxed() >= 0 && "invalid writers_wait_counter_.get()");
-#endif
-                while (get_meta().get_writers_wait_counter().load_acquire() > 0) {
-                    wait();
-                }
-                int32_t previous_counter = get_meta().get_reader_counter().fetch_add_acq_rel(1);
+                counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                 if (previous_counter >= 0) {
                     // read lock success.
-#if !defined(NDEBUG)
-                    lock_.lock();
-                    auto iter = record_.find(debug_record { id, false, 0 });
-                    assert(iter != record_.end());
-                    iter->phase_ = 1;
-                    lock_.unlock();
-#endif
                     return true;
                 }
-                get_meta().get_reader_counter().fetch_sub_relaxed(1);
-#if !defined(NDEBUG)
-                lock_.lock();
-                auto iter = record_.find(debug_record { id, false, 0 });
-                assert(iter != record_.end());
-                record_.erase(iter);
-                lock_.unlock();
-#endif
+                counter_.get().fetch_sub_relaxed(1);
                 return false;
             }
 
             inline void read_unlock()
             {
-#if !defined(NDEBUG)
-                auto id = bq::platform::thread::get_current_thread_id();
-                lock_.lock();
-                auto iter = record_.find({ id, false, 1 });
-                assert(iter != record_.end());
-                iter->phase_ = 2;
-                lock_.unlock();
-#endif
-
-                int32_t previous_counter = get_meta().get_reader_counter().fetch_sub_release(1);
-#if !defined(NDEBUG)
-                assert(previous_counter > 0 && "spin_lock_rw_crazy counter error");
-                lock_.lock();
-                iter = record_.find({ id, false, 2 });
-                assert(iter != record_.end());
-                record_.erase(iter);
-                lock_.unlock();
-#else
+                counter_type previous_counter = counter_.get().fetch_sub_release(1);
                 (void)previous_counter;
-#endif
             }
 
             inline void write_lock()
             {
-#if !defined(NDEBUG)
-                auto id = bq::platform::thread::get_current_thread_id();
-                lock_.lock();
-                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id; });
-                assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
-                record_.push_back(debug_record { id, true, 0 });
-                lock_.unlock();
-                uint64_t start_epoch = get_epoch();
-#endif
-                get_meta().get_writers_wait_counter().fetch_add_release(1);
-                auto my_ticket = ticket_seq_.fetch_add_relaxed(1);
                 while (true) {
-                    uint64_t expected_counter =  st_meta::generate_write_counter_value(0, my_ticket);
-                    uint64_t write_lock_target_value = st_meta::generate_write_counter_value(write_lock_mark_value, my_ticket + 1);
-                    if (get_meta().get_writer_counter().compare_exchange_strong(expected_counter
-                                            , write_lock_target_value
-                                            , bq::platform::memory_order::acq_rel
-                                            , bq::platform::memory_order::acquire)) {
+                    counter_type expected_counter = 0;
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                         break;
                     }
-                    yield();
-#if !defined(NDEBUG)
-                    if (get_epoch() > start_epoch + timeout_ms) {
-                        debug_output(3);
-                        assert(false);
-                    }
-#endif
+                    bq::platform::thread::cpu_relax();
                 }
-                get_meta().get_writers_wait_counter().fetch_sub_relaxed(1);
-#if !defined(NDEBUG)
-                lock_.lock();
-                auto iter = record_.find({ id, true, 0 });
-                assert(iter != record_.end());
-                iter->phase_ = 1;
-                lock_.unlock();
-#endif
             }
 
             inline bool try_write_lock()
             {
-#if !defined(NDEBUG)
-                auto id = bq::platform::thread::get_current_thread_id();
-                lock_.lock();
-                auto reentrant_iter = record_.find_if([id](const debug_record& item) { return item.tid_ == id; });
-                assert(reentrant_iter == record_.end() && "spin_lock_rw_crazy is not reentrant");
-                record_.push_back(debug_record { id, true, 0 });
-                lock_.unlock();
-#endif
-                int32_t expected_counter =  0;
-                int32_t write_lock_target_value = write_lock_mark_value;
-                if (get_meta().get_reader_counter().compare_exchange_strong(expected_counter
-                                                , write_lock_target_value
-                                                , bq::platform::memory_order::acq_rel
-                                                , bq::platform::memory_order::acquire)) {
-#if !defined(NDEBUG)
-                    lock_.lock();
-                    auto iter = record_.find({ id, true, 0 });
-                    assert(iter != record_.end());
-                    iter->phase_ = 1;
-                    lock_.unlock();
-#endif
+                counter_type expected_counter = 0;
+                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) 
+                {
                     return true;
                 }
-#if !defined(NDEBUG)
-                lock_.lock();
-                auto iter = record_.find({ id, true, 0 });
-                assert(iter != record_.end());
-                record_.erase(iter);
-                lock_.unlock();
-#endif
                 return false;
             }
 
             inline void write_unlock()
             {
-#if !defined(NDEBUG)
-                auto id = bq::platform::thread::get_current_thread_id();
-                lock_.lock();
-                auto iter = record_.find({ id, true, 1 });
-                assert(iter != record_.end());
-                iter->phase_ = 2;
-                lock_.unlock();
-                uint64_t start_epoch = get_epoch();
-#endif
-
                 while (true) {
-                    int32_t expected_counter = write_lock_mark_value;
-                    if (get_meta().get_reader_counter().compare_exchange_strong(
-                                                expected_counter
-                                                , 0
-                                                , bq::platform::memory_order::acq_rel
-                                                , bq::platform::memory_order::acquire)) {
+                    counter_type expected_counter = write_lock_mark_value;
+                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                         break;
                     }
-#if !defined(NDEBUG)
-                    if (get_epoch() > start_epoch + timeout_ms) {
-                        debug_output(4);
-                        assert(false);
-                    }
-#endif
                 }
-
-#if !defined(NDEBUG)
-                lock_.lock();
-                iter = record_.find({ id, true, 2 });
-                assert(iter != record_.end());
-                record_.erase(iter);
-                lock_.unlock();
-#endif
             }
         };
 
