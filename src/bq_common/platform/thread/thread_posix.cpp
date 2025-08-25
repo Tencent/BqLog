@@ -146,13 +146,9 @@ namespace bq {
         void thread::cpu_relax()
         {
 #if defined(BQ_ARM)
-#if defined(BQ_CLANG)
-            __builtin_arm_yield();
+            __asm__ __volatile__("yield");
 #else
-            __asm__ __volatile__("yield" : : : "memory");
-#endif
-#else
-            __builtin_ia32_pause();
+            __asm__ __volatile__("pause");
 #endif
         }
 

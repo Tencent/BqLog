@@ -17,6 +17,9 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <stringapiset.h>
+#ifdef BQ_ARM
+#include <intrin.h>
+#endif
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif
@@ -116,7 +119,21 @@ namespace bq {
 
         void thread::cpu_relax()
         {
-            SleepEx((DWORD)0, true);
+#ifdef BQ_MSVC
+#if defined(BQ_X86)
+            _mm_pause();
+#elif defined(BQ_ARM)
+            __yield();
+#else
+            _ReadWriteBarrier();
+#endif
+#else
+#ifdef BQ_ARM
+            __asm__ __volatile__("yield");
+#else
+            __asm__ __volatile__("pause");
+#endif
+#endif
         }
 
         void thread::sleep(uint64_t millsec)
