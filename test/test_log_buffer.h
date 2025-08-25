@@ -205,6 +205,7 @@ namespace bq {
             static constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
             static constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
             static constexpr int32_t oversize_chunk_frequency = 1677;
+            static constexpr int32_t auto_expand_sleep_frequency = 1024;
 
         public:
             log_buffer_write_task(int32_t id, int32_t left_write_count, bq::log_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
@@ -226,6 +227,11 @@ namespace bq {
                     uint32_t alloc_size = rand_seq(linear_ran);
                     if (left_write_count_ % oversize_chunk_frequency == 0) {
                         alloc_size = rand_seq_oversize(linear_ran_oversize);
+                    }
+                    if (log_buffer_ptr_->get_config().policy == log_memory_policy::auto_expand_when_full) {
+                        if (left_write_count_ % auto_expand_sleep_frequency == 0) {
+                            bq::platform::thread::sleep(1);
+                        }
                     }
                     auto handle = log_buffer_ptr_->alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space

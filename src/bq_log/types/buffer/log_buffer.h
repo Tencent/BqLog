@@ -113,11 +113,11 @@ namespace bq {
             uintptr_t dummy;
         } BQ_PACK_END
 
-            BQ_PACK_BEGIN struct alignas(8) pointer_8_bytes_for_64_bits_system {
+        BQ_PACK_BEGIN struct alignas(8) pointer_8_bytes_for_64_bits_system {
             log_tls_buffer_info* ptr;
         } BQ_PACK_END
 
-            BQ_PACK_BEGIN struct alignas(8) context_head {
+        BQ_PACK_BEGIN struct alignas(8) context_head {
         public:
             uint16_t version_;
             bool is_thread_finished_;
@@ -133,7 +133,9 @@ namespace bq {
             {
                 tls_info_.ptr = tls_info;
             }
-        } BQ_PACK_END static_assert(sizeof(context_head) == 16, "context_head size must be 16");
+        } 
+        BQ_PACK_END 
+        static_assert(sizeof(context_head) == 16, "context_head size must be 16");
         static_assert(sizeof(context_head) % 8 == 0, "context_head size must be a multiple of 8");
 
         BQ_PACK_BEGIN
@@ -141,7 +143,10 @@ namespace bq {
             alignas(8) bool is_removed_;
             alignas(8) bool need_reallocate_;
             alignas(8) context_head context_;
-    } BQ_PACK_END public : log_buffer(log_buffer_config& config);
+        } 
+        BQ_PACK_END 
+    public : 
+        log_buffer(log_buffer_config& config);
 
         ~log_buffer();
 
@@ -160,6 +165,11 @@ namespace bq {
         };
         java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
+
+        bq_forceinline const log_buffer_config& get_config() const
+        {
+            return config_;
+        }
 
 #if defined(BQ_UNIT_TEST)
         int32_t get_groups_count() const { return hp_buffer_.get_groups_count(); }
