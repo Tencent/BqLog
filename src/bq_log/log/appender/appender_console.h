@@ -27,6 +27,7 @@ namespace bq {
         public:
             void register_callback(bq::type_func_ptr_console_callback callback);
             void erase_callback(bq::type_func_ptr_console_callback callback);
+            bq_forceinline bool is_empty() {return callbacks_.is_empty(); }
             void call(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
         };
 
