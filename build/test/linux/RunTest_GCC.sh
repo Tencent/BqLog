@@ -1,18 +1,23 @@
 #!/bin/bash
 set -e
 CPP_VER_PARAM=${1:-17}
-mkdir CMakeFiles;
-cd CMakeFiles;
+mkdir -p CMakeFiles
+cd CMakeFiles
 
 ulimit -c unlimited
 echo "Setting core dump pattern to 'core.%p'..."
 sudo sysctl -w kernel.core_pattern=core.%p || echo "Failed to set core pattern (might lack permissions)."
 echo "Running BqLogUnitTest directly..."
 
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test;
-make;
+# 1) Debug
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test
+make -j"$(nproc)"
+
+set +e
 ./BqLogUnitTest
 exit_code=$?
+set -e
+
 if [ $exit_code -eq 0 ]; then
     echo "Test succeeded."
 else
@@ -25,6 +30,8 @@ else
             ./BqLogUnitTest "$CORE_FILE"
     else
         echo "No core dump generated in current directory."
+        echo "core_pattern: $(cat /proc/sys/kernel/core_pattern 2>/dev/null || true)"
+        echo "ulimit -c: $(ulimit -c)"
         echo "Running with GDB to capture stack trace directly..."
         gdb --batch --quiet \
             -ex "run" \
@@ -36,10 +43,15 @@ else
     exit 1
 fi
 
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test;
-make;
+# 2) RelWithDebInfo
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test
+make -j"$(nproc)"
+
+set +e
 ./BqLogUnitTest
 exit_code=$?
+set -e
+
 if [ $exit_code -eq 0 ]; then
     echo "Test succeeded."
 else
@@ -52,6 +64,8 @@ else
             ./BqLogUnitTest "$CORE_FILE"
     else
         echo "No core dump generated in current directory."
+        echo "core_pattern: $(cat /proc/sys/kernel/core_pattern 2>/dev/null || true)"
+        echo "ulimit -c: $(ulimit -c)"
         echo "Running with GDB to capture stack trace directly..."
         gdb --batch --quiet \
             -ex "run" \
@@ -62,4 +76,5 @@ else
     echo "Test failed."
     exit 1
 fi
-cd ..;
+
+cd ..

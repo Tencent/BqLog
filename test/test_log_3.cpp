@@ -999,7 +999,7 @@ namespace bq {
                         + "\n" 
                         + get_encript_config());
                     log_ptr->take_snapshot(false);
-                    sleep(begin_epoch_ms % 10);
+                    //sleep(begin_epoch_ms % 10);
                 }
             }
         };
