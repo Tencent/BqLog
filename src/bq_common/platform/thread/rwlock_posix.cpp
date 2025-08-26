@@ -20,6 +20,9 @@
 
 #ifdef BQ_POSIX
 #include <pthread.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <inttypes.h>
 
 namespace bq {
     namespace platform {
