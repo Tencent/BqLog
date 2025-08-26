@@ -28,24 +28,41 @@
 #include <Windows.h>
 #endif
 
+#ifdef BQ_MAC
+pthread_t main_thread_id = 0;
+#endif
+
 class time_out_monitor_thread : public bq::platform::thread {
 protected:
     void run() override
     {
         auto start_epoch = bq::platform::high_performance_epoch_ms();
-        constexpr uint64_t time_out = 30 * 60 * 1000;
+        constexpr uint64_t time_out = 10 * 60 * 1000;
         while (true) {
             if (is_cancelled()) {
                 break;
             }
             if (start_epoch + time_out < bq::platform::high_performance_epoch_ms()) {
                 test_output_dynamic(bq::log_level::error, "test time out, please check your test code!\n");
+#ifdef BQ_MAC
+                pthread_kill(main_thread_id, SIGUSR2);
+#else
                 assert(false && "auto test time out!");
+#endif
             }
             bq::platform::thread::sleep(500);
         }
     }
 };
+
+#ifdef BQ_MAC
+void sig_handler(int) {
+    bq::_api_string_def stack_trace_str;
+    bq::api::__api_get_stack_trace(&stack_trace_str, 0);
+    printf("timeout:stack_trace:%s", stack_trace_str.str);
+    assert(false && "auto test time out!");
+}
+#endif
 
 #if defined(BQ_ANDROID)
 int32_t test_main()
@@ -53,6 +70,14 @@ int32_t test_main()
 int32_t main()
 #endif
 {
+#ifdef BQ_MAC
+    struct sigaction sa = {};
+    sa.sa_handler = sig_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR2, &sa, NULL);
+    main_thread_id = pthread_self();
+#endif
 #if defined(WIN32)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);

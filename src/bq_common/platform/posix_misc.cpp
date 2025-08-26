@@ -33,6 +33,10 @@
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
+#ifdef BQ_MAC
+#include <execinfo.h>
+#include <cxxabi.h>
+#endif
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS)
 #include <execinfo.h>
 namespace bq {
@@ -572,9 +576,35 @@ namespace bq {
                     if (valid_frame_count++ <= skip_frame_count) {
                         continue;
                     }
-                    auto str_len = strlen(stacks[i]);
                     stack_trace_str_ref.push_back('\n');
-                    stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], (size_t)str_len);
+                    char* demangled_str = nullptr;
+#if BQ_MAC
+                    demangled_str = strstr(stacks[i], "_Z");
+                    if (demangled_str) {
+                        auto tail_mark = strchr(demangled_str, ' ');
+                        if (tail_mark) {
+                            tail_mark[0] = '\0';
+                        }
+                        tail_mark = strchr(demangled_str, '+');
+                        if (tail_mark) {
+                            tail_mark[0] = '\0';
+                        }
+                        int32_t status;
+                        char* demangled = abi::__cxa_demangle(demangled_str, nullptr, nullptr, &status);
+                        if (status == 0 && demangled) {
+                            auto str_len = strlen(demangled);
+                            stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], static_cast<size_t>(demangled_str - stacks[i]));
+                            stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), demangled, (size_t)str_len);
+                            free(demangled);
+                        }else {
+                            demangled_str = nullptr;
+                        }
+                    }
+#endif
+                    if (!demangled_str) {
+                        auto str_len = strlen(stacks[i]);
+                        stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], (size_t)str_len);
+                    }
                 }
             }
             free(stacks);
