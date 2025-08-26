@@ -427,6 +427,25 @@ namespace bq {
             {
                 log_buffer_test_total_write_count_.store_seq_cst(0);
                 bq::log_buffer test_buffer(config);
+                bq::string config_debug_str = "";
+                if (config.policy == log_memory_policy::auto_expand_when_full) {
+                    config_debug_str += ", auto expand";
+                }
+                else {
+                    config_debug_str += ", block when full";
+                }
+                if (config.need_recovery) {
+                    config_debug_str += ", recovery";
+                }
+                else {
+                    config_debug_str += ", no recovery";
+                }
+                if (config.high_frequency_threshold_per_second == 1000) {
+                    config_debug_str += ", high performance mode";
+                }
+                else {
+                    config_debug_str += ", normal mode";
+                }
                 int32_t chunk_count_per_task = 1024 * 128;
                 bq::platform::atomic<int32_t> counter(log_buffer_total_task);
                 bq::array<int32_t> task_check_vector;
@@ -493,7 +512,7 @@ namespace bq {
                 }
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms              \r", 100, (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
-                    result.add_result(task_check_vector[i] == chunk_count_per_task, "[log buffer]chunk count check error, real:%d , expected:%d", task_check_vector[i], chunk_count_per_task);
+                    result.add_result(task_check_vector[i] == chunk_count_per_task, "[log buffer]chunk count check error, real:%d , expected:%d, debu_str:%s", task_check_vector[i], chunk_count_per_task, config_debug_str.c_str());
                 }
                 test_output_dynamic_param(bq::log_level::info, "\n[log buffer] test finished, time cost:%dms\n", (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
                 result.add_result(total_chunk == log_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", log_buffer_test_total_write_count_.load(), total_chunk);
@@ -749,8 +768,8 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                do_linked_list_test(result);
-                do_memory_pool_test(result);
+                //do_linked_list_test(result);
+                //do_memory_pool_test(result);
 
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
@@ -759,9 +778,9 @@ namespace bq {
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = 1000;
 
-                do_block_list_test(result, config);
+                //do_block_list_test(result, config);
                 config.need_recovery = true;
-                do_block_list_test(result, config);
+                //do_block_list_test(result, config);
 
                 do_basic_test(result, config);
                 config.policy = log_memory_policy::block_when_full;

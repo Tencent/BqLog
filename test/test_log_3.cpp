@@ -910,15 +910,25 @@ namespace bq {
                 invalid_utf16_str.push_back(u'1');
             }
             invalid_utf16_str[1] = u'\0';
+            test_output(bq::log_level::info, "invalid_utf16_test1                           \n");
             bq::log::force_flush_all_logs();
+            test_output(bq::log_level::info, "invalid_utf16_test2                           \n");
             log_inst.error(log_inst.cat.ModuleA.SystemA.ClassA, invalid_utf16_str);
+            test_output(bq::log_level::info, "invalid_utf16_test3                           \n");
             bq::log::force_flush_all_logs();
+            test_output(bq::log_level::info, "invalid_utf16_test4                           \n");
             log_inst.error(log_inst.cat.ModuleA.SystemA.ClassA, "{}", invalid_utf16_str);
+            test_output(bq::log_level::info, "invalid_utf16_test5                           \n");
             bq::log::force_flush_all_logs();
+            test_output(bq::log_level::info, "invalid_utf16_test6                           \n");
             const bq::string raw_item1 = decode_raw_item();
+            test_output(bq::log_level::info, "invalid_utf16_test7                           \n");
             const bq::string compressed_item1 = decode_compressed_item();
+            test_output(bq::log_level::info, "invalid_utf16_test8                           \n");
             const bq::string raw_item2 = decode_raw_item();
+            test_output(bq::log_level::info, "invalid_utf16_test9                           \n");
             const bq::string compressed_item2 = decode_compressed_item();
+            test_output(bq::log_level::info, "invalid_utf16_test10                           \n");
             result.add_result(raw_item1.end_with("#"), "invalid utf16 raw test:%s", raw_item1.c_str());
             result.add_result(compressed_item1.end_with("#"), "invalid utf16 compressed test:%s", compressed_item1.c_str());
             result.add_result(raw_item2.end_with("#"), "invalid utf16 raw test:%s", raw_item2.c_str());
@@ -989,7 +999,7 @@ namespace bq {
                         + "\n" 
                         + get_encript_config());
                     log_ptr->take_snapshot(false);
-                    sleep(begin_epoch_ms % 2);
+                    sleep(begin_epoch_ms % 10);
                 }
             }
         };
