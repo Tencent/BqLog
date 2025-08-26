@@ -33,10 +33,7 @@
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
-#ifdef BQ_MAC
-#include <execinfo.h>
 #include <cxxabi.h>
-#endif
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS)
 #include <execinfo.h>
 namespace bq {
@@ -578,7 +575,6 @@ namespace bq {
                     }
                     stack_trace_str_ref.push_back('\n');
                     char* demangled_str = nullptr;
-#if BQ_MAC
                     demangled_str = strstr(stacks[i], "_Z");
                     if (demangled_str) {
                         auto tail_mark = strchr(demangled_str, ' ');
@@ -600,7 +596,6 @@ namespace bq {
                             demangled_str = nullptr;
                         }
                     }
-#endif
                     if (!demangled_str) {
                         auto str_len = strlen(stacks[i]);
                         stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], (size_t)str_len);
