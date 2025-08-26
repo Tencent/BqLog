@@ -60,6 +60,8 @@ void sig_handler(int) {
     bq::_api_string_def stack_trace_str;
     bq::api::__api_get_stack_trace(&stack_trace_str, 0);
     printf("timeout:stack_trace:%s", stack_trace_str.str);
+    fflush(stdout);
+    bq::platform::thread::sleep(1000);
     assert(false && "auto test time out!");
 }
 #endif
