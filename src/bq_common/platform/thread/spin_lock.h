@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include "bq_common/utils/utility_types.h"
 #include "bq_common/bq_common.h"
+#include "bq_common/platform/thread/rwlock.h"
 namespace bq {
     namespace platform {
         /*
@@ -190,92 +191,94 @@ namespace bq {
         /// </summary>
         ///
 
-        class spin_lock_rw_crazy {
-        private:
-            typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
-            static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
-            bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
+        //class spin_lock_rw_crazy {
+        //private:
+        //    typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
+        //    static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
+        //    bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 
-        public:
-            spin_lock_rw_crazy()
-                : counter_(0)
-            {
-            }
+        //public:
+        //    spin_lock_rw_crazy()
+        //        : counter_(0)
+        //    {
+        //    }
 
-            spin_lock_rw_crazy(const spin_lock_rw_crazy&) = delete;
-            spin_lock_rw_crazy(spin_lock_rw_crazy&&) noexcept = delete;
-            spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
-            spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
+        //    spin_lock_rw_crazy(const spin_lock_rw_crazy&) = delete;
+        //    spin_lock_rw_crazy(spin_lock_rw_crazy&&) noexcept = delete;
+        //    spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
+        //    spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
 
 
 
-            inline void read_lock()
-            {
-                while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
-                    if (previous_counter >= 0) {
-                        // read lock success.
-                        break;
-                    }
-                    counter_.get().fetch_sub_relaxed(1);
-                    while (true) {
-                        bq::platform::thread::cpu_relax();
-                        counter_type current_counter = counter_.get().load_acquire();
-                        if (current_counter >= 0) {
-                            break;
-                        }
-                    }
-                }
-            }
+        //    inline void read_lock()
+        //    {
+        //        while (true) {
+        //            counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+        //            if (previous_counter >= 0) {
+        //                // read lock success.
+        //                break;
+        //            }
+        //            counter_.get().fetch_sub_relaxed(1);
+        //            while (true) {
+        //                bq::platform::thread::cpu_relax();
+        //                counter_type current_counter = counter_.get().load_acquire();
+        //                if (current_counter >= 0) {
+        //                    break;
+        //                }
+        //            }
+        //        }
+        //    }
 
-            inline bool try_read_lock()
-            {
-                counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
-                if (previous_counter >= 0) {
-                    // read lock success.
-                    return true;
-                }
-                counter_.get().fetch_sub_relaxed(1);
-                return false;
-            }
+        //    inline bool try_read_lock()
+        //    {
+        //        counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+        //        if (previous_counter >= 0) {
+        //            // read lock success.
+        //            return true;
+        //        }
+        //        counter_.get().fetch_sub_relaxed(1);
+        //        return false;
+        //    }
 
-            inline void read_unlock()
-            {
-                counter_type previous_counter = counter_.get().fetch_sub_release(1);
-                (void)previous_counter;
-            }
+        //    inline void read_unlock()
+        //    {
+        //        counter_type previous_counter = counter_.get().fetch_sub_release(1);
+        //        (void)previous_counter;
+        //    }
 
-            inline void write_lock()
-            {
-                while (true) {
-                    counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
-                        break;
-                    }
-                    bq::platform::thread::cpu_relax();
-                }
-            }
+        //    inline void write_lock()
+        //    {
+        //        while (true) {
+        //            counter_type expected_counter = 0;
+        //            if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+        //                break;
+        //            }
+        //            bq::platform::thread::cpu_relax();
+        //        }
+        //    }
 
-            inline bool try_write_lock()
-            {
-                counter_type expected_counter = 0;
-                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) 
-                {
-                    return true;
-                }
-                return false;
-            }
+        //    inline bool try_write_lock()
+        //    {
+        //        counter_type expected_counter = 0;
+        //        if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) 
+        //        {
+        //            return true;
+        //        }
+        //        return false;
+        //    }
 
-            inline void write_unlock()
-            {
-                while (true) {
-                    counter_type expected_counter = write_lock_mark_value;
-                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
-                        break;
-                    }
-                }
-            }
-        };
+        //    inline void write_unlock()
+        //    {
+        //        while (true) {
+        //            counter_type expected_counter = write_lock_mark_value;
+        //            if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+        //                break;
+        //            }
+        //        }
+        //    }
+        //};
+
+        using spin_lock_rw_crazy = rwlock;
 
         class scoped_mcs_spin_lock {
         private:
