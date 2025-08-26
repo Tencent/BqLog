@@ -28,7 +28,7 @@
 #include <Windows.h>
 #endif
 
-#ifdef BQ_MAC
+#ifdef BQ_POSIX
 pthread_t main_thread_id = 0;
 #endif
 
@@ -44,7 +44,7 @@ protected:
             }
             if (start_epoch + time_out < bq::platform::high_performance_epoch_ms()) {
                 test_output_dynamic(bq::log_level::error, "test time out, please check your test code!\n");
-#ifdef BQ_MAC
+#ifdef BQ_POSIX
                 pthread_kill(main_thread_id, SIGUSR2);
 #else
                 assert(false && "auto test time out!");
@@ -55,7 +55,7 @@ protected:
     }
 };
 
-#ifdef BQ_MAC
+#ifdef BQ_POSIX
 void sig_handler(int) {
     bq::_api_string_def stack_trace_str;
     bq::api::__api_get_stack_trace(&stack_trace_str, 0);
@@ -70,7 +70,7 @@ int32_t test_main()
 int32_t main()
 #endif
 {
-#ifdef BQ_MAC
+#ifdef BQ_POSIX
     struct sigaction sa = {};
     sa.sa_handler = sig_handler;
     sigemptyset(&sa.sa_mask);
