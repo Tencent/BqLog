@@ -129,9 +129,21 @@ namespace bq {
                             memcpy(snapshot_write_handle.data_addr, log_entry.data(), log_entry.data_size());
                             break;
                         } else if (snapshot_write_handle.result == enum_buffer_result_code::err_not_enough_space) {
+                            //Since siso_buffer requires contiguous data, you can end up in a situation where the buffer is apparently empty, 
+                            // but because the cursor is in the middle, there isn’t enough contiguous space left. 
+                            // In such cases, we need to apply a correction.
+                            //TODO: the current snapshot does not support temporarily oversized data; such data should be discarded.
                             auto discard_handle = snapshot_buffer_->read_chunk();
+                            bool is_already_empty = discard_handle.result == enum_buffer_result_code::err_empty_log_buffer;
                             snapshot_buffer_->return_read_chunk(discard_handle);
-                            snapshot_text_continuous_ = false;
+                            if (is_already_empty) {
+                                delete snapshot_buffer_;
+                                snapshot_buffer_ = new siso_ring_buffer(buffer_data_, (size_t)buffer_size_, false);
+                                snapshot_buffer_->set_thread_check_enable(false);
+                            }
+                            else {
+                                snapshot_text_continuous_ = false;
+                            }
                         } else {
                             break;
                         }
