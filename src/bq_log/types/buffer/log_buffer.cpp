@@ -82,7 +82,7 @@ namespace bq {
                         mark_block_removed(pair.value()->cur_block_, true);
                     } else {
                         while (true) {
-                            auto finish_mark_handle = pair.value()->buffer_->lp_buffer_.alloc_write_chunk(sizeof(context_head*));
+                            auto finish_mark_handle = pair.value()->buffer_->lp_buffer_.alloc_write_chunk(sizeof(context_head));
                             bq::scoped_log_buffer_handle<miso_ring_buffer> scoped_handle(pair.value()->buffer_->lp_buffer_, finish_mark_handle);
                             if (enum_buffer_result_code::success == finish_mark_handle.result) {
                                 auto* context = reinterpret_cast<context_head*>(finish_mark_handle.data_addr);
