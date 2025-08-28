@@ -180,10 +180,10 @@ namespace bq {
                 if (enum_buffer_result_code::err_not_enough_space == result.result) {
                     switch (config_.policy) {
                     case log_memory_policy::auto_expand_when_full:
+                        // discard result and switch to high frequency mode and try again
+                        block_cache->get_buffer().commit_write_chunk(result);
                         mark_block_removed(block_cache, true); // mark removed
                         block_cache = alloc_new_hp_block();
-                        // discard result and switch to high frequency mode and try again
-                        lp_buffer_.commit_write_chunk(result);
                         continue;
                         break;
                     case log_memory_policy::block_when_full:
