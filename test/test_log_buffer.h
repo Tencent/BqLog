@@ -462,15 +462,21 @@ namespace bq {
                 test_output_dynamic_param(bq::log_level::info, "================\n[log buffer] recovery:%s, auto expand:%s, high performance mode:%s\n", config.need_recovery ? "Y" : "-", config.policy == log_memory_policy::auto_expand_when_full ? "Y" : "-", config.high_frequency_threshold_per_second < UINT64_MAX ? "Y" : "-");
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms\r", percent, 0);
 
+                int32_t try_count = 3;
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     auto handle = test_buffer.read_chunk();
                     bq::scoped_log_buffer_handle<log_buffer> read_handle(test_buffer, handle);
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
                     if (write_finished && read_empty) {
-                        break;
+                        if (--try_count < 0) {
+                            break;
+                        }
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
+                        if (write_finished) {
+                            bq::platform::thread::sleep(5);
+                        }
                         continue;
                     }
                     auto size = handle.data_size;
