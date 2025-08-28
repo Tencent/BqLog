@@ -258,6 +258,16 @@ namespace bq {
             } else {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(prev_index >= 0 && prev_index < max_blocks_count_ && "remove assert failed, invalid prev_block_node!");
+                if (prev_block_node->next_.index() != remove_index) {
+                    printf("want to remove prev:%" PRIu16 ", remove:%" PRIu16 "\n", prev_index, remove_index);
+                    block_node_head* output_node = first();
+                    while (output_node) {
+                        uint16_t output_index = get_index_by_block_head(output_node);
+                        printf("%" PRIu16 "->", output_index);
+                        output_node = next(output_node);
+                        fflush(stdout);
+                    }
+                }
                 assert(prev_block_node->next_.index() == remove_index);
 #endif
                 prev_block_node->next_ = remove_block_node->next_;
