@@ -701,6 +701,14 @@ namespace bq {
             mem_opt.is_block_marked_removed = (out_verify_result == context_verify_result::valid && is_block_removed(next_block))
                 || out_verify_result == context_verify_result::version_invalid
                 || out_verify_result == context_verify_result::seq_invalid;
+            if (mem_opt.is_block_marked_removed){
+                if (out_verify_result == context_verify_result::seq_invalid) {
+                    printf("context_verify_result::seq_invalid\n");
+                }
+                else if (out_verify_result == context_verify_result::version_invalid) {
+                    printf("context_verify_result::version_invalid\n");
+                }
+            }
             mem_opt.verify_result = out_verify_result;
             if (mem_opt.left_holes_num_ > 0) {
                 mark_block_need_reallocate(next_block, true);
