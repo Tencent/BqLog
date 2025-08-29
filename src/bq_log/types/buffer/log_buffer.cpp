@@ -292,7 +292,7 @@ namespace bq {
             if (rt_reading.last_block_) {
                 auto error_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.last_block_);
                 printf("Error Index:%" PRIu16 ":\n", error_index);
-                output_debug();
+                output_debug(3);
             }
             assert(!rt_reading.last_block_);
             if (hp_buffer_.first(bq::group_list::lock_type::no_lock)) {
@@ -651,15 +651,15 @@ namespace bq {
     }
 
 
-    void log_buffer::output_debug()
+    void log_buffer::output_debug(int32_t id)
     {
         static bq::string indices[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"};
-        bq::string output = "Group Traverse History:";
+        bq::string output = "";
         for (auto index : rt_cache_.current_reading_.travers_blocks_in_group_) {
             output += indices[index];
             output += "->";
         }
-        printf("%s\n", output.c_str());
+        printf("%d Group Traverse History:%s\n", id, output.c_str());
         fflush(stdout);
     }
 
@@ -683,7 +683,7 @@ namespace bq {
             auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
             rt_reading.travers_blocks_in_group_.push_back(next_index);
             if (next_block == rt_reading.cur_block_) {
-                output_debug();
+                output_debug(1);
             }
             assert(next_block != rt_reading.cur_block_);
         }
@@ -704,7 +704,7 @@ namespace bq {
                 // remove it
                 if (rt_reading.cur_group_.value().is_range_include(rt_reading.last_block_)) {
                     if (rt_reading.cur_group_.value().get_data_head().used_.next(rt_reading.last_block_) != rt_reading.cur_block_) {
-                        output_debug();
+                        output_debug(2);
                     }
                     hp_buffer_.recycle_block_thread_unsafe(rt_reading.cur_group_, rt_reading.last_block_, rt_reading.cur_block_);
                 } else {

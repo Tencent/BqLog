@@ -209,7 +209,7 @@ namespace bq {
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
-        void output_debug();
+        void output_debug(int32_t id);
         bool rt_try_traverse_to_next_group();
 
         // For oversize data.
