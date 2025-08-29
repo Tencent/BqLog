@@ -209,6 +209,7 @@ namespace bq {
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
+        void output_debug();
         bool rt_try_traverse_to_next_group();
 
         // For oversize data.
@@ -242,6 +243,7 @@ namespace bq {
                 group_list::iterator cur_group_;
                 block_node_head* last_block_ = nullptr;
                 block_node_head* cur_block_ = nullptr;
+                bq::array<uint16_t> travers_blocks_in_group_;
                 uint16_t version_ = 0;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data
                 read_state state_ = read_state::lp_buffer_reading;

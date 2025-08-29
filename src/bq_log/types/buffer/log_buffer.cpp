@@ -289,6 +289,11 @@ namespace bq {
 
         bool ignore_first_loop = false;
         if (rt_reading.last_block_ == rt_reading.cur_block_) {
+            if (rt_reading.last_block_) {
+                auto error_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.last_block_);
+                printf("Error Index:%" PRIu16 ":\n", error_index);
+                output_debug();
+            }
             assert(!rt_reading.last_block_);
             if (hp_buffer_.first(bq::group_list::lock_type::no_lock)) {
                 ignore_first_loop = true;
@@ -301,6 +306,7 @@ namespace bq {
         while (!loop_finished) {
             switch (rt_reading.state_) {
             case read_state::lp_buffer_reading:
+                rt_reading.travers_blocks_in_group_.clear();
                 if (rt_read_from_lp_buffer(read_handle)) {
                     loop_finished = true;
                     read_handle.data_addr += sizeof(context_head);
@@ -359,6 +365,7 @@ namespace bq {
                 break;
             }
             case read_state::next_group_finding:
+                rt_reading.travers_blocks_in_group_.clear();
                 if (!rt_try_traverse_to_next_group()) {
                     rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::lp_buffer_reading;
                 } else {
@@ -643,6 +650,19 @@ namespace bq {
         }
     }
 
+
+    void log_buffer::output_debug()
+    {
+        static bq::string indices[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"};
+        bq::string output = "Group Traverse History:";
+        for (auto index : rt_cache_.current_reading_.travers_blocks_in_group_) {
+            output += indices[index];
+            output += "->";
+        }
+        printf("%s\n", output.c_str());
+        fflush(stdout);
+    }
+
     bool log_buffer::rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result)
     {
         auto& mem_opt = rt_cache_.mem_optimize_;
@@ -660,6 +680,11 @@ namespace bq {
         }
 
         if (next_block) {
+            auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
+            rt_reading.travers_blocks_in_group_.push_back(next_index);
+            if (next_block == rt_reading.cur_block_) {
+                output_debug();
+            }
             assert(next_block != rt_reading.cur_block_);
         }
 
@@ -678,6 +703,9 @@ namespace bq {
                 }
                 // remove it
                 if (rt_reading.cur_group_.value().is_range_include(rt_reading.last_block_)) {
+                    if (rt_reading.cur_group_.value().get_data_head().used_.next(rt_reading.last_block_) != rt_reading.cur_block_) {
+                        output_debug();
+                    }
                     hp_buffer_.recycle_block_thread_unsafe(rt_reading.cur_group_, rt_reading.last_block_, rt_reading.cur_block_);
                 } else {
                     hp_buffer_.recycle_block_thread_unsafe(rt_reading.cur_group_, nullptr, rt_reading.cur_block_);
