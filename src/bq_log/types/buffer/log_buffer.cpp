@@ -841,10 +841,17 @@ namespace bq {
         if (!group_removed) {
             rt_reading.last_group_ = rt_reading.cur_group_;
         }
-
-        auto next_group = rt_reading.cur_group_
-            ? hp_buffer_.next(rt_reading.cur_group_, group_list::lock_type::no_lock)
-            : hp_buffer_.first(group_list::lock_type::no_lock);
+        group_list::iterator next_group;
+        if (group_removed) {
+            next_group = rt_reading.last_group_
+                ? hp_buffer_.next(rt_reading.cur_group_, group_list::lock_type::no_lock)
+                : hp_buffer_.first(group_list::lock_type::no_lock);
+        }else {
+            rt_reading.last_group_ = rt_reading.cur_group_;
+            next_group = rt_reading.cur_group_
+                ? hp_buffer_.next(rt_reading.cur_group_, group_list::lock_type::no_lock)
+                : hp_buffer_.first(group_list::lock_type::no_lock);
+        }
         if (!next_group) {
             mem_opt.left_holes_num_ = 0;
             rt_reading.cur_block_ = nullptr;
