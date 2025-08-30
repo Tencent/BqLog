@@ -805,6 +805,9 @@ namespace bq {
     {
         auto& mem_opt = rt_cache_.mem_optimize_;
         auto& rt_reading = rt_cache_.current_reading_;
+        auto next_group = rt_reading.cur_group_
+            ? hp_buffer_.next(rt_reading.cur_group_, group_list::lock_type::no_lock)
+            : hp_buffer_.first(group_list::lock_type::no_lock);
         bool group_removed = false;
         if (mem_opt.cur_group_using_blocks_num_ == 0 && rt_reading.cur_group_) {
             // try lock
@@ -840,17 +843,6 @@ namespace bq {
         mem_opt.cur_group_using_blocks_num_ = 0;
         if (!group_removed) {
             rt_reading.last_group_ = rt_reading.cur_group_;
-        }
-        group_list::iterator next_group;
-        if (group_removed) {
-            next_group = rt_reading.last_group_
-                ? hp_buffer_.next(rt_reading.cur_group_, group_list::lock_type::no_lock)
-                : hp_buffer_.first(group_list::lock_type::no_lock);
-        }else {
-            rt_reading.last_group_ = rt_reading.cur_group_;
-            next_group = rt_reading.cur_group_
-                ? hp_buffer_.next(rt_reading.cur_group_, group_list::lock_type::no_lock)
-                : hp_buffer_.first(group_list::lock_type::no_lock);
         }
         if (!next_group) {
             mem_opt.left_holes_num_ = 0;
