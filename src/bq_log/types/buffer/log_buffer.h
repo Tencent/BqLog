@@ -237,13 +237,25 @@ namespace bq {
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
         bq::platform::atomic<uint64_t> current_oversize_buffer_index_;
 
+        enum class enum_op {
+            traverse,
+            add,
+            remove,
+            lp
+        };
+        struct op_item {
+            enum_op op_;
+            uint16_t block_index_;
+            void* group_addr_;
+        };
+
         struct alignas(CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator last_group_; // empty means read from lp_buffer
                 group_list::iterator cur_group_;
                 block_node_head* last_block_ = nullptr;
                 block_node_head* cur_block_ = nullptr;
-                bq::array<uint16_t> travers_blocks_in_group_;
+                bq::array<op_item> history_;
                 uint16_t version_ = 0;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data
                 read_state state_ = read_state::lp_buffer_reading;

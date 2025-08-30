@@ -17,6 +17,8 @@
  */
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
+
+#include <iterator>
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif
@@ -306,7 +308,6 @@ namespace bq {
         while (!loop_finished) {
             switch (rt_reading.state_) {
             case read_state::lp_buffer_reading:
-                rt_reading.travers_blocks_in_group_.clear();
                 if (rt_read_from_lp_buffer(read_handle)) {
                     loop_finished = true;
                     read_handle.data_addr += sizeof(context_head);
@@ -365,7 +366,6 @@ namespace bq {
                 break;
             }
             case read_state::next_group_finding:
-                rt_reading.travers_blocks_in_group_.clear();
                 if (!rt_try_traverse_to_next_group()) {
                     rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::lp_buffer_reading;
                 } else {
@@ -654,12 +654,47 @@ namespace bq {
     void log_buffer::output_debug(int32_t id)
     {
         static bq::string indices[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"};
-        bq::string output = "";
-        for (auto index : rt_cache_.current_reading_.travers_blocks_in_group_) {
-            output += indices[index];
-            output += "->";
+        bq::string history_output = "";
+        void* last_group_ptr = nullptr;
+        for (auto item : rt_cache_.current_reading_.history_) {
+            if (last_group_ptr != item.group_addr_) {
+                last_group_ptr = item.group_addr_;
+                char tmp[32];
+                snprintf(tmp, 32, "0x%p", last_group_ptr);
+                history_output += "|";
+                history_output += tmp;
+                history_output += ":";
+            }
+            history_output += indices[item.block_index_] + "(";
+            switch (item.op_) {
+            case  enum_op::add:
+                history_output += "O";
+                break;
+            case  enum_op::remove:
+                history_output += "X";
+                break;
+            case  enum_op::traverse:
+                history_output += "T";
+                break;
+            case  enum_op::lp:
+                history_output += "-";
+                break;
+            }
+            history_output += ")->";
         }
-        printf("%d Group Traverse History:%s\n", id, output.c_str());
+        bq::string group_output = "";
+        auto& rt_reading = rt_cache_.current_reading_;
+        if (rt_reading.cur_group_) {
+            auto& used = rt_reading.cur_group_.value().get_data_head().used_;
+            block_node_head* output_node = used.first();
+            while (output_node) {
+                uint16_t output_index = used.get_index_by_block_head(output_node);
+                group_output += "->";
+                group_output += indices[output_index];
+                output_node = used.next(output_node);
+            }
+        }
+        printf("#%d, History:%s\n, Current Group Structure:0x%p : %s\n", id, history_output.c_str(), rt_reading.cur_group_ ? static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) : static_cast<void*>(nullptr), group_output.c_str());
         fflush(stdout);
     }
 
@@ -675,13 +710,21 @@ namespace bq {
         if (!next_block) {
             next_block = rt_reading.cur_group_.value().get_data_head().stage_.pop();
             if (next_block) {
+                while (rt_reading.history_.size() > 30) {
+                    rt_reading.history_.erase(rt_reading.history_.begin());
+                }
+                auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
+                rt_reading.history_.push_back(op_item{enum_op::add, next_index, static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
                 rt_reading.cur_group_.value().get_data_head().used_.push_after_thread_unsafe(is_cur_block_in_group ? rt_reading.cur_block_ : nullptr, next_block);
             }
         }
 
         if (next_block) {
+            while (rt_reading.history_.size() > 30) {
+                rt_reading.history_.erase(rt_reading.history_.begin());
+            }
             auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
-            rt_reading.travers_blocks_in_group_.push_back(next_index);
+            rt_reading.history_.push_back(op_item{enum_op::traverse, next_index, static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
             if (next_block == rt_reading.cur_block_) {
                 output_debug(1);
             }
@@ -697,6 +740,12 @@ namespace bq {
 #endif
         if (is_cur_block_in_group) {
             if (mem_opt.is_block_marked_removed) {
+                while (rt_reading.history_.size() > 30) {
+                    rt_reading.history_.erase(rt_reading.history_.begin());
+                }
+                auto cur_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_);
+                rt_reading.history_.push_back(op_item{enum_op::remove, cur_index, static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
+
                 if (context_verify_result::valid == mem_opt.verify_result) {
                     const auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
                     deregister_seq(context);
@@ -801,6 +850,19 @@ namespace bq {
             rt_reading.cur_block_ = nullptr;
         }
         rt_reading.cur_group_ = next_group;
+
+        while (rt_reading.history_.size() > 30) {
+            rt_reading.history_.erase(rt_reading.history_.begin());
+        }
+        while (rt_reading.history_.size() > 30) {
+            rt_reading.history_.erase(rt_reading.history_.begin());
+        }
+        if (!next_group) {
+            while (rt_reading.history_.size() > 30) {
+                rt_reading.history_.erase(rt_reading.history_.begin());
+            }
+            rt_reading.history_.push_back(op_item{enum_op::lp, 0, nullptr});
+        }
         return next_group;
     }
 
