@@ -660,10 +660,10 @@ namespace bq {
         bq::string history_output = "";
         void* last_group_ptr = nullptr;
         for (auto item : rt_cache_.current_reading_.history_) {
-            if (last_group_ptr != item.group_addr_) {
+            if (last_group_ptr != item.group_addr_ && item.op_ <= enum_op::lp) {
                 last_group_ptr = item.group_addr_;
                 char tmp[32];
-                snprintf(tmp, 32, "0x%p", last_group_ptr);
+                snprintf(tmp, 32, "%p", last_group_ptr);
                 history_output += "|";
                 history_output += tmp;
                 history_output += ":";
@@ -679,7 +679,7 @@ namespace bq {
                 history_output += indices[item.block_index_] + "(T)";
                 break;
             case  enum_op::lp:
-                history_output += "(-)";
+                history_output += "【-----】)";
                 break;
             case  enum_op::read_call:
                 history_output += "(r)";
@@ -695,7 +695,7 @@ namespace bq {
         while (iter) {
             void* addr = static_cast<void*>(&iter.value().get_data_head().used_);
             char tmp[32];
-            snprintf(tmp, 32, "0x%p", addr);
+            snprintf(tmp, 32, "%p", addr);
             group_output += tmp;
             group_output += "->";
             block_node_head* output_node = iter.value().get_data_head().used_.first();
