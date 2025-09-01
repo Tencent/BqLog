@@ -274,7 +274,7 @@ namespace bq {
         assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
-        while (rt_reading.history_.size() > 128) {
+        while (rt_reading.history_.size() > 512) {
             rt_reading.history_.erase(rt_reading.history_.begin());
         }
         rt_reading.history_.push_back(op_item{ enum_op::read_call, 0, static_cast<void*>(0)});
@@ -285,6 +285,7 @@ namespace bq {
                 rt_reading.hp_handle_cache_.result = enum_buffer_result_code::err_empty_log_buffer;
             }
         }
+        rt_reading.history_.push_back(op_item{ enum_op::read_travers, 0, static_cast<void*>(0) });
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
@@ -667,25 +668,27 @@ namespace bq {
                 history_output += tmp;
                 history_output += ":";
             }
-            history_output += indices[item.block_index_] + "(";
             switch (item.op_) {
             case  enum_op::add:
-                history_output += "O";
+                history_output += indices[item.block_index_] + "(A)";
                 break;
             case  enum_op::remove:
-                history_output += "X";
+                history_output += indices[item.block_index_] + "(X)";
                 break;
             case  enum_op::traverse:
-                history_output += "T";
+                history_output += indices[item.block_index_] + "(T)";
                 break;
             case  enum_op::lp:
-                history_output += "-";
+                history_output += "(-)";
                 break;
             case  enum_op::read_call:
-                history_output += "R";
+                history_output += "(r)";
+                break;
+            case  enum_op::read_travers:
+                history_output += "(R)";
                 break;
             }
-            history_output += ")->";
+            history_output += "->";
         }
         bq::string group_output = "[LP_Buffer]->";
         auto iter = hp_buffer_.first(group_list::lock_type::no_lock);
@@ -728,7 +731,7 @@ namespace bq {
         if (!next_block) {
             next_block = rt_reading.cur_group_.value().get_data_head().stage_.pop();
             if (next_block) {
-                while (rt_reading.history_.size() > 128) {
+                while (rt_reading.history_.size() > 512) {
                     rt_reading.history_.erase(rt_reading.history_.begin());
                 }
                 auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
@@ -738,7 +741,7 @@ namespace bq {
         }
 
         if (next_block) {
-            while (rt_reading.history_.size() > 128) {
+            while (rt_reading.history_.size() > 512) {
                 rt_reading.history_.erase(rt_reading.history_.begin());
             }
             auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
@@ -758,7 +761,7 @@ namespace bq {
 #endif
         if (is_cur_block_in_group) {
             if (mem_opt.is_block_marked_removed) {
-                while (rt_reading.history_.size() > 128) {
+                while (rt_reading.history_.size() > 512) {
                     rt_reading.history_.erase(rt_reading.history_.begin());
                 }
                 auto cur_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_);
@@ -869,7 +872,7 @@ namespace bq {
         rt_reading.cur_group_ = next_group;
 
         if (!next_group) {
-            while (rt_reading.history_.size() > 128) {
+            while (rt_reading.history_.size() > 512) {
                 rt_reading.history_.erase(rt_reading.history_.begin());
             }
             rt_reading.history_.push_back(op_item{enum_op::lp, 0, nullptr});
