@@ -145,13 +145,13 @@ bq::appender_decoder_base::read_with_cache_handle bq::appender_decoder_base::rea
         auto total_size = bq::max_value(size, DECODER_CACHE_READ_DEFAULT_SIZE);
         auto fill_size = total_size - left_size;
         cache_read_.fill_uninitialized(fill_size);
-        auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + left_size, fill_size);
+        auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + static_cast<ptrdiff_t>(left_size), fill_size);
         cache_read_cursor_ = 0;
         if (read_size < fill_size) {
-            cache_read_.erase(cache_read_.begin() + left_size + read_size, fill_size - read_size);
+            cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(left_size + read_size), fill_size - read_size);
         }
         if (!xor_key_blob_.is_empty() && read_size > 0) {
-            bq::appender_file_binary::xor_stream_inplace_u64_aligned(cache_read_.begin() + left_size
+            bq::appender_file_binary::xor_stream_inplace_u64_aligned(cache_read_.begin() + static_cast<ptrdiff_t>(left_size)
                                         , read_size
                                         , xor_key_blob_.begin()
                                         , xor_key_blob_.size()
@@ -160,7 +160,7 @@ bq::appender_decoder_base::read_with_cache_handle bq::appender_decoder_base::rea
         current_file_cursor_ += read_size;
     }
     read_with_cache_handle result;
-    result.data_ = cache_read_.begin() + cache_read_cursor_;
+    result.data_ = cache_read_.begin() + static_cast<ptrdiff_t>(cache_read_cursor_);
     result.len_ = bq::min_value(size, cache_read_.size() - cache_read_cursor_);
     cache_read_cursor_ += result.len_;
     return result;

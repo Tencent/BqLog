@@ -195,7 +195,7 @@ namespace bq {
                         break;
                     }
                 }
-                text.insert_batch(text.begin(), last_text.begin() + start_pos + offset, left_size - offset);
+                text.insert_batch(text.begin(), last_text.begin() + static_cast<ptrdiff_t>(start_pos + offset), left_size - offset);
             }
         }
         snapshot_text_continuous_ = true;

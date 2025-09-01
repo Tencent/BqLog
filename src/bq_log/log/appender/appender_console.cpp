@@ -193,7 +193,7 @@ namespace bq {
             bq::util::log_device_console(log_level::error, "console layout error, result:%d, format str:%s", (int32_t)layout_result, handle.get_format_string_data());
             return;
         }
-        log_entry_cache_.erase(log_entry_cache_.begin() + log_name_prefix_.size(), (log_entry_cache_.size() - log_name_prefix_.size()));
+        log_entry_cache_.erase(log_entry_cache_.begin() + static_cast<ptrdiff_t>(log_name_prefix_.size()), (log_entry_cache_.size() - log_name_prefix_.size()));
         const char* text_log_data = layout_ptr_->get_formated_str();
         uint32_t log_text_len = layout_ptr_->get_formated_str_len();
         log_entry_cache_.insert_batch(log_entry_cache_.end(), text_log_data, log_text_len);

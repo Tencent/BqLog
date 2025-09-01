@@ -150,14 +150,14 @@ namespace bq {
             auto total_size = bq::max_value(size, CACHE_READ_DEFAULT_SIZE);
             auto fill_size = total_size - left_size;
             cache_read_.fill_uninitialized(fill_size);
-            auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + left_size, fill_size);
+            auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + static_cast<ptrdiff_t>(left_size), fill_size);
             cache_read_cursor_ = 0;
             if (read_size < fill_size) {
-                cache_read_.erase(cache_read_.begin() + left_size + read_size, fill_size - read_size);
+                cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(left_size + read_size), fill_size - read_size);
             }
         }
         bq::appender_file_base::read_with_cache_handle result;
-        result.data_ = cache_read_.begin() + cache_read_cursor_;
+        result.data_ = cache_read_.begin() + static_cast<ptrdiff_t>(cache_read_cursor_);
         result.len_ = bq::min_value(size, cache_read_.size() - cache_read_cursor_);
         cache_read_cursor_ += result.len_;
         return result;

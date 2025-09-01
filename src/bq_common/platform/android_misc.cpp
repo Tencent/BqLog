@@ -620,7 +620,7 @@ namespace bq {
             stack_trace_str_ref.fill_uninitialized((u8_char_count << 1) + 1);
             size_t encoded_size = (size_t)bq::util::utf8_to_utf16(u8_str, u8_char_count, stack_trace_str_ref.begin(), (uint32_t)stack_trace_str_ref.size());
             assert(encoded_size < stack_trace_str_ref.size());
-            stack_trace_str_ref.erase(stack_trace_str_ref.begin() + encoded_size, stack_trace_str_ref.size() - encoded_size);
+            stack_trace_str_ref.erase(stack_trace_str_ref.begin() + static_cast<ptrdiff_t>(encoded_size), stack_trace_str_ref.size() - encoded_size);
             out_str_ptr = stack_trace_str_ref.begin();
             out_char_count = (uint32_t)stack_trace_str_ref.size();
         }

@@ -216,7 +216,7 @@ namespace bq {
         if (total_length == 0) {
             return *this;
         }
-        auto insert_it = begin() + size();
+        auto insert_it = begin() + static_cast<difference_type>(size());
         insert_batch(insert_it, rhs.begin(), rhs.size());
         return *this;
     }
@@ -354,7 +354,7 @@ namespace bq {
             return result;
         }
         result.set_capacity(count, true);
-        result.insert_batch(result.begin(), begin() + pos, count);
+        result.insert_batch(result.begin(), begin() + static_cast<difference_type>(pos), count);
         return result;
     }
 
@@ -430,11 +430,11 @@ namespace bq {
         while (pos < size()) {
             size_t found_pos = find(from, pos);
             if (found_pos != npos) {
-                result.insert_batch(result.end(), begin() + pos, found_pos - pos);
+                result.insert_batch(result.end(), begin() + static_cast<difference_type>(pos), found_pos - pos);
                 result.insert_batch(result.end(), to.begin(), to.size());
                 pos = found_pos + from.size();
             } else {
-                result.insert_batch(result.end(), begin() + pos, size() - pos);
+                result.insert_batch(result.end(), begin() + static_cast<difference_type>(pos), size() - pos);
                 pos = size();
             }
         }

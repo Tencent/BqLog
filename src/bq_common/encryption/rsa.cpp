@@ -408,7 +408,7 @@ namespace bq {
             n = k - i;
         }
         out.clear();
-        out.insert_batch(out.end(), tmp.begin() + i, n);
+        out.insert_batch(out.end(), tmp.begin() + static_cast<ptrdiff_t>(i), n);
     }
 
     static bool parse_two_tokens(const uint8_t* p, size_t n, const uint8_t*& t1, size_t& l1, const uint8_t*& t2, size_t& l2)

@@ -32,7 +32,7 @@ namespace bq {
         template <typename V, typename Allocator, size_t CB>
         friend class BQ_ARRAY_CLS_NAME;
         typedef typename bq::remove_reference<T>::type value_type;
-        typedef ptrdiff_t diff_type;
+        typedef ptrdiff_t difference_type;
         typedef typename ARRAY::size_type size_type;
 
     private:
@@ -62,16 +62,16 @@ namespace bq {
         template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
         friend bool operator>=(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
         template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
-        friend typename BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>::diff_type operator-(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+        friend typename BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>::difference_type operator-(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
 
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator++();
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator++(int32_t);
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator--();
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator--(int32_t);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(diff_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(diff_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(diff_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(diff_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(difference_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(difference_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(difference_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(difference_type value);
 
         value_type& operator*() const;
 
@@ -86,6 +86,7 @@ namespace bq {
         using value_type = typename bq::decay<T>::type;
         using size_type = size_t;
         using iterator = BQ_ARRAY_ITER_CLS_NAME<value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
+        using difference_type = typename iterator::difference_type ;
         using const_iterator = BQ_ARRAY_ITER_CLS_NAME<const value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
         using allocator_type = Allocator;
 

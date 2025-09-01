@@ -202,7 +202,7 @@ namespace bq {
                         for (size_t i = 0; i < 1024; ++i) {
                             std::uniform_int_distribution<size_t> rand_seq(0, rvalue_target_array.size());
                             size_t insert_pos = rand_seq(linear_ran);
-                            rvalue_target_array.insert_batch(rvalue_target_array.begin() + insert_pos, rvalue_src_array.begin(), push_size);
+                            rvalue_target_array.insert_batch(rvalue_target_array.begin() + static_cast<ptrdiff_t>(insert_pos), rvalue_src_array.begin(), push_size);
                         }
                         size_t total_value = 0;
                         for (const auto& item : rvalue_target_array) {
@@ -229,9 +229,9 @@ namespace bq {
                     while (remove_index < move_position_test_array.size()) {
                         decltype(move_position_test_array)::size_type remove_count = remove_index % 10;
                         if (remove_count == 1 && (remove_index % 2 == 0)) {
-                            move_position_test_array.erase_replace(move_position_test_array.begin() + remove_index);
+                            move_position_test_array.erase_replace(move_position_test_array.begin() + static_cast<ptrdiff_t>(remove_index));
                         } else {
-                            move_position_test_array.erase(move_position_test_array.begin() + remove_index, remove_count);
+                            move_position_test_array.erase(move_position_test_array.begin() + static_cast<ptrdiff_t>(remove_index), remove_count);
                         }
                         remove_index += (random_seed() % 10);
                     }

@@ -226,7 +226,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
     raw_data_.clear();
     raw_data_.fill_uninitialized(sizeof(bq::_log_entry_head_def));
 
-    size_t raw_cursor = 0;
+    ptrdiff_t raw_cursor = 0;
     bq::_log_entry_head_def& head = *((bq::_log_entry_head_def*)&raw_data_[raw_cursor]);
     head.level = (decltype(head.level))formate_template.level;
     head.category_idx = formate_template.category_idx;

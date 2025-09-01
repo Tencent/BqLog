@@ -37,6 +37,7 @@ namespace bq {
         using container_type::size;
         using container_type::operator[];
         typedef typename container_type::size_type size_type;
+        typedef typename container_type::difference_type difference_type;
         typedef typename container_type::iterator iterator;
         typedef typename container_type::const_iterator const_iterator;
         typedef typename container_type::allocator_type allocator_type;

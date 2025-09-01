@@ -238,7 +238,7 @@ namespace bq {
         size_t need_encrypt_size = get_current_file_size() + cache_write_.size() - encryption_start_pos_;
         size_t xor_key_blob_start_pos = encryption_start_pos_ - get_encryption_base_pos();
         xor_stream_inplace_u64_aligned(
-            cache_write_.end() - need_encrypt_size,
+            cache_write_.end() - static_cast<ptrdiff_t>(need_encrypt_size),
             need_encrypt_size,
             xor_key_blob_.begin(),
             get_xor_key_blob_size(),

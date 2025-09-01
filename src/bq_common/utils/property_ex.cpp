@@ -453,7 +453,7 @@ namespace bq {
             as_array().clear();
             return;
         }
-        as_array().erase(as_array().begin() + idx);
+        as_array().erase(as_array().begin() + static_cast<property_value::array_type::difference_type>(idx));
     }
 
     void property_value::clear_array_item()

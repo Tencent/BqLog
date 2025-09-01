@@ -17,7 +17,6 @@
  * \date 2022/08/10
  *
  */
- #include <string>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -95,7 +94,7 @@ namespace bq {
     }
 
     template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
-    BQ_ARRAY_INLINE typename BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>::diff_type operator-(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2)
+    BQ_ARRAY_INLINE typename BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>::difference_type operator-(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2)
     {
         assert((array1.array_data_ptr_ == array2.array_data_ptr_) && "you can not sub two bq::array_iterator generated from different bq::array");
         return array1.data_ - array2.data_;
@@ -132,14 +131,14 @@ namespace bq {
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+=(diff_type value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+=(difference_type value)
     {
         data_ += value;
         return *this;
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+(diff_type value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+(difference_type value)
     {
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
         result += value;
@@ -147,20 +146,17 @@ namespace bq {
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-=(diff_type value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-=(difference_type value)
     {
         data_ -= value;
         return *this;
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(diff_type value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(difference_type value)
     {
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
         result -= value;
-        std::string s;
-        auto u = s.begin();
-        u += (size_t)20;
         return result;
     }
 
@@ -405,17 +401,17 @@ namespace bq {
     {
         assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
         constexpr size_type count = 1;
-        size_type move_count = static_cast<size_type>((end() - dest_it));
+        auto move_count = end() - dest_it;
         size_type new_size = size_ + count;
-        size_type diff = static_cast<size_type>(dest_it - begin());
+        auto diff = dest_it - begin();
         set_capacity(new_size);
         dest_it = begin() + diff;
-        memmove((void*)(end() + count), (void*)(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
-        BQ_ARRAY_INLINE_MACRO(_inner_forward_move)<value_type, allocator_type>(allocator_, dest_it + count, dest_it, move_count);
+        memmove(static_cast<void*>(end() + static_cast<difference_type>(count)), static_cast<void*>(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        BQ_ARRAY_INLINE_MACRO(_inner_forward_move)<value_type, allocator_type>(allocator_, dest_it + static_cast<difference_type>(count), dest_it, static_cast<size_type>(move_count));
         if (move_count > 0) {
-            allocator_.destroy((value_type*)dest_it);
+            allocator_.destroy(static_cast<value_type*>(dest_it));
         }
-        allocator_.construct((value_type*)dest_it, bq::forward<V>(args)...);
+        allocator_.construct(static_cast<value_type*>(dest_it), bq::forward<V>(args)...);
         size_ = new_size;
     }
 
@@ -431,16 +427,16 @@ namespace bq {
             fflush(stdout);
         }
         assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
-        auto move_count = static_cast<size_type>((end() - dest_it));
+        auto move_count = (end() - dest_it);
         const size_type new_size = size_ + count;
-        auto diff = static_cast<size_type>(dest_it - begin());
+        auto diff = dest_it - begin();
         set_capacity(new_size);
         dest_it = begin() + diff;
         if (static_cast<void*>(end())) {
-            memmove(static_cast<void*>(end() + count), static_cast<void*>(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
+            memmove(static_cast<void*>(end() + static_cast<difference_type>(count)), static_cast<void*>(end()), TAIL_BUFFER_SIZE * sizeof(value_type));
         }
-        BQ_ARRAY_INLINE_MACRO(_inner_forward_move)<value_type, allocator_type>(allocator_, dest_it + count, dest_it, move_count);
-        BQ_ARRAY_INLINE_MACRO(_inner_backward_copy)<value_type, allocator_type>(allocator_, dest_it, src_it, count, move_count);
+        BQ_ARRAY_INLINE_MACRO(_inner_forward_move)<value_type, allocator_type>(allocator_, dest_it + static_cast<difference_type>(count), dest_it, static_cast<size_type>(move_count));
+        BQ_ARRAY_INLINE_MACRO(_inner_backward_copy)<value_type, allocator_type>(allocator_, dest_it, src_it, count, static_cast<size_type>(move_count));
         size_ = new_size;
     }
 
@@ -529,9 +525,9 @@ namespace bq {
         if (real_remove_count == 0) {
             return;
         }
-        BQ_ARRAY_INLINE_MACRO(_inner_backward_move)<typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::value_type>(where_it, where_it + real_remove_count, static_cast<size_type>(end() - (where_it + real_remove_count)));
-        allocator_.destroy(data_ + size_ - real_remove_count, real_remove_count);
-        memmove((void*)(end().operator->() - real_remove_count), (void*)(end().operator->()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        BQ_ARRAY_INLINE_MACRO(_inner_backward_move)<typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::value_type>(where_it, where_it + static_cast<difference_type>(real_remove_count), static_cast<size_type>(end() - (where_it + static_cast<difference_type>(real_remove_count))));
+        allocator_.destroy(data_ + size_ - static_cast<difference_type>(real_remove_count), real_remove_count);
+        memmove(static_cast<void*>(end().operator->() - static_cast<difference_type>(real_remove_count)), static_cast<void*>(end().operator->()), TAIL_BUFFER_SIZE * sizeof(value_type));
         size_ -= real_remove_count;
     }
 
@@ -541,8 +537,8 @@ namespace bq {
         assert(where_it >= begin() && where_it < end() && "erase_replace param where_it must between begin() and end() iterator!");
         constexpr size_type real_remove_count = 1;
         BQ_ARRAY_INLINE_MACRO(_inner_backward_move)<typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::value_type>(where_it, end() - 1, real_remove_count);
-        allocator_.destroy((value_type*)end() - 1);
-        memmove((void*)(end().operator->() - real_remove_count), (void*)(end().operator->()), TAIL_BUFFER_SIZE * sizeof(value_type));
+        allocator_.destroy(static_cast<value_type*>(end()) - 1);
+        memmove(static_cast<void*>(end().operator->() - static_cast<difference_type>(real_remove_count)), static_cast<void*>(end().operator->()), TAIL_BUFFER_SIZE * sizeof(value_type));
         --size_;
     }
 
@@ -615,13 +611,13 @@ namespace bq {
     BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::iterator BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::find(const typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::value_type& value, bool reverse_find /* = false*/)
     {
         if (reverse_find) {
-            for (size_type i = size(); i >= 1; --i) {
+            for (auto i = static_cast<difference_type>(size()); i >= 1; --i) {
                 if (data_[i - 1] == value) {
                     return begin() + i - 1;
                 }
             }
         } else {
-            for (size_type i = 0; i < size(); ++i) {
+            for (difference_type i = 0; i < static_cast<difference_type>(size()); ++i) {
                 if (data_[i] == value) {
                     return begin() + i;
                 }
@@ -634,13 +630,13 @@ namespace bq {
     BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::const_iterator BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::find(const typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::value_type& value, bool reverse_find /* = false*/) const
     {
         if (reverse_find) {
-            for (size_type i = size(); i >= 1; --i) {
+            for (auto i = static_cast<difference_type>(size()); i >= 1; --i) {
                 if (data_[i - 1] == value) {
                     return begin() + i - 1;
                 }
             }
         } else {
-            for (size_type i = 0; i < size(); ++i) {
+            for (difference_type i = 0; i < static_cast<difference_type>(size()); ++i) {
                 if (data_[i] == value) {
                     return begin() + i;
                 }
@@ -654,13 +650,13 @@ namespace bq {
     BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::iterator BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::find_if(Predicate predicate, bool reverse_find /* = false*/)
     {
         if (reverse_find) {
-            for (size_type i = size(); i >= 1; --i) {
+            for (auto i = static_cast<difference_type>(size()); i >= 1; --i) {
                 if (predicate(data_[i - 1])) {
                     return begin() + i - 1;
                 }
             }
         } else {
-            for (size_type i = 0; i < size(); ++i) {
+            for (difference_type i = 0; i < static_cast<difference_type>(size()); ++i) {
                 if (predicate(data_[i])) {
                     return begin() + i;
                 }
@@ -674,13 +670,13 @@ namespace bq {
     BQ_ARRAY_INLINE typename BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::const_iterator BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::find_if(Predicate predicate, bool reverse_find /* = false*/) const
     {
         if (reverse_find) {
-            for (size_type i = size(); i >= 1; --i) {
+            for (auto i = static_cast<difference_type>(size()); i >= 1; --i) {
                 if (predicate(data_[i - 1])) {
                     return begin() + i - 1;
                 }
             }
         } else {
-            for (size_type i = 0; i < size(); ++i) {
+            for (difference_type i = 0; i < static_cast<difference_type>(size()); ++i) {
                 if (predicate(data_[i])) {
                     return begin() + i;
                 }

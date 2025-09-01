@@ -422,7 +422,7 @@ namespace bq {
         content.fill_uninitialized(size);
         auto real_read_size = read_file(handle, (bq::string::value_type*)content.begin(), size);
         if (real_read_size < size) {
-            content.erase(content.begin() + real_read_size, size - real_read_size);
+            content.erase(content.begin() + static_cast<bq::string::difference_type>(real_read_size), size - real_read_size);
         }
         return content;
     }

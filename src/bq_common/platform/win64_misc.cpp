@@ -42,7 +42,7 @@ namespace bq {
             result.fill_uninitialized(utf8_str.size() + 1);
             uint32_t trans_size = bq::util::utf8_to_utf16(utf8_str.c_str(), (uint32_t)utf8_str.size(), &result[0], (uint32_t)result.size());
             assert((trans_size < result.size()) && "trans_to_windows_wide_string error");
-            result.erase(result.begin() + (size_t)trans_size, result.size() - ((size_t)trans_size));
+            result.erase(result.begin() + static_cast<ptrdiff_t>(trans_size), result.size() - ((size_t)trans_size));
             result = result.replace(u"/", u"\\");
             return result;
         }
@@ -99,7 +99,7 @@ namespace bq {
             base_dir_0_.fill_uninitialized((size_t)wpath_len * 3 + 2);
             size_t utf8_len = (size_t)bq::util::utf16_to_utf8(wpath, wpath_len, base_dir_0_.begin(), (uint32_t)base_dir_0_.size());
             assert(utf8_len < base_dir_0_.size() && "base_dir utf16_to_utf8 size error!");
-            base_dir_0_.erase(base_dir_0_.begin() + utf8_len, base_dir_0_.size() - utf8_len);
+            base_dir_0_.erase(base_dir_0_.begin() + static_cast<ptrdiff_t>(utf8_len), base_dir_0_.size() - utf8_len);
         }
 
         const bq::string& get_base_dir(bool is_sandbox)
@@ -299,7 +299,7 @@ namespace bq {
                         path.push_back(u'\\');
                         path += (const char16_t*)find_data.cFileName;
                         int32_t result = remove_dir_or_file_inner(path);
-                        path.erase(path.begin() + path_init_size, path.size() - path_init_size);
+                        path.erase(path.begin() + static_cast<ptrdiff_t>(path_init_size), path.size() - path_init_size);
                         if (result != 0) {
                             return result;
                         }
@@ -312,7 +312,7 @@ namespace bq {
                         path.push_back(u'\\');
                         path += (const char16_t*)find_data.cFileName;
                         int32_t result = remove_dir_or_file_inner(path);
-                        path.erase(path.begin() + path_init_size, path.size() - path_init_size);
+                        path.erase(path.begin() + static_cast<ptrdiff_t>(path_init_size), path.size() - path_init_size);
                         if (result != 0) {
                             return result;
                         }
@@ -577,7 +577,7 @@ namespace bq {
             stack_trace_str_ref.fill_uninitialized(((u16_str_len * 3) >> 1) + 1);
             size_t encoded_size = (size_t)bq::util::utf16_to_utf8(u16_str, u16_str_len, stack_trace_str_ref.begin(), (uint32_t)stack_trace_current_str_.get().size());
             assert(encoded_size < stack_trace_str_ref.size());
-            stack_trace_str_ref.erase(stack_trace_current_str_.get().begin() + encoded_size, stack_trace_str_ref.size() - encoded_size);
+            stack_trace_str_ref.erase(stack_trace_current_str_.get().begin() + static_cast<ptrdiff_t>(encoded_size), stack_trace_str_ref.size() - encoded_size);
             out_str_ptr = stack_trace_str_ref.begin();
             out_char_count = (uint32_t)stack_trace_current_str_.get().size();
         }

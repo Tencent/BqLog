@@ -1088,8 +1088,7 @@ namespace bq {
                     }
                     if (is_empty) {
                         bq::string abs_mmap_file_path = temprorary_oversize_buffer_.buffers_array_[index]->buffer_.get_mmap_file_path();
-                        ;
-                        temprorary_oversize_buffer_.buffers_array_.erase_replace(temprorary_oversize_buffer_.buffers_array_.begin() + index);
+                        temprorary_oversize_buffer_.buffers_array_.erase_replace(temprorary_oversize_buffer_.buffers_array_.begin() + static_cast<ptrdiff_t>(index));
                         if (bq::file_manager::is_file(abs_mmap_file_path)) {
                             bq::file_manager::remove_file_or_dir(abs_mmap_file_path);
                         }
