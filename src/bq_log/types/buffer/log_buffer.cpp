@@ -729,8 +729,8 @@ namespace bq {
 
         bq::string alloc_output = "[Alloc]->";
         alloc_lock_.lock();
-        for (const auto& alloc_item : alloc_list_) {
-            switch (alloc_item.result_)
+        for (const auto& item : alloc_list_) {
+            switch (item.result_)
             {
             case enum_buffer_result_code::err_alloc_size_invalid:
                 alloc_output += "[×]";
@@ -746,11 +746,11 @@ namespace bq {
                 break;
             }
             char size_tmp[32];
-            snprintf(size_tmp, 32, "%" PRIu32 "", alloc_item.size_);
+            snprintf(size_tmp, 32, "%" PRIu32 "", item.size_);
             char addr_tmp[32];
-            snprintf(addr_tmp, 32, "%p", alloc_item.block_addr_);
+            snprintf(addr_tmp, 32, "%p", item.block_addr_);
             char tid_tmp[32];
-            snprintf(tid_tmp, 32, "%" PRIu64 "", alloc_item.tid_);
+            snprintf(tid_tmp, 32, "%" PRIu64 "", item.tid_);
             alloc_output += size_tmp;
             alloc_output += "_";
             alloc_output += addr_tmp;
