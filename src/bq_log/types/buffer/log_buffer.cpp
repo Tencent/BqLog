@@ -274,6 +274,9 @@ namespace bq {
         assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
+        while (rt_reading.history_.size() > 128) {
+            rt_reading.history_.erase(rt_reading.history_.begin());
+        }
         rt_reading.history_.push_back(op_item{ enum_op::read_call, 0, static_cast<void*>(0)});
         if (rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success) {
             if (rt_reading.hp_handle_cache_.has_next()) {
@@ -694,10 +697,18 @@ namespace bq {
             group_output += "->";
             block_node_head* output_node = iter.value().get_data_head().used_.first();
             while (output_node) {
+                if (group_output.size() > 1024 * 16) {
+                    group_output += "[Oversize]";
+                    break;
+                }
                 uint16_t output_index = iter.value().get_data_head().used_.get_index_by_block_head(output_node);
                 group_output += indices[output_index];
                 group_output += "->";
                 output_node = iter.value().get_data_head().used_.next(output_node);
+            }
+            if (group_output.size() > 1024 * 16) {
+                group_output += "[Oversize]";
+                break;
             }
         }
         printf("#%d, History:%s\n, Structure:%s\n", id, history_output.c_str(), group_output.c_str());
@@ -716,7 +727,7 @@ namespace bq {
         if (!next_block) {
             next_block = rt_reading.cur_group_.value().get_data_head().stage_.pop();
             if (next_block) {
-                while (rt_reading.history_.size() > 30) {
+                while (rt_reading.history_.size() > 128) {
                     rt_reading.history_.erase(rt_reading.history_.begin());
                 }
                 auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
@@ -726,7 +737,7 @@ namespace bq {
         }
 
         if (next_block) {
-            while (rt_reading.history_.size() > 30) {
+            while (rt_reading.history_.size() > 128) {
                 rt_reading.history_.erase(rt_reading.history_.begin());
             }
             auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
@@ -746,7 +757,7 @@ namespace bq {
 #endif
         if (is_cur_block_in_group) {
             if (mem_opt.is_block_marked_removed) {
-                while (rt_reading.history_.size() > 30) {
+                while (rt_reading.history_.size() > 128) {
                     rt_reading.history_.erase(rt_reading.history_.begin());
                 }
                 auto cur_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_);
@@ -856,14 +867,8 @@ namespace bq {
         }
         rt_reading.cur_group_ = next_group;
 
-        while (rt_reading.history_.size() > 30) {
-            rt_reading.history_.erase(rt_reading.history_.begin());
-        }
-        while (rt_reading.history_.size() > 30) {
-            rt_reading.history_.erase(rt_reading.history_.begin());
-        }
         if (!next_group) {
-            while (rt_reading.history_.size() > 30) {
+            while (rt_reading.history_.size() > 128) {
                 rt_reading.history_.erase(rt_reading.history_.begin());
             }
             rt_reading.history_.push_back(op_item{enum_op::lp, 0, nullptr});
