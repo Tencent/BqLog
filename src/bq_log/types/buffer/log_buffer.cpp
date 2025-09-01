@@ -181,7 +181,7 @@ namespace bq {
                 while (alloc_list_.size() >= 128) {
                     alloc_list_.pop_front();
                 }
-                alloc_list_.emplace_back(result.result, size, block_cache, bq::platform::thread::get_current_thread_id());
+                alloc_list_.emplace_back(alloc_item{result.result, size, block_cache, bq::platform::thread::get_current_thread_id()});
                 alloc_lock_.unlock();
                 if (enum_buffer_result_code::err_not_enough_space == result.result) {
                     switch (config_.policy) {
