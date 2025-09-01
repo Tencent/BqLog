@@ -19,6 +19,7 @@
  */
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "bq_common/misc/assert.h"
 #include "bq_common/types/type_tools.h"
 #include "bq_common/types/array_def.h"
@@ -449,6 +450,11 @@ namespace bq {
     {
         if (count == 0) {
             return;
+        }
+        if (!(dest_it >= begin() && dest_it <= end())) {
+            printf("size:%zu, capacity:%zu, begin:0x%p, end:0x%p, dest:0x%p\n", size_, capacity_, data_, &*end(),  &*dest_it);
+            printf("content:%s", (char*)data_);
+            fflush(stdout);
         }
         assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
         auto move_count = static_cast<size_type>((end() - dest_it));
