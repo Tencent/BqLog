@@ -177,6 +177,12 @@ namespace bq {
                     block_cache = alloc_new_hp_block();
                 }
                 result = block_cache->get_buffer().alloc_write_chunk(size);
+                alloc_lock_.lock();
+                while (alloc_list_.size() >= 128) {
+                    alloc_list_.pop_front();
+                }
+                alloc_list_.emplace_back(result.result, size, block_cache, bq::platform::thread::get_current_thread_id());
+                alloc_lock_.unlock();
                 if (enum_buffer_result_code::err_not_enough_space == result.result) {
                     switch (config_.policy) {
                     case log_memory_policy::auto_expand_when_full:
@@ -275,9 +281,9 @@ namespace bq {
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
         while (rt_reading.history_.size() > 512) {
-            rt_reading.history_.erase(rt_reading.history_.begin());
+            rt_reading.history_.pop_front();
         }
-        rt_reading.history_.push_back(op_item{ enum_op::read_call, 0, static_cast<void*>(0)});
+        rt_reading.history_.push_back(op_item{ enum_op::read_call, 0, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(0)});
         if (rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success) {
             if (rt_reading.hp_handle_cache_.has_next()) {
                 return rt_reading.hp_handle_cache_.next();
@@ -285,7 +291,7 @@ namespace bq {
                 rt_reading.hp_handle_cache_.result = enum_buffer_result_code::err_empty_log_buffer;
             }
         }
-        rt_reading.history_.push_back(op_item{ enum_op::read_travers, 0, static_cast<void*>(0) });
+        rt_reading.history_.push_back(op_item{ enum_op::read_travers, 0, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(0) });
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
@@ -668,6 +674,10 @@ namespace bq {
                 history_output += tmp;
                 history_output += ":";
             }
+
+            char tmp2[32];
+            snprintf(tmp2, 32, "%p", item.block_addr_);
+
             switch (item.op_) {
             case  enum_op::add:
                 history_output += indices[item.block_index_] + "(A)";
@@ -676,7 +686,7 @@ namespace bq {
                 history_output += indices[item.block_index_] + "(X)";
                 break;
             case  enum_op::traverse:
-                history_output += indices[item.block_index_] + "(T)";
+                history_output += indices[item.block_index_] + "(T)" + tmp2;
                 break;
             case  enum_op::lp:
                 history_output += "【-----】)";
@@ -715,7 +725,42 @@ namespace bq {
             }
             iter = hp_buffer_.next(iter, group_list::lock_type::no_lock);
         }
-        printf("#%d, History:%s\n, Structure:%s\n", id, history_output.c_str(), group_output.c_str());
+
+
+        bq::string alloc_output = "[Alloc]->";
+        alloc_lock_.lock();
+        for (const auto& alloc_item : alloc_list_) {
+            switch (alloc_item.result_)
+            {
+            case enum_buffer_result_code::err_alloc_size_invalid:
+                alloc_output += "[×]";
+                break;
+            case enum_buffer_result_code::success:
+                alloc_output += "[✔]";
+                break;
+            case enum_buffer_result_code::err_not_enough_space:
+                alloc_output += "[⚪]";
+                break;
+            default:
+                alloc_output += "[?]";
+                break;
+            }
+            char size_tmp[32];
+            snprintf(size_tmp, 32, "%" PRIu32 "", alloc_item.size_);
+            char addr_tmp[32];
+            snprintf(addr_tmp, 32, "%p", alloc_item.block_addr_);
+            char tid_tmp[32];
+            snprintf(tid_tmp, 32, "%" PRIu64 "", alloc_item.tid_);
+            alloc_output += size_tmp;
+            alloc_output += "_";
+            alloc_output += addr_tmp;
+            alloc_output += "_";
+            alloc_output += tid_tmp;
+            alloc_output += "  ->  ";
+        }
+        alloc_lock_.unlock();
+
+        printf("#%d, History:%s\n, Structure:%s\n Alloc:%s\n", id, history_output.c_str(), group_output.c_str(), alloc_output.c_str());
         fflush(stdout);
     }
 
@@ -732,20 +777,20 @@ namespace bq {
             next_block = rt_reading.cur_group_.value().get_data_head().stage_.pop();
             if (next_block) {
                 while (rt_reading.history_.size() > 512) {
-                    rt_reading.history_.erase(rt_reading.history_.begin());
+                    rt_reading.history_.pop_front();
                 }
                 auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
-                rt_reading.history_.push_back(op_item{enum_op::add, next_index, static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
+                rt_reading.history_.push_back(op_item{enum_op::add, next_index, static_cast<void*>(next_block), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
                 rt_reading.cur_group_.value().get_data_head().used_.push_after_thread_unsafe(is_cur_block_in_group ? rt_reading.cur_block_ : nullptr, next_block);
             }
         }
 
         if (next_block) {
             while (rt_reading.history_.size() > 512) {
-                rt_reading.history_.erase(rt_reading.history_.begin());
+                rt_reading.history_.pop_front();
             }
             auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
-            rt_reading.history_.push_back(op_item{enum_op::traverse, next_index, static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
+            rt_reading.history_.push_back(op_item{enum_op::traverse, next_index, static_cast<void*>(next_block), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
             if (next_block == rt_reading.cur_block_) {
                 output_debug(1);
             }
@@ -762,10 +807,10 @@ namespace bq {
         if (is_cur_block_in_group) {
             if (mem_opt.is_block_marked_removed) {
                 while (rt_reading.history_.size() > 512) {
-                    rt_reading.history_.erase(rt_reading.history_.begin());
+                    rt_reading.history_.pop_front();
                 }
                 auto cur_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_);
-                rt_reading.history_.push_back(op_item{enum_op::remove, cur_index, static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
+                rt_reading.history_.push_back(op_item{enum_op::remove, cur_index, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
 
                 if (context_verify_result::valid == mem_opt.verify_result) {
                     const auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
@@ -873,9 +918,9 @@ namespace bq {
 
         if (!next_group) {
             while (rt_reading.history_.size() > 512) {
-                rt_reading.history_.erase(rt_reading.history_.begin());
+                rt_reading.history_.pop_front();
             }
-            rt_reading.history_.push_back(op_item{enum_op::lp, 0, nullptr});
+            rt_reading.history_.push_back(op_item{enum_op::lp, 0, nullptr, nullptr});
         }
         return next_group;
     }

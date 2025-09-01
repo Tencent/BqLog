@@ -524,6 +524,7 @@ namespace bq {
                     }
                     result.add_result(count_result, "[log buffer]chunk count check error, real:%d , expected:%d, debu_str:%s", task_check_vector[i], chunk_count_per_task, config_debug_str.c_str());
                 }
+                test_buffer.output_debug(8);
                 test_output_dynamic_param(bq::log_level::info, "\n[log buffer] test finished, time cost:%dms\n", (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
                 result.add_result(total_chunk == log_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", log_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "[log buffer] total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);

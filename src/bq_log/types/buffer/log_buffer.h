@@ -28,6 +28,7 @@
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 #include "bq_log/types/buffer/group_list.h"
 #include "bq_log/types/buffer/normal_buffer.h"
+#include <deque>
 
 namespace bq {
     class alignas(CACHE_LINE_SIZE) log_buffer {
@@ -250,8 +251,19 @@ private:
         struct op_item {
             enum_op op_;
             uint16_t block_index_;
+            void* block_addr_;
             void* group_addr_;
         };
+
+        struct alloc_item {
+            bq::enum_buffer_result_code result_;
+            uint32_t size_;
+            void* block_addr_;
+            bq::platform::thread::thread_id tid_;
+        };
+
+        bq::platform::spin_lock alloc_lock_;
+        std::deque<alloc_item> alloc_list_;
 
         struct alignas(CACHE_LINE_SIZE) {
             struct {
@@ -259,7 +271,7 @@ private:
                 group_list::iterator cur_group_;
                 block_node_head* last_block_ = nullptr;
                 block_node_head* cur_block_ = nullptr;
-                bq::array<op_item> history_;
+                std::deque<op_item> history_;
                 uint16_t version_ = 0;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data
                 read_state state_ = read_state::lp_buffer_reading;
