@@ -33,8 +33,8 @@
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
-#include <cxxabi.h>
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS)
+#include <cxxabi.h>
 #include <execinfo.h>
 namespace bq {
     BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);

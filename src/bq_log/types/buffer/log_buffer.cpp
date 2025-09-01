@@ -17,8 +17,6 @@
  */
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
-
-#include <iterator>
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif
