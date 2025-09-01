@@ -232,7 +232,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
     head.category_idx = formate_template.category_idx;
     head.timestamp_epoch = last_log_entry_epoch_;
     head.log_format_str_type = (decltype(head.log_format_str_type))log_arg_type_enum::string_utf8_type;
-    raw_cursor += sizeof(bq::_log_entry_head_def);
+    raw_cursor += static_cast<ptrdiff_t>(sizeof(bq::_log_entry_head_def));
 
     auto fmt_str_size = sizeof(uint32_t) + formate_template.fmt_string.size();
     auto fmt_str_section_size = bq::align_4(fmt_str_size);
@@ -245,7 +245,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
     if (fmt_str_size > 0) {
         memcpy((uint8_t*)(raw_data_.begin() + raw_cursor + sizeof(uint32_t)), formate_template.fmt_string.c_str(), formate_template.fmt_string.size());
     }
-    raw_cursor += fmt_str_section_size;
+    raw_cursor += static_cast<ptrdiff_t>(fmt_str_section_size);
 
     while (cursor < read_handle.len()) {
         bq::log_arg_type_enum type_info = (bq::log_arg_type_enum)read_handle.data()[cursor++];
@@ -304,7 +304,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
                 return bq::appender_decode_result::failed_decode_error;
             }
             cursor += vlq_decode_length_tmp;
-            raw_cursor += 4 + sizeof(uint32_t);
+            raw_cursor += 4 + static_cast<ptrdiff_t>(sizeof(uint32_t));
             break;
         case bq::log_arg_type_enum::int32_type:
             raw_data_.fill_uninitialized(sizeof(uint32_t));
@@ -315,7 +315,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
                 return bq::appender_decode_result::failed_decode_error;
             }
             cursor += vlq_decode_length_tmp;
-            raw_cursor += 4 + sizeof(uint32_t);
+            raw_cursor += 4 + static_cast<ptrdiff_t>(sizeof(uint32_t));
             break;
         case bq::log_arg_type_enum::uint64_type:
             raw_data_.fill_uninitialized(sizeof(uint64_t));
@@ -325,7 +325,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
                 return bq::appender_decode_result::failed_decode_error;
             }
             cursor += vlq_decode_length_tmp;
-            raw_cursor += 4 + sizeof(uint64_t);
+            raw_cursor += 4 + static_cast<ptrdiff_t>(sizeof(uint64_t));
             break;
         case bq::log_arg_type_enum::int64_type:
             raw_data_.fill_uninitialized(sizeof(uint64_t));
@@ -336,19 +336,19 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
                 return bq::appender_decode_result::failed_decode_error;
             }
             cursor += vlq_decode_length_tmp;
-            raw_cursor += 4 + sizeof(uint64_t);
+            raw_cursor += 4 + static_cast<ptrdiff_t>(sizeof(uint64_t));
             break;
         case bq::log_arg_type_enum::float_type:
             raw_data_.fill_uninitialized(sizeof(float));
             memcpy(raw_data_.begin() + raw_cursor + 4, read_handle.data() + cursor, sizeof(float));
             cursor += sizeof(float);
-            raw_cursor += 4 + sizeof(float);
+            raw_cursor += 4 + static_cast<ptrdiff_t>(sizeof(float));
             break;
         case bq::log_arg_type_enum::double_type:
             raw_data_.fill_uninitialized(sizeof(double));
             memcpy(raw_data_.begin() + raw_cursor + 4, read_handle.data() + cursor, sizeof(double));
             cursor += sizeof(double);
-            raw_cursor += 4 + sizeof(double);
+            raw_cursor += 4 + static_cast<ptrdiff_t>(sizeof(double));
             break;
         case bq::log_arg_type_enum::string_utf8_type: {
             uint32_t len = 0;
@@ -373,7 +373,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             const uint8_t* str_begin_pos = has_place_holder ? (const uint8_t*)(read_handle.data() + cursor + 1) : (const uint8_t*)(read_handle.data() + cursor);
             memcpy((uint8_t*)(raw_data_.begin() + raw_cursor), str_begin_pos, (size_t)len);
             cursor += has_place_holder ? (len + 1) : (len);
-            raw_cursor += string_section_len;
+            raw_cursor += static_cast<ptrdiff_t>(string_section_len);
         } break;
         default:
             break;
