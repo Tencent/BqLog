@@ -276,6 +276,7 @@ namespace bq {
         assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
+        rt_reading.history_.push_back(op_item{ enum_op::read_call, 0, static_cast<void*>(0)});
         if (rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success) {
             if (rt_reading.hp_handle_cache_.has_next()) {
                 return rt_reading.hp_handle_cache_.next();
@@ -679,22 +680,29 @@ namespace bq {
             case  enum_op::lp:
                 history_output += "-";
                 break;
+            case  enum_op::read_call:
+                history_output += "R";
+                break;
             }
             history_output += ")->";
         }
-        bq::string group_output = "";
-        auto& rt_reading = rt_cache_.current_reading_;
-        if (rt_reading.cur_group_) {
-            auto& used = rt_reading.cur_group_.value().get_data_head().used_;
-            block_node_head* output_node = used.first();
+        bq::string group_output = "[LP_Buffer]->";
+        auto iter = hp_buffer_.first(group_list::lock_type::no_lock);
+        while (iter) {
+            void* addr = static_cast<void*>(&iter.value().get_data_head().used_);
+            char tmp[32];
+            snprintf(tmp, 32, "0x%p", addr);
+            group_output += tmp;
+            group_output += "->";
+            block_node_head* output_node = iter.value().get_data_head().used_.first();
             while (output_node) {
-                uint16_t output_index = used.get_index_by_block_head(output_node);
-                group_output += "->";
+                uint16_t output_index = iter.value().get_data_head().used_.get_index_by_block_head(output_node);
                 group_output += indices[output_index];
-                output_node = used.next(output_node);
+                group_output += "->";
+                output_node = iter.value().get_data_head().used_.next(output_node);
             }
         }
-        printf("#%d, History:%s\n, Current Group Structure:0x%p : %s\n", id, history_output.c_str(), rt_reading.cur_group_ ? static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) : static_cast<void*>(nullptr), group_output.c_str());
+        printf("#%d, History:%s\n, Structure:%s\n", id, history_output.c_str(), group_output.c_str());
         fflush(stdout);
     }
 
