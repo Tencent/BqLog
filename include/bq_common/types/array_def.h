@@ -68,14 +68,10 @@ namespace bq {
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator++(int32_t);
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator--();
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator--(int32_t);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(size_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(size_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(size_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(size_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(diff_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(diff_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(diff_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(diff_type value);
 
         value_type& operator*() const;
 

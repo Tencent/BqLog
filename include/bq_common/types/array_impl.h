@@ -17,6 +17,7 @@
  * \date 2022/08/10
  *
  */
+ #include <string>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -131,21 +132,14 @@ namespace bq {
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+=(int32_t value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+=(diff_type value)
     {
         data_ += value;
         return *this;
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+=(size_type value)
-    {
-        data_ += (int32_t)value;
-        return *this;
-    }
-
-    template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+(int32_t value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+(diff_type value)
     {
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
         result += value;
@@ -153,40 +147,20 @@ namespace bq {
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator+(size_type value)
-    {
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
-        result += (int32_t)value;
-        return result;
-    }
-
-    template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-=(int32_t value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-=(diff_type value)
     {
         data_ -= value;
         return *this;
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-=(size_type value)
-    {
-        data_ -= (int32_t)value;
-        return *this;
-    }
-
-    template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(int32_t value)
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(diff_type value)
     {
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
         result -= value;
-        return result;
-    }
-
-    template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator-(size_type value)
-    {
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> result = *this;
-        result -= (int32_t)value;
+        std::string s;
+        auto u = s.begin();
+        u += (size_t)20;
         return result;
     }
 
