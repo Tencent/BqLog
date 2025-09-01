@@ -710,6 +710,7 @@ namespace bq {
                 group_output += "[Oversize]";
                 break;
             }
+            iter = hp_buffer_.next(iter, group_list::lock_type::no_lock);
         }
         printf("#%d, History:%s\n, Structure:%s\n", id, history_output.c_str(), group_output.c_str());
         fflush(stdout);
