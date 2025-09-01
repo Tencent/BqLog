@@ -489,6 +489,11 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
       - name: Build for Linux
         run: |
           cd build/test/linux  
@@ -506,6 +511,11 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
 
       - name: Build for Linux
         run: |
@@ -525,6 +535,11 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
       - name: Build for Linux
         run: |
           cd build/test/linux  
@@ -542,6 +557,11 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
 
       - name: Build for Linux
         run: |
@@ -561,6 +581,11 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
       - name: Build for Linux
         run: |
           cd build/test/linux  
@@ -578,6 +603,11 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
 
       - name: Build for Linux
         run: |
@@ -597,6 +627,11 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
       - name: Build for Linux
         run: |
           cd build/test/linux  
@@ -614,6 +649,11 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
 
       - name: Build for Linux
         run: |
@@ -633,6 +673,11 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
       - name: Build for Linux
         run: |
           cd build/test/linux  
@@ -650,6 +695,11 @@ jobs:
         with:
           java-version: '11'
           distribution: 'adopt'
+
+      - name: Install GDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
 
       - name: Build for Linux
         run: |
