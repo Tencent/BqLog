@@ -452,7 +452,7 @@ namespace bq {
             return;
         }
         if (!(dest_it >= begin() && dest_it <= end())) {
-            printf("size:%zu, capacity:%zu, begin:0x%p, end:0x%p, dest:0x%p\n", size_, capacity_, static_cast<void*>(data_), static_cast<void*>(&*end()), static_cast<void*>(&*dest_)it);
+            printf("size:%zu, capacity:%zu, begin:0x%p, end:0x%p, dest:0x%p\n", size_, capacity_, static_cast<void*>(data_), static_cast<void*>(&*end()), static_cast<void*>(&*dest_it));
             printf("content:%s", (char*)data_);
             fflush(stdout);
         }
