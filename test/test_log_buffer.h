@@ -513,6 +513,14 @@ namespace bq {
                     bool count_result = (task_check_vector[i] == chunk_count_per_task);
                     if (!count_result) {
                         test_buffer.output_debug(5);
+
+                        for (int32_t j = 0; j < 3; ++j) {
+                            auto handle2 = test_buffer.read_chunk();
+                            printf("\n, is_empty:%d, ", (int32_t)handle2.result);
+                            test_buffer.return_read_chunk(handle2);
+                            test_buffer.output_debug(6 + j);
+                        }
+
                     }
                     result.add_result(count_result, "[log buffer]chunk count check error, real:%d , expected:%d, debu_str:%s", task_check_vector[i], chunk_count_per_task, config_debug_str.c_str());
                 }
