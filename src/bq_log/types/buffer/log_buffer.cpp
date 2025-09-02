@@ -296,7 +296,9 @@ namespace bq {
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
         bool traverse_completed = false;
-        rt_reading.traverse_end_block_ = rt_reading.last_block_;
+        rt_reading.traverse_end_block_ = rt_reading.last_block_; 
+        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 0, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+
 
         bool ignore_first_loop = false;
         if (rt_reading.last_block_ == rt_reading.cur_block_) {
@@ -331,6 +333,7 @@ namespace bq {
                     } else {
                         ++rt_reading.version_;
                         rt_reading.traverse_end_block_ = nullptr;
+                        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 1, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
                     }
                 }
                 rt_reading.state_ = read_state::next_group_finding;
@@ -363,7 +366,8 @@ namespace bq {
                         traverse_completed = true;
                     } else {
                         ++rt_reading.version_;
-                        rt_reading.traverse_end_block_ = rt_reading.last_block_;
+                        rt_reading.traverse_end_block_ = rt_reading.last_block_; 
+                        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 2, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
                     }
                 }
                 if (!next_block_found) {
@@ -693,13 +697,16 @@ namespace bq {
                 history_output += indices[item.block_index_] + "(T)" + tmp2;
                 break;
             case  enum_op::lp:
-                history_output += "【-----】)";
+                history_output += "【-----】";
                 break;
             case  enum_op::read_call:
                 history_output += "(r)";
                 break;
             case  enum_op::read_travers:
                 history_output += "(R)";
+                break;
+            case  enum_op::travers_end_set:
+                history_output += "((❁´" + indices[item.block_index_] + "[" + tmp2 + "]`❁))";
                 break;
             default:
                 history_output += indices[item.block_index_] + "(读)";
@@ -851,14 +858,6 @@ namespace bq {
             mem_opt.is_block_marked_removed = (out_verify_result == context_verify_result::valid && is_block_removed(next_block))
                 || out_verify_result == context_verify_result::version_invalid
                 || out_verify_result == context_verify_result::seq_invalid;
-            if (mem_opt.is_block_marked_removed){
-                if (out_verify_result == context_verify_result::seq_invalid) {
-                    printf("context_verify_result::seq_invalid\n");
-                }
-                else if (out_verify_result == context_verify_result::version_invalid) {
-                    printf("context_verify_result::version_invalid\n");
-                }
-            }
             mem_opt.verify_result = out_verify_result;
             if (mem_opt.left_holes_num_ > 0) {
                 mark_block_need_reallocate(next_block, true);
@@ -869,7 +868,6 @@ namespace bq {
         } else {
             mem_opt.is_block_marked_removed = false;
             mem_opt.verify_result = context_verify_result::version_invalid;
-            ;
         }
         return false;
     }
