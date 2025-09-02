@@ -338,6 +338,10 @@ namespace bq {
                 break;
             case read_state::hp_block_reading:
                 rt_reading.hp_handle_cache_ = rt_reading.cur_block_->get_buffer().batch_read();
+                while (rt_reading.history_.size() > 512) {
+                    rt_reading.history_.pop_front();
+                }
+                rt_reading.history_.push_back(op_item{ static_cast<enum_op>(static_cast<int32_t>(enum_op::read_block) + static_cast<int32_t>(rt_reading.hp_handle_cache_.result)), rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_), static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
                 if (enum_buffer_result_code::success == rt_reading.hp_handle_cache_.result) {
                     read_handle = rt_reading.hp_handle_cache_.next();
                     loop_finished = true;
@@ -697,6 +701,9 @@ namespace bq {
             case  enum_op::read_travers:
                 history_output += "(R)";
                 break;
+            default:
+                history_output += indices[item.block_index_] + "(读)";
+                history_output.push_back(static_cast<char>(static_cast<char>(item.op_) - static_cast<char>(enum_op::read_block) + '0'));
             }
             history_output += "->";
         }

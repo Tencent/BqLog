@@ -240,13 +240,14 @@ private:
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
         bq::platform::atomic<uint64_t> current_oversize_buffer_index_;
 
-        enum class enum_op {
+        enum class enum_op : uint8_t {
             traverse,
             add,
             remove,
             lp,
             read_call,
-            read_travers
+            read_travers,
+            read_block,
         };
         struct op_item {
             enum_op op_;
