@@ -341,10 +341,6 @@ namespace bq {
                 break;
             case read_state::hp_block_reading:
                 rt_reading.hp_handle_cache_ = rt_reading.cur_block_->get_buffer().batch_read();
-                while (rt_reading.history_.size() > 512) {
-                    rt_reading.history_.pop_front();
-                }
-                rt_reading.history_.push_back(op_item{ static_cast<enum_op>(static_cast<int32_t>(enum_op::read_block) + static_cast<int32_t>(rt_reading.hp_handle_cache_.result)), rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_), static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
                 if (enum_buffer_result_code::success == rt_reading.hp_handle_cache_.result) {
                     read_handle = rt_reading.hp_handle_cache_.next();
                     loop_finished = true;
@@ -359,6 +355,14 @@ namespace bq {
 #endif
                 const auto processing_block_snapshot = rt_reading.cur_block_;
                 const auto next_block_found = rt_try_traverse_to_next_block_in_group(verify_result);
+
+                while (rt_reading.history_.size() > 512) {
+                    rt_reading.history_.pop_front();
+                }
+                if (next_block_found) {
+                    auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_);
+                    rt_reading.history_.push_back(op_item{ enum_op::found_block, next_index, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
+                }
                 if (!traverse_completed
                     && rt_reading.traverse_end_block_ == processing_block_snapshot
                     && rt_reading.cur_group_.value().is_range_include(processing_block_snapshot)) {
@@ -371,6 +375,7 @@ namespace bq {
                     }
                 }
                 if (!next_block_found) {
+                    rt_reading.history_.push_back(op_item{ enum_op::find_next_group, 0, static_cast<void*>(0), static_cast<void*>(0) });
                     rt_reading.state_ = read_state::next_group_finding;
                     break;
                 }
@@ -380,6 +385,7 @@ namespace bq {
                 if (context_verify_result::valid == verify_result) {
                     rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::hp_block_reading;
                 }
+                rt_reading.history_.push_back(op_item{ enum_op::final_state, static_cast<uint16_t>(rt_reading.state_), static_cast<void*>(0), static_cast<void*>(0)});
                 break;
             }
             case read_state::next_group_finding:
@@ -708,9 +714,17 @@ namespace bq {
             case  enum_op::travers_end_set:
                 history_output += "((❁´" + indices[item.block_index_] + "[" + tmp2 + "]`❁))";
                 break;
+            case  enum_op::found_block:
+                history_output += indices[item.block_index_] + "(F)";
+                break;
+            case  enum_op::find_next_group:
+                history_output += "(NG)";
+                break;
+            case  enum_op::final_state:
+                history_output += indices[item.block_index_] + "(Done)";
+                break;
             default:
-                history_output += indices[item.block_index_] + "(读)";
-                history_output.push_back(static_cast<char>(static_cast<char>(item.op_) - static_cast<char>(enum_op::read_block) + '0'));
+                break;
             }
             history_output += "->";
         }

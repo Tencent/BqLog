@@ -248,7 +248,9 @@ private:
             read_call,
             read_travers,
             travers_end_set,
-            read_block
+            found_block,
+            find_next_group,
+            final_state
         };
         struct op_item {
             enum_op op_;
