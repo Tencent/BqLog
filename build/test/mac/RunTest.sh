@@ -37,7 +37,7 @@ run_under_lldb_with_core() {
     -o "breakpoint set --name __assert_rtn" \
     -o "breakpoint set --name __abort_with_payload" \
     -o "breakpoint set --name __pthread_kill" \
-    -o "target stop-hook add -o \"thread backtrace all\" -o \"register read\" -o \"image list\" -o \"process save-core $core_path\" -o \"shell echo Core saved to $core_path\" -o \"quit 1\"" \
+    -o "target stop-hook add -o \"thread backtrace all\" -o \"register read\" -o \"image list\" -o \"shell echo Core saved to $core_path\" -o \"quit 1\"" \
     -o "run" \
     -o "script import lldb,sys;pr=lldb.process;ec=pr.GetExitStatus() if pr and pr.IsValid() else 0; sys.exit(0 if ec==0 else 1)" \
     -- "$exe_path"
