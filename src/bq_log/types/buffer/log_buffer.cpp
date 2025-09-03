@@ -300,7 +300,7 @@ namespace bq {
         rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 0, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
 
 
-        bool ignore_first_loop = false;
+        int32_t traverse_end_check_mark = 1;   //0 means ignore
         if (rt_reading.last_block_ == rt_reading.cur_block_) {
             if (rt_reading.last_block_) {
                 auto error_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.last_block_);
@@ -309,7 +309,7 @@ namespace bq {
             }
             assert(!rt_reading.last_block_);
             if (hp_buffer_.first(bq::group_list::lock_type::no_lock)) {
-                ignore_first_loop = true;
+                traverse_end_check_mark = 0;
             }
         }
         // Principle 1 : Only last_block_ is reliable, because cur_block_ might be recycled in rt_try_traverse_to_next_block_in_group.
@@ -326,14 +326,18 @@ namespace bq {
                     break;
                 }
                 if (!traverse_completed
-                    && rt_reading.traverse_end_block_ == nullptr
-                    && !ignore_first_loop) {
-                    if (rt_reading.version_ == version_) {
-                        traverse_completed = true;
-                    } else {
-                        ++rt_reading.version_;
-                        rt_reading.traverse_end_block_ = nullptr;
-                        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 1, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                    && rt_reading.traverse_end_block_ == nullptr)
+                {
+                    bool ignore = ((traverse_end_check_mark++) == 0);
+                    if (!ignore) {
+                        if (rt_reading.version_ == version_) {
+                            traverse_completed = true;
+                        }
+                        else {
+                            ++rt_reading.version_;
+                            rt_reading.traverse_end_block_ = nullptr;
+                            rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 1, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                        }
                     }
                 }
                 rt_reading.state_ = read_state::next_group_finding;
@@ -366,12 +370,16 @@ namespace bq {
                 if (!traverse_completed
                     && rt_reading.traverse_end_block_ == processing_block_snapshot
                     && rt_reading.cur_group_.value().is_range_include(processing_block_snapshot)) {
-                    if (rt_reading.version_ == version_) {
-                        traverse_completed = true;
-                    } else {
-                        ++rt_reading.version_;
-                        rt_reading.traverse_end_block_ = rt_reading.last_block_; 
-                        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 2, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                    bool ignore = ((traverse_end_check_mark++) == 0);
+                    if (!ignore) {
+                        if (rt_reading.version_ == version_) {
+                            traverse_completed = true;
+                        }
+                        else {
+                            ++rt_reading.version_;
+                            rt_reading.traverse_end_block_ = rt_reading.last_block_;
+                            rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 2, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                        }
                     }
                 }
                 if (!next_block_found) {
@@ -384,6 +392,10 @@ namespace bq {
 #endif
                 if (context_verify_result::valid == verify_result) {
                     rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::hp_block_reading;
+                }
+                else if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
+                    rt_reading.traverse_end_block_ = rt_reading.cur_block_;
+                    traverse_end_check_mark = 0;
                 }
                 rt_reading.history_.push_back(op_item{ enum_op::final_state, static_cast<uint16_t>(rt_reading.state_), static_cast<void*>(0), static_cast<void*>(0)});
                 break;
@@ -409,7 +421,6 @@ namespace bq {
                 assert(false && "unexpected state!");
                 break;
             }
-            ignore_first_loop = false;
         }
         return read_handle;
     }
@@ -614,7 +625,6 @@ namespace bq {
                 bq::util::aligned_delete(context.get_tls_info());
             } else {
                 ++context.get_tls_info()->rt_data_.current_read_seq_;
-                rt_cache_.current_reading_.traverse_end_block_ = rt_cache_.current_reading_.last_block_;
             }
         } else {
             // for recovering data
@@ -1198,8 +1208,7 @@ namespace bq {
                     iter->value() = bq::min_value(iter->value(), context.seq_);
                 }
             }
-        },
-            this);
+        }, this);
         lp_buffer_.set_thread_check_enable(true);
 
         auto group = hp_buffer_.first(group_list::lock_type::no_lock);
