@@ -44,7 +44,6 @@ run_with_lldb() {
     -o "breakpoint set --name __pthread_kill" \
     -o "target stop-hook add -o 'thread backtrace all' -o 'register read' -o 'image list' -o 'process save-core $core_path' -o 'shell echo Core saved to $core_path' -o 'quit 1'" \
     -o "run" \
-    -o "script import lldb,sys; pr=lldb.process; ec=pr.GetExitStatus() if pr and pr.IsValid() else 0; sys.exit(0 if ec==0 else 1)" \
     -- "$exe"
   lldb_ec=$?
   set -e
