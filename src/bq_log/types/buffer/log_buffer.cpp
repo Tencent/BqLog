@@ -363,10 +363,6 @@ namespace bq {
                 while (rt_reading.history_.size() > 512) {
                     rt_reading.history_.pop_front();
                 }
-                if (next_block_found) {
-                    auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_);
-                    rt_reading.history_.push_back(op_item{ enum_op::found_block, next_index, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
-                }
                 if (!traverse_completed
                     && rt_reading.traverse_end_block_ == processing_block_snapshot
                     && rt_reading.cur_group_.value().is_range_include(processing_block_snapshot)) {
@@ -396,8 +392,9 @@ namespace bq {
                 else if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
                     rt_reading.traverse_end_block_ = rt_reading.cur_block_;
                     traverse_end_check_mark = 0;
+                    auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_; 
+                    rt_reading.history_.push_back(op_item{ enum_op::verify_fail, 0, reinterpret_cast<void*>(static_cast<uintptr_t>(context.seq_)), reinterpret_cast<void*>(static_cast<uintptr_t>(context.get_tls_info()->rt_data_.current_read_seq_)) });
                 }
-                rt_reading.history_.push_back(op_item{ enum_op::final_state, static_cast<uint16_t>(rt_reading.state_), static_cast<void*>(0), static_cast<void*>(0)});
                 break;
             }
             case read_state::next_group_finding:
@@ -730,8 +727,12 @@ namespace bq {
             case  enum_op::find_next_group:
                 history_output += "(NG)";
                 break;
-            case  enum_op::final_state:
-                history_output += indices[item.block_index_] + "(Done)";
+            case  enum_op::verify_fail:
+            {
+                char tmp3[128];
+                snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu64 "-%" PRIu64 ")", reinterpret_cast<uintptr_t>(item.block_addr_), reinterpret_cast<uintptr_t>(item.group_addr_));
+                history_output += tmp3;
+            }
                 break;
             default:
                 break;
