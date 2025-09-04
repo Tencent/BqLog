@@ -735,6 +735,7 @@ namespace bq {
                 char tmp3[128];
                 snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu32 "-%" PRIu32 ")", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.block_addr_)), static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.group_addr_)));
                 history_output += tmp3;
+                break;
             }
             case enum_op::find_block_state_result:
                 history_output += indices[item.block_index_] + "(Done)";

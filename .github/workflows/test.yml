@@ -1180,7 +1180,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11
+            pkg install -y llvm cmake bash openjdk11 gdb
 
           run: |
             set -e -x
@@ -1194,30 +1194,29 @@ jobs:
             ls -l
             ./RunTest_Clang.sh 
 
-#  freeBSD_arm64_test_Clang_cpp17:
-#    runs-on: ubuntu-24.04-arm
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v4
-#
-#      - name: Run in FreeBSD
-#        id: RunInFreeBSD
-#        uses: vmactions/freebsd-vm@v1
-#        with:
-#          usesh: true
-#          arch: aarch64
-#          mem: 8192
-#          prepare: |
-#            pkg install -y llvm cmake bash openjdk11 gdb
-#
-#          run: |
-#            set -e -x
-#            pkg info -l openjdk11 | grep 'bin/java'
-#            export JAVA_HOME="/usr/local/openjdk11"
-#            export PATH="$JAVA_HOME/bin:$PATH"
-#            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-#            echo "PATH=$PATH" >> $GITHUB_ENV
-#            cd build/test/unix_like
-#            chmod +x *.sh
-#            ls -l
-#            ./RunTest_Clang.sh
+  freeBSD_test_GCC_cpp17:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./RunTest_GCC.sh 
