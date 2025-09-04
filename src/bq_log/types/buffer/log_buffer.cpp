@@ -734,7 +734,7 @@ namespace bq {
             case  enum_op::verify_result:
             {
                 char tmp3[128];
-                snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu16 "-% " PRIu32 " - % " PRIu32 ")", item.block_index_, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.block_addr_)), static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.group_addr_)));
+                snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu16 "-%" PRIu32 " - %" PRIu32 ")", item.block_index_, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.block_addr_)), static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.group_addr_)));
                 history_output += tmp3;
                 break;
             }
