@@ -950,7 +950,7 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake
+          apt-get install -y gcc clang g++ make cmake gdb
 
           apt-get install -y software-properties-common
           apt-get update
@@ -979,7 +979,7 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake
+          apt-get install -y gcc clang g++ make cmake gdb
 
           apt-get install -y software-properties-common
           apt-get update
@@ -1008,7 +1008,7 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake
+          apt-get install -y gcc clang g++ make cmake gdb
 
           apt-get install -y software-properties-common
           apt-get update
@@ -1037,7 +1037,7 @@ jobs:
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake
+          apt-get install -y gcc clang g++ make cmake gdb
 
           apt-get install -y software-properties-common
           apt-get update
