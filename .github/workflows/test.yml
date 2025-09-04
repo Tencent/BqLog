@@ -1180,7 +1180,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1207,7 +1207,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
