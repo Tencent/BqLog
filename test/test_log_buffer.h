@@ -204,7 +204,7 @@ namespace bq {
             static constexpr uint32_t max_chunk_size = 1024;
             static constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
             static constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
-            static constexpr int32_t oversize_chunk_frequency = 1677;
+            static constexpr int32_t oversize_chunk_frequency = INT32_MAX; //1677;
             static constexpr int32_t auto_expand_sleep_frequency = 1024;
 
         public:
@@ -787,7 +787,7 @@ namespace bq {
                 config.log_categories_name = { "_default" };
                 config.need_recovery = false;
                 config.policy = log_memory_policy::auto_expand_when_full;
-                config.high_frequency_threshold_per_second = 1;
+                config.high_frequency_threshold_per_second = 1000;
 
                 //do_block_list_test(result, config);
                 config.need_recovery = true;
