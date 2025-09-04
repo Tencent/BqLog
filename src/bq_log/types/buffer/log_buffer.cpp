@@ -730,7 +730,7 @@ namespace bq {
             case  enum_op::verify_fail:
             {
                 char tmp3[128];
-                snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu64 "-%" PRIu64 ")", reinterpret_cast<uintptr_t>(item.block_addr_), reinterpret_cast<uintptr_t>(item.group_addr_));
+                snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu32 "-%" PRIu32 ")", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.block_addr_)), static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.group_addr_)));
                 history_output += tmp3;
             }
                 break;
