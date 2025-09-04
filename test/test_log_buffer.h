@@ -204,7 +204,7 @@ namespace bq {
             static constexpr uint32_t max_chunk_size = 1024;
             static constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
             static constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
-            static constexpr int32_t oversize_chunk_frequency = 6677;
+            static constexpr int32_t oversize_chunk_frequency = INT32_MAX;
             static constexpr int32_t auto_expand_sleep_frequency = 1024;
 
         public:
@@ -235,6 +235,7 @@ namespace bq {
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited
                         || handle.result == bq::enum_buffer_result_code::err_wait_and_retry) {
+                        assert(log_buffer_ptr_->get_config().policy == log_memory_policy::block_when_full);
                         bq::platform::thread::yield();
                         continue;
                     }
@@ -775,13 +776,13 @@ namespace bq {
                 test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test end...\n");
             }
 
+
         public:
             virtual test_result test() override
             {
                 test_result result;
                 //do_linked_list_test(result);
                 //do_memory_pool_test(result);
-
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
                 config.log_categories_name = { "_default" };
