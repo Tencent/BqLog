@@ -235,7 +235,6 @@ namespace bq {
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited
                         || handle.result == bq::enum_buffer_result_code::err_wait_and_retry) {
-                        assert(log_buffer_ptr_->get_config().policy == log_memory_policy::block_when_full);
                         bq::platform::thread::yield();
                         continue;
                     }

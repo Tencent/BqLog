@@ -63,16 +63,28 @@ namespace bq {
                         }
                         bool write_success = false;
                         while (!write_success) {
-                            auto write_handle = new_buffer->alloc_write_chunk(backup_read_handle.data_size);
-                            if (write_handle.result == enum_buffer_result_code::success) {
-                                // chunk is too big for new buffer, discard and renew new buffer;
-                                memcpy(write_handle.data_addr, backup_read_handle.data_addr, (size_t)backup_read_handle.data_size);
-                                write_success = true;
-                                new_buffer->commit_write_chunk(write_handle);
-                            } else {
-                                new_buffer->commit_write_chunk(write_handle);
+                            do{
+                                auto write_handle = new_buffer->alloc_write_chunk(backup_read_handle.data_size);
+                                scoped_log_buffer_handle<siso_ring_buffer> scoped_write_handle(*new_buffer, write_handle);
+                                if (write_handle.result == enum_buffer_result_code::success) {
+                                    // chunk is too big for new buffer, discard and renew new buffer;
+                                    memcpy(write_handle.data_addr, backup_read_handle.data_addr, (size_t)backup_read_handle.data_size);
+                                    write_success = true;
+                                }
+                            } while(0);
+                            if (!write_success) {
+                                //Since siso_buffer requires contiguous data, you can end up in a situation where the buffer is apparently empty, 
+                                // but because the cursor is in the middle, there isn’t enough contiguous space left. 
+                                // In such cases, we need to apply a correction.
+                                //TODO: the current snapshot does not support temporarily oversized data; such data should be discarded.
                                 auto discard_handle = new_buffer->read_chunk();
+                                bool is_already_empty = discard_handle.result == enum_buffer_result_code::err_empty_log_buffer;
                                 new_buffer->return_read_chunk(discard_handle);
+                                if (is_already_empty) {
+                                    delete new_buffer;
+                                    new_buffer = new siso_ring_buffer(new_data, static_cast<size_t>(buffer_size_), false);
+                                    new_buffer->set_thread_check_enable(false);
+                                }
                                 snapshot_text_continuous_ = false;
                             }
                         }
@@ -141,9 +153,7 @@ namespace bq {
                                 snapshot_buffer_ = new siso_ring_buffer(buffer_data_, (size_t)buffer_size_, false);
                                 snapshot_buffer_->set_thread_check_enable(false);
                             }
-                            else {
-                                snapshot_text_continuous_ = false;
-                            }
+                            snapshot_text_continuous_ = false;
                         } else {
                             break;
                         }
