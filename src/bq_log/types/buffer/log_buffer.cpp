@@ -386,15 +386,18 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_block_);
 #endif
+                if (rt_reading.cur_block_) {
+                    auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
+                    rt_reading.history_.push_back(op_item{ enum_op::verify_result, 0, reinterpret_cast<void*>(static_cast<uintptr_t>(context.seq_)), reinterpret_cast<void*>(static_cast<uintptr_t>(context.get_tls_info()->rt_data_.current_read_seq_)) });
+                }
                 if (context_verify_result::valid == verify_result) {
                     rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::hp_block_reading;
                 }
                 else if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
                     rt_reading.traverse_end_block_ = rt_reading.cur_block_;
                     traverse_end_check_mark = 0;
-                    auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_; 
-                    rt_reading.history_.push_back(op_item{ enum_op::verify_fail, 0, reinterpret_cast<void*>(static_cast<uintptr_t>(context.seq_)), reinterpret_cast<void*>(static_cast<uintptr_t>(context.get_tls_info()->rt_data_.current_read_seq_)) });
                 }
+                rt_reading.history_.push_back(op_item{ enum_op::find_block_state_result, static_cast<uint16_t>(rt_reading.state_), static_cast<void*>(0), static_cast<void*>(0) });
                 break;
             }
             case read_state::next_group_finding:
@@ -727,12 +730,14 @@ namespace bq {
             case  enum_op::find_next_group:
                 history_output += "(NG)";
                 break;
-            case  enum_op::verify_fail:
+            case  enum_op::verify_result:
             {
                 char tmp3[128];
                 snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu32 "-%" PRIu32 ")", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.block_addr_)), static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.group_addr_)));
                 history_output += tmp3;
             }
+            case enum_op::find_block_state_result:
+                history_output += indices[item.block_index_] + "(Done)";
                 break;
             default:
                 break;

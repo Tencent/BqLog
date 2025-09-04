@@ -250,7 +250,8 @@ private:
             travers_end_set,
             found_block,
             find_next_group,
-            verify_fail
+            verify_result,
+            find_block_state_result
         };
         struct op_item {
             enum_op op_;
