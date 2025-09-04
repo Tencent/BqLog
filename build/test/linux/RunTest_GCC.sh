@@ -16,25 +16,29 @@ gdb_run() {
   gdb --batch --quiet "$exe" \
     -ex 'set pagination off' \
     -ex 'set confirm off' \
+    -ex 'set print thread-events off' \
+    -ex 'set print inferior-events off' \
     \
     -ex 'catch signal SIGSEGV' \
-    -ex 'commands\n silent\n echo [GDB] Caught SIGSEGV, dumping core and backtrace...\n gcore\n thread apply all bt full\n quit 1\n end' \
+    -ex 'commands\n silent\n printf "[GDB] Caught SIGSEGV, dumping core and backtrace...\n"\n gcore\n thread apply all bt full\n quit 1\n end' \
     \
     -ex 'catch signal SIGABRT' \
-    -ex 'commands\n silent\n echo [GDB] Caught SIGABRT, dumping core and backtrace...\n gcore\n thread apply all bt full\n quit 1\n end' \
+    -ex 'commands\n silent\n printf "[GDB] Caught SIGABRT, dumping core and backtrace...\n"\n gcore\n thread apply all bt full\n quit 1\n end' \
     \
     -ex 'catch signal SIGBUS' \
-    -ex 'commands\n silent\n echo [GDB] Caught SIGBUS, dumping core and backtrace...\n gcore\n thread apply all bt full\n quit 1\n end' \
+    -ex 'commands\n silent\n printf "[GDB] Caught SIGBUS, dumping core and backtrace...\n"\n gcore\n thread apply all bt full\n quit 1\n end' \
     \
     -ex 'catch signal SIGFPE' \
-    -ex 'commands\n silent\n echo [GDB] Caught SIGFPE, dumping core and backtrace...\n gcore\n thread apply all bt full\n quit 1\n end' \
+    -ex 'commands\n silent\n printf "[GDB] Caught SIGFPE, dumping core and backtrace...\n"\n gcore\n thread apply all bt full\n quit 1\n end' \
     \
     -ex 'catch signal SIGILL' \
-    -ex 'commands\n silent\n echo [GDB] Caught SIGILL, dumping core and backtrace...\n gcore\n thread apply all bt full\n quit 1\n end' \
+    -ex 'commands\n silent\n printf "[GDB] Caught SIGILL, dumping core and backtrace...\n"\n gcore\n thread apply all bt full\n quit 1\n end' \
     \
     -ex 'run' \
-    -ex 'set $ec = $_exitcode' \
-    -ex 'if $ec != 0\n echo [GDB] Program exited with code $ec\n quit $ec\n end'
+    -ex 'if $_exitcode != 0' \
+    -ex 'printf "[GDB] Program exited with code %d\n", $_exitcode' \
+    -ex 'quit $_exitcode' \
+    -ex 'end'
   local gdb_ec=$?
   set -e
   return $gdb_ec
