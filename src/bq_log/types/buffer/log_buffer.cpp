@@ -356,13 +356,12 @@ namespace bq {
 #endif
                 if (rt_reading.cur_block_) {
                     auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
-                    rt_reading.history_.push_back(op_item{ enum_op::verify_result, static_cast<uint16_t>(verify_result), reinterpret_cast<void*>(static_cast<uintptr_t>(context.seq_)), reinterpret_cast<void*>(static_cast<uintptr_t>(context.get_tls_info()->rt_data_.current_read_seq_))});
-                }
-
-                if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
-                    rt_reading.traverse_end_block_is_working_ = true;
-                    rt_reading.traverse_end_block_ = rt_reading.cur_block_;
-                    rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 3, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                    uint32_t expected_version = context.get_tls_info()->rt_data_.current_read_seq_;
+                    if (context.version_ != version_) {
+                        auto iter = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)].find(context.get_tls_info());
+                        expected_version = iter->value();
+                    }
+                    rt_reading.history_.push_back(op_item{ enum_op::verify_result, static_cast<uint16_t>(verify_result), reinterpret_cast<void*>(static_cast<uintptr_t>(context.seq_)), reinterpret_cast<void*>(static_cast<uintptr_t>(expected_version))});
                 }
 
                 if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
@@ -376,6 +375,13 @@ namespace bq {
                         ++rt_reading.version_;
                     }
                 }
+
+                if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
+                    rt_reading.traverse_end_block_is_working_ = true;
+                    rt_reading.traverse_end_block_ = rt_reading.cur_block_;
+                    rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 3, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                }
+
                 if (context_verify_result::valid == verify_result
                     && read_state::traversal_completed != rt_reading.state_
                 ) {
@@ -693,7 +699,7 @@ namespace bq {
                 last_group_ptr = item.group_addr_;
                 char tmp[32];
                 snprintf(tmp, 32, "%p", last_group_ptr);
-                history_output += "|";
+                history_output += "\n|";
                 history_output += tmp;
                 history_output += ":";
             }
@@ -754,19 +760,12 @@ namespace bq {
             group_output += "->";
             block_node_head* output_node = iter.value().get_data_head().used_.first();
             while (output_node) {
-                if (group_output.size() > 1024 * 16) {
-                    group_output += "[Oversize]";
-                    break;
-                }
                 uint16_t output_index = iter.value().get_data_head().used_.get_index_by_block_head(output_node);
                 group_output += indices[output_index];
                 group_output += "->";
                 output_node = iter.value().get_data_head().used_.next(output_node);
             }
-            if (group_output.size() > 1024 * 16) {
-                group_output += "[Oversize]";
-                break;
-            }
+            group_output += "\n";
             iter = hp_buffer_.next(iter, group_list::lock_type::no_lock);
         }
 
