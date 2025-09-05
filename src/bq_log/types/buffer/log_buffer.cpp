@@ -295,12 +295,16 @@ namespace bq {
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
-        bool traverse_completed = false;
-        rt_reading.traverse_end_block_ = rt_reading.last_block_; 
+        if (rt_cache_.mem_optimize_.is_block_marked_removed && rt_reading.cur_block_) {
+            rt_reading.traverse_end_block_is_working_ = false;
+        }
+        else {
+            rt_reading.traverse_end_block_is_working_ = true;
+            rt_reading.traverse_end_block_ = rt_reading.cur_block_;
+        }
         rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 0, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
 
 
-        int32_t traverse_end_check_mark = 1;   //0 means ignore
         if (rt_reading.last_block_ == rt_reading.cur_block_) {
             if (rt_reading.last_block_) {
                 auto error_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.last_block_);
@@ -308,14 +312,9 @@ namespace bq {
                 output_debug(3);
             }
             assert(!rt_reading.last_block_);
-            if (hp_buffer_.first(bq::group_list::lock_type::no_lock)) {
-                traverse_end_check_mark = 0;
-            }
         }
-        // Principle 1 : Only last_block_ is reliable, because cur_block_ might be recycled in rt_try_traverse_to_next_block_in_group.
-        // Principle 2 : traverse_end_block_ always records the last_block_ from the start of each traversal loop.
-        // Principle 3 : If the currently processed block or buffer equals traverse_end_block_, it means one full traversal loop has been completed.
-        // Principle 4 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
+        // Principle 1 : If the currently processed block or buffer equals traverse_end_block_, and traverse_end_block_is_working_ is true, it means one full traversal loop has been completed.
+        // Principle 2 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
         while (!loop_finished) {
             switch (rt_reading.state_) {
             case read_state::lp_buffer_reading:
@@ -324,21 +323,6 @@ namespace bq {
                     read_handle.data_addr += sizeof(context_head);
                     read_handle.data_size -= static_cast<uint32_t>(sizeof(context_head));
                     break;
-                }
-                if (!traverse_completed
-                    && rt_reading.traverse_end_block_ == nullptr)
-                {
-                    bool ignore = ((traverse_end_check_mark++) == 0);
-                    if (!ignore) {
-                        if (rt_reading.version_ == version_) {
-                            traverse_completed = true;
-                        }
-                        else {
-                            ++rt_reading.version_;
-                            rt_reading.traverse_end_block_ = nullptr;
-                            rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 1, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
-                        }
-                    }
                 }
                 rt_reading.state_ = read_state::next_group_finding;
                 rt_recycle_oversize_buffers();
@@ -357,26 +341,10 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_group_);
 #endif
-                const auto processing_block_snapshot = rt_reading.cur_block_;
                 const auto next_block_found = rt_try_traverse_to_next_block_in_group(verify_result);
 
                 while (rt_reading.history_.size() > 512) {
                     rt_reading.history_.pop_front();
-                }
-                if (!traverse_completed
-                    && rt_reading.traverse_end_block_ == processing_block_snapshot
-                    && rt_reading.cur_group_.value().is_range_include(processing_block_snapshot)) {
-                    bool ignore = ((traverse_end_check_mark++) == 0);
-                    if (!ignore) {
-                        if (rt_reading.version_ == version_) {
-                            traverse_completed = true;
-                        }
-                        else {
-                            ++rt_reading.version_;
-                            rt_reading.traverse_end_block_ = rt_reading.last_block_;
-                            rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 2, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
-                        }
-                    }
                 }
                 if (!next_block_found) {
                     rt_reading.history_.push_back(op_item{ enum_op::find_next_group, 0, static_cast<void*>(0), static_cast<void*>(0) });
@@ -390,20 +358,50 @@ namespace bq {
                     auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
                     rt_reading.history_.push_back(op_item{ enum_op::verify_result, static_cast<uint16_t>(verify_result), reinterpret_cast<void*>(static_cast<uintptr_t>(context.seq_)), reinterpret_cast<void*>(static_cast<uintptr_t>(context.get_tls_info()->rt_data_.current_read_seq_))});
                 }
-                if (context_verify_result::valid == verify_result) {
-                    rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::hp_block_reading;
-                }
-                else if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
+
+                if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
+                    rt_reading.traverse_end_block_is_working_ = true;
                     rt_reading.traverse_end_block_ = rt_reading.cur_block_;
-                    traverse_end_check_mark = 0;
                     rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 3, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                }
+
+                if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
+                    rt_reading.traverse_end_block_is_working_ = false;
+                }
+                else if (rt_reading.traverse_end_block_is_working_ && rt_reading.traverse_end_block_ == rt_reading.cur_block_) {
+                    if (rt_reading.version_ == version_) {
+                        rt_reading.state_ = read_state::traversal_completed;
+                    }
+                    else {
+                        ++rt_reading.version_;
+                    }
+                }
+                if (context_verify_result::valid == verify_result
+                    && read_state::traversal_completed != rt_reading.state_
+                ) {
+                    rt_reading.state_ = read_state::hp_block_reading;
                 }
                 rt_reading.history_.push_back(op_item{ enum_op::find_block_state_result, static_cast<uint16_t>(rt_reading.state_), static_cast<void*>(0), static_cast<void*>(0) });
                 break;
             }
             case read_state::next_group_finding:
                 if (!rt_try_traverse_to_next_group()) {
-                    rt_reading.state_ = traverse_completed ? read_state::traversal_completed : read_state::lp_buffer_reading;
+                    rt_reading.state_ = read_state::lp_buffer_reading;
+                    if (rt_reading.traverse_end_block_is_working_) {
+                        if (rt_reading.traverse_end_block_ == nullptr) {
+                            if (rt_reading.version_ == version_) {
+                                rt_reading.state_ = read_state::traversal_completed;
+                            }
+                            else {
+                                ++rt_reading.version_;
+                            }
+                        }
+                    }
+                    else {
+                        rt_reading.traverse_end_block_is_working_ = true;
+                        rt_reading.traverse_end_block_ = nullptr;
+                        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 2, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
+                    }
                 } else {
                     rt_reading.state_ = read_state::next_block_finding;
                 }

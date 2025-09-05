@@ -280,6 +280,7 @@ private:
                 uint16_t version_ = 0;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data
                 read_state state_ = read_state::lp_buffer_reading;
+                bool traverse_end_block_is_working_ = false;
                 block_node_head* traverse_end_block_ = nullptr;
                 siso_ring_buffer::siso_buffer_batch_read_handle hp_handle_cache_;
             } current_reading_;
