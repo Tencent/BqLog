@@ -216,8 +216,7 @@ namespace bq {
         if (total_length == 0) {
             return *this;
         }
-        auto insert_it = begin() + static_cast<difference_type>(size());
-        insert_batch(insert_it, rhs.begin(), rhs.size());
+        insert_batch(end(), rhs.begin(), rhs.size());
         return *this;
     }
 
