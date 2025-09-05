@@ -28,7 +28,6 @@
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 #include "bq_log/types/buffer/group_list.h"
 #include "bq_log/types/buffer/normal_buffer.h"
-#include <deque>
 
 namespace bq {
     class alignas(CACHE_LINE_SIZE) log_buffer {
@@ -210,8 +209,6 @@ namespace bq {
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
-public:
-        void output_debug(int32_t id);
 private:
         bool rt_try_traverse_to_next_group();
 
@@ -240,43 +237,12 @@ private:
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
         bq::platform::atomic<uint64_t> current_oversize_buffer_index_;
 
-        enum class enum_op : uint8_t {
-            traverse,
-            add,
-            remove,
-            lp,
-            read_call,
-            read_travers,
-            travers_end_set,
-            found_block,
-            find_next_group,
-            verify_result,
-            find_block_state_result
-        };
-        struct op_item {
-            enum_op op_;
-            uint16_t block_index_;
-            void* block_addr_;
-            void* group_addr_;
-        };
-
-        struct alloc_item {
-            bq::enum_buffer_result_code result_;
-            uint32_t size_;
-            void* block_addr_;
-            bq::platform::thread::thread_id tid_;
-        };
-
-        bq::platform::spin_lock alloc_lock_;
-        std::deque<alloc_item> alloc_list_;
-
         struct alignas(CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator last_group_; // empty means read from lp_buffer
                 group_list::iterator cur_group_;
                 block_node_head* last_block_ = nullptr;
                 block_node_head* cur_block_ = nullptr;
-                std::deque<op_item> history_;
                 uint16_t version_ = 0;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data
                 read_state state_ = read_state::lp_buffer_reading;

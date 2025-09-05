@@ -421,11 +421,6 @@ namespace bq {
         if (count == 0) {
             return;
         }
-        if (!(dest_it >= begin() && dest_it <= end())) {
-            printf("size:%zu, capacity:%zu, begin:0x%p, end:0x%p, dest:0x%p\n", size_, capacity_, static_cast<void*>(data_), static_cast<void*>(&*end()), static_cast<void*>(&*dest_it));
-            printf("content:%s", (char*)data_);
-            fflush(stdout);
-        }
         assert(dest_it >= begin() && dest_it <= end() && "dest_it param where_it must between begin() and end() iterator!");
         auto move_count = (end() - dest_it);
         const size_type new_size = size_ + count;

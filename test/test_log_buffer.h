@@ -204,7 +204,7 @@ namespace bq {
             static constexpr uint32_t max_chunk_size = 1024;
             static constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
             static constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
-            static constexpr int32_t oversize_chunk_frequency = INT32_MAX; //1677;
+            static constexpr int32_t oversize_chunk_frequency = 1677;
             static constexpr int32_t auto_expand_sleep_frequency = 1024;
 
         public:
@@ -511,20 +511,8 @@ namespace bq {
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms              \r", 100, (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
                 for (size_t i = 0; i < task_check_vector.size(); ++i) {
                     bool count_result = (task_check_vector[i] == chunk_count_per_task);
-                    if (!count_result) {
-                        test_buffer.output_debug(5);
-
-                        for (int32_t j = 0; j < 3; ++j) {
-                            auto handle2 = test_buffer.read_chunk();
-                            printf("\n, is_empty:%d, ", (int32_t)handle2.result);
-                            test_buffer.return_read_chunk(handle2);
-                            test_buffer.output_debug(6 + j);
-                        }
-
-                    }
                     result.add_result(count_result, "[log buffer]chunk count check error, real:%d , expected:%d, debu_str:%s", task_check_vector[i], chunk_count_per_task, config_debug_str.c_str());
                 }
-                test_buffer.output_debug(8);
                 test_output_dynamic_param(bq::log_level::info, "\n[log buffer] test finished, time cost:%dms\n", (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
                 result.add_result(total_chunk == log_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", log_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "[log buffer] total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);

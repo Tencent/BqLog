@@ -177,12 +177,6 @@ namespace bq {
                     block_cache = alloc_new_hp_block();
                 }
                 result = block_cache->get_buffer().alloc_write_chunk(size);
-                alloc_lock_.lock();
-                while (alloc_list_.size() >= 128) {
-                    alloc_list_.pop_front();
-                }
-                alloc_list_.emplace_back(alloc_item{result.result, size, block_cache, bq::platform::thread::get_current_thread_id()});
-                alloc_lock_.unlock();
                 if (enum_buffer_result_code::err_not_enough_space == result.result) {
                     switch (config_.policy) {
                     case log_memory_policy::auto_expand_when_full:
@@ -280,10 +274,6 @@ namespace bq {
         assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
-        while (rt_reading.history_.size() > 512) {
-            rt_reading.history_.pop_front();
-        }
-        rt_reading.history_.push_back(op_item{ enum_op::read_call, 0, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(0)});
         if (rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success) {
             if (rt_reading.hp_handle_cache_.has_next()) {
                 return rt_reading.hp_handle_cache_.next();
@@ -291,7 +281,6 @@ namespace bq {
                 rt_reading.hp_handle_cache_.result = enum_buffer_result_code::err_empty_log_buffer;
             }
         }
-        rt_reading.history_.push_back(op_item{ enum_op::read_travers, 0, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(0) });
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
@@ -302,15 +291,7 @@ namespace bq {
             rt_reading.traverse_end_block_is_working_ = true;
             rt_reading.traverse_end_block_ = rt_reading.cur_block_;
         }
-        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 0, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
-
-
         if (rt_reading.last_block_ == rt_reading.cur_block_) {
-            if (rt_reading.last_block_) {
-                auto error_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.last_block_);
-                printf("Error Index:%" PRIu16 ":\n", error_index);
-                output_debug(3);
-            }
             assert(!rt_reading.last_block_);
         }
         // Principle 1 : If the currently processed block or buffer equals traverse_end_block_, and traverse_end_block_is_working_ is true, it means one full traversal loop has been completed.
@@ -342,28 +323,13 @@ namespace bq {
                 assert(rt_reading.cur_group_);
 #endif
                 const auto next_block_found = rt_try_traverse_to_next_block_in_group(verify_result);
-
-                while (rt_reading.history_.size() > 512) {
-                    rt_reading.history_.pop_front();
-                }
                 if (!next_block_found) {
-                    rt_reading.history_.push_back(op_item{ enum_op::find_next_group, 0, static_cast<void*>(0), static_cast<void*>(0) });
                     rt_reading.state_ = read_state::next_group_finding;
                     break;
                 }
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_block_);
 #endif
-                if (rt_reading.cur_block_) {
-                    auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
-                    uint32_t expected_version = context.get_tls_info()->rt_data_.current_read_seq_;
-                    if (context.version_ != version_) {
-                        auto iter = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)].find(context.get_tls_info());
-                        expected_version = iter->value();
-                    }
-                    rt_reading.history_.push_back(op_item{ enum_op::verify_result, static_cast<uint16_t>(verify_result), reinterpret_cast<void*>(static_cast<uintptr_t>(context.seq_)), reinterpret_cast<void*>(static_cast<uintptr_t>(expected_version))});
-                }
-
                 if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
                     rt_reading.traverse_end_block_is_working_ = false;
                 }
@@ -377,7 +343,6 @@ namespace bq {
                 }else if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
                     rt_reading.traverse_end_block_is_working_ = true;
                     rt_reading.traverse_end_block_ = rt_reading.cur_block_;
-                    rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 3, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
                 }
 
                 if (context_verify_result::valid == verify_result
@@ -385,7 +350,6 @@ namespace bq {
                 ) {
                     rt_reading.state_ = read_state::hp_block_reading;
                 }
-                rt_reading.history_.push_back(op_item{ enum_op::find_block_state_result, static_cast<uint16_t>(rt_reading.state_), static_cast<void*>(0), static_cast<void*>(0) });
                 break;
             }
             case read_state::next_group_finding:
@@ -404,7 +368,6 @@ namespace bq {
                     else {
                         rt_reading.traverse_end_block_is_working_ = true;
                         rt_reading.traverse_end_block_ = nullptr;
-                        rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 2, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
                     }
                 } else {
                     rt_reading.state_ = read_state::next_block_finding;
@@ -686,125 +649,6 @@ namespace bq {
         }
     }
 
-
-    void log_buffer::output_debug(int32_t id)
-    {
-        static bq::string indices[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"};
-        bq::string history_output = "";
-        void* last_group_ptr = nullptr;
-        for (auto item : rt_cache_.current_reading_.history_) {
-            if (last_group_ptr != item.group_addr_ && item.op_ <= enum_op::lp) {
-                last_group_ptr = item.group_addr_;
-                char tmp[32];
-                snprintf(tmp, 32, "%p", last_group_ptr);
-                history_output += "\n|";
-                history_output += tmp;
-                history_output += ":";
-            }
-
-            char tmp2[32];
-            snprintf(tmp2, 32, "%p", item.block_addr_);
-
-            switch (item.op_) {
-            case  enum_op::add:
-                history_output += indices[item.block_index_] + "(A)";
-                break;
-            case  enum_op::remove:
-                history_output += indices[item.block_index_] + "(X)";
-                break;
-            case  enum_op::traverse:
-                history_output += indices[item.block_index_] + "(T)" + tmp2;
-                break;
-            case  enum_op::lp:
-                history_output += "【-----】";
-                break;
-            case  enum_op::read_call:
-                history_output += "(r)";
-                break;
-            case  enum_op::read_travers:
-                history_output += "(R)";
-                break;
-            case  enum_op::travers_end_set:
-                history_output += "((❁´" + indices[item.block_index_] + "[" + tmp2 + "]`❁))";
-                break;
-            case  enum_op::found_block:
-                history_output += indices[item.block_index_] + "(F)";
-                break;
-            case  enum_op::find_next_group:
-                history_output += "(NG)";
-                break;
-            case  enum_op::verify_result:
-            {
-                char tmp3[128];
-                snprintf(tmp3, sizeof(tmp3), "(V-%" PRIu16 "-%" PRIu32 " - %" PRIu32 ")", item.block_index_, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.block_addr_)), static_cast<uint32_t>(reinterpret_cast<uintptr_t>(item.group_addr_)));
-                history_output += tmp3;
-                break;
-            }
-            case enum_op::find_block_state_result:
-                history_output += indices[item.block_index_] + "(Done)";
-                break;
-            default:
-                break;
-            }
-            history_output += "->";
-        }
-        bq::string group_output = "[LP_Buffer]->";
-        auto iter = hp_buffer_.first(group_list::lock_type::no_lock);
-        while (iter) {
-            void* addr = static_cast<void*>(&iter.value().get_data_head().used_);
-            char tmp[32];
-            snprintf(tmp, 32, "%p", addr);
-            group_output += tmp;
-            group_output += "->";
-            block_node_head* output_node = iter.value().get_data_head().used_.first();
-            while (output_node) {
-                uint16_t output_index = iter.value().get_data_head().used_.get_index_by_block_head(output_node);
-                group_output += indices[output_index];
-                group_output += "->";
-                output_node = iter.value().get_data_head().used_.next(output_node);
-            }
-            group_output += "\n";
-            iter = hp_buffer_.next(iter, group_list::lock_type::no_lock);
-        }
-
-
-        bq::string alloc_output = "[Alloc]->";
-        alloc_lock_.lock();
-        for (const auto& item : alloc_list_) {
-            switch (item.result_)
-            {
-            case enum_buffer_result_code::err_alloc_size_invalid:
-                alloc_output += "[×]";
-                break;
-            case enum_buffer_result_code::success:
-                alloc_output += "[✔]";
-                break;
-            case enum_buffer_result_code::err_not_enough_space:
-                alloc_output += "[⚪]";
-                break;
-            default:
-                alloc_output += "[?]";
-                break;
-            }
-            char size_tmp[32];
-            snprintf(size_tmp, 32, "%" PRIu32 "", item.size_);
-            char addr_tmp[32];
-            snprintf(addr_tmp, 32, "%p", item.block_addr_);
-            char tid_tmp[32];
-            snprintf(tid_tmp, 32, "%" PRIu64 "", item.tid_);
-            alloc_output += size_tmp;
-            alloc_output += "_";
-            alloc_output += addr_tmp;
-            alloc_output += "_";
-            alloc_output += tid_tmp;
-            alloc_output += "  ->  ";
-        }
-        alloc_lock_.unlock();
-
-        printf("#%d, History:%s\n, Structure:%s\n Alloc:%s\n", id, history_output.c_str(), group_output.c_str(), alloc_output.c_str());
-        fflush(stdout);
-    }
-
     bool log_buffer::rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result)
     {
         auto& mem_opt = rt_cache_.mem_optimize_;
@@ -817,24 +661,11 @@ namespace bq {
         if (!next_block) {
             next_block = rt_reading.cur_group_.value().get_data_head().stage_.pop();
             if (next_block) {
-                while (rt_reading.history_.size() > 512) {
-                    rt_reading.history_.pop_front();
-                }
-                auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
-                rt_reading.history_.push_back(op_item{enum_op::add, next_index, static_cast<void*>(next_block), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
                 rt_reading.cur_group_.value().get_data_head().used_.push_after_thread_unsafe(is_cur_block_in_group ? rt_reading.cur_block_ : nullptr, next_block);
             }
         }
 
         if (next_block) {
-            while (rt_reading.history_.size() > 512) {
-                rt_reading.history_.pop_front();
-            }
-            auto next_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(next_block);
-            rt_reading.history_.push_back(op_item{enum_op::traverse, next_index, static_cast<void*>(next_block), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
-            if (next_block == rt_reading.cur_block_) {
-                output_debug(1);
-            }
             assert(next_block != rt_reading.cur_block_);
         }
 
@@ -847,21 +678,12 @@ namespace bq {
 #endif
         if (is_cur_block_in_group) {
             if (mem_opt.is_block_marked_removed) {
-                while (rt_reading.history_.size() > 512) {
-                    rt_reading.history_.pop_front();
-                }
-                auto cur_index = rt_reading.cur_group_.value().get_data_head().used_.get_index_by_block_head(rt_reading.cur_block_);
-                rt_reading.history_.push_back(op_item{enum_op::remove, cur_index, static_cast<void*>(rt_reading.cur_block_), static_cast<void*>(&rt_reading.cur_group_.value().get_data_head().used_) });
-
                 if (context_verify_result::valid == mem_opt.verify_result) {
                     const auto& context = rt_reading.cur_block_->get_misc_data<block_misc_data>().context_;
                     deregister_seq(context);
                 }
                 // remove it
                 if (rt_reading.cur_group_.value().is_range_include(rt_reading.last_block_)) {
-                    if (rt_reading.cur_group_.value().get_data_head().used_.next(rt_reading.last_block_) != rt_reading.cur_block_) {
-                        output_debug(2);
-                    }
                     hp_buffer_.recycle_block_thread_unsafe(rt_reading.cur_group_, rt_reading.last_block_, rt_reading.cur_block_);
                 } else {
                     hp_buffer_.recycle_block_thread_unsafe(rt_reading.cur_group_, nullptr, rt_reading.cur_block_);
@@ -947,13 +769,6 @@ namespace bq {
             rt_reading.cur_block_ = nullptr;
         }
         rt_reading.cur_group_ = next_group;
-
-        if (!next_group) {
-            while (rt_reading.history_.size() > 512) {
-                rt_reading.history_.pop_front();
-            }
-            rt_reading.history_.push_back(op_item{enum_op::lp, 0, nullptr, nullptr});
-        }
         return next_group;
     }
 
