@@ -374,9 +374,7 @@ namespace bq {
                     else {
                         ++rt_reading.version_;
                     }
-                }
-
-                if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
+                }else if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
                     rt_reading.traverse_end_block_is_working_ = true;
                     rt_reading.traverse_end_block_ = rt_reading.cur_block_;
                     rt_reading.history_.push_back(op_item{ enum_op::travers_end_set, 3, static_cast<void*>(rt_reading.traverse_end_block_), static_cast<void*>(0) });
