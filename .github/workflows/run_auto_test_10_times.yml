@@ -1,0 +1,86 @@
+name: Run Auto Test 10 Times on Performance Mode
+
+on:
+  workflow_dispatch:  # manually trigger
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  run-test-1:
+    name: Auto Test Run 1
+    uses: ./.github/workflows/test.yml
+
+  run-test-2:
+    name: Auto Test Run 2
+    uses: ./.github/workflows/test.yml
+
+  run-test-3:
+    name: Auto Test Run 3
+    uses: ./.github/workflows/test.yml
+
+  run-test-4:
+    name: Auto Test Run 4
+    uses: ./.github/workflows/test.yml
+
+  run-test-5:
+    name: Auto Test Run 5
+    uses: ./.github/workflows/test.yml
+
+  run-test-6:
+    name: Auto Test Run 6
+    uses: ./.github/workflows/test.yml
+
+  run-test-7:
+    name: Auto Test Run 7
+    uses: ./.github/workflows/test.yml
+
+  run-test-8:
+    name: Auto Test Run 8
+    uses: ./.github/workflows/test.yml
+
+  run-test-9:
+    name: Auto Test Run 9
+    uses: ./.github/workflows/test.yml
+
+  run-test-10:
+    name: Auto Test Run 10
+    uses: ./.github/workflows/test.yml
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [run-test-1, run-test-2, run-test-3, run-test-4, run-test-5, run-test-6, run-test-7, run-test-8, run-test-9, run-test-10]
+    if: always()
+    steps:
+      - name: Summary of 10 Test Runs
+        run: |
+          echo "Completed 10 parallel runs of Auto Test"
+          echo "Run 1: ${{ needs.run-test-1.result }}"
+          echo "Run 2: ${{ needs.run-test-2.result }}"
+          echo "Run 3: ${{ needs.run-test-3.result }}"
+          echo "Run 4: ${{ needs.run-test-4.result }}"
+          echo "Run 5: ${{ needs.run-test-5.result }}"
+          echo "Run 6: ${{ needs.run-test-6.result }}"
+          echo "Run 7: ${{ needs.run-test-7.result }}"
+          echo "Run 8: ${{ needs.run-test-8.result }}"
+          echo "Run 9: ${{ needs.run-test-9.result }}"
+          echo "Run 10: ${{ needs.run-test-10.result }}"
+          
+          # Count successful runs
+          success_count=0
+          
+          if [[ "${{ needs.run-test-1.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-2.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-3.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-4.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-5.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-6.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-7.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-8.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-9.result }}" == "success" ]]; then ((success_count++)); fi
+          if [[ "${{ needs.run-test-10.result }}" == "success" ]]; then ((success_count++)); fi
+          
+          echo "Successful runs: $success_count out of 10"
+          echo "Success rate: $((success_count * 10))%"
