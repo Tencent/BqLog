@@ -49,8 +49,8 @@ for /l %%a in (0,1,2) do (
 				 
 				 %ANDROID_NDK_ROOT%\prebuilt\windows-x86_64\bin\make --trace -j10
 				 %ANDROID_NDK_ROOT%\prebuilt\windows-x86_64\bin\make install
-				 move /Y ..\..\..\..\..\dist\dynamic_lib\android\%%j\%%p\libBqLog.so ..\..\..\..\..\dist\dynamic_lib\android\%%j\%%p\libBqLog_Symbol.so
-				 %ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-x86_64\bin\llvm-strip.exe -s ..\..\..\..\..\dist\dynamic_lib\android\%%j\%%p\libBqLog_Symbol.so -o ..\..\..\..\..\dist\dynamic_lib\android\%%j\%%p\libBqLog.so
+				 move /Y ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so
+				 %ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-x86_64\bin\llvm-strip.exe -s ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so -o ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so
 			)
 			cd ..
 		)
@@ -58,10 +58,16 @@ for /l %%a in (0,1,2) do (
 	cd ..
 )
 
-pause
+if exist "pack" rd /s /q "pack"
+md pack
+cd pack
+
+cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=android -DPACKAGE_NAME:STRING=bqlog-lib
+cmake --build . --target package
+if errorlevel 1 goto :fail
+cd ..
 
  
 echo ---------
 echo Finished!
 echo ---------
-pause
