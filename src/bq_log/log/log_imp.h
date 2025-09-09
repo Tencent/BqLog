@@ -42,13 +42,9 @@ namespace bq {
 
         void set_appenders_enable(const bq::string& appender_name, bool enable);
 
-        bq_forceinline log_buffer& get_buffer()
+        bq_forceinline log_buffer* get_buffer()
         {
-            if (buffer_) {
-                return *buffer_;
-            }
-            assert(false && "null log buffer");
-            return *reinterpret_cast<log_buffer*>(this);
+            return buffer_;
         }
 
         bq_forceinline uint64_t id() const

@@ -240,20 +240,23 @@ namespace bq {
                 handle.result = enum_buffer_result_code::success;
                 handle.data_addr = log->get_sync_buffer(total_length);
             } else {
-                auto& log_buffer = log->get_buffer();
-                auto write_handle = log_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
-                bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.result == enum_buffer_result_code::err_wait_and_retry || write_handle.low_space_flag);
-                if (need_awake_worker) {
-                    auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
-                    worker.awake();
+                auto log_buffer = log->get_buffer();
+                assert(log_buffer);
+                if (log_buffer) {
+                    auto write_handle = log_buffer->alloc_write_chunk(length + ext_info_length, epoch_ms);
+                    bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.result == enum_buffer_result_code::err_wait_and_retry || write_handle.low_space_flag);
+                    if (need_awake_worker) {
+                        auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
+                        worker.awake();
+                    }
+                    while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
+                        bq::platform::thread::cpu_relax();
+                        log_buffer->commit_write_chunk(write_handle);
+                        write_handle = log_buffer->alloc_write_chunk(length + ext_info_length, epoch_ms);
+                    }
+                    handle.result = write_handle.result;
+                    handle.data_addr = write_handle.data_addr;
                 }
-                while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
-                    bq::platform::thread::cpu_relax();
-                    log_buffer.commit_write_chunk(write_handle);
-                    write_handle = log_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
-                }
-                handle.result = write_handle.result;
-                handle.data_addr = write_handle.data_addr;
             }
 
             if (handle.result == enum_buffer_result_code::success) {
@@ -285,8 +288,11 @@ namespace bq {
                 bq::log_buffer_write_handle handle;
                 handle.data_addr = write_handle.data_addr;
                 handle.result = write_handle.result;
-                auto& log_buffer = log->get_buffer();
-                log_buffer.commit_write_chunk(handle);
+                auto log_buffer = log->get_buffer();
+                assert(log_buffer);
+                if (log_buffer) {
+                    log_buffer->commit_write_chunk(handle);
+                }
             }
         }
 
