@@ -24,15 +24,10 @@ if /i "%COMPILER_TYPE%"=="clang" (
 
 set CONFIGS=Debug MinSizeRel RelWithDebInfo Release
 
-set idx=0
 for %%c in (%CONFIGS%) do (
     set "CUR_CFG=%%c"
     call "%VS_PATH%\devenv.com" ./BqLog.sln /Rebuild "!CUR_CFG!" /Project "./BqLog.vcxproj" /Out Build.log
     cmake --install . --config !CUR_CFG! 
-    if "!idx!"=="3" (
-        cmake --build . --config !CUR_CFG! --target package
-    )
-    set /a idx+=1
 )
 
 cd ..
