@@ -1,12 +1,23 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(BqLog_CategoryLogGenerator)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/BqCommon/CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/BqCommon/CMake_utils.txt)
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt)
 endif()
-set(CMAKE_CXX_STANDARD 17)
+
+#Parse version from version.cpp
+bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/version.cpp")
+
+project(BqLog_CategoryLogGenerator VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
+
+if(NOT DEFINED CPP_VER)
+    set(CMAKE_CXX_STANDARD 17)
+    message("Use default C++ 17")
+else()
+    set(CMAKE_CXX_STANDARD ${CPP_VER})
+    message("Use custom C++ ${CPP_VER}")
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
@@ -71,7 +82,15 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../bin/tools/${TARGET_PLATFORM}${BITS_SUFFIX})
+set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/tools")
+set(INSTALL_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/tools")
+
+message("Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
+message("Dist Directory:${INSTALL_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}")
+
+set(ARTIFACTS_SUB_DIR "bin")
+set(INSTALL_SUB_DIR "${ARTIFACTS_SUB_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 
 # generate executable
 add_executable(BqLog_CategoryLogGenerator
@@ -98,3 +117,50 @@ elseif(TARGET_PLATFORM STREQUAL "unix")
         target_link_libraries(BqLog_CategoryLogGenerator PRIVATE ${EXECINFO_LIBRARY})
     endif()
 endif()
+
+
+
+
+#Ensure the target carries version/soname metadata
+set_target_properties(BqLog_CategoryLogGenerator PROPERTIES
+        VERSION ${BQ_LOG_VERSION}
+        SOVERSION ${BQ_LOG_SOVERSION}
+)
+
+set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
+
+
+install(TARGETS BqLog_CategoryLogGenerator
+        ARCHIVE DESTINATION "${INSTALL_SUB_DIR}"
+        LIBRARY DESTINATION "${INSTALL_SUB_DIR}"
+        RUNTIME DESTINATION "${INSTALL_SUB_DIR}"
+        FRAMEWORK DESTINATION "${INSTALL_SUB_DIR}"
+)
+
+install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/BqLog_CategoryLogGenerator.pdb"
+        DESTINATION "${INSTALL_SUB_DIR}"
+        OPTIONAL
+)
+
+file(GLOB README_FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../*.md"
+)
+
+install(FILES ${README_FILES}
+        DESTINATION "."
+)
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../docs"
+        DESTINATION "."
+)
+
+
+
+
+
+
+
+
+
+
+

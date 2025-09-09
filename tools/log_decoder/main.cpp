@@ -60,7 +60,7 @@ static void print_help(const char* prog) {
         + "  " + prog + " input.logcompr\n"
         + "  " + prog + " input.logcompr -o output.txt\n"
         + "  " + prog + " input.logcompr -k private_key\n";
-    CONSOLE_OUTPUT(bq::log_level::debug, output.c_str());
+    CONSOLE_OUTPUT(bq::log_level::debug, "%s", output.c_str());
 }
 
 static bool parse_args(int argc, char* argv[], Options& opt) {
