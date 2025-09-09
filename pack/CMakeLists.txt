@@ -34,7 +34,7 @@ else()
     set(_compiler_target "")
 endif()
 # Helper to test known patterns
-if(PROC_TYPE MATCHES "^(x86_64|X86_64|amd64|AMD64|x86-64)$" OR _compiler_target MATCHES "x86_64|amd64|i386|i686")
+if(PROC_TYPE MATCHES "^(x86_64|X86_64|amd64|AMD64|x86-64|i386|i686)$" OR _compiler_target MATCHES "x86_64|amd64|i386|i686")
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(DETECTED_ARCH "x86_64")
     else()
