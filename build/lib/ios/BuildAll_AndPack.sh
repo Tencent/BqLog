@@ -2,7 +2,7 @@
 
 rm -rf XCodeProj
 mkdir XCodeProj
-cd XCodeProj
+pushd "XCodeProj" >/dev/null
 cmake ../../../../src \
     -G Xcode \
     -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
@@ -30,7 +30,15 @@ do
     fi
 done
 
-cd ..
+popd >/dev/null
+
+rm -rf pack
+mkdir pack
+pushd "pack" >/dev/null
+
+cmake ../../../../pack -DTARGET_PLATFORM:STRING=ios -DPACKAGE_NAME:STRING=bqlog-lib
+cmake --build . --target package
+popd >/dev/null
 
 echo "---------"
 echo "Finished!"
