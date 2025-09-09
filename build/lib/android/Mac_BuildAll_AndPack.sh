@@ -28,13 +28,13 @@ do
         cd $build_type
         cmake ../../../../../src\
         -DANDROID_ABI=$build_target\
-         -DANDROID_PLATFORM=android-19\
-         -DANDROID_NDK=$NDK_PATH\
-         -DCMAKE_BUILD_TYPE=$build_type\
-		 -DBUILD_TYPE=dynamic_lib\
-         -DCMAKE_TOOLCHAIN_FILE=$NDK_PATH/build/cmake/android.toolchain.cmake\
-         -DTARGET_PLATFORM:STRING=android\
-		 -DANDROID_STL=none
+        -DANDROID_PLATFORM=android-19\
+        -DANDROID_NDK=$NDK_PATH\
+        -DCMAKE_BUILD_TYPE=$build_type\
+		    -DBUILD_TYPE=dynamic_lib\
+        -DCMAKE_TOOLCHAIN_FILE=$NDK_PATH/build/cmake/android.toolchain.cmake\
+        -DTARGET_PLATFORM:STRING=android\
+		    -DANDROID_STL=none
 		 
         $ANDROID_NDK_ROOT/prebuilt/darwin-x86_64/bin/make VERBOSE=1 -j$(sysctl -n hw.logicalcpu)
         if [ $? -eq 0 ]; then
@@ -44,12 +44,22 @@ do
             exit 1
         fi
         $ANDROID_NDK_ROOT/prebuilt/darwin-x86_64/bin/make install
-        mv -f ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog.so ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog_Symbol.so
-        $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip -s ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog_Symbol.so -o ../../../../../dist/dynamic_lib/android/$build_target/$build_type/libBqLog.so
+        mv -f ../../../../../install/dynamic_lib/lib/$build_target/$build_type/libBqLog.so ../../../../../install/dynamic_lib/lib/$build_target/$build_type/libBqLog_Symbol.so
+        $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip -s ../../../../../install/dynamic_lib/lib/$build_target/$build_type/libBqLog_Symbol.so -o ../../../../../install/dynamic_lib/lib/$build_target/$build_type/libBqLog.so
         cd ..
     done
     cd ..
 done
+
+popd >/dev/null
+
+rm -rf pack
+mkdir pack
+pushd "pack" >/dev/null
+
+cmake ../../../../pack -DTARGET_PLATFORM:STRING=android -DPACKAGE_NAME:STRING=bqlog-lib
+cmake --build . --target package
+popd >/dev/null
 
 
 echo "---------"
