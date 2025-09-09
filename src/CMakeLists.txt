@@ -11,17 +11,43 @@ set(APPLE_LIB_FORMAT "framework" CACHE STRING "Apple build format")
 set_property(CACHE APPLE_LIB_FORMAT PROPERTY STRINGS "framework" "dylib" "a")
 endif()
 
-OPTION(JAVA_SUPPORT "Support Java" OFF) 
+OPTION(JAVA_SUPPORT "Support Java" OFF)
 
+#Parse version from version.cpp
+set(_VERSION_CPP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bq_log/global/version.cpp")
+if(EXISTS "${_VERSION_CPP_PATH}")
+    file(READ "${_VERSION_CPP_PATH}" _version_cpp)
+    # defaults
+    set(VERSION_MAJOR "0")
+    set(VERSION_MINOR "0")
+    set(VERSION_PATCH "0")
+    # try to match BQ_LOG_VERSION "x.y.z"
+    string(REGEX MATCH "BQ_LOG_VERSION[^\"']*\"([0-9]+)\\.([0-9]+)\\.([0-9]+)\"" _match "${_version_cpp}")
+    if(NOT CMAKE_MATCH_1 STREQUAL "")
+        set(VERSION_MAJOR "${CMAKE_MATCH_1}")
+        set(VERSION_MINOR "${CMAKE_MATCH_2}")
+        set(VERSION_PATCH "${CMAKE_MATCH_3}")
+    endif()
+else()
+    message(WARNING "Version file not found: `src/bq_log/global/version.cpp` — defaulting to 0.0.0")
+endif()
+set(BQ_LOG_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set(BQ_LOG_SOVERSION "${VERSION_MAJOR}")
 
-project(BqLog)
+project(BqLog VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+if(NOT DEFINED CPP_VER)
+    set(CMAKE_CXX_STANDARD 17)
+    message("Use default C++ 17")
+else()
+    set(CMAKE_CXX_STANDARD ${CPP_VER})
+    message("Use custom C++ ${CPP_VER}")
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
@@ -87,27 +113,68 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-if(BUILD_TYPE STREQUAL "static_lib")
-    set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../artifacts/static_lib")
-    set(DIST_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dist/static_lib")
+
+# Prefer the system processor variable
+set(PROC_TYPE "${CMAKE_SYSTEM_PROCESSOR}")
+if("${PROC_TYPE}" STREQUAL "")
+    set(PROC_TYPE "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+endif()
+# If cross-compiling, the compiler target triple may be set
+if(DEFINED CMAKE_C_COMPILER_TARGET AND NOT CMAKE_C_COMPILER_TARGET STREQUAL "")
+    set(_compiler_target "${CMAKE_C_COMPILER_TARGET}")
 else()
-    add_compile_definitions(BQ_DYNAMIC_LIB)
-    set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../artifacts/dynamic_lib")
-    set(DIST_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dist/dynamic_lib")
+    set(_compiler_target "")
+endif()
+# Helper to test known patterns
+if(PROC_TYPE MATCHES "^(x86_64|X86_64|amd64|AMD64|x86-64)$" OR _compiler_target MATCHES "x86_64|amd64|i386|i686")
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(DETECTED_ARCH "x86_64")
+    else()
+        set(DETECTED_ARCH "x86")
+    endif()
+elseif(PROC_TYPE MATCHES "^(aarch64|arm64|AARCH64|ARM64|armv8|armv7l|arm)$" OR _compiler_target MATCHES "aarch64|armv7|arm")
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(DETECTED_ARCH "arm64")
+    else()
+        set(DETECTED_ARCH "arm32")
+    endif()
 endif()
 
+if(TARGET_PLATFORM STREQUAL "linux")
+    set(PACKAGE_NAME "linux_${DETECTED_ARCH}")
+elseif(TARGET_PLATFORM STREQUAL "win64")
+    set(PACKAGE_NAME "windows_${DETECTED_ARCH}")
+elseif(TARGET_PLATFORM STREQUAL "unix")
+    set(PACKAGE_NAME "unix_${DETECTED_ARCH}")
+elseif(TARGET_PLATFORM STREQUAL "mac")
+    set(PACKAGE_NAME "macos_universal")
+elseif(TARGET_PLATFORM STREQUAL "ios")
+    set(PACKAGE_NAME "ios")
+elseif(TARGET_PLATFORM STREQUAL "android")
+    set(PACKAGE_NAME "android")
+else()
+    set(PACKAGE_NAME "unkown_platform")
+endif()
 
+if(BUILD_TYPE STREQUAL "static_lib")
+    set(PACKAGE_NAME "${PACKAGE_NAME}_static_lib")
+else()
+    set(PACKAGE_NAME "${PACKAGE_NAME}_shared_lib")
+endif()
+
+message(STATUS "PACKAGE_NAME: ${PACKAGE_NAME}")
+
+set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../artifacts/${PACKAGE_NAME}")
+set(INSTALL_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../install/${PACKAGE_NAME}")
 
 if(TARGET_PLATFORM STREQUAL "android")
-    set(ARTIFACTS_SUB_DIR "${TARGET_PLATFORM}/${ANDROID_ABI}/${CMAKE_BUILD_TYPE}")
-    set(DIST_SUB_DIR "${TARGET_PLATFORM}/${ANDROID_ABI}")
+    set(ARTIFACTS_SUB_DIR "${ANDROID_ABI}/${CMAKE_BUILD_TYPE}")
 else()
 	if(TARGET_PLATFORM STREQUAL "linux" OR TARGET_PLATFORM STREQUAL "unix")
-		set(ARTIFACTS_SUB_DIR "${TARGET_PLATFORM}${BITS_SUFFIX}/${CMAKE_BUILD_TYPE}")
+		set(ARTIFACTS_SUB_DIR "${CMAKE_BUILD_TYPE}")
 	else()
-		set(ARTIFACTS_SUB_DIR "${TARGET_PLATFORM}${BITS_SUFFIX}")
+		set(ARTIFACTS_SUB_DIR "")
 	endif()
-    set(DIST_SUB_DIR "${TARGET_PLATFORM}${BITS_SUFFIX}")
 	if(JAVA_SUPPORT)
 		if(DEFINED ENV{JAVA_HOME})
 			message("JAVA_HOME: $ENV{JAVA_HOME}")
@@ -124,13 +191,14 @@ else()
         endforeach()
 	endif()
 endif()
+set(INSTALL_SUB_DIR "${ARTIFACTS_SUB_DIR}")
 
 message("Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
-message("Dist Directory:${DIST_OUTPUT_BASE_DIR}/${DIST_SUB_DIR}")
+message("Dist Directory:${INSTALL_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}")
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/bin/${ARTIFACTS_SUB_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/lib/${ARTIFACTS_SUB_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/lib/${ARTIFACTS_SUB_DIR}")
 
 #universal binary for mac os, support both Intel cpu and Apple cpu
 if(TARGET_PLATFORM STREQUAL "mac")
@@ -166,8 +234,8 @@ elseif(TARGET_PLATFORM STREQUAL "mac")
             MACOSX_FRAMEWORK_IDENTIFIER com.tencent.BqLog
             PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
-            VERSION 1.0.0
-            SOVERSION 1.0.0
+            VERSION ${BQ_LOG_VERSION}
+            SOVERSION ${BQ_LOG_SOVERSION}
         )
     endif()
 elseif(TARGET_PLATFORM STREQUAL "ios")
@@ -187,8 +255,8 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
             MACOSX_FRAMEWORK_IDENTIFIER com.tencent.BqLog
             PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
-            VERSION 1.0.0
-            SOVERSION 1.0.0
+            VERSION ${BQ_LOG_VERSION}
+            SOVERSION ${BQ_LOG_SOVERSION}
         )
     endif()
 elseif(TARGET_PLATFORM STREQUAL "win64")
@@ -201,7 +269,7 @@ endif()
 add_custom_command(TARGET BqLog POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${ARTIFACTS_OUTPUT_BASE_DIR}/include"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../include" "${ARTIFACTS_OUTPUT_BASE_DIR}/include"
-    COMMENT "Copying include headers to dist folder"
+    COMMENT "Copying include headers to install folder"
 )
 if(BUILD_TYPE STREQUAL "dynamic_lib")
     add_custom_command(TARGET BqLog POST_BUILD
@@ -218,19 +286,42 @@ if(BUILD_TYPE STREQUAL "dynamic_lib")
     endif()
 endif()
 
+#Ensure the target carries version/soname metadata
+set_target_properties(BqLog PROPERTIES
+        VERSION ${BQ_LOG_VERSION}
+        SOVERSION ${BQ_LOG_SOVERSION}
+)
+
+set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
+
 install(TARGETS BqLog
-        ARCHIVE DESTINATION "${DIST_OUTPUT_BASE_DIR}/${DIST_SUB_DIR}/$<CONFIG>"
-        LIBRARY DESTINATION "${DIST_OUTPUT_BASE_DIR}/${DIST_SUB_DIR}/$<CONFIG>"
-        RUNTIME DESTINATION "${DIST_OUTPUT_BASE_DIR}/${DIST_SUB_DIR}/$<CONFIG>"
-        FRAMEWORK DESTINATION "${DIST_OUTPUT_BASE_DIR}/${DIST_SUB_DIR}/$<CONFIG>")
-   
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${DIST_OUTPUT_BASE_DIR}/include)")
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${ARTIFACTS_OUTPUT_BASE_DIR}/include ${DIST_OUTPUT_BASE_DIR}/include)")
+        ARCHIVE DESTINATION "lib/${INSTALL_SUB_DIR}"
+        LIBRARY DESTINATION "lib/${INSTALL_SUB_DIR}"
+        RUNTIME DESTINATION "bin/${INSTALL_SUB_DIR}"
+        FRAMEWORK DESTINATION "framework/${INSTALL_SUB_DIR}")
+
+install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/include/"
+        DESTINATION "include"
+)
 
 
 
+set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_INSTALL_PREFIX};.")
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}-${PACKAGE_NAME}")
+set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../dist")
+
+# choose binary generator per target platform
+if(TARGET_PLATFORM STREQUAL "win64" OR TARGET_PLATFORM STREQUAL "android")
+    set(CPACK_GENERATOR "ZIP")
+else()
+    # linux/unix/mac -> tar.gz (TGZ)
+    set(CPACK_GENERATOR "TGZ")
+endif()
 
 
+include(CPack)
 
 
 

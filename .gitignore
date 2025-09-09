@@ -1,4 +1,6 @@
 ﻿artifacts/
+dist/
+install/
 .vscode/
 .idea/
 **/cmake*/

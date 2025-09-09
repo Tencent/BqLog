@@ -69,12 +69,13 @@ int32_t bq_tgkill(pid_t tgid, pid_t tid, int32_t sig)
 #endif
 
 namespace bq {
+    const char* get_bq_log_version();
     namespace api {
         static_assert(sizeof(uintptr_t) == sizeof(log_imp*), "invalid pointer size");
 
         BQ_API const char* __api_get_log_version()
         {
-            return "1.4.7";
+            return get_bq_log_version();
         }
 
 #if defined(BQ_POSIX)
