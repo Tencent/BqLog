@@ -16,7 +16,8 @@ for i in "${!CONFIG_TYPE[@]}"; do
     -DTARGET_PLATFORM:STRING=linux \
 	  -DCMAKE_BUILD_TYPE=$config_type \
 	  -DBUILD_TYPE=$BUILD_TYPE
-	  cmake --build . --parallel
+      
+	cmake --build . --parallel
     cmake --build . --target install
     popd >/dev/null
 done
