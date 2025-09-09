@@ -120,11 +120,13 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     env->ReleaseStringCritical(format_content, (const jchar*)format_str);
 
     bq::log_imp* log = bq::log_manager::get_log_by_id(static_cast<uint64_t>(log_id));
-    auto& log_buffer = log->get_buffer();
     bq::log_buffer_write_handle inner_handle;
     inner_handle.data_addr = handle.data_addr;
     inner_handle.result = handle.result;
-    tls_write_handle_.java_info_ = log_buffer.get_java_buffer_info(env, inner_handle);
+    if (log) {
+        auto& log_buffer = log->get_buffer();
+        tls_write_handle_.java_info_ = log_buffer.get_java_buffer_info(env, inner_handle);
+    }
     *tls_write_handle_.java_info_.offset_store_ += (int32_t)head->log_args_offset;
     return tls_write_handle_.java_info_.buffer_array_obj_;
 }
