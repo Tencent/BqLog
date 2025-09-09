@@ -22,12 +22,22 @@ if /i "%COMPILER_TYPE%"=="clang" (
     cmake ..\..\..\..\src -DTARGET_PLATFORM:STRING=win64 -DCMAKE_GENERATOR_PLATFORM=x64 -DJAVA_SUPPORT=ON -DBUILD_TYPE=%BUILD_TYPE%
 )
 
+IF %exitcode% NEQ 0 (
+    echo BqLog failed with exit code %exitcode%
+    exit /b %exitcode%
+)
+
 set CONFIGS=Debug MinSizeRel RelWithDebInfo Release
 
 for %%c in (%CONFIGS%) do (
     set "CUR_CFG=%%c"
     call "%VS_PATH%\devenv.com" ./BqLog.sln /Rebuild "!CUR_CFG!" /Project "./BqLog.vcxproj" /Out Build.log
-    cmake --install . --config !CUR_CFG! 
+    cmake --install . --config !CUR_CFG!
+
+    IF %exitcode% NEQ 0 (
+        echo BqLog failed with exit code %exitcode%
+        exit /b %exitcode%
+    )
 )
 
 cd ..

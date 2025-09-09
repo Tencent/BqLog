@@ -1,11 +1,11 @@
 #!/bin/bash
+set -euo pipefail
 
 BUILD_TYPE=$1
 COMPILER_TYPE_C=$2
 COMPILER_TYPE_CXX=$3
 
 CONFIG_TYPE=(Debug MinSizeRel RelWithDebInfo Release)
-last_index=$((${#CONFIG_TYPE[@]} - 1))
 for i in "${!CONFIG_TYPE[@]}"; do
     config_type="${CONFIG_TYPE[$i]}"
     rm -rf $BUILD_TYPE/$config_type
@@ -18,10 +18,6 @@ for i in "${!CONFIG_TYPE[@]}"; do
 	  -DBUILD_TYPE=$BUILD_TYPE
 	  cmake --build . --parallel
     cmake --build . --target install
-
-    if [[ $i -eq $last_index ]]; then
-      cmake --build . --target package
-    fi
     popd >/dev/null
 done
 
