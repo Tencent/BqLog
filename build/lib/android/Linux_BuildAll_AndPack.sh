@@ -14,28 +14,30 @@ fi
 
 NDK_PATH="$ANDROID_NDK_ROOT"
 
-# Detect HOST_TAG for NDK prebuilt tools
-uname_s="$(uname -s)"
+# Detect host architecture for NDK toolchain
 uname_m="$(uname -m)"
-case "$uname_s" in
-  Darwin)
-    if [[ "$uname_m" == "arm64" ]]; then
-      HOST_TAG="darwin-arm64"
-    else
-      HOST_TAG="darwin-x86_64"
-    fi
-    ;;
-  Linux)
+if [[ "$uname_m" == "aarch64" || "$uname_m" == "arm64" ]]; then
+  HOST_TAG="linux-arm64"
+elif [[ "$uname_m" == "x86_64" ]]; then
+  HOST_TAG="linux-x86_64"
+else
+  echo "Unsupported host architecture: $uname_m"
+  exit 1
+fi
+
+# Fallback if NDK doesn't have this prebuilt
+if [[ ! -d "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin" ]]; then
+  if [[ -d "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin" ]]; then
     HOST_TAG="linux-x86_64"
-    ;;
-  MINGW*|MSYS*|CYGWIN*)
-    HOST_TAG="windows-x86_64"
-    ;;
-  *)
-    echo "Unsupported host OS: $uname_s"
+  elif [[ -d "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-arm64/bin" ]]; then
+    HOST_TAG="linux-arm64"
+  else
+    echo "No suitable NDK prebuilt toolchain found for this host."
     exit 1
-    ;;
-esac
+  fi
+fi
+
+echo "Using NDK toolchain: $HOST_TAG"
 
 BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64)
 BUILD_TYPE=(Debug RelWithDebInfo MinSizeRel Release)

@@ -12,9 +12,24 @@ If not exist %ANDROID_NDK_ROOT% (
 
 Echo Android NDK Found:%ANDROID_NDK_ROOT%
 
-set ANDROID_PLATFORM="android-19"
+set ANDROID_PLATFORM="android-21"
 
+echo Android NDK found: %ANDROID_NDK_ROOT%
 
+REM Try to use windows-arm64 toolchain if it exists, otherwise fallback to windows-x86_64
+set "HOST_TAG=windows-x86_64"
+if exist "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-arm64\bin" (
+    set "HOST_TAG=windows-arm64"
+    echo Using NDK host toolchain: windows-arm64
+) else (
+    if exist "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-x86_64\bin" (
+        set "HOST_TAG=windows-x86_64"
+        echo Using NDK host toolchain: windows-x86_64
+    ) else (
+        echo ERROR: Neither windows-arm64 nor windows-x86_64 toolchain found in your NDK. Build cancelled!
+        goto :EOF
+    )
+)
 
 
 set BUILD_TARGET[0]=armeabi-v7a
@@ -47,10 +62,10 @@ for /l %%a in (0,1,2) do (
 				 -DTARGET_PLATFORM:STRING=android^
 				 -DANDROID_STL=none
 				 
-				 %ANDROID_NDK_ROOT%\prebuilt\windows-x86_64\bin\make --trace -j10
-				 %ANDROID_NDK_ROOT%\prebuilt\windows-x86_64\bin\make install
+				 %ANDROID_NDK_ROOT%\prebuilt\%HOST_TAG%\bin\make --trace -j10
+				 %ANDROID_NDK_ROOT%\prebuilt\%HOST_TAG%\bin\make install
 				 move /Y ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so
-				 %ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-x86_64\bin\llvm-strip.exe -s ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so -o ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so
+				 %ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe -s ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so -o ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so
 			)
 			cd ..
 		)
