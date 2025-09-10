@@ -35,6 +35,7 @@ if exist "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-arm64\bin" (
 set BUILD_TARGET[0]=armeabi-v7a
 set BUILD_TARGET[1]=arm64-v8a
 set BUILD_TARGET[2]=x86_64
+set BUILD_TARGET[3]=x86
 set BUILD_TYPE[0]=Debug
 set BUILD_TYPE[1]=MinSizeRel
 set BUILD_TYPE[2]=RelWithDebInfo

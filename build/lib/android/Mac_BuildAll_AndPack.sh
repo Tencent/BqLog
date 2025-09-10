@@ -41,7 +41,7 @@ fi
 # Detect number of CPU cores for parallel build
 PARALLEL_JOBS="${PARALLEL_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || echo 8)}"
 
-BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64)
+BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64 x86)
 BUILD_TYPE=(Debug RelWithDebInfo MinSizeRel Release)
 
 echo "NDK: $NDK_PATH"

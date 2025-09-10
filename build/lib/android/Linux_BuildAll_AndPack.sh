@@ -39,7 +39,7 @@ fi
 
 echo "Using NDK toolchain: $HOST_TAG"
 
-BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64)
+BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64 x86)
 BUILD_TYPE=(Debug RelWithDebInfo MinSizeRel Release)
 
 for build_target in "${BUILD_TARGET[@]}"; do
