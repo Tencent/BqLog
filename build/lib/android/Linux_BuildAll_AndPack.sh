@@ -78,6 +78,12 @@ for build_target in "${BUILD_TARGET[@]}"; do
   cd ..
 done
 
+pushd "gradle_proj" >/dev/null
+chmod +x ./gradlew
+./gradlew assemble
+popd >/dev/null
+
+
 rm -rf pack
 mkdir -p pack
 pushd "pack" >/dev/null
