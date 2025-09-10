@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "BqLog"
-include(":lib")
+include(":bqlog")

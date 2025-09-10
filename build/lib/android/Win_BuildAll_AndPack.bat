@@ -47,11 +47,11 @@ for /l %%a in (0,1,2) do (
     for /f "usebackq delims== tokens=1-2" %%i in (`set BUILD_TARGET[%%a]`) do (
 		rd /s /q %%j
 		md %%j
-		cd %%j
+		pushd %%j
 		for /l %%a in (0,1,3) do (
 			for /f "usebackq delims== tokens=1-2" %%o in (`set BUILD_TYPE[%%a]`) do (
 				md %%p
-				cd %%p
+				pushd %%p
 				cmake ..\..\..\..\..\src^
 				 -G="MinGW Makefiles"^
 				 -DANDROID_ABI=%%j^
@@ -68,20 +68,25 @@ for /l %%a in (0,1,2) do (
 				 move /Y ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so
 				 %ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe -s ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so -o ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so
 			)
-			cd ..
+			popd
 		)
     )
-	cd ..
+	popd
 )
+
+pushd gradle_proj
+call gradlew.bat assemble
+if errorlevel 1 goto :fail
+popd
 
 if exist "pack" rd /s /q "pack"
 md pack
-cd pack
+pushd pack
 
 cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=android -DPACKAGE_NAME:STRING=bqlog-lib
 cmake --build . --target package
 if errorlevel 1 goto :fail
-cd ..
+popd
 
  
 echo ---------
