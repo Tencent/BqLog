@@ -521,6 +521,12 @@ jobs:
             chmod +x *.sh
             ls -l
             ./BuildAll_AndPack_Clang.sh
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
 
   build_freebsd_x86_64_libs_GCC:
     runs-on: ubuntu-latest
@@ -577,6 +583,12 @@ jobs:
             chmod +x *.sh
             ls -l
             ./BuildAll_And_Pack_Tools_Clang.sh
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_tools
+          path: ${{ github.workspace }}/dist
 
   build_freebsd_x86_64_tools_GCC:
     runs-on: ubuntu-latest
