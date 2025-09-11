@@ -16,6 +16,8 @@ if exist "%PROJ_DIR%" rd /s /q "%PROJ_DIR%"
 md "%PROJ_DIR%"
 cd "%PROJ_DIR%"
 
+set CL=/MP
+
 if /i "%COMPILER_TYPE%"=="clang" (
     cmake ..\..\..\..\src -DTARGET_PLATFORM:STRING=win64 -DCMAKE_GENERATOR_PLATFORM=x64 -DJAVA_SUPPORT=ON -DBUILD_TYPE=%BUILD_TYPE% -T ClangCl
 ) else (

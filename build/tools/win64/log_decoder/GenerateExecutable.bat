@@ -14,7 +14,7 @@ cd VSProj
 
 cmake ..\..\..\..\..\tools\log_decoder\ -DTARGET_PLATFORM:STRING=win64 -DCMAKE_GENERATOR_PLATFORM=x64
 
-
+set CL=/MP
 echo "VS COMMAND TOOLS PATH:"
 echo "%VS_PATH%\devenv.com"
 call "%VS_PATH%\devenv.com" ./BqLog_LogDecoder.sln /Rebuild "RelWithDebInfo" /Project "./BqLog_LogDecoder.vcxproj" /Out Build.log 
