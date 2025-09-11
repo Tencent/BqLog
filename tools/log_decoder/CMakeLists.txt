@@ -20,7 +20,6 @@ else()
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
 
 #make __cplusplus correct in Visual Studio
 if (MSVC)
@@ -91,6 +90,11 @@ message("Dist Directory:${INSTALL_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}")
 set(ARTIFACTS_SUB_DIR "bin/$<CONFIG>")
 set(INSTALL_SUB_DIR "bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
+
+#universal binary for mac os, support both Intel cpu and Apple cpu
+if(TARGET_PLATFORM STREQUAL "mac")
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
+endif()
 
 # generate executable
 add_executable(BqLog_LogDecoder
