@@ -16,7 +16,7 @@ android {
         }
         externalNativeBuild {
             cmake {
-                arguments += listOf("-DBUILD_TYPE=dynamic_lib", "-DTARGET_PLATFORM:STRING=android", "-DANDROID_STL=none")
+                arguments += listOf("-DBUILD_TYPE=dynamic_lib", "-DTARGET_PLATFORM:STRING=android", "-DANDROID_STL=none", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
             }
         }
     }
@@ -42,6 +42,12 @@ android {
         cmake {
             path = file("../../../../../src/CMakeLists.txt")
         }
+    }
+    
+    packagingOptions {
+      jniLibs {
+        useLegacyPackaging = true
+      }
     }
 
     sourceSets {

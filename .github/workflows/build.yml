@@ -58,4 +58,121 @@ jobs:
           name: win64_libs_clang
           path: dist\
 
-  
+  build_windows_tools:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build Tools
+        run: |
+          cd build\tools\win64 
+          .\BuildAll_And_Pack_Tools.bat
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: win64_tools
+          path: bin\tools\win64
+
+  #Android
+  build_windows_android:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+            ndk;28.2.13676358
+
+      - name: Build for Windows Android
+        run: |
+          cd build\lib\android
+          .\Win_BuildAll_AndPack.bat 
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-android.outputs.android-sdk-root }}/ndk/28.2.13676358
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android_artifact
+          path: dist\
+
+  build_mac_android:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+            ndk;28.2.13676358
+
+      - name: Build for Windows Android
+        run: |
+          cd build\lib\android
+          .\Mac_BuildAll_AndPack.bat 
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-android.outputs.android-sdk-root }}/ndk/28.2.13676358
+
+  build_linux_android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+            ndk;28.2.13676358
+
+      - name: Build for Windows Android
+        run: |
+          cd build\lib\android
+          .\Linux_BuildAll_AndPack.bat 
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-android.outputs.android-sdk-root }}/ndk/28.2.13676358
