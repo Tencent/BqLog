@@ -523,9 +523,9 @@ jobs:
             ./BuildAll_AndPack_Clang.sh
             cd "$GITHUB_WORKSPACE"
             DIST_DIR=dist
-            for f in "$DIST_DIR"/bqlog-lib-unix_x86_64-*.tar.gz; do
+            for f in "$DIST_DIR"/*unix*; do
               [ -e "$f" ] || { echo "No unix package found to rename"; break; }
-              new="${f/unix/freebsd}"
+              new=$(echo "$f" | sed 's/-unix_/-freebsd_/')
               mv -v "$f" "$new"
             done
       
@@ -592,9 +592,9 @@ jobs:
             ./BuildAll_And_Pack_Tools_Clang.sh
             cd "$GITHUB_WORKSPACE"
             DIST_DIR=dist
-            for f in "$DIST_DIR"/bqlog-tools-unix_x86_64-*.tar.gz; do
+            for f in "$DIST_DIR"/*unix*; do
               [ -e "$f" ] || { echo "No unix package found to rename"; break; }
-              new="${f/unix/freebsd}"
+              new=$(echo "$f" | sed 's/-unix_/-freebsd_/')
               mv -v "$f" "$new"
             done
       
