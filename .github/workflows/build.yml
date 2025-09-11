@@ -171,9 +171,9 @@ jobs:
 
       - name: Build for Linux Android
         run: |
-          cd build\lib\android
-          chmod +x .\Linux_BuildAll_AndPack.sh
-          .\Linux_BuildAll_AndPack.sh
+          cd build/lib/android
+          chmod +x ./Linux_BuildAll_AndPack.sh
+          ./Linux_BuildAll_AndPack.sh
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
@@ -259,7 +259,7 @@ jobs:
 
       - name: Build for Linux
         run: |
-          cd build/lib/linux  
+          cd build/tools/linux  
           chmod +x *.sh
           ./BuildAll_And_Pack_Tools_GCC.sh
 
@@ -272,6 +272,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
 
       - name: Install necessary tools (gcc and clang)
         run: |
@@ -308,6 +321,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
+
       - name: Install necessary tools (gcc and clang)
         run: |
           apt-get update
@@ -336,6 +362,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
 
       - name: Install necessary tools (gcc and clang)
         run: |
@@ -371,6 +410,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
 
       - name: Install necessary tools (gcc and clang)
         run: |
@@ -395,7 +447,7 @@ jobs:
 
 
   #Mac
-  build_Mac_lib:
+  build_mac_lib:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -413,7 +465,7 @@ jobs:
           name: macos_universal_binary_libs
           path: dist\
 
-  build_Mac_tools:
+  build_mac_tools:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -421,9 +473,9 @@ jobs:
 
       - name: Build for Mac
         run: |
-          cd build/lib/mac  
+          cd build/tools/mac  
           chmod +x *.sh
-          ./BuildAll_AndPack.sh
+          ./BuildAll_And_Pack_Tools.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
