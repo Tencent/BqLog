@@ -466,7 +466,7 @@ jobs:
           path: dist\
 
   build_mac_tools:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

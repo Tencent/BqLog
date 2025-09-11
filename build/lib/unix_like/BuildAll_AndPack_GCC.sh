@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -euo pipefail
 
 ./Dont_Execute_This.sh dynamic_lib gcc g++
