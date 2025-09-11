@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   #Windows
-  build_windows_static_lib_MSVC:
+  build_windows_lib_MSVC:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -33,7 +33,7 @@ jobs:
           name: win64_libs
           path: ${{ github.workspace }}/dist
 
-  build_windows_dynamic_lib_MSVC:
+  build_windows_lib_Clang:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
