@@ -16,7 +16,7 @@ for config_type in $CONFIG_TYPE; do
     -DCMAKE_BUILD_TYPE=$config_type \
     -DBUILD_TYPE=$BUILD_TYPE
     
-	cmake --build . --parallel
+	cmake --build . --parallel 4
     cmake --build . --target install
     cd ../..
 done

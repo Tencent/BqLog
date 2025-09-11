@@ -236,6 +236,8 @@ jobs:
       - name: Build for Linux
         run: |
           cd build/tools/linux  
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh
           chmod +x *.sh
           ./BuildAll_And_Pack_Tools_Clang.sh
 
@@ -260,6 +262,8 @@ jobs:
       - name: Build for Linux
         run: |
           cd build/tools/linux  
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh
           chmod +x *.sh
           ./BuildAll_And_Pack_Tools_GCC.sh
 
@@ -393,7 +397,9 @@ jobs:
 
       - name: Build for Debian 32
         run: |
-          cd build/tools/linux  
+          cd build/tools/linux
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh 
           chmod +x *.sh
           ./BuildAll_And_Pack_Tools_Clang.sh 
       
@@ -441,7 +447,9 @@ jobs:
 
       - name: Build for Debian 32
         run: |
-          cd build/tools/linux  
+          cd build/tools/linux
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh
           chmod +x *.sh
           ./BuildAll_And_Pack_Tools_GCC.sh 
 
@@ -474,9 +482,9 @@ jobs:
       - name: Build for Mac
         run: |
           cd build/tools/mac  
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh
           chmod +x *.sh
-          ls -l
-          pwd
           ./BuildAll_And_Pack_Tools.sh
 
       - name: Upload Artifacts
@@ -564,6 +572,8 @@ jobs:
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
             ./BuildAll_And_Pack_Tools_Clang.sh
@@ -591,6 +601,8 @@ jobs:
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
             ./BuildAll_And_Pack_Tools_GCC.sh
