@@ -521,6 +521,13 @@ jobs:
             chmod +x *.sh
             ls -l
             ./BuildAll_AndPack_Clang.sh
+            cd "$GITHUB_WORKSPACE"
+            DIST_DIR=dist
+            for f in "$DIST_DIR"/bqlog-lib-unix_x86_64-*.tar.gz; do
+              [ -e "$f" ] || { echo "No unix package found to rename"; break; }
+              new="${f/unix/freebsd}"
+              mv -v "$f" "$new"
+            done
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -583,6 +590,13 @@ jobs:
             chmod +x *.sh
             ls -l
             ./BuildAll_And_Pack_Tools_Clang.sh
+            cd "$GITHUB_WORKSPACE"
+            DIST_DIR=dist
+            for f in "$DIST_DIR"/bqlog-tools-unix_x86_64-*.tar.gz; do
+              [ -e "$f" ] || { echo "No unix package found to rename"; break; }
+              new="${f/unix/freebsd}"
+              mv -v "$f" "$new"
+            done
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
