@@ -30,7 +30,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: win64_libs_msvc
+          name: win64_libs
           path: dist\
 
   build_windows_dynamic_lib_MSVC:
@@ -51,12 +51,6 @@ jobs:
           .\BuildAll_AndPack_Clang.bat 
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: win64_libs_clang
-          path: dist\
 
   build_windows_tools:
     runs-on: windows-latest
@@ -110,9 +104,10 @@ jobs:
       - name: Build for Windows Android
         run: |
           cd build\lib\android
+          chmod +x .\Win_BuildAll_AndPack.sh
           .\Win_BuildAll_AndPack.bat 
         env:
-          ANDROID_NDK_ROOT: \ndk
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -174,9 +169,247 @@ jobs:
           ndk-version: r28c
           local-cache: false
 
-      - name: Build for Windows Android
+      - name: Build for Linux Android
         run: |
           cd build\lib\android
-          .\Linux_BuildAll_AndPack.bat 
+          chmod +x .\Linux_BuildAll_AndPack.sh
+          .\Linux_BuildAll_AndPack.sh
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+
+  #Linux-ubuntu-x86_64
+  build_ubuntu_x86_64_lib_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./BuildAll_AndPack_Clang.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x86_64_libs
+          path: dist\
+
+  build_ubuntu_x86_64_lib_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./BuildAll_AndPack_GCC.sh
+
+  build_ubuntu_x86_64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+      - name: Build for Linux
+        run: |
+          cd build/tools/linux  
+          chmod +x *.sh
+          ./BuildAll_And_Pack_Tools_Clang.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x86_64_tools
+          path: dist\
+
+  build_ubuntu_x86_64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake
+
+      - name: Build for Linux
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./BuildAll_And_Pack_Tools_GCC.sh
+
+
+  #Linux-debian-x86
+  build_debian_x86_lib_Clang:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./BuildAll_AndPack_GCC.sh 
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x86_libs
+          path: dist\
+
+  build_debian_x86_lib_GCC:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./BuildAll_AndPack_GCC.sh 
+
+  build_debian_x86_tools_Clang:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/tools/linux  
+          chmod +x *.sh
+          ./BuildAll_And_Pack_Tools_Clang.sh 
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x86_tools
+          path: dist\
+
+  build_debian_x86_tools_GCC:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/tools/linux  
+          chmod +x *.sh
+          ./BuildAll_And_Pack_Tools_GCC.sh 
+
