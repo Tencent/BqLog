@@ -76,8 +76,7 @@ add_jar(
 )
 message("Jar file generated at directory: (ProjectRoot)/artifacts/wrapper/java")
 
-# Sources jar with version in file name (robust custom rule to avoid UseJava RESOURCES issues)
-# Also inject the same manifest so Implementation-Version matches.
+# Sources jar 
 set(SOURCES_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar")
 add_custom_command(
     OUTPUT "${SOURCES_JAR_PATH}"
@@ -90,6 +89,24 @@ add_custom_command(
 )
 add_custom_target(BqLogWrapper_Java_sources ALL DEPENDS "${SOURCES_JAR_PATH}")
 add_dependencies(BqLogWrapper_Java_sources BqLogWrapper_Java)
+
+# Javadoc 
+set(JAVADOC_DIR "${ARTIFACTS_DIR}/javadoc")
+set(JAVADOC_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar")
+add_custom_command(
+    OUTPUT "${JAVADOC_JAR_PATH}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${JAVADOC_DIR}"
+    COMMAND "${Java_JAVADOC_EXECUTABLE}" -encoding UTF-8 -quiet -Xdoclint:none
+            -d "${JAVADOC_DIR}"
+            ${SRC_LIST}
+    COMMAND "${Java_JAR_EXECUTABLE}" cfm "BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar" "${MANIFEST_FILE}" -C "${JAVADOC_DIR}" .
+    DEPENDS ${SRC_LIST} "${MANIFEST_FILE}"
+    WORKING_DIRECTORY "${ARTIFACTS_DIR}"
+    COMMENT "Generating javadoc and packaging: ${JAVADOC_JAR_PATH}"
+    VERBATIM
+)
+add_custom_target(BqLogWrapper_Java_javadoc ALL DEPENDS "${JAVADOC_JAR_PATH}")
+add_dependencies(BqLogWrapper_Java_javadoc BqLogWrapper_Java)
 
 # Custom target for JNI header generation (classpath uses the versioned jar)
 add_custom_command(
@@ -113,11 +130,13 @@ install(
         FILES
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}.jar"
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar"
+            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar"
         DESTINATION "${BQ_LOG_INSTALL_DIR}"
     )
 install(
         FILES
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}.jar"
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar"
+            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar"
         DESTINATION "${BQ_LOG_DIST_DIR}"
     )
