@@ -8,9 +8,6 @@ cd makeProj
 cmake ..\..\..\..\wrapper\java -G "Unix Makefiles"
 cmake --build . --target install
 
-echo Please Ensure "make.exe" is in your PATH.
-
-make
+if errorlevel 1 goto :fail
 
 cd ..
-pause
