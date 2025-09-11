@@ -99,19 +99,20 @@ jobs:
       - name: Set up Android SDK (with NDK)
         id: setup-android
         uses: android-actions/setup-android@v3
+        
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
-            ndk;28.2.13676358
+          ndk-version: r28c
+          local-cache: false
 
       - name: Build for Windows Android
         run: |
           cd build\lib\android
           .\Win_BuildAll_AndPack.bat 
         env:
-          ANDROID_NDK_ROOT: ${{ steps.setup-android.outputs.android-sdk-root }}/ndk/28.2.13676358
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -134,19 +135,21 @@ jobs:
       - name: Set up Android SDK (with NDK)
         id: setup-android
         uses: android-actions/setup-android@v3
+        
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
-            ndk;28.2.13676358
+          ndk-version: r28c
+          local-cache: false
 
-      - name: Build for Windows Android
+      - name: Build for Mac Android
         run: |
-          cd build\lib\android
-          .\Mac_BuildAll_AndPack.bat 
+          cd build/lib/android
+          chmod +x *.sh
+          ./Mac_Build_Dynamic_Lib.sh 
         env:
-          ANDROID_NDK_ROOT: ${{ steps.setup-android.outputs.android-sdk-root }}/ndk/28.2.13676358
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
   build_linux_android:
     runs-on: ubuntu-latest
@@ -163,16 +166,17 @@ jobs:
       - name: Set up Android SDK (with NDK)
         id: setup-android
         uses: android-actions/setup-android@v3
+        
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
-            ndk;28.2.13676358
+          ndk-version: r28c
+          local-cache: false
 
       - name: Build for Windows Android
         run: |
           cd build\lib\android
           .\Linux_BuildAll_AndPack.bat 
         env:
-          ANDROID_NDK_ROOT: ${{ steps.setup-android.outputs.android-sdk-root }}/ndk/28.2.13676358
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
