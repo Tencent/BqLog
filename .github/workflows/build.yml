@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: win64_libs
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
   build_windows_dynamic_lib_MSVC:
     runs-on: windows-latest
@@ -113,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android_artifact
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
   build_mac_android:
     runs-on: macos-latest
@@ -201,7 +201,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux_x86_64_libs
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
   build_ubuntu_x86_64_lib_GCC:
     runs-on: ubuntu-latest
@@ -245,7 +245,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux_x86_64_tools
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
   build_ubuntu_x86_64_tools_GCC:
     runs-on: ubuntu-latest
@@ -315,7 +315,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux_x86_libs
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
   build_debian_x86_lib_GCC:
     runs-on: ubuntu-latest
@@ -407,7 +407,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux_x86_tools
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
   build_debian_x86_tools_GCC:
     runs-on: ubuntu-latest
@@ -471,7 +471,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos_universal_binary_libs
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
   build_mac_tools:
     runs-on: macos-latest
@@ -491,7 +491,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos_universal_binary_tools
-          path: dist\
+          path: ${{ github.workspace }}/dist
 
 
   #freebsd_x86_64
