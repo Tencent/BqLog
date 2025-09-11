@@ -3,11 +3,11 @@ SETLOCAL ENABLEEXTENSIONS
 
 If not Defined ANDROID_NDK_ROOT (
     Echo ANDROID_NDK_ROOT is not defined! Build Cancelled!
-	GOTO :EOF
+	goto :fail
 )
 If not exist %ANDROID_NDK_ROOT% (
     Echo Folder %ANDROID_NDK_ROOT% Is Not Found! Build Cancelled!
-	GOTO :EOF
+	goto :fail
 )
 
 Echo Android NDK Found:%ANDROID_NDK_ROOT%
@@ -27,7 +27,7 @@ if exist "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-arm64\bin" (
         echo Using NDK host toolchain: windows-x86_64
     ) else (
         echo ERROR: Neither windows-arm64 nor windows-x86_64 toolchain found in your NDK. Build cancelled!
-        goto :EOF
+        goto :fail
     )
 )
 
@@ -43,7 +43,7 @@ set BUILD_TYPE[3]=Release
 
 rem %%j : BUILD_TARGET
 rem %%p : BUILD_TYPE
-for /l %%a in (0,1,2) do (
+for /l %%a in (0,1,3) do (
     for /f "usebackq delims== tokens=1-2" %%i in (`set BUILD_TARGET[%%a]`) do (
 		rd /s /q %%j
 		md %%j
