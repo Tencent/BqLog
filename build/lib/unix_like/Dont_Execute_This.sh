@@ -9,7 +9,7 @@ CONFIG_TYPE="Debug MinSizeRel RelWithDebInfo Release"
 for config_type in $CONFIG_TYPE; do
     rm -rf $BUILD_TYPE/$config_type
     mkdir -p $BUILD_TYPE/$config_type
-    pushd "$BUILD_TYPE/$config_type" >/dev/null
+    cd $BUILD_TYPE/$config_type
     CC=$COMPILER_TYPE_C CXX=$COMPILER_TYPE_CXX cmake ../../../../../src \
     -DJAVA_SUPPORT=ON \
     -DTARGET_PLATFORM:STRING=unix \
@@ -18,7 +18,6 @@ for config_type in $CONFIG_TYPE; do
     
 	cmake --build . --parallel
     cmake --build . --target install
-    popd >/dev/null
     cd ../..
 done
 

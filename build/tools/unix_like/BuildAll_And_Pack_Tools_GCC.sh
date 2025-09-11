@@ -1,17 +1,16 @@
 #!/bin/sh
 set -euo pipefail
 
-pushd "category_log_generator" >/dev/null
+cd category_log_generator
 ./GenerateExecutable_GCC.sh
-popd >/dev/null
-pushd "log_decoder" >/dev/null
+cd ../log_decoder
 ./GenerateExecutable_GCC.sh
-popd >/dev/null
+cd ..
 
 rm -rf pack
 mkdir pack
-pushd "pack" >/dev/null
+cd pack
 
 cmake ../../../../pack -DTARGET_PLATFORM:STRING=linux -DPACKAGE_NAME:STRING=bqlog-tools
 cmake --build . --target package
-popd >/dev/null
+cd ..

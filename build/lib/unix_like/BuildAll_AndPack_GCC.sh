@@ -6,8 +6,8 @@ set -euo pipefail
 
 rm -rf pack
 mkdir pack
-pushd "pack" >/dev/null
+cd pack
 
 cmake ../../../../pack -DTARGET_PLATFORM:STRING=unix -DPACKAGE_NAME:STRING=bqlog-lib
 cmake --build . --target package
-popd >/dev/null
+cd ..
