@@ -7,6 +7,246 @@ permissions:
   contents: write
 
 jobs:
+  #Windows
+  build_windows_86_64_lib_MSVC:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\BuildAll_AndPack_MSVC.bat
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_windows_x86_64_lib_Clang:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\BuildAll_AndPack_Clang.bat
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  build_windows_x86_64_tools:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build Tools
+        run: |
+          cd build\tools\win64 
+          .\BuildAll_And_Pack_Tools.bat
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_x86_64_tools
+          path: bin\tools\win64
+
+  build_windows_arm64_lib_MSVC:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\BuildAll_AndPack_MSVC.bat arm64
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_arm64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_windows_arm64_lib_Clang:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\BuildAll_AndPack_Clang.bat arm64
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  build_windows_arm64_tools:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build Tools
+        run: |
+          cd build\tools\win64 
+          .\BuildAll_And_Pack_Tools.bat arm64
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_arm64_tools
+          path: ${{ github.workspace }}/dist
+
+  #Android
+  build_windows_android:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
+
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r28c
+          local-cache: false
+
+      - name: Build for Windows Android
+        run: |
+          cd build\lib\android
+          chmod +x .\Win_BuildAll_AndPack.sh
+          .\Win_BuildAll_AndPack.bat
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android_artifact
+          path: ${{ github.workspace }}/dist
+
+  build_mac_android:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
+
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r28c
+          local-cache: false
+
+      - name: Build for Mac Android
+        run: |
+          cd build/lib/android
+          chmod +x *.sh
+          ./Mac_BuildAll_AndPack.sh
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+  build_linux_android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
+
+      - name: Set up NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r28c
+          local-cache: false
+
+      - name: Build for Linux Android
+        run: |
+          cd build/lib/android
+          chmod +x ./Linux_BuildAll_AndPack.sh
+          ./Linux_BuildAll_AndPack.sh
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+
   #Linux-ubuntu-x86_64
   build_ubuntu_x86_64_lib_Clang:
     runs-on: ubuntu-latest
@@ -186,3 +426,396 @@ jobs:
           chmod +x *.sh
           ./BuildAll_And_Pack_Tools_GCC.sh
 
+  #Linux-debian-x86
+  build_debian_x86_lib_Clang:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./BuildAll_AndPack_GCC.sh 
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x86_libs
+          path: ${{ github.workspace }}/dist
+
+  build_debian_x86_lib_GCC:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/lib/linux  
+          chmod +x *.sh
+          ./BuildAll_AndPack_GCC.sh 
+
+  build_debian_x86_tools_Clang:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/tools/linux
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh 
+          chmod +x *.sh
+          ./BuildAll_And_Pack_Tools_Clang.sh 
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x86_tools
+          path: ${{ github.workspace }}/dist
+
+  build_debian_x86_tools_GCC:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/i386_debian:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable UTF-8 locale
+        run: |
+          apt-get update
+          apt-get install -y locales
+          sed -i 's/# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          sed -i 's/# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          update-locale LANG=en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANGUAGE=en_US:en" >> $GITHUB_ENV
+          locale
+
+      - name: Install necessary tools (gcc and clang)
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+
+      - name: Set up Java
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
+
+      - name: Build for Debian 32
+        run: |
+          cd build/tools/linux
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh
+          chmod +x *.sh
+          ./BuildAll_And_Pack_Tools_GCC.sh 
+
+
+  #Mac
+  build_mac_lib:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build for Mac
+        run: |
+          cd build/lib/mac  
+          chmod +x *.sh
+          ./BuildAll_AndPack.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos_universal_binary_libs
+          path: ${{ github.workspace }}/dist
+
+  build_mac_tools:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build for Mac
+        run: |
+          cd build/tools/mac  
+          chmod +x category_log_generator/*.sh
+          chmod +x log_decoder/*.sh
+          chmod +x *.sh
+          ./BuildAll_And_Pack_Tools.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos_universal_binary_tools
+          path: ${{ github.workspace }}/dist
+
+
+  #freebsd_x86_64
+  build_freebsd_x86_64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./BuildAll_AndPack_Clang.sh freebsd
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_freebsd_x86_64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./BuildAll_AndPack_GCC.sh freebsd
+
+  build_freebsd_x86_64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            ./BuildAll_And_Pack_Tools_Clang.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_tools
+          path: ${{ github.workspace }}/dist
+
+  build_freebsd_x86_64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            ./BuildAll_And_Pack_Tools_GCC.sh
+
+  #iOS
+  build_ios_lib:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build for Mac
+        run: |
+          cd build/lib/ios  
+          chmod +x *.sh
+          ./BuildAll_AndPack.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios_libs
+          path: ${{ github.workspace }}/dist
+
+  #Java wrapper
+  build_windows_java11_wrapper:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Java
+        run: |
+          cd build\wrapper\java  
+          .\BuildAll_AndPack.bat
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: java_wrapper
+          path: ${{ github.workspace }}/dist

@@ -30,7 +30,7 @@ message(STATUS "BQ_LOG_VERSION=${BQ_LOG_VERSION}")
 project(${PROJ_NAME} VERSION ${BQ_LOG_VERSION})
 
 # Java compile flags: UTF-8, suppress warnings, include debug info for IDE symbol mapping
-set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn" "-g")
+set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn" "-g" "-source" "1.8" "-target" "1.8")
 
 ############################################################
 # Search Source Files
@@ -58,6 +58,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ARTIFACTS_DIR}")
 
 # Build jars
 find_package(Java REQUIRED)
+message(STATUS "Java home: ${Java_JAVA_HOME}")
+message(STATUS "Java executable: ${Java_JAVAC_EXECUTABLE}")
 include(UseJava)
 
 # Prepare custom manifest with library version
@@ -76,7 +78,7 @@ add_jar(
 )
 message("Jar file generated at directory: (ProjectRoot)/artifacts/wrapper/java")
 
-# Sources jar 
+# Sources jar
 set(SOURCES_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar")
 add_custom_command(
     OUTPUT "${SOURCES_JAR_PATH}"
@@ -90,7 +92,7 @@ add_custom_command(
 add_custom_target(BqLogWrapper_Java_sources ALL DEPENDS "${SOURCES_JAR_PATH}")
 add_dependencies(BqLogWrapper_Java_sources BqLogWrapper_Java)
 
-# Javadoc 
+# Javadoc
 set(JAVADOC_DIR "${ARTIFACTS_DIR}/javadoc")
 set(JAVADOC_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar")
 add_custom_command(
@@ -123,7 +125,7 @@ add_custom_command(
 add_custom_target(generate_jni_headers ALL DEPENDS "log_invoker.h")
 add_dependencies(generate_jni_headers BqLogWrapper_Java)
 
-set(BQ_LOG_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/wrapper")
+set(BQ_LOG_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/wrapper_java")
 set(BQ_LOG_DIST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../dist")
 
 install(
