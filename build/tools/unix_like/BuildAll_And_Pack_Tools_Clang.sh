@@ -11,6 +11,6 @@ rm -rf pack
 mkdir pack
 cd pack
 
-cmake ../../../../pack -DTARGET_PLATFORM:STRING=linux -DPACKAGE_NAME:STRING=bqlog-tools
+cmake ../../../../pack -DTARGET_PLATFORM:STRING=unix -DPACKAGE_NAME:STRING=bqlog-tools
 cmake --build . --target package
 cd ..
