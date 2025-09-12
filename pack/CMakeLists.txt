@@ -23,7 +23,10 @@ project("${PACKAGE_NAME}Pack" VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
 
 
 # Prefer the system processor variable
-set(PROC_TYPE "${CMAKE_SYSTEM_PROCESSOR}")
+set(PROC_TYPE "${CMAKE_GENERATOR_PLATFORM}")
+if("${PROC_TYPE}" STREQUAL "")
+    set(PROC_TYPE "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
 if("${PROC_TYPE}" STREQUAL "")
     set(PROC_TYPE "${CMAKE_HOST_SYSTEM_PROCESSOR}")
 endif()
