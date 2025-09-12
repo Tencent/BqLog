@@ -1,6 +1,6 @@
 set -euo pipefail
-mkdir -p EclipseProj
-cd EclipseProj
+mkdir -p makeProj
+cd makeProj
 
 cmake ../../../../wrapper/java -G "Unix Makefiles"
 cmake --build . --target install
