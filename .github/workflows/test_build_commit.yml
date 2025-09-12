@@ -1,4 +1,4 @@
-name: Build And Release
+name: Test Build And Commit
 
 on:
   workflow_dispatch:  # manually trigger
@@ -26,6 +26,7 @@ jobs:
         run: |
           set -e
           cd dist
+          ls -l
           shopt -s nullglob
           for f in *.sha256; do
             sha256sum -c "$f"
