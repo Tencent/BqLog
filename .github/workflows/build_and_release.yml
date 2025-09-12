@@ -1,0 +1,31 @@
+name: Build And Release
+
+on:
+  workflow_dispatch:  # manually trigger
+
+permissions:
+  contents: write
+
+jobs:
+  build_sub_flow:
+    uses: ./.github/workflows/build.yml
+  
+
+  do_release:
+    runs-on: ubuntu-latest
+    needs: 
+      - build_sub_flow
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Verify SHA-256
+        run: |
+          set -e
+          cd dist
+          shopt -s nullglob
+          for f in *.sha256; do
+            sha256sum -c "$f"
+          done
