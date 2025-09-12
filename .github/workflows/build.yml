@@ -85,6 +85,8 @@ jobs:
 
       - name: Set up Java
         uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
 
       - name: Build for Windows
         run: |
@@ -107,6 +109,8 @@ jobs:
 
       - name: Set up Java
         uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
 
       - name: Build for Windows
         run: |
@@ -123,6 +127,8 @@ jobs:
 
       - name: Set up Java
         uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
 
       - name: Build Tools
         run: |
