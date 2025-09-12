@@ -78,7 +78,7 @@ jobs:
           path: bin\tools\win64
 
   build_windows_arm64_lib_MSVC:
-    runs-on: windows-11-arm
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -86,14 +86,13 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
-          check-latest: true
+          java-version: '11'
+          distribution: 'adopt'
 
       - name: Build for Windows
         run: |
           cd build\lib\win64  
-          .\BuildAll_AndPack_MSVC.bat
+          .\BuildAll_AndPack_MSVC.bat arm64
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
@@ -104,7 +103,7 @@ jobs:
           path: ${{ github.workspace }}/dist
 
   build_windows_arm64_lib_Clang:
-    runs-on: windows-11-arm
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -112,19 +111,18 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
-          check-latest: true
+          java-version: '11'
+          distribution: 'adopt'
 
       - name: Build for Windows
         run: |
           cd build\lib\win64  
-          .\BuildAll_AndPack_Clang.bat 
+          .\BuildAll_AndPack_Clang.bat arm64
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
   build_windows_arm64_tools:
-    runs-on: windows-11-arm
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -132,14 +130,13 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
-          check-latest: true
+          java-version: '11'
+          distribution: 'adopt'
 
       - name: Build Tools
         run: |
           cd build\tools\win64 
-          .\BuildAll_And_Pack_Tools.bat
+          .\BuildAll_And_Pack_Tools.bat arm64
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
