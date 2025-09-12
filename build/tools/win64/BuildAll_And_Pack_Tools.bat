@@ -26,6 +26,6 @@ rd /s/q pack
 md pack
 cd pack
 
-cmake ../../../../pack %ARCH_PARAM% -DPACKAGE_NAME:STRING=bqlog-tools
+cmake ../../../../pack %ARCH_PARAM% -DTARGET_PLATFORM:STRING=win64 -DPACKAGE_NAME:STRING=bqlog-tools
 cmake --build . --target package
 cd ..
