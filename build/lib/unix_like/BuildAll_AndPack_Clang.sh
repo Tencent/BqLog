@@ -1,7 +1,7 @@
 #!/bin/sh
 set -euo pipefail
 
-UNIX_VERSION=$1
+UNIX_VERSION=${1:-}
 
 ./Dont_Execute_This.sh dynamic_lib clang clang++
 ./Dont_Execute_This.sh static_lib clang clang++

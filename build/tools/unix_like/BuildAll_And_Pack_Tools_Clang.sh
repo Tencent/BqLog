@@ -1,7 +1,7 @@
 #!/bin/sh
 set -euo pipefail
 
-UNIX_VERSION=$1
+UNIX_VERSION=${1:-}
 
 cd category_log_generator
 ./GenerateExecutable_Clang.sh
