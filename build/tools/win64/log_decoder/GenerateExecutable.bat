@@ -13,6 +13,7 @@ echo "Architecture: %ARCH_PARAM%"
 
 set "GEN_PLATFORM_ARG="
 if defined ARCH_PARAM set "GEN_PLATFORM_ARG=-A %ARCH_PARAM%"
+if defined ARCH_PARAM set "VS_ARCH_ARG=|%ARCH_PARAM%"
 
 set VS_PATH="%VS_PATH%"
 
@@ -30,8 +31,8 @@ cmake ..\..\..\..\..\tools\log_decoder\ -DTARGET_PLATFORM:STRING=win64 %GEN_PLAT
 
 echo "VS COMMAND TOOLS PATH:"
 echo "%VS_PATH%\devenv.com"
-call "%VS_PATH%\devenv.com" ./BqLog_LogDecoder.sln /Rebuild "RelWithDebInfo|%ARCH_PARAM%" /Project "./BqLog_LogDecoder.vcxproj" /Out Build.log 
+call "%VS_PATH%\devenv.com" ./BqLog_LogDecoder.sln /Rebuild "RelWithDebInfo%VS_ARCH_ARG%" /Project "./BqLog_LogDecoder.vcxproj" /Out Build.log 
 cmake --install . --config RelWithDebInfo
 cd ..
 
-if errorlevel 1 goto :fail
+if errorlevel 1 exit /b %errorlevel%

@@ -8,6 +8,6 @@ cd makeProj
 cmake ..\..\..\..\wrapper\java -G "Unix Makefiles"
 cmake --build . --target install
 
-if errorlevel 1 goto :fail
+if errorlevel 1 exit /b %errorlevel%
 
 cd ..

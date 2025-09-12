@@ -16,10 +16,10 @@ if defined ARCH_PARAM set "GEN_PLATFORM_ARG=-A %ARCH_PARAM%"
 
 cd category_log_generator
 call ./GenerateExecutable.bat %ARCH_PARAM%
-if errorlevel 1 goto :fail
+if errorlevel 1 exit /b %errorlevel%
 cd ../log_decoder
 call ./GenerateExecutable.bat %ARCH_PARAM%
-if errorlevel 1 goto :fail
+if errorlevel 1 exit /b %errorlevel%
 cd ..
 
 rd /s/q pack

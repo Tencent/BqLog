@@ -13,6 +13,7 @@ echo "Architecture: %ARCH_PARAM%"
 
 set "GEN_PLATFORM_ARG="
 if defined ARCH_PARAM set "GEN_PLATFORM_ARG=-A %ARCH_PARAM%"
+if defined ARCH_PARAM set "VS_ARCH_ARG=|%ARCH_PARAM%"
 
 set VS_PATH="%VS_PATH%"
 
@@ -30,8 +31,8 @@ cmake ..\..\..\..\..\tools\category_log_generator\ -DTARGET_PLATFORM:STRING=win6
 
 echo "VS COMMAND TOOLS PATH:"
 echo "%VS_PATH%\devenv.com"
-call "%VS_PATH%\devenv.com" ./BqLog_CategoryLogGenerator.sln /Rebuild "RelWithDebInfo|%ARCH_PARAM%" /Project "./BqLog_CategoryLogGenerator.vcxproj" /Out Build.log 
+call "%VS_PATH%\devenv.com" ./BqLog_CategoryLogGenerator.sln /Rebuild "RelWithDebInfo%VS_ARCH_ARG%" /Project "./BqLog_CategoryLogGenerator.vcxproj" /Out Build.log 
 cmake --install . --config RelWithDebInfo
 cd ..
 
-if errorlevel 1 goto :fail
+if errorlevel 1 exit /b %errorlevel%

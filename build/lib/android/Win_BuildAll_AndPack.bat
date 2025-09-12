@@ -76,7 +76,7 @@ for /l %%a in (0,1,3) do (
 
 pushd gradle_proj
 call gradlew.bat assemble
-if errorlevel 1 goto :fail
+if errorlevel 1 exit /b %errorlevel%
 popd
 
 if exist "pack" rd /s /q "pack"
@@ -85,7 +85,7 @@ pushd pack
 
 cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=android -DPACKAGE_NAME:STRING=bqlog-lib
 cmake --build . --target package
-if errorlevel 1 goto :fail
+if errorlevel 1 exit /b %errorlevel%
 popd
 
  
