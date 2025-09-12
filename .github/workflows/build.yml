@@ -87,6 +87,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
+          java-version: '21'
+          check-latest: true
 
       - name: Build for Windows
         run: |
@@ -111,6 +113,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
+          java-version: '21'
+          check-latest: true
 
       - name: Build for Windows
         run: |
@@ -129,6 +133,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
+          java-version: '21'
+          check-latest: true
 
       - name: Build Tools
         run: |
