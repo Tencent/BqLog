@@ -24,8 +24,6 @@ jobs:
         run: |
           cd build\lib\win64  
           .\BuildAll_AndPack_MSVC.bat
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -49,8 +47,6 @@ jobs:
         run: |
           cd build\lib\win64  
           .\BuildAll_AndPack_Clang.bat
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
   build_windows_x86_64_lib_MinGW:
     runs-on: windows-latest
@@ -126,8 +122,6 @@ jobs:
         run: |
           cd build\tools\win64 
           .\BuildAll_And_Pack_Tools.bat
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -151,8 +145,6 @@ jobs:
         run: |
           cd build\lib\win64  
           .\BuildAll_AndPack_MSVC.bat arm64
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -176,8 +168,6 @@ jobs:
         run: |
           cd build\lib\win64  
           .\BuildAll_AndPack_Clang.bat arm64
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
   build_windows_arm64_lib_MinGW:
     runs-on: windows-11-arm
@@ -253,8 +243,6 @@ jobs:
         run: |
           cd build\tools\win64 
           .\BuildAll_And_Pack_Tools.bat arm64
-        env:
-          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

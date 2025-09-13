@@ -15,14 +15,6 @@ set "GEN_PLATFORM_ARG="
 if defined ARCH_PARAM set "GEN_PLATFORM_ARG=-A %ARCH_PARAM%"
 if defined ARCH_PARAM set "VS_ARCH_ARG=|%ARCH_PARAM%"
 
-set VS_PATH="%VS_PATH%"
-
-IF NOT EXIST %VS_PATH%\devenv.com (
-	echo "Please set the VS_PATH environment variable to the correct Visual Studio installation path, pointing to the directory where devenv.com is located."
-	GOTO :fail
-)
-set VS_PATH=%VS_PATH:~1,-1%
-
 rd /s/q VSProj
 md VSProj
 cd VSProj
