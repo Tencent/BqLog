@@ -85,12 +85,12 @@ jobs:
         run: |
           $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
+        shell: cmd
       - name: Add MSYS2 to PATH
         run: |
           $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
+        shell: cmd
 
       - name: Build for Windows
         run: |
@@ -207,12 +207,12 @@ jobs:
         run: |
           $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
+        shell: cmd
       - name: Add MSYS2 to PATH
         run: |
           $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
+        shell: cmd
 
       - name: Build for Windows
         run: |
