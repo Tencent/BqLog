@@ -29,8 +29,6 @@ cd VSProj
 
 cmake ..\..\..\..\..\tools\log_decoder\ -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG%
 
-echo "VS COMMAND TOOLS PATH:"
-echo "%VS_PATH%\devenv.com"
-call "%VS_PATH%\devenv.com" ./BqLog_LogDecoder.sln /Rebuild "RelWithDebInfo%VS_ARCH_ARG%" /Project "./BqLog_LogDecoder.vcxproj" /Out Build.log || exit /b 1
+cmake --build . --config RelWithDebInfo --parallel %BUILD_JOBS% || exit /b 1
 cmake --install . --config RelWithDebInfo || exit /b 1
 cd ..
