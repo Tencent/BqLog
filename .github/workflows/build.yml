@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   #Windows
-  build_windows_86_64_lib_MSVC:
+  build_windows_x86_64_lib_MSVC:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -51,6 +51,59 @@ jobs:
           .\BuildAll_AndPack_Clang.bat
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  build_windows_x86_64_lib_MinGW:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Install MSYS2
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MINGW64
+          release: true
+          path-type: inherit
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          update: true
+
+      - name: Ensure MSYS2 packages
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Remove conflicting MinGW paths
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+      - name: Add MSYS2 to PATH
+        run: |
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\BuildAll_AndPack_MinGW.bat
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_mingw_x86_64_libs
+          path: ${{ github.workspace }}/dist
 
   build_windows_x86_64_tools:
     runs-on: windows-latest
@@ -120,6 +173,59 @@ jobs:
           .\BuildAll_AndPack_Clang.bat arm64
         env:
           VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+  build_windows_arm64_lib_MinGW:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Install MSYS2
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MINGW64
+          release: true
+          path-type: inherit
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          update: true
+
+      - name: Ensure MSYS2 packages
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Remove conflicting MinGW paths
+        run: |
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+      - name: Add MSYS2 to PATH
+        run: |
+          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Build for Windows
+        run: |
+          cd build\lib\win64  
+          .\BuildAll_AndPack_MinGW.bat arm64
+        env:
+          VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_mingw_arm64_libs
+          path: ${{ github.workspace }}/dist
 
   build_windows_arm64_tools:
     runs-on: windows-latest
