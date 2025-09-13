@@ -61,12 +61,14 @@ for /l %%a in (0,1,3) do (
 				 -DBUILD_TYPE=dynamic_lib^
 				 -DCMAKE_TOOLCHAIN_FILE=%ANDROID_NDK_ROOT%/build/cmake/android.toolchain.cmake^
 				 -DTARGET_PLATFORM:STRING=android^
-				 -DANDROID_STL=none
+				 -DANDROID_STL=none^
+				 || exit /b 1
 				 
-				 %ANDROID_NDK_ROOT%\prebuilt\%HOST_TAG%\bin\make --trace -j10
-				 %ANDROID_NDK_ROOT%\prebuilt\%HOST_TAG%\bin\make install
+				 cmake --build . -- -j10 || exit /b 1
+                 cmake --build . --target install || exit /b 1
                  for %%F in ("..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so") do if not exist "%%~dpF" mkdir "%%~dpF"Z
                  "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe" -s "..\..\..\..\..\install\dynamic_lib\lib\%%p\%%j\libBqLog.so" -o "..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so"
+
 			)
 			popd
 		)
@@ -75,17 +77,15 @@ for /l %%a in (0,1,3) do (
 )
 
 pushd gradle_proj
-call gradlew.bat assemble
-if errorlevel 1 exit /b %errorlevel%
+call gradlew.bat assemble || exit /b 1
 popd
 
 if exist "pack" rd /s /q "pack"
 md pack
 pushd pack
 
-cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=android -DPACKAGE_NAME:STRING=bqlog-lib
-cmake --build . --target package
-if errorlevel 1 exit /b %errorlevel%
+cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=android -DPACKAGE_NAME:STRING=bqlog-lib || exit /b 1
+cmake --build . --target package || exit /b 1
 popd
 
  

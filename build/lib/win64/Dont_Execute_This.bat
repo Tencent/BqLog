@@ -33,30 +33,24 @@ cd "%PROJ_DIR%"
 
 
 if /i "%COMPILER_TYPE%"=="clang" (
-    cmake ..\..\..\..\src -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DJAVA_SUPPORT=ON -DBUILD_TYPE=%BUILD_TYPE% -T ClangCl
+    cmake ..\..\..\..\src -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DJAVA_SUPPORT=ON -DBUILD_TYPE=%BUILD_TYPE% -T ClangCl || exit /b 1
 ) else if /I "%COMPILER_TYPE%"=="mingw" (
     rem nothing
 ) else (
-    cmake ..\..\..\..\src -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DJAVA_SUPPORT=ON -DBUILD_TYPE=%BUILD_TYPE%
+    cmake ..\..\..\..\src -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DJAVA_SUPPORT=ON -DBUILD_TYPE=%BUILD_TYPE% || exit /b 1
 )
-
-if errorlevel 1 exit /b %errorlevel%
 
 set CONFIGS=Debug MinSizeRel RelWithDebInfo Release
 
 for %%c in (%CONFIGS%) do (
     set "CUR_CFG=%%c"
     if /i "%COMPILER_TYPE%"=="mingw" (
-        cmake ..\..\..\..\src -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DJAVA_SUPPORT=ON -DCMAKE_BUILD_TYPE=!CUR_CFG! -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DBUILD_TYPE=%BUILD_TYPE%
-        if errorlevel 1 exit /b %errorlevel%
-        cmake --build . --parallel
+        cmake ..\..\..\..\src -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DJAVA_SUPPORT=ON -DCMAKE_BUILD_TYPE=!CUR_CFG! -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DBUILD_TYPE=%BUILD_TYPE% || exit /b 1
+        cmake --build . --parallel || exit /b 1
     ) else (
-        call "%VS_PATH%\devenv.com" ./BqLog.sln /Rebuild "!CUR_CFG!%VS_ARCH_ARG%" /Project "./BqLog.vcxproj" /Out Build.log
+        call "%VS_PATH%\devenv.com" ./BqLog.sln /Rebuild "!CUR_CFG!%VS_ARCH_ARG%" /Project "./BqLog.vcxproj" /Out Build.log || exit /b 1
     )
-    if errorlevel 1 exit /b %errorlevel%
-    cmake --install . --config !CUR_CFG!
-
-    if errorlevel 1 exit /b %errorlevel%
+    cmake --install . --config !CUR_CFG! || exit /b 1
 )
 
 cd ..

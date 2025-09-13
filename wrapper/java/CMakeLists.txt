@@ -136,3 +136,15 @@ install(
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar"
         DESTINATION "${BQ_LOG_INSTALL_DIR}"
     )
+
+file(GLOB MD_FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../*.md"
+)
+
+install(FILES ${MD_FILES}
+        DESTINATION "${BQ_LOG_INSTALL_DIR}/.."
+)
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../docs"
+        DESTINATION "${BQ_LOG_INSTALL_DIR}/.."
+)

@@ -12,17 +12,14 @@ if /I "%ARCH_PARAM%"=="arm64" (
 set "GEN_PLATFORM_ARG="
 if defined ARCH_PARAM set "GEN_PLATFORM_ARG=-A %ARCH_PARAM%"
 
-cmd /c .\Dont_Execute_This.bat dynamic_lib mingw %ARCH_PARAM%
-if errorlevel 1 exit /b %errorlevel%
-cmd /c .\Dont_Execute_This.bat static_lib mingw %ARCH_PARAM%
-if errorlevel 1 exit /b %errorlevel%
+cmd /c .\Dont_Execute_This.bat dynamic_lib mingw %ARCH_PARAM% || exit /b 1
+cmd /c .\Dont_Execute_This.bat static_lib mingw %ARCH_PARAM% || exit /b 1
 
 if exist "pack" rd /s /q "pack"
 md pack
 cd pack
 
-cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DPACKAGE_NAME:STRING=bqlog-lib-mingw
-cmake --build . --target package
-if errorlevel 1 exit /b %errorlevel%
+cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DPACKAGE_NAME:STRING=bqlog-lib-mingw || exit /b 1
+cmake --build . --target package || exit /b 1
 cd ..
 

@@ -235,11 +235,11 @@ install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/BqLog.pdb"
     OPTIONAL
 )
 
-file(GLOB README_FILES
+file(GLOB MD_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../*.md"
 )
 
-install(FILES ${README_FILES}
+install(FILES ${MD_FILES}
     DESTINATION ".."
 )
 
