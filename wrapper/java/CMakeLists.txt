@@ -126,19 +126,13 @@ add_custom_target(generate_jni_headers ALL DEPENDS "log_invoker.h")
 add_dependencies(generate_jni_headers BqLogWrapper_Java)
 
 set(BQ_LOG_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/wrapper_java")
-set(BQ_LOG_DIST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../dist")
-
+if(POLICY CMP0177)
+    cmake_policy(SET CMP0177 NEW)
+endif()
 install(
         FILES
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}.jar"
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar"
             "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar"
         DESTINATION "${BQ_LOG_INSTALL_DIR}"
-    )
-install(
-        FILES
-            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}.jar"
-            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar"
-            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar"
-        DESTINATION "${BQ_LOG_DIST_DIR}"
     )

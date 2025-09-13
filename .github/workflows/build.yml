@@ -75,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows_x86_64_tools
-          path: bin\tools\win64
+          path: ${{ github.workspace }}/dist
 
   build_windows_arm64_lib_MSVC:
     runs-on: windows-latest

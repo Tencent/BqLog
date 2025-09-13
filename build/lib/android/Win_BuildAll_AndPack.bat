@@ -65,8 +65,8 @@ for /l %%a in (0,1,3) do (
 				 
 				 %ANDROID_NDK_ROOT%\prebuilt\%HOST_TAG%\bin\make --trace -j10
 				 %ANDROID_NDK_ROOT%\prebuilt\%HOST_TAG%\bin\make install
-				 move /Y ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so
-				 %ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe -s ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so -o ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so
+                 for %%F in ("..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so") do if not exist "%%~dpF" mkdir "%%~dpF"Z
+                 "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe" -s "..\..\..\..\..\install\dynamic_lib\lib\%%p\%%j\libBqLog.so" -o "..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so"
 			)
 			popd
 		)

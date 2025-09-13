@@ -241,7 +241,8 @@ public class log {
     }
 
     /**
-     * @param Unregister console callback.
+     * Unregister a previously registered console callback.
+     * @param callback
      */
     public static void unregister_console_callback(console_callbck_delegate callback)
     {

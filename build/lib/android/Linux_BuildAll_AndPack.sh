@@ -67,11 +67,10 @@ for build_target in "${BUILD_TARGET[@]}"; do
     cmake --build . --target install
 
     # Strip using NDK llvm-strip for the host
-    SYMBOL_SO=../../../../../install/dynamic_lib/lib/"$build_target"/"$build_type"/libBqLog_Symbol.so
-    FINAL_SO=../../../../../install/dynamic_lib/lib/"$build_target"/"$build_type"/libBqLog.so
-
-    mv -f "$FINAL_SO" "$SYMBOL_SO"
-    "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/llvm-strip" -s "$SYMBOL_SO" -o "$FINAL_SO"
+    SOURCE_SO=../../../../../install/dynamic_lib/lib/"$build_type"/"$build_target"/libBqLog.so
+    STRIP_SO=../../../../../install/dynamic_lib/lib_strip/"$build_type"/"$build_target"/libBqLog.so
+    mkdir -p "$(dirname "STRIP_SO")"
+    "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/llvm-strip" -s "SOURCE_SO" -o "STRIP_SO"
 
     cd ..
   done
