@@ -48,10 +48,12 @@ for %%c in (%CONFIGS%) do (
     set "CUR_CFG=%%c"
     if /i "%COMPILER_TYPE%"=="mingw" (
         cmake ..\..\..\..\src -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DJAVA_SUPPORT=ON -DCMAKE_BUILD_TYPE=!CUR_CFG! -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DBUILD_TYPE=%BUILD_TYPE%
+        if errorlevel 1 exit /b %errorlevel%
         cmake --build . --parallel
     ) else (
         call "%VS_PATH%\devenv.com" ./BqLog.sln /Rebuild "!CUR_CFG!%VS_ARCH_ARG%" /Project "./BqLog.vcxproj" /Out Build.log
     )
+    if errorlevel 1 exit /b %errorlevel%
     cmake --install . --config !CUR_CFG!
 
     if errorlevel 1 exit /b %errorlevel%
