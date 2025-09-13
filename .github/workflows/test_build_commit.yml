@@ -24,10 +24,20 @@ jobs:
 
       - name: Verify SHA-256
         run: |
-          set -e
+          set -euo pipefail
           cd dist
-          ls -l
           shopt -s nullglob
-          for f in *.sha256; do
-            sha256sum -c "$f"
+          
+          files=( *.sha256 )
+          if ((${#files[@]} == 0)); then
+            echo "No .sha256 files found under dist/" >&2
+            exit 1
+          fi
+          
+          status=0
+          for f in "${files[@]}"; do
+            if ! sha256sum -c "$f"; then
+              status=1
+            fi
           done
+          exit $status
