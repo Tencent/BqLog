@@ -923,3 +923,28 @@ jobs:
         with:
           name: java_wrapper
           path: ${{ github.workspace }}/dist
+
+  #C# wrapper
+  build_windows_C#_wrapper:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install and Pack
+        run: |
+          robocopy ".\wrapper\csharp" ".\install\wrapper\csharp" /E /R:0 /W:0
+          robocopy ".\docs" ".\install\docs" /E /R:0 /W:0
+          robocopy ".\" ".\install" *.md /R:0 /W:0
+          cd .\build\wrapper\csharp\
+          mkdir pack
+          cd pack
+          cmake ../../../../pack -G "Unix Makefiles" -DTARGET_PLATFORM:STRING=all -DPACKAGE_NAME:STRING=bqlog-c#-wrapper
+          cmake --build . --config Release --target package
+          cd ..
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: c#_wrapper
+          path: ${{ github.workspace }}/dist
