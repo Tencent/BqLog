@@ -925,7 +925,7 @@ jobs:
           path: ${{ github.workspace }}/dist
 
   #C# wrapper
-  build_windows_CSharp_wrapper:
+  build_windows_csharp_wrapper:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
