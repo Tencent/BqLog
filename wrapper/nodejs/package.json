@@ -1,0 +1,36 @@
+{
+  "name": "bqlog-nodejs",
+  "version": "1.4.9",
+  "description": "Node.js binding for BqLog - High-performance logging library",
+  "main": "index.js",
+  "keywords": [
+    "logging",
+    "bqlog",
+    "native",
+    "performance",
+    "harmonyos",
+    "node-api"
+  ],
+  "author": "Tencent",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tencent/BqLog.git"
+  },
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "dependencies": {
+    "node-addon-api": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "typescript": "^4.0.0"
+  },
+  "scripts": {
+    "build": "node-gyp rebuild",
+    "test": "node test/test.js",
+    "install": "node-gyp rebuild"
+  },
+  "gypfile": true
+}
