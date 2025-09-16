@@ -22,12 +22,12 @@ set BUILD_TYPE[3]=Release
 
 rem %%j : BUILD_TARGET
 rem %%p : BUILD_TYPE
-for /l %%a in (0,1,0) do (
+for /l %%a in (0,1,1) do (
     for /f "usebackq delims== tokens=1-2" %%i in (`set BUILD_TARGET[%%a]`) do (
 		rd /s /q %%j
 		md %%j
 		pushd %%j
-		for /l %%a in (0,1,1) do (
+		for /l %%a in (0,1,3) do (
 			for /f "usebackq delims== tokens=1-2" %%o in (`set BUILD_TYPE[%%a]`) do (
 				md %%p
 				pushd %%p
