@@ -42,6 +42,9 @@
 #if defined(BQ_PS)
 #include "bq_common/platform/ps_misc.h"
 #endif
+#if defined(BQ_OHOS)
+#include "bq_common/platform/harmony_misc.h"
+#endif
 #if defined(BQ_POSIX)
 #include "bq_common/platform/posix_misc.h"
 #endif

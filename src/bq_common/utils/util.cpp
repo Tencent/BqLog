@@ -16,6 +16,8 @@
 #include "bq_common/bq_common.h"
 #if defined(BQ_ANDROID)
 #include <android/log.h>
+#elif BQ_OHOS
+#include <hilog/log.h>
 #endif
 #include <time.h>
 
@@ -127,6 +129,13 @@ namespace bq {
 #elif defined(BQ_IOS)
         (void)level;
         bq::platform::ios_print(text);
+#elif BQ_OHOS
+        (void)level;
+        (void)text;
+        if(level == bq::log_level::verbose)
+            OH_LOG_Print(LOG_APP, LogLevel::LOG_DEBUG, 0, "Bq", text,"");
+        else
+            OH_LOG_Print(LOG_APP, (LogLevel)(int32_t)(LogLevel::LOG_DEBUG+((int32_t)level - (int32_t)bq::log_level::verbose-1)), 0, "Bq", text,"");
 #else
         decltype(stdout) output_target = stdout;
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);

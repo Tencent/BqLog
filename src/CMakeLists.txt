@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.22)
-
 set(TARGET_PLATFORM "win64" CACHE STRING "Choose the target platform")
 set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS "win64" "mac" "ios" "android" "linux" "unix")
 
@@ -37,6 +36,10 @@ if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /D_HAS_EXCEPTIONS=0 /GR-")
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
     add_compile_options(/W4 /WX)
+elseif(TARGET_PLATFORM STREQUAL "harmony")
+    message("set options for harmony")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+    add_compile_options(-Wall -Wextra -pedantic -Werror -fno-exceptions -Wno-unused-function)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -100,6 +103,8 @@ set(INSTALL_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../install/${BUILD_TYPE
 
 if(TARGET_PLATFORM STREQUAL "android")
     set(ARTIFACTS_SUB_DIR "lib/${ANDROID_ABI}/$<CONFIG>")
+elseif(TARGET_PLATFORM STREQUAL "harmony")
+    set(ARTIFACTS_SUB_DIR "lib/${OHOS_ARCH}/$<CONFIG>")
 else()
 	set(ARTIFACTS_SUB_DIR "lib/$<CONFIG>")
 	if(JAVA_SUPPORT)
@@ -191,6 +196,9 @@ elseif(TARGET_PLATFORM STREQUAL "win64")
     else()
         target_link_libraries(BqLog PRIVATE -ldbghelp)
     endif()
+elseif(TARGET_PLATFORM STREQUAL "harmony")
+    message("harmony----------------------------------------------")
+    target_link_libraries(BqLog PUBLIC libace_napi.z.so libbundle_ndk.z.so libohenvironment.so libhilog_ndk.z.so libohfileuri.so)
 endif()
 
 add_custom_command(TARGET BqLog POST_BUILD

@@ -44,6 +44,9 @@
 #endif
 #endif
 #endif
+#elif __OHOS__
+#define BQ_OHOS 1
+#define BQ_POSIX 1
 #elif defined(__ORBIS__)
 #define BQ_PS 1
 #define BQ_POSIX 1
