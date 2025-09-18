@@ -32,7 +32,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/wrapper/java")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/wrapper/java")
 
-set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn")
+set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-g" "-parameters" "-nowarn")
 
 # build library
 find_package(Java REQUIRED)
