@@ -19,6 +19,7 @@
 #include "bundle/native_interface_bundle.h"
 #include "napi/native_api.h"
 #include <js_native_api_types.h>
+#include "bq_log/bq_log.h"
 
 namespace bq {
     namespace platform {
@@ -53,7 +54,7 @@ namespace bq {
                 OH_NativeBundle_ApplicationInfo nativeApplicationInfo = OH_NativeBundle_GetCurrentApplicationInfo();
                 harmony_external_storage_path = harmony_external_storage_path +"/"+nativeApplicationInfo.bundleName;
                 common_global_vars::get().base_dir_init_inst_.base_dir_0_ = harmony_external_storage_path;
-                free(nativeApplicationInfo.bundleName);
+                //free(nativeApplicationInfo.bundleName);
             } else {
                  OH_LOG_INFO(LOG_APP,"GetDocumentPath failed, error code is %d", ret);
             }
@@ -83,19 +84,11 @@ namespace bq {
                  harmony_internal_storage_path = "/data/storage/el2/base/files";                
                  common_global_vars::get().base_dir_init_inst_.base_dir_1_ = harmony_internal_storage_path;
             }
-            free(urlpath);            
+            free(urlpath);
+    
+            OH_LOG_INFO(LOG_APP,"internal storage path:%s", get_base_dir(true).c_str());
+            OH_LOG_INFO(LOG_APP,"external storage path:%s", get_base_dir(false).c_str());
         }
-        
-        const bq::string& get_base_dir(bool is_sandbox)
-        {
-            assert(ohos_env && "JNI_Onload was not invoked yet");
-            if(is_sandbox)
-                return common_global_vars::get().base_dir_init_inst_.base_dir_1_;
-            else
-                return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
-        }
-
-
 
         static napi_value NAPI_Global_add(napi_env env, napi_callback_info info)
         {
@@ -123,12 +116,20 @@ namespace bq {
         
         }
 
+        static napi_value NAPI_Global_api_get_log_version(napi_env env, napi_callback_info info)
+        {
+            napi_value ver;
+            napi_create_string_utf8(env,bq::api::__api_get_log_version(), strlen(bq::api::__api_get_log_version()), &ver);
+            return ver;
+        }
+
         EXTERN_C_START
         static napi_value Init(napi_env env, napi_value exports)
         {
             bq::platform::ohos_env = env;
                 napi_property_descriptor desc[] = {
-                { "add", nullptr, NAPI_Global_add, nullptr, nullptr, nullptr, napi_default, nullptr }
+                { "add", nullptr, NAPI_Global_add, nullptr, nullptr, nullptr, napi_default, nullptr },
+                {"api_get_log_version", nullptr, NAPI_Global_api_get_log_version, nullptr, nullptr, nullptr, napi_default, nullptr }
             };
             napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
             OH_NativeBundle_ApplicationInfo nativeApplicationInfo = OH_NativeBundle_GetCurrentApplicationInfo();
@@ -152,6 +153,16 @@ namespace bq {
         extern "C" __attribute__((constructor)) void RegisterEntryModule(void)
         {
             napi_module_register(&nm_BqLog);
+        }
+
+        
+        const bq::string& get_base_dir(bool is_sandbox)
+        {
+            assert(ohos_env && "JNI_Onload was not invoked yet");
+            if(is_sandbox)
+                return common_global_vars::get().base_dir_init_inst_.base_dir_1_;
+            else
+                return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
         }
 
         bool share_file(const char* file_path)
