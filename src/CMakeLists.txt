@@ -229,11 +229,14 @@ if(BUILD_TYPE STREQUAL "dynamic_lib")
 endif()
 
 #Ensure the target carries version/soname metadata
- set_target_properties(BqLog PROPERTIES
-         VERSION ${BQ_LOG_VERSION}
-         SOVERSION ${BQ_LOG_SOVERSION}
- )
-
+if(TARGET_PLATFORM STREQUAL "harmony")
+    message("harmony----------------------------------------------")
+else()
+set_target_properties(BqLog PROPERTIES
+     VERSION ${BQ_LOG_VERSION}
+     SOVERSION ${BQ_LOG_SOVERSION}
+)
+endif()
 set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
 
 
