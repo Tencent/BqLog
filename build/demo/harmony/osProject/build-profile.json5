@@ -1,0 +1,67 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\eggdai\\.ohos\\config\\default_TempLib_9FssSdQBNLHD4do4U024jTqYbaBX176cWAviUUaydcI=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B0B433A28F9985025F2FFE96C3DBA43BC99D8EBB11C0EBCECE30B13FBF5F44E3E6455C2C345CE69",
+          "profile": "C:\\Users\\eggdai\\.ohos\\config\\default_TempLib_9FssSdQBNLHD4do4U024jTqYbaBX176cWAviUUaydcI=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\eggdai\\.ohos\\config\\default_TempLib_9FssSdQBNLHD4do4U024jTqYbaBX176cWAviUUaydcI=.p12",
+          "storePassword": "0000001B2FCBC1554B46A56CC012F30AC9DF494C959C2DC676D4F7B01A6FB46F03BB68D76102228F3947F9"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.1(13)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BqLog",
+      "srcPath": "./BqLog",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

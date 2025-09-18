@@ -1,0 +1,5 @@
+{
+  "libbqlog.so": {
+    "source": "src/mock/Libbqlog.mock.ets"
+  }
+}

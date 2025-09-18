@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "BqLogAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "BqLogAbility_label",
+      "value": "label"
+    }
+  ]
+}

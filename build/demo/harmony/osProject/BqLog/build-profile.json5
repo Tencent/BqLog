@@ -1,0 +1,40 @@
+{
+  "apiType": "stageMode",
+  "buildOption": {
+    "externalNativeOptions": {
+      "path": "../../../../../src/CMakeLists.txt",
+      "arguments": "-DTARGET_PLATFORM=harmony -DCMAKE_CXX_FLAGS=\"-Wno-unused-command-line-argument\" -DCMAKE_C_FLAGS=\"-Wno-unused-command-line-argument\" -DBUILD_TYPE=dynamic_lib",
+      "cppFlags": "",
+      "abiFilters": ["arm64-v8a", "x86_64"]
+    }
+  },
+  "buildOptionSet": [
+    {
+      "name": "release",
+      "arkOptions": {
+        "obfuscation": {
+          "ruleOptions": {
+            "enable": false,
+            "files": [
+              "./obfuscation-rules.txt"
+            ]
+          }
+        }
+      },
+      "nativeLib": {
+        "debugSymbol": {
+          "strip": true,
+          "exclude": []
+        }
+      }
+    },
+  ],
+  "targets": [
+    {
+      "name": "default"
+    },
+    {
+      "name": "ohosTest",
+    }
+  ]
+}

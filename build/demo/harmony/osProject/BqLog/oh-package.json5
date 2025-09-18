@@ -1,0 +1,11 @@
+{
+  "name": "bqlog",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "libbqlog.so": "file:./src/main/cpp/types/libbqlog"
+  }
+}
