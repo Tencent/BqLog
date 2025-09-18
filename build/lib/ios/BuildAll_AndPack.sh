@@ -8,25 +8,25 @@ cmake ../../../../src \
     -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
     -DPLATFORM=OS64 \
     -DDEPLOYMENT_TARGET=9.0 \
-    -DBUILD_TYPE=dynamic_lib \
+    -DBUILD_LIB_TYPE=dynamic_lib \
     -DAPPLE_LIB_FORMAT=framework \
     -DTARGET_PLATFORM:STRING=ios
 
-BUILD_TYPE=(Debug MinSizeRel Release RelWithDebInfo)
-for build_type in ${BUILD_TYPE[@]}
+BUILD_CONFIGS=(Debug MinSizeRel Release RelWithDebInfo)
+for build_config in ${BUILD_CONFIGS[@]}
 do
-    cmake --build . --config $build_type
+    cmake --build . --config $build_config
     if [ $? -eq 0 ]; then
         echo "Build succeeded."
     else
         echo "Build failed."
         exit 1
     fi
-    cmake --install . --config $build_type
+    cmake --install . --config $build_config
 
-    if [ -d "../../../../artifacts/dynamic_lib/ios/${build_type}/BqLog.framework.dSYM" ]; then
-        rm -rf "../../../../dist/dynamic_lib/ios/${build_type}/BqLog.framework.dSYM"
-        cp -r "../../../../artifacts/dynamic_lib/ios/${build_type}/BqLog.framework.dSYM" "../../../../dist/dynamic_lib/ios/${build_type}/BqLog.framework.dSYM"
+    if [ -d "../../../../artifacts/dynamic_lib/ios/${build_config}/BqLog.framework.dSYM" ]; then
+        rm -rf "../../../../dist/dynamic_lib/ios/${build_config}/BqLog.framework.dSYM"
+        cp -r "../../../../artifacts/dynamic_lib/ios/${build_config}/BqLog.framework.dSYM" "../../../../dist/dynamic_lib/ios/${build_config}/BqLog.framework.dSYM"
     fi
 done
 

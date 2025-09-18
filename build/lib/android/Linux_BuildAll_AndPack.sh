@@ -40,23 +40,23 @@ fi
 echo "Using NDK toolchain: $HOST_TAG"
 
 BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64 x86)
-BUILD_TYPE=(Debug RelWithDebInfo MinSizeRel Release)
+BUILD_CONFIGS=(Debug RelWithDebInfo MinSizeRel Release)
 
 for build_target in "${BUILD_TARGET[@]}"; do
   rm -rf "$build_target"
   mkdir -p "$build_target"
   cd "$build_target"
 
-  for build_type in "${BUILD_TYPE[@]}"; do
-    mkdir -p "$build_type"
-    cd "$build_type"
+  for build_config in "${BUILD_CONFIGS[@]}"; do
+    mkdir -p "$build_config"
+    cd "$build_config"
 
     cmake ../../../../../src \
       -DANDROID_ABI="$build_target" \
       -DANDROID_PLATFORM="android-21" \
       -DANDROID_NDK="$NDK_PATH" \
-      -DCMAKE_BUILD_TYPE="$build_type" \
-      -DBUILD_TYPE=dynamic_lib \
+      -DCMAKE_BUILD_TYPE="$build_config" \
+      -DBUILD_LIB_TYPE=dynamic_lib \
       -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/android.toolchain.cmake" \
       -DTARGET_PLATFORM:STRING=android \
       -DANDROID_STL=none
@@ -67,8 +67,8 @@ for build_target in "${BUILD_TARGET[@]}"; do
     cmake --build . --target install
 
     # Strip using NDK llvm-strip for the host
-    SOURCE_SO=../../../../../install/dynamic_lib/lib/"$build_type"/"$build_target"/libBqLog.so
-    STRIP_SO=../../../../../install/dynamic_lib/lib_strip/"$build_type"/"$build_target"/libBqLog.so
+    SOURCE_SO=../../../../../install/dynamic_lib/lib/"$build_config"/"$build_target"/libBqLog.so
+    STRIP_SO=../../../../../install/dynamic_lib/lib_strip/"$build_config"/"$build_target"/libBqLog.so
     mkdir -p "$(dirname "$STRIP_SO")"
     "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/llvm-strip" -s "$SOURCE_SO" -o "$STRIP_SO"
 
