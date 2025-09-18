@@ -412,7 +412,7 @@ namespace bq
         /// <returns></returns>
         public bool is_valid()
         {
-            return get_id() > 0;
+            return get_id() != 0;
         }
 
         /// <summary>

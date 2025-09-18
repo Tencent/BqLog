@@ -111,11 +111,8 @@ namespace bq {
             jobj_little_endian_value_ = env->NewGlobalRef(env->GetStaticObjectField(cls_byte_order, little_endian_field));
             jobj_big_endian_value_ = env->NewGlobalRef(env->GetStaticObjectField(cls_byte_order, big_endian_field));
         }
-#ifdef __cplusplus
-        extern "C" {
-#endif
-        JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
-        {
+
+        jint jni_init(JavaVM* vm, void* reserved) {
             (void)reserved;
             java_vm = vm;
 #if defined(BQ_ANDROID)
@@ -132,8 +129,18 @@ namespace bq {
             }
             return JNI_VERSION_1_6;
         }
+
+#ifdef BQ_DYNAMIC_LIB
+#ifdef __cplusplus
+        extern "C" {
+#endif
+        JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
+        {
+            return jni_init(vm, reserved);
+        }
 #ifdef __cplusplus
         }
+#endif
 #endif
     }
 }

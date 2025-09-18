@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.22)
 set(TARGET_PLATFORM "win64" CACHE STRING "Choose the target platform")
 set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS "win64" "mac" "ios" "android" "linux" "unix")
 
-set(BUILD_TYPE "static_lib" CACHE STRING "Choose the build type")
-set_property(CACHE BUILD_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib")
+set(BUILD_LIB_TYPE "static_lib" CACHE STRING "Choose the build type")
+set_property(CACHE BUILD_LIB_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib")
 
 if(TARGET_PLATFORM STREQUAL "mac" OR TARGET_PLATFORM STREQUAL "ios")
 set(APPLE_LIB_FORMAT "framework" CACHE STRING "Apple build format")
@@ -12,6 +12,7 @@ set_property(CACHE APPLE_LIB_FORMAT PROPERTY STRINGS "framework" "dylib" "a")
 endif()
 
 OPTION(JAVA_SUPPORT "Support Java" OFF)
+OPTION(NODE_API_SUPPORT "Support Node-API(NodeJs)" OFF)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
@@ -19,10 +20,18 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
+endif()
 #Parse version from version.cpp
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../src/bq_log/global/version.cpp")
 
 project(BqLog VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
+BQ_DETECT_ARCH(DETECTED_ARCH)
+
+
 if(NOT DEFINED CPP_VER)
     set(CMAKE_CXX_STANDARD 17)
     message("Use default C++ 17")
@@ -95,29 +104,103 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../artifacts/${BUILD_TYPE}")
-set(INSTALL_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../install/${BUILD_TYPE}")
+set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../artifacts/${BUILD_LIB_TYPE}")
+set(INSTALL_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../install/${BUILD_LIB_TYPE}")
 
 if(TARGET_PLATFORM STREQUAL "android")
     set(ARTIFACTS_SUB_DIR "lib/$<CONFIG>/${ANDROID_ABI}")
 else()
 	set(ARTIFACTS_SUB_DIR "lib/$<CONFIG>")
-	if(JAVA_SUPPORT)
-		if(DEFINED ENV{JAVA_HOME})
-			message("JAVA_HOME: $ENV{JAVA_HOME}")
-		else()
-			message(FATAL_ERROR "can not find environment variable JAVA_HOME")
-		endif()
-		add_compile_definitions(BQ_JAVA)
-		include_directories($ENV{JAVA_HOME}/include)
-        file(GLOB JNI_SUBDIRS "$ENV{JAVA_HOME}/include/*")
-        foreach(DIR IN LISTS JNI_SUBDIRS)
-            if(IS_DIRECTORY ${DIR})
-                include_directories(${DIR})
-            endif()
-        endforeach()
-	endif()
 endif()
+
+if(JAVA_SUPPORT)
+	if(DEFINED ENV{JAVA_HOME})
+		message("JAVA_HOME: $ENV{JAVA_HOME}")
+	else()
+		message(FATAL_ERROR "can not find environment variable JAVA_HOME")
+	endif()
+	add_compile_definitions(BQ_JAVA)
+	include_directories($ENV{JAVA_HOME}/include)
+    file(GLOB JNI_SUBDIRS "$ENV{JAVA_HOME}/include/*")
+    foreach(DIR IN LISTS JNI_SUBDIRS)
+        if(IS_DIRECTORY ${DIR})
+            include_directories(${DIR})
+         endif()
+    endforeach()
+endif()
+if(NODE_API_SUPPORT)
+	add_compile_definitions(BQ_NAPI)
+    set(_NODE_API_HEADERS_FOUND OFF)
+    set(_NODE_API_HEADERS_DIR "")
+
+    # 1) ENV: NODE_MODULES_ROOT/node-api-headers/include
+    if(DEFINED ENV{NODE_MODULES_ROOT} AND NOT "$ENV{NODE_MODULES_ROOT}" STREQUAL "")
+        file(TO_CMAKE_PATH "$ENV{NODE_MODULES_ROOT}" _NMR)
+        if(EXISTS "${_NMR}/node-api-headers/include/node_api.h")
+            set(_NODE_API_HEADERS_DIR "${_NMR}/node-api-headers/include")
+            set(_NODE_API_HEADERS_FOUND ON)
+        endif()
+    endif()
+
+    # 2) node -p "require.resolve('node-api-headers/package.json')" from CMAKE_SOURCE_DIR (then PROJECT_SOURCE_DIR)
+    if(NOT _NODE_API_HEADERS_FOUND)
+        find_program(NODE_EXECUTABLE node)
+        if(NOT NODE_EXECUTABLE)
+            set(NODE_EXECUTABLE "node")
+        endif()
+        if(NODE_EXECUTABLE)
+            set(_NODE_RESOLVE_JS [[require('path').dirname(require.resolve('node-api-headers/package.json'))]])
+
+            execute_process(
+                COMMAND "${NODE_EXECUTABLE}" -p "${_NODE_RESOLVE_JS}"
+                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+                RESULT_VARIABLE _RES
+                OUTPUT_VARIABLE _PKG_DIR
+                ERROR_QUIET
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            if(_RES EQUAL 0 AND NOT "${_PKG_DIR}" STREQUAL "")
+                file(TO_CMAKE_PATH "${_PKG_DIR}" _PKG_DIR_CMAKE)
+                if(EXISTS "${_PKG_DIR_CMAKE}/include/node_api.h")
+                    set(_NODE_API_HEADERS_DIR "${_PKG_DIR_CMAKE}/include")
+                    set(_NODE_API_HEADERS_FOUND ON)
+                endif()
+            endif()
+
+            if(NOT _NODE_API_HEADERS_FOUND AND NOT "${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+                execute_process(
+                    COMMAND "${NODE_EXECUTABLE}" -p "${_NODE_RESOLVE_JS}"
+                    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+                    RESULT_VARIABLE _RES2
+                    OUTPUT_VARIABLE _PKG_DIR2
+                    ERROR_QUIET
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                )
+                if(_RES2 EQUAL 0 AND NOT "${_PKG_DIR2}" STREQUAL "")
+                    file(TO_CMAKE_PATH "${_PKG_DIR2}" _PKG_DIR2_CMAKE)
+                    if(EXISTS "${_PKG_DIR2_CMAKE}/include/node_api.h")
+                        set(_NODE_API_HEADERS_DIR "${_PKG_DIR2_CMAKE}/include")
+                        set(_NODE_API_HEADERS_FOUND ON)
+                    endif()
+                endif()
+            endif()
+        endif()
+    endif()
+
+    if(_NODE_API_HEADERS_FOUND)
+        include_directories(${_NODE_API_HEADERS_DIR})
+    else()
+        message(FATAL_ERROR
+            "Node-API headers not found.\n"
+            "Please run: npm i node-api-headers\n"
+            "and set the environment variable NODE_MODULES_ROOT to your node_modules directory.\n"
+            "Expected header: %ENV{NODE_MODULES_ROOT}/node-api-headers/include/node_api.h"
+        )
+    endif()
+endif()
+
+
+
 set(INSTALL_SUB_DIR "${ARTIFACTS_SUB_DIR}")
 
 message("Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
@@ -132,7 +215,10 @@ if(TARGET_PLATFORM STREQUAL "mac")
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif()
 
-if(BUILD_TYPE STREQUAL "static_lib")
+if(NODE_API_SUPPORT)
+    add_compile_definitions(BQ_DYNAMIC_LIB)
+    add_library(BqLog MODULE ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+elseif(BUILD_LIB_TYPE STREQUAL "static_lib")
     # build static library
     add_library(BqLog STATIC ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
 else()
@@ -162,9 +248,12 @@ elseif(TARGET_PLATFORM STREQUAL "mac")
             MACOSX_FRAMEWORK_IDENTIFIER com.tencent.BqLog
             PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
-            VERSION ${BQ_LOG_VERSION}
-            SOVERSION ${BQ_LOG_SOVERSION}
+            VERSION ${PROJECT_VERSION}
+            SOVERSION ${PROJECT_VERSION_MAJOR}
         )
+    endif()
+    if(NODE_API_SUPPORT)
+        target_link_options(BqLog PRIVATE "-undefined" "dynamic_lookup")
     endif()
 elseif(TARGET_PLATFORM STREQUAL "ios")
     find_library(SECURITY_FRAMEWORK Security)
@@ -183,14 +272,69 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
             MACOSX_FRAMEWORK_IDENTIFIER com.tencent.BqLog
             PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.tencent.BqLog
-            VERSION ${BQ_LOG_VERSION}
-            SOVERSION ${BQ_LOG_SOVERSION}
+            VERSION ${PROJECT_VERSION}
+            SOVERSION ${PROJECT_VERSION_MAJOR}
         )
     endif()
 elseif(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
         target_link_libraries(BqLog PRIVATE -ldbghelp)
+    endif()
+    if(NODE_API_SUPPORT)
+        #find node.lib
+        # Discover Node version via `node -p process.versions.node`
+        execute_process(
+        COMMAND "${NODE_EXECUTABLE}" -p "process.versions.node"
+            RESULT_VARIABLE NODE_CMD_RC
+            OUTPUT_VARIABLE NODEJS_VERSION
+            ERROR_VARIABLE NODE_CMD_ERR
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_STRIP_TRAILING_WHITESPACE
+)
+
+        # Determine arch subdir used by node-gyp cache
+        set(_node_arch "${DETECTED_ARCH}")
+        if(_node_arch STREQUAL "x86_64")
+            set(_node_arch "x64")
+        endif()
+
+        # Candidate cache paths (new node-gyp cache and legacy .node-gyp)
+        if(DEFINED ENV{LOCALAPPDATA})
+            file(TO_CMAKE_PATH "$ENV{LOCALAPPDATA}/node-gyp/Cache/${NODEJS_VERSION}/${_node_arch}" _gyp_cache_new)
+        endif()
+        if(DEFINED ENV{USERPROFILE})
+            file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.node-gyp/${NODEJS_VERSION}/${_node_arch}" _gyp_cache_legacy)
+        endif()
+        message(STATUS "$ENV{LOCALAPPDATA}/node-gyp/Cache/${NODEJS_VERSION}/${_node_arch}")
+        message(STATUS "$ENV{USERPROFILE}/.node-gyp/${NODEJS_VERSION}/${_node_arch}")
+
+        # Choose library names per toolchain
+        if(MINGW)
+            set(_node_lib_names libnode.dll.a)
+        else()
+            set(_node_lib_names node node.lib)
+        endif()
+
+        find_library(NODEJS_IMPORT_LIB
+            NAMES ${_node_lib_names}
+            PATHS
+            "${_gyp_cache_new}"
+            "${_gyp_cache_legacy}"
+            NO_DEFAULT_PATH)
+
+        unset(_gyp_cache_new)
+        unset(_gyp_cache_legacy)
+        unset(_node_arch)
+        unset(_node_lib_names)
+
+        if(NOT NODEJS_IMPORT_LIB OR NOT EXISTS "${NODEJS_IMPORT_LIB}")
+            message(FATAL_ERROR
+            "Node import library not found. "
+            "or install via `npx node-gyp install`.")
+        endif()
+        message(STATUS "Using Node import library: ${NODEJS_IMPORT_LIB}")
+        target_link_libraries(BqLog PRIVATE "${NODEJS_IMPORT_LIB}")
     endif()
 endif()
 
@@ -199,7 +343,7 @@ add_custom_command(TARGET BqLog POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../include" "${ARTIFACTS_OUTPUT_BASE_DIR}/include"
     COMMENT "Copying include headers to install folder"
 )
-if(BUILD_TYPE STREQUAL "dynamic_lib")
+if(BUILD_LIB_TYPE STREQUAL "dynamic_lib")
     add_custom_command(TARGET BqLog POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ARTIFACTS_OUTPUT_BASE_DIR}/include/bq_common/platform/build_type_dynamic_lib_import.h" "${ARTIFACTS_OUTPUT_BASE_DIR}/include/bq_common/platform/build_type.h"
         COMMENT "Switch include headers to dynamic lib mode"
@@ -216,8 +360,8 @@ endif()
 
 #Ensure the target carries version/soname metadata
 set_target_properties(BqLog PROPERTIES
-        VERSION ${BQ_LOG_VERSION}
-        SOVERSION ${BQ_LOG_SOVERSION}
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
 set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")

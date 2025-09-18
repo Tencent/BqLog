@@ -205,7 +205,7 @@ namespace bq {
         /// <returns></returns>
         bool is_valid() const
         {
-            return get_id() > 0;
+            return get_id() != 0;
         }
 
         /// <summary>

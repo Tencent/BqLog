@@ -17,9 +17,6 @@
  */
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
-#if defined(BQ_JAVA)
-#include <jni.h>
-#endif
 
 namespace bq {
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
@@ -46,26 +43,58 @@ namespace bq {
         return block->get_misc_data<log_buffer::block_misc_data>().need_reallocate_;
     }
 
+
+#if defined(BQ_NAPI)
+    static void napi_tsfn_log_tls_buffer_info_clear(napi_env env, void* param) {
+        bq::log_buffer::log_tls_buffer_info::napi_info* napi_info = static_cast<bq::log_buffer::log_tls_buffer_info::napi_info*>(param);
+        if (napi_info) {
+            if (napi_info->buffer_obj_for_lp_buffer_
+                || napi_info->buffer_obj_for_hp_buffer_
+                || napi_info->buffer_obj_for_oversize_buffer_) {
+                if (env) {
+                    if (napi_info->buffer_obj_for_lp_buffer_) {
+                        napi_delete_reference(env, napi_info->buffer_obj_for_lp_buffer_);
+                        napi_info->buffer_obj_for_lp_buffer_ = NULL;
+                    }
+                    if (napi_info->buffer_obj_for_hp_buffer_) {
+                        napi_delete_reference(env, napi_info->buffer_obj_for_hp_buffer_);
+                        napi_info->buffer_obj_for_hp_buffer_ = NULL;
+                    }
+                    if (napi_info->buffer_obj_for_oversize_buffer_) {
+                        napi_delete_reference(env, napi_info->buffer_obj_for_oversize_buffer_);
+                        napi_info->buffer_obj_for_oversize_buffer_ = NULL;
+                    }
+                }
+            }
+        }
+        
+    }
+#endif
+
     log_buffer::log_tls_buffer_info::~log_tls_buffer_info()
     {
 #if defined(BQ_JAVA)
-        if (buffer_obj_for_lp_buffer_
-            || buffer_obj_for_hp_buffer_
-            || buffer_obj_for_oversize_buffer_) {
+        if (java_.buffer_obj_for_lp_buffer_
+            || java_.buffer_obj_for_hp_buffer_
+            || java_.buffer_obj_for_oversize_buffer_) {
             bq::platform::jni_env env;
-            if (buffer_obj_for_lp_buffer_) {
-                env.env->DeleteGlobalRef(buffer_obj_for_lp_buffer_);
-                buffer_obj_for_lp_buffer_ = NULL;
+            if (java_.buffer_obj_for_lp_buffer_) {
+                env.env->DeleteGlobalRef(java_.buffer_obj_for_lp_buffer_);
+                java_.buffer_obj_for_lp_buffer_ = NULL;
             }
-            if (buffer_obj_for_hp_buffer_) {
-                env.env->DeleteGlobalRef(buffer_obj_for_hp_buffer_);
-                buffer_obj_for_hp_buffer_ = NULL;
+            if (java_.buffer_obj_for_hp_buffer_) {
+                env.env->DeleteGlobalRef(java_.buffer_obj_for_hp_buffer_);
+                java_.buffer_obj_for_hp_buffer_ = NULL;
             }
-            if (buffer_obj_for_oversize_buffer_) {
-                env.env->DeleteGlobalRef(buffer_obj_for_oversize_buffer_);
-                buffer_obj_for_oversize_buffer_ = NULL;
+            if (java_.buffer_obj_for_oversize_buffer_) {
+                env.env->DeleteGlobalRef(java_.buffer_obj_for_oversize_buffer_);
+                java_.buffer_obj_for_oversize_buffer_ = NULL;
             }
         }
+#endif
+#if defined(BQ_NAPI)
+        log_tls_buffer_info::napi_info* napi_info = new log_tls_buffer_info::napi_info(napi_);
+        bq::platform::napi_call_native_func_in_js_thread(&napi_tsfn_log_tls_buffer_info_clear, napi_info);
 #endif
     }
 
@@ -449,53 +478,177 @@ namespace bq {
 #endif
         auto& current_buffer_info = log_tls_info_.get().get_buffer_info_directly(this);
         java_buffer_info result;
-        result.offset_store_ = &current_buffer_info.buffer_offset_;
+        result.offset_store_ = &current_buffer_info.java_.buffer_offset_;
 
         BQ_UNLIKELY_IF(current_buffer_info.oversize_target_buffer_)
         {
-            if (!current_buffer_info.buffer_obj_for_oversize_buffer_) {
+            if (!current_buffer_info.java_.buffer_obj_for_oversize_buffer_) {
                 jobject byte_array_obj = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
-                current_buffer_info.buffer_obj_for_oversize_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
-                auto offset_obj = bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_), false);
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_oversize_buffer_, 1, offset_obj);
+                current_buffer_info.java_.buffer_obj_for_oversize_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
+                auto offset_obj = bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.java_.buffer_offset_, sizeof(current_buffer_info.java_.buffer_offset_), false);
+                env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_oversize_buffer_, 1, offset_obj);
             }
             auto& over_size_buffer_ref = current_buffer_info.oversize_target_buffer_->buffer_;
-            if (current_buffer_info.buffer_ref_oversize != &over_size_buffer_ref
-                || current_buffer_info.size_ref_oversize != over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count()) {
-                current_buffer_info.buffer_ref_oversize = &over_size_buffer_ref;
-                current_buffer_info.size_ref_oversize = over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count();
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_oversize_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(over_size_buffer_ref.get_buffer_addr()), current_buffer_info.size_ref_oversize, false));
+            if (current_buffer_info.java_.buffer_ref_oversize != &over_size_buffer_ref
+                || current_buffer_info.java_.size_ref_oversize != over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count()) {
+                current_buffer_info.java_.buffer_ref_oversize = &over_size_buffer_ref;
+                current_buffer_info.java_.size_ref_oversize = over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count();
+                env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_oversize_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(over_size_buffer_ref.get_buffer_addr()), current_buffer_info.java_.size_ref_oversize, false));
             }
-            result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_oversize_buffer_;
+            result.buffer_array_obj_ = current_buffer_info.java_.buffer_obj_for_oversize_buffer_;
             result.buffer_base_addr_ = over_size_buffer_ref.get_buffer_addr();
             *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
         }
         else if (current_buffer_info.cur_block_)
         {
             auto& ring_buffer = current_buffer_info.cur_block_->get_buffer();
-            if (!current_buffer_info.buffer_obj_for_hp_buffer_) {
+            if (!current_buffer_info.java_.buffer_obj_for_hp_buffer_) {
                 jobject byte_array_obj = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
-                current_buffer_info.buffer_obj_for_hp_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
-                auto offset_obj = bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_), false);
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 1, offset_obj);
+                current_buffer_info.java_.buffer_obj_for_hp_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
+                auto offset_obj = bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.java_.buffer_offset_, sizeof(current_buffer_info.java_.buffer_offset_), false);
+                env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_hp_buffer_, 1, offset_obj);
             }
-            if (current_buffer_info.buffer_ref_block_ != current_buffer_info.cur_block_) {
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_hp_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(ring_buffer.get_buffer_addr()), ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count(), false));
-                current_buffer_info.buffer_ref_block_ = current_buffer_info.cur_block_;
+            if (current_buffer_info.java_.buffer_ref_block_ != current_buffer_info.cur_block_) {
+                env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_hp_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(ring_buffer.get_buffer_addr()), ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count(), false));
+                current_buffer_info.java_.buffer_ref_block_ = current_buffer_info.cur_block_;
             }
-            result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_hp_buffer_;
+            result.buffer_array_obj_ = current_buffer_info.java_.buffer_obj_for_hp_buffer_;
             result.buffer_base_addr_ = ring_buffer.get_buffer_addr();
             *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
         }
         else
         {
-            if (!current_buffer_info.buffer_obj_for_lp_buffer_) {
+            if (!current_buffer_info.java_.buffer_obj_for_lp_buffer_) {
                 jobject byte_array_obj = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
-                current_buffer_info.buffer_obj_for_lp_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(lp_buffer_.get_buffer_addr()), lp_buffer_.get_block_size() * lp_buffer_.get_total_blocks_count(), false));
-                env->SetObjectArrayElement(current_buffer_info.buffer_obj_for_lp_buffer_, 1, bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.buffer_offset_, sizeof(current_buffer_info.buffer_offset_), false));
+                current_buffer_info.java_.buffer_obj_for_lp_buffer_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
+                env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_lp_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(lp_buffer_.get_buffer_addr()), lp_buffer_.get_block_size() * lp_buffer_.get_total_blocks_count(), false));
+                env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_lp_buffer_, 1, bq::platform::create_new_direct_byte_buffer(env, &current_buffer_info.java_.buffer_offset_, sizeof(current_buffer_info.java_.buffer_offset_), false));
             }
-            result.buffer_array_obj_ = current_buffer_info.buffer_obj_for_lp_buffer_;
+            result.buffer_array_obj_ = current_buffer_info.java_.buffer_obj_for_lp_buffer_;
+            result.buffer_base_addr_ = lp_buffer_.get_buffer_addr();
+            *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
+        }
+        return result;
+    }
+#endif
+
+
+#if defined(BQ_NAPI)
+    log_buffer::napi_buffer_info log_buffer::get_napi_buffer_info(napi_env env, const log_buffer_write_handle& handle)
+    {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+        assert((this->id_ == log_tls_info_.get().cur_log_buffer_id_) && "tls cur_log_buffer_ check failed");
+#endif
+        auto& current_buffer_info = log_tls_info_.get().get_buffer_info_directly(this);
+        napi_buffer_info result;
+        result.offset_store_ = &current_buffer_info.napi_.buffer_offset_;
+
+        BQ_UNLIKELY_IF(current_buffer_info.oversize_target_buffer_)
+        {
+            if (!current_buffer_info.napi_.buffer_obj_for_oversize_buffer_) {
+                // Create [dataArrayBuffer, offsetArrayBuffer]
+                napi_value arr = nullptr;
+                napi_create_array_with_length(env, 2, &arr);
+
+                napi_value offset_obj = nullptr;
+                napi_create_external_arraybuffer(
+                    env,
+                    (void*)&current_buffer_info.napi_.buffer_offset_,
+                    sizeof(current_buffer_info.napi_.buffer_offset_),
+                    nullptr, nullptr,
+                    &offset_obj);
+                napi_set_element(env, arr, 1, offset_obj);
+
+                // Persist the array
+                napi_create_reference(env, arr, 1, &current_buffer_info.napi_.buffer_obj_for_oversize_buffer_);
+            }
+            auto& over_size_buffer_ref = current_buffer_info.oversize_target_buffer_->buffer_;
+            if (current_buffer_info.napi_.buffer_ref_oversize != &over_size_buffer_ref
+                || current_buffer_info.napi_.size_ref_oversize != over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count()) {
+                current_buffer_info.napi_.buffer_ref_oversize = &over_size_buffer_ref;
+                current_buffer_info.napi_.size_ref_oversize = over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count();
+                napi_value data_ab = nullptr;
+                napi_create_external_arraybuffer(
+                    env,
+                    const_cast<uint8_t*>(over_size_buffer_ref.get_buffer_addr())
+                    , current_buffer_info.napi_.size_ref_oversize,
+                    nullptr, nullptr,
+                    &data_ab);
+                napi_value arr = nullptr;
+                napi_get_reference_value(env, current_buffer_info.napi_.buffer_obj_for_oversize_buffer_, &arr);
+                napi_set_element(env, arr, 0, data_ab);
+            }
+            napi_get_reference_value(env, current_buffer_info.napi_.buffer_obj_for_oversize_buffer_ , &result.buffer_array_obj_);
+            result.buffer_base_addr_ = over_size_buffer_ref.get_buffer_addr();
+            *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
+        }
+        else if (current_buffer_info.cur_block_)
+        {
+            auto& ring_buffer = current_buffer_info.cur_block_->get_buffer();
+            if (!current_buffer_info.napi_.buffer_obj_for_hp_buffer_) {
+                napi_value arr = nullptr;
+                napi_create_array_with_length(env, 2, &arr);
+
+
+                napi_value offset_obj = nullptr;
+                napi_create_external_arraybuffer(
+                    env,
+                    (void*)&current_buffer_info.napi_.buffer_offset_,
+                    sizeof(current_buffer_info.napi_.buffer_offset_),
+                    nullptr, nullptr,
+                    &offset_obj);
+                napi_set_element(env, arr, 1, offset_obj);
+                napi_create_reference(env, arr, 1, &current_buffer_info.napi_.buffer_obj_for_hp_buffer_);
+            }
+            if (current_buffer_info.napi_.buffer_ref_block_ != current_buffer_info.cur_block_) {
+                napi_value data_ab = nullptr;
+                napi_create_external_arraybuffer(
+                    env, 
+                    const_cast<uint8_t*>(ring_buffer.get_buffer_addr()), 
+                    ring_buffer.get_block_size()* ring_buffer.get_total_blocks_count(),
+                    nullptr, nullptr,
+                    &data_ab);
+                napi_value arr = nullptr;
+                napi_get_reference_value(env, current_buffer_info.napi_.buffer_obj_for_hp_buffer_, &arr);
+                napi_set_element(env, arr, 0, data_ab);
+                current_buffer_info.napi_.buffer_ref_block_ = current_buffer_info.cur_block_;
+            }
+            napi_get_reference_value(env, current_buffer_info.napi_.buffer_obj_for_hp_buffer_, &result.buffer_array_obj_);
+            result.buffer_base_addr_ = ring_buffer.get_buffer_addr();
+            *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
+        }
+        else
+        {
+            if (!current_buffer_info.napi_.buffer_obj_for_lp_buffer_) {
+                napi_value arr = nullptr;
+                napi_create_array_with_length(env, 2, &arr);
+
+                // data buffer
+                {
+                    napi_value data_ab = nullptr;
+                    napi_create_external_arraybuffer(
+                        env,
+                        const_cast<uint8_t*>(lp_buffer_.get_buffer_addr()),
+                        (size_t)lp_buffer_.get_block_size()* (size_t)lp_buffer_.get_total_blocks_count(),
+                        nullptr, nullptr,
+                        &data_ab);
+                    napi_set_element(env, arr, 0, data_ab);
+                }
+
+                // offset buffer
+                {
+                    napi_value offset_obj = nullptr;
+                    napi_create_external_arraybuffer(
+                        env,
+                        (void*)&current_buffer_info.napi_.buffer_offset_,
+                        sizeof(current_buffer_info.napi_.buffer_offset_),
+                        nullptr, nullptr,
+                        &offset_obj);
+                    napi_set_element(env, arr, 1, offset_obj);
+                }
+                napi_create_reference(env, arr, 1, &current_buffer_info.napi_.buffer_obj_for_lp_buffer_);
+            }
+            napi_get_reference_value(env, current_buffer_info.napi_.buffer_obj_for_lp_buffer_, &result.buffer_array_obj_);
             result.buffer_base_addr_ = lp_buffer_.get_buffer_addr();
             *result.offset_store_ = (int32_t)(handle.data_addr - result.buffer_base_addr_);
         }

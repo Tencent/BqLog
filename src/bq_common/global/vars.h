@@ -147,6 +147,9 @@ namespace bq {
 #if defined(BQ_JAVA)
         bq::array<void (*)()> jni_onload_callbacks_inst_;
 #endif
+#if defined(BQ_NAPI)
+        bq::array<void (*)(napi_env env, napi_value exports)> napi_init_callbacks_inst_;
+#endif
 #if defined(BQ_ANDROID)
         jobject android_asset_manager_java_instance_ = nullptr;
         AAssetManager* android_asset_manager_inst_ = nullptr;

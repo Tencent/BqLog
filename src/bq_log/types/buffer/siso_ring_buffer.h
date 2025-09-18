@@ -161,6 +161,8 @@ namespace bq {
         friend struct siso_buffer_batch_read_handle;
 
     public:
+        siso_ring_buffer() = delete;
+
         siso_ring_buffer(void* buffer, size_t buffer_size, bool is_memory_recovery);
 
         siso_ring_buffer(const siso_ring_buffer& rhs) = delete;

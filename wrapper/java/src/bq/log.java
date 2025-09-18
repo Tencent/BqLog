@@ -369,7 +369,7 @@ public class log {
      */
     public boolean is_valid()
     {
-        return get_id() > 0;
+        return get_id() != 0;
     }
 
     /**

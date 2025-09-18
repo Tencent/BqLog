@@ -373,6 +373,11 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv
     return ret;
 }
 
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_take_snapshot_string
+ * Signature: (JZ)Ljava/lang/String;
+ */
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jboolean use_gmt_time)
 {
     bq::_api_string_def snapshot_str_def;

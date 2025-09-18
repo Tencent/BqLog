@@ -45,6 +45,9 @@
 #if defined(BQ_POSIX)
 #include "bq_common/platform/posix_misc.h"
 #endif
+#if defined(BQ_NAPI)
+#include "bq_common/platform/napi_misc.h"
+#endif
 
 namespace bq {
     namespace platform {
