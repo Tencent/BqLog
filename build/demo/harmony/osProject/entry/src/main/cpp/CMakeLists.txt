@@ -10,7 +10,7 @@ endif()
 
 include_directories(${NATIVERENDER_ROOT_PATH}
                     ${NATIVERENDER_ROOT_PATH}/include
-                    ${NATIVERENDER_ROOT_PATH}/../../../../../../../../install/dynamic_lib/include)
+                    ${NATIVERENDER_ROOT_PATH}/../../../../../../../../include)
 #add_library(BqLog SHARED IMPORTED)
 #set_target_properties(BqLog
 #    PROPERTIES
