@@ -41,16 +41,15 @@ for /l %%a in (0,1,1) do (
 				 -DTARGET_PLATFORM:STRING=harmony^
 				 -DOHOS_STL=c++_shared
 				
-				Echo ---------------1111111111--------------
-				rem "%OHOS_NDK_ROOT%/native/build-tools/cmake/bin/cmake.exe" --trace -j10
+				Echo ---------------build--------------
 				"%OHOS_NDK_ROOT%\native\build-tools\cmake\bin\ninja.exe" -f build.ninja
 				Echo ---------------install--------------
 				"%OHOS_NDK_ROOT%\native\build-tools\cmake/bin\cmake.exe" --install .
-				Echo ---------------2222222222--------------
-				 move /Y ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so
-				Echo ---------------3333333333--------------
+				Echo ---------------move--------------
+				move /Y ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so
+				Echo ---------------strip--------------
 				"%OHOS_NDK_ROOT%\native\llvm\bin\llvm-strip.exe" -s ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog_Symbol.so -o ..\..\..\..\..\install\dynamic_lib\lib\%%j\%%p\libBqLog.so
-				Echo ---------------4444444444--------------
+				Echo ---------------finish--------------
 				 
 			)
 			popd

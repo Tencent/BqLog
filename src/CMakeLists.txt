@@ -22,6 +22,12 @@ endif()
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../src/bq_log/global/version.cpp")
 
 project(BqLog VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
+
+# Add BQ_DYNAMIC_LIB macro definition
+if(BUILD_TYPE STREQUAL "dynamic_lib")
+    add_compile_definitions(BQ_DYNAMIC_LIB=1)
+endif()
+
 if(NOT DEFINED CPP_VER)
     set(CMAKE_CXX_STANDARD 17)
     message("Use default C++ 17")
@@ -38,6 +44,7 @@ if (MSVC)
     add_compile_options(/W4 /WX)
 elseif(TARGET_PLATFORM STREQUAL "harmony")
     message("set options for harmony")
+    add_compile_definitions(BQ_DYNAMIC_LIB=1)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
     add_compile_options(-Wall -Wextra -pedantic -fno-exceptions)
 else()
@@ -222,10 +229,10 @@ if(BUILD_TYPE STREQUAL "dynamic_lib")
 endif()
 
 #Ensure the target carries version/soname metadata
-set_target_properties(BqLog PROPERTIES
-        VERSION ${BQ_LOG_VERSION}
-        SOVERSION ${BQ_LOG_SOVERSION}
-)
+ set_target_properties(BqLog PROPERTIES
+         VERSION ${BQ_LOG_VERSION}
+         SOVERSION ${BQ_LOG_SOVERSION}
+ )
 
 set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
 
