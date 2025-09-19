@@ -781,6 +781,7 @@ jobs:
             cd build/lib/unix_like  
             chmod +x *.sh
             ls -l
+            export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native clang YES NO
 
       - name: Upload Artifacts
@@ -814,6 +815,7 @@ jobs:
             cd build/lib/unix_like  
             chmod +x *.sh
             ls -l
+            export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native gcc YES NO
 
   build_freebsd_x86_64_tools_Clang:
@@ -843,7 +845,8 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            ./build_all_and_pack_clang.sh freebsd
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_clang.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -878,7 +881,8 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            ./build_all_and_pack_gcc.sh freebsd
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_gcc.sh
 
   #iOS
   build_ios_lib:
