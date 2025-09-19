@@ -29,7 +29,6 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." >/dev/null 2>&1 && pwd)"
 SRC_DIR="${REPO_ROOT}/src"
 PACK_DIR="${REPO_ROOT}/pack"
 
-# Build configurations (match Windows naming order)
 BuildConfigs=(Debug MinSizeRel RelWithDebInfo Release)
 
 ACTION="${1:-}"
