@@ -225,6 +225,13 @@ namespace bq {
         /// <returns>the decoded snapshot buffer</returns>
         bq::string take_snapshot(bool use_gmt_time) const;
 
+        /// <summary>
+        /// Reset the base dir
+        /// </summary>
+        /// <param name="in_sandbox"></param>
+        /// <param name="dir"></param>
+        void reset_base_dir(bool in_sandbox, const bq::string& dir);
+
     public:
         /// Core log functions, there are 6 log levels:
         /// verbose, debug, info, warning, error, fatal

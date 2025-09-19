@@ -442,7 +442,21 @@ namespace bq
             }
         }
 
-#nullable disable
+        /// <summary>
+        /// Reset the base dir
+        /// </summary>
+        /// <param name="in_sandbox"></param>
+        /// <param name="dir"></param>
+        public void reset_base_dir(bool in_sandbox, string dir)
+        {
+            unsafe
+            {
+                byte* dir_utf8 = utf8_encoder.alloc_utf8_fixed_str(dir);
+                bq.impl.log_invoker.__api_reset_base_dir(in_sandbox, dir_utf8);
+                utf8_encoder.release_utf8_fixed_str(dir_utf8);
+            }
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null))
@@ -457,7 +471,6 @@ namespace bq
             }
             return log_id_ == other.get_id();
         }
-#nullable enable
 
         public override int GetHashCode()
         {

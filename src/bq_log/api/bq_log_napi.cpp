@@ -189,36 +189,38 @@ namespace bq {
 extern "C" {
     // ----------------------------- console TSFN -----------------------------
 
-    struct console_msg_payload {
+    BQ_PACK_BEGIN
+    struct console_msg_head {
         uint64_t    log_id;
         int32_t     category_idx;
         int32_t     level;
-        const char* content;
-    };
+        uint32_t    length;
+    }
+    BQ_PACK_END
 
     static napi_ref console_callback_{ NULL };
     static bq::miso_ring_buffer console_msg_buffer_(bq::log_buffer_config({"napi_console_cb_msg", bq::array<bq::string>(), 1024 * 8, false, bq::log_memory_policy::block_when_full, 0}));
 
 
     static void tsfn_console_call_js(napi_env env, void* param) {
-        console_msg_payload* msg = nullptr;
+        console_msg_head* msg = nullptr;
         bool from_buffer = (param == (void*)&console_msg_buffer_);
         bq::log_buffer_read_handle handle;
         if (from_buffer)
         {
             handle = console_msg_buffer_.read_chunk();
             assert(bq::enum_buffer_result_code::success == handle.result);
-            msg = (console_msg_payload*)handle.data_addr;
+            msg = (console_msg_head*)handle.data_addr;
         }
         else {
-            msg = (console_msg_payload*)param;
+            msg = (console_msg_head*)param;
         }
         if (msg && env && console_callback_) {
             napi_value argv[4];
             argv[0] = bq::_make_u64(env, msg->log_id);
             argv[1] = bq::_make_i32(env, msg->category_idx);
             argv[2] = bq::_make_i32(env, msg->level);
-            argv[3] = bq::_make_str_utf8(env, msg->content);
+            napi_create_string_utf8(env, (char*)(msg + 1), msg->length, &argv[3]);
             napi_value undefined = bq::_make_undefined(env);
             napi_value js_cb = NULL;
             napi_get_reference_value(env, console_callback_, &js_cb);
@@ -231,19 +233,25 @@ extern "C" {
 
     static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length) {
         (void)length;
-        auto handle = console_msg_buffer_.alloc_write_chunk(sizeof(console_msg_payload));
-        console_msg_payload* msg = nullptr;
+        uint32_t size = static_cast<uint32_t>(sizeof(console_msg_head)) + static_cast<uint32_t>(length);
+        auto handle = console_msg_buffer_.alloc_write_chunk(size);
+        console_msg_head* msg = nullptr;
         bool success = bq::enum_buffer_result_code::success != handle.result;
         if (success) {
-            msg = (console_msg_payload*)malloc(sizeof(console_msg_payload));
+            msg = (console_msg_head*)handle.data_addr;
         }
         else {
-            msg = (console_msg_payload*)handle.data_addr;
+            msg = (console_msg_head*)malloc(size);
         }
-        msg->log_id = log_id;
-        msg->category_idx = category_idx;
-        msg->level = log_level;
-        msg->content = content ? content : "";
+        if (msg) {
+            msg->log_id = log_id;
+            msg->category_idx = category_idx;
+            msg->level = log_level;
+            msg->length = static_cast<uint32_t>(length);
+            if (length > 0) {
+                memcpy(msg + 1, content, static_cast<size_t>(length));
+            }
+        }
         console_msg_buffer_.commit_write_chunk(handle);
         bq::platform::napi_call_native_func_in_js_thread(&tsfn_console_call_js, success ? (void*)&console_msg_buffer_ : (void*)msg);
     }
@@ -688,6 +696,19 @@ extern "C" {
         if (argc < 1) { napi_throw_type_error(env, NULL, "enable required"); return NULL; }
         bool en = bq::_get_bool(env, argv[0]);
         bq::log::set_console_buffer_enable(en);
+        return bq::_make_undefined(env);
+    }
+
+    // reset_base_dir(in_sandbox: boolean, dir: string): void
+    BQ_NAPI_DEF(reset_base_dir, napi_env, env, napi_callback_info, info)
+    {
+        size_t argc = 2; napi_value argv[2] = { 0, 0 };
+        BQ_NAPI_CALL(env, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
+        if (argc < 2) { napi_throw_type_error(env, NULL, "reset_base_dir invalid parameters count, should be 2"); return NULL; }
+        bool in_sandbox = bq::_get_bool(env, argv[0]);
+        char* dir = bq::_dup_cstr_from_napi(env, argv[1]);
+        bq::api::__api_reset_base_dir(in_sandbox, dir);
+        bq::_free_cstr(dir);
         return bq::_make_undefined(env);
     }
 

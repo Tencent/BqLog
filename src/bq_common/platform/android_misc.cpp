@@ -270,16 +270,6 @@ namespace bq {
             common_global_vars::get().android_asset_manager_inst_ = AAssetManager_fromJava(env, common_global_vars::get().android_asset_manager_java_instance_);
         }
 
-        const bq::string& get_base_dir(bool is_sandbox)
-        {
-            assert(bq::platform::get_jvm() && "JNI_Onload was not invoked yet");
-            if (is_sandbox) {
-                return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
-            } else {
-                return common_global_vars::get().base_dir_init_inst_.base_dir_1_;
-            }
-        }
-
         const bq::string& get_android_id()
         {
             if (!common_global_vars::get().android_id_.is_empty())
