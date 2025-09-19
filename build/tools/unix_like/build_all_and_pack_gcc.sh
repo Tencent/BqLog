@@ -4,9 +4,9 @@ set -euo pipefail
 UNIX_VERSION=${1:-}
 
 cd category_log_generator
-./GenerateExecutable_Clang.sh
+./executable_generate_gcc.sh
 cd ../log_decoder
-./GenerateExecutable_Clang.sh
+./executable_generate_gcc.sh
 cd ..
 
 rm -rf pack

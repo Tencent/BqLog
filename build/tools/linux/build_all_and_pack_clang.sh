@@ -2,10 +2,10 @@
 set -euo pipefail
 
 pushd "category_log_generator" >/dev/null
-./GenerateExecutable_GCC.sh
+./executable_generate_clang.sh
 popd >/dev/null
 pushd "log_decoder" >/dev/null
-./GenerateExecutable_GCC.sh
+./executable_generate_clang.sh
 popd >/dev/null
 
 rm -rf pack

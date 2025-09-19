@@ -3,10 +3,10 @@
 set -euo pipefail
 
 pushd "category_log_generator" >/dev/null
-./GenerateExecutable.sh
+./executable_generate.sh
 popd >/dev/null
 pushd "log_decoder" >/dev/null
-./GenerateExecutable.sh
+./executable_generate.sh
 popd >/dev/null
 
 rm -rf pack

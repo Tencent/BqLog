@@ -15,9 +15,9 @@ set "GEN_PLATFORM_ARG="
 if defined ARCH_PARAM set "GEN_PLATFORM_ARG=-A %ARCH_PARAM%"
 
 cd category_log_generator
-call ./GenerateExecutable.bat %ARCH_PARAM% || exit /b 1
+call ./executable_generate.bat %ARCH_PARAM% || exit /b 1
 cd ../log_decoder
-call ./GenerateExecutable.bat %ARCH_PARAM% || exit /b 1
+call ./executable_generate.bat %ARCH_PARAM% || exit /b 1
 cd ..
 
 rd /s/q pack
