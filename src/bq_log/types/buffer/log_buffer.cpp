@@ -66,6 +66,7 @@ namespace bq {
                     }
                 }
             }
+            delete napi_info;
         }
         
     }
@@ -93,8 +94,8 @@ namespace bq {
         }
 #endif
 #if defined(BQ_NAPI)
-        log_tls_buffer_info::napi_info* napi_info = new log_tls_buffer_info::napi_info(napi_);
-        bq::platform::napi_call_native_func_in_js_thread(&napi_tsfn_log_tls_buffer_info_clear, napi_info);
+        log_tls_buffer_info::napi_info* napi_info_ptr = new log_tls_buffer_info::napi_info(napi_);
+        bq::platform::napi_call_native_func_in_js_thread(&napi_tsfn_log_tls_buffer_info_clear, napi_info_ptr);
 #endif
     }
 

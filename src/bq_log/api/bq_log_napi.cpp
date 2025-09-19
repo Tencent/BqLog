@@ -54,9 +54,6 @@ namespace bq {
     static inline napi_value _make_i32(napi_env env, int32_t x) {
         napi_value v; napi_create_int32(env, x, &v); return v;
     }
-    static inline napi_value _make_u32(napi_env env, uint32_t x) {
-        napi_value v; napi_create_uint32(env, x, &v); return v;
-    }
     static inline napi_value _make_u64(napi_env env, uint64_t x) {
         napi_value v; napi_create_bigint_uint64(env, x, &v); return v;
     }
@@ -313,7 +310,7 @@ extern "C" {
         // free temp strings
         if (category_names) {
             for (uint32_t i = 0; i < categories_count; ++i) {
-                bq::_free_cstr((char*)category_names[i]);
+                bq::_free_cstr(const_cast<char*>(category_names[i]));
             }
             free((void*)category_names);
         }
@@ -510,10 +507,10 @@ extern "C" {
         if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
         uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
         const uint32_t* bitmap_ptr = bq::api::__api_get_log_merged_log_level_bitmap_by_log_id(id);
-        return bq::_make_external_arraybuffer(env, (void*)bitmap_ptr, sizeof(uint32_t));
+        return bq::_make_external_arraybuffer(env, const_cast<void*>((const void*)bitmap_ptr), sizeof(uint32_t));
     }
 
-    // get_log_category_masks_array_by_log_id(log_id: bigint): ArrayBuffer (size = categories_count bytes)
+    // get_log_category_masks_array_by_log_id(log_id: bigint): ArrayBuffer (size = categories_count bytes)ss
     BQ_NAPI_DEF(get_log_category_masks_array_by_log_id, napi_env, env, napi_callback_info, info)
     {
         size_t argc = 1; napi_value argv[1] = { 0 };
@@ -523,7 +520,7 @@ extern "C" {
         uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
         uint32_t count = bq::api::__api_get_log_categories_count(id);
         const uint8_t* mask_array_ptr = bq::api::__api_get_log_category_masks_array_by_log_id(id);
-        return bq::_make_external_arraybuffer(env, (void*)mask_array_ptr, (size_t)count * sizeof(uint8_t));
+        return bq::_make_external_arraybuffer(env, const_cast<void*>((const void*)mask_array_ptr), (size_t)count * sizeof(uint8_t));
     }
 
     // get_log_print_stack_level_bitmap_by_log_id(log_id: bigint): ArrayBuffer (size 4)
@@ -534,7 +531,7 @@ extern "C" {
         if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
         uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
         const uint32_t* bitmap_ptr = bq::api::__api_get_log_print_stack_level_bitmap_by_log_id(id);
-        return bq::_make_external_arraybuffer(env, (void*)bitmap_ptr, sizeof(uint32_t));
+        return bq::_make_external_arraybuffer(env, const_cast<void*>((const void*)bitmap_ptr), sizeof(uint32_t));
     }
 
     // log_device_console(level: number, content: string): void
@@ -605,7 +602,7 @@ extern "C" {
         if (argc < 1) { napi_throw_type_error(env, NULL, "handle required"); return NULL; }
 
         uint64_t handle = bq::_get_u64_from_bigint(env, argv[0]);
-        bq::_api_string_def text = { 0 };
+        bq::_api_string_def text = { NULL, 0 };
         bq::appender_decode_result result = bq::api::__api_log_decoder_decode((uint32_t)handle, &text);
 
         napi_value obj = NULL; napi_create_object(env, &obj);
@@ -657,7 +654,7 @@ extern "C" {
         uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
         bool use_gmt_time = bq::_get_bool(env, argv[1]);
 
-        bq::_api_string_def snapshot_str_def = { 0 };
+        bq::_api_string_def snapshot_str_def = { NULL, 0 };
         bq::api::__api_take_snapshot_string(id, use_gmt_time, &snapshot_str_def);
         napi_value out = bq::_make_str_utf8(env, snapshot_str_def.str);
         bq::api::__api_release_snapshot_string(id, &snapshot_str_def);

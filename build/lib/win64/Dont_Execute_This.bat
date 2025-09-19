@@ -15,7 +15,7 @@ rem   Dont_Execute_This.bat dynamic_lib [arch] [compiler] [java] [node]
 rem   Dont_Execute_This.bat static_lib  [arch] [compiler] [java] [node]
 rem
 rem Normalized values:
-rem   arch      : ARM64 | x64
+rem   arch      : x86_64 | x86 | arm64 | native
 rem   compiler  : msvc | clang | mingw
 rem   java,node : ON | OFF
 rem   lib type  : static_lib | dynamic_lib
@@ -90,38 +90,33 @@ if not defined NODE_API_SUPPORT call :ask_yes_no "Enable Node-API (Node.js) supp
 goto :eof
 
 :ensure_arch_only
-call :detect_host_arch ARCH_PARAM
-if not defined ARCH_PARAM call :ask_arch ARCH_PARAM
+rem Default to 'native' when unspecified
+set "%~1=native"
 goto :eof
 
 :normalize_arch
 set "VAL=%~1"
 set "OUTVAR=%~2"
 set "%OUTVAR%="
-if /I "%VAL%"=="arm64" set "%OUTVAR%=ARM64"
-if /I "%VAL%"=="ARM64" set "%OUTVAR%=ARM64"
-if /I "%VAL%"=="x64"   set "%OUTVAR%=x64"
-goto :eof
-
-:detect_host_arch
-set "OUTVAR=%~1"
-set "HOST_ARCH="
-if /I "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "HOST_ARCH=ARM64"
-if /I "%PROCESSOR_ARCHITECTURE%"=="AMD64" set "HOST_ARCH=x64"
-if not defined HOST_ARCH if /I "%PROCESSOR_ARCHITEW6432%"=="ARM64" set "HOST_ARCH=ARM64"
-if not defined HOST_ARCH if /I "%PROCESSOR_ARCHITEW6432%"=="AMD64" set "HOST_ARCH=x64"
-if defined HOST_ARCH set "%OUTVAR%=%HOST_ARCH%"
+if /I "%VAL%"=="x86_64" set "%OUTVAR%=x86_64"
+if /I "%VAL%"=="x86"    set "%OUTVAR%=x86"
+if /I "%VAL%"=="arm64"  set "%OUTVAR%=arm64"
+if /I "%VAL%"=="native" set "%OUTVAR%=native"
 goto :eof
 
 :ask_arch
 set "OUTVAR=%~1"
 echo.
 echo Select architecture:
-echo   [A] ARM64
-echo   [X] x64
-choice /C AX /N /M "Enter choice (A/X): "
-if errorlevel 2 set "%OUTVAR%=x64"  & goto :eof
-if errorlevel 1 set "%OUTVAR%=ARM64" & goto :eof
+echo   [N] native
+echo   [X] x86_64
+echo   [E] x86
+echo   [A] arm64
+choice /C NXEA /N /M "Enter choice (N/X/E/A): "
+if errorlevel 4 set "%OUTVAR%=arm64"  & goto :eof
+if errorlevel 3 set "%OUTVAR%=x86"    & goto :eof
+if errorlevel 2 set "%OUTVAR%=x86_64" & goto :eof
+if errorlevel 1 set "%OUTVAR%=native" & goto :eof
 goto :ask_arch
 
 :normalize_compiler
@@ -196,9 +191,19 @@ if /I not "%BUILD_LIB_TYPE_ARG%"=="static_lib" if /I not "%BUILD_LIB_TYPE_ARG%"=
   exit /b 2
 )
 
+rem Map arch -> VS -A platform
 set "VS_GEN_PLATFORM_ARG="
-if /I "%ARCH_PARAM%"=="ARM64" set "VS_GEN_PLATFORM_ARG=-A ARM64"
-if /I "%ARCH_PARAM%"=="x64"   set "VS_GEN_PLATFORM_ARG=-A x64"
+if /I "%ARCH_PARAM%"=="arm64"  set "VS_GEN_PLATFORM_ARG=-A ARM64"
+if /I "%ARCH_PARAM%"=="x86_64" set "VS_GEN_PLATFORM_ARG=-A x64"
+if /I "%ARCH_PARAM%"=="x86"    set "VS_GEN_PLATFORM_ARG=-A Win32"
+rem 'native' => leave VS_GEN_PLATFORM_ARG empty
+
+rem Pass USER_DEF_ARCH to CMake if not native
+if /I not "%ARCH_PARAM%"=="native" (
+  set "USER_DEF_ARCH=%ARCH_PARAM%"
+) else (
+  set "USER_DEF_ARCH="
+)
 
 echo.
 echo ===== Build Configuration =====
@@ -208,6 +213,7 @@ echo   COMPILER            : %COMPILER_TYPE%
 echo   JAVA_SUPPORT        : %JAVA_SUPPORT%
 echo   NODE_API_SUPPORT    : %NODE_API_SUPPORT%
 echo   CMake -A            : %VS_GEN_PLATFORM_ARG%
+echo   USER_DEF_ARCH       : %USER_DEF_ARCH%
 echo =================================
 echo.
 
@@ -217,7 +223,6 @@ md "%PROJ_DIR%" || exit /b 1
 cd "%PROJ_DIR%" || exit /b 1
 
 set "SRC_DIR=..\..\..\..\src"
-
 set "CONFIGS=Debug MinSizeRel RelWithDebInfo Release"
 
 if /I "%COMPILER_TYPE%"=="mingw" (
@@ -225,10 +230,16 @@ if /I "%COMPILER_TYPE%"=="mingw" (
     set "CUR_CFG=%%c"
     set "MINGW_TARGET_ARGS="
     echo   BUILD FOR CONFIG             %BUILD_LIB_TYPE_ARG%   : !CUR_CFG!
-    if /I "%ARCH_PARAM%"=="ARM64" (
+
+    if /I "%ARCH_PARAM%"=="arm64" (
       set "MINGW_TARGET_ARGS=-DCMAKE_C_COMPILER_TARGET=aarch64-w64-windows-gnu -DCMAKE_CXX_COMPILER_TARGET=aarch64-w64-windows-gnu -DCMAKE_SYSTEM_PROCESSOR=aarch64"
-    ) else (
+    ) else if /I "%ARCH_PARAM%"=="x86_64" (
       set "MINGW_TARGET_ARGS=-DCMAKE_C_COMPILER_TARGET=x86_64-w64-windows-gnu -DCMAKE_CXX_COMPILER_TARGET=x86_64-w64-windows-gnu -DCMAKE_SYSTEM_PROCESSOR=x86_64"
+    ) else if /I "%ARCH_PARAM%"=="x86" (
+      set "MINGW_TARGET_ARGS=-DCMAKE_C_COMPILER_TARGET=i686-w64-windows-gnu -DCMAKE_CXX_COMPILER_TARGET=i686-w64-windows-gnu -DCMAKE_SYSTEM_PROCESSOR=x86"
+    ) else (
+      rem native => let toolchain decide
+      set "MINGW_TARGET_ARGS="
     )
 
     cmake "!SRC_DIR!" -G "Ninja" ^
@@ -252,7 +263,6 @@ if /I "%COMPILER_TYPE%"=="mingw" (
     cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE_ARG% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% || exit /b 1
   )
 
-  set "CONFIGS=Debug MinSizeRel RelWithDebInfo Release"
   for %%c in (%CONFIGS%) do (
     set "CUR_CFG=%%c"
     echo   BUILD FOR CONFIG             %BUILD_LIB_TYPE_ARG%   : !CUR_CFG!
@@ -267,8 +277,16 @@ goto :eof
 
 :gen_vsproj
 set "VS_GEN_PLATFORM_ARG="
-if /I "%ARCH_PARAM%"=="ARM64" set "VS_GEN_PLATFORM_ARG=-A ARM64"
-if /I "%ARCH_PARAM%"=="x64"   set "VS_GEN_PLATFORM_ARG=-A x64"
+if /I "%ARCH_PARAM%"=="arm64"  set "VS_GEN_PLATFORM_ARG=-A ARM64"
+if /I "%ARCH_PARAM%"=="x86_64" set "VS_GEN_PLATFORM_ARG=-A x64"
+if /I "%ARCH_PARAM%"=="x86"    set "VS_GEN_PLATFORM_ARG=-A Win32"
+
+rem Pass USER_DEF_ARCH to CMake if not native
+if /I not "%ARCH_PARAM%"=="native" (
+  set "USER_DEF_ARCH=%ARCH_PARAM%"
+) else (
+  set "USER_DEF_ARCH="
+)
 
 if /I "%COMPILER_TYPE%"=="mingw" (
   echo gen-vsproj requires MSVC or ClangCL. MinGW is not supported for Visual Studio solutions.
@@ -283,6 +301,7 @@ echo   JAVA_SUPPORT        : %JAVA_SUPPORT%
 echo   NODE_API_SUPPORT    : %NODE_API_SUPPORT%
 echo   BUILD_LIB_TYPE      : %BUILD_LIB_TYPE%
 echo   CMake -A            : %VS_GEN_PLATFORM_ARG%
+echo   USER_DEF_ARCH       : %USER_DEF_ARCH%
 echo =================================
 echo.
 
@@ -302,8 +321,9 @@ goto :eof
 
 :do_pack
 set "GEN_PLATFORM_ARG="
-if /I "%ARCH_PARAM%"=="ARM64" set "GEN_PLATFORM_ARG=-A ARM64"
-if /I "%ARCH_PARAM%"=="x64"   set "GEN_PLATFORM_ARG=-A x64"
+if /I "%ARCH_PARAM%"=="arm64"  set "GEN_PLATFORM_ARG=-A ARM64"
+if /I "%ARCH_PARAM%"=="x86_64" set "GEN_PLATFORM_ARG=-A x64"
+if /I "%ARCH_PARAM%"=="x86"    set "GEN_PLATFORM_ARG=-A Win32"
 
 echo.
 echo ===== Packaging =====
