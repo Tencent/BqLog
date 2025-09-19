@@ -19,7 +19,6 @@ set -e -u -o pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" >/dev/null 2>&1 && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." >/dev/null 2>&1 && pwd)"
 SRC_DIR="${REPO_ROOT}/src"
-INCLUDE_DIR="${REPO_ROOT}/include"
 DIST_DIR="${REPO_ROOT}/dist"
 PACK_DIR="${REPO_ROOT}/pack"
 
@@ -38,29 +37,30 @@ NODE_API_SUPPORT=""
 BUILD_LIB_TYPE=""
 APPLE_LIB_FORMAT=""
 
-to_lower() { print -r -- "$1" | tr '[:upper:]' '[:lower:]'; }
-to_upper() { print -r -- "$1" | tr '[:lower:]' '[:upper:]'; }
+# Helpers (zsh-native lowercase)
+to_lower() { print -r -- "${1:-}" | tr '[:upper:]' '[:lower:]'; }
+to_upper() { print -r -- "${1:-}" | tr '[:lower:]' '[:upper:]'; }
 
 normalize_onoff() {
-  case "$(to_lower "$1")" in
-    on|yes|1)  echo "ON" ;;
-    off|no|0)  echo "OFF" ;;
-    *)         echo "" ;;
+  local v="${1:-}"; v="${v:l}"  # zsh lowercase
+  case "$v" in
+    on|yes|y|1|true)  echo "ON" ;;
+    off|no|n|0|false) echo "OFF" ;;
+    *)                echo "" ;;
   esac
 }
 normalize_build_lib_type() {
-  case "$(to_lower "$1")" in
-    static_lib)  echo "static_lib" ;;
-    dynamic_lib) echo "dynamic_lib" ;;
-    *)           echo "" ;;
+  local v="${1:-}"; v="${v:l}"
+  case "$v" in
+    static_lib|dynamic_lib) echo "$v" ;;
+    *) echo "" ;;
   esac
 }
 normalize_format() {
-  case "$(to_lower "$1")" in
-    framework) echo "framework" ;;
-    dylib)     echo "dylib" ;;
-    a)         echo "a" ;;
-    *)         echo "" ;;
+  local v="${1:-}"; v="${v:l}"
+  case "$v" in
+    framework|dylib|a) echo "$v" ;;
+    *) echo "" ;;
   esac
 }
 
@@ -95,7 +95,7 @@ ask_build_lib_type() {
 }
 ask_format() {
   # If N-API is ON and dynamic lib, force dylib without prompting
-  if [[ "$NODE_API_SUPPORT" == "ON" && "$BUILD_LIB_TYPE" == "dynamic_lib" ]]; then
+  if [[ "${NODE_API_SUPPORT:-}" == "ON" && "${BUILD_LIB_TYPE:-}" == "dynamic_lib" ]]; then
     echo
     echo "Node-API is ON: dynamic library format is forced to 'dylib' (framework will not be produced)."
     APPLE_LIB_FORMAT="dylib"
@@ -118,8 +118,8 @@ ask_format() {
 }
 
 ensure_common_params() {
-  [[ -z "$JAVA_SUPPORT"     ]] && JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
-  [[ -z "$NODE_API_SUPPORT" ]] && NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
+  [[ -z "${JAVA_SUPPORT:-}"     ]] && JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
+  [[ -z "${NODE_API_SUPPORT:-}" ]] && NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
 }
 
 determine_generator() {
@@ -128,14 +128,10 @@ determine_generator() {
     xcode) echo "Xcode"; return ;;
     make|unix|makefiles) echo "Unix Makefiles"; return ;;
   esac
-  if command -v xcodebuild >/dev/null 2>&1; then
-    echo "Xcode"
-  else
-    echo "Unix Makefiles"
-  fi
+  if command -v xcodebuild >/dev/null 2>&1; then echo "Xcode"; else echo "Unix Makefiles"; fi
 }
 
-# Parse and normalize
+# Parse and normalize (non-interactive params)
 [[ -z "${ACTION:-}" ]] && ACTION="all"
 JAVA_SUPPORT="$(normalize_onoff "$ARG1")"
 NODE_API_SUPPORT="$(normalize_onoff "$ARG2")"
@@ -154,13 +150,14 @@ echo "  GENERATOR:         $(determine_generator)"
 typeset -a ARCH_ARGS
 ARCH_ARGS=("-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64")
 
-# Core build for one (libtype, format) across all BuildConfigs
+# Build one (libtype, format) across all configs
 build_one_pair() {
   local build_lib_type="$1"   # static_lib | dynamic_lib
   local apple_format="$2"     # framework | dylib | a
+  local gen proj_dir
+  gen="$(determine_generator)"
+  proj_dir="${SCRIPT_DIR}/proj_${build_lib_type}_${apple_format}"
 
-  local gen; gen="$(determine_generator)"
-  local proj_dir="${SCRIPT_DIR}/proj_${build_lib_type}_${apple_format}"
   rm -rf "${proj_dir}"
   mkdir -p "${proj_dir}"
   pushd "${proj_dir}" >/dev/null
@@ -215,9 +212,10 @@ build_one_pair() {
 gen_project_one() {
   local build_lib_type="$1"
   local apple_format="$2"
+  local gen proj_dir
+  gen="$(determine_generator)"
+  proj_dir="${SCRIPT_DIR}/vsproj_${build_lib_type}_${apple_format}"
 
-  local gen; gen="$(determine_generator)"
-  local proj_dir="${SCRIPT_DIR}/vsproj_${build_lib_type}_${apple_format}"
   rm -rf "${proj_dir}"
   mkdir -p "${proj_dir}"
   pushd "${proj_dir}" >/dev/null
@@ -257,7 +255,7 @@ gen_project_one() {
 
 # Build all combinations (respect N-API rule: dynamic => dylib only when ON)
 build_all_combos() {
-  if [[ "$NODE_API_SUPPORT" == "ON" ]]; then
+  if [[ "${NODE_API_SUPPORT:-}" == "ON" ]]; then
     # dynamic: dylib only
     build_one_pair "dynamic_lib" "dylib"
   else
@@ -304,7 +302,7 @@ do_pack() {
 
 # Enforce N-API rule on explicit build/gen requests
 enforce_napi_rule_if_needed() {
-  if [[ "$NODE_API_SUPPORT" == "ON" && "$BUILD_LIB_TYPE" == "dynamic_lib" && "${APPLE_LIB_FORMAT:-}" != "dylib" ]]; then
+  if [[ "${NODE_API_SUPPORT:-}" == "ON" && "${BUILD_LIB_TYPE:-}" == "dynamic_lib" && "${APPLE_LIB_FORMAT:-}" != "dylib" ]]; then
     echo "NODE_API_SUPPORT=ON: forcing dynamic_lib format to 'dylib' (was: ${APPLE_LIB_FORMAT:-unset})."
     APPLE_LIB_FORMAT="dylib"
   fi
@@ -313,23 +311,25 @@ enforce_napi_rule_if_needed() {
 # Dispatch
 case "$ACTION" in
   all)
-    ensure_common_params
+    # If CLI provided ON/OFF, use it; otherwise prompt
+    [[ -z "${JAVA_SUPPORT:-}"     ]] && JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
+    [[ -z "${NODE_API_SUPPORT:-}" ]] && NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
     build_all_combos
     do_pack
     echo "---------"; echo "Finished!"; echo "---------"
     ;;
   build)
     ensure_common_params
-    [[ -z "$BUILD_LIB_TYPE"   ]] && ask_build_lib_type
-    [[ -z "$APPLE_LIB_FORMAT" ]] && ask_format
+    [[ -z "${BUILD_LIB_TYPE:-}"   ]] && ask_build_lib_type
+    [[ -z "${APPLE_LIB_FORMAT:-}" ]] && ask_format
     enforce_napi_rule_if_needed
     build_one_pair "$BUILD_LIB_TYPE" "$APPLE_LIB_FORMAT"
     echo "---------"; echo "Finished!"; echo "---------"
     ;;
   gen-vsproj)
     ensure_common_params
-    [[ -z "$BUILD_LIB_TYPE"   ]] && ask_build_lib_type
-    [[ -z "$APPLE_LIB_FORMAT" ]] && ask_format
+    [[ -z "${BUILD_LIB_TYPE:-}"   ]] && ask_build_lib_type
+    [[ -z "${APPLE_LIB_FORMAT:-}" ]] && ask_format
     enforce_napi_rule_if_needed
     gen_project_one "$BUILD_LIB_TYPE" "$APPLE_LIB_FORMAT"
     echo "---------"; echo "Finished!"; echo "---------"
