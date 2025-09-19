@@ -217,7 +217,8 @@ build_one() {
       -DBUILD_SHARED_LIBS="$SHARED" \
       -DCMAKE_C_COMPILER="$CC" \
       -DCMAKE_CXX_COMPILER="$CXX"
-    make -j || exit 1
+    cmake --build . -- -j 4 || exit 1
+    cmake --install . || exit 1
   done
   cd ..
 }
@@ -261,6 +262,7 @@ do_pack() {
   echo "================================="
   echo
   cmake "$PACK_DIR" -DTARGET_PLATFORM:STRING=unix -DPACKAGE_NAME:STRING=bqlog-lib
+  cmake --build . --target package || exit 1
   make package
   cd ..
 }
