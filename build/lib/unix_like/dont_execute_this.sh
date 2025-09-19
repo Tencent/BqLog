@@ -34,42 +34,62 @@ BUILD_LIB_TYPE=""
 
 to_lower() { printf "%s" "$1" | tr '[:upper:]' '[:lower:]'; }
 to_upper() { printf "%s" "$1" | tr '[:lower:]' '[:upper:]'; }
+trim() { printf "%s" "$1" | awk '{$1=$1; print}'; }
 
 normalize_arch() {
   case "$(to_lower "$1")" in
     arm64) echo "arm64" ;;
     x86) echo "x86" ;;
-    x86_64|amd64) echo "x86_64" ;;
-    native|"") unamearch=$(uname -m)
+    x86_64|amd64|x64) echo "x86_64" ;;
+    native) unamearch=$(uname -m)
       case "$unamearch" in
         aarch64) echo "arm64" ;;
-        x86_64) echo "x86_64" ;;
+        x86_64|amd64) echo "x86_64" ;;
         i*86) echo "x86" ;;
         *) echo "$unamearch" ;;
       esac ;;
+    "") echo "" ;; # 空字符串不再自动识别，触发交互
     *) echo "" ;;
   esac
 }
 normalize_compiler() {
   case "$(to_lower "$1")" in
-    gcc) echo "gcc" ;;
-    clang) echo "clang" ;;
+    gcc|g) echo "gcc" ;;
+    clang|c) echo "clang" ;;
     *) echo "" ;;
   esac
 }
 normalize_onoff() {
-  case "$(to_upper "$1")" in
-    ON|YES|1) echo "ON" ;;
-    OFF|NO|0) echo "OFF" ;;
+  case "$(to_upper "$(trim "$1")")" in
+    ON|YES|TRUE|1|Y) echo "ON" ;;
+    OFF|NO|FALSE|0|N) echo "OFF" ;;
     *) echo "" ;;
   esac
 }
 normalize_build_lib_type() {
   case "$(to_lower "$1")" in
-    static_lib) echo "static_lib" ;;
-    dynamic_lib) echo "dynamic_lib" ;;
+    static_lib|static|s) echo "static_lib" ;;
+    dynamic_lib|shared|dynamic|d) echo "dynamic_lib" ;;
     *) echo "" ;;
   esac
+}
+
+# I/O helpers: print to tty/stderr; read from tty when possible
+_prompt() {
+  msg="$1"
+  if [ -w /dev/tty ] 2>/dev/null; then
+    printf "%s" "$msg" > /dev/tty
+  else
+    printf "%s" "$msg" >&2
+  fi
+}
+_read_tty() {
+  varname="$1"
+  if [ -r /dev/tty ] 2>/dev/null; then
+    IFS= read -r "$varname" < /dev/tty
+  else
+    IFS= read -r "$varname"
+  fi
 }
 
 ask_arch() {
@@ -77,16 +97,17 @@ ask_arch() {
   echo "Select architecture:"
   echo "  [A] arm64"
   echo "  [X] x86"
-  echo "  [Z] x86_64"
-  echo "  [N] native"
+  echo "  [Z] x86_64 (amd64/x64)"
+  echo "  [N] native (autodetect)"
   while :; do
-    printf "Enter choice (A/X/Z/N): "
-    read c
-    case "$(to_upper "$c")" in
-      A) ARCH_PARAM="arm64"; break ;;
-      X) ARCH_PARAM="x86"; break ;;
-      Z) ARCH_PARAM="x86_64"; break ;;
-      N) ARCH_PARAM="$(normalize_arch native)"; break ;;
+    _prompt "Enter choice (A/X/Z/N): "
+    _read_tty c_raw
+    c="$(to_lower "$(trim "$c_raw")")"
+    case "$c" in
+      a|arm64) ARCH_PARAM="arm64"; break ;;
+      x|x86) ARCH_PARAM="x86"; break ;;
+      z|x86_64|amd64|x64) ARCH_PARAM="x86_64"; break ;;
+      n|native) ARCH_PARAM="$(normalize_arch native)"; break ;;
     esac
   done
 }
@@ -96,22 +117,27 @@ ask_compiler() {
   echo "  [G] GCC"
   echo "  [C] Clang"
   while :; do
-    printf "Enter choice (G/C): "
-    read c
-    case "$(to_upper "$c")" in
-      G) COMPILER_TYPE="gcc"; break ;;
-      C) COMPILER_TYPE="clang"; break ;;
+    _prompt "Enter choice (G/C or gcc/clang): "
+    _read_tty c_raw
+    c="$(to_lower "$(trim "$c_raw")")"
+    case "$c" in
+      g|gcc) COMPILER_TYPE="gcc"; break ;;
+      c|clang) COMPILER_TYPE="clang"; break ;;
     esac
   done
 }
 ask_yes_no() {
   prompt="$1"
   while :; do
-    printf "%s (Y/N): " "$prompt"
-    read c
-    case "$(to_upper "$c")" in
-      Y) echo "ON"; break ;;
-      N) echo "OFF"; break ;;
+    _prompt "$prompt (Y/N): "
+    _read_tty c_raw
+    c="$(to_upper "$(trim "$c_raw")")"
+    # 取第一个单词，避免用户一次粘贴 "YES NO"
+    set -- $c
+    c="$1"
+    case "$c" in
+      Y|YES|ON|TRUE|1) echo "ON"; break ;;
+      N|NO|OFF|FALSE|0) echo "OFF"; break ;;
     esac
   done
 }
@@ -121,11 +147,12 @@ ask_build_lib_type() {
   echo "  [S] static_lib"
   echo "  [D] dynamic_lib"
   while :; do
-    printf "Enter choice (S/D): "
-    read c
-    case "$(to_upper "$c")" in
-      S) BUILD_LIB_TYPE="static_lib"; break ;;
-      D) BUILD_LIB_TYPE="dynamic_lib"; break ;;
+    _prompt "Enter choice (S/D): "
+    _read_tty c_raw
+    c="$(to_lower "$(trim "$c_raw")")"
+    case "$c" in
+      s|static|static_lib) BUILD_LIB_TYPE="static_lib"; break ;;
+      d|dynamic|shared|dynamic_lib) BUILD_LIB_TYPE="dynamic_lib"; break ;;
     esac
   done
 }
@@ -135,6 +162,13 @@ ensure_common_params() {
   [ -z "$COMPILER_TYPE" ] && ask_compiler
   [ -z "$JAVA_SUPPORT" ] && JAVA_SUPPORT=$(ask_yes_no "Enable Java/JNI support?")
   [ -z "$NODE_API_SUPPORT" ] && NODE_API_SUPPORT=$(ask_yes_no "Enable Node-API (Node.js) support?")
+  echo
+  echo "Parameters:"
+  echo "  ARCH             : $ARCH_PARAM"
+  echo "  COMPILER         : $COMPILER_TYPE"
+  echo "  JAVA_SUPPORT     : $JAVA_SUPPORT"
+  echo "  NODE_API_SUPPORT : $NODE_API_SUPPORT"
+  echo
 }
 ensure_arch_only() {
   ARCH_PARAM="$(normalize_arch native)"
@@ -146,7 +180,8 @@ if [ "$ACTION" = "dynamic_lib" ]; then BUILD_LIB_TYPE="dynamic_lib"; ACTION="bui
 if [ "$ACTION" = "static_lib" ]; then BUILD_LIB_TYPE="static_lib"; ACTION="build"; fi
 [ -z "$ACTION" ] && ACTION="all"
 
-ARCH_PARAM="$(normalize_arch "$ARG1")"
+# 只有传入时才解析 arch，否则触发交互
+if [ -n "$ARG1" ]; then ARCH_PARAM="$(normalize_arch "$ARG1")"; fi
 COMPILER_TYPE="$(normalize_compiler "$ARG2")"
 JAVA_SUPPORT="$(normalize_onoff "$ARG3")"
 NODE_API_SUPPORT="$(normalize_onoff "$ARG4")"
