@@ -137,6 +137,7 @@ if(BUILD_TYPE STREQUAL "static_lib")
     add_library(BqLog STATIC ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
 else()
     # build dynamic library
+    add_compile_definitions(BQ_DYNAMIC_LIB)
     add_library(BqLog SHARED ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
 endif()
 
