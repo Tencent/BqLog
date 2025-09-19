@@ -215,15 +215,19 @@ if(TARGET_PLATFORM STREQUAL "mac")
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif()
 
-if(NODE_API_SUPPORT)
-    add_compile_definitions(BQ_DYNAMIC_LIB)
-    add_library(BqLog MODULE ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
-elseif(BUILD_LIB_TYPE STREQUAL "static_lib")
+
+if(BUILD_LIB_TYPE STREQUAL "static_lib")
     # build static library
     add_library(BqLog STATIC ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
 else()
     # build dynamic library
-    add_library(BqLog SHARED ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+    add_compile_definitions(BQ_DYNAMIC_LIB)
+    if(NODE_API_SUPPORT)
+        add_library(BqLog MODULE ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+        set_target_properties(BqLog PROPERTIES PREFIX "" SUFFIX ".node")
+    else()
+        add_library(BqLog SHARED ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+    endif()
 endif()
 
 

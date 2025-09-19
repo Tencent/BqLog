@@ -218,11 +218,13 @@ cd "%PROJ_DIR%" || exit /b 1
 
 set "SRC_DIR=..\..\..\..\src"
 
+set "CONFIGS=Debug MinSizeRel RelWithDebInfo Release"
+
 if /I "%COMPILER_TYPE%"=="mingw" (
-  set "CONFIGS=Debug MinSizeRel RelWithDebInfo Release"
   for %%c in (%CONFIGS%) do (
     set "CUR_CFG=%%c"
     set "MINGW_TARGET_ARGS="
+    echo   BUILD FOR CONFIG             %BUILD_LIB_TYPE_ARG%   : !CUR_CFG!
     if /I "%ARCH_PARAM%"=="ARM64" (
       set "MINGW_TARGET_ARGS=-DCMAKE_C_COMPILER_TARGET=aarch64-w64-windows-gnu -DCMAKE_CXX_COMPILER_TARGET=aarch64-w64-windows-gnu -DCMAKE_SYSTEM_PROCESSOR=aarch64"
     ) else (
@@ -253,6 +255,7 @@ if /I "%COMPILER_TYPE%"=="mingw" (
   set "CONFIGS=Debug MinSizeRel RelWithDebInfo Release"
   for %%c in (%CONFIGS%) do (
     set "CUR_CFG=%%c"
+    echo   BUILD FOR CONFIG             %BUILD_LIB_TYPE_ARG%   : !CUR_CFG!
     cmake --build . --config !CUR_CFG! --parallel %BUILD_JOBS% || exit /b 1
     cmake --install . --config !CUR_CFG! || exit /b 1
   )
