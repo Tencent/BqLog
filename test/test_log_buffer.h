@@ -202,7 +202,7 @@ namespace bq {
         public:
             static constexpr uint32_t min_chunk_size = 12;
             static constexpr uint32_t max_chunk_size = 1024;
-            static constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
+            static constexpr uint32_t min_oversize_chunk_size = 32 * 1024; // 32K
             static constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
             static constexpr int32_t oversize_chunk_frequency = 1677;
             static constexpr int32_t auto_expand_sleep_frequency = 1024;
