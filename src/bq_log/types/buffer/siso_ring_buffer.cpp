@@ -66,15 +66,17 @@ namespace bq {
 
         uint32_t size_required = size + (uint32_t)data_block_offset;
         uint32_t need_block_count = static_cast<uint32_t>((size_required + (BLOCK_SIZE - 1)) >> BLOCK_SIZE_LOG2);
-        if (need_block_count > aligned_blocks_count_ || need_block_count == 0) {
+        block& new_block = cursor_to_block(head_->wt_writing_cursor_cache_);
+        uint32_t left_blocks_to_tail = static_cast<uint32_t>(aligned_blocks_count_ - (uint32_t)(&new_block - aligned_blocks_));
+        BQ_UNLIKELY_IF (need_block_count > aligned_blocks_count_
+            || need_block_count == 0
+            || (need_block_count > left_blocks_to_tail && (need_block_count + left_blocks_to_tail) > aligned_blocks_count_)) {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
 #endif
             handle.result = enum_buffer_result_code::err_alloc_size_invalid;
             return handle;
         }
-        block& new_block = cursor_to_block(head_->wt_writing_cursor_cache_);
-        uint32_t left_blocks_to_tail = static_cast<uint32_t>(aligned_blocks_count_ - (uint32_t)(&new_block - aligned_blocks_));
         if (left_blocks_to_tail < need_block_count) {
             size_required = size;
             need_block_count = static_cast<uint32_t>((size_required + (BLOCK_SIZE - 1)) >> BLOCK_SIZE_LOG2);
