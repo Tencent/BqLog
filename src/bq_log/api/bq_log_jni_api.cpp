@@ -373,6 +373,11 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv
     return ret;
 }
 
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_take_snapshot_string
+ * Signature: (JZ)Ljava/lang/String;
+ */
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jboolean use_gmt_time)
 {
     bq::_api_string_def snapshot_str_def;
@@ -425,6 +430,18 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1callback
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1enable(JNIEnv*, jclass, jboolean enable)
 {
     bq::log::set_console_buffer_enable(enable);
+}
+
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_reset_base_dir
+ * Signature: (ZLjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir(JNIEnv* env, jclass, jboolean in_sandbox, jstring dir)
+{
+    const char* dir_c_str = env->GetStringUTFChars(dir, NULL);
+    bq::api::__api_reset_base_dir((bool)in_sandbox, dir_c_str);
+    env->ReleaseStringUTFChars(dir, dir_c_str);
 }
 
 static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)

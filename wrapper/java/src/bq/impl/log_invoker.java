@@ -65,5 +65,7 @@ public class log_invoker {
 	
 	public static native void __api_set_console_buffer_enable(boolean enable);
 	
+	public static native void __api_reset_base_dir(boolean in_sandbox, String dir);
+	
 	public static native boolean __api_fetch_and_remove_console_buffer(Object callback);
 }

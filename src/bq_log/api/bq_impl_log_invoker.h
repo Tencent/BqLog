@@ -217,6 +217,14 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1
 
 /*
  * Class:     bq_impl_log_invoker
+ * Method:    __api_reset_base_dir
+ * Signature: (ZLjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir
+  (JNIEnv *, jclass, jboolean, jstring);
+
+/*
+ * Class:     bq_impl_log_invoker
  * Method:    __api_fetch_and_remove_console_buffer
  * Signature: (Ljava/lang/Object;)Z
  */

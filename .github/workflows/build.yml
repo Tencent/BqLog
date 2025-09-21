@@ -23,7 +23,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\lib\win64  
-          .\BuildAll_AndPack_MSVC.bat
+          .\build_all_and_pack.bat native msvc YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -46,7 +46,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\lib\win64  
-          .\BuildAll_AndPack_Clang.bat
+          .\build_all_and_pack.bat native clang YES NO
 
   build_windows_x86_64_lib_MinGW:
     runs-on: windows-latest
@@ -98,7 +98,7 @@ jobs:
         shell: cmd
         run: |
           cd build\lib\win64
-          call BuildAll_AndPack_MinGW.bat
+          call build_all_and_pack.bat native mingw YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -121,7 +121,7 @@ jobs:
       - name: Build Tools
         run: |
           cd build\tools\win64 
-          .\BuildAll_And_Pack_Tools.bat
+          .\build_all_and_pack.bat
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -144,7 +144,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\lib\win64  
-          .\BuildAll_AndPack_MSVC.bat arm64
+          .\build_all_and_pack.bat arm64 msvc YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -167,7 +167,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\lib\win64  
-          .\BuildAll_AndPack_Clang.bat arm64
+          .\build_all_and_pack.bat arm64 clang YES NO
 
   build_windows_arm64_lib_MinGW:
     runs-on: windows-11-arm
@@ -219,7 +219,7 @@ jobs:
         shell: cmd
         run: |
           cd build\lib\win64
-          call BuildAll_AndPack_MinGW.bat arm64
+          call build_all_and_pack.bat native mingw YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -242,7 +242,7 @@ jobs:
       - name: Build Tools
         run: |
           cd build\tools\win64 
-          .\BuildAll_And_Pack_Tools.bat arm64
+          .\build_all_and_pack.bat arm64
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -277,15 +277,14 @@ jobs:
       - name: Build for Windows Android
         run: |
           cd build\lib\android
-          chmod +x .\Win_BuildAll_AndPack.sh
-          .\Win_BuildAll_AndPack.bat
+          .\win_build_all_and_pack.bat
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android_artifact
+          name: android_libs
           path: ${{ github.workspace }}/dist
 
   build_mac_android:
@@ -315,7 +314,7 @@ jobs:
         run: |
           cd build/lib/android
           chmod +x *.sh
-          ./Mac_BuildAll_AndPack.sh
+          ./mac_build_all_and_pack.sh
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
@@ -345,8 +344,8 @@ jobs:
       - name: Build for Linux Android
         run: |
           cd build/lib/android
-          chmod +x ./Linux_BuildAll_AndPack.sh
-          ./Linux_BuildAll_AndPack.sh
+          chmod +x ./*.sh
+          ./linux_build_all_and_pack.sh
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
@@ -368,7 +367,7 @@ jobs:
         run: |
           cd build/lib/linux  
           chmod +x *.sh
-          ./BuildAll_AndPack_Clang.sh
+          ./build_all_and_pack.sh native clang YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -392,7 +391,7 @@ jobs:
         run: |
           cd build/lib/linux  
           chmod +x *.sh
-          ./BuildAll_AndPack_GCC.sh
+          ./build_all_and_pack.sh native gcc YES NO
 
   build_ubuntu_x86_64_tools_Clang:
     runs-on: ubuntu-latest
@@ -412,7 +411,7 @@ jobs:
           chmod +x category_log_generator/*.sh
           chmod +x log_decoder/*.sh
           chmod +x *.sh
-          ./BuildAll_And_Pack_Tools_Clang.sh
+          ./build_all_and_pack_clang.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -438,7 +437,7 @@ jobs:
           chmod +x category_log_generator/*.sh
           chmod +x log_decoder/*.sh
           chmod +x *.sh
-          ./BuildAll_And_Pack_Tools_GCC.sh
+          ./build_all_and_pack_gcc.sh
 
 
   #Linux-ubuntu-arm64
@@ -458,7 +457,7 @@ jobs:
         run: |
           cd build/lib/linux  
           chmod +x *.sh
-          ./BuildAll_AndPack_Clang.sh
+          ./build_all_and_pack.sh native clang YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -482,7 +481,7 @@ jobs:
         run: |
           cd build/lib/linux  
           chmod +x *.sh
-          ./BuildAll_AndPack_GCC.sh
+          ./build_all_and_pack.sh native gcc YES NO
 
   build_ubuntu_arm64_tools_Clang:
     runs-on: ubuntu-24.04-arm
@@ -502,7 +501,7 @@ jobs:
           chmod +x category_log_generator/*.sh
           chmod +x log_decoder/*.sh
           chmod +x *.sh
-          ./BuildAll_And_Pack_Tools_Clang.sh
+          ./build_all_and_pack_clang.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -528,7 +527,7 @@ jobs:
           chmod +x category_log_generator/*.sh
           chmod +x log_decoder/*.sh
           chmod +x *.sh
-          ./BuildAll_And_Pack_Tools_GCC.sh
+          ./build_all_and_pack_gcc.sh
 
   #Linux-debian-x86
   build_debian_x86_lib_Clang:
@@ -571,7 +570,7 @@ jobs:
         run: |
           cd build/lib/linux  
           chmod +x *.sh
-          ./BuildAll_AndPack_GCC.sh 
+          ./build_all_and_pack.sh native clang YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -619,7 +618,7 @@ jobs:
         run: |
           cd build/lib/linux  
           chmod +x *.sh
-          ./BuildAll_AndPack_GCC.sh 
+          ./build_all_and_pack.sh native gcc YES NO
 
   build_debian_x86_tools_Clang:
     runs-on: ubuntu-latest
@@ -663,7 +662,7 @@ jobs:
           chmod +x category_log_generator/*.sh
           chmod +x log_decoder/*.sh 
           chmod +x *.sh
-          ./BuildAll_And_Pack_Tools_Clang.sh 
+          ./build_all_and_pack_clang.sh 
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -713,7 +712,7 @@ jobs:
           chmod +x category_log_generator/*.sh
           chmod +x log_decoder/*.sh
           chmod +x *.sh
-          ./BuildAll_And_Pack_Tools_GCC.sh 
+          ./build_all_and_pack_gcc.sh 
 
 
   #Mac
@@ -727,7 +726,7 @@ jobs:
         run: |
           cd build/lib/mac  
           chmod +x *.sh
-          ./BuildAll_AndPack.sh
+          ./build_all_and_pack.sh YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -747,7 +746,7 @@ jobs:
           chmod +x category_log_generator/*.sh
           chmod +x log_decoder/*.sh
           chmod +x *.sh
-          ./BuildAll_And_Pack_Tools.sh
+          ./build_all_and_pack.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -782,7 +781,8 @@ jobs:
             cd build/lib/unix_like  
             chmod +x *.sh
             ls -l
-            ./BuildAll_AndPack_Clang.sh freebsd
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -815,7 +815,8 @@ jobs:
             cd build/lib/unix_like  
             chmod +x *.sh
             ls -l
-            ./BuildAll_AndPack_GCC.sh freebsd
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES NO
 
   build_freebsd_x86_64_tools_Clang:
     runs-on: ubuntu-latest
@@ -844,7 +845,8 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            ./BuildAll_And_Pack_Tools_Clang.sh freebsd
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_clang.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -879,7 +881,8 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            ./BuildAll_And_Pack_Tools_GCC.sh freebsd
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_gcc.sh
 
   #iOS
   build_ios_lib:
@@ -892,7 +895,7 @@ jobs:
         run: |
           cd build/lib/ios  
           chmod +x *.sh
-          ./BuildAll_AndPack.sh
+          ./build_all_and_pack.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -916,10 +919,35 @@ jobs:
       - name: Build for Java
         run: |
           cd build\wrapper\java  
-          .\BuildAll_AndPack.bat
+          .\build_all_and_pack.bat
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: java_wrapper
+          path: ${{ github.workspace }}/dist
+
+  #C# wrapper
+  build_windows_csharp_wrapper:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install and Pack
+        run: |
+          robocopy ".\wrapper\csharp" ".\install\wrapper\csharp" /E /R:0 /W:0
+          robocopy ".\docs" ".\install\docs" /E /R:0 /W:0
+          robocopy ".\" ".\install" *.md /R:0 /W:0
+          cd .\build\wrapper\csharp\
+          mkdir pack
+          cd pack
+          cmake ../../../../pack -G "Unix Makefiles" -DTARGET_PLATFORM:STRING=all -DPACKAGE_NAME:STRING=bqlog-c#-wrapper
+          cmake --build . --config Release --target package
+          cd ..
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: c#_wrapper
           path: ${{ github.workspace }}/dist

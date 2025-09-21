@@ -133,6 +133,8 @@ namespace bq {
         bool is_read_chunk_waiting_for_return_ = false;
 #endif
     public:
+        miso_ring_buffer() = delete;
+
         miso_ring_buffer(const log_buffer_config& config);
 
         miso_ring_buffer(const miso_ring_buffer& rhs) = delete;

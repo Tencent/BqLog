@@ -206,6 +206,11 @@ namespace bq {
         return result;
     }
 
+    inline void log::reset_base_dir(bool in_sandbox, const bq::string& dir)
+    {
+        bq::api::__api_reset_base_dir(in_sandbox, dir.c_str());
+    }
+
     template <typename STR>
     bq_forceinline bq::tuple<const char*, uint32_t> get_stack_trace()
     {

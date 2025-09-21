@@ -218,6 +218,14 @@ namespace bq {
         BQ_API void __api_set_console_buffer_enable(bool enable);
 
         /// <summary>
+        /// reset the base dir in runtime
+        /// </summary>
+        /// <param name="in_sandbox"></param>
+        /// <param name="dir"></param>
+        /// <returns></returns>
+        BQ_API void __api_reset_base_dir(bool in_sandbox, const char* dir);
+
+        /// <summary>
         /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
         /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry.
         /// Please ensure not to output synchronized BQ logs within the callback function.

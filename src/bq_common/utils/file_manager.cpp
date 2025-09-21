@@ -28,10 +28,6 @@ namespace bq {
     {
         seq_generator = 0;
         FILE_MANAGER_LOG(log_level::info, "file_manager is constructed");
-#if !defined(BQ_ANDROID)
-        FILE_MANAGER_LOG(log_level::info, "internal storage path:%s", get_base_dir(true).c_str());
-        FILE_MANAGER_LOG(log_level::info, "external storage path:%s", get_base_dir(false).c_str());
-#endif
     }
 
     file_manager::~file_manager()

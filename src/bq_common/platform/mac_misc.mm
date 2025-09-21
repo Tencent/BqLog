@@ -42,14 +42,9 @@ namespace bq {
 			{
 				tmp.fill_uninitialized(1024);
 			}
-            base_dir_0_ = &tmp[0];
+            set_base_dir_0(&tmp[0]);
+            set_base_dir_1(&tmp[0]);
         }
-
-		const bq::string& get_base_dir(bool is_sandbox)
-		{
-			(void)is_sandbox;
-			return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
-		}
 
         bool share_file(const char* file_path)
 		{

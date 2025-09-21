@@ -205,7 +205,7 @@ namespace bq {
         /// <returns></returns>
         bool is_valid() const
         {
-            return get_id() > 0;
+            return get_id() != 0;
         }
 
         /// <summary>
@@ -224,6 +224,13 @@ namespace bq {
         /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
         /// <returns>the decoded snapshot buffer</returns>
         bq::string take_snapshot(bool use_gmt_time) const;
+
+        /// <summary>
+        /// Reset the base dir
+        /// </summary>
+        /// <param name="in_sandbox"></param>
+        /// <param name="dir"></param>
+        void reset_base_dir(bool in_sandbox, const bq::string& dir);
 
     public:
         /// Core log functions, there are 6 log levels:

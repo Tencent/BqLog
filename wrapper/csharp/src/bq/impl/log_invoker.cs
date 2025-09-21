@@ -99,6 +99,9 @@ namespace bq.impl
         public static unsafe extern void __api_set_console_buffer_enable(bool enable);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
+        public static unsafe extern void __api_reset_base_dir(bool in_sandbox, byte* dir_utf8);
+
+        [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern bool __api_fetch_and_remove_console_buffer(type_func_ptr_console_buffer_fetch_callback on_console_callback, IntPtr pass_through_param);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]

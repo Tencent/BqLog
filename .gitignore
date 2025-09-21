@@ -4,3 +4,6 @@ install/
 .vscode/
 .idea/
 **/cmake*/
+node_modules/
+package.json
+package-lock.json

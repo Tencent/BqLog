@@ -13,7 +13,7 @@
 //
 //  bq_common.h
 //  include this file when static link bq_common library
-//  Created by Yu Cao on 2022/8/31.
+//  Created by pippocao on 2022/8/31.
 //
 
 #ifdef NDEBUG

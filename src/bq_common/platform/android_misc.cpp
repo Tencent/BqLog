@@ -270,16 +270,6 @@ namespace bq {
             common_global_vars::get().android_asset_manager_inst_ = AAssetManager_fromJava(env, common_global_vars::get().android_asset_manager_java_instance_);
         }
 
-        const bq::string& get_base_dir(bool is_sandbox)
-        {
-            assert(bq::platform::get_jvm() && "JNI_Onload was not invoked yet");
-            if (is_sandbox) {
-                return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
-            } else {
-                return common_global_vars::get().base_dir_init_inst_.base_dir_1_;
-            }
-        }
-
         const bq::string& get_android_id()
         {
             if (!common_global_vars::get().android_id_.is_empty())
@@ -502,8 +492,8 @@ namespace bq {
             init_android_reflection_variables();
             init_android_asset_manager();
 
-            common_global_vars::get().base_dir_init_inst_.base_dir_0_ = get_files_dir();
-            common_global_vars::get().base_dir_init_inst_.base_dir_1_ = get_external_files_dir();
+            common_global_vars::get().base_dir_init_inst_.set_base_dir_0(get_files_dir());
+            common_global_vars::get().base_dir_init_inst_.set_base_dir_1(get_external_files_dir());
 
             bq::util::log_device_console(log_level::info, "internal storage path:%s", get_base_dir(true).c_str());
             bq::util::log_device_console(log_level::info, "external storage path:%s", get_base_dir(false).c_str());
@@ -512,33 +502,33 @@ namespace bq {
             // for sand box dir: internal storage -> external storage -> cache storage
             // for not in sand box dir: external storage -> internal storage -> cache storage
             bool need_alarm = false;
-            if (common_global_vars::get().base_dir_init_inst_.base_dir_0_.is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.base_dir_0_)) {
+            if (common_global_vars::get().base_dir_init_inst_.get_base_dir_0().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_0())) {
                 bq::string candidiate_path;
-                if (common_global_vars::get().base_dir_init_inst_.base_dir_1_.is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.base_dir_1_)) {
+                if (common_global_vars::get().base_dir_init_inst_.get_base_dir_1().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_1())) {
                     need_alarm = true;
                     candidiate_path = get_cache_dir();
                 } else {
-                    candidiate_path = common_global_vars::get().base_dir_init_inst_.base_dir_1_;
+                    candidiate_path = common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
                 }
                 __android_log_print(ANDROID_LOG_WARN, "Bq",
-                    "common_global_vars::get().base_dir_init_inst_.base_dir_0_:\"%s\" can_write_to_dir = false, use \"%s\" instead",
-                    common_global_vars::get().base_dir_init_inst_.base_dir_0_.c_str(),
+                    "common_global_vars::get().base_dir_init_inst_.get_base_dir_0():\"%s\" can_write_to_dir = false, use \"%s\" instead",
+                    common_global_vars::get().base_dir_init_inst_.get_base_dir_0().c_str(),
                     candidiate_path.c_str());
-                common_global_vars::get().base_dir_init_inst_.base_dir_0_ = candidiate_path;
+                common_global_vars::get().base_dir_init_inst_.set_base_dir_0(candidiate_path);
             }
-            if (common_global_vars::get().base_dir_init_inst_.base_dir_1_.is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.base_dir_1_)) {
+            if (common_global_vars::get().base_dir_init_inst_.get_base_dir_1().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_1())) {
                 bq::string candidiate_path;
-                if (common_global_vars::get().base_dir_init_inst_.base_dir_0_.is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.base_dir_0_)) {
+                if (common_global_vars::get().base_dir_init_inst_.get_base_dir_0().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_0())) {
                     need_alarm = true;
                     candidiate_path = get_cache_dir();
                 } else {
-                    candidiate_path = common_global_vars::get().base_dir_init_inst_.base_dir_0_;
+                    candidiate_path = common_global_vars::get().base_dir_init_inst_.get_base_dir_0();
                 }
                 __android_log_print(ANDROID_LOG_WARN, "Bq",
-                    "common_global_vars::get().base_dir_init_inst_.base_dir_1_:\"%s\" can_write_to_dir = false, use \"%s\" instead",
-                    common_global_vars::get().base_dir_init_inst_.base_dir_1_.c_str(),
+                    "common_global_vars::get().base_dir_init_inst_.get_base_dir_1():\"%s\" can_write_to_dir = false, use \"%s\" instead",
+                    common_global_vars::get().base_dir_init_inst_.get_base_dir_1().c_str(),
                     candidiate_path.c_str());
-                common_global_vars::get().base_dir_init_inst_.base_dir_1_ = candidiate_path;
+                common_global_vars::get().base_dir_init_inst_.set_base_dir_1(candidiate_path);
             }
             if (need_alarm) {
                 __android_log_print(ANDROID_LOG_ERROR, "Bq", "If you are using BQ in isolateProcess Android Service, you may not have any I/O read/write permissions, and all file read/write operations will fail.");

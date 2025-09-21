@@ -30,7 +30,7 @@ message(STATUS "BQ_LOG_VERSION=${BQ_LOG_VERSION}")
 project(${PROJ_NAME} VERSION ${BQ_LOG_VERSION})
 
 # Java compile flags: UTF-8, suppress warnings, include debug info for IDE symbol mapping
-set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn" "-g" "-source" "1.8" "-target" "1.8")
+set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn" "-g" "-parameters" "-source" "1.8" "-target" "1.8")
 
 ############################################################
 # Search Source Files

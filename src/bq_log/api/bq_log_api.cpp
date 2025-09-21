@@ -442,6 +442,16 @@ namespace bq {
             appender_console::set_console_buffer_enable(enable);
         }
 
+        BQ_API void __api_reset_base_dir(bool in_sandbox, const char* dir)
+        {
+            if (in_sandbox) {
+                return common_global_vars::get().base_dir_init_inst_.set_base_dir_0(dir);
+            }
+            else {
+                return common_global_vars::get().base_dir_init_inst_.set_base_dir_1(dir);
+            }
+        }
+
         BQ_API bool __api_fetch_and_remove_console_buffer(bq::type_func_ptr_console_buffer_fetch_callback on_console_callback, const void* pass_through_param)
         {
             return appender_console::fetch_and_remove_from_console_buffer(on_console_callback, pass_through_param);

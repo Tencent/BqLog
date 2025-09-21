@@ -45,6 +45,9 @@
 #if defined(BQ_POSIX)
 #include "bq_common/platform/posix_misc.h"
 #endif
+#if defined(BQ_NAPI)
+#include "bq_common/platform/napi_misc.h"
+#endif
 
 namespace bq {
     namespace platform {
@@ -70,8 +73,17 @@ namespace bq {
         }
 
         struct base_dir_initializer {
+        private:
             bq::string base_dir_0_;
             bq::string base_dir_1_;
+
+        public:
+            const bq::string& get_base_dir_0() const { return base_dir_0_; }
+            const bq::string& get_base_dir_1() const { return base_dir_1_; }
+
+            void set_base_dir_0(const bq::string& dir);
+            void set_base_dir_1(const bq::string& dir);
+
             base_dir_initializer();
         };
 

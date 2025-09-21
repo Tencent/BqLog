@@ -369,7 +369,7 @@ public class log {
      */
     public boolean is_valid()
     {
-        return get_id() > 0;
+        return get_id() != 0;
     }
 
     /**
@@ -392,6 +392,16 @@ public class log {
 	public String take_snapshot(boolean use_gmt_time)
 	{
 		return bq.impl.log_invoker.__api_take_snapshot_string(log_id_, use_gmt_time);
+	}
+	
+	/**
+	 * Reset the base dir
+	 * @param in_sandbox
+	 * @param dir
+	 */
+	public void reset_base_dir(boolean in_sandbox, String dir)
+	{
+		bq.impl.log_invoker.__api_reset_base_dir(in_sandbox, dir);
 	}
 
     @Override

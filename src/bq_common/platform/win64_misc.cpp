@@ -95,17 +95,13 @@ namespace bq {
             static_assert(sizeof(char16_t) == sizeof(WCHAR), "WCHAR must be 16bits on WIndows Platform!");
             const char16_t* wpath = (const char16_t*)_wgetcwd(nullptr, 0);
             uint32_t wpath_len = (uint32_t)wcslen((LPCWSTR)wpath);
-            base_dir_0_.reset();
-            base_dir_0_.fill_uninitialized((size_t)wpath_len * 3 + 2);
-            size_t utf8_len = (size_t)bq::util::utf16_to_utf8(wpath, wpath_len, base_dir_0_.begin(), (uint32_t)base_dir_0_.size());
-            assert(utf8_len < base_dir_0_.size() && "base_dir utf16_to_utf8 size error!");
-            base_dir_0_.erase(base_dir_0_.begin() + static_cast<ptrdiff_t>(utf8_len), base_dir_0_.size() - utf8_len);
-        }
-
-        const bq::string& get_base_dir(bool is_sandbox)
-        {
-            (void)is_sandbox;
-            return common_global_vars::get().base_dir_init_inst_.base_dir_0_;
+            bq::string base_dir;
+            base_dir.fill_uninitialized((size_t)wpath_len * 3 + 2);
+            size_t utf8_len = (size_t)bq::util::utf16_to_utf8(wpath, wpath_len, base_dir.begin(), (uint32_t)base_dir.size());
+            assert(utf8_len < base_dir.size() && "base_dir utf16_to_utf8 size error!");
+            base_dir.erase(base_dir.begin() + static_cast<ptrdiff_t>(utf8_len), base_dir.size() - utf8_len);
+            set_base_dir_0(base_dir);
+            set_base_dir_1(base_dir);
         }
 
         int32_t get_file_size(const char* file_path, size_t& size_ref)
