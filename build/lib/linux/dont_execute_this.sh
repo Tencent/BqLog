@@ -357,7 +357,7 @@ gen_vsproj() {
 
   cmake "${SRC_DIR}" -G "${GEN}" \
     -DTARGET_PLATFORM:STRING=linux \
-    -DBUILD_TYPE="${BUILD_LIB_TYPE}" \
+    -DBUILD_LIB_TYPE="${BUILD_LIB_TYPE}" \
     -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
     -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
     -DCMAKE_BUILD_TYPE=Debug \

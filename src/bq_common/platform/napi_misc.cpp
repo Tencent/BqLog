@@ -22,11 +22,12 @@ namespace bq {
     BQ_TLS_NON_POD(bq::array<napi_value>, tls_argv_array_);
     namespace platform {
         //Only single env is supported for now
-        static napi_threadsafe_function tsfn_dispatcher_for_native_func_;
-        static napi_threadsafe_function tsfn_dispatcher_for_js_func_;
+        static napi_threadsafe_function tsfn_dispatcher_for_native_func_ = nullptr;
+        static napi_threadsafe_function tsfn_dispatcher_for_js_func_ = nullptr;
 
-        static bq::array<napi_property_descriptor> napi_registered_init_functions_;
-        static bq::platform::mutex napi_init_function_registration_mutex_;
+        static spin_lock_zero_init napi_init_mutex_;
+        static bool is_napi_initialized_ = false;
+        static bq::array<napi_property_descriptor>* napi_registered_init_functions_ = nullptr;
 
         struct native_func_call_ctx {
             void(*fn)(napi_env, void*);
@@ -61,13 +62,21 @@ namespace bq {
 
         napi_init_function_register::napi_init_function_register(void (*init_callback)(napi_env env, napi_value exports))
         {
+            bq::platform::scoped_mutex lock(common_global_vars::get().napi_init_mutex_);
             common_global_vars::get().napi_init_callbacks_inst_.push_back(init_callback);
         }
 
         __napi_func_register_helper::__napi_func_register_helper(const char* name, napi_callback func)
         {
-            bq::platform::scoped_mutex lock(napi_init_function_registration_mutex_);
-            napi_registered_init_functions_.push_back(napi_property_descriptor{name, 0, func, 0, 0, 0, napi_default, 0});
+            bq::platform::scoped_spin_lock lock(napi_init_mutex_);
+            if (is_napi_initialized_) {
+                //already initialized, ignore new registrations
+                return;
+            }
+            if (!napi_registered_init_functions_) {
+                napi_registered_init_functions_ = new bq::array<napi_property_descriptor>();
+            }
+            napi_registered_init_functions_->push_back(napi_property_descriptor{name, 0, func, 0, 0, 0, napi_default, 0});
         }
 
         static void dispatcher_call_native(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data) {
@@ -111,6 +120,8 @@ namespace bq {
         // Module initializer 
         napi_value napi_init(napi_env env, napi_value exports)
         {
+            bq::platform::scoped_spin_lock lock(napi_init_mutex_);
+            is_napi_initialized_ = true;
             napi_create_threadsafe_function(
                 env, nullptr, nullptr, nullptr,
                 1024, 1, nullptr, nullptr, nullptr,
@@ -127,9 +138,9 @@ namespace bq {
                 callback(env, exports);
             }
 
-            bq::platform::scoped_mutex lock(napi_init_function_registration_mutex_);
-            if (napi_registered_init_functions_.size() > 0) {
-                napi_define_properties(env, exports, napi_registered_init_functions_.size(), napi_registered_init_functions_.begin());
+            if (napi_registered_init_functions_) {
+                napi_define_properties(env, exports, napi_registered_init_functions_->size(), napi_registered_init_functions_->begin());
+                delete napi_registered_init_functions_;
             }
             return exports;
         }

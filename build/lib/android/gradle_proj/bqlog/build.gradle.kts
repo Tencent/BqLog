@@ -16,7 +16,7 @@ android {
         }
         externalNativeBuild {
             cmake {
-                arguments += listOf("-DBUILD_TYPE=dynamic_lib", "-DTARGET_PLATFORM:STRING=android", "-DANDROID_STL=none", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+                arguments += listOf("-DBUILD_LIB_TYPE=dynamic_lib", "-DTARGET_PLATFORM:STRING=android", "-DANDROID_STL=none", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
             }
         }
     }

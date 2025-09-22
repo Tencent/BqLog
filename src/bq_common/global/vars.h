@@ -148,6 +148,7 @@ namespace bq {
         bq::array<void (*)()> jni_onload_callbacks_inst_;
 #endif
 #if defined(BQ_NAPI)
+        bq::platform::mutex napi_init_mutex_;
         bq::array<void (*)(napi_env env, napi_value exports)> napi_init_callbacks_inst_;
 #endif
 #if defined(BQ_ANDROID)

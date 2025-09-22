@@ -234,7 +234,7 @@ gen_project_one() {
   if [[ "$gen" == "Xcode" ]]; then
     cmake "${SRC_DIR}" -G "Xcode" \
       -DTARGET_PLATFORM:STRING=mac \
-      -DBUILD_TYPE="${build_lib_type}" \
+      -DBUILD_LIB_TYPE="${build_lib_type}" \
       -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
       -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
       -DAPPLE_LIB_FORMAT:STRING="${apple_format}" \
@@ -242,7 +242,7 @@ gen_project_one() {
   else
     cmake "${SRC_DIR}" -G "Unix Makefiles" \
       -DTARGET_PLATFORM:STRING=mac \
-      -DBUILD_TYPE="${build_lib_type}" \
+      -DBUILD_LIB_TYPE="${build_lib_type}" \
       -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
       -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
       -DCMAKE_BUILD_TYPE=Debug \

@@ -117,40 +117,39 @@ namespace bq {
             }
         };
 
-        class spin_lock {
-        private:
-            bq::cache_friendly_type<bq::platform::atomic<bool>> value_;
+        /// <summary>
+        /// Base class of spin_lock, but it can be used as global variable and don't need to worry about
+        /// the "Static Initialization Order Fiasco" problem, because it is zero initialized.
+        /// </summary>
+        class spin_lock_zero_init {
+        protected:
+            alignas(8) bool value_;   // 0 by zero init
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-            bq::platform::atomic<bq::platform::thread::thread_id> thread_id_;
+            alignas(8) bq::platform::thread::thread_id thread_id_;  // 0 by zero init
 #endif
-
-        public:
-            spin_lock()
-                : value_(false)
-#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                , thread_id_(0)
-#endif
-            {
+        protected:
+            bq::platform::atomic<bool>& value() {
+                return BQ_PACK_ACCESS_BY_TYPE(value_, bq::platform::atomic<bool>);
             }
-
-            spin_lock(const spin_lock&) = delete;
-            spin_lock(spin_lock&&) noexcept = delete;
-            spin_lock& operator=(const spin_lock&) = delete;
-            spin_lock& operator=(spin_lock&&) noexcept = delete;
-
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+            bq::platform::atomic<bq::platform::thread::thread_id>& thread_id() {
+                return BQ_PACK_ACCESS_BY_TYPE(thread_id_, bq::platform::atomic<bq::platform::thread::thread_id>);
+            }
+#endif
+        public:
             inline void lock()
             {
                 while (true) {
-                    if (!value_.get().exchange(true, bq::platform::memory_order::acquire)) {
+                    if (!value().exchange(true, bq::platform::memory_order::acquire)) {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                        thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
+                        thread_id().store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
 #endif
                         break;
                     }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                    assert(bq::platform::thread::get_current_thread_id() != thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
+                    assert(bq::platform::thread::get_current_thread_id() != thread_id().load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
 #endif
-                    while (value_.get().load(bq::platform::memory_order::relaxed)) {
+                    while (value().load(bq::platform::memory_order::relaxed)) {
                         bq::platform::thread::cpu_relax();
                     }
                 }
@@ -158,14 +157,14 @@ namespace bq {
 
             inline bool try_lock()
             {
-                if (!value_.get().exchange(true, bq::platform::memory_order::acquire)) {
+                if (!value().exchange(true, bq::platform::memory_order::acquire)) {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                    thread_id_.store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
+                    thread_id().store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
 #endif
                     return true;
                 }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                assert(bq::platform::thread::get_current_thread_id() != thread_id_.load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
+                assert(bq::platform::thread::get_current_thread_id() != thread_id().load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
 #endif
                 return false;
             }
@@ -173,10 +172,25 @@ namespace bq {
             inline void unlock()
             {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                thread_id_.store(0, bq::platform::memory_order::seq_cst);
+                thread_id().store(0, bq::platform::memory_order::seq_cst);
 #endif
-                value_.get().store(false, bq::platform::memory_order::release);
+                value().store(false, bq::platform::memory_order::release);
             }
+        };
+        static_assert(bq::is_trivially_constructible<spin_lock_zero_init>::value, "spin_lock_zero_init must be trivially constructible");
+        static_assert(bq::is_trivially_destructible<spin_lock_zero_init>::value, "spin_lock_zero_init must be trivially destructible");
+
+        class spin_lock : public spin_lock_zero_init {
+        public:
+            spin_lock() {
+                value_ = false;
+#if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
+                thread_id_ = 0;
+#endif
+            }
+            spin_lock(const spin_lock&) = delete;
+            spin_lock(spin_lock&&) noexcept = delete;
+            spin_lock& operator=(const spin_lock&) = delete;
         };
 
         /// <summary>
@@ -299,12 +313,12 @@ namespace bq {
 
         class scoped_spin_lock {
         private:
-            spin_lock& lock_;
+            spin_lock_zero_init& lock_;
 
         public:
             scoped_spin_lock() = delete;
 
-            explicit scoped_spin_lock(spin_lock& lock)
+            explicit scoped_spin_lock(spin_lock_zero_init& lock)
                 : lock_(lock)
             {
                 lock_.lock();
@@ -318,13 +332,13 @@ namespace bq {
 
         class scoped_try_spin_lock {
         private:
-            spin_lock& lock_;
+            spin_lock_zero_init& lock_;
             bool locked_;
 
         public:
             scoped_try_spin_lock() = delete;
 
-            explicit scoped_try_spin_lock(spin_lock& lock)
+            explicit scoped_try_spin_lock(spin_lock_zero_init& lock)
                 : lock_(lock)
             {
                 locked_ = lock_.try_lock();
