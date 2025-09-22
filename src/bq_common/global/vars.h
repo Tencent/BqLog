@@ -134,15 +134,15 @@ namespace bq {
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
 
     struct common_global_vars : public global_vars_base<common_global_vars> {
-        bq::platform::base_dir_initializer base_dir_init_inst_;
-        bq::hash_map<bq::platform::file_node_info, bq::platform::file_open_mode_enum> file_exclusive_cache_;
-        bq::platform::mutex file_exclusive_mutex_;
-        bq::platform::mutex stack_trace_mutex_;
 #if defined(BQ_WIN)
         bq::platform::mutex win_api_mutex_;
 #endif
         bq::array<char> device_console_buffer_ = { '\0' };
         bq::platform::mutex console_mutex_;
+        bq::platform::base_dir_initializer base_dir_init_inst_;
+        bq::hash_map<bq::platform::file_node_info, bq::platform::file_open_mode_enum> file_exclusive_cache_;
+        bq::platform::mutex file_exclusive_mutex_;
+        bq::platform::mutex stack_trace_mutex_;
 
 #if defined(BQ_JAVA)
         bq::array<void (*)()> jni_onload_callbacks_inst_;

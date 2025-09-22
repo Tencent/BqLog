@@ -27,8 +27,9 @@ namespace bq {
             if (_status != napi_ok) { \
                 const napi_extended_error_info* _info = nullptr; \
                 napi_get_last_error_info((env), &_info); \
-                const char* _msg = (_info && _info->error_message) ? _info->error_message : "napi error"; \
-                napi_throw_error((env), nullptr, _msg); \
+                char msg_[512]; \
+                snprintf(msg_, sizeof(msg_), "%s:%d:%s : NAPI call failed: %s", __FILE__, __LINE__, __FUNCTION__, (_info && _info->error_message) ? _info->error_message : "napi error"); \
+                napi_throw_error((env), nullptr, msg_); \
                 return nullptr; \
             } \
         } while(0)
@@ -38,9 +39,10 @@ namespace bq {
             if (_status != napi_ok) { \
                 const napi_extended_error_info* _info = nullptr; \
                 napi_get_last_error_info((env), &_info); \
-                const char* _msg = (_info && _info->error_message) ? _info->error_message : "napi error"; \
-                napi_throw_error((env), nullptr, _msg); \
-                return nullptr; \
+                char msg_[512]; \
+                snprintf(msg_, sizeof(msg_), "%s:%d:%s : NAPI call failed: %s", __FILE__, __LINE__, __FUNCTION__, (_info && _info->error_message) ? _info->error_message : "napi error"); \
+                napi_throw_error((env), nullptr, msg_); \
+                return; \
             } \
         } while(0)
 

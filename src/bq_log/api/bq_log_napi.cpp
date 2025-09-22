@@ -259,7 +259,7 @@ extern "C" {
     BQ_NAPI_DEF(get_log_version, napi_env, env, napi_callback_info, info)
     {
         (void)info;
-        const char* ver = bq::log::get_version().c_str();
+        const char* ver = bq::api::__api_get_log_version();
         return bq::_make_str_utf8(env, ver);
     }
 
