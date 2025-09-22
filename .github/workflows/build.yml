@@ -146,7 +146,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26
+          ndk-version: r28 #16k alignement by default from r28
           local-cache: false
 
       - name: Build for Windows Android
@@ -178,7 +178,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26
+          ndk-version: r28 #16k alignement by default from r28
           local-cache: false
 
       - name: Build for Mac Android

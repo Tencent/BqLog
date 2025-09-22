@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * Copyright (C) 2024 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -354,16 +354,34 @@ namespace bq {
             }
         });
 
-        static bq::hash_map<windows_file_node_info, file_open_mode_enum> &get_file_exclusive_cache()
+        struct temp_exclusive_cache {
+            bq::hash_map<windows_file_node_info, file_open_mode_enum> file_exclusive_cache;
+            temp_exclusive_cache() { isInit = true; }
+            ~temp_exclusive_cache() { isInit = false; }
+            bool isInit = false;
+        };
+
+        static bq::hash_map<windows_file_node_info, file_open_mode_enum> *get_file_exclusive_cache()
         {
-            static bq::hash_map<windows_file_node_info, file_open_mode_enum> file_exclusive_cache;
-            return file_exclusive_cache;
+            static temp_exclusive_cache temp;
+            if (!temp.isInit)
+                return nullptr;
+            return &temp.file_exclusive_cache;
         }
 
-        static bq::platform::mutex &get_file_exclusive_mutex()
+        struct temp_exclusive_mutex {
+            bq::platform::mutex file_exclusive_mutex;
+            temp_exclusive_mutex() { isInit = true; }
+            ~temp_exclusive_mutex() { isInit = false; }
+            bool isInit = false;
+        };
+
+        static bq::platform::mutex* get_file_exclusive_mutex()
         {
-            static bq::platform::mutex file_exclusive_mutex;
-            return file_exclusive_mutex;
+            static temp_exclusive_mutex temp;
+            if (!temp.isInit)
+                return nullptr;
+            return &temp.file_exclusive_mutex;
         }
 
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
@@ -376,8 +394,14 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check GetFileInformationByHandle failed");
                 return false;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<windows_file_node_info, file_open_mode_enum> &file_exclusive_cache = get_file_exclusive_cache();
+            auto mutex_ptr = get_file_exclusive_mutex();
+            if (!mutex_ptr)
+                return false;
+            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
+            auto cache_ptr = get_file_exclusive_cache();
+            if (!cache_ptr)
+                return false;
+            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             windows_file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;
@@ -401,8 +425,14 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check GetFileInformationByHandle failed");
                 return;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
+            auto mutex_ptr = get_file_exclusive_mutex();
+            if (!mutex_ptr)
+                return;
+            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
+            auto cache_ptr = get_file_exclusive_cache();
+            if (!cache_ptr)
+                return;
+            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             windows_file_node_info node_info;
             node_info.volumn = file_info.dwVolumeSerialNumber;
@@ -565,7 +595,6 @@ namespace bq {
         static thread_local bq::string stack_trace_current_str_;
         static thread_local bq::u16string stack_trace_current_str_u16_;
         static HANDLE stack_trace_process_ = GetCurrentProcess();
-        static bq::platform::mutex stack_trace_mutex_;
         static bq::platform::atomic<bool> stack_trace_sym_initialized_ = false;
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
@@ -590,7 +619,8 @@ namespace bq {
                 SymInitialize(stack_trace_process_, NULL, TRUE);
             }
             stack_trace_current_str_u16_.clear();
-            bq::platform::scoped_mutex lock(stack_trace_mutex_);
+            static bq::platform::mutex* stack_trace_mutex_ = new mutex();//Temporary, Unsafe for multi thread!
+            bq::platform::scoped_mutex lock(*stack_trace_mutex_);
             RtlCaptureContext(&context);
 
             STACKFRAME64 stack;

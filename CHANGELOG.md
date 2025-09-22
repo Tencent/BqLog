@@ -1,4 +1,14 @@
 # Changelog
+## [v1.5.0] - 2025-09-22
+- Changed the company entity of the open source License from "THL A29 Limited" to "Tencent"
+- Android binary artifacts now support 16 KB page sizes
+- Fixed a potential infinite loop issue when writing large-size logs
+- **Bug fix**: [Help: After initializing on Android as per the documentation, is_valid always returns false, but logging is unaffected. The documentation mentions checking is_valid before use or there may be risks. How should I troubleshoot this?](https://github.com/Tencent/BqLog/issues/43).
+- **Bug fix**: [The program crashed on exit, please help check the cause](https://github.com/Tencent/BqLog/issues/46), temporarily fixed in the current version. Will be completely resolved in the new 2.x version.
+- **Pull Request**: [Retain local variables and other information in jar files for easier source code reading](https://github.com/Tencent/BqLog/pull/52).
+**v1.5.0 will be the final stable version before the 2.x series.** 
+
+# Changelog
 ## [v1.4.9] - 2025-05-29
 - **Bug fix**: [能帮忙看一下这个crash是怎么回事吗？libsystem_kernel.dylib ___pthread_kill](https://github.com/Tencent/BqLog/issues/43), crash fix: crash caused by array overflow.
 

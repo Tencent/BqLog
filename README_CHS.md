@@ -1,14 +1,15 @@
-# BqLog(扁鹊日志)(V 1.4.9)  ([ChangeLog](/CHANGELOG.md))
+# BqLog(扁鹊日志)(V 1.5.0)  ([ChangeLog](/CHANGELOG.md))
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](https://github.com/Tencent/BqLog/blob/main/LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-1.4.9-red.svg)](https://github.com/Tencent/BqLog/releases)  
+[![Release Version](https://img.shields.io/badge/release-1.5.0-red.svg)](https://github.com/Tencent/BqLog/releases)  
 > BqLog是一个轻量级，高性能日志系统，应用于《Honor Of Kings》等项目，已经上线并良好运行  
-> ***BqLog的1.5.x版本正在路上，BqLog源自移动客户端，在桌面和服务器设备上，该新版本BqLog可以通过放开部分内存使用限制达到成倍以上的性能提高。***
+> ***BqLog的2.x版本正在路上，BqLog源自移动客户端，在桌面和服务器设备上，该新版本BqLog可以通过放开部分内存使用限制达到成倍以上的性能提高。***   
+> **v1.5.0将是2.x版本之前的最终稳定版本** 
 ## 支持平台
 - Windows 64 bit
 - MacOS
 - Linux
 - iOS
-- Android(X86_64, arm64-v8a、armeabi-v7a)
+- Android(X86_64, arm64-v8a、armeabi-v7a)(支持16KB分页)
 - Unix(在FreeBSD通过测试)
 
 ## 支持编程语言

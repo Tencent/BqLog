@@ -1,16 +1,5 @@
 /*
- * Copyright (C) 2024 THL A29 Limited, a Tencent company.
- * BQLOG is licensed under the Apache License, Version 2.0.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
-/*
- * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * Copyright (C) 2024 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -344,16 +333,33 @@ namespace bq {
             }
         });
 
-        static bq::hash_map<posix_file_node_info, file_open_mode_enum>& get_file_exclusive_cache()
-        {
-            static bq::hash_map<posix_file_node_info, file_open_mode_enum> file_exclusive_cache;
-            return file_exclusive_cache;
-        }
+        struct temp_exclusive_cache {
+            bq::hash_map<posix_file_node_info, file_open_mode_enum> file_exclusive_cache;
+            temp_exclusive_cache() { isInit = true; }
+            ~temp_exclusive_cache() { isInit = false; }
+            bool isInit = false;
+        };
 
-        static bq::platform::mutex& get_file_exclusive_mutex()
+        static bq::hash_map<posix_file_node_info, file_open_mode_enum>* get_file_exclusive_cache()
         {
-            static bq::platform::mutex file_exclusive_mutex;
-            return file_exclusive_mutex;
+            static temp_exclusive_cache temp;
+            if (!temp.isInit)
+                return nullptr;
+            return &temp.file_exclusive_cache;
+        }
+        struct temp_exclusive_mutex {
+            bq::platform::mutex file_exclusive_mutex;
+            temp_exclusive_mutex() { isInit = true; }
+            ~temp_exclusive_mutex() { isInit = false; }
+            bool isInit = false;
+        };
+
+        static bq::platform::mutex* get_file_exclusive_mutex()
+        {
+            static temp_exclusive_mutex tem;
+            if (!tem.isInit)
+                return nullptr;
+            return &tem.file_exclusive_mutex;
         }
 
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
@@ -377,8 +383,14 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return false;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
+            auto mutex_ptr = get_file_exclusive_mutex();
+            if (!mutex_ptr)
+                return false;
+            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
+            auto cache_ptr = get_file_exclusive_cache();
+            if (!cache_ptr)
+                return false;
+            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             posix_file_node_info node_info;
             node_info.ino = file_info.st_ino;
@@ -400,8 +412,14 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return;
             }
-            bq::platform::mutex& file_exclusive_mutex = get_file_exclusive_mutex();
-            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = get_file_exclusive_cache();
+            auto mutex_ptr = get_file_exclusive_mutex();
+            if (!mutex_ptr)
+                return;
+            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
+            auto cache_ptr = get_file_exclusive_cache();
+            if (!cache_ptr)
+                return;
+            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
             bq::platform::scoped_mutex lock(file_exclusive_mutex);
             posix_file_node_info node_info;
             node_info.ino = file_info.st_ino;
@@ -510,9 +528,15 @@ namespace bq {
 
         int32_t flush_file(const platform_file_handle& file_handle)
         {
+#if defined(BQ_IOS) || defined(BQ_MAC)
             if (fsync(file_handle) == 0) {
                 return 0;
             }
+#else
+            if (fdatasync(file_handle) == 0) {
+                return 0;
+            }
+#endif
             return errno;
         }
 
