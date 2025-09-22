@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * Copyright (C) 2024 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -97,6 +97,14 @@ namespace bq {
         do {
             uint32_t new_cursor = current_write_cursor + need_block_count;
             if (new_cursor - current_read_cursor > aligned_blocks_count_) {
+                if ((need_block_count << 1) > aligned_blocks_count_) {
+                    // not enough space
+#if defined(BQ_LOG_BUFFER_DEBUG)
+                    ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
+#endif
+                    handle.result = enum_buffer_result_code::err_alloc_size_invalid;
+                    return handle;
+                }
                 // not enough space
 #if BQ_RING_BUFFER_DEBUG
                 ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_not_enough_space];
@@ -124,6 +132,14 @@ namespace bq {
                     // fall back
                     uint32_t expected = next_write_cursor;
                     if (write_cursor_.atomic_value.compare_exchange_strong(expected, current_write_cursor, platform::memory_order::relaxed, platform::memory_order::relaxed)) {
+                        if ((need_block_count << 1) > aligned_blocks_count_) {
+                            // not enough space
+#if defined(BQ_LOG_BUFFER_DEBUG)
+                            ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
+#endif
+                            handle.result = enum_buffer_result_code::err_alloc_size_invalid;
+                            return handle;
+                        }
                         // not enough space
 #if BQ_RING_BUFFER_DEBUG
                         ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_not_enough_space];

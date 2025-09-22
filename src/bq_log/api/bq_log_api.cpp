@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * Copyright (C) 2024 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -75,7 +75,7 @@ namespace bq {
 
         BQ_API const char* __api_get_log_version()
         {
-            return "1.4.9";
+            return "1.5.0";
         }
 
 #if BQ_POSIX

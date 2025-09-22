@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 THL A29 Limited, a Tencent company.
+ * Copyright (C) 2024 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -211,7 +211,7 @@ namespace bq {
         /// <returns></returns>
         bool is_valid() const
         {
-            return get_id() > 0;
+            return get_id() != 0;
         }
 
         /// <summary>
