@@ -367,9 +367,7 @@ namespace bq {
                 static_assert(sizeof(CHAR_TYPE) == 1 || sizeof(CHAR_TYPE) == 2 || sizeof(CHAR_TYPE) == 4, "invalid char type!");
                 static_assert(N > 0, "char array dimension must not be zero");
                 size_t str_data_len = _serialize_str_helper_by_encode<CHAR_TYPE>::get_array_string_storage_size(str);
-                return bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value
-                    + sizeof(uint32_t)
-                    + str_data_len;
+                return str_data_len;
             }
             template <typename CHAR_TYPE, size_t N>
             static bq_forceinline void type_copy(const CHAR_TYPE (&value)[N], uint8_t* data_addr, size_t data_size)
@@ -394,9 +392,7 @@ namespace bq {
                     return _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, _string_type::array_type>::get_storage_data_size("null");
                 }
                 size_t str_data_len = _serialize_str_helper_by_encode<CHAR_TYPE>::get_c_style_string_storage_size(str);
-                return bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value
-                    + sizeof(uint32_t)
-                    + str_data_len;
+                return str_data_len;
             }
 
             template <typename CHAR_TYPE>
@@ -423,9 +419,7 @@ namespace bq {
             {
                 static_assert(sizeof(typename STRING_TYPE::value_type) == 1 || sizeof(typename STRING_TYPE::value_type) == 2 || sizeof(typename STRING_TYPE::value_type) == 4, "invalid char type!");
                 size_t str_data_len = _serialize_str_helper_by_encode<typename STRING_TYPE::value_type>::get_class_string_storage_size(str);
-                return bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value
-                    + sizeof(uint32_t)
-                    + str_data_len;
+                return str_data_len;
             }
 
             template <typename STRING_TYPE>
@@ -462,30 +456,47 @@ namespace bq {
         //================================================string helpers end============================================
 
         //================================================get storage size begin========================================
+        template <bool INCLUDE_TYPE_INFO>
+        bq_forceinline size_t get_string_field_total_storage_size(size_t str_storage_size)
+        {
+            return bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value
+                + sizeof(uint32_t)
+                + str_storage_size;
+        }
+
         template <bool INCLUDE_TYPE_INFO, typename T>
         bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::custom_type>::value && _custom_type_helper<T>::has_member_func, size_t>
-        _get_storage_data_size(const T& arg)
+        _get_storage_data_size(const T& arg, size_t known_data_size = SIZE_MAX)
         {
-            return _serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::get_c_style_string_storage_size(arg.bq_log_format_str_chars(), arg.bq_log_format_str_size()) + bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t);
+            if (SIZE_MAX != known_data_size) {
+                return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(known_data_size);
+            }
+            return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(_serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::get_c_style_string_storage_size(arg.bq_log_format_str_chars(), arg.bq_log_format_str_size()));
         }
 
         template <bool INCLUDE_TYPE_INFO, typename T>
         bq_forceinline bq::enable_if_t<_is_serialize_func_type<T, _serialize_func_type::custom_type>::value && !_custom_type_helper<T>::has_member_func, size_t>
-        _get_storage_data_size(const T& arg)
+        _get_storage_data_size(const T& arg, size_t known_data_size = SIZE_MAX)
         {
-            return _serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::get_c_style_string_storage_size(bq_log_format_str_chars(arg), bq_log_format_str_size(arg)) + bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t);
+            if (SIZE_MAX != known_data_size) {
+                return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(known_data_size);
+            }
+            return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(_serialize_str_helper_by_encode<typename _custom_type_helper<T>::char_type>::get_c_style_string_storage_size(bq_log_format_str_chars(arg), bq_log_format_str_size(arg)));
         }
 
         template <bool INCLUDE_TYPE_INFO, typename T>
         bq_forceinline bq::enable_if_t<_is_bq_log_supported_string_type<T>::value, size_t>
-        _get_storage_data_size(const T& str)
+        _get_storage_data_size(const T& str, size_t known_data_size = SIZE_MAX)
         {
             constexpr _string_type type = bq::condition_value<(_is_bq_string_like<T>::value || _is_std_string_view_like<T>::value),
                 _string_type,
                 _string_type::cls_type,
                 bq::condition_value<bq::is_array<T>::value, _string_type,
                     _string_type::array_type, _string_type::c_style_type>::value>::value;
-            return _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, type>::get_storage_data_size(str);
+            if (SIZE_MAX != known_data_size) {
+                return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(known_data_size);
+            }
+            return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(_serialize_str_helper_by_type<INCLUDE_TYPE_INFO, type>::get_storage_data_size(str));
         }
 
         template <bool INCLUDE_TYPE_INFO, typename T>
@@ -649,6 +660,18 @@ bq::enable_if_t<is_params_valid_type_helper<PARAMS...>::value, size_seq<INCLUDE_
 {
     size_seq<INCLUDE_TYPE_INFO, PARAMS...> init_seq;
     fill_size_seq(init_seq, params...);
+    return init_seq;
+}
+
+template <bool INCLUDE_TYPE_INFO, typename PARAM>
+bq::enable_if_t<is_params_valid_type_helper<PARAM>::value, size_seq<INCLUDE_TYPE_INFO, PARAM>> make_single_size_seq(const PARAM& param, size_t known_data_size = SIZE_MAX)
+{
+    size_seq<INCLUDE_TYPE_INFO, PARAM> init_seq;
+    using element_type = typename bq::remove_reference_t<decltype(init_seq)>::element_type;
+    constexpr bool is_constexpr = element_type::is_constexpr;
+    if (!is_constexpr) {
+        init_seq.get_element().value = _get_storage_data_size<INCLUDE_TYPE_INFO>(param, known_data_size);
+    }
     return init_seq;
 }
 //=====================================================================size_seq end=========================================================================================
