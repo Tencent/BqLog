@@ -12,19 +12,6 @@ package bq.impl;
  */
 
 /*
- * The Java implementation of log_context differs significantly from C#, 
- * and it appears counter intuitive. This is all in the name of performance. Because:
-
- * 1. Java doesn't have "Struct" + "Implicit Conversions" to avoid heap allocation.
- * 2. If you directly place a log_context object inside Java's ThreadLocal, 
- * 	  then in an environment with a thread pool + multiple web applications, 
- *    it might cause memory leaks, preventing the application from unloading cleanly.
- * 3. We try to avoid passing custom objects to JNI as much as possible because the C++ side 
- *    would then have to use reflection to retrieve values. And caching reflections isn't safe enough 
- *    in situations with a single JVM and multiple classLoaders.
- * 4. ThreadLocal.get actually involves a hash map lookup, so we try to call it as infrequently as possible.
- * 
- * 
  * Author : pippocao
  */
 
@@ -37,7 +24,7 @@ import java.util.Map;
 
 
 public class log_context {
-     private static final int _log_head_def_size = 24;
+     private static final int log_head_def_size_ = 24;
      private bq.log parent_log_;
 
 
@@ -174,7 +161,7 @@ public class log_context {
          long log_format_content_len = (long)log_format_content.length() << 1;
          long fmt_string_storage_size = align4(4/*sizeof(uint32_t)*/ + log_format_content_len);
     	 
-         ByteBuffer[] result = log_invoker.__api_log_buffer_alloc(target_log.get_id(), (long)_log_head_def_size + fmt_string_storage_size + param_storage_size, (short)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content, log_format_content_len);
+         ByteBuffer[] result = log_invoker.__api_log_buffer_alloc(target_log.get_id(), (long)log_head_def_size_ + fmt_string_storage_size + param_storage_size, (short)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content, log_format_content_len);
          
          if (null != result)
          {

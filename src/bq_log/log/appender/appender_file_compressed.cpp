@@ -327,6 +327,10 @@ namespace bq {
         const char* format_data_ptr = handle.get_format_string_data();
         uint32_t format_data_len = *((const uint32_t*)format_data_ptr);
         format_data_ptr += sizeof(uint32_t);
+        if ((const uint8_t*)format_data_ptr + format_data_len > handle.get_log_args_data()) {
+            bq::util::log_device_console(bq::log_level::error, "appender_file_compressed::log_impl invalid format data length:%" PRIu32, format_data_len);
+            return;
+        }
         uint64_t fmt_hash = calculate_hash_64_for_compressed_appender<false>(format_data_ptr, (size_t)format_data_len);
         uint64_t format_template_hash = get_format_template_hash(handle.get_level(), handle.get_log_head().category_idx, fmt_hash);
 
@@ -459,6 +463,7 @@ namespace bq {
                     switch (type_info) {
                     case bq::log_arg_type_enum::unsupported_type:
                         bq::util::log_device_console(bq::log_level::warning, "appender_file_compressed : non_primitivi_type is not supported yet, type:%d", (int32_t)type_info);
+                        args_data_cursor = raw_log_args_data_len;
                         break;
                     case bq::log_arg_type_enum::null_type:
                         args_data_cursor += 4;

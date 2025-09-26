@@ -111,8 +111,7 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     head->log_format_str_type = static_cast<uint16_t>(bq::log_arg_type_enum::string_utf16_type);
 
     jboolean is_cpy = false;
-    bq::tools::size_seq<false, const char16_t*> seq;
-    seq.get_element().value = sizeof(uint32_t) + (size_t)utf16_str_bytes_len;
+    auto seq = bq::tools::make_single_string_size_seq<false, char16_t>((size_t)utf16_str_bytes_len);
     head->log_args_offset = static_cast<uint32_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
     uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
     const char16_t* format_str = (const char16_t*)env->GetStringCritical(format_content, &is_cpy);

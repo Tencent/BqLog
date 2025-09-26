@@ -72,11 +72,6 @@ namespace bq {
         bitmap_ &= ~(1U << static_cast<uint32_t>(level));
     }
 
-    bool log_level_bitmap::have_level(bq::log_level level) const
-    {
-        return (bitmap_ & (1U << static_cast<uint32_t>(level))) != 0;
-    }
-
     uint32_t* log_level_bitmap::get_bitmap_ptr()
     {
         return &bitmap_;

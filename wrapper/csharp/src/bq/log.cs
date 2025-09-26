@@ -330,7 +330,7 @@ namespace bq
         /// copy constructor
         /// </summary>
         /// <param name="rhs"></param>
-        public log(log rhs)
+        protected log(log rhs)
         {
             unsafe
             {

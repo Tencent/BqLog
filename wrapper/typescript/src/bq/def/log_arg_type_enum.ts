@@ -1,4 +1,3 @@
-package bq.def;
 /*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -11,8 +10,24 @@ package bq.def;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-import java.util.AbstractMap.SimpleEntry;
-
-public class constants {
-	public static final Class<?> cls_param_wrapper = new SimpleEntry<int[], long[]>(new int[1], new long[2]).getClass();
+export enum log_arg_type_enum {
+    unsupported_type, //means undefined in typescript wrapper
+    null_type,
+    pointer_type,   //means object in typescript wrapper
+    bool_type,
+    char_type,
+    char16_type,
+    char32_type,
+    int8_type,
+    uint8_type,
+    int16_type,
+    uint16_type,
+    int32_type,
+    uint32_type,
+    int64_type,
+    uint64_type,
+    float_type,
+    double_type,
+    string_utf8_type,
+    string_utf16_type
 }

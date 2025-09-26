@@ -87,6 +87,46 @@ namespace bq {
         struct custom_type2 {
         };
 
+        struct custom_type3 {
+        private:
+            const char16_t* data = u"custom_type3";
+        public:
+            const char16_t* bq_log_format_str_chars() const
+            {
+                return data;
+            }
+
+            size_t bq_log_format_str_size() const
+            {
+                return (uint32_t)bq::___string_len(data);
+            }
+        };
+
+        struct custom_type4 {
+        private:
+            const char16_t* data = u"custom_type4";
+
+        public:
+            size_t bq_log_format_str_size() const
+            {
+                return (uint32_t)bq::___string_len(data);
+            }
+
+            void bq_log_custom_format(char* dest, size_t data_size) const{
+                assert(data_size >= bq_log_format_str_size());
+                bq::util::utf16_to_utf8(data, static_cast<uint32_t>(bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
+            }
+        };
+
+        struct custom_type5 {
+            const char16_t* data = u"custom_type5";
+
+            size_t bq_log_format_str_size() const
+            {
+                return (uint32_t)bq::___string_len(data);
+            }
+        };
+
         const char* bq_log_format_str_chars(const custom_type1& value)
         {
             (void)value;
@@ -109,6 +149,11 @@ namespace bq {
         {
             (void)value;
             return (size_t)strlen("custom_type2");
+        }
+
+        void bq_log_custom_format(const custom_type5& obj, char* dest, size_t data_size) {
+            assert(data_size >= obj.bq_log_format_str_size());
+            bq::util::utf16_to_utf8(obj.data, static_cast<uint32_t>(obj.bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
         }
 
         constexpr auto null_params = test_make_array<std::nullptr_t>(nullptr);
@@ -366,6 +411,21 @@ namespace bq {
             {
                 (void)value;
                 return "custom_type2";
+            }
+            static bq::string trans(const custom_type3& value)
+            {
+                (void)value;
+                return "custom_type3";
+            }
+            static bq::string trans(const custom_type4& value)
+            {
+                (void)value;
+                return "custom_type4";
+            }
+            static bq::string trans(const custom_type5& value)
+            {
+                (void)value;
+                return "custom_type5";
             }
             static bq::string trans(float value)
             {
@@ -708,18 +768,27 @@ namespace bq {
         log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str);                \
     }
 #endif
-#define CUSTOM_TYPE1_ADDITIONAL_TEST()                                                               \
+#define CUSTOM_TYPE_ADDITIONAL_TEST()                                                               \
     {                                                                                                \
-        custom_type1 test_var;                                                                       \
-        auto new_param_tuple_with_test_str = std::tuple_cat(param_tuple, std::make_tuple(test_var)); \
-        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str);                \
+        custom_type1 test_var1;                                                                       \
+        auto new_param_tuple_with_test_str1 = std::tuple_cat(param_tuple, std::make_tuple(test_var1)); \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str1);                \
+        custom_type2 test_var2;                                                                       \
+        auto new_param_tuple_with_test_str2 = std::tuple_cat(param_tuple, std::make_tuple(test_var2)); \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str2);                \
+        custom_type3 test_var3;                                                                       \
+        auto new_param_tuple_with_test_str3 = std::tuple_cat(param_tuple, std::make_tuple(test_var3)); \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str3);                \
+        custom_type4 test_var4;                                                                       \
+        auto new_param_tuple_with_test_str4 = std::tuple_cat(param_tuple, std::make_tuple(test_var4)); \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str4);                \
+        custom_type5 test_var5;                                                                       \
+        auto new_param_tuple_with_test_str5 = std::tuple_cat(param_tuple, std::make_tuple(test_var5)); \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str5);                \
     }
 
 #define CUSTOM_TYPE2_ADDITIONAL_TEST()                                                               \
     {                                                                                                \
-        custom_type2 test_var;                                                                       \
-        auto new_param_tuple_with_test_str = std::tuple_cat(param_tuple, std::make_tuple(test_var)); \
-        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str);                \
     }
 
         template <size_t LEFT_PARAM_COUNT, size_t TYPE_INDEX, size_t OBJ_INDEX, typename PARAM_TUPLE>
@@ -783,8 +852,7 @@ namespace bq {
             STD_STR_VIEW_ADDITIONAL_TEST("StringVewTest");
             STD_U16_STR_VIEW_ADDITIONAL_TEST(u"StringVewTest");
 #endif
-            CUSTOM_TYPE1_ADDITIONAL_TEST();
-            CUSTOM_TYPE2_ADDITIONAL_TEST();
+            CUSTOM_TYPE_ADDITIONAL_TEST();
         }
 
         template <size_t LEFT_PARAM_COUNT>

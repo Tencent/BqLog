@@ -76,17 +76,6 @@ namespace bq {
                 int32_t buffer_offset_ = 0;
             };
 #endif
-#if defined(BQ_NAPI)
-            struct napi_info{
-                napi_ref buffer_obj_for_lp_buffer_ = NULL; // miso_ring_buffer shared between low frequency threads;
-                napi_ref buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
-                napi_ref buffer_obj_for_oversize_buffer_ = NULL; // oversize buffer;
-                block_node_head* buffer_ref_block_ = nullptr;
-                normal_buffer* buffer_ref_oversize = nullptr;
-                uint32_t size_ref_oversize = 0;
-                int32_t buffer_offset_ = 0;
-            };
-#endif
             uint64_t last_update_epoch_ms_ = 0;
             uint64_t update_times_ = 0;
             block_node_head* cur_block_ = nullptr; // nullptr means using lp_buffer.
@@ -96,9 +85,6 @@ namespace bq {
             bq::shared_ptr<destruction_mark> destruction_mark_;
 #if defined(BQ_JAVA)
             java_info java_;
-#endif
-#if defined(BQ_NAPI)
-            napi_info napi_;
 #endif
             // Fields frequently accessed by write(produce) thread.
             alignas(CACHE_LINE_SIZE) struct {
@@ -185,15 +171,6 @@ namespace bq {
         };
         java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
-#if defined(BQ_NAPI)
-        struct napi_buffer_info {
-            napi_value buffer_array_obj_;
-            int32_t* offset_store_;
-            const uint8_t* buffer_base_addr_;
-        };
-        napi_buffer_info get_napi_buffer_info(napi_env env, const log_buffer_write_handle& handle);
-#endif
-
         bq_forceinline const log_buffer_config& get_config() const
         {
             return config_;
@@ -261,9 +238,6 @@ private:
             bq::array<bq::unique_ptr<oversize_buffer_obj_def>> buffers_array_;
 #if defined(BQ_JAVA)
             jobject java_buffer_obj_ = nullptr;
-#endif
-#if defined(BQ_NAPI)
-            napi_value napi_buffer_obj_ = nullptr;
 #endif
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
         bq::platform::atomic<uint64_t> current_oversize_buffer_index_;

@@ -1,4 +1,3 @@
-package bq.def;
 /*
  * Copyright (C) 2024 THL A29 Limited, a Tencent company.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -11,8 +10,6 @@ package bq.def;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-import java.util.AbstractMap.SimpleEntry;
-
-public class constants {
-	public static final Class<?> cls_param_wrapper = new SimpleEntry<int[], long[]>(new int[1], new long[2]).getClass();
+export class constants {
+    public static readonly undefined_str = "undefined";
 }

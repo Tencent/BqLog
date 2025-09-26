@@ -54,30 +54,30 @@ public class log {
     
     protected static log get_log_by_id(long log_id)
     {
-        log log = new log();
+        log log_inst = new log();
         String name = log_invoker.__api_get_log_name_by_id(log_id);
         if (null == name)
         {
-            return log;
+            return log_inst;
         }
-        log.name_ = name;
-        log.merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(log_id);
-        log.categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(log_id);
-        log.print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(log_id);
+        log_inst.name_ = name;
+        log_inst.merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(log_id);
+        log_inst.categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(log_id);
+        log_inst.print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(log_id);
 
         long category_count = log_invoker.__api_get_log_categories_count(log_id);
-        log.categories_name_array_ = new ArrayList<String>((int)category_count);
+        log_inst.categories_name_array_ = new ArrayList<String>((int)category_count);
         for (long i = 0; i < category_count; ++i)
         {
             String category_item_name = log_invoker.__api_get_log_category_name_by_index(log_id, i);
             if (null != category_item_name)
             {
-                log.categories_name_array_.add(category_item_name);
+                log_inst.categories_name_array_.add(category_item_name);
             }
         }
-        log.log_id_ = log_id;
-        log.context_ = new bq.impl.log_context(log);
-        return log;
+        log_inst.log_id_ = log_id;
+        log_inst.context_ = new bq.impl.log_context(log_inst);
+        return log_inst;
     }
 
     @SuppressWarnings("unused")
@@ -300,7 +300,7 @@ public class log {
      * copy constructor
      * @param rhs
      */
-    public log(log rhs)
+    protected log(log rhs)
     {
     	merged_log_level_bitmap_ = rhs.merged_log_level_bitmap_;
         name_ = rhs.name_;

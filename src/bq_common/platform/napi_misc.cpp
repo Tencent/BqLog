@@ -124,27 +124,27 @@ namespace bq {
             is_napi_initialized_ = true;
 
             napi_value name_native{};
-            BQ_NAPI_CALL(env, napi_create_string_utf8(env, "bqlog-tsfn-native-wrapper", NAPI_AUTO_LENGTH, &name_native));
-            BQ_NAPI_CALL(env, napi_create_threadsafe_function(
+            BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-native-wrapper", NAPI_AUTO_LENGTH, &name_native));
+            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(
                 env, nullptr, nullptr, name_native,
                 1024, 1, nullptr, nullptr, nullptr,
                 dispatcher_call_native, &tsfn_dispatcher_for_native_func_
             ));
             napi_value name_js{};
-            BQ_NAPI_CALL(env, napi_create_string_utf8(env, "bqlog-tsfn-js-wrapper", NAPI_AUTO_LENGTH, &name_js));
-            BQ_NAPI_CALL(env, napi_create_threadsafe_function(
+            BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-js-wrapper", NAPI_AUTO_LENGTH, &name_js));
+            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(
                 env, nullptr, nullptr, name_js,
                 1024, 1, nullptr, nullptr, nullptr,
                 dispatcher_call_js, &tsfn_dispatcher_for_js_func_
             ));
-            BQ_NAPI_CALL(env, napi_add_env_cleanup_hook(env, cleanup_hook, nullptr));
+            BQ_NAPI_CALL(env, nullptr, napi_add_env_cleanup_hook(env, cleanup_hook, nullptr));
 
             for (auto callback : common_global_vars::get().napi_init_callbacks_inst_) {
                 callback(env, exports);
             }
 
             if (napi_registered_init_functions_) {
-                BQ_NAPI_CALL(env, napi_define_properties(env, exports, napi_registered_init_functions_->size(), napi_registered_init_functions_->begin()));
+                BQ_NAPI_CALL(env, nullptr, napi_define_properties(env, exports, napi_registered_init_functions_->size(), napi_registered_init_functions_->begin()));
                 delete napi_registered_init_functions_;
             }
             return exports;

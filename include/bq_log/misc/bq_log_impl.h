@@ -246,13 +246,13 @@ namespace bq {
         }
         bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
         head->category_idx = category_index;
-        head->level = (uint8_t)level;
+        head->level = static_cast<uint8_t>(level);
         head->log_format_str_type = static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>());
         size_t log_args_offset = total_data_size;
-        if (log_args_offset > UINT16_MAX) {
+        if (log_args_offset > UINT32_MAX) {
             assert(false && "format string too long");
         }
-        head->log_args_offset = (uint16_t)log_args_offset;
+        head->log_args_offset = (uint32_t)log_args_offset;
         uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
         bq::impl::_do_log_format_fill(log_format_content_addr, format_size_seq.get_element().get_value(), log_format_content, stack_info);
         bq::api::__api_log_buffer_commit(log_id_, handle);
@@ -277,13 +277,13 @@ namespace bq {
         }
         bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
         head->category_idx = category_index;
-        head->level = (uint8_t)level;
+        head->level = static_cast<uint8_t>(level);
         head->log_format_str_type = static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>());
         size_t log_args_offset = static_cast<size_t>(sizeof(bq::_log_entry_head_def) + aligned_format_data_size);
-        if (log_args_offset > UINT16_MAX) {
+        if (log_args_offset > UINT32_MAX) {
             assert(false && "format string too long");
         }
-        head->log_args_offset = (uint16_t)log_args_offset;
+        head->log_args_offset = (uint32_t)log_args_offset;
         uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
         bq::impl::_do_log_format_fill(log_format_content_addr, format_size_seq.get_element().get_value(), log_format_content, stack_info);
         uint8_t* log_args_addr = handle.data_addr + log_args_offset;

@@ -78,6 +78,16 @@ namespace bq {
 
         const layout& get_layout() const;
 
+        bq_forceinline bool is_enable_for(uint32_t category_index, bq::log_level level) const
+        {
+            return merged_log_level_bitmap_.have_level(level) && categories_mask_array_[category_index];
+        }
+
+        bq_forceinline bool is_stack_trace_enable_for(bq::log_level level) const
+        {
+            return print_stack_level_bitmap_.have_level(level);
+        }
+
     private:
         bool add_appender(const string& name, const bq::property_value& jobj);
         void refresh_merged_log_level_bitmap();

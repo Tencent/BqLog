@@ -22,7 +22,10 @@ namespace bq {
     public:
         log_level_bitmap& operator=(const log_level_bitmap& rhs);
         void clear();
-        bool have_level(bq::log_level level) const;
+        bq_forceinline bool have_level(bq::log_level level) const
+        {
+            return (bitmap_ & (1U << static_cast<uint32_t>(level))) != 0;
+        }
         void add_level(bq::log_level level);
         void add_level(const bq::string& level_string);
         void del_level(bq::log_level level);
