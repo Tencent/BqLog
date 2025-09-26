@@ -9,8 +9,17 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+import { log_level } from "./def/log_level";
 import { log_invoker, native_export } from "./impl/log_invoker";
 
+
+
+export type console_callback = (
+    log_id: bigint,
+    category_idx: number,
+    level: number,
+    text: string
+) => void;
 export class log {
     private log_id_: bigint = 0n;
     private name_: string = "";
@@ -18,6 +27,7 @@ export class log {
     private categories_mask_array_: DataView | null = null;
     private print_stack_level_bitmap_: DataView | null = null;
     private categories_name_array_: Array<string> = [];
+    private static callback_: console_callback | null = null;
 
     protected static get_log_by_id(log_id: bigint): log {
         let log_inst: log = new log(log_id);
@@ -39,6 +49,42 @@ export class log {
             }
         }
         return log_inst;
+    }
+
+    /**
+     * Get bqLog lib version
+     * @return
+     */
+    public static get_version(): string {
+        return log_invoker.__api_get_log_version();
+    }
+
+    /**
+     * Reset the base dir
+     * @param in_sandbox
+     * @param dir
+     */
+    public static reset_base_dir(in_sandbox: boolean, dir: string): void {
+        log_invoker.__api_reset_base_dir(in_sandbox, dir);
+    }
+
+    /**
+     * If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
+     * If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
+     * this functionality does not guarantee success.
+     */
+    public static enable_auto_crash_handle(): void {
+        log_invoker.__api_enable_auto_crash_handler();
+    }
+
+    /**
+     * If bqLog is stored in a relative path, it will choose whether the relative path is within the sandbox or not.
+     * This will return the absolute paths corresponding to both scenarios.
+     * @param is_in_sandbox
+     * @return
+     */
+    public static get_file_base_dir(is_in_sandbox: boolean): string {
+        return log_invoker.__api_get_file_base_dir(is_in_sandbox);
     }
 
     /**
@@ -82,7 +128,67 @@ export class log {
         return new log(0n);
     }
 
-    public constructor(arg?: log | bigint) {
+    /**
+     * Synchronously flush the buffer of all log objects
+     * to ensure that all data in the buffer is processed after the call.
+     */
+    public static force_flush_all_logs(): void {
+        log_invoker.__api_force_flush(0n);
+    }
+    /**
+     * Register a callback that will be invoked whenever a console log message is output. 
+     * This can be used for an external system to monitor console log output.
+     * @param callback
+     */
+    public static register_console_callback(callback: console_callback): void {
+        log_invoker.__api_set_console_callback(callback);
+        log.callback_ = callback;
+    }
+
+    /**
+     * Unregister a previously registered console callback.
+     * @param callback
+     */
+    public static unregister_console_callback(callback: console_callback): void {
+        if (log.callback_ == callback) {
+            log_invoker.__api_set_console_callback();
+        }
+    }
+
+    /**
+     * Enable or disable the console appender buffer. 
+     * Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread, 
+     * we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
+     * @param enable
+     */
+    public static set_console_buffer_enable(enable: boolean): void {
+        log_invoker.__api_set_console_buffer_enable(enable);
+    }
+
+    /**
+     * Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
+     * If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
+     * Please ensure not to output synchronized BQ logs within the callback function.
+     * @param on_console_callback
+     *        A callback function to be invoked for the fetched log entry if the console appender buffer is not empty
+     * @return
+     *        True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.
+     */
+    public static fetch_and_remove_console_buffer(on_console_callback: console_callback): boolean {
+        return log_invoker.__api_fetch_and_remove_console_buffer(on_console_callback);
+    }
+
+    /**
+    * Output to console with log_level.
+    * Important: This is not log entry, and can not be caught by console callback which was registered by register_console_callback or fetch_and_remove_console_buffer
+    * @param level
+    * @param str
+    */
+    public static console(level: log_level, str: string): void {
+        log_invoker.__api_log_device_console(level, str);
+    }
+
+    protected constructor(arg?: log | bigint) {
         if (arg instanceof log) {
             this.merged_log_level_bitmap_ = arg.merged_log_level_bitmap_;
             this.name_ = arg.name_;
@@ -139,6 +245,34 @@ export class log {
      */
     public get_id(): bigint {
         return this.log_id_;
+    }
+
+    /**
+     * Whether a log object is valid
+     * @return
+     */
+    public is_valid(): boolean {
+        return this.get_id() != 0n;
+    }
+
+    /**
+     * Get the name of a log
+     * @return
+     */
+    public get_name(): string {
+        return this.name_;
+    }
+
+    /**
+     * Works only when snapshot is configured.
+     * It will decode the snapshot buffer to text.
+     * @param use_gmt_time
+     * 			Whether the timestamp of each log is GMT time or local time
+     * @return
+     * 			The decoded snapshot buffer
+     */
+    public take_snapshot(use_gmt_time: boolean): string {
+        return log_invoker.__api_take_snapshot_string(this.log_id_, use_gmt_time);
     }
 
     public declare verbose: (log_format_content: string, ...args: unknown[]) => boolean;

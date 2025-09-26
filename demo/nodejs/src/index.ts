@@ -51,12 +51,13 @@ process.stdin.once("data", () => {
     process.stdin.pause();
 
     let log1 = log.create_log("test_log", config);
-    let log2 = new log(log1);
     let id = log1.get_id()
+
     log1.debug("valid:{}", 2.23423534523451253245234523451243412);
-    log2.debug("valid:{}", log1.debug);
     // log2.debug("valid:{}", 2.23423534523451253245234523451243412);
     //console.log(log1.debug("test_log{}", 55));
+
+
     log1.force_flush();
 });
 

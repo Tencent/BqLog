@@ -23,17 +23,10 @@ import { lib_def } from "../lib_def";
 import { detect_runtime, runtime_kind } from "../utils/env_detector";
 import { load_bq_log_native, native_binding } from "../utils/lib_loader";
 
-export type console_callback = (
-    log_id: bigint,
-    category_idx: number,
-    level: number,
-    text: string
-) => void;
-
-let _native_mod: native_binding | null = null;
+let native_mod_: native_binding | null = null;
 
 export function native_export(name: string): any {
-    return _native_mod?.[`__bq_napi_${name}`];
+    return native_mod_?.[`__bq_napi_${name}`];
 }
 
 function as_bigint(v: unknown, def: bigint = 0n): bigint {
@@ -73,8 +66,8 @@ function dump_native_exports(mod: native_binding, prefix = "__bq_napi_") {
 // auto load on module initialization, similar to java static block
 (function auto_load() {
     try {
-        _native_mod = load_bq_log_native();
-        //dump_native_exports(_native_mod);
+        native_mod_ = load_bq_log_native();
+        //dump_native_exports(native_mod_);
     } catch (e) {
         // eslint-disable-next-line no-console
         console.error(`failed to load ${lib_def.lib_name}`);
@@ -187,13 +180,13 @@ export class log_invoker {
         return native_export("take_snapshot_string")(log_id, !!use_gmt_time) as string;
     }
 
-    public static __api_set_console_callback(enable: boolean, callback?: console_callback): void {
+    public static __api_set_console_callback(callback?: Function): void {
         if (typeof callback !== "function") {
             throw new Error(
                 "__api_set_console_callback requires a function callback"
             );
         }
-        native_export("set_console_callback")(!!enable, callback);
+        native_export("set_console_callback")(callback);
     }
 
     public static __api_set_console_buffer_enable(enable: boolean): void {
@@ -204,7 +197,7 @@ export class log_invoker {
         native_export("reset_base_dir")(!!in_sandbox, dir);
     }
 
-    public static __api_fetch_and_remove_console_buffer(callback: console_callback): boolean {
+    public static __api_fetch_and_remove_console_buffer(callback: Function): boolean {
         if (typeof callback !== "function") {
             throw new Error(
                 "__api_fetch_and_remove_console_buffer requires a function callback"

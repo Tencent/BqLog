@@ -84,6 +84,13 @@ namespace bq {
         static bq::string get_file_base_dir(bool is_in_sandbox);
 
         /// <summary>
+        /// Reset the base dir
+        /// </summary>
+        /// <param name="in_sandbox"></param>
+        /// <param name="dir"></param>
+        static void reset_base_dir(bool in_sandbox, const bq::string& dir);
+
+        /// <summary>
         /// Create a log object
         /// </summary>
         /// <param name="log_name">If the log name is an empty string, bqLog will automatically assign you a unique log name. If the log name already exists, it will return the previously existing log object and overwrite the previous configuration with the new config.</param>
@@ -224,13 +231,6 @@ namespace bq {
         /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
         /// <returns>the decoded snapshot buffer</returns>
         bq::string take_snapshot(bool use_gmt_time) const;
-
-        /// <summary>
-        /// Reset the base dir
-        /// </summary>
-        /// <param name="in_sandbox"></param>
-        /// <param name="dir"></param>
-        void reset_base_dir(bool in_sandbox, const bq::string& dir);
 
     public:
         /// Core log functions, there are 6 log levels:

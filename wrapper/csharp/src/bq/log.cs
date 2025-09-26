@@ -137,6 +137,21 @@ namespace bq
         }
 
         /// <summary>
+        /// Reset the base dir
+        /// </summary>
+        /// <param name="in_sandbox"></param>
+        /// <param name="dir"></param>
+        public void reset_base_dir(bool in_sandbox, string dir)
+        {
+            unsafe
+            {
+                byte* dir_utf8 = utf8_encoder.alloc_utf8_fixed_str(dir);
+                bq.impl.log_invoker.__api_reset_base_dir(in_sandbox, dir_utf8);
+                utf8_encoder.release_utf8_fixed_str(dir_utf8);
+            }
+        }
+
+        /// <summary>
         /// Create a log object
         /// </summary>
         /// <param name="name">
@@ -439,21 +454,6 @@ namespace bq
                 string result = new string(snapshot_def.str, 0, (int)snapshot_def.len, System.Text.Encoding.UTF8);
                 bq.impl.log_invoker.__api_release_snapshot_string(log_id_, &snapshot_def);
                 return result;
-            }
-        }
-
-        /// <summary>
-        /// Reset the base dir
-        /// </summary>
-        /// <param name="in_sandbox"></param>
-        /// <param name="dir"></param>
-        public void reset_base_dir(bool in_sandbox, string dir)
-        {
-            unsafe
-            {
-                byte* dir_utf8 = utf8_encoder.alloc_utf8_fixed_str(dir);
-                bq.impl.log_invoker.__api_reset_base_dir(in_sandbox, dir_utf8);
-                utf8_encoder.release_utf8_fixed_str(dir_utf8);
             }
         }
 

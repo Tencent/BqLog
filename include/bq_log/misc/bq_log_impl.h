@@ -109,6 +109,11 @@ namespace bq {
         return api::__api_get_file_base_dir(is_in_sandbox);
     }
 
+    inline void log::reset_base_dir(bool in_sandbox, const bq::string& dir)
+    {
+        bq::api::__api_reset_base_dir(in_sandbox, dir.c_str());
+    }
+
     inline log log::get_log_by_id(uint64_t log_id)
     {
         log log;
@@ -204,11 +209,6 @@ namespace bq {
         result.insert_batch(result.begin(), snapshot_def.str, snapshot_def.len);
         bq::api::__api_release_snapshot_string(log_id_, &snapshot_def);
         return result;
-    }
-
-    inline void log::reset_base_dir(bool in_sandbox, const bq::string& dir)
-    {
-        bq::api::__api_reset_base_dir(in_sandbox, dir.c_str());
     }
 
     template <typename STR>

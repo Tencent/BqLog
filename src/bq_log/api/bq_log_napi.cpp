@@ -984,12 +984,12 @@ BQ_NAPI_DEF(take_snapshot_string, napi_env, env, napi_callback_info, info)
     return out;
 }
 
-// set_console_callback(enable: boolean, callback?: function): void
+// set_console_callback(callback?: function): void
 BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
 {
-    size_t argc = 2; napi_value argv[2] = { 0,0 };
+    size_t argc = 1; napi_value argv[1] = { 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
-    if (argc < 2) {
+    if (argc != 1) {
         napi_throw_type_error(env, NULL, "function count error");
         return NULL;
     }
@@ -997,11 +997,7 @@ BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
         napi_delete_reference(env, console_callback_);
         console_callback_ = NULL;
     }
-    bool enable = bq::_get_bool(env, argv[0]);
-    if (!enable) {
-        return bq::_make_undefined(env);
-    }
-    BQ_NAPI_CALL(env, nullptr, napi_create_reference(env, argv[1], 1, &console_callback_));
+    BQ_NAPI_CALL(env, nullptr, napi_create_reference(env, argv[0], 1, &console_callback_));
     console_msg_buffer_.set_thread_check_enable(false);
 
     bq::log::register_console_callback(on_console_callback);
