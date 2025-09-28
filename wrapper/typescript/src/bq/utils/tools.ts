@@ -10,14 +10,26 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+/**
+ * Join path segments in a cross-runtime way (Node, OHOS) without relying on node:path.
+ * - Supports POSIX and Windows (drive letters, UNC).
+ * - Normalizes multiple separators, resolves "." and ".." where possible.
+ * - Chooses separator based on detected root (POSIX "/" or Windows "\" when drive/UNC is detected).
+ */
+/*
+ * Cross-runtime utilities without top-level node:* imports.
+ * All names use lower_snake_case; member-like variables end with underscore by convention.
+ */
+
+/**
+ * Join path segments in a cross-runtime way (Node, OHOS) without relying on node:path.
+ */
 export function path_join(...parts: Array<string | null | undefined>): string {
   let segments: string[] = [];
   let is_abs = false;
   let drive: string | null = null;
   let is_unc = false;
-
-  // separator decision: default to posix, switch to windows when a win root is detected
-  let use_backslash = false;
+  let use_backslash = false; // switch to backslash when a Windows root is detected
 
   for (let i = 0; i < parts.length; i++) {
     const part_raw = parts[i];
@@ -26,7 +38,7 @@ export function path_join(...parts: Array<string | null | undefined>): string {
     let part = String(part_raw);
     if (part.length === 0) continue;
 
-    // detect windows drive absolute like "C:\..." or "C:/..."
+    // Detect "C:\..." or "C:/..."
     const m_drive_abs = part.match(/^([a-zA-Z]):[\\/]/);
     if (m_drive_abs) {
       drive = m_drive_abs[1].toUpperCase();
@@ -34,27 +46,24 @@ export function path_join(...parts: Array<string | null | undefined>): string {
       is_unc = false;
       use_backslash = true;
       segments = [];
-      part = part.slice(2); // keep the separator for trimming below
+      part = part.slice(2);
     } else if (part.startsWith("\\\\") || part.startsWith("//")) {
-      // windows UNC root
+      // Windows UNC root
       drive = null;
       is_abs = true;
       is_unc = true;
       use_backslash = true;
       segments = [];
-      // trim all leading slashes/backslashes
       part = part.replace(/^[/\\]+/, "");
     } else if (part[0] === "/" || part[0] === "\\") {
-      // posix absolute or windows absolute without drive
+      // POSIX absolute or Windows absolute without drive
       drive = null;
       is_abs = true;
       is_unc = false;
-      // keep posix style for such roots
-      // do not force backslash unless a drive/unc is seen
       segments = [];
       part = part.replace(/^[/\\]+/, "");
     } else {
-      // handle "C:foo" (drive-relative) as a drive prefix without absolute
+      // Handle "C:foo" (drive-relative)
       const m_drive_rel = part.match(/^([a-zA-Z]):(.*)$/);
       if (m_drive_rel) {
         drive = m_drive_rel[1].toUpperCase();
@@ -63,7 +72,6 @@ export function path_join(...parts: Array<string | null | undefined>): string {
         use_backslash = true;
         part = m_drive_rel[2] || "";
         if (part.startsWith("/") || part.startsWith("\\")) {
-          // treat like absolute drive if a separator follows (rare case)
           is_abs = true;
           part = part.replace(/^[/\\]+/, "");
           segments = [];
@@ -71,7 +79,6 @@ export function path_join(...parts: Array<string | null | undefined>): string {
       }
     }
 
-    // split by both separators
     const segs = part.split(/[\/\\]+/);
     for (let j = 0; j < segs.length; j++) {
       const s = segs[j];
@@ -82,10 +89,8 @@ export function path_join(...parts: Array<string | null | undefined>): string {
           segments.pop();
         } else {
           if (is_abs || is_unc) {
-            // at root, do not go above
-            continue;
+            continue; // do not go above root
           }
-          // drive-relative or fully relative: keep ".."
           segments.push("..");
         }
       } else {
@@ -94,29 +99,98 @@ export function path_join(...parts: Array<string | null | undefined>): string {
     }
   }
 
-  // choose separator
   const sep = use_backslash ? "\\" : "/";
-
-  // build prefix/root
   let prefix = "";
-  if (is_unc) {
-    prefix = "\\\\";
-  } else if (drive) {
+  if (is_unc) prefix = "\\\\";
+  else if (drive) {
     prefix = drive + ":";
     if (is_abs) prefix += "\\";
-  } else if (is_abs) {
-    prefix = "/";
-  }
+  } else if (is_abs) prefix = "/";
 
-  // join segments
-  let body = segments.join(sep);
-
-  // ensure we do not return empty unless representing the root
+  const body = segments.join(sep);
   if (!prefix && !body) return ".";
-
-  // if absolute root only, return prefix
   if (prefix && !body) return prefix;
-
-  // normal case
   return prefix ? prefix + body : body;
+}
+
+/**
+ * Convert a file:// URL to a local filesystem path (POSIX + Windows).
+ */
+export function file_url_to_path(file_url: string): string {
+  try {
+    const u = new URL(file_url);
+    if (u.protocol !== "file:") return "";
+    let p = decodeURIComponent(u.pathname || "");
+    const host = u.host || "";
+
+    // Windows UNC root: file://server/ -> \\server\
+    if (host && (p === "" || p === "/")) {
+      return "\\\\" + host + "\\";
+    }
+    if (host) {
+      // UNC path: file://host/C:/path -> \\host\C:\path
+      let body = p.startsWith("/") ? p.slice(1) : p;
+      body = body.replace(/\//g, "\\");
+      return "\\\\" + host + "\\" + body;
+    }
+
+    // Windows drive: /C:/path -> C:\path
+    if (/^\/[A-Za-z]:\//.test(p)) {
+      p = p.slice(1).replace(/\//g, "\\");
+      return p;
+    }
+
+    // POSIX
+    return p || "/";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Get current module directory.
+ * - Prefer __dirname (CJS).
+ * - For ESM, pass import.meta.url to convert to directory.
+ */
+export function current_dirname(import_meta_url?: string): string {
+  try {
+    // @ts-ignore
+    if (typeof __dirname !== "undefined") return __dirname as string;
+  } catch { }
+  if (import_meta_url) {
+    const p = file_url_to_path(import_meta_url);
+    if (p) {
+      const idx = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+      return idx >= 0 ? p.slice(0, idx) : p;
+    }
+  }
+  return "";
+}
+
+/**
+ * Safely get Node's require function across CJS/ESM.
+ * Tries multiple fallbacks before giving up.
+ */
+export function safe_require(): any | null {
+  // 1) eval('require')
+  try {
+    // eslint-disable-next-line no-eval
+    const r = (0, eval)("require");
+    if (typeof r === "function") return r;
+  } catch { }
+
+  // 2) globalThis.require
+  try {
+    const r = (globalThis as any)?.require;
+    if (typeof r === "function") return r;
+  } catch { }
+
+  // 3) module.require (CJS)
+  try {
+    // @ts-ignore
+    const m = typeof module !== "undefined" ? (module as any) : null;
+    if (m && typeof m.require === "function") return m.require.bind(m);
+  } catch { }
+
+  return null;
 }

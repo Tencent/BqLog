@@ -130,6 +130,7 @@ if(JAVA_SUPPORT)
 endif()
 if(NODE_API_SUPPORT)
 	add_compile_definitions(BQ_NAPI)
+    add_compile_definitions(NAPI_VERSION=6)  #best compability, for nodejs version >= 12
     set(_NODE_API_HEADERS_FOUND OFF)
     set(_NODE_API_HEADERS_DIR "")
 

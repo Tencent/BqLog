@@ -19,66 +19,14 @@
 */
 
 import { string_holder } from "../def/string_holder"
-import { lib_def } from "../lib_def";
-import { detect_runtime, runtime_kind } from "../utils/env_detector";
-import { load_bq_log_native, native_binding } from "../utils/lib_loader";
-
-let native_mod_: native_binding | null = null;
-
-export function native_export(name: string): any {
-    return native_mod_?.[`__bq_napi_${name}`];
-}
+// IMPORTANT: this is a build-alias file generated per build.
+// For ESM build it is a copy of lib_loader.esm.txt,
+// for CJS and OHOS build it is lib_loader.ts.
+import { native_export } from "../utils/lib_loader";
 
 function as_bigint(v: unknown, def: bigint = 0n): bigint {
     return typeof v === "bigint" ? v : def;
 }
-
-function dump_native_exports(mod: native_binding, prefix = "__bq_napi_") {
-    try {
-        const keys = Reflect.ownKeys(mod)
-            .filter((k): k is string => typeof k === "string" && k.startsWith(prefix))
-            .sort();
-
-        const items = keys.map(k => {
-            const v = (mod as any)[k];
-            return {
-                key: k,
-                name: k.slice(prefix.length),
-                type: typeof v,
-                arity: typeof v === "function" ? v.length : undefined,
-            };
-        });
-
-        const title = `[bqlog] native exports (${items.length})`;
-        if (typeof console.groupCollapsed === "function") console.groupCollapsed(title);
-        else console.log(title);
-
-        for (const it of items) {
-            console.log(`${it.key} -> ${it.type}${it.arity != null ? ` (arity=${it.arity})` : ""}`);
-        }
-        if (typeof console.groupEnd === "function") console.groupEnd();
-
-    } catch (err) {
-        console.warn("[bqlog] Failed to dump native exports:", err);
-    }
-}
-
-// auto load on module initialization, similar to java static block
-(function auto_load() {
-    try {
-        native_mod_ = load_bq_log_native();
-        //dump_native_exports(native_mod_);
-    } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(`failed to load ${lib_def.lib_name}`);
-        // eslint-disable-next-line no-console
-        console.error((e as Error)?.message ?? String(e));
-        const k: runtime_kind = detect_runtime();
-        // eslint-disable-next-line no-console
-        console.error(`runtime: ${k}`);
-    }
-})();
-
 export class log_invoker {
     public static __api_get_log_version(): string {
         return native_export("get_log_version")();

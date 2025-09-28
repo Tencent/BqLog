@@ -10,7 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-import { log_invoker, native_export } from "../impl/log_invoker";
+import { log_invoker } from "../impl/log_invoker";
 import { string_holder } from "../def/string_holder";
 
 export enum appender_decode_result {

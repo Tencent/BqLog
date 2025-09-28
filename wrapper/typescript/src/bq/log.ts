@@ -10,9 +10,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 import { log_level } from "./def/log_level";
-import { log_invoker, native_export } from "./impl/log_invoker";
-
-
+import { log_invoker } from "./impl/log_invoker";
+// IMPORTANT: this is a build-alias file generated per build.
+// For ESM build it is a copy of lib_loader.esm.txt,
+// for CJS and OHOS build it is lib_loader.ts.
+import { native_export } from "./utils/lib_loader"
 
 export type console_callback = (
     log_id: bigint,
