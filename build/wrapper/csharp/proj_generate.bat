@@ -1,7 +1,7 @@
 mkdir VSProj
 cd VSProj
 
-cmake ..\..\..\..\wrapper\csharp\src
+cmake ..\..\..\..\wrapper\csharp
 
 cd ..
 pause
