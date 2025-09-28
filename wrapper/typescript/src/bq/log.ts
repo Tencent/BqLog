@@ -23,11 +23,8 @@ export type console_callback = (
 export class log {
     private log_id_: bigint = 0n;
     private name_: string = "";
-    private merged_log_level_bitmap_: DataView | null = null;
-    private categories_mask_array_: DataView | null = null;
-    private print_stack_level_bitmap_: DataView | null = null;
-    private categories_name_array_: Array<string> = [];
-    private static callback_: console_callback | null = null;
+    protected categories_name_array_: Array<string> = [];
+    protected static callback_: console_callback | null = null;
 
     protected static get_log_by_id(log_id: bigint): log {
         let log_inst: log = new log(log_id);
@@ -36,9 +33,6 @@ export class log {
             return log_inst;
         }
         log_inst.name_ = name;
-        log_inst.merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(log_id);
-        log_inst.categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(log_id);
-        log_inst.print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(log_id);
 
         let category_count = log_invoker.__api_get_log_categories_count(log_id);
         log_inst.categories_name_array_ = [];
@@ -188,14 +182,10 @@ export class log {
         log_invoker.__api_log_device_console(level, str);
     }
 
-    protected constructor(arg?: log | bigint) {
+    protected constructor(arg: log | bigint) {
         if (arg instanceof log) {
-            this.merged_log_level_bitmap_ = arg.merged_log_level_bitmap_;
             this.name_ = arg.name_;
             this.log_id_ = arg.log_id_;
-            this.merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(this.log_id_);
-            this.categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(this.log_id_);
-            this.print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(this.log_id_);
 
             let category_count = log_invoker.__api_get_log_categories_count(this.log_id_);
             this.categories_name_array_ = [];

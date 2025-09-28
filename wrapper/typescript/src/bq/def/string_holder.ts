@@ -10,6 +10,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-export interface string_holder {
-    text: string;
+export class string_holder {
+    value: string | undefined;
 }

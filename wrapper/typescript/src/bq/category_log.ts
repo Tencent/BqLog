@@ -9,3 +9,26 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+import { log } from "./log"
+
+export class category_log extends log {
+    protected constructor(arg: category_log | bigint) {
+        super(arg);
+    }
+
+    /**
+     * Get log categories count
+     * @return
+     */
+    public get_categories_count(): number {
+        return this.categories_name_array_.length;
+    }
+
+    /**
+     * Get names of all categories
+     * @return
+     */
+    public get_categories_name_array(): string[] {
+        return this.categories_name_array_;
+    }
+}

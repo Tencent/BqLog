@@ -192,14 +192,6 @@ namespace bq {
     static inline void _free_cstr(char* p) {
         if (p) free(p);
     }
-
-    static inline napi_value _make_dataview(napi_env env, void* data, size_t byte_length) {
-        napi_value ab = NULL;
-        BQ_NAPI_CALL(env, nullptr, napi_create_external_arraybuffer(env, data, byte_length, NULL, NULL, &ab));
-        napi_value dv = NULL;
-        BQ_NAPI_CALL(env, nullptr, napi_create_dataview(env, byte_length, ab, 0, &dv));
-        return dv;
-    }    
 }
 
 
@@ -822,41 +814,6 @@ BQ_NAPI_DEF(get_log_category_name_by_index, napi_env, env, napi_callback_info, i
     return bq::_make_str_utf8(env, name_def.str);
 }
 
-// get_log_merged_log_level_bitmap_by_log_id(log_id: bigint): DataView (size 4)
-BQ_NAPI_DEF(get_log_merged_log_level_bitmap_by_log_id, napi_env, env, napi_callback_info, info)
-{
-    size_t argc = 1; napi_value argv[1] = { 0 };
-    BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
-    if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
-    const uint32_t* bitmap_ptr = bq::api::__api_get_log_merged_log_level_bitmap_by_log_id(id);
-    return bq::_make_dataview(env, const_cast<void*>((const void*)bitmap_ptr), sizeof(uint32_t));
-}
-
-// get_log_category_masks_array_by_log_id(log_id: bigint): DataView (size = categories_count bytes)
-BQ_NAPI_DEF(get_log_category_masks_array_by_log_id, napi_env, env, napi_callback_info, info)
-{
-    size_t argc = 1; napi_value argv[1] = { 0 };
-    BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
-    if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
-
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
-    uint32_t count = bq::api::__api_get_log_categories_count(id);
-    const uint8_t* mask_array_ptr = bq::api::__api_get_log_category_masks_array_by_log_id(id);
-    return bq::_make_dataview(env, const_cast<void*>((const void*)mask_array_ptr), (size_t)count * sizeof(uint8_t));
-}
-
-// get_log_print_stack_level_bitmap_by_log_id(log_id: bigint): DataView (size 4)
-BQ_NAPI_DEF(get_log_print_stack_level_bitmap_by_log_id, napi_env, env, napi_callback_info, info)
-{
-    size_t argc = 1; napi_value argv[1] = { 0 };
-    BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
-    if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
-    const uint32_t* bitmap_ptr = bq::api::__api_get_log_print_stack_level_bitmap_by_log_id(id);
-    return bq::_make_dataview(env, const_cast<void*>((const void*)bitmap_ptr), sizeof(uint32_t));
-}
-
 // log_device_console(level: number, content: string): void
 BQ_NAPI_DEF(log_device_console, napi_env, env, napi_callback_info, info)
 {
@@ -892,11 +849,27 @@ BQ_NAPI_DEF(get_file_base_dir, napi_env, env, napi_callback_info, info)
     return bq::_make_str_utf8(env, path);
 }
 
+struct decoder_napi_wrap_inst {
+    uint32_t handle_;
+};
+static void NAPI_CDECL decoder_inst_finalize(napi_env env,
+    void* finalize_data,
+    void* finalize_hint)
+{
+    (void)env;
+    (void)finalize_hint;
+    decoder_napi_wrap_inst* wrap_inst = (decoder_napi_wrap_inst*)finalize_data;
+    if (wrap_inst) {
+        bq::api::__api_log_decoder_destroy(wrap_inst->handle_);
+        delete wrap_inst;
+    }
+}
+
 // log_decoder_create(path: string, priv_key: string): bigint (negative int64 on error)
 BQ_NAPI_DEF(log_decoder_create, napi_env, env, napi_callback_info, info)
 {
     size_t argc = 2; napi_value argv[2] = { 0,0 };
-    BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
+    BQ_NAPI_CALL(env, bq::_make_u32(env, 0xFFFFFFFF), napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "path and priv_key required"); return NULL; }
 
     char* path = bq::_dup_cstr_from_napi(env, argv[0]);
@@ -909,13 +882,35 @@ BQ_NAPI_DEF(log_decoder_create, napi_env, env, napi_callback_info, info)
     bq::_free_cstr(priv_key);
 
     if (result != bq::appender_decode_result::success) {
-        // negative error code in int64
-        return bq::_make_i64(env, (int64_t)result * (int64_t)(-1));
+        // negative error code in int32
+        return bq::_make_u32(env, (int32_t)result * (int32_t)(-1));
     }
     else {
-        return bq::_make_i64(env, (int64_t)handle);
+        return bq::_make_u32(env, handle);
     }
 }
+
+// log_decoder_attach
+// attach_decoder_inst(decoder_inst: log_decoder, handle: number): void
+BQ_NAPI_DEF(attach_decoder_inst, napi_env, env, napi_callback_info, info)
+{
+    size_t argc = 2; napi_value argv[2] = { 0,0 };
+    BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
+    if (argc != 2) {
+        napi_throw_type_error(env, NULL, "decoder_inst and handle:number required in attach_decoder_inst");
+        return bq::_make_undefined(env);
+    }
+    napi_valuetype t0; napi_typeof(env, argv[0], &t0);
+    if (t0 != napi_object) {
+        napi_throw_type_error(env, NULL, "first arg must be object");
+        return nullptr;
+    }
+    uint32_t handle = bq::_get_u32(env, argv[1]);
+    decoder_napi_wrap_inst* wrap_inst = new decoder_napi_wrap_inst{ handle };
+    BQ_NAPI_CALL(env, nullptr, napi_wrap(env, argv[0], wrap_inst, decoder_inst_finalize, nullptr, nullptr));
+    return bq::_make_undefined(env);
+}
+
 
 // log_decoder_decode(handle: bigint): { code: number, text: string }
 BQ_NAPI_DEF(log_decoder_decode, napi_env, env, napi_callback_info, info)
@@ -924,9 +919,9 @@ BQ_NAPI_DEF(log_decoder_decode, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "handle required"); return NULL; }
 
-    uint64_t handle = bq::_get_u64_from_bigint(env, argv[0]);
+    uint32_t handle = bq::_get_u32(env, argv[0]);
     bq::_api_string_def text = { NULL, 0 };
-    bq::appender_decode_result result = bq::api::__api_log_decoder_decode((uint32_t)handle, &text);
+    bq::appender_decode_result result = bq::api::__api_log_decoder_decode(handle, &text);
 
     napi_value obj = NULL; napi_create_object(env, &obj);
     napi_value v_code = bq::_make_i32(env, (int32_t)result);
@@ -934,17 +929,6 @@ BQ_NAPI_DEF(log_decoder_decode, napi_env, env, napi_callback_info, info)
     napi_set_named_property(env, obj, "code", v_code);
     napi_set_named_property(env, obj, "text", v_text);
     return obj;
-}
-
-// log_decoder_destroy(handle: bigint): void
-BQ_NAPI_DEF(log_decoder_destroy, napi_env, env, napi_callback_info, info)
-{
-    size_t argc = 1; napi_value argv[1] = { 0 };
-    BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
-    if (argc < 1) { napi_throw_type_error(env, NULL, "handle required"); return NULL; }
-    uint64_t handle = bq::_get_u64_from_bigint(env, argv[0]);
-    bq::api::__api_log_decoder_destroy((uint32_t)handle);
-    return bq::_make_undefined(env);
 }
 
 // log_decode(in_path: string, out_path: string, priv_key: string): boolean

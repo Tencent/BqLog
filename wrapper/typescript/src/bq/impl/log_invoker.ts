@@ -129,18 +129,6 @@ export class log_invoker {
         return native_export("get_log_category_name_by_index")(log_id, category_index);
     }
 
-    public static __api_get_log_merged_log_level_bitmap_by_log_id(log_id: bigint): DataView | null {
-        return native_export("get_log_merged_log_level_bitmap_by_log_id")(log_id);
-    }
-
-    public static __api_get_log_category_masks_array_by_log_id(log_id: bigint): DataView | null {
-        return native_export("get_log_category_masks_array_by_log_id")(log_id);
-    }
-
-    public static __api_get_log_print_stack_level_bitmap_by_log_id(log_id: bigint): DataView | null {
-        return native_export("get_log_print_stack_level_bitmap_by_log_id")(log_id);
-    }
-
     public static __api_log_device_console(level: number, content: string): void {
         native_export("log_device_console")(level, content);
     }
@@ -153,27 +141,27 @@ export class log_invoker {
         return native_export("get_file_base_dir")(!!is_in_sandbox) as string;
     }
 
-    public static __api_log_decoder_create(log_file_path: string, priv_key: string): bigint {
-        return as_bigint(native_export("log_decoder_create")(log_file_path, priv_key));
+    public static __api_log_decoder_create(log_file_path: string, priv_key?: string): number {
+        return native_export("log_decoder_create")(log_file_path, priv_key ? priv_key : "");
     }
 
-    public static __api_log_decoder_decode(handle: bigint, out: string_holder): number {
+    public static __api_log_decoder_decode(handle: number, out: string_holder): number {
         const obj = native_export("log_decoder_decode")(handle) as {
             code: number;
             text: string;
         };
         if (out && typeof out === "object") {
-            out.text = obj?.text ?? "";
+            out.value = obj?.text ?? "";
         }
         return obj?.code ?? 0;
     }
 
-    public static __api_log_decoder_destroy(handle: bigint): void {
-        native_export("log_decoder_destroy")(handle);
+    public static __api_attach_decoder_inst(decoder_inst: any): void {
+        native_export("attach_decoder_inst")(decoder_inst, decoder_inst['handle_']);
     }
 
-    public static __api_log_decode(in_file_path: string, out_file_path: string, priv_key: string): boolean {
-        return !!native_export("log_decode")(in_file_path, out_file_path, priv_key);
+    public static __api_log_decode(in_file_path: string, out_file_path: string, priv_key?: string): boolean {
+        return !!native_export("log_decode")(in_file_path, out_file_path, priv_key ? priv_key : "");
     }
 
     public static __api_take_snapshot_string(log_id: bigint, use_gmt_time: boolean): string {
