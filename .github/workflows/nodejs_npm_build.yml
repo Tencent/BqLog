@@ -1,0 +1,11 @@
+name: NodeJs NPM Build
+on:
+  workflow_dispatch:  # manually trigger
+
+permissions:
+  contents: write
+
+jobs:
+  build_sub_flow:
+    uses: ./.github/workflows/nodejs_native_build.yml
+  
