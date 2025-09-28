@@ -795,7 +795,7 @@ BQ_NAPI_DEF(get_log_categories_count, napi_env, env, napi_callback_info, info)
     if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
     uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
     uint32_t count = bq::api::__api_get_log_categories_count(id);
-    return bq::_make_u32(env, (uint64_t)count);
+    return bq::_make_u32(env, count);
 }
 
 // get_log_category_name_by_index(log_id: bigint, index: number): string|null
@@ -865,11 +865,11 @@ static void NAPI_CDECL decoder_inst_finalize(napi_env env,
     }
 }
 
-// log_decoder_create(path: string, priv_key: string): bigint (negative int64 on error)
+// log_decoder_create(path: string, priv_key: string): number (negative on error)
 BQ_NAPI_DEF(log_decoder_create, napi_env, env, napi_callback_info, info)
 {
     size_t argc = 2; napi_value argv[2] = { 0,0 };
-    BQ_NAPI_CALL(env, bq::_make_u32(env, 0xFFFFFFFF), napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
+    BQ_NAPI_CALL(env, bq::_make_i32(env, -1), napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "path and priv_key required"); return NULL; }
 
     char* path = bq::_dup_cstr_from_napi(env, argv[0]);
@@ -883,10 +883,10 @@ BQ_NAPI_DEF(log_decoder_create, napi_env, env, napi_callback_info, info)
 
     if (result != bq::appender_decode_result::success) {
         // negative error code in int32
-        return bq::_make_u32(env, (int32_t)result * (int32_t)(-1));
+        return bq::_make_i32(env, (int32_t)result * (int32_t)(-1));
     }
     else {
-        return bq::_make_u32(env, handle);
+        return bq::_make_i32(env, static_cast<int32_t>(handle));
     }
 }
 
