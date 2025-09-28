@@ -443,7 +443,7 @@ public:
         if (js_string_value2_) {
             size_t sz2 = 0;
             BQ_NAPI_CALL(env_, false, napi_get_value_string_utf8(env_, js_string_value2_, nullptr, 0, &sz2));
-            js_string_utf8_size_ += (sz2 + 1); // 1 byte for '\n'
+            js_string_utf8_size_ += sz2;
         }
         size_seq_ = bq::tools::make_single_string_size_seq<INCLUDE_TYPE_INFO, char>(js_string_utf8_size_);
         return true;
@@ -471,7 +471,6 @@ public:
             assert(copied <= data_size);
 #endif
             if (js_string_value2_) {
-                dest[copied++] = '\n';
                 size_t left = data_size - copied;
                 //1 byte has already been preserved for '\0', don't worry about overflow here
                 napi_get_value_string_utf8(env_, js_string_value2_, dest + copied, left + 1, &copied);
@@ -561,6 +560,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
 
         napi_value err;
         BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_create_error(env, nullptr, empty_msg, &err));
+        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_set_named_property(env, err, "name", empty_msg));
 
         napi_value global, error_ctor, cap_fun;
         BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_global(env, &global));
