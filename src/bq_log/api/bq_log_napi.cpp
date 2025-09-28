@@ -25,7 +25,6 @@
 #include "bq_log/types/buffer/log_buffer.h"
 
 namespace bq {
-    BQ_TLS_NON_POD(bq::u16string, _tls_utf16_str);
     BQ_TLS_NON_POD(bq::string, _tls_utf8_str);
 
     template<typename T, size_t MAX_RESERVE_SIZE>
@@ -61,9 +60,6 @@ namespace bq {
     static inline napi_value _make_u64(napi_env env, uint64_t x) {
         napi_value v; napi_create_bigint_uint64(env, x, &v); return v;
     }
-    static inline napi_value _make_i64(napi_env env, int64_t x) {
-        napi_value v; napi_create_bigint_int64(env, x, &v); return v;
-    }
     static inline napi_value _make_str_utf8(napi_env env, const char* s) {
         napi_value v; napi_create_string_utf8(env, s ? s : "", NAPI_AUTO_LENGTH, &v); return v;
     }
@@ -90,28 +86,6 @@ namespace bq {
         return fabs(d) <= 9007199254740991.0; // 9007199254740991 = 2^53 - 1
     }
 
-    static inline bq::napi_str_result<bq::u16string, 256> read_utf16_str_tls(napi_env env, napi_value v, size_t u16string_bytes) {
-        auto& tls_str = bq::_tls_utf16_str.get();
-        if (!v) {
-            tls_str.clear();
-            return bq::napi_str_result<bq::u16string, 256>(tls_str);
-        }
-        if (tls_str.is_empty()) {
-            tls_str.fill_uninitialized(10);
-        }
-        size_t len16 = (u16string_bytes >> 1);
-        if (u16string_bytes == SIZE_MAX) {
-            napi_get_value_string_utf16(env, v, nullptr, 0, &len16);
-        }
-        tls_str.clear();
-        if (len16 > 0) {
-            tls_str.fill_uninitialized(len16);
-            size_t got16 = 0;
-            napi_get_value_string_utf16(env, v, tls_str.begin(), len16 + 1, &got16);
-            assert(got16 == len16);
-        }
-        return bq::napi_str_result<bq::u16string, 256>(tls_str);
-    }
 
     static inline bq::napi_str_result<bq::string, 256> read_utf8_str_tls(napi_env env, napi_value v, size_t u8string_bytes) {
         auto& tls_str = bq::_tls_utf8_str.get();
@@ -528,7 +502,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         }
     }
     bq::log_imp* log_impl = bq::log_manager::get_log_by_id(log_js_inst->log_id_);
-    if (!log_impl->is_enable_for(category_index, log_level)) {
+    if (!log_impl || !log_impl->is_enable_for(category_index, log_level)) {
         return bq::_make_bool(env, false);
     }
 

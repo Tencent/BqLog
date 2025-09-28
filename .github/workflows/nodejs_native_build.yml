@@ -91,7 +91,7 @@ jobs:
       - name: Install node-api-headers
         run: |
           npm install node-api-headers
-          npx node-gyp install
+          npx node-gyp install --arch=arm64
 
       - name: Build for Windows
         run: |
@@ -125,7 +125,7 @@ jobs:
       - name: Install node-api-headers
         run: |
           npm install node-api-headers
-          npx node-gyp install
+          npx node-gyp install --arch=arm64
 
       - name: Build for Windows
         run: |
@@ -405,6 +405,7 @@ jobs:
           mem: 8192
           prepare: |
             pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -443,6 +444,7 @@ jobs:
           mem: 8192
           prepare: |
             pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
