@@ -8,4 +8,138 @@ permissions:
 jobs:
   build_sub_flow:
     uses: ./.github/workflows/nodejs_native_build.yml
-  
+
+  collect_and_stage_prebuilds:
+    runs-on: ubuntu-latest
+    needs: build_sub_flow
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts from native builds
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded_artifacts
+
+      - name: Prepare tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+
+      - name: Extract all archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p extracted
+          shopt -s nullglob
+          # unzip *.zip
+          for z in downloaded_artifacts/**/*.zip downloaded_artifacts/*.zip; do
+            d="extracted/$(basename "${z%.*}")"
+            mkdir -p "$d"
+            echo "::group::Unzip $z -> $d"
+            unzip -o "$z" -d "$d"
+            echo "::endgroup::"
+          done
+          # tar -xzf *.tgz / *.tar.gz
+          for t in downloaded_artifacts/**/*.tgz downloaded_artifacts/*.tgz downloaded_artifacts/**/*.tar.gz downloaded_artifacts/*.tar.gz; do
+            d="extracted/$(basename "${t%%.tar.gz}")"
+            d="${d%.*}" # strip .tgz as well
+            mkdir -p "$d"
+            echo "::group::Untar $t -> $d"
+            tar -xzf "$t" -C "$d"
+            echo "::endgroup::"
+          done
+
+      - name: Stage RelWithDebInfo BqLog.node (+pdb) into wrapper/typescript/prebuilds
+        shell: bash
+        run: |
+          set -euo pipefail
+          TS_DIR="wrapper/typescript"
+          PREBUILDS_DIR="$TS_DIR/prebuilds"
+          mkdir -p "$PREBUILDS_DIR"
+
+          map_target() {
+            # Map archive folder name to prebuilds/<plat-arch>
+            # Input: archive base name (e.g., PACKAGE-windows-x86_64-1.2.3)
+            local name="$1"
+            local lowered="${name,,}"
+            if [[ "$lowered" == *macos*universal* ]]; then
+              echo "darwin-universal"  # special marker, handled later (copy to two dirs)
+            elif [[ "$lowered" == *windows*arm64* ]]; then
+              echo "win32-arm64"
+            elif [[ "$lowered" == *windows* ]]; then
+              # default windows x64
+              echo "win32-x64"
+            elif [[ "$lowered" == *freebsd* ]]; then
+              echo "freebsd-x64"
+            elif [[ "$lowered" == *linux*arm64* ]]; then
+              echo "linux-arm64"
+            elif [[ "$lowered" == *linux*x86_64* || "$lowered" == *linux*amd64* ]]; then
+              echo "linux-x64"
+            elif [[ "$lowered" == *linux*x86* || "$lowered" == *debian*x86* || "$lowered" == *i386* ]]; then
+              echo "linux-ia32"
+            else
+              # Fallback unknown
+              echo ""
+            fi
+          }
+
+          copied_any=0
+          shopt -s globstar nullglob
+          for d in extracted/*; do
+            base="$(basename "$d")"
+            target="$(map_target "$base")"
+            if [[ -z "$target" ]]; then
+              echo "Skip: cannot determine prebuild target for $base"
+              continue
+            fi
+
+            # Find RelWithDebInfo/BqLog.node
+            mapfile -t nodes < <(find "$d" -type f -path "*/RelWithDebInfo/*" -name "BqLog.node" 2>/dev/null || true)
+            if (( ${#nodes[@]} == 0 )); then
+              echo "No RelWithDebInfo/BqLog.node found in $base, skipping."
+              continue
+            fi
+
+            # Prefer the first match
+            node_src="${nodes[0]}"
+            echo "::group::Stage from $base -> $target"
+            if [[ "$target" == "darwin-universal" ]]; then
+              for tdir in "darwin-x64" "darwin-arm64"; do
+                mkdir -p "$PREBUILDS_DIR/$tdir"
+                cp -f "$node_src" "$PREBUILDS_DIR/$tdir/BqLog.node"
+                # Copy optional PDB (Windows only; on mac不会有)
+              done
+            else
+              mkdir -p "$PREBUILDS_DIR/$target"
+              cp -f "$node_src" "$PREBUILDS_DIR/$target/BqLog.node"
+              # Optional PDB (for Windows builds, if packaged together)
+              pdb="$(dirname "$node_src")/BqLog.pdb"
+              if [[ -f "$pdb" ]]; then
+                cp -f "$pdb" "$PREBUILDS_DIR/$target/BqLog.pdb"
+              fi
+            fi
+            echo "::endgroup::"
+            copied_any=1
+          done
+
+          if [[ "$copied_any" -ne 1 ]]; then
+            echo "Error: No prebuilds were staged."
+            exit 1
+          fi
+
+      - name: List staged prebuilds
+        run: |
+          find wrapper/typescript/prebuilds -maxdepth 2 -type f -print | sort
+
+      - name: Build NPM
+        run: |
+          cd build/wrapper/nodejs
+          chmod +x *.sh
+          ./build_all_and_pack.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodejs_npm_all
+          path: ${{ github.workspace }}/dist
