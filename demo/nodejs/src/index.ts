@@ -1,12 +1,11 @@
-import { log_invoker } from "./bq_log/bq/impl/log_invoker"
-import { log } from "./bq_log/bq/log"
+import { bq } from "bqlog"
 
 console.log('cwd =', process.cwd());
 console.log('PID =', process.pid);
 console.log('Attach debugger, then press Enter to require…');
 
 
-console.log(log_invoker.__api_get_log_version());
+console.log(bq.log.get_version());
 
 let config = `appenders_config.appender_0.type=console
 appenders_config.appender_0.time_zone =default local time
@@ -50,7 +49,7 @@ process.stdin.once("data", () => {
     }
     process.stdin.pause();
 
-    let log1 = log.create_log("test_log", config);
+    let log1 = bq.log.create_log("test_log", config);
     let id = log1.get_id()
 
     log1.debug("valid:{}", 2.23423534523451253245234523451243412);
