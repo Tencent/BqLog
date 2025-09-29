@@ -10,6 +10,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+import { log_invoker } from "../impl/log_invoker";
+
 export class log_category_base {
     protected index: number = 0;
+
+    protected constructor(index: number) {
+        this.index = index;
+        log_invoker.__api_attach_category_base_inst(this);
+    }
 }
