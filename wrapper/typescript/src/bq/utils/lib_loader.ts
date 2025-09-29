@@ -10,12 +10,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-
 /*
- * CJS + OHOS loader wrapper (no top-level node:* imports).
- * - Node CJS: sync auto-load using global require + __dirname (via tools).
- * - OHOS: sync auto-load using requireNapi/requireNativeModule.
- */
+* CJS + OHOS loader wrapper (no top-level node:* imports).
+* - Node CJS: sync auto-load using global require + __dirname (via tools).
+* - OHOS: sync auto-load using requireNapi/requireNativeModule.
+*/
 
 import * as tools from "../utils/tools";
 import { load_node_sync_core, load_ohos_sync, native_binding } from "./lib_loader_core";

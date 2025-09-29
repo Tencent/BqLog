@@ -9,17 +9,18 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
- 
- /*
- * CJS + OHOS loader wrapper (no top-level node:* imports).
- * - Node CJS: sync auto-load using global require + __dirname (via tools).
- * - OHOS: sync auto-load using requireNapi/requireNativeModule.
- */
+
+/*
+* CJS + OHOS loader wrapper (no top-level node:* imports).
+* - Node CJS: sync auto-load using global require + __dirname (via tools).
+* - OHOS: sync auto-load using requireNapi/requireNativeModule.
+*/
 
 import * as tools from "../utils/tools";
 import { load_node_sync_core, load_ohos_sync, native_binding } from "./lib_loader_core";
 
 let native_mod_: native_binding | null = null;
+const proc: any = (globalThis as any)?.proc;
 
 export function native_export(name: string): any {
     const mod = native_mod_;
@@ -33,10 +34,10 @@ export function native_export(name: string): any {
     try {
         // Robust Node detection
         const is_node =
-            typeof process === "object" &&
-            !!(process as any) &&
-            typeof (process as any).versions === "object" &&
-            !!(process as any).versions?.node;
+            typeof proc === "object" &&
+            !!(proc as any) &&
+            typeof (proc as any).versions === "object" &&
+            !!(proc as any).versions?.node;
 
         if (is_node) {
             // Try multiple strategies to get require
