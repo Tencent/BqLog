@@ -1,0 +1,17 @@
+{
+  "name": "minimal-ts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "bqlog": "file:C:/Users/pippocao/Downloads/nodejs_npm_all/bqlog-nodejs-npm-2.0.1/bqlog-nodejs-npm-2.0.1/wrapper_nodejs/bqlog-2.0.1.tgz"
+  }
+}

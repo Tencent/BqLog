@@ -1,3 +1,4 @@
 ﻿dist
 node_modules
 *.bak
+/package-lock.json
