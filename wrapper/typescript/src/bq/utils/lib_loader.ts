@@ -21,6 +21,7 @@ import * as tools from "../utils/tools";
 import { load_node_sync_core, load_ohos_sync, native_binding } from "./lib_loader_core";
 
 let native_mod_: native_binding | null = null;
+const proc: any = (globalThis as any)?.proc;
 
 export function native_export(name: string): any {
     const mod = native_mod_;
@@ -34,10 +35,10 @@ export function native_export(name: string): any {
     try {
         // Robust Node detection
         const is_node =
-            typeof process === "object" &&
-            !!(process as any) &&
-            typeof (process as any).versions === "object" &&
-            !!(process as any).versions?.node;
+            typeof proc === "object" &&
+            !!(proc as any) &&
+            typeof (proc as any).versions === "object" &&
+            !!(proc as any).versions?.node;
 
         if (is_node) {
             // Try multiple strategies to get require

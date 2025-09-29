@@ -21,6 +21,7 @@ import * as tools from "../utils/tools";
 export interface native_binding {
   [key: string]: any;
 }
+const proc: any = (globalThis as any)?.proc;
 
 function try_require_with(req: any, id: string): native_binding | null {
   if (!req) return null;
@@ -44,7 +45,7 @@ function build_candidates(base_dir: string, plat: string, arch: string, napi_ver
 }
 
 function name_candidates_from_env(): string[] {
-  const env_name = (typeof process !== "undefined" && process?.env?.BQ_NAPI_NAME) || "";
+  const env_name = (typeof proc !== "undefined" && proc?.env?.BQ_NAPI_NAME) || "";
   return Array.from(new Set([
     env_name,
     lib_def.lib_name,
@@ -58,7 +59,7 @@ function name_candidates_from_env(): string[] {
  * Build a list of base directories to probe:
  * - base_dir (as provided by wrapper)
  * - base_dir/.. and base_dir/../.. (common packaging layouts)
- * - process.cwd() (when available)
+ * - proc.cwd() (when available)
  * - optional extra dirs from env BQ_NODE_SEARCH_DIRS (sep: ; or :)
  */
 function gather_base_dirs(base_dir: string): string[] {
@@ -74,13 +75,14 @@ function gather_base_dirs(base_dir: string): string[] {
 
   try {
     // @ts-ignore
-    if (typeof process !== "undefined" && typeof process.cwd === "function") {
-      push(process.cwd());
+    if (typeof proc !== "undefined" && typeof proc.cwd === "function") {
+      push(proc.cwd());
     }
   } catch { }
 
   try {
-    const extra = (typeof process !== "undefined" && process?.env?.BQ_NODE_SEARCH_DIRS) || "";
+    const raw = (typeof proc !== "undefined" && proc?.env?.BQ_NODE_SEARCH_DIRS) || "";
+    const extra: string = typeof raw === "string" ? raw : "";
     if (extra) {
       const parts = extra.split(/[;:]/g).map(s => s.trim()).filter(Boolean);
       for (const p of parts) push(p);
@@ -97,9 +99,9 @@ function gather_base_dirs(base_dir: string): string[] {
  * On failure, throws with all tried files and base directory list.
  */
 export function load_node_sync_core(req: any, base_dir: string): native_binding {
-  const plat = process.platform;
-  const arch = process.arch;
-  const napi_ver = process.versions?.napi;
+  const plat = proc.platform;
+  const arch = proc.arch;
+  const napi_ver = proc.versions?.napi;
   const names = name_candidates_from_env();
 
   // Aggregate diagnostics
@@ -107,7 +109,7 @@ export function load_node_sync_core(req: any, base_dir: string): native_binding 
   const base_dirs = gather_base_dirs(base_dir);
 
   // 1) explicit absolute path from env
-  const addon_env = (typeof process !== "undefined" && process?.env?.BQ_NODE_ADDON) || "";
+  const addon_env = (typeof proc !== "undefined" && proc?.env?.BQ_NODE_ADDON) || "";
   if (addon_env) {
     const got = try_require_with(req, addon_env);
     if (got) return got;
