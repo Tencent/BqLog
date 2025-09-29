@@ -20,7 +20,7 @@ import * as tools from "../utils/tools";
 import { load_node_sync_core, load_ohos_sync, native_binding } from "./lib_loader_core";
 
 let native_mod_: native_binding | null = null;
-const proc: any = (globalThis as any)?.proc;
+const proc: any = (globalThis as any)?.process;
 
 export function native_export(name: string): any {
     const mod = native_mod_;

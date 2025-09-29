@@ -21,7 +21,7 @@ import * as tools from "../utils/tools";
 export interface native_binding {
   [key: string]: any;
 }
-const proc: any = (globalThis as any)?.proc;
+const proc: any = (globalThis as any)?.process;
 
 function try_require_with(req: any, id: string): native_binding | null {
   if (!req) return null;

@@ -10,6 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 import { log } from "./log"
+import { log_invoker } from "./impl/log_invoker";
 
 export class category_log extends log {
     protected constructor(arg: category_log | bigint) {
@@ -30,5 +31,25 @@ export class category_log extends log {
      */
     public get_categories_name_array(): string[] {
         return this.categories_name_array_;
+    }
+
+    /**
+     * Create a category log
+     * @param name 
+     *          If the log name is an empty string, bqLog will automatically assign you a unique log name. 
+     * 			If the log name already exists, it will return the previously existing log object and overwrite the previous configuration with the new config.
+     * @param config 
+     * 			Log config string
+     * @param categories_count 
+     * @param categories 
+     * @returns 
+     * 			A log id, if create failed, 0 will be returned
+     */
+    protected static call_api_create_category_log(name: string, config: string, categories_count: number, categories: string[] | null): bigint {
+        if (!config || config.length == 0) {
+            return 0n;
+        }
+        let log_handle: bigint = log_invoker.__api_create_log(name, config, categories_count, categories);
+        return log_handle;
     }
 }

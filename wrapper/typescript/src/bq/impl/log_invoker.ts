@@ -50,7 +50,7 @@ export class log_invoker {
     }
 
     public static __api_attach_category_base_inst(category_inst: any): void {
-        return native_export("category_base_inst")(category_inst, category_inst['index']);
+        return native_export("attach_category_base_inst")(category_inst, category_inst['index']);
     }
 
     public static __api_set_appenders_enable(log_id: bigint, appender_name: string, enable: boolean): void {

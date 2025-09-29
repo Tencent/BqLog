@@ -28,25 +28,6 @@ export class log {
     protected categories_name_array_: Array<string> = [];
     protected static callback_: console_callback | null = null;
 
-    protected static get_log_by_id(log_id: bigint): log {
-        let log_inst: log = new log(log_id);
-        let name = log_invoker.__api_get_log_name_by_id(log_id);
-        if (null == name) {
-            return log_inst;
-        }
-        log_inst.name_ = name;
-
-        let category_count = log_invoker.__api_get_log_categories_count(log_id);
-        log_inst.categories_name_array_ = [];
-        for (let i = 0; i < category_count; ++i) {
-            let category_item_name = log_invoker.__api_get_log_category_name_by_index(log_id, i);
-            if (category_item_name) {
-                log_inst.categories_name_array_.push(category_item_name);
-            }
-        }
-        return log_inst;
-    }
-
     /**
      * Get bqLog lib version
      * @return
@@ -97,9 +78,8 @@ export class log {
         if (!config || config.length == 0) {
             return new log(0n);
         }
-        let log_handle: bigint = log_invoker.__api_create_log(name, config, 0, null);
-        let result: log = log.get_log_by_id(log_handle);
-        return result;
+        let log_id: bigint = log_invoker.__api_create_log(name, config, 0, null);
+        return new log(log_id);
     }
 
     /**
@@ -118,7 +98,7 @@ export class log {
             let id = log_invoker.__api_get_log_id_by_index(i);
             let name = log_invoker.__api_get_log_name_by_id(id);
             if (log_name == name) {
-                return log.get_log_by_id(id);
+                return new log(id);
             }
         }
         return new log(0n);
@@ -199,6 +179,18 @@ export class log {
             }
         } else if (typeof (arg) === 'bigint') {
             this.log_id_ = arg;
+            let name = log_invoker.__api_get_log_name_by_id(this.log_id_);
+            if (!name) {
+                this.log_id_ = 0n;
+                return;
+            }
+            this.name_ = name;
+            let category_count = log_invoker.__api_get_log_categories_count(this.log_id_);
+            this.categories_name_array_ = [];
+            for (let i = 0; i < category_count; ++i) {
+                let category_item_name = log_invoker.__api_get_log_category_name_by_index(this.log_id_, i);
+                this.categories_name_array_.push(category_item_name as string);
+            }
         }
         log_invoker.__api_attach_log_inst(this);
     }

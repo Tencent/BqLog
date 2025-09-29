@@ -349,8 +349,10 @@ BQ_NAPI_DEF(attach_log_inst, napi_env, env, napi_callback_info, info)
         return nullptr;
     }
     uint64_t log_id = bq::_get_u64_from_bigint(env, argv[1]);
-    log_napi_wrap_inst* wrap_inst = new log_napi_wrap_inst{ log_id };
-    BQ_NAPI_CALL(env, nullptr, napi_wrap(env, argv[0], wrap_inst, log_inst_finalize, nullptr, nullptr));
+    if (log_id != 0) {
+        log_napi_wrap_inst* wrap_inst = new log_napi_wrap_inst{ log_id };
+        BQ_NAPI_CALL(env, nullptr, napi_wrap(env, argv[0], wrap_inst, log_inst_finalize, nullptr, nullptr));
+    }
     return bq::_make_undefined(env);
 }
 
