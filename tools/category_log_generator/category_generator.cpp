@@ -15,6 +15,7 @@
 #include "template/category_log_template_cpp.h"
 #include "template/category_log_template_csharp.h"
 #include "template/category_log_template_java.h"
+#include "template/category_log_template_typescript.h"
 
 namespace bq {
     bool category_generator::parse_config_file(const bq::string& file_path, category_node& category_root)
@@ -39,14 +40,17 @@ namespace bq {
                 end_pos = content.size();
             }
             string line = content.substr(search_start, end_pos - search_start);
-
-            bq::array<bq::string> comment_split = line.split("//");
-            if (comment_split.is_empty()) {
-                continue;
+            search_start = end_pos + 1;
+            bq::string comment;
+            bq::string category;
+            auto pos = line.find("//");
+            if (pos != bq::string::npos) {
+                comment = line.substr(pos + 2);
+                category = line.substr(0, pos);
             }
-            bq::string category = comment_split[0];
-            bq::string comment = comment_split.size() > 1 ? comment_split[1] : "";
-
+            else {
+                category = line;
+            }
             category = category.trim();
             if (category.is_empty()) {
                 continue;
@@ -97,6 +101,11 @@ namespace bq {
         code = java.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".java"), code);
         bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".java").c_str());
+        
+        category_log_template_typescript ts(class_name);
+        code = ts.generate(root_node);
+        bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".ts"), code);
+        bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".ts").c_str());
 
         return true;
     }

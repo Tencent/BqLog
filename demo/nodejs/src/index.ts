@@ -1,5 +1,6 @@
 //Use This when your are using ESM
 import { bq } from "bqlog"
+import { demo_category_log } from "./demo_category_log.js";
 
 
 //Use This if you are using CJS
@@ -43,28 +44,28 @@ log.buffer_size=65535
 log.recovery=true
 log.print_stack_levels=[debug,error,fatal]`;
 
-// if (process.stdin.isTTY) {
-//     process.stdin.setRawMode(true);
-// }
-// process.stdin.resume();
-// process.stdin.once("data", () => {
-//     if (process.stdin.isTTY) {
-//         process.stdin.setRawMode(false);
-//     }
-//     process.stdin.pause();
-// });
+/*
+if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true);
+}
+process.stdin.resume();
+process.stdin.once("data", () => {
+    if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+    }
+    process.stdin.pause();
+});
+*/
+
+let dlog = demo_category_log.create_log("test_log2", config);
+dlog.debug(dlog.cat.Factory.House, "valid:{}", 2.23423534523451253245234523451243412);
+dlog.info(dlog.cat.Transport.Trains, "valid:{}", 33333);
+
+
+bq.log.force_flush_all_logs();
 
 
 
-let log1 = bq.log.create_log("test_log", config);
-let id = log1.get_id()
-
-log1.debug("valid:{}", 2.23423534523451253245234523451243412);
-// log2.debug("valid:{}", 2.23423534523451253245234523451243412);
-//console.log(log1.debug("test_log{}", 55));
-
-
-log1.force_flush();
 
 
 

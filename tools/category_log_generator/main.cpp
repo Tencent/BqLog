@@ -12,20 +12,39 @@
 #include "bq_common/bq_common.h"
 #include "category_generator.h"
 
+#include <iostream>
+
+static void print_usage(std::ostream& os) {
+    os << "Usage:\n"
+        << "  BqLog_CategoryLogGenerator ClassName CategoryConfigFile [OutputFolder]\n"
+        << "  BqLog_CategoryLogGenerator -h | --help\n\n"
+        << "Arguments:\n"
+        << "  ClassName            Name of the generated category log class.\n"
+        << "  CategoryConfigFile   Path to the category configuration text file (format described below).\n"
+        << "  OutputFolder         Optional output directory (default: current directory \"./\").\n\n"
+        << "Options:\n"
+        << "  -h, --help           Show detailed help and the CategoryConfigFile format and examples.\n\n"
+        << "Example:\n"
+        << "  BqLog_CategoryLogGenerator DemoCategoryLog ./categories.txt ./out\n\n";
+}
+
 int32_t main(int32_t argc, char* argv[])
 {
     bq::string help_flag1 = "--help";
     bq::string help_flag2 = "-h";
 
+    // Help
     if (argc == 2 && (help_flag1.equals_ignore_case(argv[1]) || help_flag2.equals_ignore_case(argv[1]))) {
-        std::cout << "usage : BqLog_CategoryLogGenerator ClassName CategoryConfigFile [OutputFolder]" << std::endl;
-        std::cout << "or : BqLog_CategoryLogGenerator -h(or --help) " << std::endl;
+        print_usage(std::cout);
         output_config_file_format(std::cout);
         return 0;
     }
+
+    // Argument count validation
     if (argc != 3 && argc != 4) {
-        std::cerr << "usage : BqLog_CategoryLogGenerator ClassName CategoryConfigFile [OutputFolder]" << std::endl;
-        std::cerr << "or : BqLog_CategoryLogGenerator -h(or --help) " << std::endl;
+        std::cerr << "Invalid arguments: expected 2 or 3 arguments, got " << (argc - 1) << "." << std::endl;
+        print_usage(std::cerr);
+        std::cerr << "Tip: run with -h or --help to see the CategoryConfigFile format and examples." << std::endl;
         return -1;
     }
 
@@ -35,10 +54,12 @@ int32_t main(int32_t argc, char* argv[])
     if (argc == 4) {
         output_dir = argv[3];
     }
+
     if (!bq::category_generator::general_log_class(class_name, config_file, output_dir)) {
         std::cerr << "Generate category log file failed!" << std::endl;
         return -1;
     }
+
     std::cout << "Generate category log file success!" << std::endl;
     return 0;
 }
