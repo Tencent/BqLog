@@ -12,7 +12,7 @@
  */
 #ifdef BQ_WIN
 #include <WinSock2.h>
-#include <Windows.h>
+#include <windows.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>

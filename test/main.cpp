@@ -25,7 +25,7 @@
 #include "test_log.h"
 #include <locale.h>
 #if defined(WIN32)
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 #ifdef BQ_POSIX

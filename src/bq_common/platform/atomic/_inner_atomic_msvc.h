@@ -21,9 +21,9 @@
  *  both arm and Intel architecture is supported for all memory order semantic.
  */
 #ifdef BQ_MSVC
-// although <winsock2.h> does nothing help to atomic, but we must include it before <Windows.h> to avoid compiling error when develop net socket functionalities.
+// although <winsock2.h> does nothing help to atomic, but we must include it before <windows.h> to avoid compiling error when develop net socket functionalities.
 #include <winsock2.h>
-#include <Windows.h>
+#include <windows.h>
 #include <intrin.h>
 namespace bq {
     namespace platform {

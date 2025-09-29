@@ -11,7 +11,7 @@
  */
 #include "bq_common/bq_common.h"
 #if defined(BQ_WIN)
-#include <Windows.h>
+#include <windows.h>
 
 namespace bq {
     static size_t get_memory_map_size_unit()
