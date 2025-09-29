@@ -6,7 +6,7 @@ md makeProj
 cd makeProj
 
 cmake ..\..\..\..\wrapper\typescript -G "Unix Makefiles" || exit /b 1
-cmake --build . --target install -v|| exit /b 1
+cmake --build . --target install || exit /b 1
 
 
 cd ..

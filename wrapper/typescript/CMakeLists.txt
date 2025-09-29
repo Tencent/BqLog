@@ -85,3 +85,17 @@ install(CODE
   endif()
   "
 )
+
+
+
+file(GLOB MD_FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../*.md"
+)
+
+install(FILES ${MD_FILES}
+        DESTINATION "${INSTALL_DIR}/.."
+)
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../docs"
+        DESTINATION "${INSTALL_DIR}/.."
+)
