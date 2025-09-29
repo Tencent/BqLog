@@ -1,15 +1,24 @@
 /*
- * Node ESM loader wrapper.
- * - Uses createRequire + fileURLToPath to sync auto-load at module init.
- * - Not imported on OHOS/CJS builds.
- * Not exported publicly; used only inside the package.
+ * Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-import { createRequire } from "node:module";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { load_node_sync_core, native_binding } from "./lib_loader_core";
+/*
+ * CJS + OHOS loader wrapper (no top-level node:* imports).
+ * - Node CJS: sync auto-load using global require + __dirname (via tools).
+ * - OHOS: sync auto-load using requireNapi/requireNativeModule.
+ */
+
+import * as tools from "../utils/tools";
+import { load_node_sync_core, load_ohos_sync, native_binding } from "./lib_loader_core";
 
 let native_mod_: native_binding | null = null;
 
@@ -21,16 +30,47 @@ export function native_export(name: string): any {
     return fn;
 }
 
-// auto-load at module initialization (sync)
 (function auto_load() {
     try {
-        const req = createRequire(import.meta.url);
-        const here_dir = path.dirname(fileURLToPath(import.meta.url));
-        const base_dir = path.resolve(here_dir, "../../../");
-        native_mod_ = load_node_sync_core(req, base_dir);
+        // Robust Node detection
+        const is_node =
+            typeof process === "object" &&
+            !!(process as any) &&
+            typeof (process as any).versions === "object" &&
+            !!(process as any).versions?.node;
+
+        if (is_node) {
+            // Try multiple strategies to get require
+            let req = tools.safe_require();
+            if (!req) {
+                try {
+                    // @ts-ignore try global require
+                    req = (typeof require === "function") ? require : null;
+                } catch { }
+            }
+            if (!req) {
+                try {
+                    // @ts-ignore try module.require
+                    const m = (typeof module !== "undefined") ? (module as any) : null;
+                    if (m && typeof m.require === "function") req = m.require.bind(m);
+                } catch { }
+            }
+
+            if (!req) {
+                throw new Error("node detected but no require function is available");
+            }
+
+            const here_dir = tools.current_dirname(); // __dirname in CJS
+            const base_dir = tools.path_join(here_dir, "../../../");
+            native_mod_ = load_node_sync_core(req, base_dir);
+            return;
+        }
+
+        // Fallback: OHOS path
+        native_mod_ = load_ohos_sync();
     } catch (e) {
         // eslint-disable-next-line no-console
-        console.error("failed to load native module (esm)");
+        console.error("failed to load native module (cjs/ohos)");
         // eslint-disable-next-line no-console
         console.error((e as Error)?.message ?? String(e));
     }

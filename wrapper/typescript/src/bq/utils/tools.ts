@@ -10,6 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+
 /**
  * Join path segments in a cross-runtime way (Node, OHOS) without relying on node:path.
  * - Supports POSIX and Windows (drive letters, UNC).
@@ -19,10 +20,6 @@
 /*
  * Cross-runtime utilities without top-level node:* imports.
  * All names use lower_snake_case; member-like variables end with underscore by convention.
- */
-
-/**
- * Join path segments in a cross-runtime way (Node, OHOS) without relying on node:path.
  */
 export function path_join(...parts: Array<string | null | undefined>): string {
   let segments: string[] = [];

@@ -9,21 +9,6 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-/*
- * Shared core for loading native addon across Node (CJS/ESM) and OHOS.
- * No top-level node:* imports. Business logic is here only once.
- * Naming rules:
- * - functions/variables: lower_snake_case
- * - member-like variables end with underscore (e.g., native_mod_)
- */
-
-/*
- * Shared core for loading native addon across Node (CJS/ESM) and OHOS.
- * No top-level node:* imports. Business logic is written once here.
- * Naming rules:
- * - functions/variables: lower_snake_case
- * - member-like variables end with underscore (e.g., native_mod_)
- */
 
 /*
  * Shared core for loading native addon across Node (CJS/ESM) and OHOS.
