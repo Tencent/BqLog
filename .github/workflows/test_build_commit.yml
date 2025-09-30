@@ -37,6 +37,7 @@ jobs:
           status=0
           for f in "${files[@]}"; do
             if ! sha256sum -c "$f"; then
+              echo "sha256 check failed: $f/" >&2
               status=1
             fi
           done
