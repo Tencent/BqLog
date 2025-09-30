@@ -158,24 +158,24 @@ public class log {
     }
 
     /**
-     * If bqLog is stored in a relative path, it will choose whether the relative path is within the sandbox or not.
+     * If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
      * This will return the absolute paths corresponding to both scenarios.
-     * @param is_in_sandbox
+     * @param base_dir_type
      * @return
      */
-    public static String get_file_base_dir(boolean is_in_sandbox)
+    public static String get_file_base_dir(int base_dir_type)
     {
-        return log_invoker.__api_get_file_base_dir(is_in_sandbox);
+        return log_invoker.__api_get_file_base_dir(base_dir_type);
     }
 	
 	/**
 	 * Reset the base dir
-	 * @param in_sandbox
+	 * @param base_dir_type
 	 * @param dir
 	 */
-	public static void reset_base_dir(boolean in_sandbox, String dir)
+	public static void reset_base_dir(int base_dir_type, String dir)
 	{
-		bq.impl.log_invoker.__api_reset_base_dir(in_sandbox, dir);
+		bq.impl.log_invoker.__api_reset_base_dir(base_dir_type, dir);
 	}
     
     /**

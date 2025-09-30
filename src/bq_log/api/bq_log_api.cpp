@@ -396,9 +396,9 @@ namespace bq {
             }
         }
 
-        BQ_API const char* __api_get_file_base_dir(bool is_in_sandbox)
+        BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type)
         {
-            return bq::file_manager::get_base_dir(is_in_sandbox).c_str();
+            return bq::file_manager::get_base_dir(base_dir_type).c_str();
         }
 
         BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, const char* priv_key, uint32_t* out_handle)
@@ -442,13 +442,16 @@ namespace bq {
             appender_console::set_console_buffer_enable(enable);
         }
 
-        BQ_API void __api_reset_base_dir(bool in_sandbox, const char* dir)
+        BQ_API void __api_reset_base_dir(int32_t base_dir_type, const char* dir)
         {
-            if (in_sandbox) {
+            if (0 == base_dir_type) {
                 return common_global_vars::get().base_dir_init_inst_.set_base_dir_0(dir);
             }
-            else {
+            else if(1 == base_dir_type){
                 return common_global_vars::get().base_dir_init_inst_.set_base_dir_1(dir);
+            }
+            else {
+                bq::util::log_device_console(bq::log_level::warning, "[reset_base_dir] unknown base dir type:%d", base_dir_type);
             }
         }
 

@@ -85,8 +85,8 @@ export class log_invoker {
         native_export("force_flush")(log_id);
     }
 
-    public static __api_get_file_base_dir(is_in_sandbox: boolean): string {
-        return native_export("get_file_base_dir")(!!is_in_sandbox) as string;
+    public static __api_get_file_base_dir(base_dir_type: number): string {
+        return native_export("get_file_base_dir")(base_dir_type) as string;
     }
 
     public static __api_log_decoder_create(log_file_path: string, priv_key?: string): number {
@@ -129,8 +129,8 @@ export class log_invoker {
         native_export("set_console_buffer_enable")(!!enable);
     }
 
-    public static __api_reset_base_dir(in_sandbox: boolean, dir: string): void {
-        native_export("reset_base_dir")(!!in_sandbox, dir);
+    public static __api_reset_base_dir(base_dir_type: number, dir: string): void {
+        native_export("reset_base_dir")(base_dir_type, dir);
     }
 
     public static __api_fetch_and_remove_console_buffer(callback: Function): boolean {

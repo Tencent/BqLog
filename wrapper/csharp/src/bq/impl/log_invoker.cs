@@ -75,7 +75,7 @@ namespace bq.impl
         public unsafe static extern void __api_force_flush(ulong log_id);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public unsafe static extern sbyte* __api_get_file_base_dir(bool is_in_sandbox);
+        public unsafe static extern sbyte* __api_get_file_base_dir(int base_dir_type);
         
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public unsafe static extern bq.tools.log_decoder.appender_decode_result __api_log_decoder_create(byte* log_file_path_utf8, byte* priv_key_utf8, uint* out_handle);
@@ -99,7 +99,7 @@ namespace bq.impl
         public static unsafe extern void __api_set_console_buffer_enable(bool enable);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern void __api_reset_base_dir(bool in_sandbox, byte* dir_utf8);
+        public static unsafe extern void __api_reset_base_dir(int base_dir_type, byte* dir_utf8);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern bool __api_fetch_and_remove_console_buffer(type_func_ptr_console_buffer_fetch_callback on_console_callback, IntPtr pass_through_param);

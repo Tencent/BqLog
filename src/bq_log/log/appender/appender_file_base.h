@@ -69,8 +69,6 @@ namespace bq {
     public:
         virtual ~appender_file_base();
 
-        bool is_output_file_in_sandbox() const;
-
         // flush appender output data from memory to Operation System IO.
         virtual void flush_cache();
         // flush appender file to physical disk.
@@ -124,7 +122,7 @@ namespace bq {
         size_t max_file_size_;
         size_t current_file_size_;
         bq::file_handle file_;
-        bool is_in_sandbox_ = false;
+        int32_t base_dir_type_ = false;
         uint64_t expire_time_ms_;
         uint64_t capacity_limit_ = 0;
         uint64_t current_file_expire_time_epoch_ms_;

@@ -121,16 +121,16 @@ namespace bq
         }
 
         /// <summary>
-        /// If bqLog is stored in a relative path, it will choose whether the relative path is within the sandbox or not.
+        /// If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
         /// This will return the absolute paths corresponding to both scenarios.
         /// </summary>
-        /// <param name="is_in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <returns></returns>
-        public static string get_file_base_dir(bool is_in_sandbox)
+        public static string get_file_base_dir(int base_dir_type)
         {
             unsafe
             {
-                sbyte* path_str = log_invoker.__api_get_file_base_dir(is_in_sandbox);
+                sbyte* path_str = log_invoker.__api_get_file_base_dir(base_dir_type);
                 int len = get_str_len(path_str);
                 return new string(path_str, 0, len, System.Text.Encoding.UTF8);
             }
@@ -139,14 +139,14 @@ namespace bq
         /// <summary>
         /// Reset the base dir
         /// </summary>
-        /// <param name="in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <param name="dir"></param>
-        public void reset_base_dir(bool in_sandbox, string dir)
+        public void reset_base_dir(int base_dir_type, string dir)
         {
             unsafe
             {
                 byte* dir_utf8 = utf8_encoder.alloc_utf8_fixed_str(dir);
-                bq.impl.log_invoker.__api_reset_base_dir(in_sandbox, dir_utf8);
+                bq.impl.log_invoker.__api_reset_base_dir(base_dir_type, dir_utf8);
                 utf8_encoder.release_utf8_fixed_str(dir_utf8);
             }
         }

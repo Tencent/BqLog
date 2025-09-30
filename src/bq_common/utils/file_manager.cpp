@@ -41,27 +41,27 @@ namespace bq {
         return *common_global_vars::get().file_manager_inst_;
     }
 
-    const bq::string& file_manager::get_base_dir(bool in_sand_box)
+    const bq::string& file_manager::get_base_dir(int32_t base_dir_type)
     {
-        return bq::platform::get_base_dir(in_sand_box);
+        return bq::platform::get_base_dir(base_dir_type);
     }
 
-    string file_manager::trans_process_relative_path_to_absolute_path(const bq::string& relative_path, bool in_sand_box)
+    string file_manager::trans_process_relative_path_to_absolute_path(const bq::string& relative_path, int32_t base_dir_type)
     {
         string absolute_path = relative_path;
         if (!is_absolute(absolute_path)) {
-            absolute_path = combine_path(get_base_dir(in_sand_box), relative_path);
+            absolute_path = combine_path(get_base_dir(base_dir_type), relative_path);
         }
         absolute_path = get_lexically_path(absolute_path);
         return absolute_path;
     }
 
-    string file_manager::trans_process_absolute_path_to_relative_path(const bq::string& absolute_path, bool in_sand_box)
+    string file_manager::trans_process_absolute_path_to_relative_path(const bq::string& absolute_path, int32_t base_dir_type)
     {
         if (!is_absolute(absolute_path)) {
             return absolute_path;
         }
-        string relative_path = file_manager::get_base_dir(in_sand_box);
+        string relative_path = file_manager::get_base_dir(base_dir_type);
         relative_path = file_manager::get_lexically_path(relative_path);
         relative_path = get_lexically_path(absolute_path).replace(relative_path, "");
         return relative_path;

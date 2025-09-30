@@ -499,8 +499,8 @@ namespace bq {
             bq::util::log_device_console(log_level::info, "external storage path:%s", get_base_dir(false).c_str());
 
             // priority:
-            // for sand box dir: internal storage -> external storage -> cache storage
-            // for not in sand box dir: external storage -> internal storage -> cache storage
+            // for base dir type 0: internal storage -> external storage -> cache storage
+            // for base dir type 1: external storage -> internal storage -> cache storage
             bool need_alarm = false;
             if (common_global_vars::get().base_dir_init_inst_.get_base_dir_0().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_0())) {
                 bq::string candidiate_path;

@@ -154,10 +154,10 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1force_1flush
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_get_file_base_dir
- * Signature: (Z)Ljava/lang/String;
+ * Signature: (I)Ljava/lang/String;
  */
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1dir
-  (JNIEnv *, jclass, jboolean);
+  (JNIEnv *, jclass, jint);
 
 /*
  * Class:     bq_impl_log_invoker
@@ -218,10 +218,10 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_reset_base_dir
- * Signature: (ZLjava/lang/String;)V
+ * Signature: (ILjava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir
-  (JNIEnv *, jclass, jboolean, jstring);
+  (JNIEnv *, jclass, jint, jstring);
 
 /*
  * Class:     bq_impl_log_invoker

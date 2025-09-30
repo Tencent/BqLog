@@ -138,10 +138,10 @@ namespace bq {
     public:
         // Functions with file path
         // tool functions IMPORTANT: all the path parameter is relative to platform::get_base_dir(path of the executable file on Win, Linux and Mac, app path on mobile devices)
-        static const bq::string& get_base_dir(bool in_sand_box);
+        static const bq::string& get_base_dir(int32_t base_dir_type);
 
-        static string trans_process_relative_path_to_absolute_path(const bq::string& relative_path, bool in_sand_box);
-        static string trans_process_absolute_path_to_relative_path(const bq::string& absolute_path, bool in_sand_box);
+        static string trans_process_relative_path_to_absolute_path(const bq::string& relative_path, int32_t base_dir_type);
+        static string trans_process_absolute_path_to_relative_path(const bq::string& absolute_path, int32_t base_dir_type);
 
         static bool create_directory(const bq::string& path);
 
@@ -181,12 +181,6 @@ namespace bq {
         // Functions withs file file_handle.
 
         /// <summary>
-        /// is current handle in sandbox.(this only make sense for Android and iOS.)
-        /// </summary>
-        /// <returns>true means in sandbox, otherwise not or handle is not valid</returns>
-        // bool is_handle_in_sandbox(const file_handle& handle) const;
-
-        /// <summary>
         /// whether a handle is valid
         /// </summary>
         /// <param name="handle"></param>
@@ -197,7 +191,6 @@ namespace bq {
         /// open a file in binary mode, and return file handle
         /// </summary>
         /// <param name="relative_path_to_base_dir">file path and name relative from the base directory</param>
-        /// <param name="in_sand_box"></param>
         /// <returns>file handle, may be empty handle if file is not exist and auto_create is set to false, and also could be empty handle if file is already locked by another process</returns>
         /// @warning SEEK_END is used by default inside the function
         file_handle open_file(const bq::string& path, file_open_mode_enum open_mode);
@@ -301,9 +294,9 @@ namespace bq {
         bq::platform::mutex mutex;
     };
 #ifndef TO_ABSOLUTE_PATH
-#define TO_ABSOLUTE_PATH(path, is_in_sand) bq::file_manager::trans_process_relative_path_to_absolute_path(path, is_in_sand)
+#define TO_ABSOLUTE_PATH(path, base_dir_type) bq::file_manager::trans_process_relative_path_to_absolute_path(path, base_dir_type)
 #endif
 #ifndef TO_RELATIVE_PATH
-#define TO_RELATIVE_PATH(path, is_in_sand) bq::file_manager::trans_process_absolute_path_to_relative_path(path, is_in_sand)
+#define TO_RELATIVE_PATH(path, base_dir_type) bq::file_manager::trans_process_absolute_path_to_relative_path(path, base_dir_type)
 #endif
 }

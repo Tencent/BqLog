@@ -13,12 +13,16 @@
 
 namespace bq {
     namespace platform {
-        const bq::string& get_base_dir(bool is_sandbox)
+        const bq::string& get_base_dir(int32_t base_dir_type)
         {
-            if (is_sandbox) {
+            if (base_dir_type == 0) {
                 return common_global_vars::get().base_dir_init_inst_.get_base_dir_0();
             }
+            else if (base_dir_type == 1) {
+                return common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
+            }
             else {
+                bq::util::log_device_console(bq::log_level::warning, "[get_base_dir] unknown base dir type:%d", base_dir_type);
                 return common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
             }
         }
@@ -26,12 +30,12 @@ namespace bq {
         void base_dir_initializer::set_base_dir_0(const bq::string& dir)
         {
             base_dir_0_ = dir;
-            bq::util::log_device_console(log_level::info, "set base dir in sandbox: %s", dir.c_str());
+            bq::util::log_device_console(log_level::info, "set base dir type 0: %s", dir.c_str());
         }
         void base_dir_initializer::set_base_dir_1(const bq::string& dir)
         {
             base_dir_1_ = dir;
-            bq::util::log_device_console(log_level::info, "set base dir : %s", dir.c_str());
+            bq::util::log_device_console(log_level::info, "set base dir type 1: %s", dir.c_str());
         }
     }
 }

@@ -14,9 +14,9 @@
 #include "file_manager.h"
 
 namespace bq {
-    bool property::load(const string& file_name, bool in_sand_box)
+    bool property::load(const string& file_name, int32_t base_dir_type)
     {
-        string path = TO_ABSOLUTE_PATH(file_name, in_sand_box);
+        string path = TO_ABSOLUTE_PATH(file_name, base_dir_type);
         string context = file_manager::read_all_text(path);
         return load(context);
     }
@@ -89,13 +89,13 @@ namespace bq {
         return vv;
     }
 
-    bool property::store(const string& file_name, bool in_sand_box)
+    bool property::store(const string& file_name, int32_t base_dir_type)
     {
         string lines;
         for (auto& cell : properties) {
             lines += cell.key() + "=" + cell.value() + "\n";
         }
-        string path = TO_ABSOLUTE_PATH(file_name, in_sand_box);
+        string path = TO_ABSOLUTE_PATH(file_name, base_dir_type);
         file_manager::instance().write_all_text(path, lines);
         return true;
     }

@@ -828,7 +828,7 @@ namespace bq {
                 auto new_index = current_oversize_buffer_index_.add_fetch(1, bq::platform::memory_order::relaxed);
                 char tmp[32];
                 snprintf(tmp, sizeof(tmp), "_%" PRIu64 "", new_index);
-                abs_recovery_file_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + tmp + ".mmap", true);
+                abs_recovery_file_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + tmp + ".mmap", 0);
             }
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
             temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, config_.need_recovery, abs_recovery_file_path));
@@ -1067,7 +1067,7 @@ namespace bq {
         }
 
         // Recover oversize buffers
-        bq::string over_size_memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os", true);
+        bq::string over_size_memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os", 0);
         if (bq::file_manager::is_dir(over_size_memory_map_folder)) {
             bq::array<bq::string> sub_names = bq::file_manager::get_sub_dirs_and_files_name(over_size_memory_map_folder);
             for (const bq::string& file_name : sub_names) {
@@ -1121,7 +1121,7 @@ namespace bq {
 
     void log_buffer::clear_recovery_data()
     {
-        bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name, true);
+        bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name, 0);
         if (bq::file_manager::is_dir(memory_map_folder)) {
             bq::file_manager::remove_file_or_dir(memory_map_folder);
         }

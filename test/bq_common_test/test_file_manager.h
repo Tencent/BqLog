@@ -5,7 +5,7 @@
 
 namespace bq {
     namespace test {
-        const bool in_sand_box = false;
+        const int32_t base_dir_type = 1;
 
         class test_file_manager : public test_base {
         public:
@@ -13,26 +13,26 @@ namespace bq {
             {
                 test_result result;
                 bq::file_manager& file_manager = bq::file_manager::instance();
-                file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc", in_sand_box));
-                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd", in_sand_box)), "create_directory_in_base_path cc/bb/aa/dd");
-                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/", in_sand_box)), "super long path: create_directory_in_base_path cc/bb/aa/dd/*");
-                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/测试中文%##@aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/", in_sand_box)), "super long path and Chinese characters: create_directory_in_base_path cc/bb/aa/dd/*");
-                result.add_result(file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/dd", in_sand_box)), "check create_directory_in_base_path cc/bb/aa/dd");
-                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/ee", in_sand_box)), "create_directory_in_base_path cc/bb/aa/ee");
-                bq::array<bq::string> sub_dirs = file_manager.get_sub_dirs_and_files_name(TO_ABSOLUTE_PATH("cc/bb/aa/", in_sand_box));
+                file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc", base_dir_type));
+                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd", base_dir_type)), "create_directory_in_base_path cc/bb/aa/dd");
+                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/", base_dir_type)), "super long path: create_directory_in_base_path cc/bb/aa/dd/*");
+                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/测试中文%##@aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/", base_dir_type)), "super long path and Chinese characters: create_directory_in_base_path cc/bb/aa/dd/*");
+                result.add_result(file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/dd", base_dir_type)), "check create_directory_in_base_path cc/bb/aa/dd");
+                result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/ee", base_dir_type)), "create_directory_in_base_path cc/bb/aa/ee");
+                bq::array<bq::string> sub_dirs = file_manager.get_sub_dirs_and_files_name(TO_ABSOLUTE_PATH("cc/bb/aa/", base_dir_type));
                 result.add_result(sub_dirs.size() == 2, "get_sub_dirs_and_files_name test 0");
                 result.add_result((sub_dirs[0] == "dd" && sub_dirs[1] == "ee")
                         || (sub_dirs[1] == "dd" && sub_dirs[0] == "ee"),
                     "get_sub_dirs_and_files_name test 1");
 
                 {
-                    auto handle1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", in_sand_box), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
-                    result.add_result(handle1.is_valid(), "open_or_create_file test 0", in_sand_box);
+                    auto handle1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", base_dir_type), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    result.add_result(handle1.is_valid(), "open_or_create_file test 0", base_dir_type);
                     char data1[] = "This is test data 1\r\n";
                     char data2[] = "This is test data 2\r\n";
                     char data3[] = "This is test data 3\r\n";
                     result.add_result(sizeof(data1) == file_manager.write_file(handle1, data1, sizeof(data1)), "write test0");
-                    auto handle2 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", in_sand_box), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    auto handle2 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", base_dir_type), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
                     result.add_result(handle2.is_valid(), "open_or_create_file test 1");
                     result.add_result(sizeof(data2) == file_manager.write_file(handle2, data2, sizeof(data2)), "write test1");
                     result.add_result(sizeof(data3) == file_manager.write_file(handle1, data3, sizeof(data3)), "write test2");
@@ -42,7 +42,7 @@ namespace bq {
                     result.add_result(file_manager.close_file(handle1), "close file test 0");
                     result.add_result(file_manager.close_file(handle2), "close file test 1");
 
-                    auto handle3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", in_sand_box), file_open_mode_enum::read_write);
+                    auto handle3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", base_dir_type), file_open_mode_enum::read_write);
                     result.add_result(handle3.is_valid(), "open_or_create_file test 2");
                     result.add_result(file_manager.get_file_size(handle3) == bq::max_value(sizeof(data1) + sizeof(data3), sizeof(data2)), "file size test 2");
                     result.add_result(sizeof(data3) == file_manager.write_file(handle3, data3, sizeof(data3)), "write test3");
@@ -50,8 +50,8 @@ namespace bq {
                 }
 
                 {
-                    file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc/bb/write_test.txt", in_sand_box));
-                    auto handle3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/write_test.txt", in_sand_box), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc/bb/write_test.txt", base_dir_type));
+                    auto handle3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/write_test.txt", base_dir_type), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
                     decltype(handle3) handle4;
                     decltype(handle3) handle5 = handle3;
                     handle4 = handle5;
@@ -64,8 +64,8 @@ namespace bq {
 
                 {
                     const char test_data[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-                    file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc/bb/write_test.bin", in_sand_box));
-                    auto handle3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/write_test.bin", in_sand_box), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc/bb/write_test.bin", base_dir_type));
+                    auto handle3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/write_test.bin", base_dir_type), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
                     file_manager.write_file(handle3, test_data, sizeof(test_data));
 
                     char read_buffer[128];
@@ -87,7 +87,7 @@ namespace bq {
                 }
 
                 {
-                    auto handle1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/truncate/v.txt", in_sand_box), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    auto handle1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/truncate/v.txt", base_dir_type), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
                     result.add_result(handle1.is_valid(), "truncate test 1");
                     char data1[] = "This is test data 1\r\n";
                     char data2[] = "This is test data 2\r\n";
@@ -105,16 +105,16 @@ namespace bq {
                     result.add_result(file_manager.write_file(handle1, data1, sizeof(data1)), "write after truncate test");
                     file_manager.close_file(handle1);
                     result.add_result(!handle1.is_valid(), "truncate test 8");
-                    handle1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/truncate/v.txt", in_sand_box), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    handle1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/truncate/v.txt", base_dir_type), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
                     result.add_result(file_manager.get_file_size(handle1) == sizeof(data1), "truncate test 9");
                 }
 
                 {
                     // last modified time
-                    auto last_modified_time0 = bq::file_manager::get_file_last_modified_epoch_ms(TO_ABSOLUTE_PATH("cc/bb/32323/not_exist.32", in_sand_box));
+                    auto last_modified_time0 = bq::file_manager::get_file_last_modified_epoch_ms(TO_ABSOLUTE_PATH("cc/bb/32323/not_exist.32", base_dir_type));
                     result.add_result(last_modified_time0 == 0, "last_modified_time test 0");
                     auto current_epoch = bq::platform::high_performance_epoch_ms();
-                    auto last_modified_time1 = bq::file_manager::get_file_last_modified_epoch_ms(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", in_sand_box));
+                    auto last_modified_time1 = bq::file_manager::get_file_last_modified_epoch_ms(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", base_dir_type));
                     result.add_result(last_modified_time1 <= current_epoch && (current_epoch - last_modified_time1) < 60000, "last_modified_time test 1， last_modified_time1：%" PRIu64 ", current_epoch:%" PRIu64 "", last_modified_time1, current_epoch);
                 }
 
@@ -163,11 +163,11 @@ namespace bq {
                     file_manager.close_file(mmf_handle_tar);
                 }
 
-                result.add_result(file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc/../cc/bb/aa/dd/", in_sand_box)), "check remove directory 0");
-                result.add_result(!file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/dd", in_sand_box)), "check remove directory 1");
-                result.add_result(file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc", in_sand_box)), "check remove directory 2");
-                result.add_result(!file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/", in_sand_box)), "check remove directory 3");
-                result.add_result(!file_manager.is_dir(TO_ABSOLUTE_PATH("cc", in_sand_box)), "check remove directory 4");
+                result.add_result(file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc/../cc/bb/aa/dd/", base_dir_type)), "check remove directory 0");
+                result.add_result(!file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/dd", base_dir_type)), "check remove directory 1");
+                result.add_result(file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc", base_dir_type)), "check remove directory 2");
+                result.add_result(!file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/", base_dir_type)), "check remove directory 3");
+                result.add_result(!file_manager.is_dir(TO_ABSOLUTE_PATH("cc", base_dir_type)), "check remove directory 4");
                 return result;
             }
         };

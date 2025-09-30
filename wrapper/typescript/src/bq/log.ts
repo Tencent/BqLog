@@ -38,11 +38,11 @@ export class log {
 
     /**
      * Reset the base dir
-     * @param in_sandbox
+     * @param base_dir_type
      * @param dir
      */
-    public static reset_base_dir(in_sandbox: boolean, dir: string): void {
-        log_invoker.__api_reset_base_dir(in_sandbox, dir);
+    public static reset_base_dir(base_dir_type: number, dir: string): void {
+        log_invoker.__api_reset_base_dir(base_dir_type, dir);
     }
 
     /**
@@ -55,13 +55,13 @@ export class log {
     }
 
     /**
-     * If bqLog is stored in a relative path, it will choose whether the relative path is within the sandbox or not.
+     * If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
      * This will return the absolute paths corresponding to both scenarios.
-     * @param is_in_sandbox
+     * @param base_dir_type
      * @return
      */
-    public static get_file_base_dir(is_in_sandbox: boolean): string {
-        return log_invoker.__api_get_file_base_dir(is_in_sandbox);
+    public static get_file_base_dir(base_dir_type: number): string {
+        return log_invoker.__api_get_file_base_dir(base_dir_type);
     }
 
     /**

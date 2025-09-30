@@ -37,7 +37,7 @@ bq::appender_decoder_manager& bq::appender_decoder_manager::instance()
 
 bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq::string& path, const bq::string& private_key_str, uint32_t& out_handle)
 {
-    string path_tmp = TO_ABSOLUTE_PATH(path, false);
+    string path_tmp = TO_ABSOLUTE_PATH(path, 1);
     auto handle = bq::file_manager::instance().open_file(path_tmp, file_open_mode_enum::read);
     if (!handle.is_valid()) {
         bq::util::log_device_console(log_level::error, "decode log file :%s open failed, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());

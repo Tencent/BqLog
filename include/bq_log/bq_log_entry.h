@@ -76,19 +76,19 @@ namespace bq {
         static void enable_auto_crash_handle();
 
         /// <summary>
-        /// If bqLog is stored in a relative path, it will choose whether the relative path is within the sandbox or not.
+        /// If BqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
         /// This will return the absolute paths corresponding to both scenarios.
         /// </summary>
-        /// <param name="is_in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <returns></returns>
-        static bq::string get_file_base_dir(bool is_in_sandbox);
+        static bq::string get_file_base_dir(int32_t base_dir_type);
 
         /// <summary>
         /// Reset the base dir
         /// </summary>
-        /// <param name="in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <param name="dir"></param>
-        static void reset_base_dir(bool in_sandbox, const bq::string& dir);
+        static void reset_base_dir(int32_t base_dir_type, const bq::string& dir);
 
         /// <summary>
         /// Create a log object

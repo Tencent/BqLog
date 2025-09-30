@@ -104,14 +104,14 @@ namespace bq {
         api::__api_force_flush(log_id_);
     }
 
-    inline bq::string log::get_file_base_dir(bool is_in_sandbox)
+    inline bq::string log::get_file_base_dir(int32_t base_dir_type)
     {
-        return api::__api_get_file_base_dir(is_in_sandbox);
+        return api::__api_get_file_base_dir(base_dir_type);
     }
 
-    inline void log::reset_base_dir(bool in_sandbox, const bq::string& dir)
+    inline void log::reset_base_dir(int32_t base_dir_type, const bq::string& dir)
     {
-        bq::api::__api_reset_base_dir(in_sandbox, dir.c_str());
+        bq::api::__api_reset_base_dir(base_dir_type, dir.c_str());
     }
 
     inline log log::get_log_by_id(uint64_t log_id)

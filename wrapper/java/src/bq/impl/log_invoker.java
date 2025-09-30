@@ -49,7 +49,7 @@ public class log_invoker {
 	
 	public static native void __api_force_flush(long log_id);
 	
-	public static native String __api_get_file_base_dir(boolean is_in_sandbox);
+	public static native String __api_get_file_base_dir(int base_dir_type);
 
 	public static native long __api_log_decoder_create(String log_file_path, String priv_key);
 
@@ -65,7 +65,7 @@ public class log_invoker {
 	
 	public static native void __api_set_console_buffer_enable(boolean enable);
 	
-	public static native void __api_reset_base_dir(boolean in_sandbox, String dir);
+	public static native void __api_reset_base_dir(int base_dir_type, String dir);
 	
 	public static native boolean __api_fetch_and_remove_console_buffer(Object callback);
 }

@@ -30,11 +30,6 @@ namespace bq {
         file_manager::instance().close_file(file_);
     }
 
-    bool appender_file_base::is_output_file_in_sandbox() const
-    {
-        return is_in_sandbox_;
-    }
-
     void appender_file_base::flush_cache()
     {
         if (!file_) {
@@ -71,7 +66,7 @@ namespace bq {
                 is_gmt_time_ ? "UTC0" : "LOCAL",
                 time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
                 error_code, static_cast<uint64_t>(real_write_size), static_cast<uint64_t>(need_write_size));
-            string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", true);
+            string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", 0);
             bq::file_manager::append_all_text(path, error_text);
             bq::util::log_device_console_plain_text(log_level::warning, error_text);
             open_new_indexed_file_by_name();
@@ -86,7 +81,7 @@ namespace bq {
                 if (err_code != 0) {
                     char ids[32] = { 0 };
                     snprintf(ids, 32, "%d", err_code);
-                    string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", true);
+                    string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", 0);
                     bq::file_manager::write_all_text(path, ids);
                     bq::util::log_device_console(log_level::warning, "appender_file_base::flush_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
                 }
@@ -103,9 +98,9 @@ namespace bq {
     bool appender_file_base::reset_impl(const bq::property_value& config_obj)
     {
         bq::string prev_config_file_name = config_file_name_;
-        bool prev_is_in_sandbox = is_in_sandbox_;
+        auto prev_base_dir_type = base_dir_type_;
         set_basic_configs(config_obj);
-        return (prev_config_file_name == config_file_name_) && (prev_is_in_sandbox == is_in_sandbox_);
+        return (prev_config_file_name == config_file_name_) && (prev_base_dir_type == base_dir_type_);
     }
 
     void appender_file_base::log_impl(const log_entry_handle& handle)
@@ -238,7 +233,7 @@ namespace bq {
 
     bool appender_file_base::open_file_with_write_exclusive(const bq::string& file_path)
     {
-        string path = TO_ABSOLUTE_PATH(file_path, is_in_sandbox_);
+        string path = TO_ABSOLUTE_PATH(file_path, base_dir_type_);
         file_ = file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         if (!file_) {
             return false;
@@ -258,11 +253,11 @@ namespace bq {
             config_file_name_ = ((string)config_obj["file_name"]).trim();
         }
 
-        if (config_obj["is_in_sandbox"].is_bool()) {
-            is_in_sandbox_ = (bool)config_obj["is_in_sandbox"];
+        if (config_obj["base_dir_type"].is_integral()) {
+            base_dir_type_ = static_cast<int32_t>((bq::property_value::integral_type)config_obj["base_dir_type"]);
         }
         else {
-            is_in_sandbox_ = false;
+            base_dir_type_ = 0;
         }
 
         if (config_obj["always_create_new_file"].is_bool()) {
@@ -337,7 +332,7 @@ namespace bq {
         bq::string file_prefix = file_name + time_str_buf;
         const bq::string ext_name_with_dot = get_file_ext_name();
 
-        string path = TO_ABSOLUTE_PATH(dir_name, is_in_sandbox_);
+        string path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
         bq::array<bq::string> exist_files = bq::file_manager::get_sub_dirs_and_files_name(path);
         for (const bq::string& name : exist_files) {
             bq::string full_name_in_absolute_path = bq::file_manager::combine_path(path, name);
@@ -360,14 +355,14 @@ namespace bq {
             // can we reuse prev file
         }
 
-        string full_path = TO_ABSOLUTE_PATH(dir_name, is_in_sandbox_);
+        string full_path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
         bq::file_manager::create_directory(full_path);
         bool need_open_new_file = true;
         while (need_open_new_file) {
             char idx_buff[32];
             snprintf(idx_buff, sizeof(idx_buff), "%d", max_index++);
             bq::string file_relative_path = config_file_name_ + time_str_buf + idx_buff + ext_name_with_dot;
-            bq::string absolute_file_path = TO_ABSOLUTE_PATH(file_relative_path, is_in_sandbox_);
+            bq::string absolute_file_path = TO_ABSOLUTE_PATH(file_relative_path, base_dir_type_);
             parse_file_context parse_context(file_relative_path);
 
             need_open_new_file = !open_file_with_write_exclusive(file_relative_path) || is_file_oversize();
@@ -398,7 +393,7 @@ namespace bq {
         auto file_name = bq::file_manager::get_file_name_from_path(config_file_name_);
         bq::string file_prefix = file_name + "_";
 
-        bq::string path = TO_ABSOLUTE_PATH(dir_name, is_in_sandbox_);
+        bq::string path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
         bq::array<bq::string> exist_files = bq::file_manager::get_sub_dirs_and_files_name(path);
         uint64_t current_epoch_ms = bq::platform::high_performance_epoch_ms();
         for (const bq::string& name : exist_files) {
@@ -424,7 +419,7 @@ namespace bq {
         auto dir_name = bq::file_manager::get_directory_from_path(config_file_name_);
         auto file_name = bq::file_manager::get_file_name_from_path(config_file_name_);
         bq::string file_prefix = file_name + "_";
-        bq::string path = TO_ABSOLUTE_PATH(dir_name, is_in_sandbox_);
+        bq::string path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
         bq::array<bq::string> exist_files = bq::file_manager::get_sub_dirs_and_files_name(path);
 
         bq::array<bq::tuple<uint64_t, bq::string, uint64_t>> sort_list;

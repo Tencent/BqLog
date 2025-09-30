@@ -142,7 +142,7 @@ namespace bq {
                     if (with_mmap) {
                         char mmap_file_name[128];
                         snprintf(mmap_file_name, sizeof(mmap_file_name), "test_siso_%" PRIu64 ".mmap", static_cast<uint64_t>(i));
-                        mmap_file_handles[i] = bq::file_manager::instance().open_file(TO_ABSOLUTE_PATH(mmap_file_name, false), bq::file_open_mode_enum::auto_create | bq::file_open_mode_enum::read_write | bq::file_open_mode_enum::exclusive);
+                        mmap_file_handles[i] = bq::file_manager::instance().open_file(TO_ABSOLUTE_PATH(mmap_file_name, 1), bq::file_open_mode_enum::auto_create | bq::file_open_mode_enum::read_write | bq::file_open_mode_enum::exclusive);
                         if (!mmap_file_handles[i]) {
                             result.add_result(false, "[siso_test] failed to create mmap file");
                             return;

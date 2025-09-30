@@ -814,14 +814,14 @@ BQ_NAPI_DEF(force_flush, napi_env, env, napi_callback_info, info)
     return bq::_make_undefined(env);
 }
 
-// get_file_base_dir(in_sand_box: boolean): string
+// get_file_base_dir(base_dir_type: number): string
 BQ_NAPI_DEF(get_file_base_dir, napi_env, env, napi_callback_info, info)
 {
     size_t argc = 1; napi_value argv[1] = { 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
-    if (argc < 1) { napi_throw_type_error(env, NULL, "in_sand_box required"); return NULL; }
-    bool in_sand_box = bq::_get_bool(env, argv[0]);
-    const char* path = bq::api::__api_get_file_base_dir(in_sand_box);
+    if (argc < 1) { napi_throw_type_error(env, NULL, "base_dir_type required"); return NULL; }
+    int32_t base_dir_type = bq::_get_i32(env, argv[0]);
+    const char* path = bq::api::__api_get_file_base_dir(base_dir_type);
     return bq::_make_str_utf8(env, path);
 }
 
@@ -975,15 +975,15 @@ BQ_NAPI_DEF(set_console_buffer_enable, napi_env, env, napi_callback_info, info)
     return bq::_make_undefined(env);
 }
 
-// reset_base_dir(in_sandbox: boolean, dir: string): void
+// reset_base_dir(base_dir_type: number, dir: string): void
 BQ_NAPI_DEF(reset_base_dir, napi_env, env, napi_callback_info, info)
 {
     size_t argc = 2; napi_value argv[2] = { 0, 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "reset_base_dir invalid parameters count, should be 2"); return NULL; }
-    bool in_sandbox = bq::_get_bool(env, argv[0]);
+    int32_t base_dir_type = bq::_get_i32(env, argv[0]);
     char* dir = bq::_dup_cstr_from_napi(env, argv[1]);
-    bq::api::__api_reset_base_dir(in_sandbox, dir);
+    bq::api::__api_reset_base_dir(base_dir_type, dir);
     bq::_free_cstr(dir);
     return bq::_make_undefined(env);
 }

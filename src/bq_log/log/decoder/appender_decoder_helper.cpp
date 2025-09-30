@@ -27,7 +27,7 @@ bool bq::appender_decoder_helper::decode(const bq::string& in_file_path, const b
 
     bq::file_handle output_handle;
     bq::file_manager& file_manager_cache = bq::file_manager::instance();
-    string path = TO_ABSOLUTE_PATH(out_file_path, false);
+    string path = TO_ABSOLUTE_PATH(out_file_path, 1);
     output_handle = file_manager_cache.open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
     if (output_handle) {
         file_manager_cache.seek(output_handle, bq::file_manager::seek_option::end, 0);

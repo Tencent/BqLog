@@ -291,11 +291,11 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1force_1flush(JNIEnv*, 
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_get_file_base_dir
- * Signature: (Z)Ljava/lang/String;
+ * Signature: (I)Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1dir(JNIEnv* env, jclass, jboolean in_sand_box)
+JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1dir(JNIEnv* env, jclass, jint base_dir_type)
 {
-    const char* path = bq::api::__api_get_file_base_dir(in_sand_box);
+    const char* path = bq::api::__api_get_file_base_dir(static_cast<int32_t>(base_dir_type));
     return env->NewStringUTF(path);
 }
 
@@ -434,12 +434,12 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_reset_base_dir
- * Signature: (ZLjava/lang/String;)V
+ * Signature: (ILjava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir(JNIEnv* env, jclass, jboolean in_sandbox, jstring dir)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir(JNIEnv* env, jclass, jint base_dir_type, jstring dir)
 {
     const char* dir_c_str = env->GetStringUTFChars(dir, NULL);
-    bq::api::__api_reset_base_dir((bool)in_sandbox, dir_c_str);
+    bq::api::__api_reset_base_dir(static_cast<int32_t>(base_dir_type), dir_c_str);
     env->ReleaseStringUTFChars(dir, dir_c_str);
 }
 

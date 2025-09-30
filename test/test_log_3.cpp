@@ -561,7 +561,7 @@ namespace bq {
 
         static void clear_test_output_folder()
         {
-            bq::string path = bq::file_manager::trans_process_relative_path_to_absolute_path("bqLog/UnitTestLog", false);
+            bq::string path = bq::file_manager::trans_process_relative_path_to_absolute_path("bqLog/UnitTestLog", 1);
             bq::file_manager::instance().remove_file_or_dir(path);
         }
 
@@ -638,7 +638,7 @@ namespace bq {
                     bq::file_manager::instance().remove_file_or_dir(file_path);
                 }
                 bq::array<bq::string> file_list;
-                bq::string path = TO_ABSOLUTE_PATH("bqLog/UnitTestLog", false);
+                bq::string path = TO_ABSOLUTE_PATH("bqLog/UnitTestLog", 1);
                 bq::file_manager::get_all_files(path, file_list);
                 for (auto iter = file_list.begin(); iter != file_list.end(); ++iter) {
                     if (iter->end_with(ext_name)) {
@@ -1026,7 +1026,7 @@ namespace bq {
 						appenders_config.CompressedAppender.time_zone=default local time
 						appenders_config.CompressedAppender.levels=[error,fatal]
 						appenders_config.CompressedAppender.file_name=bqLog/UnitTestLog/test3
-						appenders_config.CompressedAppender.is_in_sandbox=false
+						appenders_config.CompressedAppender.base_dir_type=0
 						appenders_config.CompressedAppender.max_file_size=100000000
 						appenders_config.CompressedAppender.expire_time_days=2
 						
@@ -1034,7 +1034,7 @@ namespace bq {
 						appenders_config.RawAppender.time_zone=default local time
 						appenders_config.RawAppender.levels=[error,fatal]
 						appenders_config.RawAppender.file_name=bqLog/UnitTestLog/test3
-						appenders_config.RawAppender.is_in_sandbox=false
+						appenders_config.RawAppender.base_dir_type=0
 						appenders_config.RawAppender.max_file_size=100000000
 						appenders_config.RawAppender.expire_time_days=2
 					

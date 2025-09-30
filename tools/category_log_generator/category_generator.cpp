@@ -21,7 +21,7 @@ namespace bq {
     bool category_generator::parse_config_file(const bq::string& file_path, category_node& category_root)
     {
         bq::array<bq::string> lines;
-        bq::string abs_path = TO_ABSOLUTE_PATH(file_path, true);
+        bq::string abs_path = TO_ABSOLUTE_PATH(file_path, 0);
         if (!bq::file_manager::is_file(abs_path)) {
             bq::util::log_device_console(bq::log_level::error, "failed to read CategoryConfigFile:%s", abs_path.c_str());
             return false;
@@ -85,7 +85,7 @@ namespace bq {
             return false;
         }
         bq::string code;
-        bq::string abs_dir = TO_ABSOLUTE_PATH(output_path, true);
+        bq::string abs_dir = TO_ABSOLUTE_PATH(output_path, 0);
 
         category_log_template_cpp cpp(class_name);
         code = cpp.generate(root_node);

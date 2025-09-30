@@ -144,7 +144,7 @@ int32_t main(int32_t argc, char* argv[]) {
     bq::string priv_key_str;
     // Load private key if provided (PEM; unencrypted).
     if (!opt.private_key_path.is_empty() && opt.private_key_path != "-") {
-        bq::string abs_key_path = TO_ABSOLUTE_PATH(opt.private_key_path, false);
+        bq::string abs_key_path = TO_ABSOLUTE_PATH(opt.private_key_path, 1);
         priv_key_str = bq::file_manager::instance().read_all_text(abs_key_path);
         if (priv_key_str.is_empty()) {
             CONSOLE_OUTPUT(bq::log_level::error, "error: failed to read private key file: %s\n", abs_key_path.c_str());
@@ -166,10 +166,10 @@ int32_t main(int32_t argc, char* argv[]) {
     if (!opt.output_path.is_empty()) {
         bool ret = bq::tools::log_decoder::decode_file(opt.input_path, opt.output_path, priv_key_str);
         if (!ret) {
-            CONSOLE_OUTPUT(bq::log_level::error, "Failed to decode log file: %s", TO_ABSOLUTE_PATH(opt.input_path, false).c_str());
+            CONSOLE_OUTPUT(bq::log_level::error, "Failed to decode log file: %s", TO_ABSOLUTE_PATH(opt.input_path, 1).c_str());
             return 1;
         }
-        CONSOLE_OUTPUT(bq::log_level::info, "Successfully decoded! see output:%s", TO_ABSOLUTE_PATH(opt.output_path, false).c_str());
+        CONSOLE_OUTPUT(bq::log_level::info, "Successfully decoded! see output:%s", TO_ABSOLUTE_PATH(opt.output_path, 1).c_str());
         return 0;
     }
 

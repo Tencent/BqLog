@@ -90,7 +90,7 @@ namespace bq {
         // TODO optimize use TSC
         uint64_t high_performance_epoch_ms();
 
-        const bq::string& get_base_dir(bool is_sandbox);
+        const bq::string& get_base_dir(int32_t base_dir_type);
 
         int32_t get_file_size(const char* file_path, size_t& size_ref);
 

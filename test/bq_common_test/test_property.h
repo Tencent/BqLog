@@ -43,7 +43,7 @@ namespace bq {
 								\
 								bybyby! 
 				)";
-                file_manager::write_all_text(TO_ABSOLUTE_PATH("property.properties", false), context);
+                file_manager::write_all_text(TO_ABSOLUTE_PATH("property.properties", 1), context);
                 bool success = properties.load("property.properties", false);
                 string serialize = properties.serialize();
                 add_test_result(success);
@@ -60,8 +60,8 @@ namespace bq {
                 add_test_result(d2 == 1);
 
                 string wpv = pv.serialize();
-                file_manager::write_all_text(TO_ABSOLUTE_PATH("property.properties", false), wpv);
-                auto context2 = file_manager::read_all_text(TO_ABSOLUTE_PATH("property.properties", false));
+                file_manager::write_all_text(TO_ABSOLUTE_PATH("property.properties", 1), wpv);
+                auto context2 = file_manager::read_all_text(TO_ABSOLUTE_PATH("property.properties", 1));
                 pv = property_value::create_from_string(context2);
 
                 add_test_result(pv.object_size() == 13);

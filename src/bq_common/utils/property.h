@@ -20,9 +20,9 @@ namespace bq {
         typedef hash_map<string, string> hash_type;
 
     public:
-        bool load(const string& file_name, bool in_sand_box);
+        bool load(const string& file_name, int32_t base_dir_type);
         bool load(const string& context);
-        bool store(const string& file_name, bool in_sand_box);
+        bool store(const string& file_name, int32_t base_dir_type);
         void set(const string& key, const string& default_value = "");
         string get(const string& key, const string& default_value = "");
         hash_type& maps() { return properties; }

@@ -157,11 +157,11 @@ namespace bq {
 
         /// <summary>
         /// get file base dir
-        /// android storage path is distinguished by "is_in_sandbox"(internal storage or external storage)
+        /// android, iOS, harmonyOS storage path is distinguished by "base_dir_type"(internal storage or external storage)
         /// </summary>
-        /// <param name="is_in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <returns></returns>
-        BQ_API const char* __api_get_file_base_dir(bool is_in_sandbox);
+        BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type);
 
         /// <summary>
         /// create a decoder to decode binary log file
@@ -220,10 +220,10 @@ namespace bq {
         /// <summary>
         /// reset the base dir in runtime
         /// </summary>
-        /// <param name="in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <param name="dir"></param>
         /// <returns></returns>
-        BQ_API void __api_reset_base_dir(bool in_sandbox, const char* dir);
+        BQ_API void __api_reset_base_dir(int32_t base_dir_type, const char* dir);
 
         /// <summary>
         /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
