@@ -39,7 +39,27 @@ namespace bq {
         {
             // empty implementation
         }
-
+        bool can_write_to_dir(bq::string path)
+        {
+            bq::string test_path = path + "/bq_test_dir";
+            if (bq::platform::make_dir(test_path.c_str()) != 0) {
+                return false;
+            }
+            int32_t index = bq::util::rand() % 1000000;
+            char name[128] = { 0 };
+            sprintf(name, "/test_%d.txt", index);
+            bq::string test_file_name = test_path + name;
+            bq::platform::platform_file_handle file_handle;
+            if (bq::platform::open_file(test_file_name.c_str(), bq::platform::file_open_mode_enum::auto_create | bq::platform::file_open_mode_enum::read_write, file_handle) != 0)
+                return false;
+            if (bq::platform::close_file(file_handle) != 0)
+                return false;
+            if (bq::platform::remove_dir_or_file(test_file_name.c_str()) != 0)
+                return false;
+            if (bq::platform::remove_dir_or_file(test_path.c_str()) != 0)
+                return false;
+            return true;
+        }
         static void ohos_onload()
         {
             string harmony_external_storage_path;
@@ -88,6 +108,9 @@ namespace bq {
     
             OH_LOG_INFO(LOG_APP,"internal storage path:%s", get_base_dir(true).c_str());
             OH_LOG_INFO(LOG_APP,"external storage path:%s", get_base_dir(false).c_str());
+            can_write_to_dir(harmony_internal_storage_path);
+            can_write_to_dir(harmony_external_storage_path);
+    
         }
 
         static napi_value NAPI_Global_add(napi_env env, napi_callback_info info)
