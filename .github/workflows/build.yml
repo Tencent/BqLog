@@ -904,7 +904,7 @@ jobs:
           path: ${{ github.workspace }}/dist
 
   #HarmonyOS
-  build_OHOS_on_mac:
+  build_harmony_os_on_mac:
     runs-on: macos-latest
     env:
       REPO: pippocao/Images
