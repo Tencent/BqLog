@@ -4,7 +4,7 @@
     "externalNativeOptions": {
       "path": "../../../../../src/CMakeLists.txt",
       "arguments": "-DTARGET_PLATFORM:STRING=ohos -DOHOS_STL=c++_static -DBUILD_LIB_TYPE=dynamic_lib ",
-      "cppFlags": "-Wno-error=unused-command-line-argument",
+      "cppFlags": "",
       "abiFilters": ["arm64-v8a", "x86_64"],
     }
   },
