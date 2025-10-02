@@ -948,8 +948,8 @@ jobs:
 
       - name: Build for Mac
         run: |
-          export PATH="${INSTALL_DIR}/cmdline-tools/bin:${PATH}"
-          export OHOS_SDK="${INSTALL_DIR}/sdk/default/openharmony"
+          export PATH="${INSTALL_DIR}/command-line-tools/bin:${PATH}"
+          export OHOS_SDK="${INSTALL_DIR}/command-line-tools/sdk/default/openharmony"
           cd build/lib/ohos  
           chmod +x *.sh
           ./mac_build_all_and_pack.sh
