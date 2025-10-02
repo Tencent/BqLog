@@ -1,7 +1,7 @@
 {
   "name": "bqlog",
   "version": "1.0.0",
-  "description": "Please describe the basic information.",
+  "description": "BqLog HarmonyOS Library.",
   "main": "./src/main/ets/wrapper/index.ts",
   "author": "",
   "license": "Apache-2.0",
