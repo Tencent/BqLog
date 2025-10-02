@@ -11,11 +11,11 @@
  */
 
 export type runtime_kind = "node" | "ohos" | "unknown";
-
+const proc: any = (globalThis as any)?.process;
 export function detect_runtime(): runtime_kind {
-  const is_node = typeof process !== "undefined"
-    && !!(process as any).versions
-    && typeof (process as any).versions.node === "string";
+  const is_node = typeof proc !== "undefined"
+      && !!(proc as any).versions
+      && typeof (proc as any).versions.node === "string";
   if (is_node) {
     return "node";
   }
