@@ -27,17 +27,12 @@ echo "NDK: $NDK_PATH"
 echo "Parallel jobs: $PARALLEL_JOBS"
 
 for build_target in "${BUILD_TARGET[@]}"; do
-  rm -rf "$build_target"
-  mkdir -p "$build_target"
-  cd "$build_target"
-
   for build_config in "${BUILD_CONFIGS[@]}"; do
     for build_lib_type in "${BUILD_LIB_TYPES[@]}"; do
-      rm -rf "$build_config"
-      mkdir -p "$build_config"
-      cd "$build_config"
-
-      cmake ../../../../../src \
+      rm -rf "cmake_build"
+      mkdir -p "cmake_build"
+      pushd "cmake_build" >/dev/null
+      cmake ../../../../src \
         -DOHOS_ARCH="$build_target" \
         -DOHOS_PLATFORM=OHOS \
         -DCMAKE_BUILD_TYPE="$build_config" \
@@ -52,17 +47,16 @@ for build_target in "${BUILD_TARGET[@]}"; do
 
       # Strip symbols
       if( [ "$build_lib_type" == "dynamic_lib" ] ); then
-        SOURCE_SO=../../../../../install/dynamic_lib/lib/"$build_config"/"$build_target"/libBqLog.so
-        STRIP_SO=../../../../../install/dynamic_lib/lib_strip/"$build_config"/"$build_target"/libBqLog.so
+        SOURCE_SO=../../../../install/dynamic_lib/lib/"$build_config"/"$build_target"/libBqLog.so
+        STRIP_SO=../../../../install/dynamic_lib/lib_strip/"$build_config"/"$build_target"/libBqLog.so
         mkdir -p "$(dirname "$STRIP_SO")"
         echo "SOURCE_SO:$SOURCE_SO"
         "$NDK_PATH/llvm/bin/llvm-strip" -s "$SOURCE_SO" -o "$STRIP_SO"
       fi
-      cd ..
+      popd >/dev/null
     done
 
   done
-  cd ..
 done
 
 pushd "harmonyOS" >/dev/null

@@ -1,94 +1,76 @@
 @echo off
-SETLOCAL ENABLEEXTENSIONS
+setlocal EnableExtensions EnableDelayedExpansion
 
-If not Defined ANDROID_NDK_ROOT (
-    Echo ANDROID_NDK_ROOT is not defined! Build Cancelled!
-	goto :fail
-)
-If not exist %ANDROID_NDK_ROOT% (
-    Echo Folder %ANDROID_NDK_ROOT% Is Not Found! Build Cancelled!
-	goto :fail
+REM Check OHOS_SDK
+if "%OHOS_SDK%"=="" (
+  echo Environment variable OHOS_SDK is not found! Build cancelled!
+  exit /b 1
 )
 
-Echo Android NDK Found:%ANDROID_NDK_ROOT%
+set "NDK_PATH=%OHOS_SDK%\native"
 
-set ANDROID_PLATFORM="android-21"
+REM Detect number of CPU cores for parallel build
+if not defined PARALLEL_JOBS set "PARALLEL_JOBS=%NUMBER_OF_PROCESSORS%"
 
-echo Android NDK found: %ANDROID_NDK_ROOT%
+echo NDK: %NDK_PATH%
+echo Parallel jobs: %PARALLEL_JOBS%
 
-REM Try to use windows-arm64 toolchain if it exists, otherwise fallback to windows-x86_64
-set "HOST_TAG=windows-x86_64"
-if exist "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-arm64\bin" (
-    set "HOST_TAG=windows-arm64"
-    echo Using NDK host toolchain: windows-arm64
-) else (
-    if exist "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-x86_64\bin" (
-        set "HOST_TAG=windows-x86_64"
-        echo Using NDK host toolchain: windows-x86_64
-    ) else (
-        echo ERROR: Neither windows-arm64 nor windows-x86_64 toolchain found in your NDK. Build cancelled!
-        goto :fail
+for %%T in (armeabi-v7a arm64-v8a x86_64) do (
+  for %%C in (Debug RelWithDebInfo MinSizeRel Release) do (
+    for %%L in (static_lib dynamic_lib) do (
+      if exist "cmake_build" rmdir /s /q "cmake_build"
+      mkdir "cmake_build"
+      pushd "cmake_build"
+
+      REM Convert NDK path to POSIX style for CMake
+      set "NDK_POSIX=%NDK_PATH:\=/%"
+
+      cmake ../../../../src -DOHOS_ARCH=%%T -DOHOS_PLATFORM=OHOS -DCMAKE_BUILD_TYPE=%%C -DBUILD_LIB_TYPE=%%L -DCMAKE_TOOLCHAIN_FILE=!NDK_POSIX!/build/cmake/ohos.toolchain.cmake -DTARGET_PLATFORM:STRING=ohos -DOHOS_STL=c++_static || goto :error
+
+      REM Build and install
+      cmake --build . -- -j%PARALLEL_JOBS% || goto :error
+      cmake --build . --target install || goto :error
+
+      REM Strip symbols for dynamic lib
+      if /I "%%L"=="dynamic_lib" (
+        set "SOURCE_SO=..\..\..\..\install\dynamic_lib\lib\%%C\%%T\libBqLog.so"
+        set "STRIP_SO=..\..\..\..\install\dynamic_lib\lib_strip\%%C\%%T\libBqLog.so"
+        for %%I in ("!STRIP_SO!") do set "DEST_DIR=%%~dpI"
+        if not exist "!DEST_DIR!" mkdir "!DEST_DIR!"
+        echo SOURCE_SO:!SOURCE_SO!
+
+        set "STRIP_EXE=%NDK_PATH%\llvm\bin\llvm-strip.exe"
+        if not exist "!STRIP_EXE!" set "STRIP_EXE=%NDK_PATH%\llvm\bin\llvm-strip"
+        "!STRIP_EXE!" -s "!SOURCE_SO!" -o "!STRIP_SO!" || goto :error
+      )
+
+      popd
     )
+  )
 )
 
-
-set BUILD_TARGET[0]=armeabi-v7a
-set BUILD_TARGET[1]=arm64-v8a
-set BUILD_TARGET[2]=x86_64
-set BUILD_TARGET[3]=x86
-set BUILD_CONFIGS[0]=Debug
-set BUILD_CONFIGS[1]=MinSizeRel
-set BUILD_CONFIGS[2]=RelWithDebInfo
-set BUILD_CONFIGS[3]=Release
-
-rem %%j : BUILD_TARGET
-rem %%p : BUILD_CONFIGS
-for /l %%a in (0,1,3) do (
-    for /f "usebackq delims== tokens=1-2" %%i in (`set BUILD_TARGET[%%a]`) do (
-		rd /s /q %%j
-		md %%j
-		pushd %%j
-		for /l %%a in (0,1,3) do (
-			for /f "usebackq delims== tokens=1-2" %%o in (`set BUILD_CONFIGS[%%a]`) do (
-				md %%p
-				pushd %%p
-				cmake ..\..\..\..\..\src^
-				 -G="MinGW Makefiles"^
-				 -DANDROID_ABI=%%j^
-				 -DANDROID_PLATFORM=%ANDROID_PLATFORM%^
-				 -DANDROID_NDK=%ANDROID_NDK_ROOT%^
-				 -DCMAKE_BUILD_TYPE="%%p"^
-				 -DBUILD_LIB_TYPE=dynamic_lib^
-				 -DCMAKE_TOOLCHAIN_FILE=%ANDROID_NDK_ROOT%/build/cmake/android.toolchain.cmake^
-				 -DTARGET_PLATFORM:STRING=android^
-				 -DANDROID_STL=none^
-				 || exit /b 1
-				 
-				 cmake --build . -- -j10 || exit /b 1
-                 cmake --build . --target install || exit /b 1
-                 for %%F in ("..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so") do if not exist "%%~dpF" mkdir "%%~dpF"Z
-                 "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe" -s "..\..\..\..\..\install\dynamic_lib\lib\%%p\%%j\libBqLog.so" -o "..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so"
-
-			)
-			popd
-		)
-    )
-	popd
-)
-
-pushd gradle_proj
-call gradlew.bat assemble || exit /b 1
+pushd "harmonyOS" || goto :error
+set "HVIGORW=hvigorw.bat"
+if not exist "%HVIGORW%" set "HVIGORW=hvigorw"
+call "%HVIGORW%" clean --no-daemon || goto :error
+call "%HVIGORW%" assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel || goto :error
+if not exist "..\..\..\..\install\dynamic_lib" mkdir "..\..\..\..\install\dynamic_lib"
+copy /Y "bqlog\build\default\outputs\default\bqlog.har" "..\..\..\..\install\dynamic_lib\bqlog.har" >nul || goto :error
 popd
 
-if exist "pack" rd /s /q "pack"
-md pack
-pushd pack
-
-cmake ..\..\..\..\pack -DTARGET_PLATFORM:STRING=android -DPACKAGE_NAME:STRING=bqlog-lib || exit /b 1
-cmake --build . --target package || exit /b 1
+REM Package the library
+if exist "pack" rmdir /s /q "pack"
+mkdir "pack"
+pushd "pack"
+cmake ../../../../pack -DTARGET_PLATFORM:STRING=ohos -DPACKAGE_NAME:STRING=bqlog-lib || goto :error
+cmake --build . --target package || goto :error
 popd
 
- 
 echo ---------
 echo Finished!
 echo ---------
+exit /b 0
+
+:error
+echo Build failed with error level %errorlevel%.
+exit /b %errorlevel%
