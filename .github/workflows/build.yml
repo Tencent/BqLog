@@ -903,6 +903,63 @@ jobs:
           name: ios_libs
           path: ${{ github.workspace }}/dist
 
+  #HarmonyOS
+  build_OHOS_on_mac:
+    runs-on: macos-latest
+    env:
+      REPO: pippocao/Images
+      TAG: OHOS_Mac_Arm64_CommandLineTool_6.0.0
+      ZIP_NAME: commandline-tools-mac-arm64-6.0.0.858.zip
+      TOOL_NAME: ohos-commandline-tools
+      TOOL_VERSION: 6.0.0.858
+      INSTALL_DIR: ${{ github.workspace }}/.toolcache/ohos/commandline-tools/6.0.0.858
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore extracted dir cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.INSTALL_DIR }}
+          key: macos-arm64-${{ env.TOOL_NAME }}-${{ env.TOOL_VERSION }}
+
+      - name: Download from Release when cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          mkdir -p "${RUNNER_TEMP}"
+          gh release download "${TAG}" \
+            --repo "${REPO}" \
+            --pattern "${ZIP_NAME}" \
+            --dir "${RUNNER_TEMP}"
+          ls -lh "${RUNNER_TEMP}"
+
+      - name: Extract when cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        run: |
+          set -euxo pipefail
+          mkdir -p "${INSTALL_DIR}"
+          unzip -q "${RUNNER_TEMP}/${ZIP_NAME}" -d "${INSTALL_DIR}"
+          /usr/bin/find "${INSTALL_DIR}" -maxdepth 2 -mindepth 1 -print
+          
+
+      - name: Build for Mac
+        run: |
+          export PATH="${INSTALL_DIR}/cmdline-tools/bin:${PATH}"
+          export OHOS_SDK="${INSTALL_DIR}/sdk/default/openharmony"
+          cd build/lib/ohos  
+          chmod +x *.sh
+          ./mac_build_all_and_pack.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohos_libs
+          path: ${{ github.workspace }}/dist
+
   #Java wrapper
   build_windows_java11_wrapper:
     runs-on: windows-latest
