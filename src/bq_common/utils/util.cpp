@@ -16,8 +16,11 @@
 #include "bq_common/bq_common.h"
 #if defined(BQ_ANDROID)
 #include <android/log.h>
+#elif defined(BQ_OHOS)
+#include <hilog/log.h>
 #endif
 #include <time.h>
+
 
 namespace bq {
     static uint32_t rand_seed = 0;
@@ -124,9 +127,16 @@ namespace bq {
 #endif
 #if defined(BQ_ANDROID)
         __android_log_write(ANDROID_LOG_VERBOSE + ((int32_t)level - (int32_t)bq::log_level::verbose), "Bq", text);
+#elif defined(BQ_OHOS)
+        if(level < bq::log_level::info){
+            level = bq::log_level::info; //HarmonyOS don't have verbose level;
+        }
+        OH_LOG_PrintMsg(LOG_APP, static_cast<LogLevel>(static_cast<int32_t>(LOG_DEBUG) + static_cast<int32_t>(level) - static_cast<int32_t>(bq::log_level::debug)), 0x8527, "Bq", text);
 #elif defined(BQ_IOS)
         (void)level;
         bq::platform::ios_print(text);
+#elif defined(BQ_OHOS)
+        
 #else
         decltype(stdout) output_target = stdout;
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);

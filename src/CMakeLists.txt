@@ -34,10 +34,10 @@ BQ_DETECT_ARCH(DETECTED_ARCH)
 
 if(NOT DEFINED CPP_VER)
     set(CMAKE_CXX_STANDARD 17)
-    message("Use default C++ 17")
+    message(STATUS "Use default C++ 17")
 else()
     set(CMAKE_CXX_STANDARD ${CPP_VER})
-    message("Use custom C++ ${CPP_VER}")
+    message(STATUS "Use custom C++ ${CPP_VER}")
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -115,7 +115,7 @@ endif()
 
 if(JAVA_SUPPORT)
 	if(DEFINED ENV{JAVA_HOME})
-		message("JAVA_HOME: $ENV{JAVA_HOME}")
+		message(STATUS "JAVA_HOME: $ENV{JAVA_HOME}")
 	else()
 		message(FATAL_ERROR "can not find environment variable JAVA_HOME")
 	endif()
@@ -204,8 +204,8 @@ endif()
 
 set(INSTALL_SUB_DIR "${ARTIFACTS_SUB_DIR}")
 
-message("Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
-message("Dist Directory:${INSTALL_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}")
+message(STATUS "Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
+message(STATUS "Dist Directory:${INSTALL_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
@@ -246,6 +246,22 @@ elseif(TARGET_PLATFORM STREQUAL "unix")
     if(EXECINFO_LIBRARY)
         target_link_libraries(BqLog PRIVATE ${EXECINFO_LIBRARY})
     endif()
+elseif(TARGET_PLATFORM STREQUAL "ohos")
+    find_library(ACE_NAPI_LIB ace_napi.z REQUIRED)
+    find_library(HILOG_LIB hilog_ndk.z REQUIRED)
+    find_library(BUNDLE_LIB NAMES
+            bundle_ndk.z
+            bundlemanager_ndk.z
+            bundlemanager.z
+            bundle_ndk
+            REQUIRED)
+    target_link_libraries(BqLog
+            PRIVATE
+            ${ACE_NAPI_LIB}
+            ${HILOG_LIB}
+            ${BUNDLE_LIB}
+            dl            # 如果你代码里用到了 dladdr/dlopen/dlsym 等
+    )
 elseif(TARGET_PLATFORM STREQUAL "mac")
     if(APPLE_LIB_FORMAT STREQUAL "framework")
         set_target_properties(BqLog PROPERTIES
@@ -364,10 +380,12 @@ if(BUILD_LIB_TYPE STREQUAL "dynamic_lib")
 endif()
 
 #Ensure the target carries version/soname metadata
-set_target_properties(BqLog PROPERTIES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
-)
+if(NOT TARGET_PLATFORM STREQUAL "ohos")
+    set_target_properties(BqLog PROPERTIES
+            VERSION ${PROJECT_VERSION}
+            SOVERSION ${PROJECT_VERSION_MAJOR}
+    )
+endif()
 
 set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
 

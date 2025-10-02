@@ -1,0 +1,15 @@
+{
+  "module": {
+    "name": "bqlog",
+    "type": "har",
+    "description": "BqLog HarmonyOS Library",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1",
+      "tv",
+      "wearable",
+      "car",
+    ]
+  }
+}

@@ -33,7 +33,7 @@
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS)
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
 #include <cxxabi.h>
 #include <execinfo.h>
 namespace bq {
@@ -547,7 +547,7 @@ namespace bq {
 #endif
         }
 
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS)
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
             if (!bq::stack_trace_current_str_) {

@@ -111,56 +111,13 @@ export function path_join(...parts: Array<string | null | undefined>): string {
 }
 
 /**
- * Convert a file:// URL to a local filesystem path (POSIX + Windows).
- */
-export function file_url_to_path(file_url: string): string {
-  try {
-    const u = new URL(file_url);
-    if (u.protocol !== "file:") return "";
-    let p = decodeURIComponent(u.pathname || "");
-    const host = u.host || "";
-
-    // Windows UNC root: file://server/ -> \\server\
-    if (host && (p === "" || p === "/")) {
-      return "\\\\" + host + "\\";
-    }
-    if (host) {
-      // UNC path: file://host/C:/path -> \\host\C:\path
-      let body = p.startsWith("/") ? p.slice(1) : p;
-      body = body.replace(/\//g, "\\");
-      return "\\\\" + host + "\\" + body;
-    }
-
-    // Windows drive: /C:/path -> C:\path
-    if (/^\/[A-Za-z]:\//.test(p)) {
-      p = p.slice(1).replace(/\//g, "\\");
-      return p;
-    }
-
-    // POSIX
-    return p || "/";
-  } catch {
-    return "";
-  }
-}
-
-/**
  * Get current module directory.
- * - Prefer __dirname (CJS).
- * - For ESM, pass import.meta.url to convert to directory.
  */
-export function current_dirname(import_meta_url?: string): string {
+export function current_dirname(): string {
   try {
     // @ts-ignore
     if (typeof __dirname !== "undefined") return __dirname as string;
   } catch { }
-  if (import_meta_url) {
-    const p = file_url_to_path(import_meta_url);
-    if (p) {
-      const idx = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
-      return idx >= 0 ? p.slice(0, idx) : p;
-    }
-  }
   return "";
 }
 

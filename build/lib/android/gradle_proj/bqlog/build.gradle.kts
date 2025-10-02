@@ -62,7 +62,6 @@ fun dependencies() {
     // Add your dependencies here if needed
 }
 
-// 创建一个函数来生成复制AAR的任务
 fun createCopyAarTask(taskName: String, buildType: String, relativePath: String) {
     tasks.register<Copy>(taskName) {
         val aarName = "bqlog-$buildType.aar"
@@ -79,11 +78,9 @@ fun createCopyAarTask(taskName: String, buildType: String, relativePath: String)
     }
 }
 
-// 创建任务
 createCopyAarTask("copyAarRelease", "release", "../../../../install/dynamic_lib")
 createCopyAarTask("copyAarDebug", "debug", "../../../../install/dynamic_lib")
 
-// 配置assemble任务
 tasks.named("assemble") {
     finalizedBy("copyAarRelease")
     finalizedBy("copyAarDebug")

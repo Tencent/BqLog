@@ -22,7 +22,6 @@
 #include <unwind.h>
 #include <dlfcn.h>
 #include <string.h>
-#include "bq_common/bq_common.h"
 
 namespace bq {
     BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);

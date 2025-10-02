@@ -33,6 +33,10 @@
 // Mac's Catalyst (ports iOS API into Mac, like UIKit).
 #else
 #endif
+#elif defined(__OHOS__)
+#define BQ_OHOS 1
+#define BQ_POSIX 1
+#define BQ_NAPI 1
 #elif defined(__ANDROID__)
 #define BQ_ANDROID 1
 #define BQ_POSIX 1
