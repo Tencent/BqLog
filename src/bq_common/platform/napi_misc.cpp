@@ -121,6 +121,9 @@ namespace bq {
         napi_value napi_init(napi_env env, napi_value exports)
         {
             bq::platform::scoped_spin_lock lock(napi_init_mutex_);
+            if(is_napi_initialized_){
+                return nullptr;
+            }
             is_napi_initialized_ = true;
 
             napi_value name_native{};

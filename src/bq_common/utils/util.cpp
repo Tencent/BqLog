@@ -128,8 +128,8 @@ namespace bq {
 #if defined(BQ_ANDROID)
         __android_log_write(ANDROID_LOG_VERBOSE + ((int32_t)level - (int32_t)bq::log_level::verbose), "Bq", text);
 #elif defined(BQ_OHOS)
-        if(level < bq::log_level::info){
-            level = bq::log_level::info; //HarmonyOS don't have verbose level;
+        if(level < bq::log_level::debug){
+            level = bq::log_level::debug; //HarmonyOS don't have verbose level;
         }
         OH_LOG_PrintMsg(LOG_APP, static_cast<LogLevel>(static_cast<int32_t>(LOG_DEBUG) + static_cast<int32_t>(level) - static_cast<int32_t>(bq::log_level::debug)), 0x8527, "Bq", text);
 #elif defined(BQ_IOS)

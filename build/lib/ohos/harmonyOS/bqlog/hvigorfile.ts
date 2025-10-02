@@ -64,6 +64,7 @@ function sync_wrapper_into_module(): void {
   remove_dir_recursive(wrapper_dst_dir);
   ensure_dir(wrapper_dst_dir);
   copy_dir_recursive(wrapper_src_dir, wrapper_dst_dir);
+  fs.copyFileSync(`${wrapper_dst_dir}/bq/utils/lib_loader.ohos.txt`, `${wrapper_dst_dir}/bq/utils/lib_loader.ts`)
 }
 
 /** run copy early on file load to avoid relying on hvigor task APIs or argv */

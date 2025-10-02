@@ -11,7 +11,7 @@
  */
 
 /*
- * Shared core for loading native addon across Node (CJS/ESM) and OHOS.
+ * Shared core for loading native addon across Node (CJS/ESM).
  * No top-level node:* imports. Business logic is written once here.
  */
 
@@ -165,34 +165,5 @@ export function load_node_sync_core(req: any, base_dir: string): native_binding 
       ...tried_files.map(p => `  - ${p}`),
       `also tried bindings(...) and direct require(...) with names: ${names.join(", ")}`
     ].join("\n")
-  );
-}
-
-/**
- * OHOS sync loader via requireNapi/requireNativeModule.
- * On failure, throws with module names tried.
- */
-export function load_ohos_sync(): native_binding {
-  const names = name_candidates_from_env();
-  const g: any = globalThis as any;
-  const has_require_napi = typeof g.requireNapi === "function";
-  const has_require_native_module = typeof g.requireNativeModule === "function";
-
-  if (has_require_napi) {
-    for (const n of names) {
-      try {
-        try { const got = g.requireNapi(n); if (got) return got; }
-        catch { const got2 = g.requireNapi(n, true); if (got2) return got2; }
-      } catch { }
-    }
-  }
-  if (has_require_native_module) {
-    for (const n of names) {
-      try { const got = g.requireNativeModule(n); if (got) return got; } catch { }
-    }
-  }
-  throw new Error(
-    `failed to load ${lib_def.lib_name} via requireNapi/requireNativeModule on OHOS\n` +
-    `tried module names: ${names.join(", ")}`
   );
 }

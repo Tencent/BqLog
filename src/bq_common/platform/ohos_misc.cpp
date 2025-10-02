@@ -38,7 +38,7 @@ namespace bq {
         base_dir_initializer::base_dir_initializer()
         {
             set_base_dir_0("/data/storage/el2/base/files");
-            set_base_dir_1("/storage/media/100/local/files/Docs/appdata/bq");
+            set_base_dir_1("/data/storage/el2/base/cache");
         }
         const bq::string get_bundle_name()
         {

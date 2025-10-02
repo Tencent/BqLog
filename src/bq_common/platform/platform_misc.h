@@ -18,6 +18,12 @@
 #include "bq_common/types/array.h"
 #include "bq_common/types/string.h"
 
+#if defined(BQ_POSIX)
+#include "bq_common/platform/posix_misc.h"
+#endif
+#if defined(BQ_NAPI)
+#include "bq_common/platform/napi_misc.h"
+#endif
 #if defined(BQ_JAVA)
 #include "bq_common/platform/java_misc.h"
 #endif
@@ -42,11 +48,8 @@
 #if defined(BQ_PS)
 #include "bq_common/platform/ps_misc.h"
 #endif
-#if defined(BQ_POSIX)
-#include "bq_common/platform/posix_misc.h"
-#endif
-#if defined(BQ_NAPI)
-#include "bq_common/platform/napi_misc.h"
+#if defined(BQ_OHOS)
+#include "bq_common/platform/ohos_misc.h"
 #endif
 
 namespace bq {

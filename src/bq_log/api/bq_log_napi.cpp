@@ -15,12 +15,12 @@
 
 
 
+#include "bq_common/bq_common.h"
 #if defined(BQ_NAPI)
 #include <stddef.h>
 #include <math.h>
 #include "bq_log/bq_log.h"
 #include "bq_log/global/vars.h"
-#include "bq_common/bq_common.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/types/buffer/log_buffer.h"
 

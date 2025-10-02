@@ -11,13 +11,12 @@
  */
 
 /*
-* CJS + OHOS loader wrapper (no top-level node:* imports).
+* CJS + loader wrapper (no top-level node:* imports).
 * - Node CJS: sync auto-load using global require + __dirname (via tools).
-* - OHOS: sync auto-load using requireNapi/requireNativeModule.
 */
 
 import * as tools from "../utils/tools";
-import { load_node_sync_core, load_ohos_sync, native_binding } from "./lib_loader_core";
+import { load_node_sync_core, native_binding } from "./lib_loader_core";
 
 let native_mod_: native_binding | null = null;
 const proc: any = (globalThis as any)?.process;
@@ -65,12 +64,10 @@ export function native_export(name: string): any {
             native_mod_ = load_node_sync_core(req, base_dir);
             return;
         }
-
-        // Fallback: OHOS path
-        native_mod_ = load_ohos_sync();
+        throw new Error("not running under Node.js");
     } catch (e) {
         // eslint-disable-next-line no-console
-        console.error("failed to load native module (cjs/ohos)");
+        console.error("failed to load native module (cjs)");
         // eslint-disable-next-line no-console
         console.error((e as Error)?.message ?? String(e));
     }

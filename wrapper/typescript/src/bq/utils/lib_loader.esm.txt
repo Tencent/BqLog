@@ -13,7 +13,7 @@
  /*
  * Node ESM loader wrapper.
  * - Uses createRequire + fileURLToPath to sync auto-load at module init.
- * - Not imported on OHOS/CJS builds.
+ * - Not imported on CJS builds.
  * Not exported publicly; used only inside the package.
  */
 
