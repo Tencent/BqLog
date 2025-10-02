@@ -8,7 +8,7 @@ import { harTasks } from '@ohos/hvigor-ohos-plugin';
 
 /** resolve important paths */
 const project_root_dir = __dirname;
-const wrapper_src_dir = path.resolve(project_root_dir, '../../../../../wrapper/typescript');
+const wrapper_src_dir = path.resolve(project_root_dir, '../../../../../wrapper/typescript/src');
 const wrapper_dst_dir = path.resolve(project_root_dir, 'src/main/ets/wrapper');
 
 /** remove a directory recursively if it exists */
