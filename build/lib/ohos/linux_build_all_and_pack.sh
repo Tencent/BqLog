@@ -58,8 +58,8 @@ for build_target in "${BUILD_TARGET[@]}"; do
 done
 
 pushd "harmonyOS" >/dev/null
-./hvigorw clean --no-daemon
-./hvigorw assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel
+hvigorw clean --no-daemon
+hvigorw assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel
 cp -f bqlog/build/default/outputs/default/bqlog.har ../../../../install/dynamic_lib/bqlog.har
 popd >/dev/null
 
