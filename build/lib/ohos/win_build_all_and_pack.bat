@@ -25,7 +25,7 @@ for %%T in (armeabi-v7a arm64-v8a x86_64) do (
       REM Convert NDK path to POSIX style for CMake
       set "NDK_POSIX=%NDK_PATH:\=/%"
 
-      cmake ../../../../src -DOHOS_ARCH=%%T -DOHOS_PLATFORM=OHOS -DCMAKE_BUILD_TYPE=%%C -DBUILD_LIB_TYPE=%%L -DCMAKE_TOOLCHAIN_FILE=!NDK_POSIX!/build/cmake/ohos.toolchain.cmake -DTARGET_PLATFORM:STRING=ohos -DOHOS_STL=c++_static || goto :error
+      cmake ../../../../src -G "Unix Makefiles" -DOHOS_ARCH=%%T -DOHOS_PLATFORM=ohos -DCMAKE_BUILD_TYPE=%%C -DBUILD_LIB_TYPE=%%L -DCMAKE_TOOLCHAIN_FILE=!NDK_POSIX!/build/cmake/ohos.toolchain.cmake -DTARGET_PLATFORM:STRING=ohos -DOHOS_STL=c++_static || goto :error
 
       REM Build and install
       cmake --build . -- -j%PARALLEL_JOBS% || goto :error
@@ -50,10 +50,8 @@ for %%T in (armeabi-v7a arm64-v8a x86_64) do (
 )
 
 pushd "harmonyOS" || goto :error
-set "HVIGORW=hvigorw.bat"
-if not exist "%HVIGORW%" set "HVIGORW=hvigorw"
-call "%HVIGORW%" clean --no-daemon || goto :error
-call "%HVIGORW%" assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel || goto :error
+call hvigorw clean --no-daemon || goto :error
+call hvigorw assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel || goto :error
 if not exist "..\..\..\..\install\dynamic_lib" mkdir "..\..\..\..\install\dynamic_lib"
 copy /Y "bqlog\build\default\outputs\default\bqlog.har" "..\..\..\..\install\dynamic_lib\bqlog.har" >nul || goto :error
 popd
