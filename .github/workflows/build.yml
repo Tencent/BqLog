@@ -957,7 +957,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ohos_libs
+          name: harmony_os_libs
           path: ${{ github.workspace }}/dist
 
   #Java wrapper
