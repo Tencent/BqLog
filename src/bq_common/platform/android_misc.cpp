@@ -258,6 +258,9 @@ namespace bq {
             bq::string base_dir1_candidate = bq::string("/storage/emulated/0/Android/data/") + package_name + "/files";
             bool can_write_1 = can_write_to_dir(base_dir1_candidate);
 
+            bq::util::log_device_console(bq::log_level::info, "Android internal dir detected by native:%s, can write:%d", base_dir0_candidate.c_str(), can_write_0);
+            bq::util::log_device_console(bq::log_level::info, "Android external dir detected by native:%s, can write:%d", base_dir1_candidate.c_str(), can_write_1);
+
             if(can_write_0){
                 set_base_dir_0(base_dir0_candidate);
             }else if(can_write_1){
@@ -648,27 +651,30 @@ namespace bq {
                 || common_global_vars::get().base_dir_init_inst_.get_base_dir_1().is_empty()){
                 auto internal_dir = get_files_dir();
                 auto external_dir = get_external_files_dir();
-                bq::util::log_device_console(log_level::info, "internal storage path:%s", internal_dir.c_str());
-                bq::util::log_device_console(log_level::info, "external storage path:%s", external_dir.c_str());
                 auto cache_dir = get_cache_dir();
                 // priority:
                 // for base dir type 0: internal storage -> external storage -> cache storage
                 // for base dir type 1: external storage -> internal storage -> cache storage
+                bool can_internal_dir_write = can_write_to_dir(internal_dir);
+                bool can_external_dir_write = can_write_to_dir(external_dir);
+                bool can_cache_dir_write = can_write_to_dir(cache_dir);
+                bq::util::log_device_console(log_level::info, "internal storage path detected by android java:%s, can write:%d", internal_dir.c_str(), can_internal_dir_write);
+                bq::util::log_device_console(log_level::info, "external storage path detected by android java:%s, can write:%d", external_dir.c_str(), can_external_dir_write);
+                bq::util::log_device_console(log_level::info, "cache storage path detected by android java:%s, can write:%d", cache_dir.c_str(), can_cache_dir_write);
 
-                if(can_write_to_dir(internal_dir)){
+                if(can_internal_dir_write){
                     common_global_vars::get().base_dir_init_inst_.set_base_dir_0(internal_dir);
-                }else if(can_write_to_dir(external_dir)){
+                }else if(can_external_dir_write){
                     common_global_vars::get().base_dir_init_inst_.set_base_dir_0(external_dir);
-                }else if(can_write_to_dir(cache_dir)){
+                }else if(can_cache_dir_write){
                     common_global_vars::get().base_dir_init_inst_.set_base_dir_0(cache_dir);
                 }
 
-
-                if(can_write_to_dir(external_dir)){
+                if(can_external_dir_write){
                     common_global_vars::get().base_dir_init_inst_.set_base_dir_1(external_dir);
-                }else if(can_write_to_dir(internal_dir)){
+                }else if(can_internal_dir_write){
                     common_global_vars::get().base_dir_init_inst_.set_base_dir_1(internal_dir);
-                }else if(can_write_to_dir(cache_dir)){
+                }else if(can_cache_dir_write){
                     common_global_vars::get().base_dir_init_inst_.set_base_dir_1(cache_dir);
                 }
             }
