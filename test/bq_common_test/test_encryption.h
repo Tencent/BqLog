@@ -25,7 +25,7 @@ namespace bq {
         private:
             void test_rsa(test_result& result, int32_t key_bits, int32_t test_count)
             {
-                bq::string base_dir = bq::file_manager::get_base_dir(false);
+                bq::string base_dir = bq::file_manager::get_base_dir(1);
                 char key_bits_str[32];
                 snprintf(key_bits_str, sizeof(key_bits_str), "%" PRId32 "", key_bits);
                 char thread_id_str[64];

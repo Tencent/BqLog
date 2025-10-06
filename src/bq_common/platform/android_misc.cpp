@@ -18,6 +18,7 @@
 #include <jni.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <stdio.h>
 #include <time.h>
 #include <unwind.h>
 #include <dlfcn.h>
@@ -91,12 +92,7 @@ namespace bq {
             return context_inst_atomic.load();
         }
 
-        base_dir_initializer::base_dir_initializer()
-        {
-            // empty implementation
-        }
-
-        bool can_write_to_dir(bq::string path)
+        static bool can_write_to_dir(bq::string path)
         {
             bq::string test_path = path + "/bq_test_dir";
             if (bq::platform::make_dir(test_path.c_str()) != 0) {
@@ -106,16 +102,173 @@ namespace bq {
             char name[128] = { 0 };
             sprintf(name, "/test_%d.txt", index);
             bq::string test_file_name = test_path + name;
-            bq::platform::platform_file_handle file_handle;
-            if (bq::platform::open_file(test_file_name.c_str(), bq::platform::file_open_mode_enum::auto_create | bq::platform::file_open_mode_enum::read_write, file_handle) != 0)
+            FILE* test_f = fopen(test_file_name.c_str(), "a");
+            if (!test_f)
                 return false;
-            if (bq::platform::close_file(file_handle) != 0)
+            if (fclose(test_f) != 0)
                 return false;
             if (bq::platform::remove_dir_or_file(test_file_name.c_str()) != 0)
                 return false;
             if (bq::platform::remove_dir_or_file(test_path.c_str()) != 0)
                 return false;
             return true;
+        }
+
+        static bool is_valid_pkg(const bq::string& name) {
+            size_t n = name.size();
+            if (n == 0 || n > 255){
+                return false;
+            }
+            char c0 = name[0];
+            if (!(c0 >= 'a' && c0 <= 'z')){
+                return false;
+            }
+            bool has_dot = false;
+            for (size_t i = 0; i < n; ++i) {
+                char c = name[i];
+                if (!((c >= 'a' && c <= 'z') ||
+                      (c >= '0' && c <= '9') ||
+                      c == '.')) {
+                    return false;
+                }
+                if (c == '.'){
+                    has_dot = true;
+                }
+            }
+            if (!has_dot){
+                return false;
+            }
+            if(name.find("..") != bq::string::npos){
+                return false;
+            }
+            return true;
+        }
+
+        static bool try_parse_line_for_pkg(const bq::string& line, bq::string& out_pkg) {
+            const char* needle = "/base.apk";
+            size_t pos_base = line.find(needle);
+            if (pos_base == bq::string::npos || pos_base == 0){
+                return false;
+            }
+            auto segments = line.split("/");
+            for(size_t i = segments.size(); i > 0; --i) {
+                const auto &seg = segments[i - 1];
+                bq::string candidate_name;
+                for(const auto c : seg){
+                    if((c >= 'a' && c <= 'z')
+                       || (c >= '0' && c <= '9')
+                       || c == '.'){
+                        candidate_name.push_back(c);
+                    }else{
+                        break;
+                    }
+                }
+                if(!is_valid_pkg(candidate_name)){
+                    continue;
+                }
+                bq::string test_dir = bq::string("/data/user/0/") + candidate_name + "/files";
+                if (can_write_to_dir(test_dir)) {
+                    out_pkg = candidate_name;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Try to analyze "Internal files dir" and "External files dir" without
+         * reflect android java classes.
+         */
+        base_dir_initializer::base_dir_initializer()
+        {
+            bq::string package_name;
+            bq::string maps_str;
+            // Derive the package name from /proc/self/maps first. This is more reliable than using /proc/self/cmdline,
+            // because cmdline reflects the (possibly customized) process name and may not match the real applicationId.
+            FILE *fp_maps = fopen("/proc/self/maps", "re");
+            if (!fp_maps){
+                bq::util::log_device_console(bq::log_level::warning, "failed to load /proc/self/maps");
+            }
+            char buf_maps[4096];
+            bq::string line;
+            bool found = false;
+            while (!found) {
+                size_t n = fread(buf_maps, 1, sizeof(buf_maps), fp_maps);
+                if (n == 0) {
+                    if (line.size() > 0) {
+                        if (try_parse_line_for_pkg(line, package_name)) {
+                            found = true;
+                        }
+                    }
+                    break;
+                }
+
+                for (size_t i = 0; i < n ; ++i) {
+                    char c = buf_maps[i];
+                    if (c == '\n') {
+                        if (line.size() > 0) {
+                            if (try_parse_line_for_pkg(line, package_name)) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        line.clear();
+                    } else {
+                        line.push_back(c);
+                    }
+                }
+            }
+            fclose(fp_maps);
+
+            // If we cannot locate a plausible base.apk entry in maps, we fall back to cmdline. However, for a process
+            // with a fully custom process name (e.g. android:process="com.other.proc"), that fallback will fail to
+            // recover the true package name, so JNI_OnLoad (or a later Java-provided value) must be used instead.
+            if(package_name.is_empty()){
+                FILE *fp = fopen("/proc/self/cmdline", "rb");
+                if (!fp){
+                    bq::util::log_device_console(bq::log_level::warning, "failed to load /proc/self/cmdline");
+                    return;
+                }
+                char buf[256];
+                bool done = false;
+                while (!done) {
+                    size_t n = fread(buf, 1, sizeof(buf), fp);
+                    if(n < sizeof(buf)){
+                        done = true;
+                    }
+                    for (size_t i = 0; i < n; ++i) {
+                        if (buf[i] == '\0') {
+                            done = true;
+                            break;
+                        }else{
+                            package_name.push_back(buf[i]);
+                        }
+                    }
+                }
+                fclose(fp);
+                auto colon_pos = package_name.find(":");
+                if(colon_pos != bq::string::npos){
+                    package_name = package_name.substr(0, colon_pos);
+                }
+            }
+
+            bq::util::log_device_console(bq::log_level::info, "Android package name detected:%s", package_name.c_str());
+            bq::string base_dir0_candidate = bq::string("/data/user/0/") + package_name + "/files";
+            bool can_write_0 = can_write_to_dir(base_dir0_candidate);
+            bq::string base_dir1_candidate = bq::string("/storage/emulated/0/Android/data/") + package_name + "/files";
+            bool can_write_1 = can_write_to_dir(base_dir1_candidate);
+
+            if(can_write_0){
+                set_base_dir_0(base_dir0_candidate);
+            }else if(can_write_1){
+                set_base_dir_0(base_dir1_candidate);
+            }
+
+            if(can_write_1){
+                set_base_dir_1(base_dir1_candidate);
+            }else if(can_write_0){
+                set_base_dir_1(base_dir0_candidate);
+            }
         }
 
         bq::string get_files_dir()
@@ -491,46 +644,33 @@ namespace bq {
             init_android_reflection_variables();
             init_android_asset_manager();
 
-            common_global_vars::get().base_dir_init_inst_.set_base_dir_0(get_files_dir());
-            common_global_vars::get().base_dir_init_inst_.set_base_dir_1(get_external_files_dir());
+            if(common_global_vars::get().base_dir_init_inst_.get_base_dir_0().is_empty()
+                || common_global_vars::get().base_dir_init_inst_.get_base_dir_1().is_empty()){
+                auto internal_dir = get_files_dir();
+                auto external_dir = get_external_files_dir();
+                bq::util::log_device_console(log_level::info, "internal storage path:%s", internal_dir.c_str());
+                bq::util::log_device_console(log_level::info, "external storage path:%s", external_dir.c_str());
+                auto cache_dir = get_cache_dir();
+                // priority:
+                // for base dir type 0: internal storage -> external storage -> cache storage
+                // for base dir type 1: external storage -> internal storage -> cache storage
 
-            bq::util::log_device_console(log_level::info, "internal storage path:%s", get_base_dir(true).c_str());
-            bq::util::log_device_console(log_level::info, "external storage path:%s", get_base_dir(false).c_str());
+                if(can_write_to_dir(internal_dir)){
+                    common_global_vars::get().base_dir_init_inst_.set_base_dir_0(internal_dir);
+                }else if(can_write_to_dir(external_dir)){
+                    common_global_vars::get().base_dir_init_inst_.set_base_dir_0(external_dir);
+                }else if(can_write_to_dir(cache_dir)){
+                    common_global_vars::get().base_dir_init_inst_.set_base_dir_0(cache_dir);
+                }
 
-            // priority:
-            // for base dir type 0: internal storage -> external storage -> cache storage
-            // for base dir type 1: external storage -> internal storage -> cache storage
-            bool need_alarm = false;
-            if (common_global_vars::get().base_dir_init_inst_.get_base_dir_0().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_0())) {
-                bq::string candidiate_path;
-                if (common_global_vars::get().base_dir_init_inst_.get_base_dir_1().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_1())) {
-                    need_alarm = true;
-                    candidiate_path = get_cache_dir();
-                } else {
-                    candidiate_path = common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
+
+                if(can_write_to_dir(external_dir)){
+                    common_global_vars::get().base_dir_init_inst_.set_base_dir_1(external_dir);
+                }else if(can_write_to_dir(internal_dir)){
+                    common_global_vars::get().base_dir_init_inst_.set_base_dir_1(internal_dir);
+                }else if(can_write_to_dir(cache_dir)){
+                    common_global_vars::get().base_dir_init_inst_.set_base_dir_1(cache_dir);
                 }
-                __android_log_print(ANDROID_LOG_WARN, "Bq",
-                    "common_global_vars::get().base_dir_init_inst_.get_base_dir_0():\"%s\" can_write_to_dir = false, use \"%s\" instead",
-                    common_global_vars::get().base_dir_init_inst_.get_base_dir_0().c_str(),
-                    candidiate_path.c_str());
-                common_global_vars::get().base_dir_init_inst_.set_base_dir_0(candidiate_path);
-            }
-            if (common_global_vars::get().base_dir_init_inst_.get_base_dir_1().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_1())) {
-                bq::string candidiate_path;
-                if (common_global_vars::get().base_dir_init_inst_.get_base_dir_0().is_empty() || !can_write_to_dir(common_global_vars::get().base_dir_init_inst_.get_base_dir_0())) {
-                    need_alarm = true;
-                    candidiate_path = get_cache_dir();
-                } else {
-                    candidiate_path = common_global_vars::get().base_dir_init_inst_.get_base_dir_0();
-                }
-                __android_log_print(ANDROID_LOG_WARN, "Bq",
-                    "common_global_vars::get().base_dir_init_inst_.get_base_dir_1():\"%s\" can_write_to_dir = false, use \"%s\" instead",
-                    common_global_vars::get().base_dir_init_inst_.get_base_dir_1().c_str(),
-                    candidiate_path.c_str());
-                common_global_vars::get().base_dir_init_inst_.set_base_dir_1(candidiate_path);
-            }
-            if (need_alarm) {
-                __android_log_print(ANDROID_LOG_ERROR, "Bq", "If you are using BQ in isolateProcess Android Service, you may not have any I/O read/write permissions, and all file read/write operations will fail.");
             }
         }
 

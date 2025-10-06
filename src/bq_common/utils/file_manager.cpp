@@ -41,7 +41,7 @@ namespace bq {
         return *common_global_vars::get().file_manager_inst_;
     }
 
-    const bq::string& file_manager::get_base_dir(int32_t base_dir_type)
+    bq::string file_manager::get_base_dir(int32_t base_dir_type)
     {
         return bq::platform::get_base_dir(base_dir_type);
     }

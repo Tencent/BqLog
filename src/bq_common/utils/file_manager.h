@@ -138,7 +138,7 @@ namespace bq {
     public:
         // Functions with file path
         // tool functions IMPORTANT: all the path parameter is relative to platform::get_base_dir(path of the executable file on Win, Linux and Mac, app path on mobile devices)
-        static const bq::string& get_base_dir(int32_t base_dir_type);
+        static bq::string get_base_dir(int32_t base_dir_type);
 
         static string trans_process_relative_path_to_absolute_path(const bq::string& relative_path, int32_t base_dir_type);
         static string trans_process_absolute_path_to_relative_path(const bq::string& absolute_path, int32_t base_dir_type);

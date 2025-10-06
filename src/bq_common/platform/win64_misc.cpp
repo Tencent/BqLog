@@ -52,7 +52,7 @@ namespace bq {
             if (is_absolute(path)) {
                 return path;
             }
-            const bq::string& base_dir = get_base_dir(true);
+            const bq::string& base_dir = get_base_dir(0);
             if (path.begin_with("\\") || path.begin_with("/")) {
                 return base_dir + path.substr(1, path.size() - 1);
             } else {
