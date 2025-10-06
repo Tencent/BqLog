@@ -33,7 +33,7 @@ for build_target in "${BUILD_TARGET[@]}"; do
       pushd "cmake_build" >/dev/null
       cmake ../../../../src \
         -DOHOS_ARCH="$build_target" \
-        -DOHOS_PLATFORM=OHOS \
+        -DOHOS_PLATFORM=ohos \
         -DCMAKE_BUILD_TYPE="$build_config" \
         -DBUILD_LIB_TYPE="$build_lib_type" \
         -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/ohos.toolchain.cmake" \
@@ -58,8 +58,8 @@ for build_target in "${BUILD_TARGET[@]}"; do
 done
 
 pushd "harmonyOS" >/dev/null
-./hvigorw clean --no-daemon
-./hvigorw assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel
+hvigorw clean --no-daemon
+hvigorw assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel
 cp -f bqlog/build/default/outputs/default/bqlog.har ../../../../install/dynamic_lib/bqlog.har
 popd >/dev/null
 
