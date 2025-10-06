@@ -26,9 +26,17 @@ namespace bq {
     {
         bq::platform::jni_env env_holder;
         JNIEnv* env = env_holder.env;
-        log_global_vars::get().cls_bq_log_ = env->FindClass("bq/log");
-        log_global_vars::get().mid_native_console_callbck_ = env->GetStaticMethodID(log_global_vars::get().cls_bq_log_, "native_console_callbck", "(JIILjava/lang/String;)V");
-        log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callbck_ = env->GetStaticMethodID(log_global_vars::get().cls_bq_log_, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
+        auto bq_log_cls = env->FindClass("bq/log");
+        if(bq_log_cls){
+            log_global_vars::get().cls_bq_log_ = bq_log_cls;
+            log_global_vars::get().mid_native_console_callbck_ = env->GetStaticMethodID(bq_log_cls, "native_console_callbck", "(JIILjava/lang/String;)V");
+            log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callbck_ = env->GetStaticMethodID(bq_log_cls, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
+        }
+        if (env->ExceptionCheck()) {
+            env->ExceptionDescribe();
+            env->ExceptionClear();
+            bq::util::log_device_console(bq::log_level::error, "exception occured while finding class \"bq.log\", make sure Java wrapper is included in your project, or errors will occur when you call java methods");
+        }
     }
 #endif
 

@@ -394,10 +394,12 @@ static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_id
     JNIEnv* env = env_holder.env;
     jclass cls = bq::log_global_vars::get().cls_bq_log_;
     if (!cls) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log class is not find in JVM");
         return;
     }
     jmethodID mid = bq::log_global_vars::get().mid_native_console_callbck_;
     if (!mid) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log.native_console_callbck method is not find in JVM");
         return;
     }
     jstring message = env->NewStringUTF(content);
@@ -451,10 +453,12 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
     JNIEnv* env = env_holder.env;
     jclass cls = bq::log_global_vars::get().cls_bq_log_;
     if (!cls) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log class is not find in JVM");
         return;
     }
     jmethodID mid = bq::log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callbck_;
     if (!mid) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log.native_console_buffer_fetch_and_remove_callbck method is not find in JVM");
         return;
     }
     jstring message = env->NewStringUTF(content);
