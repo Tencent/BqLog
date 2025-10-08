@@ -25,6 +25,9 @@ namespace bq {
             (void)category_idx;
             (void)log_level;
             (void)length;
+            if (log_id == 0) {
+                return; //It's not a log callback
+            }
             log_str = content;
             log_c_str = log_str.c_str();
         }
