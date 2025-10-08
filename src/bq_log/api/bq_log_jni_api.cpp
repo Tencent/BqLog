@@ -110,13 +110,12 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     head->level = (uint8_t)level;
     head->log_format_str_type = static_cast<uint16_t>(bq::log_arg_type_enum::string_utf16_type);
 
-    jboolean is_cpy = false;
     auto seq = bq::tools::make_single_string_size_seq<false, char16_t>((size_t)utf16_str_bytes_len);
     head->log_args_offset = static_cast<uint32_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
     uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
-    const char16_t* format_str = (const char16_t*)env->GetStringCritical(format_content, &is_cpy);
-    bq::impl::_do_log_args_fill<false>(log_format_content_addr, seq, format_str);
-    env->ReleaseStringCritical(format_content, (const jchar*)format_str);
+    *(uint32_t*)log_format_content_addr = (uint32_t)utf16_str_bytes_len;
+    log_format_content_addr += sizeof(uint32_t);
+    env->GetStringRegion(format_content, (jsize)0, (jsize)utf16_str_bytes_len >> 1, (jchar*)log_format_content_addr);
 
     bq::log_imp* log = bq::log_manager::get_log_by_id(static_cast<uint64_t>(log_id));
     bq::log_buffer_write_handle inner_handle;
@@ -138,13 +137,13 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_1string(JNIEnv* env, jclass, jlong log_id, jlong offset, jstring arg_str, jlong arg_utf16_bytes_len)
 {
     (void)log_id;
-    bq::tools::size_seq<true, const char16_t*> seq;
-    seq.get_element().value = sizeof(uint32_t) + sizeof(uint32_t) + (size_t)arg_utf16_bytes_len;
+    auto seq = bq::tools::make_single_string_size_seq<true, char16_t>((size_t)arg_utf16_bytes_len);
     uint8_t* log_format_content_addr = const_cast<uint8_t*>(tls_write_handle_.java_info_.buffer_base_addr_) + (ptrdiff_t)offset;
-    jboolean is_cpy = false;
-    const char16_t* str = (const char16_t*)env->GetStringCritical(arg_str, &is_cpy);
-    bq::impl::_do_log_args_fill<true>(log_format_content_addr, seq, str);
-    env->ReleaseStringCritical(arg_str, (const jchar*)str);
+    *log_format_content_addr = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
+    log_format_content_addr += sizeof(uint32_t);
+    *(uint32_t*)log_format_content_addr = (uint32_t)arg_utf16_bytes_len;
+    log_format_content_addr += sizeof(uint32_t);
+    env->GetStringRegion(arg_str, (jsize)0, (jsize)arg_utf16_bytes_len >> 1, (jchar*)log_format_content_addr);
 }
 
 /*
