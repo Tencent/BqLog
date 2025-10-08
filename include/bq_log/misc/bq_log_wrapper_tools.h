@@ -101,9 +101,23 @@ namespace bq {
             };
             template <typename U, typename V = void>
             struct format_custom_member_func_sfinae : public bq::false_type {
+                typedef void char_type;
             };
             template <typename U>
             struct format_custom_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_custom_format(bq::declval<char*>(), bq::declval<size_t>()))>, void>::value>> : public bq::true_type {
+                typedef char char_type;
+            };
+            template <typename U>
+            struct format_custom_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_custom_format(bq::declval<char16_t*>(), bq::declval<size_t>()))>, void>::value>> : public bq::true_type {
+                typedef char16_t char_type;
+            };
+            template <typename U>
+            struct format_custom_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_custom_format(bq::declval<char32_t*>(), bq::declval<size_t>()))>, void>::value>> : public bq::true_type {
+                typedef char32_t char_type;
+            };
+            template <typename U>
+            struct format_custom_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_custom_format(bq::declval<wchar_t*>(), bq::declval<size_t>()))>, void>::value>> : public bq::true_type {
+                typedef wchar_t char_type;
             };
 
             // global function version
@@ -137,9 +151,23 @@ namespace bq {
             };
             template <typename U, typename V = void>
             struct format_custom_global_func_sfinae : public bq::false_type {
+                typedef void char_type;
             };
             template <typename U>
             struct format_custom_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_custom_format(bq::declval<const U&>(), bq::declval<char*>(), bq::declval<size_t>())), void>::value>> : public bq::true_type {
+                typedef char char_type;
+            };
+            template <typename U>
+            struct format_custom_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_custom_format(bq::declval<const U&>(), bq::declval<char16_t*>(), bq::declval<size_t>())), void>::value>> : public bq::true_type {
+                typedef char16_t char_type;
+            };
+            template <typename U>
+            struct format_custom_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_custom_format(bq::declval<const U&>(), bq::declval<char32_t*>(), bq::declval<size_t>())), void>::value>> : public bq::true_type {
+                typedef char32_t char_type;
+            };
+            template <typename U>
+            struct format_custom_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_custom_format(bq::declval<const U&>(), bq::declval<wchar_t*>(), bq::declval<size_t>())), void>::value>> : public bq::true_type {
+                typedef wchar_t char_type;
             };
 
         public:
@@ -150,7 +178,13 @@ namespace bq {
             static constexpr bool has_member_c_str_func = (!has_member_custom_format_func) && (!has_global_custom_format_func) && format_c_str_member_func_sfinae<bq::decay_t<T>>::value;
             static constexpr bool has_global_c_str_func = (!has_member_custom_format_func) && (!has_global_custom_format_func) && (!has_member_c_str_func) && format_c_str_global_func_sfinae<bq::decay_t<T>>::value;
             static constexpr bool is_valid = (has_member_size_func || has_global_size_func) && (has_member_c_str_func || has_global_c_str_func || has_member_custom_format_func || has_global_custom_format_func); 
-            typedef bq::condition_type_t<has_member_c_str_func, typename format_c_str_member_func_sfinae<bq::decay_t<T>>::char_type, bq::condition_type_t<has_global_c_str_func, typename format_c_str_global_func_sfinae<bq::decay_t<T>>::char_type, char>> char_type;
+            using char_type = bq::condition_type_t<
+                has_member_c_str_func,
+                typename format_c_str_member_func_sfinae<bq::decay_t<T>>::char_type,
+                bq::condition_type_t<has_global_c_str_func, typename format_c_str_global_func_sfinae<bq::decay_t<T>>::char_type,
+                bq::condition_type_t<has_member_custom_format_func, typename format_custom_member_func_sfinae<bq::decay_t<T>>::char_type,
+                bq::condition_type_t<has_global_custom_format_func, typename format_custom_global_func_sfinae<bq::decay_t<T>>::char_type,
+                char>>>>;
         };
 
         template <typename STR>
@@ -690,7 +724,7 @@ _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
     data_size -= (bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t));
     *(uint32_t*)data_addr = (uint32_t)data_size;
     data_addr += sizeof(uint32_t);
-    value.bq_log_custom_format(reinterpret_cast<char*>(data_addr), data_size);
+    value.bq_log_custom_format(reinterpret_cast<typename _custom_type_helper<T>::char_type*>(data_addr), data_size);
 }
 
 template <bool INCLUDE_TYPE_INFO, typename T>
@@ -702,7 +736,7 @@ _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
     data_size -= (bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value + sizeof(uint32_t));
     *(uint32_t*)data_addr = (uint32_t)data_size;
     data_addr += sizeof(uint32_t);
-    bq_log_custom_format(value, reinterpret_cast<char*>(data_addr), data_size);
+    bq_log_custom_format(value, reinterpret_cast<typename _custom_type_helper<T>::char_type*>(data_addr), data_size);
 }
 
 template <bool INCLUDE_TYPE_INFO, typename T>

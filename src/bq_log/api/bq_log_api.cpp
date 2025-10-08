@@ -264,10 +264,6 @@ namespace bq {
 #endif
                 head->timestamp_epoch = epoch_ms;
                 head->ext_info_offset = length;
-                bq::ext_log_entry_info_head* ext_info = (bq::ext_log_entry_info_head*)(handle.data_addr + length);
-                BQ_PACK_ACCESS(ext_info->thread_id_) = thread_info_tls_.thread_id_;
-                ext_info->thread_name_len_ = thread_info_tls_.thread_name_len_;
-                memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
             }
             return handle;
         }
@@ -279,6 +275,11 @@ namespace bq {
                 assert(false && "commit invalid log buffer");
                 return;
             }
+            bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)write_handle.data_addr;
+            bq::ext_log_entry_info_head* ext_info = (bq::ext_log_entry_info_head*)(write_handle.data_addr + head->ext_info_offset);
+            BQ_PACK_ACCESS(ext_info->thread_id_) = thread_info_tls_.thread_id_;
+            ext_info->thread_name_len_ = thread_info_tls_.thread_name_len_;
+            memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
             if (log->get_thread_mode() == log_thread_mode::sync) {
                 log->sync_process(true);
             } else {

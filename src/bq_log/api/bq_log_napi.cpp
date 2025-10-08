@@ -394,54 +394,59 @@ BQ_NAPI_DEF(attach_category_base_inst, napi_env, env, napi_callback_info, info)
 template<bool INCLUDE_TYPE_INFO>
 struct js_string_custom_formater {
 private:
-    bq::tools::size_seq<INCLUDE_TYPE_INFO, const char*> size_seq_;
+    bq::tools::size_seq<INCLUDE_TYPE_INFO, const char16_t*> size_seq_;
     napi_env env_;
     napi_value js_string_value1_;
     napi_value js_string_value2_;
-    size_t js_string_utf8_size_;
+    size_t js_string_utf16_size_;
 public:
     bool reset(napi_env env, napi_value js_str_val1, napi_value js_str_val2 = nullptr) {
         env_ = env;
         js_string_value1_ = js_str_val1;
         js_string_value2_ = js_str_val2;
-        js_string_utf8_size_ = 0;
+        js_string_utf16_size_ = 0;
         if (js_string_value1_) {
-            BQ_NAPI_CALL(env_, false, napi_get_value_string_utf8(env_, js_string_value1_, nullptr, 0, &js_string_utf8_size_));
+            BQ_NAPI_CALL(env_, false, napi_get_value_string_utf16(env_, js_string_value1_, nullptr, 0, &js_string_utf16_size_));
         }
         if (js_string_value2_) {
             size_t sz2 = 0;
-            BQ_NAPI_CALL(env_, false, napi_get_value_string_utf8(env_, js_string_value2_, nullptr, 0, &sz2));
-            js_string_utf8_size_ += sz2;
+            BQ_NAPI_CALL(env_, false, napi_get_value_string_utf16(env_, js_string_value2_, nullptr, 0, &sz2));
+            js_string_utf16_size_ += sz2;
         }
-        size_seq_ = bq::tools::make_single_string_size_seq<INCLUDE_TYPE_INFO, char>(js_string_utf8_size_);
+        size_seq_ = bq::tools::make_single_string_size_seq<INCLUDE_TYPE_INFO, char16_t>(js_string_utf16_size_ << 1);
         return true;
     }
 
-    const bq::tools::size_seq<INCLUDE_TYPE_INFO, const char*>& get_size_seq() const {
+    const bq::tools::size_seq<INCLUDE_TYPE_INFO, const char16_t*>& get_size_seq() const {
         return size_seq_;
     }
 
     size_t bq_log_format_str_size() const {
-        return js_string_utf8_size_;
+        return js_string_utf16_size_ << 1;
     }
 
-    void bq_log_custom_format(char* dest, size_t data_size) const {
+    void bq_log_custom_format(char16_t* dest, size_t data_size) const {
+        data_size >>= 1;
 #ifndef NDEBUG
-        assert(data_size >= js_string_utf8_size_);
+        assert(data_size >= js_string_utf16_size_);
 #endif
         if (dest) {
             size_t copied = 0;
             if (js_string_value1_) {
-                //1 byte has already been preserved for '\0', don't worry about overflow here
-                napi_get_value_string_utf8(env_, js_string_value1_, dest, data_size + 1, &copied);
+                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head. 
+                // We only populate it after committing the buffer, so the temporary trailing u'\0' (two bytes) is harmless
+                // — it will be overwritten by later data or the bq::ext_log_entry_info_head write on this thread.
+                napi_get_value_string_utf16(env_, js_string_value1_, dest, data_size + 1, &copied);
             }
 #ifndef NDEBUG
             assert(copied <= data_size);
 #endif
             if (js_string_value2_) {
                 size_t left = data_size - copied;
-                //1 byte has already been preserved for '\0', don't worry about overflow here
-                napi_get_value_string_utf8(env_, js_string_value2_, dest + copied, left + 1, &copied);
+                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head. 
+                // We only populate it after committing the buffer, so the temporary trailing u'\0' (two bytes) is harmless
+                // — it will be overwritten by later data or the bq::ext_log_entry_info_head write on this thread.
+                napi_get_value_string_utf16(env_, js_string_value2_, dest + copied, left + 1, &copied);
 #ifndef NDEBUG
                 assert(copied <= left);
 #endif
@@ -463,9 +468,8 @@ struct arg_info {
                                         arg_info_ptr[i].type_ = napi_string;\
                                         arg_info_ptr[i].custom_formatter_.reset(env, STRING_VALUE);\
                                         arg_info_array[i].data_size_ = arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value();\
-                                        arg_info_array[i].storage_size_ = bq::align_4(arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value() + 1); \
-                                        //napi_get_value_string_utf8 always write a trailing '\0', so no need to +1 here to prevent the overflow.         
-
+                                        arg_info_array[i].storage_size_ = bq::align_4(arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value()); \
+                                        
 #define TRANS_AND_RECORD_STRING_ARG napi_value string_cast_value;\
                                         BQ_NAPI_CALL(env, nullptr, napi_coerce_to_string(env, argv_ptr[i], &string_cast_value));\
                                         RECORD_STRING_ARG(string_cast_value)
@@ -543,8 +547,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         return bq::_make_bool(env, false);
     }
 
-    //napi_get_value_string_utf8 always write a trailing '\0', so no need to +1 here to prevent the overflow. 
-    size_t aligned_format_data_size = bq::align_4(format_custom_formatter.get_size_seq().get_element().get_value() + 1);
+    size_t aligned_format_data_size = bq::align_4(format_custom_formatter.get_size_seq().get_element().get_value());
     size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_format_data_size;
     for (size_t i = (has_category_arg ? 2 : 1); i < argc; ++i) {
         napi_valuetype input_param_type = napi_undefined;
@@ -624,6 +627,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         }
         total_data_size += arg_info_array[i].storage_size_;
     }
+
     auto handle = bq::api::__api_log_buffer_alloc(log_js_inst->log_id_, (uint32_t)total_data_size);
     if (handle.result != bq::enum_buffer_result_code::success) {
         return bq::_make_bool(env, false);
@@ -631,7 +635,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
     bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
     head->category_idx = category_index;
     head->level = static_cast<uint8_t>(log_level);
-    head->log_format_str_type = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type);
+    head->log_format_str_type = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
     size_t log_args_offset = static_cast<size_t>(sizeof(bq::_log_entry_head_def) + aligned_format_data_size);
     head->log_args_offset = (uint32_t)log_args_offset;
     uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
