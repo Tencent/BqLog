@@ -137,7 +137,6 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
 JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_1string(JNIEnv* env, jclass, jlong log_id, jlong offset, jstring arg_str, jlong arg_utf16_bytes_len)
 {
     (void)log_id;
-    auto seq = bq::tools::make_single_string_size_seq<true, char16_t>((size_t)arg_utf16_bytes_len);
     uint8_t* log_format_content_addr = const_cast<uint8_t*>(tls_write_handle_.java_info_.buffer_base_addr_) + (ptrdiff_t)offset;
     *log_format_content_addr = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
     log_format_content_addr += sizeof(uint32_t);
