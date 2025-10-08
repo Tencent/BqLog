@@ -33,7 +33,7 @@ public class log {
 	}
 
     @FunctionalInterface
-    public interface console_callbck_delegate{
+    public interface console_callback_delegate{
         void callback(long log_id, int category_idx, int log_level, String content);
     }
     
@@ -41,9 +41,8 @@ public class log {
 		@SuppressWarnings("unused")
 		protected long index = 0L;
 	};
-    private static ConcurrentLinkedQueue<console_callbck_delegate> console_callbck_delegates_ = new ConcurrentLinkedQueue<console_callbck_delegate>();
-	private static java.util.concurrent.locks.ReentrantLock console_callback_lock_ = new java.util.concurrent.locks.ReentrantLock();
-	
+    private static console_callback_delegate console_callback_delegate_ = null;
+
 	private long log_id_ = 0;
     private String name_ = "";
     private ByteBuffer merged_log_level_bitmap_ = null;
@@ -81,15 +80,14 @@ public class log {
     }
 
     @SuppressWarnings("unused")
-	private static void native_console_callbck(long log_id, int category_idx, int log_level, String content)
+	private static void native_console_callback(long log_id, int category_idx, int log_level, String content)
     {
-    	for(console_callbck_delegate callback_obj : console_callbck_delegates_)
-    	{
-    		callback_obj.callback(log_id, category_idx, log_level, content);
-    	}
+        if(console_callback_delegate_ != null){
+            console_callback_delegate_.callback(log_id, category_idx, log_level, content);
+        }
     }
     @SuppressWarnings("unused")
-	private static void native_console_buffer_fetch_and_remove_callbck(console_callbck_delegate callback_obj, long log_id, int category_idx, int log_level, String content)
+	private static void native_console_buffer_fetch_and_remove_callback(console_callback_delegate callback_obj, long log_id, int category_idx, int log_level, String content)
     {
 		callback_obj.callback(log_id, category_idx, log_level, content);
     }
@@ -239,30 +237,24 @@ public class log {
      * This can be used for an external system to monitor console log output.
      * @param callback
      */
-    public static void register_console_callback(console_callbck_delegate callback)
+    public static void register_console_callback(console_callback_delegate callback)
     {
-    	console_callback_lock_.lock();
-        console_callbck_delegates_.offer(callback);
-        if(console_callbck_delegates_.size() == 1)
-        {
+        console_callback_delegate_ = callback;
+        if(null != console_callback_delegate_){
             log_invoker.__api_set_console_callback(true);
         }
-        console_callback_lock_.unlock();
     }
 
     /**
      * Unregister a previously registered console callback.
      * @param callback
      */
-    public static void unregister_console_callback(console_callbck_delegate callback)
+    public static void unregister_console_callback(console_callback_delegate callback)
     {
-    	console_callback_lock_.lock();
-        console_callbck_delegates_.remove(callback);
-        if(console_callbck_delegates_.size() == 0)
-        {
+        if(console_callback_delegate_ == callback){
+            console_callback_delegate_ = null;
             log_invoker.__api_set_console_callback(false);
         }
-        console_callback_lock_.unlock();
     }
     
     /**
@@ -285,7 +277,7 @@ public class log {
      * @return
      *        True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.
      */
-    public static boolean fetch_and_remove_console_buffer(console_callbck_delegate on_console_callback)
+    public static boolean fetch_and_remove_console_buffer(console_callback_delegate on_console_callback)
     {
     	return log_invoker.__api_fetch_and_remove_console_buffer(on_console_callback);
     }

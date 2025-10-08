@@ -961,10 +961,15 @@ BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
         napi_delete_reference(env, console_callback_);
         console_callback_ = NULL;
     }
-    BQ_NAPI_CALL(env, nullptr, napi_create_reference(env, argv[0], 1, &console_callback_));
-    console_msg_buffer_.set_thread_check_enable(false);
-
-    bq::log::register_console_callback(on_console_callback);
+    napi_valuetype t = napi_undefined;
+    BQ_NAPI_CALL(env, nullptr, napi_typeof(env, argv[0], &t));
+    if (t == napi_function) {
+        BQ_NAPI_CALL(env, nullptr, napi_create_reference(env, argv[0], 1, &console_callback_));
+        console_msg_buffer_.set_thread_check_enable(false);
+        bq::log::register_console_callback(on_console_callback);
+    }else {
+        bq::log::unregister_console_callback(on_console_callback);
+    }
     return bq::_make_undefined(env);
 }
 

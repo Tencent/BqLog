@@ -228,8 +228,7 @@ namespace bq
         }
 
         public delegate void type_console_callback(ulong log_id, int category_idx, bq.def.log_level log_level, string content);
-        private static List<type_console_callback> console_callbacks_ = new List<type_console_callback>();
-        private static System.Threading.ReaderWriterLockSlim console_callbacks_lock_ = new System.Threading.ReaderWriterLockSlim();
+        private static type_console_callback console_callback_ = null;
         /// <summary>
         /// Register a callback that will be invoked whenever a console log message is output. 
         /// This can be used for an external system to monitor console log output.
@@ -237,16 +236,18 @@ namespace bq
         /// <param name="callback"></param>
         public static void register_console_callback(type_console_callback callback)
         {
-            console_callbacks_lock_.EnterWriteLock();
-            console_callbacks_.Add(callback);
+            console_callback_ = callback;
             unsafe
             {
-                if(console_callbacks_.Count == 1)
+                if (console_callback_ != null)
                 {
                     log_invoker.__api_register_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
                 }
+                else
+                {
+                    log_invoker.__api_unregister_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                }
             }
-            console_callbacks_lock_.ExitWriteLock();
         }
 
         /// <summary>
@@ -255,29 +256,26 @@ namespace bq
         /// <param name="callback"></param>
         public static void unregister_console_callback(type_console_callback callback)
         {
-            console_callbacks_lock_.EnterWriteLock();
-            console_callbacks_.Remove(callback);
-            unsafe
+            if(console_callback_ == callback)
             {
-                if (console_callbacks_.Count == 0)
+                console_callback_ = null;
+                unsafe
                 {
                     log_invoker.__api_unregister_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
                 }
             }
-            console_callbacks_lock_.ExitWriteLock();
         }
+
 #if ENABLE_IL2CPP
         [MonoPInvokeCallback(typeof(type_console_callback))]
 #endif
         private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, int log_level, sbyte* content, int length)
         {
-            string value = new string(content, 0, length, System.Text.Encoding.UTF8);
-            console_callbacks_lock_.EnterReadLock();
-            for(int i = 0; i < console_callbacks_.Count; ++i)
+            if (console_callback_ != null)
             {
-                console_callbacks_[i](log_id, category_idx, (bq.def.log_level)log_level, value);
+                string value = new string(content, 0, length, System.Text.Encoding.UTF8);
+                console_callback_(log_id, category_idx, (bq.def.log_level)log_level, value);
             }
-            console_callbacks_lock_.ExitReadLock();
         }
 
         /// <summary>

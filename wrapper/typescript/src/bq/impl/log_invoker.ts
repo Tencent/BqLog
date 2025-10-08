@@ -116,10 +116,10 @@ export class log_invoker {
         return native_export("take_snapshot_string")(log_id, !!use_gmt_time) as string;
     }
 
-    public static __api_set_console_callback(callback?: Function): void {
-        if (typeof callback !== "function") {
+    public static __api_set_console_callback(callback: Function | null): void {
+        if (typeof callback !== "function" && callback !== null) {
             throw new Error(
-                "__api_set_console_callback requires a function callback"
+                "__api_set_console_callback requires a function callback, or pass null "
             );
         }
         native_export("set_console_callback")(callback);

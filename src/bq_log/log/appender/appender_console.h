@@ -44,11 +44,11 @@ namespace bq {
 
         class console_static_misc {
         private:
-            console_callback callbacks_;
+            console_callback callback_;
             console_buffer buffer_;
 
         public:
-            bq_forceinline console_callback& callback() { return callbacks_; }
+            bq_forceinline console_callback& callback() { return callback_; }
             bq_forceinline console_buffer& buffer() { return buffer_; }
         };
 

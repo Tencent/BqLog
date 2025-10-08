@@ -24,16 +24,16 @@ namespace bq {
         int32_t length_;
     };
     static BQ_TLS console_callback_tls_data _tls_console_callback_data;
-    static bq::type_func_ptr_console_callback consle_callback_ = nullptr;
+    static bq::type_func_ptr_console_callback console_callback_ = nullptr;
 
     void BQ_STDCALL _default_console_callback_dispacher(bq::log_level level, const char* text)
     {
-        if (consle_callback_) {
+        if (console_callback_) {
             auto& data = _tls_console_callback_data;
             if (data.length_ == 0 && text) {
                 data.length_ = static_cast<int32_t>(strlen(text));
             }
-            consle_callback_(data.log_id_, data.category_idx_, static_cast<int32_t>(level), text, data.length_);
+            console_callback_(data.log_id_, data.category_idx_, static_cast<int32_t>(level), text, data.length_);
         }
         else {
             bq::util::_default_console_output(level, text);
@@ -43,7 +43,7 @@ namespace bq {
     void appender_console::console_callback::register_callback(bq::type_func_ptr_console_callback callback)
     {
         bq::platform::scoped_spin_lock lock(lock_);
-        consle_callback_ = callback;
+        console_callback_ = callback;
         if (callback) {
             bq::util::set_console_output_callback(&_default_console_callback_dispacher);
         }
@@ -163,8 +163,9 @@ namespace bq {
 
     void appender_console::unregister_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        (void)callback;
-        get_console_misc().callback().register_callback(nullptr);
+        if (console_callback_ == callback) {
+            get_console_misc().callback().register_callback(nullptr);
+        }
     }
 
     void appender_console::set_console_buffer_enable(bool enable)

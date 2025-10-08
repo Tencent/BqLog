@@ -127,7 +127,8 @@ export class log {
      */
     public static unregister_console_callback(callback: console_callback): void {
         if (log.callback_ == callback) {
-            log_invoker.__api_set_console_callback();
+            log_invoker.__api_set_console_callback(null);
+            log.callback_ = null;
         }
     }
 
