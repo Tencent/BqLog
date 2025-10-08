@@ -19,16 +19,12 @@ namespace bq {
         friend struct log_global_vars;
 
     private:
-        class console_callbacks {
+        class console_callback {
         private:
-            bq::platform::mutex mutex_;
-            bq::hash_map<bq::type_func_ptr_console_callback, bool> callbacks_;
-
+            friend void _default_console_callback_dispacher(bq::log_level level, const char* text);
+            bq::platform::spin_lock lock_;
         public:
             void register_callback(bq::type_func_ptr_console_callback callback);
-            void erase_callback(bq::type_func_ptr_console_callback callback);
-            bq_forceinline bool is_empty() {return callbacks_.is_empty(); }
-            void call(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
         };
 
         class console_buffer {
@@ -48,11 +44,11 @@ namespace bq {
 
         class console_static_misc {
         private:
-            console_callbacks callbacks_;
+            console_callback callbacks_;
             console_buffer buffer_;
 
         public:
-            bq_forceinline console_callbacks& callback() { return callbacks_; }
+            bq_forceinline console_callback& callback() { return callbacks_; }
             bq_forceinline console_buffer& buffer() { return buffer_; }
         };
 

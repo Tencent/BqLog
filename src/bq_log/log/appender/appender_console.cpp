@@ -18,31 +18,37 @@
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 
 namespace bq {
+    struct console_callback_tls_data {
+        uint64_t log_id_;
+        int32_t category_idx_; 
+        int32_t length_;
+    };
+    static BQ_TLS console_callback_tls_data _tls_console_callback_data;
+    static bq::type_func_ptr_console_callback consle_callback_ = nullptr;
 
-    void appender_console::console_callbacks::register_callback(bq::type_func_ptr_console_callback callback)
+    void BQ_STDCALL _default_console_callback_dispacher(bq::log_level level, const char* text)
     {
-        bq::platform::scoped_mutex lock(mutex_);
-        callbacks_[callback] = true;
-    }
-
-    void appender_console::console_callbacks::erase_callback(bq::type_func_ptr_console_callback callback)
-    {
-        bq::platform::scoped_mutex lock(mutex_);
-        auto iter = callbacks_.find(callback);
-        if (iter != callbacks_.end()) {
-            callbacks_.erase(iter);
+        if (consle_callback_) {
+            auto& data = _tls_console_callback_data;
+            if (data.length_ == 0 && text) {
+                data.length_ = static_cast<int32_t>(strlen(text));
+            }
+            consle_callback_(data.log_id_, data.category_idx_, static_cast<int32_t>(level), text, data.length_);
+        }
+        else {
+            bq::util::_default_console_output(level, text);
         }
     }
 
-    void appender_console::console_callbacks::call(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+    void appender_console::console_callback::register_callback(bq::type_func_ptr_console_callback callback)
     {
-        if (callbacks_.is_empty()) {
-            return;
+        bq::platform::scoped_spin_lock lock(lock_);
+        consle_callback_ = callback;
+        if (callback) {
+            bq::util::set_console_output_callback(&_default_console_callback_dispacher);
         }
-        bq::platform::scoped_mutex lock(mutex_);
-        for (auto iter = callbacks_.begin(); iter != callbacks_.end(); ++iter) {
-            bq::type_func_ptr_console_callback callback = iter->key();
-            callback(log_id, category_idx, log_level, content, length);
+        else {
+            bq::util::set_console_output_callback(nullptr);
         }
     }
 
@@ -157,7 +163,8 @@ namespace bq {
 
     void appender_console::unregister_console_callback(bq::type_func_ptr_console_callback callback)
     {
-        get_console_misc().callback().erase_callback(callback);
+        (void)callback;
+        get_console_misc().callback().register_callback(nullptr);
     }
 
     void appender_console::set_console_buffer_enable(bool enable)
@@ -199,13 +206,17 @@ namespace bq {
         log_entry_cache_.insert_batch(log_entry_cache_.end(), text_log_data, log_text_len);
         auto level = handle.get_level();
         auto& console_misc = get_console_misc();
-        if (console_misc.callback().is_empty() && !console_misc.buffer().is_enable()) {
+        auto& data = _tls_console_callback_data;
+        data.category_idx_ = static_cast<int32_t>(handle.get_category_idx());
+        data.length_ = (int32_t)log_entry_cache_.size();
+        data.log_id_ = parent_log_->id();
 #if !defined(BQ_UNIT_TEST)
-            util::log_device_console_plain_text(level, log_entry_cache_.c_str());
+        util::log_device_console_plain_text(level, log_entry_cache_.c_str());
 #endif
-        }
-        else {
-            console_misc.callback().call(parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        data.category_idx_ = 0;
+        data.length_ = 0;
+        data.log_id_ = 0;
+        if (console_misc.buffer().is_enable()) {
             console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
         }
     }

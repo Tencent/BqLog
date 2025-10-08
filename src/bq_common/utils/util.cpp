@@ -24,6 +24,7 @@
 
 namespace bq {
     static uint32_t rand_seed = 0;
+    static util::type_func_ptr_bq_util_consle_callback consle_callback_;
 
     void util::bq_assert(bool cond, bq::string msg)
     {
@@ -118,7 +119,21 @@ namespace bq {
         log_device_console_plain_text(level, device_console_buffer.begin().operator->());
     }
 
-    void util::log_device_console_plain_text(bq::log_level level, const char* text)
+    void util::log_device_console_plain_text(bq::log_level level, const char* text) {
+        auto callback = consle_callback_;
+        if (callback) {
+            callback(level, text);
+        }
+        else {
+            _default_console_output(level, text);
+        }
+    }
+
+    void util::set_console_output_callback(type_func_ptr_bq_util_consle_callback callback) {
+        consle_callback_ = callback;
+    }
+
+    void util::_default_console_output(bq::log_level level, const char* text)
     {
 #if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
         if (level < log_device_min_level) {
@@ -135,8 +150,6 @@ namespace bq {
 #elif defined(BQ_IOS)
         (void)level;
         bq::platform::ios_print(text);
-#elif defined(BQ_OHOS)
-        
 #else
         decltype(stdout) output_target = stdout;
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);

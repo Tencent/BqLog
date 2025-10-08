@@ -42,6 +42,12 @@ namespace bq {
 
         static void log_device_console_plain_text(bq::log_level level, const char* text);
 
+        typedef void(BQ_STDCALL* type_func_ptr_bq_util_consle_callback)(bq::log_level level, const char* text);
+        static void set_console_output_callback(type_func_ptr_bq_util_consle_callback callback);
+
+        // Output to console directly, no console callback will be called
+        static void _default_console_output(bq::log_level level, const char* text);
+
         static uint32_t get_hash(const void* data, size_t size);
 
         static uint64_t get_hash_64(const void* data, size_t size);
