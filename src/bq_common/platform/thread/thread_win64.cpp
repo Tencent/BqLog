@@ -215,20 +215,7 @@ namespace bq {
 
         thread::~thread()
         {
-            DWORD exitCode = 0;
-
             if (platform_data_->thread_handle.load() != INVALID_HANDLE_VALUE) {
-                if (GetExitCodeThread(platform_data_->thread_handle.load(), &exitCode)) {
-                    const char* stack_trace_addr = nullptr;
-                    uint32_t stack_trace_len = 0;
-                    bq::platform::get_stack_trace(0, stack_trace_addr, stack_trace_len);
-                    if (exitCode == STILL_ACTIVE) {
-                        bq::util::log_device_console(bq::log_level::fatal, "thread instance is destructed but thread is still exist, stack trace:\n%s", stack_trace_addr);
-                        assert(false && "thread instance is destructed but thread is still running");
-                    }
-                } else {
-                    bq::util::log_device_console(bq::log_level::fatal, "GetExitCodeThread failed, GetLastError=%" PRId32, static_cast<int32_t>(GetLastError()));
-                }
                 if (!CloseHandle(platform_data_->thread_handle.load())) {
                     bq::util::log_device_console(bq::log_level::error, "Win64 Thread CloseHandle failed, GetLastError=%" PRId32 ", thread name:%s, thread_id:%" PRIu64, static_cast<int32_t>(GetLastError()), thread_name_.c_str(), thread_id_);
                 }

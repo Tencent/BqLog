@@ -138,7 +138,7 @@ namespace bq {
             {
                 bq::string empty_str;
                 bq::string full_str = "123";
-                log_inst.fatal(log_inst.cat.ModuleA.SystemA, "测试一下:{}", "我操你妈的爱丽丝打开房间阿里山的开发机阿里山的开发");
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, "测试一下:{}", "的爱丽丝打开房间阿里山的开发机阿里山的开发");
                 log_inst.fatal(log_inst.cat.ModuleA.SystemA, "Empty Str Test {}, {}", empty_str, full_str);
                 result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA]\tEmpty Str Test , 123"), "empty str test");
             }

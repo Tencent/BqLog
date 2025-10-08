@@ -232,6 +232,7 @@ namespace bq {
     void log_manager::uninit()
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_spin_lock scoped_lock_uninit(uninit_lock_);
         phase expected_phase = phase::working;
         if (!phase_.compare_exchange_strong(expected_phase, phase::uninitialized)) {
             return;
@@ -256,6 +257,21 @@ namespace bq {
     bq::layout& log_manager::get_public_layout()
     {
         return public_layout_;
+    }
+
+    void log_manager::try_restart_worker(log_worker* worker_ptr)
+    {
+        bq::platform::scoped_spin_lock scoped_lock(uninit_lock_);
+        if (phase_.load(bq::platform::memory_order::acquire) != phase::working) {
+            return;
+        }
+        bq::util::log_device_console(bq::log_level::warning, "thread id:%" PRIu64 ", name:%s was terminated, try restart it!", worker_ptr->get_thread_id(), worker_ptr->get_thread_name().c_str());
+        auto thread_mode = worker_ptr->get_thread_mode();
+        auto target_log = worker_ptr->get_log_target();
+        bq::object_destructor<log_worker>::destruct(worker_ptr);
+        bq::object_constructor<log_worker>::construct(worker_ptr);
+        worker_ptr->init(thread_mode, target_log);
+        worker_ptr->start();
     }
 
     uint32_t log_manager::get_logs_count() const

@@ -243,14 +243,22 @@ namespace bq {
                 auto& log_buffer = log->get_buffer();
                 auto write_handle = log_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
                 bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.result == enum_buffer_result_code::err_wait_and_retry || write_handle.low_space_flag);
+                log_worker* worker_obj = nullptr;
                 if (need_awake_worker) {
-                    auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
-                    worker.awake();
+                    worker_obj = log->get_thread_mode() == log_thread_mode::independent ? &log->get_worker() : &log_manager::instance().get_public_worker();
+                    worker_obj->awake();
                 }
+                int check_thread_alive_interval = 0;
                 while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
                     bq::platform::thread::cpu_relax();
                     log_buffer.commit_write_chunk(write_handle);
                     write_handle = log_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
+                    if (++check_thread_alive_interval == 1024 * 8) {
+                        if (!bq::platform::thread::is_thread_alive(worker_obj->get_thread_id())) {
+                            log_manager::instance().try_restart_worker(worker_obj);
+                        }
+                        check_thread_alive_interval = 0;
+                    }
                 }
                 handle.result = write_handle.result;
                 handle.data_addr = write_handle.data_addr;

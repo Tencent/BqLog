@@ -69,12 +69,15 @@ namespace bq {
         /// <returns></returns>
         bq::layout& get_public_layout();
 
+        void try_restart_worker(log_worker* worker_ptr);
+
     private:
         bq::platform::atomic<phase> phase_;
         bq::array_inline<bq::unique_ptr<log_imp>> log_imp_list_;
         bq::log_worker public_worker_;
         bq::layout public_layout_;
         bq::platform::spin_lock_rw_crazy logs_lock_;
+        bq::platform::spin_lock uninit_lock_;
         bq::platform::atomic<int32_t> automatic_log_name_seq_;
     };
 }

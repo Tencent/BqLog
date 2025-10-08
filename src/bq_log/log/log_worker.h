@@ -45,6 +45,16 @@ namespace bq {
             return thread_mode_ == log_thread_mode::async;
         }
 
+        bq_forceinline log_thread_mode get_thread_mode() const
+        {
+            return thread_mode_;
+        }
+
+        bq_forceinline log_imp* get_log_target() const
+        {
+            return log_target_;
+        }
+
         bq_forceinline void awake()
         {
             bool origin_value = awake_flag_.exchange_relaxed(false);

@@ -24,7 +24,7 @@
 
 namespace bq {
     static uint32_t rand_seed = 0;
-    static util::type_func_ptr_bq_util_consle_callback consle_callback_;
+    static util::type_func_ptr_bq_util_consle_callback consle_callback_ = nullptr;
 
     void util::bq_assert(bool cond, bq::string msg)
     {
