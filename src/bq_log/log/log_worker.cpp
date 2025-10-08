@@ -77,8 +77,6 @@ namespace bq {
     void log_worker::run()
     {
         assert(thread_mode_ != log_thread_mode::sync && "log_worker started without init");
-        tls_log_worker_watch_dog_.get().worker_thread_id_ = bq::platform::thread::get_current_thread_id();
-        tls_log_worker_watch_dog_.get().worker_ptr_ = this;
 #ifdef BQ_POSIX
         // we need flush ring_buffer in signal handler.
         // but handler can not be called in worker thread.(the flush operation is not re-entrant)
