@@ -20,6 +20,7 @@
 #endif
 namespace bq {
     static bq::platform::atomic<int32_t> log_worker_name_seq = 0;
+    BQ_TLS_NON_POD(log_worker_watch_dog, tls_log_worker_watch_dog_)
 
     log_worker::log_worker()
         : manager_(nullptr)
@@ -77,6 +78,8 @@ namespace bq {
     void log_worker::run()
     {
         assert(thread_mode_ != log_thread_mode::sync && "log_worker started without init");
+        tls_log_worker_watch_dog_.get().thread_id_ = bq::platform::thread::get_current_thread_id();
+        tls_log_worker_watch_dog_.get().worker_ptr_ = this;
 #ifdef BQ_POSIX
         // we need flush ring_buffer in signal handler.
         // but handler can not be called in worker thread.(the flush operation is not re-entrant)
@@ -108,6 +111,17 @@ namespace bq {
             trigger_.wait_for(mutex_, process_interval_ms);
             awake_flag_.store_relaxed(false);
             mutex_.unlock();
+        }
+    }
+
+    log_worker_watch_dog::~log_worker_watch_dog()
+    {
+        if (bq::platform::thread::get_current_thread_id() != thread_id_) {
+            return;
+        }
+        //Reliable in most cases, except log_manager is destructing in other thread.
+        if (log_global_vars::get().log_manager_inst_) {
+            log_global_vars::get().log_manager_inst_->try_restart_worker(worker_ptr_);
         }
     }
 }
