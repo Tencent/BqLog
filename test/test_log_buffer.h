@@ -198,6 +198,7 @@ namespace bq {
             bq::log_buffer* log_buffer_ptr_;
             int32_t left_write_count_;
             bq::platform::atomic<int32_t>& counter_ref_;
+            bq::platform::atomic<bool>& mark_ref_;
 
         public:
             static constexpr uint32_t min_chunk_size = 12;
@@ -208,8 +209,8 @@ namespace bq {
             static constexpr int32_t auto_expand_sleep_frequency = 1024;
 
         public:
-            log_buffer_write_task(int32_t id, int32_t left_write_count, bq::log_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
-                : counter_ref_(counter)
+            log_buffer_write_task(int32_t id, int32_t left_write_count, bq::log_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter, bq::platform::atomic<bool>& mark)
+                : counter_ref_(counter), mark_ref_(mark)
             {
                 this->id_ = id;
                 this->left_write_count_ = left_write_count;
@@ -249,6 +250,7 @@ namespace bq {
                     log_buffer_ptr_->commit_write_chunk(handle);
                     ++log_buffer_test_total_write_count_;
                 }
+                mark_ref_.store(true, bq::platform::memory_order::release);
                 counter_ref_.fetch_add(-1, bq::platform::memory_order::release);
             }
         };
@@ -446,11 +448,13 @@ namespace bq {
                 }
                 int32_t chunk_count_per_task = 1024 * 128;
                 bq::platform::atomic<int32_t> counter(log_buffer_total_task);
+                bq::platform::atomic<bool> write_end_marker[log_buffer_total_task];
                 bq::array<int32_t> task_check_vector;
                 std::vector<std::thread> task_thread_vector;
                 for (int32_t i = 0; i < log_buffer_total_task; ++i) {
                     task_check_vector.push_back(0);
-                    log_buffer_write_task task(i, chunk_count_per_task, &test_buffer, counter);
+                    write_end_marker[i] = false;
+                    log_buffer_write_task task(i, chunk_count_per_task, &test_buffer, counter, write_end_marker[i]);
                     task_thread_vector.emplace_back(task);
                 }
 
@@ -464,6 +468,14 @@ namespace bq {
 
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
+                    if (write_finished) {
+                        //double check, inter-thread happens before to each thread.
+                        for (int32_t i = 0; i < log_buffer_total_task; ++i) {
+                            if (!write_end_marker[i].load(bq::platform::memory_order::acquire)) {
+                                write_finished = false;
+                            }
+                        }
+                    }
                     auto handle = test_buffer.read_chunk();
                     bq::scoped_log_buffer_handle<log_buffer> read_handle(test_buffer, handle);
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
