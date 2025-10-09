@@ -239,9 +239,7 @@ namespace bq {
         }
         public_worker_.cancel();
         public_worker_.awake();
-        if (bq::platform::thread::is_thread_alive(public_worker_.get_thread_id())) {
-            public_worker_.join();
-        }
+        public_worker_.join();
         for (auto& log_imp : log_imp_list_) {
             if (log_imp->get_thread_mode() == log_thread_mode::independent) {
                 log_imp->worker_.cancel();
@@ -250,9 +248,7 @@ namespace bq {
         }
         for (auto& log_imp : log_imp_list_) {
             if (log_imp->get_thread_mode() == log_thread_mode::independent) {
-                if (bq::platform::thread::is_thread_alive(log_imp->worker_.get_thread_id())) {
-                    log_imp->worker_.join();
-                }
+                log_imp->worker_.join();
             }
         }
         bq::util::log_device_console(log_level::info, "BqLog is uninited!");
@@ -265,6 +261,9 @@ namespace bq {
 
     void log_manager::try_restart_worker(log_worker* worker_ptr)
     {
+        if (phase_.load(bq::platform::memory_order::acquire) != phase::working) {
+            return;
+        }
         bq::platform::scoped_spin_lock scoped_lock(uninit_lock_);
         if (phase_.load(bq::platform::memory_order::acquire) != phase::working) {
             return;
