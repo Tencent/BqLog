@@ -49,8 +49,8 @@ namespace bq {
         const char digit3_array[3000 + 16] = {};
 #if defined(BQ_JAVA)
         jclass cls_bq_log_ = nullptr;
-        jmethodID mid_native_console_callbck_ = nullptr;
-        jmethodID mid_native_console_buffer_fetch_and_remove_callbck_ = nullptr;
+        jmethodID mid_native_console_callback_ = nullptr;
+        jmethodID mid_native_console_buffer_fetch_and_remove_callback_ = nullptr;
 #endif
         log_manager* log_manager_inst_ = new log_manager();
         appender_console::console_static_misc* console_static_misc_ = new appender_console::console_static_misc();
