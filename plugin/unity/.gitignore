@@ -1,3 +1,8 @@
-Runtime/Plugins/
+*.framework
+*.aar
+*.so
+*.dll
+*.pdb
+*.lib
 Runtime/src/
-*.meta
+Runtime/src.meta
