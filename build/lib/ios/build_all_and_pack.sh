@@ -1,94 +1,37 @@
 #!/bin/zsh
-
+set -e -u -o pipefail
 rm -rf XCodeProj
 mkdir XCodeProj
 pushd "XCodeProj" >/dev/null
-cmake ../../../../src \
-    -G Xcode \
-    -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
-    -DPLATFORM=OS64 \
-    -DDEPLOYMENT_TARGET=9.0 \
-    -DBUILD_LIB_TYPE=dynamic_lib \
-    -DAPPLE_LIB_FORMAT=framework \
-    -DTARGET_PLATFORM:STRING=ios
 
+BUILD_LIB_TYPES=(dynamic_lib dynamic_lib static_lib static_lib)
+APPLE_LIB_FORMATS=(framework dylib framework a)
 BUILD_CONFIGS=(Debug MinSizeRel Release RelWithDebInfo)
-for build_config in ${BUILD_CONFIGS[@]}
-do
-    cmake --build . --config $build_config
-    if [ $? -eq 0 ]; then
-        echo "Build succeeded."
-    else
-        echo "Build failed."
-        exit 1
-    fi
-    cmake --install . --config $build_config
-done
 
-cmake ../../../../src \
-    -G Xcode \
-    -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
-    -DPLATFORM=OS64 \
-    -DDEPLOYMENT_TARGET=9.0 \
-    -DBUILD_LIB_TYPE=dynamic_lib \
-    -DAPPLE_LIB_FORMAT=dylib \
-    -DTARGET_PLATFORM:STRING=ios
+for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
+    BUILD_LIB_TYPE=${BUILD_LIB_TYPES[i]}
+    APPLE_LIB_FORMAT=${APPLE_LIB_FORMATS[i]}
 
-BUILD_CONFIGS=(Debug MinSizeRel Release RelWithDebInfo)
-for build_config in ${BUILD_CONFIGS[@]}
-do
-    cmake --build . --config $build_config
-    if [ $? -eq 0 ]; then
-        echo "Build succeeded."
-    else
-        echo "Build failed."
-        exit 1
-    fi
-    cmake --install . --config $build_config
-done
+    cmake ../../../../src \
+        -G Xcode \
+        -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
+        -DPLATFORM=OS64 \
+        -DDEPLOYMENT_TARGET=9.0 \
+        -DBUILD_LIB_TYPE=$BUILD_LIB_TYPE \
+        -DAPPLE_LIB_FORMAT=$APPLE_LIB_FORMAT \
+        -DTARGET_PLATFORM:STRING=ios
 
-cmake ../../../../src \
-    -G Xcode \
-    -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
-    -DPLATFORM=OS64 \
-    -DDEPLOYMENT_TARGET=9.0 \
-    -DBUILD_LIB_TYPE=static_lib \
-    -DAPPLE_LIB_FORMAT=framework \
-    -DTARGET_PLATFORM:STRING=ios
-
-BUILD_CONFIGS=(Debug MinSizeRel Release RelWithDebInfo)
-for build_config in ${BUILD_CONFIGS[@]}
-do
-    cmake --build . --config $build_config
-    if [ $? -eq 0 ]; then
-        echo "Build succeeded."
-    else
-        echo "Build failed."
-        exit 1
-    fi
-    cmake --install . --config $build_config
-done
-
-cmake ../../../../src \
-    -G Xcode \
-    -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
-    -DPLATFORM=OS64 \
-    -DDEPLOYMENT_TARGET=9.0 \
-    -DBUILD_LIB_TYPE=static_lib \
-    -DAPPLE_LIB_FORMAT=a \
-    -DTARGET_PLATFORM:STRING=ios
-
-BUILD_CONFIGS=(Debug MinSizeRel Release RelWithDebInfo)
-for build_config in ${BUILD_CONFIGS[@]}
-do
-    cmake --build . --config $build_config
-    if [ $? -eq 0 ]; then
-        echo "Build succeeded."
-    else
-        echo "Build failed."
-        exit 1
-    fi
-    cmake --install . --config $build_config
+    for build_config in ${BUILD_CONFIGS[@]}
+    do
+        cmake --build . --config $build_config
+        if [ $? -eq 0 ]; then
+            echo "Build succeeded."
+        else
+            echo "Build failed."
+            exit 1
+        fi
+        cmake --install . --config $build_config
+    done
 done
 
 popd >/dev/null
