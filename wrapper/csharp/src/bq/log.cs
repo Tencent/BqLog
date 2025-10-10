@@ -267,7 +267,7 @@ namespace bq
         }
 
 #if ENABLE_IL2CPP
-        [MonoPInvokeCallback(typeof(type_console_callback))]
+        [AOT.MonoPInvokeCallback(typeof(type_console_callback))]
 #endif
         private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, int log_level, sbyte* content, int length)
         {
@@ -293,7 +293,7 @@ namespace bq
         /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
         /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
         /// Please ensure not to output synchronized BQ logs within the callback function.
-        /// IMPORTANT: If you are using this code in an IL2CPP environment, please make sure that the on_console_callback is marked as static unsafe and is decorated with the [MonoPInvokeCallback(typeof(type_console_callback))] attribute.
+        /// IMPORTANT: If you are using this code in an IL2CPP environment, please make sure that the on_console_callback is marked as static unsafe and is decorated with the [AOT.MonoPInvokeCallback(typeof(type_console_callback))] attribute.
         /// </summary>
         /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
         /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
@@ -303,7 +303,7 @@ namespace bq
             return log_invoker.__api_fetch_and_remove_console_buffer(new type_func_ptr_console_buffer_fetch_callback(_native_console_buffer_fetch_callback_wrapper), delegate_ptr);
         }
 #if ENABLE_IL2CPP
-        [MonoPInvokeCallback(typeof(type_console_callback))]
+        [AOT.MonoPInvokeCallback(typeof(type_console_callback))]
 #endif
         private unsafe static void _native_console_buffer_fetch_callback_wrapper(IntPtr pass_through_param, ulong log_id, int category_idx, int log_level, sbyte* content, int length)
         {
