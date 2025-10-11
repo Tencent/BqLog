@@ -1623,10 +1623,10 @@ jobs:
           path: ${{ github.workspace }}/dist
 
 
-  #Unity package
+  # Unity package
   unity_package_build:
     runs-on: ubuntu-latest
-    needs: [ build_windows_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC ]
+    needs: [build_windows_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1655,15 +1655,9 @@ jobs:
           fi
           echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
 
-          # Update plugin/unity/package.json "version" field (ensure VERSION is available to node)
-          if [[ -f plugin/unity/package.json ]]; then
-            VERSION="$VERSION" node -e "const fs=require('fs');const p='plugin/unity/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));if(!j.name) throw new Error('package.json missing name'); j.version=process.env.VERSION; fs.writeFileSync(p, JSON.stringify(j,null,2)); console.log('Updated', p, 'to version', j.version);"
-            echo "Sanity check package.json:"
-            cat plugin/unity/package.json
-          else
-            echo "plugin/unity/package.json not found!" >&2
-            exit 1
-          fi
+          # Update plugin/unity/package.json: version and files whitelist (if missing)
+          node -e "const fs=require('fs');const p='plugin/unity/package.json';if(!fs.existsSync(p))process.exit(2);const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.env.VERSION; if(!Array.isArray(j.files)){ j.files=['package.json','Runtime/**','Editor/**','README*','LICENSE*','CHANGELOG*']; } fs.writeFileSync(p, JSON.stringify(j,null,2)); console.log('Updated', p, 'version=', j.version, 'files=', j.files);"
+          echo "Sanity check package.json:" && cat plugin/unity/package.json
 
       - name: Extract all archives (zip and tar.gz) with artifact prefix and list contents
         shell: bash
@@ -1750,24 +1744,35 @@ jobs:
             mkdir -p "$WIN_X64_DIR"
             echo "Copy: $dll -> $WIN_X64_DIR/"
             cp -f "$dll" "$WIN_X64_DIR/"
-
             if [[ -f "$win_dir/BqLog.pdb" ]]; then
               echo "Copy: $win_dir/BqLog.pdb -> $WIN_X64_DIR/"
               cp -f "$win_dir/BqLog.pdb" "$WIN_X64_DIR/"
+            fi
+            if [[ -f "$win_dir/BqLog.lib" ]]; then
+              echo "Copy: $win_dir/BqLog.lib -> $WIN_X64_DIR/"
+              cp -f "$win_dir/BqLog.lib" "$WIN_X64_DIR/"
+            else
+              pkg_root="$(echo "$win_dir" | sed 's#/dynamic_lib/.*##')"
+              mapfile -t win_lib_fallback < <(find "$pkg_root" -type f -name "BqLog.lib" | sort)
+              if (( ${#win_lib_fallback[@]} )); then
+                echo "Copy (fallback): ${win_lib_fallback[0]} -> $WIN_X64_DIR/"
+                cp -f "${win_lib_fallback[0]}" "$WIN_X64_DIR/"
+              fi
             fi
           else
             echo "WARN: Windows x86_64 DLL not found for version ${VERSION}"
           fi
 
-          # Linux x86_64 (libBqLog.so)
-          mapfile -t linux_so < <(find "$BASE" -type f -path "*/bqlog-lib-linux-x86_64-${VERSION}/*" -name "libBqLog.so" | sort)
+          # Linux x86_64 (libBqLog.so) - fixed path per your build layout
+          mapfile -t linux_so < <(find "$BASE" -type f -path "*/bqlog-lib-linux-x86_64-${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so" | sort)
           if (( ${#linux_so[@]} )); then
             copy_one "${linux_so[0]}" "$LINUX_X64_DIR"
           else
-            echo "WARN: Linux x86_64 SO not found for version ${VERSION}"
+            echo "ERROR: Linux x86_64 libBqLog.so not found at expected path" >&2
+            exit 1
           fi
 
-          # iOS (BqLog.framework) - copy the entire framework directory
+          # iOS (BqLog.framework)
           mapfile -t ios_fw < <(find "$BASE" -type d -path "*/bqlog-lib-ios-${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.framework" | sort)
           if (( ${#ios_fw[@]} )); then
             copy_one "${ios_fw[0]}" "$IOS_DIR"
@@ -1798,13 +1803,17 @@ jobs:
           set -euo pipefail
           find plugin/unity/Runtime -maxdepth 6 -type f -print | sort
 
+
       - name: Build Unity Package
         run: |
           set -euo pipefail
           echo "Verifying package.json before pack:"
           test -f plugin/unity/package.json && cat plugin/unity/package.json || (echo "package.json missing"; exit 1)
-          mkdir -p dist/plugins/unity
+          echo "::group::npm pack --dry-run"
           cd plugin/unity
+          npm pack --dry-run || true
+          echo "::endgroup::"
+          mkdir -p ../../dist/plugins/unity
           npm pack --pack-destination ../../dist/plugins/unity
 
       - name: Upload Artifacts
