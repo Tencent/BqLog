@@ -1775,13 +1775,11 @@ jobs:
           echo "ERROR: Expected directory not found: $LINUX_INNER_DIR" >&2
           exit 1
           fi
-  
           REAL_SO="$LINUX_INNER_DIR/libBqLog.so.${VERSION}"
           if [[ ! -f "$REAL_SO" ]]; then
           echo "ERROR: Expected real .so not found: $REAL_SO" >&2
           exit 1
           fi
-  
           echo "Copy (real .so): $REAL_SO -> $LINUX_X64_DIR/libBqLog.so"
           mkdir -p "$LINUX_X64_DIR"
           # -L to dereference symlink if any; final name must be libBqLog.so
@@ -1795,13 +1793,22 @@ jobs:
             echo "WARN: iOS framework not found for version ${VERSION}"
           fi
 
-          # macOS universal (BqLog.framework)
-          mapfile -t mac_fw < <(find "$BASE" -type d -path "*/bqlog-lib-macos-universal-${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/BqLog.framework" | sort)
-          if (( ${#mac_fw[@]} )); then
-            copy_one "${mac_fw[0]}" "$MACOS_DIR"
-          else
-            echo "WARN: macOS framework not found for version ${VERSION}"
+          # macOS universal (libBqLog.dylib) - use exact versioned real .dylib (BqLog.${VERSION}.dylib) and copy as libBqLog.dylib
+          MACOS_PKG_BASE="$BASE/macos_universal_libs/bqlog-lib-macos-universal-${VERSION}"
+          MACOS_INNER_DIR="$MACOS_PKG_BASE/bqlog-lib-macos-universal-${VERSION}/dynamic_lib/lib/RelWithDebInfo"
+          if [[ ! -d "$MACOS_INNER_DIR" ]]; then
+            echo "ERROR: Expected directory not found: $MACOS_INNER_DIR" >&2
+            exit 1
           fi
+          REAL_DYLIB="$MACOS_INNER_DIR/libBqLog.${VERSION}.dylib"
+          if [[ ! -f "$REAL_DYLIB" ]]; then
+            echo "ERROR: Expected real .dylib not found: $REAL_DYLIB" >&2
+            exit 1
+          fi
+          echo "Copy (real .dylib): $REAL_DYLIB -> $MACOS_DIR/libBqLog.dylib"
+          mkdir -p "$MACOS_DIR"
+          # -L to dereference symlink if any; final name must be libBqLog.dylib
+          cp -Lf "$REAL_DYLIB" "$MACOS_DIR/libBqLog.dylib"
 
           echo "Staged files/directories (Plugins subtree, up to depth 6):"
           /usr/bin/find plugin/unity/Runtime/Plugins -maxdepth 6 -print | sort
@@ -1812,11 +1819,6 @@ jobs:
           # Copy the contents of wrapper/csharp/src into Runtime/src (avoid nesting src/src)
           mkdir -p plugin/unity/Runtime/src
           cp -r wrapper/csharp/src/. plugin/unity/Runtime/src/
-
-      - name: List staged plugins (show files up to depth 6)
-        run: |
-          set -euo pipefail
-          find plugin/unity/Runtime -maxdepth 6 -type f -print | sort
 
 
       - name: Build Unity Package
