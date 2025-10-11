@@ -1607,7 +1607,7 @@ jobs:
   #Unity package
   unity_package_build:
     runs-on: ubuntu-latest
-    needs: [build_windows_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC]
+    needs: [ build_windows_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1623,27 +1623,67 @@ jobs:
           sudo apt-get install -y unzip
           sudo apt-get install -y nodejs npm 
 
-      - name: Extract all archives
+      - name: Extract version from source and update package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          # extract version code from （src/bq_log/global/version.cpp）
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
+          if [[ -z "$VERSION" ]]; then
+            echo "Failed to extract version from src/bq_log/global/version.cpp"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
+          
+          # update "version" field in  plugin/unity/package.json
+          if [[ -f plugin/unity/package.json ]]; then
+            node -e "const fs=require('fs');const p='plugin/unity/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.env.VERSION;fs.writeFileSync(p, JSON.stringify(j,null,2));console.log('Updated', p, 'to version', j.version);"
+          else
+            echo "plugin/unity/package.json not found!" >&2
+            exit 1
+          fi
+
+      - name: Extract all archives (zip and tar.gz) with artifact prefix and list contents
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p extracted
           shopt -s nullglob
-          # unzip *.zip
+          
+          get_artifact_name() {
+            # downloaded_artifacts/<artifact-name>/<file>
+            local p="$1"
+            basename "$(dirname "$p")"
+          }
+          
+          # unzip *.zip（unzip to extracted/<artifact>/<base>）
           for z in downloaded_artifacts/**/*.zip downloaded_artifacts/*.zip; do
-            d="extracted/$(basename "${z%.*}")"
+            artifact="$(get_artifact_name "$z")"
+            base="$(basename "${z%.*}")"
+            d="extracted/${artifact}/${base}"
             mkdir -p "$d"
             echo "::group::Unzip $z -> $d"
+            unzip -l "$z" || true
             unzip -o "$z" -d "$d"
+            /usr/bin/find "$d" -maxdepth 2 -print | sort
             echo "::endgroup::"
           done
-          # tar -xzf *.tgz / *.tar.gz
+          
+          # tar -xzf *.tgz / *.tar.gz（unzip to extracted/<artifact>/<base>）
           for t in downloaded_artifacts/**/*.tgz downloaded_artifacts/*.tgz downloaded_artifacts/**/*.tar.gz downloaded_artifacts/*.tar.gz; do
-            d="extracted/$(basename "${t%%.tar.gz}")"
-            d="${d%.*}" # strip .tgz as well
+            artifact="$(get_artifact_name "$t")"
+            fname="$(basename "$t")"
+            base="${fname%.tar.gz}"
+            base="${base%.tgz}"
+            d="extracted/${artifact}/${base}"
             mkdir -p "$d"
             echo "::group::Untar $t -> $d"
-            tar -xzf "$t" -C "$d"
+            echo "Listing contents of $t"
+            tar -tzf "$t" | sed -n '1,200p' || true
+            echo "--- extracting (verbose) ---"
+            tar -xvzf "$t" -C "$d"
+            echo "--- extracted tree ---"
+            /usr/bin/find "$d" -maxdepth 2 -print | sort
             echo "::endgroup::"
           done
 
@@ -1651,18 +1691,96 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          : "${VERSION:?VERSION env not set}"
+          BASE="extracted"
+          
+          # target folder
+          ANDROID_DIR="plugin/unity/Runtime/Plugins/Android"
+          WIN_X64_DIR="plugin/unity/Runtime/Plugins/Windows/x86_64"
+          LINUX_X64_DIR="plugin/unity/Runtime/Plugins/Linux/x86_64"
+          IOS_DIR="plugin/unity/Runtime/Plugins/iOS"
+          MACOS_DIR="plugin/unity/Runtime/Plugins/macOS"
+          
+          mkdir -p "$ANDROID_DIR" "$WIN_X64_DIR" "$LINUX_X64_DIR" "$IOS_DIR" "$MACOS_DIR"
+          
+          copy_one() {
+            local src="$1"
+            local dst="$2"
+            echo "Copy: $src -> $dst/"
+            mkdir -p "$dst"
+            cp -a "$src" "$dst/"
+          }
+          
+          # Android (.aar)
+          mapfile -t android_aar < <(find "$BASE" -type f -path "*/bqlog-lib-android-${VERSION}/*/dynamic_lib/*bqlog-release.aar" | sort)
+          if (( ${#android_aar[@]} )); then
+            echo "Copy: ${android_aar[0]} -> $ANDROID_DIR/bqlog.aar"
+            mkdir -p "$ANDROID_DIR"
+            cp -f "${android_aar[0]}" "$ANDROID_DIR/bqlog.aar"
+          else
+            echo "WARN: Android AAR not found for version ${VERSION}"
+          fi
+          
+          # Windows x86_64 (BqLog.dll)
+          mapfile -t win_dll < <(find "$BASE" -type f -path "*/bqlog-lib-windows-x86_64-${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/BqLog.dll" | sort)
+          if (( ${#win_dll[@]} )); then
+            dll="${win_dll[0]}"
+            win_dir="$(dirname "$dll")"
+            mkdir -p "$WIN_X64_DIR"
+            echo "Copy: $dll -> $WIN_X64_DIR/"
+            cp -f "$dll" "$WIN_X64_DIR/"
+
+            # PDB
+            if [[ -f "$win_dir/BqLog.pdb" ]]; then
+              echo "Copy: $win_dir/BqLog.pdb -> $WIN_X64_DIR/"
+              cp -f "$win_dir/BqLog.pdb" "$WIN_X64_DIR/"
+            else
+              echo "INFO: BqLog.pdb not found next to DLL (optional)."
+            fi
+
+            # LIB
+            if [[ -f "$win_dir/BqLog.lib" ]]; then
+              echo "Copy: $win_dir/BqLog.lib -> $WIN_X64_DIR/"
+              cp -f "$win_dir/BqLog.lib" "$WIN_X64_DIR/"
+            else
+              echo "INFO: BqLog.lib not found next to DLL (optional)."
+            fi
+          else
+            echo "WARN: Windows x86_64 DLL not found for version ${VERSION}"
+          fi
+          
+          # iOS (BqLog.framework) 
+          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/bqlog-lib-ios-${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.framework" | sort)
+          if (( ${#ios_fw[@]} )); then
+            copy_one "${ios_fw[0]}" "$IOS_DIR"
+          else
+            echo "WARN: iOS framework not found for version ${VERSION}"
+          fi
+          
+          # macOS universal (BqLog.framework)
+          mapfile -t mac_fw < <(find "$BASE" -type d -path "*/bqlog-lib-macos-universal-${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/BqLog.framework" | sort)
+          if (( ${#mac_fw[@]} )); then
+            copy_one "${mac_fw[0]}" "$MACOS_DIR"
+          else
+            echo "WARN: macOS framework not found for version ${VERSION}"
+          fi
+          
+          echo "Staged files/directories:"
+          /usr/bin/find plugin/unity/Runtime/Plugins -maxdepth 3 -mindepth 1 -print | sort
 
       - name: Copy source codes
         run: |
-          cp -r wrapper/typescript/src plugins/unity/Runtime/src
-      - name: List staged prebuilds
+          mkdir -p plugin/unity/Runtime/src
+          cp -r wrapper/typescript/src plugin/unity/Runtime/src
+
+      - name: List staged plugins
         run: |
-          find plugins/unity/Runtime -maxdepth 3 -type f -print | sort
+          find plugin/unity/Runtime -maxdepth 3 -type f -print | sort
 
       - name: Build Unity Package
         run: |
           mkdir -p dist/plugins/unity
-          cd plugins/unity
+          cd plugin/unity
           npm pack --pack-destination ../../dist/plugins/unity
 
       - name: Upload Artifacts
