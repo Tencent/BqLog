@@ -1485,27 +1485,47 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y unzip
 
-      - name: Extract all archives
+      - name: Extract all archives (zip and tar.gz) with artifact prefix and list contents
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p extracted
           shopt -s nullglob
-          # unzip *.zip
+
+          get_artifact_name() {
+            # downloaded_artifacts/<artifact-name>/<file>
+            local p="$1"
+            basename "$(dirname "$p")"
+          }
+
+          # unzip *.zip（unzip to extracted/<artifact>/<base>）
           for z in downloaded_artifacts/**/*.zip downloaded_artifacts/*.zip; do
-            d="extracted/$(basename "${z%.*}")"
+            artifact="$(get_artifact_name "$z")"
+            base="$(basename "${z%.*}")"
+            d="extracted/${artifact}/${base}"
             mkdir -p "$d"
             echo "::group::Unzip $z -> $d"
+            unzip -l "$z" || true
             unzip -o "$z" -d "$d"
+            /usr/bin/find "$d" -maxdepth 2 -print | sort
             echo "::endgroup::"
           done
-          # tar -xzf *.tgz / *.tar.gz
+
+          # tar -xzf *.tgz / *.tar.gz（unzip to extracted/<artifact>/<base>）
           for t in downloaded_artifacts/**/*.tgz downloaded_artifacts/*.tgz downloaded_artifacts/**/*.tar.gz downloaded_artifacts/*.tar.gz; do
-            d="extracted/$(basename "${t%%.tar.gz}")"
-            d="${d%.*}" # strip .tgz as well
+            artifact="$(get_artifact_name "$t")"
+            fname="$(basename "$t")"
+            base="${fname%.tar.gz}"
+            base="${base%.tgz}"
+            d="extracted/${artifact}/${base}"
             mkdir -p "$d"
             echo "::group::Untar $t -> $d"
-            tar -xzf "$t" -C "$d"
+            echo "Listing contents of $t"
+            tar -tzf "$t" | sed -n '1,200p' || true
+            echo "--- extracting (verbose) ---"
+            tar -xvzf "$t" -C "$d"
+            echo "--- extracted tree ---"
+            /usr/bin/find "$d" -maxdepth 2 -print | sort
             echo "::endgroup::"
           done
 
@@ -1545,7 +1565,7 @@ jobs:
 
           copied_any=0
           shopt -s globstar nullglob
-          for d in extracted/*; do
+          for d in extracted/*/*; do
             base="$(basename "$d")"
             target="$(map_target "$base")"
             if [[ -z "$target" ]]; then
@@ -1567,12 +1587,11 @@ jobs:
               for tdir in "darwin-x64" "darwin-arm64"; do
                 mkdir -p "$PREBUILDS_DIR/$tdir"
                 cp -f "$node_src" "$PREBUILDS_DIR/$tdir/BqLog.node"
-                # Copy optional PDB (Windows only; on mac不会有)
               done
             else
               mkdir -p "$PREBUILDS_DIR/$target"
               cp -f "$node_src" "$PREBUILDS_DIR/$target/BqLog.node"
-              # Optional PDB (for Windows builds, if packaged together)
+              # Optional PDB (Windows builds)
               pdb="$(dirname "$node_src")/BqLog.pdb"
               if [[ -f "$pdb" ]]; then
                 cp -f "$pdb" "$PREBUILDS_DIR/$target/BqLog.pdb"
@@ -1736,14 +1755,6 @@ jobs:
               cp -f "$win_dir/BqLog.pdb" "$WIN_X64_DIR/"
             else
               echo "INFO: BqLog.pdb not found next to DLL (optional)."
-            fi
-
-            # LIB
-            if [[ -f "$win_dir/BqLog.lib" ]]; then
-              echo "Copy: $win_dir/BqLog.lib -> $WIN_X64_DIR/"
-              cp -f "$win_dir/BqLog.lib" "$WIN_X64_DIR/"
-            else
-              echo "INFO: BqLog.lib not found next to DLL (optional)."
             fi
           else
             echo "WARN: Windows x86_64 DLL not found for version ${VERSION}"
