@@ -282,12 +282,6 @@ jobs:
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: android_libs
-          path: ${{ github.workspace }}/dist
-
   build_mac_android:
     runs-on: macos-latest
     steps:
@@ -349,6 +343,12 @@ jobs:
           ./linux_build_all_and_pack.sh
         env:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android_libs
+          path: ${{ github.workspace }}/dist
 
 
   #Linux-ubuntu-x86_64
@@ -1626,7 +1626,7 @@ jobs:
   # Unity package
   unity_package_build:
     runs-on: ubuntu-latest
-    needs: [build_windows_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC]
+    needs: [build_linux_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1647,17 +1647,33 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Extract version from src/bq_log/global/version.cpp
+          # Parse version from src/bq_log/global/version.cpp
           VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
           if [[ -z "$VERSION" ]]; then
             echo "Failed to extract version from src/bq_log/global/version.cpp"
             exit 1
           fi
+          # Make VERSION available to both this and subsequent steps
           echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
-
-          # Update plugin/unity/package.json: version and files whitelist (if missing)
-          node -e "const fs=require('fs');const p='plugin/unity/package.json';if(!fs.existsSync(p))process.exit(2);const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.env.VERSION; if(!Array.isArray(j.files)){ j.files=['package.json','Runtime/**','Editor/**','README*','LICENSE*','CHANGELOG*']; } fs.writeFileSync(p, JSON.stringify(j,null,2)); console.log('Updated', p, 'version=', j.version, 'files=', j.files);"
-          echo "Sanity check package.json:" && cat plugin/unity/package.json
+          export VERSION
+          
+          # Update plugin/unity/package.json (ensure VERSION is visible to node)
+          if [[ -f plugin/unity/package.json ]]; then
+            VERSION="$VERSION" node -e "const fs=require('fs');const p='plugin/unity/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));if(!j.name)throw new Error('package.json missing name');if(!process.env.VERSION)throw new Error('VERSION env missing');j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('Updated',p,'to version',j.version);"
+          else
+            echo 'plugin/unity/package.json not found!' >&2
+            exit 1
+          fi
+          
+          # Sanity check: ensure version exists after write
+          if ! grep -q '"version"' plugin/unity/package.json; then
+            echo 'ERROR: version field missing in plugin/unity/package.json after update' >&2
+            cat plugin/unity/package.json
+            exit 1
+          fi
+          
+          echo 'Sanity check package.json:'
+          cat plugin/unity/package.json
 
       - name: Extract all archives (zip and tar.gz) with artifact prefix and list contents
         shell: bash
