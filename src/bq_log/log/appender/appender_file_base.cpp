@@ -208,7 +208,7 @@ namespace bq {
             auto current_time_epoch = (handle.get_log_head()).timestamp_epoch;
             if (current_time_epoch > current_file_expire_time_epoch_ms_) {
                 need_create_new_file = true;
-                bq::util::log_device_console(bq::log_level::error, "need_create_new_file");
+                bq::util::log_device_console(bq::log_level::info, "need_create_new_file");
             }
         }
         if (need_create_new_file) {

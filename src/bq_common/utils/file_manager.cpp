@@ -28,6 +28,8 @@ namespace bq {
     {
         seq_generator = 0;
         FILE_MANAGER_LOG(log_level::info, "file_manager is constructed");
+        FILE_MANAGER_LOG(log_level::info, "base dir type 0: %s", get_base_dir(0).c_str());
+        FILE_MANAGER_LOG(log_level::info, "base dir type 1: %s", get_base_dir(1).c_str());
     }
 
     file_manager::~file_manager()
