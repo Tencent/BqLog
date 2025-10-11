@@ -7,32 +7,39 @@ pushd "XCodeProj" >/dev/null
 BUILD_LIB_TYPES=(dynamic_lib dynamic_lib static_lib static_lib)
 APPLE_LIB_FORMATS=(framework dylib framework a)
 BUILD_CONFIGS=(Debug MinSizeRel Release RelWithDebInfo)
+TARGET_PLATFORMS=(OS64 SIMULATORARM64 SIMULATOR64)
 
-for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
-    BUILD_LIB_TYPE=${BUILD_LIB_TYPES[i]}
-    APPLE_LIB_FORMAT=${APPLE_LIB_FORMATS[i]}
+for TARGET_PLATFORM in ${TARGET_PLATFORMS[@]}; do
+    echo "== Configure/Build for PLATFORM=${TARGET_PLATFORM} =="
+    rm -f CMakeCache.txt
+    rm -rf CMakeFiles *.xcodeproj(N)
+    for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
+        BUILD_LIB_TYPE=${BUILD_LIB_TYPES[i]}
+        APPLE_LIB_FORMAT=${APPLE_LIB_FORMATS[i]}
 
-    cmake ../../../../src \
-        -G Xcode \
-        -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
-        -DPLATFORM=OS64 \
-        -DDEPLOYMENT_TARGET=9.0 \
-        -DBUILD_LIB_TYPE=$BUILD_LIB_TYPE \
-        -DAPPLE_LIB_FORMAT=$APPLE_LIB_FORMAT \
-        -DTARGET_PLATFORM:STRING=ios
+        cmake ../../../../src \
+            -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
+            -DPLATFORM=${TARGET_PLATFORM} \
+            -DDEPLOYMENT_TARGET=9.0 \
+            -DBUILD_LIB_TYPE=$BUILD_LIB_TYPE \
+            -DAPPLE_LIB_FORMAT=$APPLE_LIB_FORMAT \
+            -DTARGET_PLATFORM:STRING=ios
 
-    for build_config in ${BUILD_CONFIGS[@]}
-    do
-        cmake --build . --config $build_config
-        if [ $? -eq 0 ]; then
-            echo "Build succeeded."
-        else
-            echo "Build failed."
-            exit 1
-        fi
-        cmake --install . --config $build_config
+        for build_config in ${BUILD_CONFIGS[@]}
+        do
+            cmake --build . --config $build_config
+            if [ $? -eq 0 ]; then
+                echo "Build succeeded."
+            else
+                echo "Build failed."
+                exit 1
+            fi
+            cmake --install . --config $build_config
+        done
     done
 done
+
 
 popd >/dev/null
 

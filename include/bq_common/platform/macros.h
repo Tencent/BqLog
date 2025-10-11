@@ -123,7 +123,7 @@
 #elif defined(BQ_DYNAMIC_LIB_IMPORT)
 #define BQ_API BQ_API_IMPORT
 #else
-#define BQ_API
+#define BQ_API extern "C"
 #endif
 
 #ifdef _MSC_VER
