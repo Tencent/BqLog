@@ -1763,14 +1763,24 @@ jobs:
             echo "WARN: Windows x86_64 DLL not found for version ${VERSION}"
           fi
 
-          # Linux x86_64 (libBqLog.so) - fixed path per your build layout
-          mapfile -t linux_so < <(find "$BASE" -type f -path "*/bqlog-lib-linux-x86_64-${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so" | sort)
-          if (( ${#linux_so[@]} )); then
-            copy_one "${linux_so[0]}" "$LINUX_X64_DIR"
-          else
-            echo "ERROR: Linux x86_64 libBqLog.so not found at expected path" >&2
-            exit 1
+          # Linux x86_64 (libBqLog.so) - use exact versioned real .so (.so.${VERSION}) and copy as libBqLog.so
+          LINUX_PKG_BASE="$BASE/linux_x86_64_libs/bqlog-lib-linux-x86_64-${VERSION}"
+          LINUX_INNER_DIR="$LINUX_PKG_BASE/bqlog-lib-linux-x86_64-${VERSION}/dynamic_lib/lib/RelWithDebInfo"
+          if [[ ! -d "$LINUX_INNER_DIR" ]]; then
+          echo "ERROR: Expected directory not found: $LINUX_INNER_DIR" >&2
+          exit 1
           fi
+  
+          REAL_SO="$LINUX_INNER_DIR/libBqLog.so.${VERSION}"
+          if [[ ! -f "$REAL_SO" ]]; then
+          echo "ERROR: Expected real .so not found: $REAL_SO" >&2
+          exit 1
+          fi
+  
+          echo "Copy (real .so): $REAL_SO -> $LINUX_X64_DIR/libBqLog.so"
+          mkdir -p "$LINUX_X64_DIR"
+          # -L to dereference symlink if any; final name must be libBqLog.so
+          cp -Lf "$REAL_SO" "$LINUX_X64_DIR/libBqLog.so"
 
           # iOS (BqLog.framework)
           mapfile -t ios_fw < <(find "$BASE" -type d -path "*/bqlog-lib-ios-${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.framework" | sort)
