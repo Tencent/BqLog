@@ -1764,17 +1764,6 @@ jobs:
               echo "Copy: $win_dir/BqLog.pdb -> $WIN_X64_DIR/"
               cp -f "$win_dir/BqLog.pdb" "$WIN_X64_DIR/"
             fi
-            if [[ -f "$win_dir/BqLog.lib" ]]; then
-              echo "Copy: $win_dir/BqLog.lib -> $WIN_X64_DIR/"
-              cp -f "$win_dir/BqLog.lib" "$WIN_X64_DIR/"
-            else
-              pkg_root="$(echo "$win_dir" | sed 's#/dynamic_lib/.*##')"
-              mapfile -t win_lib_fallback < <(find "$pkg_root" -type f -name "BqLog.lib" | sort)
-              if (( ${#win_lib_fallback[@]} )); then
-                echo "Copy (fallback): ${win_lib_fallback[0]} -> $WIN_X64_DIR/"
-                cp -f "${win_lib_fallback[0]}" "$WIN_X64_DIR/"
-              fi
-            fi
           else
             echo "WARN: Windows x86_64 DLL not found for version ${VERSION}"
           fi
