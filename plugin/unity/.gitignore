@@ -1,8 +1,0 @@
-*.framework
-*.aar
-*.so
-*.dll
-*.pdb
-*.lib
-Runtime/src/
-Runtime/src.meta
