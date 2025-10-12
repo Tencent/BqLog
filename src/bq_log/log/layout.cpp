@@ -17,7 +17,7 @@
 #include "bq_log/misc/bq_log_wrapper_tools.h"
 #include "bq_log/log/layout.h"
 
-#include "bq_log/global/vars.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
 
 namespace bq {

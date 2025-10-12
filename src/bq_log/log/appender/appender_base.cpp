@@ -12,7 +12,7 @@
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/appender/appender_base.h"
 
-#include "bq_log/global/vars.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/utils/log_utils.h"
 

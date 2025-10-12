@@ -11,7 +11,7 @@
  */
 #include <stddef.h>
 #include "bq_log/bq_log.h"
-#include "bq_log/global/vars.h"
+#include "bq_log/global/log_vars.h"
 
 #if defined(BQ_JAVA)
 #include "bq_common/bq_common.h"

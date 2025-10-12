@@ -12,9 +12,9 @@
  * RSA raw implementation, compatible with ssh-keygen output.
  */
 
+#include "bq_common/encryption/rsa.h"
 #include <string.h>
 #include <stdint.h>
-#include "bq_common/encryption/rsa.h"
 
 namespace bq {
     static uint32_t load_u32_be(const uint8_t* p)

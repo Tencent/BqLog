@@ -14,7 +14,7 @@
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/appender/appender_console.h"
 
-#include "bq_log/global/vars.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 
 namespace bq {

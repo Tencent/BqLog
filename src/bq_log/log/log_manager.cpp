@@ -14,7 +14,7 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_manager.h"
 
-#include "bq_log/global/vars.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/log_worker.h"
 
 namespace bq {

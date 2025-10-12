@@ -41,4 +41,4 @@
 #include "bq_common/utils/utility_types.h"
 #include "bq_common/encryption/rsa.h"
 #include "bq_common/encryption/aes.h"
-#include "bq_common/global/vars.h"
+#include "bq_common/global/common_vars.h"

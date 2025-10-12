@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
-#include "bq_log/global/vars.h"
+#include "bq_log/global/log_vars.h"
 
 namespace bq {
     log_global_vars* log_global_var_default_initer_ = &log_global_vars::get();
