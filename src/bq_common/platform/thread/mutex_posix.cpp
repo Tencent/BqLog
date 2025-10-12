@@ -9,7 +9,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/platform/thread/mutex_win64.h"
+#include "bq_common/platform/thread/mutex_posix.h"
 #ifdef BQ_POSIX
 #include <pthread.h>
 #include "bq_common/bq_common.h"
