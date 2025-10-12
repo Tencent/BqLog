@@ -22,9 +22,7 @@
  * inherent thread class and implement the virtual callback functions.
  * call start to begin thread.
  */
-#include "bq_common/platform/macros.h"
-#include <stdint.h>
-#include "bq_common/types/string.h"
+#include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
 #if defined(BQ_JAVA)
 #include <jni.h>

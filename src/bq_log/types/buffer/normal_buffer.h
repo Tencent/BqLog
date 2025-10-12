@@ -19,7 +19,6 @@
  * \author pippocao
  * \date 2025/07/26
  */
-#include <stddef.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/types/buffer/log_buffer_defs.h"
 #include "bq_log/types/buffer/siso_ring_buffer.h"

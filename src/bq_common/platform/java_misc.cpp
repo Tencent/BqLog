@@ -9,14 +9,11 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/java_misc.h"
 
 #if defined(BQ_JAVA)
-#include <jni.h>
 #include <sys/types.h>
-#if defined(BQ_ANDROID)
-#include <android/log.h>
-#endif
+#include "bq_common/bq_common.h"
 
 namespace bq {
     namespace platform {
@@ -115,14 +112,7 @@ namespace bq {
         jint jni_init(JavaVM* vm, void* reserved) {
             (void)reserved;
             java_vm = vm;
-#if defined(BQ_ANDROID)
-            __android_log_write(ANDROID_LOG_INFO, "Bq", "JNI_Onload is called");
-            android_jni_onload();
-#elif defined(BQ_IOS)
-            bq::platform::ios_print("Bq JNI_Onload is called");
-#else
-            printf("Bq JNI_Onload is called");
-#endif
+            bq::util::log_device_console(bq::log_level::info, "Bq JNI_Onload is called");
             init_reflection_variables();
             for (auto callback : get_jni_onload_callbacks()) {
                 callback();

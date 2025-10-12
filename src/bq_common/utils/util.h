@@ -10,10 +10,8 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <time.h>
-#include "bq_common/platform/macros.h"
-#include "bq_common/types/array.h"
-#include "bq_common/types/string.h"
+
+#include "bq_common/bq_common_public_include.h"
 #include "bq_common/types/basic_types.h"
 
 namespace bq {

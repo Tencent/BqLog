@@ -13,7 +13,7 @@
 //  vars.cpp
 //  Created by Yu Cao on 2025/4/11.
 //
-#include "bq_common/bq_common.h"
+#include "bq_common/global/common_vars.h"
 
 namespace bq {
     static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();

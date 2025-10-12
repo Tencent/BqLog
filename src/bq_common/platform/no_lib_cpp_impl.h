@@ -25,13 +25,9 @@
  * \author pippocao
  * \date 2022/09/21
  */
-#include "bq_common/platform/macros.h"
-#include "bq_common/misc/assert.h"
+
+#include "bq_common/bq_common_public_include.h"
 #if defined(BQ_NO_LIBCPP)
-#include <limits.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdint.h>
 
 namespace std {
     enum class align_val_t : size_t { };

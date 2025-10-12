@@ -10,13 +10,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/unix_misc.h"
 #if defined(BQ_UNIX)
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include "bq_common/bq_common.h"
 namespace bq {
     namespace platform {
         // According to test result, benifit from VDSO.

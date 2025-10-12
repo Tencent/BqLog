@@ -21,7 +21,6 @@
  */
 
 #include "bq_common/encryption/aes.h"
-#include <string.h>
 
 namespace bq {
     class aes_core {

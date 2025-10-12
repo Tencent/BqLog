@@ -9,7 +9,6 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <string.h>
 #include "bq_log/log/decoder/appender_decoder_base.h"
 
 static constexpr size_t DECODER_CACHE_READ_DEFAULT_SIZE = 32 * 1024;

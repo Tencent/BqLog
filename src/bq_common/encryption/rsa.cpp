@@ -13,8 +13,6 @@
  */
 
 #include "bq_common/encryption/rsa.h"
-#include <string.h>
-#include <stdint.h>
 
 namespace bq {
     static uint32_t load_u32_be(const uint8_t* p)

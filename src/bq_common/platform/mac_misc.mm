@@ -9,14 +9,15 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+
+#include "bq_common/platform/mac_misc.h"
 #if defined(BQ_MAC)
 #import <Foundation/Foundation.h>
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
-#include <unistd.h>
+#include "bq_common/bq_common.h"
 
 namespace bq {
 	namespace platform {

@@ -9,9 +9,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
+
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 
 namespace bq {

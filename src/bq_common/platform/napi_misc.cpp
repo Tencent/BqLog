@@ -9,14 +9,11 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
 
+#include "bq_common/platform/napi_misc.h"
 #if defined(BQ_NAPI)
-
 #include <sys/types.h>
-#if defined(BQ_HMOS)
-//TODO harmony OS headers
-#endif
+#include "bq_common/bq_common.h"
 
 namespace bq {
     BQ_TLS_NON_POD(bq::array<napi_value>, tls_argv_array_);

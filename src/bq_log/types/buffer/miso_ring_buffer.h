@@ -48,7 +48,7 @@
  * \author pippocao
  * \date 2023/10/08
  */
-#include <stddef.h>
+
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_api.h"
 #include "bq_log/types/buffer/log_buffer_defs.h"

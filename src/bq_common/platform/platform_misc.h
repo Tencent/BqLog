@@ -10,14 +10,8 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdint.h>
-#include "bq_common/platform/macros.h"
-#include "bq_common/types/array.h"
-#include "bq_common/types/string.h"
 
+#include "bq_common/bq_common_public_include.h"
 #if defined(BQ_POSIX)
 #include "bq_common/platform/posix_misc.h"
 #endif
