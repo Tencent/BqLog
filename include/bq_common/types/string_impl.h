@@ -68,9 +68,11 @@ namespace bq {
     template <typename CHAR_TYPE>
     inline const CHAR_TYPE* ___strstr(const CHAR_TYPE* str1, const CHAR_TYPE* str2)
     {
+        if (!str2) {
+            return nullptr;
+        }
         auto len2 = ___string_len(str2);
         if (0 == len2) {
-            return nullptr;
         }
         auto len1 = ___string_len(str1);
         const CHAR_TYPE* begin_pos = ___find_char(str1, *str2);
@@ -389,7 +391,10 @@ namespace bq {
         if (size() < str.size()) {
             return false;
         }
-        return memcmp(c_str(), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
+        if ((nullptr != c_str()) && (nullptr != str.c_str())) {
+            return memcmp(c_str(), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
+        }
+        return false;
     }
 
     template <typename CHAR_TYPE, typename Allocator>
@@ -398,7 +403,10 @@ namespace bq {
         if (size() < str.size()) {
             return false;
         }
-        return memcmp(c_str() + (size() - str.size()), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
+        if ((nullptr != c_str()) && (nullptr != str.c_str()) ) {
+            return memcmp(c_str() + (size() - str.size()), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
+        }
+        return false;
     }
 
     template <typename CHAR_TYPE, typename Allocator>

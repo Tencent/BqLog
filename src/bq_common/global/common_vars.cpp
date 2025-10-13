@@ -17,4 +17,19 @@
 
 namespace bq {
     static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();
+
+    common_global_vars::common_global_vars()
+    {
+#if defined(BQ_ANDROID)
+        platform::jni_onload_register register_(&bq::platform:::android_jni_onload);
+#endif
+    }
+
+
+    void common_global_vars::partial_destruct()
+    {
+        delete file_manager_inst_;
+        file_manager_inst_ = nullptr;
+    }
+
 }

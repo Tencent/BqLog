@@ -166,19 +166,10 @@ namespace bq {
         property_value null_property_value_;
         file_manager* file_manager_inst_ = new file_manager();
 
-        common_global_vars()
-        {
-#if defined(BQ_ANDROID)
-            platform::jni_onload_register register_(&bq::platform:::android_jni_onload);
-#endif
-        }
+        common_global_vars();
 
     protected:
-        virtual void partial_destruct() override
-        {
-            delete file_manager_inst_;
-            file_manager_inst_ = nullptr;
-        }
+        virtual void partial_destruct() override;
     };
 
 }

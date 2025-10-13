@@ -61,23 +61,9 @@ namespace bq {
         void init_layout_values();
 
     protected:
-        virtual void partial_destruct() override
-        {
-            delete log_manager_inst_;
-            log_manager_inst_ = nullptr;
-            delete appender_decoder_manager_inst_;
-            appender_decoder_manager_inst_ = nullptr;
-            delete console_static_misc_;
-            console_static_misc_ = nullptr;
-        }
+        virtual void partial_destruct() override;
 
     public:
-        log_global_vars()
-        {
-#if defined(BQ_JAVA)
-            platform::jni_onload_register register_(&log_global_vars::jni_onload_callback);
-#endif
-            init_layout_values();
-        }
+        log_global_vars();
     };
 }
