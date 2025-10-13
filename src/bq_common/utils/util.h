@@ -13,6 +13,7 @@
 
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/types/basic_types.h"
+#include "bq_common/platform/platform_misc.h"
 
 namespace bq {
     class util {
