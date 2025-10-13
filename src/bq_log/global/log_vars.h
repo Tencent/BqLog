@@ -65,5 +65,7 @@ namespace bq {
 
     public:
         log_global_vars();
+
+        virtual ~log_global_vars(){}
     };
 }

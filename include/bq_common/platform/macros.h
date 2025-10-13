@@ -154,7 +154,7 @@ namespace bq {
                 ____BQ_TLS_##Name##_ptr = nullptr;                          \
             }                                                               \
         }                                                                   \
-        bq_forceinline operator bool() { return ____BQ_TLS_##Name##_ptr; }  \
+        bq_forceinline operator bool() { return (bool)____BQ_TLS_##Name##_ptr; }  \
         bq_forceinline Type& get() {                                        \
             if (!____BQ_TLS_##Name##_ptr) {                                 \
                 ____BQ_TLS_##Name##_ptr = new Type();                       \

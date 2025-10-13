@@ -240,7 +240,7 @@ namespace bq {
     {
         auto& tls_buffer_info = log_tls_info_.get().get_buffer_info_directly(this);
         block_node_head*& block_cache = tls_buffer_info.cur_block_;
-        bool is_high_frequency = block_cache;
+        bool is_high_frequency = (block_cache != nullptr);
         if (is_high_frequency) {
             block_cache->get_buffer().commit_write_chunk(handle);
         } else {

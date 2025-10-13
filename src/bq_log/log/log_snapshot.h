@@ -40,7 +40,7 @@ namespace bq {
 
         bq_forceinline bool is_enable() const
         {
-            return snapshot_buffer_;
+            return (bool)snapshot_buffer_;
         }
 
     private:

@@ -548,8 +548,13 @@ namespace bq {
 
         bool share_file(const char* file_path)
         {
-            // 使用默认文件浏览器打开文件夹
-            HINSTANCE result = ShellExecute(NULL, "open", file_path, NULL, NULL, SW_SHOWNORMAL);
+            if (!file_path || !*file_path)
+            {
+                return false;
+            }
+            bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(file_path)));
+            // Open directory by default file explorer
+            HINSTANCE result = ShellExecuteW(NULL, L"open", (LPCWSTR)file_path_w.c_str(), NULL, NULL, SW_SHOWNORMAL);
             // 检查操作是否成功
             return reinterpret_cast<int64_t>(result) > 32;
         }
@@ -713,9 +718,11 @@ namespace bq {
                         stack_trace_str_ref.push_back(u'(');
                         stack_trace_str_ref += (const char16_t*)line.FileName;
                         stack_trace_str_ref.push_back(u':');
-                        char16_t tmp[32];
-                        swprintf((wchar_t*)tmp, 32, L"%d", line.LineNumber);
-                        stack_trace_str_ref += tmp;
+                        char tmp[32];
+                        auto num_len = snprintf(tmp, sizeof(tmp), "%" PRIu32, static_cast<uint32_t>(line.LineNumber));
+                        for (decltype(num_len) i = 0; i < num_len; ++i) {
+                            stack_trace_str_ref.push_back(static_cast<char16_t>(tmp[i]));
+                        }
                         stack_trace_str_ref.push_back(u')');
                     }
                 } else {

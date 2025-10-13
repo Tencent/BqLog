@@ -46,9 +46,16 @@ namespace bq {
         template <typename API_DEC_TYPE>
         API_DEC_TYPE get_sys_api(const char* module_name, const char* api_name)
         {
-            HMODULE module = GetModuleHandle(module_name);
+            HMODULE module = GetModuleHandleA(module_name); 
             if (module) {
-                return reinterpret_cast<API_DEC_TYPE>((void*)GetProcAddress(module, api_name));
+#if defined(BQ_MSVC)
+#pragma warning(push)
+#pragma warning(disable: 4191)
+#endif
+                return reinterpret_cast<API_DEC_TYPE>(::GetProcAddress(module, api_name));
+#if defined(BQ_MSVC)
+#pragma warning(pop)
+#endif
             }
             return nullptr;
         }

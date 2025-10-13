@@ -46,7 +46,7 @@ namespace bq {
         }
         inline bool has_been_mapped() const
         {
-            return mapped_data_;
+            return (bool)mapped_data_;
         }
     };
 

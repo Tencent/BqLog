@@ -109,7 +109,7 @@ namespace bq {
                 , last_lock_type_(lock_type::no_lock)
             {
             }
-            bq_forceinline operator bool() const { return value_; }
+            bq_forceinline operator bool() const { return (bool)value_; }
             bq_forceinline group_node& value() { return *value_; }
             bq_forceinline const group_node& value() const { return *value_; }
             bq_forceinline bool operator==(const group_list::iterator& rhs) const { return value_ == rhs.value_; }
