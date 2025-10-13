@@ -72,10 +72,10 @@ namespace bq {
     {
         assert((BQ_POD_RUNTIME_OFFSET_OF(block::chunk_head_def, data) % 8 == 0) && "invalid chunk_head size, it must be a multiple of 8 to ensure the `data` is 8 bytes aligned");
 
-        const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
+        const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
 
-        assert((uintptr_t)&cursors_.write_cursor_ % (uintptr_t)CACHE_LINE_SIZE == 0);
-        assert((uintptr_t)&cursors_.read_cursor_ % (uintptr_t)CACHE_LINE_SIZE == 0);
+        assert((uintptr_t)&cursors_.write_cursor_ % (uintptr_t)BQ_CACHE_LINE_SIZE == 0);
+        assert((uintptr_t)&cursors_.read_cursor_ % (uintptr_t)BQ_CACHE_LINE_SIZE == 0);
 
         auto mmap_result = create_memory_map();
         switch (mmap_result) {
@@ -115,7 +115,7 @@ namespace bq {
         log_buffer_write_handle handle;
 
         uint32_t size_required = size + (uint32_t)data_block_offset;
-        uint32_t need_block_count_tmp = static_cast<uint32_t>((size_required + (CACHE_LINE_SIZE - 1)) >> CACHE_LINE_SIZE_LOG2);
+        uint32_t need_block_count_tmp = static_cast<uint32_t>((size_required + (BQ_CACHE_LINE_SIZE - 1)) >> BQ_CACHE_LINE_SIZE_LOG2);
         if (need_block_count_tmp > aligned_blocks_count_ || need_block_count_tmp == 0 || need_block_count_tmp > block::MAX_BLOCK_NUM_PER_CHUNK) {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
@@ -406,7 +406,7 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
             return create_memory_map_result::failed;
         }
-        aligned_blocks_count_ = config_.default_buffer_size >> CACHE_LINE_SIZE_LOG2;
+        aligned_blocks_count_ = config_.default_buffer_size >> BQ_CACHE_LINE_SIZE_LOG2;
         size_t head_size = sizeof(head);
         size_t map_size = (uint32_t)(config_.default_buffer_size + head_size);
         size_t file_size = bq::memory_map::get_min_size_of_memory_map_file(0, map_size);
@@ -431,7 +431,7 @@ namespace bq {
             return create_memory_map_result::failed;
         }
 
-        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (CACHE_LINE_SIZE - 1)) != 0) {
+        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (BQ_CACHE_LINE_SIZE - 1)) != 0) {
             bq::util::log_device_console(log_level::warning, "ring buffer memory map file \"%s\" memory address is not aligned, use memory instead.", memory_map_file_.abs_file_path().c_str());
             bq::memory_map::release_memory_map(memory_map_handle_);
             bq::file_manager::instance().close_file(memory_map_file_);
@@ -519,12 +519,12 @@ namespace bq {
 
     void miso_ring_buffer::init_with_memory()
     {
-        aligned_blocks_count_ = config_.default_buffer_size >> CACHE_LINE_SIZE_LOG2;
+        aligned_blocks_count_ = config_.default_buffer_size >> BQ_CACHE_LINE_SIZE_LOG2;
 
         size_t head_size = sizeof(head);
 
         size_t alloc_size = (uint32_t)(config_.default_buffer_size + head_size);
-        head_ = (head*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, sizeof(uint8_t) * alloc_size);
+        head_ = (head*)bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, sizeof(uint8_t) * alloc_size);
 
         aligned_blocks_ = (miso_ring_buffer::block*)(head_ + 1);
         for (uint32_t i = 0; i < aligned_blocks_count_; ++i) {

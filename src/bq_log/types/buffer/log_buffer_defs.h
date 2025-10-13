@@ -35,7 +35,7 @@
 #endif
 
 namespace bq {
-    static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
+    static constexpr size_t BQ_CACHE_LINE_SIZE_LOG2 = 6;
 
 #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)
 

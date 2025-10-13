@@ -82,11 +82,11 @@ namespace bq {
 
         static constexpr ptrdiff_t get_buffer_data_offset()
         {
-            return (ptrdiff_t)((sizeof(block_node_head) + CACHE_LINE_SIZE - 1) - ((sizeof(block_node_head) + CACHE_LINE_SIZE - 1) % CACHE_LINE_SIZE));
+            return (ptrdiff_t)((sizeof(block_node_head) + BQ_CACHE_LINE_SIZE - 1) - ((sizeof(block_node_head) + BQ_CACHE_LINE_SIZE - 1) % BQ_CACHE_LINE_SIZE));
         }
     } BQ_PACK_END
 
-        BQ_PACK_BEGIN class alignas(CACHE_LINE_SIZE) block_list {
+        BQ_PACK_BEGIN class alignas(BQ_CACHE_LINE_SIZE) block_list {
         friend struct group_data_head;
 
     private:
@@ -262,5 +262,5 @@ namespace bq {
                 prev_block_node->next_ = remove_block_node->next_;
             }
         }
-    } BQ_PACK_END static_assert(sizeof(block_list) == CACHE_LINE_SIZE, "invalid block_list size");
+    } BQ_PACK_END static_assert(sizeof(block_list) == BQ_CACHE_LINE_SIZE, "invalid block_list size");
 }

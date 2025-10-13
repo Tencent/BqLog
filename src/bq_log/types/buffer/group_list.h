@@ -32,7 +32,7 @@
 
 namespace bq {
     BQ_PACK_BEGIN
-    struct alignas(CACHE_LINE_SIZE) group_data_head {
+    struct alignas(BQ_CACHE_LINE_SIZE) group_data_head {
         block_list used_;
         block_list free_;
         block_list stage_;
@@ -249,9 +249,9 @@ namespace bq {
 #if defined(BQ_UNIT_TEST)
         bq::platform::atomic<int32_t> groups_count_ = 0;
 #endif
-        alignas(CACHE_LINE_SIZE) bq::platform::atomic<uint64_t> current_group_index_;
-        alignas(CACHE_LINE_SIZE) group_node::pointer_type head_;
-        alignas(CACHE_LINE_SIZE) memory_pool<group_node> pool_;
+        alignas(BQ_CACHE_LINE_SIZE) bq::platform::atomic<uint64_t> current_group_index_;
+        alignas(BQ_CACHE_LINE_SIZE) group_node::pointer_type head_;
+        alignas(BQ_CACHE_LINE_SIZE) memory_pool<group_node> pool_;
     };
 
 }

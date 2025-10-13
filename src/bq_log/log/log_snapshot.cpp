@@ -50,8 +50,8 @@ namespace bq {
         if (buffer_size_ != 0) {
             if (snapshot_buffer_) {
                 auto current_usable_buffer_size = (uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count());
-                if (abs(static_cast<int32_t>(current_usable_buffer_size) - static_cast<int32_t>(buffer_size_)) > static_cast<int32_t>(CACHE_LINE_SIZE) * 2) {
-                    decltype(buffer_data_) new_data = (decltype(buffer_data_))bq::platform::aligned_alloc(CACHE_LINE_SIZE, (size_t)siso_ring_buffer::calculate_min_size_of_memory(buffer_size_));
+                if (abs(static_cast<int32_t>(current_usable_buffer_size) - static_cast<int32_t>(buffer_size_)) > static_cast<int32_t>(BQ_CACHE_LINE_SIZE) * 2) {
+                    decltype(buffer_data_) new_data = (decltype(buffer_data_))bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, (size_t)siso_ring_buffer::calculate_min_size_of_memory(buffer_size_));
                     // create a new snapshot_buffer_ and backup log data.
                     auto* new_buffer = new siso_ring_buffer(new_data, static_cast<size_t>(buffer_size_), false);
                     new_buffer->set_thread_check_enable(false);
@@ -96,7 +96,7 @@ namespace bq {
                     buffer_data_ = new_data;
                 }
             } else {
-                buffer_data_ = (decltype(buffer_data_))bq::platform::aligned_alloc(CACHE_LINE_SIZE, (size_t)siso_ring_buffer::calculate_min_size_of_memory(buffer_size_));
+                buffer_data_ = (decltype(buffer_data_))bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, (size_t)siso_ring_buffer::calculate_min_size_of_memory(buffer_size_));
                 snapshot_buffer_ = new siso_ring_buffer(buffer_data_, (size_t)buffer_size_, false);
                 snapshot_buffer_->set_thread_check_enable(false);
             }

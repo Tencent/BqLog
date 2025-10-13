@@ -48,7 +48,7 @@ namespace bq {
         auto mmap_result = create_memory_map();
         switch (mmap_result) {
         case bq::create_memory_map_result::failed:
-            buffer_data_ = (uint8_t*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, calculate_size_of_memory(required_size_));
+            buffer_data_ = (uint8_t*)bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, calculate_size_of_memory(required_size_));
             bq::object_constructor<bq::siso_ring_buffer>::construct(reinterpret_cast<bq::siso_ring_buffer*>(siso_buffer_obj_), buffer_data_ + HEAD_SIZE, calculate_size_of_memory(required_size_) - static_cast<uint32_t>(HEAD_SIZE), false);
             init_with_memory();
             break;
@@ -100,7 +100,7 @@ namespace bq {
             return create_memory_map_result::failed;
         }
 
-        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (CACHE_LINE_SIZE - 1)) != 0) {
+        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (BQ_CACHE_LINE_SIZE - 1)) != 0) {
             bq::util::log_device_console(log_level::warning, "normal buffer memory map file \"%s\" memory address is not aligned, use memory instead.", memory_map_file_.abs_file_path().c_str());
             bq::memory_map::release_memory_map(memory_map_handle_);
             bq::file_manager::instance().close_file(memory_map_file_);

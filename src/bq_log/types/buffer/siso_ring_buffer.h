@@ -73,19 +73,19 @@ namespace bq {
             // rt is short name of "read thread", which means this variable is accessed in read thread.
             uint32_t rt_reading_cursor_cache_; // This field is used as snapshot when recovering from memory map file .
             uint32_t rt_writing_cursor_cache_;
-            char cache_line_padding0_[CACHE_LINE_SIZE - 3 * sizeof(uint32_t)];
+            char cache_line_padding0_[BQ_CACHE_LINE_SIZE - 3 * sizeof(uint32_t)];
             // this cache variable used in writing thread is used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
             // wt is short name of "write thread", which means this variable is accessed in write thread.
             uint32_t wt_reading_cursor_cache_;
             uint32_t wt_writing_cursor_cache_; // This field is used as snapshot when recovering from memory map file .
-            char cache_line_padding1_[CACHE_LINE_SIZE - 2 * sizeof(uint32_t)];
+            char cache_line_padding1_[BQ_CACHE_LINE_SIZE - 2 * sizeof(uint32_t)];
 
             uint32_t reading_cursor_; // Used to sync data between read thread and write thread in run-time.
-            char cache_line_padding2_[CACHE_LINE_SIZE - sizeof(uint32_t)];
+            char cache_line_padding2_[BQ_CACHE_LINE_SIZE - sizeof(uint32_t)];
             uint32_t writing_cursor_; // Used to sync data between read thread and write thread in run-time.
-            char cache_line_padding3_[CACHE_LINE_SIZE - sizeof(uint32_t)];
+            char cache_line_padding3_[BQ_CACHE_LINE_SIZE - sizeof(uint32_t)];
 
-        } BQ_PACK_END static_assert(sizeof(head) == 4 * CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
+        } BQ_PACK_END static_assert(sizeof(head) == 4 * BQ_CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
 
         head* head_;
         block* aligned_blocks_;
@@ -94,7 +94,7 @@ namespace bq {
         memory_map_buffer_state mmap_buffer_state_;
 
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        char padding_[CACHE_LINE_SIZE];
+        char padding_[BQ_CACHE_LINE_SIZE];
         bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id write_thread_id_ = 0;

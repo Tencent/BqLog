@@ -18,7 +18,7 @@ namespace bq {
         : is_memory_recovery_(is_memory_recovery)
     {
         // make sure it's cache line size aligned
-        assert((uintptr_t)buffer % CACHE_LINE_SIZE == 0 && "input buffer of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)buffer % BQ_CACHE_LINE_SIZE == 0 && "input buffer of siso_ring_buffer should be cache line size aligned");
         assert(buffer_size >= sizeof(block) * 4 && "input buffer size of siso_ring_buffer must be at least 256 bytes");
         if (is_memory_recovery) {
             if (!try_recover_from_exist_memory_map(buffer, buffer_size)) {
@@ -27,11 +27,11 @@ namespace bq {
         } else {
             init_with_memory(buffer, buffer_size);
         }
-        assert((uintptr_t)&head_->aligned_blocks_count_cache_ % CACHE_LINE_SIZE == 0 && "head_->aligned_blocks_count_cache_ of siso_ring_buffer should be cache line size aligned");
-        assert((uintptr_t)&head_->wt_reading_cursor_cache_ % CACHE_LINE_SIZE == 0 && "head_->wt_reading_cursor_cache_ of siso_ring_buffer should be cache line size aligned");
-        assert((uintptr_t)&head_->reading_cursor_ % CACHE_LINE_SIZE == 0 && "head_->reading_cursor_ of siso_ring_buffer should be cache line size aligned");
-        assert((uintptr_t)&head_->writing_cursor_ % CACHE_LINE_SIZE == 0 && "head_->writing_cursor_ of siso_ring_buffer should be cache line size aligned");
-        assert((uintptr_t)aligned_blocks_ % CACHE_LINE_SIZE == 0 && "aligned_blocks_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->aligned_blocks_count_cache_ % BQ_CACHE_LINE_SIZE == 0 && "head_->aligned_blocks_count_cache_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->wt_reading_cursor_cache_ % BQ_CACHE_LINE_SIZE == 0 && "head_->wt_reading_cursor_cache_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->reading_cursor_ % BQ_CACHE_LINE_SIZE == 0 && "head_->reading_cursor_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->writing_cursor_ % BQ_CACHE_LINE_SIZE == 0 && "head_->writing_cursor_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)aligned_blocks_ % BQ_CACHE_LINE_SIZE == 0 && "aligned_blocks_ of siso_ring_buffer should be cache line size aligned");
 #if defined(BQ_LOG_BUFFER_DEBUG)
         (void)padding_;
         total_write_bytes_ = 0;
@@ -349,7 +349,7 @@ namespace bq {
     uint32_t siso_ring_buffer::calculate_min_size_of_memory(uint32_t expected_buffer_size)
     {
         expected_buffer_size = bq::roundup_pow_of_two(expected_buffer_size);
-        return expected_buffer_size + (uint32_t)(sizeof(head) + CACHE_LINE_SIZE);
+        return expected_buffer_size + (uint32_t)(sizeof(head) + BQ_CACHE_LINE_SIZE);
     }
 
     void siso_ring_buffer::init_with_memory_map(void* buffer, size_t buffer_size)

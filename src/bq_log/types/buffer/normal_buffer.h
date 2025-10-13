@@ -26,7 +26,7 @@
 namespace bq {
     class normal_buffer {
     private:
-        static constexpr size_t HEAD_SIZE = CACHE_LINE_SIZE;
+        static constexpr size_t HEAD_SIZE = BQ_CACHE_LINE_SIZE;
         bq::file_handle memory_map_file_;
         bq::memory_map_handle memory_map_handle_;
         uint8_t* buffer_data_;

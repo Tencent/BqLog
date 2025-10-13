@@ -30,7 +30,7 @@
 #include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
-    class alignas(CACHE_LINE_SIZE) log_buffer {
+    class alignas(BQ_CACHE_LINE_SIZE) log_buffer {
     public:
 #if defined(BQ_ANDROID) || defined(BQ_IOS)
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 8;
@@ -64,7 +64,7 @@ namespace bq {
         };
 
 
-        struct alignas(CACHE_LINE_SIZE) log_tls_buffer_info {
+        struct alignas(BQ_CACHE_LINE_SIZE) log_tls_buffer_info {
 #if defined(BQ_JAVA)
             struct java_info{
                 jobjectArray buffer_obj_for_lp_buffer_ = NULL; // miso_ring_buffer shared between low frequency threads;
@@ -87,17 +87,17 @@ namespace bq {
             java_info java_;
 #endif
             // Fields frequently accessed by write(produce) thread.
-            alignas(CACHE_LINE_SIZE) struct {
+            alignas(BQ_CACHE_LINE_SIZE) struct {
                 uint32_t current_write_seq_ = 0;
             } wt_data_;
             // Fields frequently accessed by read(consumer) thread.
-            alignas(CACHE_LINE_SIZE) struct {
+            alignas(BQ_CACHE_LINE_SIZE) struct {
                 uint32_t current_read_seq_ = 0;
             } rt_data_;
 
             ~log_tls_buffer_info();
         };
-        static_assert(sizeof(log_tls_buffer_info) % CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
+        static_assert(sizeof(log_tls_buffer_info) % BQ_CACHE_LINE_SIZE == 0, "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
 
         struct log_tls_info {
 #if !defined(BQ_LOG_BUFFER_DEBUG)
@@ -233,7 +233,7 @@ private:
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
 
-        struct alignas(CACHE_LINE_SIZE) {
+        struct alignas(BQ_CACHE_LINE_SIZE) {
             bq::platform::spin_lock_rw_crazy array_lock_;
             bq::array<bq::unique_ptr<oversize_buffer_obj_def>> buffers_array_;
 #if defined(BQ_JAVA)
@@ -242,7 +242,7 @@ private:
         } temprorary_oversize_buffer_; // used when allocating a large chunk of data that exceeds the size of lp_buffer or hp_buffer.
         bq::platform::atomic<uint64_t> current_oversize_buffer_index_;
 
-        struct alignas(CACHE_LINE_SIZE) {
+        struct alignas(BQ_CACHE_LINE_SIZE) {
             struct {
                 group_list::iterator last_group_; // empty means read from lp_buffer
                 group_list::iterator cur_group_;
@@ -265,7 +265,7 @@ private:
             } mem_optimize_;
         } rt_cache_; // Cache that only access in read(consumer) thread.
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        alignas(CACHE_LINE_SIZE) bq::platform::thread::thread_id empty_thread_id_ = 0;
+        alignas(BQ_CACHE_LINE_SIZE) bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;
 #endif
     };
@@ -282,7 +282,7 @@ private:
         cur_log_buffer_id_ = buffer->id_;
         auto iter = log_map_->find(buffer->id_);
         if (iter == log_map_->end()) {
-            iter = log_map_->add(buffer->id_, bq::util::aligned_new<log_tls_buffer_info>(CACHE_LINE_SIZE));
+            iter = log_map_->add(buffer->id_, bq::util::aligned_new<log_tls_buffer_info>(BQ_CACHE_LINE_SIZE));
             iter->value()->destruction_mark_ = buffer->destruction_mark_;
             iter->value()->buffer_ = const_cast<log_buffer*>(buffer);
         }

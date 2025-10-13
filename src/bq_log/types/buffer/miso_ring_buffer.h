@@ -55,10 +55,10 @@
 
 namespace bq {
 
-    class alignas(CACHE_LINE_SIZE) miso_ring_buffer {
+    class alignas(BQ_CACHE_LINE_SIZE) miso_ring_buffer {
     private:
-        static constexpr size_t CACHE_LINE_SIZE_LOG2 = 6;
-        static_assert(CACHE_LINE_SIZE >> CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
+        static constexpr size_t BQ_CACHE_LINE_SIZE_LOG2 = 6;
+        static_assert(BQ_CACHE_LINE_SIZE >> BQ_CACHE_LINE_SIZE_LOG2 == 1, "invalid cache line size information");
         enum class block_status : uint8_t {
             unused, // data section begin from this block is unused, can not be read
             used, // data section begin from this block has already finished writing, and can be read.
@@ -89,7 +89,7 @@ namespace bq {
             chunk_head_def chunk_head;
 
         private:
-            uint8_t data[CACHE_LINE_SIZE];
+            uint8_t data[BQ_CACHE_LINE_SIZE];
         };
 
         // frequently modified by read thread, so don't access it in write thread too often.
@@ -99,20 +99,20 @@ namespace bq {
             uint32_t read_cursor_cache_;
             uint32_t read_cursor_start_cache_;
             uint64_t log_checksum_;
-            char mmap_misc_data_[CACHE_LINE_SIZE - sizeof(read_cursor_cache_) - sizeof(log_checksum_) - sizeof(read_cursor_start_cache_)];
-        } BQ_PACK_END static_assert(sizeof(head) == CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
+            char mmap_misc_data_[BQ_CACHE_LINE_SIZE - sizeof(read_cursor_cache_) - sizeof(log_checksum_) - sizeof(read_cursor_start_cache_)];
+        } BQ_PACK_END static_assert(sizeof(head) == BQ_CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
 
-        static_assert(sizeof(block) == CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
+        static_assert(sizeof(block) == BQ_CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);
         static_assert(sizeof(block::chunk_head) < sizeof(block), "the size of chunk_head should be less than that of block");
 
-        struct alignas(CACHE_LINE_SIZE) cursors_set {
+        struct alignas(BQ_CACHE_LINE_SIZE) cursors_set {
             bq::platform::atomic<uint32_t> write_cursor_;
-            char cache_line_padding0_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
+            char cache_line_padding0_[BQ_CACHE_LINE_SIZE - sizeof(write_cursor_)];
             bq::platform::atomic<uint32_t> read_cursor_;
-            char cache_line_padding1_[CACHE_LINE_SIZE - sizeof(write_cursor_)];
+            char cache_line_padding1_[BQ_CACHE_LINE_SIZE - sizeof(write_cursor_)];
         };
-        static_assert(sizeof(cursors_set) == CACHE_LINE_SIZE * 2, "invalid cursors_set size");
+        static_assert(sizeof(cursors_set) == BQ_CACHE_LINE_SIZE * 2, "invalid cursors_set size");
 
         log_buffer_config config_;
         memory_map_buffer_state mmap_buffer_state_;
@@ -124,7 +124,7 @@ namespace bq {
         bq::file_handle memory_map_file_;
         bq::memory_map_handle memory_map_handle_;
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        alignas(CACHE_LINE_SIZE) bool check_thread_ = true;
+        alignas(BQ_CACHE_LINE_SIZE) bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;
         bq::platform::atomic<uint32_t> result_code_statistics_[(int32_t)enum_buffer_result_code::result_code_count];

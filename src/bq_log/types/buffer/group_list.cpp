@@ -29,7 +29,7 @@ namespace bq {
         , free_(max_blocks_count, group_data_addr, group_data_size, false)
         , stage_(max_blocks_count, group_data_addr, group_data_size, is_memory_recovery)
     {
-        assert(((uintptr_t)group_data_addr % CACHE_LINE_SIZE) == 0);
+        assert(((uintptr_t)group_data_addr % BQ_CACHE_LINE_SIZE) == 0);
         bq::hash_map<uint8_t*, bool> used_map;
         bq::hash_map<uint8_t*, bool> stage_map;
         if (is_memory_recovery) {
@@ -69,8 +69,8 @@ namespace bq {
 
     size_t group_node::get_group_meta_size(const log_buffer_config& config)
     {
-        static_assert(sizeof(decltype(config.calculate_check_sum())) <= CACHE_LINE_SIZE, "group meta data size overflow");
-        return CACHE_LINE_SIZE;
+        static_assert(sizeof(decltype(config.calculate_check_sum())) <= BQ_CACHE_LINE_SIZE, "group meta data size overflow");
+        return BQ_CACHE_LINE_SIZE;
     }
 
     size_t group_node::get_group_data_size(const log_buffer_config& config, uint16_t max_block_count_per_group)
@@ -119,7 +119,7 @@ namespace bq {
             return create_memory_map_result::failed;
         }
 
-        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (CACHE_LINE_SIZE - 1)) != 0) {
+        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (BQ_CACHE_LINE_SIZE - 1)) != 0) {
             bq::util::log_device_console(log_level::warning, "group node memory map file \"%s\" memory address is not aligned, use memory instead.", memory_map_file_.abs_file_path().c_str());
             bq::memory_map::release_memory_map(memory_map_handle_);
             return create_memory_map_result::failed;
@@ -163,11 +163,11 @@ namespace bq {
             memset(memory_map_handle_.get_mapped_data(), 0, memory_map_handle_.get_mapped_size());
             node_data_ = static_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
         } else {
-            node_data_ = (uint8_t*)malloc(desired_size + CACHE_LINE_SIZE);
+            node_data_ = (uint8_t*)malloc(desired_size + BQ_CACHE_LINE_SIZE);
             assert(node_data_ && "not enough memory, alloc memory failed");
         }
-        uintptr_t node_head_addr_value = (uintptr_t)node_data_ + (uintptr_t)(CACHE_LINE_SIZE - 1);
-        node_head_addr_value -= (node_head_addr_value % CACHE_LINE_SIZE);
+        uintptr_t node_head_addr_value = (uintptr_t)node_data_ + (uintptr_t)(BQ_CACHE_LINE_SIZE - 1);
+        node_head_addr_value -= (node_head_addr_value % BQ_CACHE_LINE_SIZE);
         auto node_head_addr = (uint8_t*)node_head_addr_value;
         new (node_head_addr, bq::enum_new_dummy::dummy) group_data_head(max_block_count_per_group, node_head_addr + sizeof(group_data_head), desired_size - sizeof(group_data_head), config.need_recovery);
         head_ptr_ = (group_data_head*)node_head_addr;
@@ -253,7 +253,7 @@ namespace bq {
             if (u64_value > current_group_index_.load(bq::platform::memory_order::relaxed)) {
                 current_group_index_.store(u64_value, bq::platform::memory_order::seq_cst);
             }
-            auto* new_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, u64_value);
+            auto* new_node = bq::util::aligned_new<group_node>(BQ_CACHE_LINE_SIZE, this, max_block_count_per_group_, u64_value);
             new_node->get_next_ptr().node_ = head_.node_;
             head_.node_ = new_node;
         }
@@ -302,7 +302,7 @@ namespace bq {
             if (!result) {
                 src_node = pool_.pop();
                 if (!src_node) {
-                    src_node = bq::util::aligned_new<group_node>(CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1, bq::platform::memory_order::relaxed));
+                    src_node = bq::util::aligned_new<group_node>(BQ_CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1, bq::platform::memory_order::relaxed));
                 }
                 result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;

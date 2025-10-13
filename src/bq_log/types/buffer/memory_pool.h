@@ -30,7 +30,7 @@ namespace bq {
     class memory_pool_obj_base;
 
     template <typename T>
-    class alignas(CACHE_LINE_SIZE) memory_pool_obj_base<T, true> {
+    class alignas(BQ_CACHE_LINE_SIZE) memory_pool_obj_base<T, true> {
     public:
         static constexpr bool is_aligned = true;
 
@@ -38,10 +38,10 @@ namespace bq {
         friend memory_pool<T>;
         T* memory_pool_next_;
         T* memory_pool_prev_;
-        char memory_pool_padding_[CACHE_LINE_SIZE - 2 * sizeof(T*)];
+        char memory_pool_padding_[BQ_CACHE_LINE_SIZE - 2 * sizeof(T*)];
         // Note: No constructor to initialize pointers, managed solely by memory_pool for performance
     };
-    static_assert(sizeof(memory_pool_obj_base<char, true>) == CACHE_LINE_SIZE, "invalid memory_pool_obj_base struct size");
+    static_assert(sizeof(memory_pool_obj_base<char, true>) == BQ_CACHE_LINE_SIZE, "invalid memory_pool_obj_base struct size");
     static_assert(bq::is_pod<memory_pool_obj_base<char, true>>::value, "invalid memory_pool_obj_base struct type");
 
     template <typename T>

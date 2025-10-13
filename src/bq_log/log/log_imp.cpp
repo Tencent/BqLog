@@ -166,7 +166,7 @@ namespace bq {
                     }
                 }
             }
-            buffer_ = bq::util::aligned_new<bq::log_buffer>(CACHE_LINE_SIZE, buffer_config);
+            buffer_ = bq::util::aligned_new<bq::log_buffer>(BQ_CACHE_LINE_SIZE, buffer_config);
         }
         worker_.init(thread_mode_, this);
         if (thread_mode_ == log_thread_mode::independent) {

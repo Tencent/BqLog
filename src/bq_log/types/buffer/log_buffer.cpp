@@ -118,7 +118,7 @@ namespace bq {
     {
         static bq::platform::atomic<uint64_t> id_generator(0);
         id_ = id_generator.add_fetch_relaxed(1);
-        const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
+        const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
         if (config.need_recovery) {
             rt_cache_.current_reading_.version_ = static_cast<uint16_t>(version_ - MAX_RECOVERY_VERSION_RANGE);
             prepare_and_fix_recovery_data();
@@ -130,8 +130,8 @@ namespace bq {
 
         block_node_head::alignment_assert();
 
-        assert((BQ_POD_RUNTIME_OFFSET_OF(log_tls_buffer_info, wt_data_) % CACHE_LINE_SIZE == 0) && "log_tls_buffer_info current_write_seq_ must be 64 bytes aligned");
-        assert((BQ_POD_RUNTIME_OFFSET_OF(log_tls_buffer_info, rt_data_) % CACHE_LINE_SIZE == 0) && "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
+        assert((BQ_POD_RUNTIME_OFFSET_OF(log_tls_buffer_info, wt_data_) % BQ_CACHE_LINE_SIZE == 0) && "log_tls_buffer_info current_write_seq_ must be 64 bytes aligned");
+        assert((BQ_POD_RUNTIME_OFFSET_OF(log_tls_buffer_info, rt_data_) % BQ_CACHE_LINE_SIZE == 0) && "log_tls_buffer_info current_read_seq_ must be 64 bytes aligned");
     }
 
     log_buffer::~log_buffer()
@@ -1089,7 +1089,7 @@ namespace bq {
                     continue;
                 }
                 size_t file_size = bq::file_manager::get_file_size(full_path);
-                uint32_t default_buffer_size = static_cast<uint32_t>(CACHE_LINE_SIZE);
+                uint32_t default_buffer_size = static_cast<uint32_t>(BQ_CACHE_LINE_SIZE);
                 while (default_buffer_size < UINT32_MAX) {
                     uint32_t map_size = normal_buffer::calculate_size_of_memory(default_buffer_size);
                     size_t desired_file_size = bq::memory_map::get_min_size_of_memory_map_file(0, map_size);
