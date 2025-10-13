@@ -154,7 +154,7 @@ namespace bq {
                         }
                         buffers[i] = (uint8_t*)mmap_handles[i].get_mapped_data();
                     } else {
-                        buffers[i] = (uint8_t*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, buffer_size);
+                        buffers[i] = (uint8_t*)bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, buffer_size);
                     }
                     ring_buffers[i] = new bq::siso_ring_buffer(buffers[i], buffer_size, with_mmap);
                     siso_write_task write_task(chunk_count_per_task, ring_buffers[i]);
@@ -202,8 +202,8 @@ namespace bq {
             void do_traverse_test(test_result& result)
             {
                 auto buffer_size = siso_ring_buffer::calculate_min_size_of_memory(64 * 1024);
-                uint8_t* buffer_data1 = (uint8_t*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, buffer_size);
-                uint8_t* buffer_data2 = (uint8_t*)bq::platform::aligned_alloc(CACHE_LINE_SIZE, buffer_size);
+                uint8_t* buffer_data1 = (uint8_t*)bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, buffer_size);
+                uint8_t* buffer_data2 = (uint8_t*)bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, buffer_size);
                 bq::siso_ring_buffer ring_buffer1(buffer_data1, buffer_size, false);
                 bq::siso_ring_buffer ring_buffer2(buffer_data2, buffer_size, false);
                 bq::array<uint32_t> data_src;

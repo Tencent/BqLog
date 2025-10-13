@@ -283,8 +283,8 @@ namespace bq {
                     bq::memory_pool<memory_pool_test_obj_not_aligned> pool_not_aligned_form, pool_not_aligned_to;
 
                     for (int32_t i = 0; i < OBJ_COUNT; ++i) {
-                        pool_aligned_form.push(bq::util::aligned_new<memory_pool_test_obj_aligned>(CACHE_LINE_SIZE, i));
-                        pool_aligned_to.push(util::aligned_new<memory_pool_test_obj_aligned>(CACHE_LINE_SIZE, i));
+                        pool_aligned_form.push(bq::util::aligned_new<memory_pool_test_obj_aligned>(BQ_CACHE_LINE_SIZE, i));
+                        pool_aligned_to.push(util::aligned_new<memory_pool_test_obj_aligned>(BQ_CACHE_LINE_SIZE, i));
                         pool_not_aligned_form.push(new memory_pool_test_obj_not_aligned(i));
                         pool_not_aligned_to.push(new memory_pool_test_obj_not_aligned(i));
                     }
@@ -349,11 +349,11 @@ namespace bq {
             {
                 config.default_buffer_size = bq::roundup_pow_of_two(config.default_buffer_size);
                 constexpr size_t BLOCK_COUNT = 16;
-                const size_t size = sizeof(block_list) * 2 + config.default_buffer_size * BLOCK_COUNT + CACHE_LINE_SIZE;
+                const size_t size = sizeof(block_list) * 2 + config.default_buffer_size * BLOCK_COUNT + BQ_CACHE_LINE_SIZE;
                 bq::array<uint8_t> buffer;
                 buffer.fill_uninitialized(size);
                 const uintptr_t base_addr = reinterpret_cast<uintptr_t>(static_cast<uint8_t*>(buffer.begin()));
-                uintptr_t aligned_addr = (base_addr + (uintptr_t)(CACHE_LINE_SIZE - 1)) & ~(static_cast<uintptr_t>(CACHE_LINE_SIZE) - 1);
+                uintptr_t aligned_addr = (base_addr + (uintptr_t)(BQ_CACHE_LINE_SIZE - 1)) & ~(static_cast<uintptr_t>(BQ_CACHE_LINE_SIZE) - 1);
                 const uintptr_t buffer_addr = aligned_addr + 2 * sizeof(block_list);
                 new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
                 block_list& list_from = *reinterpret_cast<block_list*>(aligned_addr);
