@@ -96,61 +96,73 @@ namespace bq {
 
         const bool_type& as_bool(bool skip_check_type = false) const
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::boolean_type);
             return *(const bool_type*)(data_.get());
         }
         bool_type& as_bool(bool skip_check_type = false)
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::boolean_type);
             return *(bool_type*)(data_.get());
         }
         const decimal_type& as_decimal(bool skip_check_type = false) const
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::decimal_type);
             return *(const decimal_type*)(data_.get());
         }
         decimal_type& as_decimal(bool skip_check_type = false)
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::decimal_type);
             return *(decimal_type*)(data_.get());
         }
         const int64_t& as_integral(bool skip_check_type = false) const
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::integral_type);
             return *(const int64_t*)(data_.get());
         }
         int64_t& as_integral(bool skip_check_type = false)
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::integral_type);
             return *(int64_t*)(data_.get());
         }
         const string_type& as_string(bool skip_check_type = false) const
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::string_type);
             return *(const string_type*)(data_.get());
         }
         string_type& as_string(bool skip_check_type = false)
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::string_type);
             return *(string_type*)(data_.get());
         }
         const array_type& as_array(bool skip_check_type = false) const
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::array_type);
             return *(const array_type*)(data_.get());
         }
         array_type& as_array(bool skip_check_type = false)
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::array_type);
             return *(array_type*)(data_.get());
         }
         const object_type& as_object(bool skip_check_type = false) const
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::object_type);
             return *(const object_type*)(data_.get());
         }
         object_type& as_object(bool skip_check_type = false)
         {
+            (void)skip_check_type;  //avoid unused warning in release mode
             assert(skip_check_type || type_ == enum_property_value_type::object_type);
             return *(object_type*)(data_.get());
         }
