@@ -11,7 +11,7 @@
  */
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 
-#include "bq_log/global/vars.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/decoder/appender_decoder_raw.h"
 #include "bq_log/log/decoder/appender_decoder_compressed.h"
 #include "bq_log/log/appender/appender_file_binary.h"

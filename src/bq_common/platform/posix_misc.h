@@ -10,11 +10,10 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+
+#include "bq_common/bq_common_public_include.h"
 #ifdef BQ_POSIX
 #include <sys/stat.h>
-#include "bq_common/platform/macros.h"
-#include "bq_common/types/array.h"
-#include "bq_common/types/string.h"
 
 namespace bq {
     namespace platform {

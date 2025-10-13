@@ -10,9 +10,17 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+/*!
+ * \file thread_win64.h
+ *
+ * \author pippocao
+ * \date 2022/09/15
+ *
+ * simple substitute of std::thread.
+ * we exclude STL and libc++ to reduce the final executable and library file size
+ *
+ * inherent thread class and implement the virtual callback functions.
+ * call start to begin thread.
+ */
 
-#include "bq_common/bq_common_public_include.h"
-#ifdef BQ_LINUX
-#include <unistd.h>
-#include <pwd.h>
-#endif
+#include "bq_common/platform/thread/thread.h"

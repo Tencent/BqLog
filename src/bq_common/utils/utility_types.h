@@ -17,10 +17,9 @@
  * \date 2022/07/14
  *
  */
-#include <stdint.h>
-#include "bq_common/misc/assert.h"
-#include "bq_common/types/type_traits.h"
-#include "bq_common/types/type_tools.h"
+
+#include "bq_common/bq_common_public_include.h"
+#include "bq_common/platform/atomic/atomic.h"
 namespace bq {
 
     static constexpr size_t CACHE_LINE_SIZE = 64;

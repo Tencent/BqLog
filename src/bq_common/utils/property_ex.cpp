@@ -10,11 +10,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 // author: eggdai
-#include <stdio.h>
-#include <inttypes.h>
-#include <string.h>
+#include "bq_common/utils/property_ex.h"
 #include <math.h>
-#include <errno.h>
 #include "bq_common/bq_common.h"
 
 namespace bq {

@@ -20,22 +20,18 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
 #include <pthread.h>
-#include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
 #include <cxxabi.h>
 #include <execinfo.h>
+#include "bq_common/bq_common.h"
 namespace bq {
     BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);
     BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_);

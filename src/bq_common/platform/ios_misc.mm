@@ -9,7 +9,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/ios_misc.h"
 #if defined(BQ_IOS)
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
+#include "bq_common/bq_common.h"
 namespace bq {
     BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);
     BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_);

@@ -20,7 +20,8 @@
  *
  */
 
-#include "bq_common/bq_common.h"
+#include "bq_common/bq_common_public_include.h"
+#include "bq_common/platform/platform_misc.h"
 
 namespace bq {
     template <typename T, size_t Alignment>

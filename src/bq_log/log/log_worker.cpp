@@ -9,10 +9,10 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "bq_log/log/log_worker.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/global/vars.h"
 #include "bq_log/log/log_manager.h"
-#include "bq_log/log/log_worker.h"
 #ifdef BQ_POSIX
 #ifndef BQ_PS
 #include <signal.h>

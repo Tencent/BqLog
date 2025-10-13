@@ -9,12 +9,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "bq_log/log/decoder/appender_decoder_helper.h"
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
 #include "bq_log/log/appender/appender_file_raw.h"
 
-#include "appender_decoder_helper.h"
 
 bool bq::appender_decoder_helper::decode(const bq::string& in_file_path, const bq::string& out_file_path, const bq::string& priv_key)
 {

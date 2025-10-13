@@ -9,13 +9,11 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/thread/condition_variable_posix.h"
 #ifdef BQ_POSIX
 #include <pthread.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <inttypes.h>
 #include <sys/time.h>
+#include "bq_common/bq_common.h"
 
 namespace bq {
     namespace platform {

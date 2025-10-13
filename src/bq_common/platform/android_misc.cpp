@@ -9,10 +9,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
 
+#include "bq_common/platform/android_misc.h"
 #if defined(BQ_ANDROID)
-
 #include <pthread.h>
 #include <sys/prctl.h>
 #include <jni.h>
@@ -23,6 +22,7 @@
 #include <unwind.h>
 #include <dlfcn.h>
 #include <string.h>
+#include "bq_common/bq_common.h"
 
 namespace bq {
     BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);

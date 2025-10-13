@@ -20,11 +20,10 @@
  *
  *
  */
-#include <stdint.h>
-#include <inttypes.h>
-#include <stdio.h>
+#include "bq_common/bq_common_public_include.h"
+#include "bq_common/platform/atomic/atomic.h"
+#include "bq_common/platform/thread/thread.h"
 #include "bq_common/utils/utility_types.h"
-#include "bq_common/bq_common.h"
 namespace bq {
     namespace platform {
         /*

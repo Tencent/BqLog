@@ -9,13 +9,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <stddef.h>
-#include "bq_log/bq_log.h"
-#include "bq_log/global/vars.h"
+#include "bq_log/api/bq_log_jni_api.h"
 
 #if defined(BQ_JAVA)
 #include "bq_common/bq_common.h"
-#include "bq_log/api/bq_impl_log_invoker.h"
+#include "bq_log/bq_log.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/types/buffer/log_buffer.h"
 #ifdef __cplusplus

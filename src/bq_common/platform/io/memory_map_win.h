@@ -1,4 +1,5 @@
-﻿/*
+﻿#pragma once
+/*
  * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
@@ -9,12 +10,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-//
-//  vars.cpp
-//  Created by Yu Cao on 2025/4/11.
-//
-#include "bq_common/bq_common.h"
-
-namespace bq {
-    static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();
-}
+/*!
+ * \file memory_map_win.h
+ * simple wrapper class of mmap
+ * \author pippocao
+ * \date 2023
+ *
+ *
+ */
+#include "bq_common/platform/io/memory_map.h"

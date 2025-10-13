@@ -12,8 +12,6 @@
  * RSA raw implementation, compatible with ssh-keygen output.
  */
 
-#include <string.h>
-#include <stdint.h>
 #include "bq_common/encryption/rsa.h"
 
 namespace bq {

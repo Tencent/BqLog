@@ -10,9 +10,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-
-#include "bq_common/bq_common_public_include.h"
-#ifdef BQ_LINUX
-#include <unistd.h>
-#include <pwd.h>
-#endif
+/*!
+ * \file memory_map_posix.h
+ * simple wrapper class of mmap
+ * \author pippocao
+ * \date 2023
+ *
+ *
+ */
+#include "bq_common/platform/io/memory_map.h"

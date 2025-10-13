@@ -86,7 +86,7 @@
  *
  */
 
-#include "bq_common/bq_common.h"
+#include "bq_common/bq_common_public_include.h"
 
 namespace bq {
     struct proxy_base {
@@ -415,7 +415,7 @@ namespace bq {
         }                                                                                                                         \
     };
 
-#if BQ_CPP17
+#ifdef BQ_CPP17
 #define BQ_FACADE_DEC(FACADE_NAME, FUNCTION_NAME) \
     struct FACADE_NAME {                          \
         __BQ_FACADE_CPP11_PART(FUNCTION_NAME)     \

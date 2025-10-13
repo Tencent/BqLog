@@ -13,11 +13,8 @@
 //  vars.cpp
 //  Created by Yu Cao on 2025/4/11.
 //
-#include <stdlib.h>
-#include <ctype.h>
-#include <time.h>
-#include "bq_log/global/vars.h"
-
+#include "bq_log/global/log_vars.h"
+#include "bq_common/bq_common.h"
 namespace bq {
     log_global_vars* log_global_var_default_initer_ = &log_global_vars::get();
 

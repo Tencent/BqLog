@@ -20,7 +20,6 @@
  *
  */
 
-#include <string.h>
 #include "bq_common/encryption/aes.h"
 
 namespace bq {

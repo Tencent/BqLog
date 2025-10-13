@@ -17,8 +17,8 @@
 //  used to avoid the Static Initialization Order Fiasco.
 //  In theory, all global variables with constructors or destructor
 //  should be managed here.
-#include "bq_common/bq_common.h"
 
+#include "bq_common/bq_common.h"
 namespace bq {
     template <typename P>
     struct _global_vars_priority_var_initializer {
@@ -168,6 +168,9 @@ namespace bq {
 
         common_global_vars()
         {
+#if defined(BQ_ANDROID)
+            platform::jni_onload_register register_(&bq::platform:::android_jni_onload);
+#endif
         }
 
     protected:

@@ -9,19 +9,15 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/win64_misc.h"
 #if defined(BQ_WIN)
 #include <windows.h>
 #include <sys/stat.h>
-#include <errno.h>
 #include <direct.h>
-#include <stdio.h>
 #include <fileapi.h>
-#include <stdint.h>
-#include <string.h>
 #include <DbgHelp.h>
 #include <wchar.h>
-#include <inttypes.h>
+#include "bq_common/bq_common.h"
 
 #ifdef BQ_VISUAL_STUDIO
 #pragma comment(lib, "dbghelp.lib")

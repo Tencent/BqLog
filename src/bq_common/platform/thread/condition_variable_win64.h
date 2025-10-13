@@ -10,9 +10,14 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-
-#include "bq_common/bq_common_public_include.h"
-#ifdef BQ_LINUX
-#include <unistd.h>
-#include <pwd.h>
-#endif
+/*!
+ * \file condition_variable_win64.h
+ *
+ * \author pippocao
+ * \date 2022/09/16
+ *
+ * simple substitute of c++ standard condition_variable.
+ * we exclude STL and libc++ to reduce the final executable and library file size
+ *
+ */
+#include "bq_common/platform/thread/condition_variable.h"

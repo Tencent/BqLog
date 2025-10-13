@@ -19,9 +19,8 @@
  * simple atomic template class as substitute of std::atomic.
  * we exclude STL and libc++ to reduce the final executable and library file size
  */
-#include "bq_common/misc/assert.h"
-#include "bq_common/platform/macros.h"
-#include "bq_common/types/type_traits.h"
+
+#include "bq_common/bq_common_public_include.h"
 
 namespace bq {
     namespace platform {

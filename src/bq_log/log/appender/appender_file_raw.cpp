@@ -9,8 +9,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <assert.h>
-#include "appender_file_raw.h"
+#include "bq_log/log/appender/appender_file_raw.h"
 
 namespace bq {
     void appender_file_raw::log_impl(const log_entry_handle& handle)

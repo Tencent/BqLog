@@ -17,9 +17,7 @@
 //  used to avoid the Static Initialization Order Fiasco.
 //  In theory, all global variables with constructors or destructors
 //  should be managed here.
-#include <string.h>
-#include <inttypes.h>
-#include "bq_common/bq_common.h"
+#include "bq_common/bq_common_public_include.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"

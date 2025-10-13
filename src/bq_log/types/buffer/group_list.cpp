@@ -1,4 +1,25 @@
-﻿#include <stdlib.h>
+﻿/*
+* Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+/*!
+ * \class bq::group_list
+ *
+ * A singly linked list, where each item is referred to as a "Group,"
+ * containing a pool of group_list::group::group_node siso_buffer instances. Each siso_buffer serves a single thread
+ * , aimed at reducing inter-thread data storms caused by the MESI protocol, thereby enhancing performance.
+ *
+ * \author pippocao
+ * \date 2024/12/17
+ */
+
 #include "bq_log/types/buffer/group_list.h"
 
 namespace bq {

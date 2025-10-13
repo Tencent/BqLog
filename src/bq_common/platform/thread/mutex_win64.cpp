@@ -9,11 +9,11 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/thread/mutex_win64.h"
 #ifdef BQ_WIN
 #include <windows.h>
-#include <errno.h>
-#include <stdlib.h>
+#include "bq_common/bq_common.h"
+
 namespace bq {
     namespace platform {
         struct mutex_platform_def {

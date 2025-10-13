@@ -15,6 +15,7 @@
  * \author pippocao
  * \date 2024/12/06
  */
+
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
 

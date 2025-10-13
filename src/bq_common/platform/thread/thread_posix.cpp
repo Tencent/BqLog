@@ -9,7 +9,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
+#include "bq_common/platform/thread/thread_posix.h"
 #ifdef BQ_POSIX
 #include <pthread.h>
 #include <signal.h>
@@ -29,15 +29,14 @@
 
 #include <sched.h>
 #include <sys/select.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <inttypes.h>
 #if !defined(BQ_APPLE) && !defined(BQ_PS) && !defined(BQ_UNIX)
 #include <sys/prctl.h>
 #endif
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif
+#include "bq_common/bq_common.h"
+
 namespace bq {
     namespace platform {
         struct thread_platform_def {

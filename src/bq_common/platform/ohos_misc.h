@@ -10,15 +10,10 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "bq_common/bq_common_public_include.h"
 #if defined(BQ_OHOS)
 #include <hitrace/trace.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include "napi/native_api.h" 
-#include "bq_common/platform/macros.h"
-#include "bq_common/types/array.h"
-#include "bq_common/types/string.h"
+#include "napi/native_api.h"
 
 // On OHOS (and most non-Windows platforms), calling convention macro is not needed.
 // Node's node_api.h defines NAPI_CDECL (notably for Windows). If it's missing, make it empty.

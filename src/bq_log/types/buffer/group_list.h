@@ -20,7 +20,6 @@
  * \author pippocao
  * \date 2024/12/17
  */
-#include <stddef.h>
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif
