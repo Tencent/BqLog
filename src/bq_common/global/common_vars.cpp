@@ -21,7 +21,7 @@ namespace bq {
     common_global_vars::common_global_vars()
     {
 #if defined(BQ_ANDROID)
-        platform::jni_onload_register register_(&bq::platform:::android_jni_onload);
+        platform::jni_onload_register register_(&bq::platform::android_jni_onload);
 #endif
     }
 
