@@ -11,7 +11,6 @@
  */
 #include "bq_common/platform/thread/mutex_win64.h"
 #ifdef BQ_WIN
-#include <windows.h>
 #include "bq_common/bq_common.h"
 
 namespace bq {

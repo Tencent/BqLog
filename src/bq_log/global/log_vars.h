@@ -50,9 +50,9 @@ namespace bq {
         jmethodID mid_native_console_callback_ = nullptr;
         jmethodID mid_native_console_buffer_fetch_and_remove_callback_ = nullptr;
 #endif
-        log_manager* log_manager_inst_ = new log_manager();
         appender_console::console_static_misc* console_static_misc_ = new appender_console::console_static_misc();
         appender_decoder_manager* appender_decoder_manager_inst_ = new appender_decoder_manager();
+        log_manager* log_manager_inst_ = new log_manager();
 
     private:
 #if defined(BQ_JAVA)
@@ -63,12 +63,12 @@ namespace bq {
     protected:
         virtual void partial_destruct() override
         {
+            delete log_manager_inst_;
+            log_manager_inst_ = nullptr;
             delete appender_decoder_manager_inst_;
             appender_decoder_manager_inst_ = nullptr;
             delete console_static_misc_;
             console_static_misc_ = nullptr;
-            delete log_manager_inst_;
-            log_manager_inst_ = nullptr;
         }
 
     public:

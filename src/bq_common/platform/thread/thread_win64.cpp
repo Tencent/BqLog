@@ -11,14 +11,11 @@
  */
 #include "bq_common/platform/thread/thread_win64.h"
 #ifdef BQ_WIN
+#include "bq_common/bq_common.h"
 #include <processthreadsapi.h>
-#include <windows.h>
 #include <stringapiset.h>
 #ifdef BQ_ARM
 #include <intrin.h>
-#endif
-#if defined(BQ_JAVA)
-#include <jni.h>
 #endif
 
 namespace bq {

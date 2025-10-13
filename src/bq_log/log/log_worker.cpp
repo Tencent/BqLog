@@ -11,7 +11,7 @@
  */
 #include "bq_log/log/log_worker.h"
 #include "bq_log/bq_log.h"
-#include "bq_log/global/vars.h"
+#include "bq_log/global//log_vars.h"
 #include "bq_log/log/log_manager.h"
 #ifdef BQ_POSIX
 #ifndef BQ_PS
