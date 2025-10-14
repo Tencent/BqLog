@@ -10,8 +10,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "bq_common/bq_common.h"
 #include "bq_log/utils/time_zone.h"
+#include "bq_common/bq_common.h"
 #ifdef BQ_WIN
 #include <timezoneapi.h>
 #endif
