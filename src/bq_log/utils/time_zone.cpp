@@ -134,12 +134,12 @@ namespace bq {
                 time_zone_str_ = "UTC0";
             }
             else if (gmt_offset_minutes_ == 0) {
-                char buffer[16];
+                char buffer[32];
                 snprintf(buffer, sizeof(buffer), "UTC%+" PRId32, gmt_offset_hours_);
                 time_zone_str_ = buffer;
             }
             else {
-                char buffer[16];
+                char buffer[64];
                 snprintf(buffer, sizeof(buffer), "UTC%+d:%02" PRId32, gmt_offset_hours_, abs(gmt_offset_minutes_));
                 time_zone_str_ = buffer;
             }
