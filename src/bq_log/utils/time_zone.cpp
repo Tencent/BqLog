@@ -76,7 +76,7 @@ namespace bq {
             }
             char* end_ptr = nullptr;
             char* start_ptr = (char*)upper_time_zone.begin() + parse_start;
-            int32_t hour = strtol(start_ptr, &end_ptr, 10);
+            int32_t hour = static_cast<int32_t>(strtol(start_ptr, &end_ptr, 10));
             if (end_ptr == start_ptr) {
                 bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, use local time as default.", time_zone_str.c_str());
                 break;
@@ -88,7 +88,7 @@ namespace bq {
             int32_t minute = 0;
             if (*end_ptr == ':') {
                 start_ptr = end_ptr + 1;
-                minute = strtol(start_ptr, &end_ptr, 10);
+                minute = static_cast<int32_t>(strtol(start_ptr, &end_ptr, 10));
                 if (end_ptr == start_ptr) {
                     bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, use local time as default.", time_zone_str.c_str());
                     break;
@@ -116,8 +116,8 @@ namespace bq {
         if (use_local_time_) {
             time_zone_str_ = get_local_timezone_name();
             time_t now = time(NULL);
-            struct tm lt = { 0 };
-            struct tm gt = { 0 };
+            struct tm lt;
+            struct tm gt;
             if (!BQ_LOCALTIME(&lt, &now)) {
                 time_zone_diff_to_gmt_ms_ = 0;
             }
@@ -159,7 +159,7 @@ namespace bq {
 
     bq::string time_zone::get_local_timezone_name() {
         time_t now = time(NULL);
-        struct tm lt = {};
+        struct tm lt;
         if (!BQ_LOCALTIME(&lt, &now)) {
             bq::util::log_device_console(bq::log_level::warning, "failed to fetch localtime.");
             return "localtime";
