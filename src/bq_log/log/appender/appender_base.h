@@ -13,6 +13,7 @@
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/layout.h"
 #include "bq_log/log/log_level_bitmap.h"
+#include "bq_log/utils/time_zone.h"
 
 namespace bq {
     class log_imp;
@@ -64,7 +65,7 @@ namespace bq {
         virtual void log_impl(const log_entry_handle& handle) = 0;
 
     protected:
-        bool is_gmt_time_;
+        time_zone time_zone_;
         const log_imp* parent_log_;
         layout* layout_ptr_;
         appender_type type_;

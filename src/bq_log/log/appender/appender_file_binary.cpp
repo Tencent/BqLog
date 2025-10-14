@@ -92,6 +92,14 @@ namespace bq {
         }
         appender_payload_metadata payload_metadata;
         memcpy(&payload_metadata, read_handle.data(), sizeof(payload_metadata));
+        if (payload_metadata.use_local_time != time_zone_.is_use_local_time()
+            || payload_metadata.gmt_offset_hours != time_zone_.get_gmt_offset_hours()
+            || payload_metadata.gmt_offset_minutes != time_zone_.get_gmt_offset_minutes()
+            || payload_metadata.time_zone_diff_to_gmt_ms != time_zone_.get_time_zone_diff_to_gmt_ms()
+            || payload_metadata.time_zone_str != time_zone_.get_time_zone_str()) {
+            context.log_parse_fail_reason("timezone miss match");
+            return false;
+        }
         if (payload_metadata.category_count != parent_log_->get_categories_count()) {
             context.log_parse_fail_reason("category count miss match");
             return false;
@@ -202,10 +210,14 @@ namespace bq {
         }
 
         appender_payload_metadata payload_matadata;
-        payload_matadata.is_gmt = is_gmt_time_;
         payload_matadata.magic_number[0] = 2;
         payload_matadata.magic_number[1] = 2;
         payload_matadata.magic_number[2] = 7;
+        payload_matadata.use_local_time = time_zone_.is_use_local_time();
+        payload_matadata.gmt_offset_hours = time_zone_.get_gmt_offset_hours();
+        payload_matadata.gmt_offset_minutes = time_zone_.get_gmt_offset_minutes();
+        payload_matadata.time_zone_diff_to_gmt_ms = time_zone_.get_time_zone_diff_to_gmt_ms();
+        snprintf(payload_matadata.time_zone_str, sizeof(payload_matadata.time_zone_str), "%s", time_zone_.get_time_zone_str().c_str());
         payload_matadata.category_count = parent_log_->get_categories_count();
         handle = write_with_cache_alloc(sizeof(payload_matadata));
         memcpy(handle.data(), &payload_matadata, handle.allcoated_len());

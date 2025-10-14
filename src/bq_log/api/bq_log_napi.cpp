@@ -151,7 +151,20 @@ namespace bq {
         return out;
     }
 
-    static inline char* _dup_cstr_from_napi(napi_env env, napi_value v) {
+    static bq::string _dup_string_from_napi(napi_env env, napi_value v) {
+        size_t len = 0;
+        napi_get_value_string_utf8(env, v, NULL, 0, &len);
+        bq::string out;
+        if (len > 0) {
+            out.fill_uninitialized(len);
+            size_t got = 0;
+            napi_get_value_string_utf8(env, v, (char*)out.begin(), len + 1, &got);
+            assert(got == len);
+        }
+        return out;
+    }
+
+    static char* _dup_cstr_from_napi(napi_env env, napi_value v) {
         size_t len = 0;
         napi_get_value_string_utf8(env, v, NULL, 0, &len);
         char* out = (char*)malloc(len + 1);
@@ -162,7 +175,7 @@ namespace bq {
         return out;
     }
 
-    static inline void _free_cstr(char* p) {
+    static void _free_cstr(char* p) {
         if (p) free(p);
     }
 }
@@ -266,8 +279,8 @@ BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
         return NULL;
     }
 
-    char* log_name = bq::_dup_cstr_from_napi(env, argv[0]);
-    char* log_config = bq::_dup_cstr_from_napi(env, argv[1]);
+    auto log_name = bq::_dup_string_from_napi(env, argv[0]);
+    auto log_config = bq::_dup_string_from_napi(env, argv[1]);
     uint32_t categories_count = 0;
     const char** category_names = NULL;
 
@@ -289,7 +302,7 @@ BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
         }
     }
 
-    uint64_t log_id = bq::api::__api_create_log(log_name ? log_name : "", log_config ? log_config : "", (uint32_t)categories_count, (const char**)category_names);
+    uint64_t log_id = bq::api::__api_create_log(log_name.c_str(), log_config.c_str(), (uint32_t)categories_count, (const char**)category_names);
 
     // free temp strings
     if (category_names) {
@@ -298,8 +311,6 @@ BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
         }
         free((void*)category_names);
     }
-    bq::_free_cstr(log_name);
-    bq::_free_cstr(log_config);
 
     return bq::_make_u64(env, log_id);
 }
@@ -311,11 +322,9 @@ BQ_NAPI_DEF(log_reset_config, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "log_name and config required"); return NULL; }
 
-    char* log_name = bq::_dup_cstr_from_napi(env, argv[0]);
-    char* log_config = bq::_dup_cstr_from_napi(env, argv[1]);
-    bq::api::__api_log_reset_config(log_name ? log_name : "", log_config ? log_config : "");
-    bq::_free_cstr(log_name);
-    bq::_free_cstr(log_config);
+    auto log_name = bq::_dup_string_from_napi(env, argv[0]);
+    auto log_config = bq::_dup_string_from_napi(env, argv[1]);
+    bq::api::__api_log_reset_config(log_name.c_str(), log_config.c_str());
     return bq::_make_undefined(env);
 }
 
@@ -724,11 +733,10 @@ BQ_NAPI_DEF(set_appenders_enable, napi_env, env, napi_callback_info, info)
     if (argc < 3) { napi_throw_type_error(env, NULL, "id, appender_name, enable required"); return NULL; }
 
     uint64_t log_id = bq::_get_u64_from_bigint(env, argv[0]);
-    char* appender_name = bq::_dup_cstr_from_napi(env, argv[1]);
+    auto appender_name = bq::_dup_string_from_napi(env, argv[1]);
     bool enable = bq::_get_bool(env, argv[2]);
 
-    bq::api::__api_set_appenders_enable(log_id, appender_name ? appender_name : "", enable);
-    bq::_free_cstr(appender_name);
+    bq::api::__api_set_appenders_enable(log_id, appender_name.c_str(), enable);
     return bq::_make_undefined(env);
 }
 
@@ -851,14 +859,12 @@ BQ_NAPI_DEF(log_decoder_create, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, bq::_make_i32(env, -1), napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "path and priv_key required"); return NULL; }
 
-    char* path = bq::_dup_cstr_from_napi(env, argv[0]);
-    char* priv_key = bq::_dup_cstr_from_napi(env, argv[1]);
+    auto path = bq::_dup_string_from_napi(env, argv[0]);
+    auto priv_key = bq::_dup_string_from_napi(env, argv[1]);
 
     uint32_t handle = 0;
-    bq::appender_decode_result result = bq::api::__api_log_decoder_create(path ? path : "", priv_key ? priv_key : "", &handle);
+    bq::appender_decode_result result = bq::api::__api_log_decoder_create(path.c_str(), priv_key.c_str(), &handle);
 
-    bq::_free_cstr(path);
-    bq::_free_cstr(priv_key);
 
     if (result != bq::appender_decode_result::success) {
         // negative error code in int32
@@ -917,15 +923,11 @@ BQ_NAPI_DEF(log_decode, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 3) { napi_throw_type_error(env, NULL, "in_path, out_path and priv_key required"); return NULL; }
 
-    char* in_path = bq::_dup_cstr_from_napi(env, argv[0]);
-    char* out_path = bq::_dup_cstr_from_napi(env, argv[1]);
-    char* priv_key = bq::_dup_cstr_from_napi(env, argv[2]);
+    auto in_path = bq::_dup_string_from_napi(env, argv[0]);
+    auto out_path = bq::_dup_string_from_napi(env, argv[1]);
+    auto priv_key = bq::_dup_string_from_napi(env, argv[2]);
 
-    bool ok = bq::api::__api_log_decode(in_path ? in_path : "", out_path ? out_path : "", priv_key ? priv_key : "");
-
-    bq::_free_cstr(in_path);
-    bq::_free_cstr(out_path);
-    bq::_free_cstr(priv_key);
+    bool ok = bq::api::__api_log_decode(in_path.c_str(), out_path.c_str(), priv_key.c_str());
 
     return bq::_make_bool(env, ok);
 }
@@ -938,10 +940,10 @@ BQ_NAPI_DEF(take_snapshot_string, napi_env, env, napi_callback_info, info)
     if (argc < 2) { napi_throw_type_error(env, NULL, "log_id and use_gmt_time required"); return NULL; }
 
     uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
-    bool use_gmt_time = bq::_get_bool(env, argv[1]);
+    bq::string time_zone_config_str = bq::_dup_string_from_napi(env, argv[1]);
 
     bq::_api_string_def snapshot_str_def = { NULL, 0 };
-    bq::api::__api_take_snapshot_string(id, use_gmt_time, &snapshot_str_def);
+    bq::api::__api_take_snapshot_string(id, time_zone_config_str.c_str(), &snapshot_str_def);
     napi_value out = bq::_make_str_utf8(env, snapshot_str_def.str);
     bq::api::__api_release_snapshot_string(id, &snapshot_str_def);
     return out;
@@ -990,9 +992,8 @@ BQ_NAPI_DEF(reset_base_dir, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "reset_base_dir invalid parameters count, should be 2"); return NULL; }
     int32_t base_dir_type = bq::_get_i32(env, argv[0]);
-    char* dir = bq::_dup_cstr_from_napi(env, argv[1]);
-    bq::api::__api_reset_base_dir(base_dir_type, dir);
-    bq::_free_cstr(dir);
+    bq::string dir = bq::_dup_string_from_napi(env, argv[1]);
+    bq::api::__api_reset_base_dir(base_dir_type, dir.c_str());
     return bq::_make_undefined(env);
 }
 

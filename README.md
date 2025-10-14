@@ -135,7 +135,7 @@ int main()
             # This appender's output target is the console
             appenders_config.appender_0.type=console           
             # This appender uses local time for timestamps
-            appenders_config.appender_0.time_zone=default local time   
+            appenders_config.appender_0.time_zone=localtime   
             # This appender outputs logs of these 6 levels (no spaces in between)
             appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
         )";
@@ -164,7 +164,7 @@ public class demo_main {
             # This appender's output target is the console
             appenders_config.appender_0.type=console           
             # This appender uses local time for timestamps
-            ppenders_config.appender_0.time_zone=default local time   
+            ppenders_config.appender_0.time_zone=localtime   
             # This appender outputs logs of these 6 levels (no spaces in between)
             appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
         ";
@@ -192,7 +192,7 @@ public class demo_main {
             # This appender's output target is the console
             appenders_config.appender_0.type=console           
             # This appender uses local time for timestamps
-            appenders_config.appender_0.time_zone=default local time   
+            appenders_config.appender_0.time_zone=localtime   
             # This appender outputs logs of these 6 levels (no spaces in between)
             appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
         """;
@@ -565,7 +565,7 @@ Below is a complete example:
 # The first Appender is named appender_0 and its type is ConsoleAppender
 appenders_config.appender_0.type=console
 # The time zone for appender_0 is the system's local time
-appenders_config.appender_0.time_zone=default local time
+appenders_config.appender_0.time_zone=localtime
 # appender_0 will output all 6 levels of logs (note: there should be no spaces between log levels, or it will fail to parse)
 appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal]
 

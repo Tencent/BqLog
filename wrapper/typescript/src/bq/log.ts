@@ -251,13 +251,13 @@ export class log {
     /**
      * Works only when snapshot is configured.
      * It will decode the snapshot buffer to text.
-     * @param use_gmt_time
-     * 			Whether the timestamp of each log is GMT time or local time
+     * @param time_zone_config
+     * 			Use this to specify the time display of log text. such as : "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"
      * @return
      * 			The decoded snapshot buffer
      */
-    public take_snapshot(use_gmt_time: boolean): string {
-        return log_invoker.__api_take_snapshot_string(this.log_id_, use_gmt_time);
+    public take_snapshot(time_zone_config?: string): string {
+        return log_invoker.__api_take_snapshot_string(this.log_id_, time_zone_config);
     }
 
     public declare verbose: (log_format_content: string, ...args: unknown[]) => boolean;

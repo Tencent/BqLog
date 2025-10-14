@@ -201,10 +201,10 @@ namespace bq {
         return ((*merged_log_level_bitmap_ & (1U << (int32_t)level)) != 0) && categories_mask_array_[category_index];
     }
 
-    inline bq::string log::take_snapshot(bool use_gmt_time) const
+    inline bq::string log::take_snapshot(const bq::string& time_zone_config) const
     {
         bq::_api_string_def snapshot_def;
-        bq::api::__api_take_snapshot_string(log_id_, use_gmt_time, &snapshot_def);
+        bq::api::__api_take_snapshot_string(log_id_, time_zone_config.c_str(), &snapshot_def);
         bq::string result;
         result.insert_batch(result.begin(), snapshot_def.str, snapshot_def.len);
         bq::api::__api_release_snapshot_string(log_id_, &snapshot_def);

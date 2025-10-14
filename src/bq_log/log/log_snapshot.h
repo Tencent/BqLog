@@ -33,7 +33,7 @@ namespace bq {
 
         void write_data(const bq::log_entry_handle& log_entry);
 
-        const bq::string& take_snapshot_string(bool use_gmt_time);
+        const bq::string& take_snapshot_string(const bq::string& time_zone_config);
 
         // take_snapshot_string and release_snapshot_string must be called in pair, or the lock will not be released
         void release_snapshot_string();

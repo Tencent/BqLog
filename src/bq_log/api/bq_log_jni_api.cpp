@@ -369,15 +369,17 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv
     return ret;
 }
 
-/*
+ /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_take_snapshot_string
- * Signature: (JZ)Ljava/lang/String;
+ * Signature: (JLjava/lang/String;)Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jboolean use_gmt_time)
+JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jstring time_zone_config)
 {
     bq::_api_string_def snapshot_str_def;
-    bq::api::__api_take_snapshot_string((uint64_t)log_id, use_gmt_time, &snapshot_str_def);
+    const char* time_zone_config_str = env->GetStringUTFChars(time_zone_config, NULL);
+    bq::api::__api_take_snapshot_string((uint64_t)log_id, time_zone_config_str, &snapshot_str_def);
+    env->ReleaseStringUTFChars(time_zone_config, time_zone_config_str);
     jstring snapshot_str = env->NewStringUTF(snapshot_str_def.str);
     bq::api::__api_release_snapshot_string((uint64_t)log_id, &snapshot_str_def);
     return snapshot_str;

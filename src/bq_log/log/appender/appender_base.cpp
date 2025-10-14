@@ -44,7 +44,7 @@ namespace bq {
 
     void appender_base::clear()
     {
-        is_gmt_time_ = false;
+        time_zone_.reset();
         log_level_bitmap_.clear();
         parent_log_ = nullptr;
         layout_ptr_ = nullptr;
@@ -94,12 +94,9 @@ namespace bq {
             log_level_bitmap_.add_level("all");
         }
 
-        is_gmt_time_ = false;
         if (config_obj["time_zone"].is_string()) {
             bq::string time_zone_str = ((string)config_obj["time_zone"]).trim();
-            if (time_zone_str.equals_ignore_case("gmt")) {
-                is_gmt_time_ = true;
-            }
+            time_zone_.parse_by_string(time_zone_str);
         }
 
         if (config_obj["enable"].is_bool()) {

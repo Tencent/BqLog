@@ -32,7 +32,7 @@ namespace bq {
         bool reset_config(const property_value& config);
         void log(const log_entry_handle& handle);
 
-        const bq::string& take_snapshot_string(bool use_gmt_time);
+        const bq::string& take_snapshot_string(const bq::string& time_zone_config);
         void release_snapshot_string();
 
         const bq::string& get_name() const;

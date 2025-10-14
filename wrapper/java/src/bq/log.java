@@ -386,14 +386,15 @@ public class log {
 	/**
 	 * Works only when snapshot is configured.
 	 * It will decode the snapshot buffer to text.
-	 * @param use_gmt_time
-	 * 			Whether the timestamp of each log is GMT time or local time
+	 * @param time_zone_config
+	 * 			Use this to specify the time display of log text.
+	 *          such as : "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"
 	 * @return
 	 * 			The decoded snapshot buffer
 	 */
-	public String take_snapshot(boolean use_gmt_time)
+	public String take_snapshot(String time_zone_config)
 	{
-		return bq.impl.log_invoker.__api_take_snapshot_string(log_id_, use_gmt_time);
+		return bq.impl.log_invoker.__api_take_snapshot_string(log_id_, time_zone_config);
 	}
 
     @Override

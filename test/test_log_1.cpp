@@ -13,6 +13,7 @@
 #include "test_log.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
 #include "bq_log/utils/log_utils.h"
+#include "bq_log/utils/time_zone.h"
 
 namespace bq {
     namespace test {
@@ -110,6 +111,17 @@ namespace bq {
                     decltype(i) i_decoded = bq::log_utils::zigzag::decode(ui_decode);
                     result.add_result(i == i_decoded, "zigzag + vlq test 3");
                 }
+            }
+
+            {
+                //test time zone;
+                time_zone utc8("UTC+8");
+                result.add_result(utc8.get_time_zone_diff_to_gmt_ms() == static_cast<int64_t>(8 * 3600 * 1000), "time zone differ time test UTC8");
+                result.add_result(utc8.get_time_zone_str() == "UTC+8", "time zone str test UTC8");
+
+                time_zone utc1130("UTC-11:30");
+                result.add_result(utc1130.get_time_zone_diff_to_gmt_ms() == static_cast<int64_t>(-11 * 3600 * 1000 - 30 * 60 * 1000), "time zone differ time test UTC-11:30");
+                result.add_result(utc1130.get_time_zone_str() == "UTC-11:30", "time zone str test UTC-11:30");
             }
 
             const char* str_type = "utf8_str";

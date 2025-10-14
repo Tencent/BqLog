@@ -14,7 +14,7 @@ console.log('Attach debugger, then press Enter to require…');
 console.log(bq.log.get_version());
 
 let config = `appenders_config.appender_0.type=console
-appenders_config.appender_0.time_zone =default local time
+appenders_config.appender_0.time_zone =localtime
 appenders_config.appender_0.levels=[verbose, debug, info, warning, error, fatal]
 appenders_config.appender_0.base_dir_type=0
 appenders_config.appender_0.max_file_size=10000000
@@ -22,7 +22,7 @@ appenders_config.appender_0.expire_time_days=10
 appenders_config.appender_0.capacity_limit=200000000
 
 appenders_config.appender_1.type=text_file
-appenders_config.appender_1.time_zone =default local time
+appenders_config.appender_1.time_zone =localtime
 appenders_config.appender_1.levels=[verbose, debug, info, warning, error, fatal]
 appenders_config.appender_1.file_name=output/log
 appenders_config.appender_1.base_dir_type=0
@@ -32,7 +32,7 @@ appenders_config.appender_1.capacity_limit=10000000000
 appenders_config.appender_1.always_create_new_file=true
 
 appenders_config.appender_3409.type=compressed_file
-appenders_config.appender_3409.time_zone =default local time
+appenders_config.appender_3409.time_zone =localtime
 appenders_config.appender_3409.levels=[verbose, debug, info, warning, error, fatal]
 appenders_config.appender_3409.file_name=output/log
 appenders_config.appender_3409.base_dir_type=0

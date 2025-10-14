@@ -12,6 +12,7 @@
 #include "bq_log/log/log_snapshot.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/utils/log_utils.h"
+#include "bq_log/utils/time_zone.h"
 
 namespace bq {
 
@@ -164,7 +165,7 @@ namespace bq {
         }
     }
 
-    const bq::string& log_snapshot::take_snapshot_string(bool use_gmt_time)
+    const bq::string& log_snapshot::take_snapshot_string(const bq::string& time_zone_config)
     {
         lock_.lock();
         snapshot_text_index_ = (snapshot_text_index_ + 1) & 0x01;
@@ -174,6 +175,7 @@ namespace bq {
             bq::util::log_device_console_plain_text(log_level::warning, "calling take_snapshot without enable snapshot");
             return snapshot_text_[snapshot_text_index_];
         }
+        time_zone time_zone_tmp(time_zone_config);
         while (true) {
             auto snapshot_read_handle = snapshot_buffer_->read_chunk();
             scoped_log_buffer_handle<siso_ring_buffer> scoped_snapshot_read_handle(*snapshot_buffer_, snapshot_read_handle);
@@ -181,9 +183,10 @@ namespace bq {
                 break;
             }
             bq::log_entry_handle item(snapshot_read_handle.data_addr, snapshot_read_handle.data_size);
-            snapshot_layout_.do_layout(item, use_gmt_time, &parent_log_->get_categories_name());
+            snapshot_layout_.do_layout(item, time_zone_tmp, &parent_log_->get_categories_name());
             text.insert_batch(text.end(), snapshot_layout_.get_formated_str(), snapshot_layout_.get_formated_str_len());
             text.insert(text.end(), '\n');
+            snapshot_layout_.tidy_memory();
         }
 
         if (snapshot_text_continuous_) {

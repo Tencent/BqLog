@@ -239,10 +239,10 @@ namespace bq {
         /// Note: if snapshot is not enabled, this API will return empty snapshot string.
         /// </summary>
         /// <param name="log_id"></param>
-        /// <param name="use_gmt_time"></param>
+        /// <param name="time_zone_config_utf8"></param>
         /// <param name="out_snapshot_string"></param>
         /// <returns></returns>
-        BQ_API void __api_take_snapshot_string(uint64_t log_id, bool use_gmt_time, bq::_api_string_def* out_snapshot_string);
+        BQ_API void __api_take_snapshot_string(uint64_t log_id, const char* time_zone_config_utf8, bq::_api_string_def* out_snapshot_string);
 
         /// <summary>
         /// The functions __api_take_snapshot_string and __api_release_snapshot_string must be called in pairs.

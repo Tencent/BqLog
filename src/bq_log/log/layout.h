@@ -22,6 +22,7 @@
 
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_types.h"
+#include "bq_log/utils/time_zone.h"
 
 namespace bq {
     class layout {
@@ -61,7 +62,7 @@ namespace bq {
     public:
         layout();
 
-        enum_layout_result do_layout(const bq::log_entry_handle& log_entry, bool gmt_time, const bq::array<bq::string>* categories_name_array_ptr);
+        enum_layout_result do_layout(const bq::log_entry_handle& log_entry, const time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr);
 
         inline const char* get_formated_str()
         {
@@ -74,6 +75,14 @@ namespace bq {
         inline uint32_t get_formated_str_len() const
         {
             return format_content_cursor;
+        }
+
+        inline void tidy_memory() {
+            if (format_content.capacity() > 1024) {
+                format_content.clear();
+                format_content.set_capacity(1024, true);
+            }
+            format_content_cursor = 0;
         }
 
     private:
@@ -92,8 +101,6 @@ namespace bq {
         void python_style_format_content_utf8(const bq::log_entry_handle& log_entry);
 
         void python_style_format_content_utf16(const bq::log_entry_handle& log_entry);
-
-        void clear_format_content();
 
         template <typename T>
         format_info c20_format(const T* style, int32_t len);
@@ -130,7 +137,7 @@ namespace bq {
         void reverse(uint32_t begin_cursor, uint32_t end_cursor);
         //------------------------- insert functions end ----------------------//
     private:
-        bool is_gmt_time_;
+        const time_zone* time_zone_ptr_;
         static constexpr uint32_t MAX_TIME_STR_LEN = 128;
         char time_cache_[MAX_TIME_STR_LEN + 1];
         size_t time_cache_len_;

@@ -126,7 +126,6 @@ namespace bq {
         uint64_t expire_time_ms_;
         uint64_t capacity_limit_ = 0;
         uint64_t current_file_expire_time_epoch_ms_;
-        int64_t time_zone_diff_to_gmt_ms_;
 
     protected:
         // Cache part

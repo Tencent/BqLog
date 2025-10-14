@@ -194,10 +194,10 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_take_snapshot_string
- * Signature: (JZ)Ljava/lang/String;
+ * Signature: (JLjava/lang/String;)Ljava/lang/String;
  */
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string
-  (JNIEnv *, jclass, jlong, jboolean);
+  (JNIEnv *, jclass, jlong, jstring);
 
 /*
  * Class:     bq_impl_log_invoker

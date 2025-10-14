@@ -461,14 +461,14 @@ namespace bq {
             return appender_console::fetch_and_remove_from_console_buffer(on_console_callback, pass_through_param);
         }
 
-        BQ_API void __api_take_snapshot_string(uint64_t log_id, bool use_gmt_time, bq::_api_string_def* out_snapshot_string)
+        BQ_API void __api_take_snapshot_string(uint64_t log_id, const char* time_zone_config_utf8, bq::_api_string_def* out_snapshot_string)
         {
             bq::log_manager::instance().force_flush(log_id);
             bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
             if (!log) {
                 return;
             }
-            const bq::string& result = log->take_snapshot_string(use_gmt_time);
+            const bq::string& result = log->take_snapshot_string(time_zone_config_utf8);
             out_snapshot_string->str = result.c_str();
             out_snapshot_string->len = (uint32_t)result.size();
         }

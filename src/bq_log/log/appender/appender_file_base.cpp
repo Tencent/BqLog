@@ -50,13 +50,9 @@ namespace bq {
             char error_text[256] = { 0 };
             auto epoch = bq::platform::high_performance_epoch_ms();
             struct tm time_st;
-            if (is_gmt_time_) {
-                bq::util::get_gmt_time_by_epoch(epoch, time_st);
-            } else {
-                bq::util::get_local_time_by_epoch(epoch, time_st);
-            }
+            time_zone_.get_tm_by_epoch(epoch, time_st);
             snprintf(error_text, sizeof(error_text), "%s %d-%02d-%02d %02d:%02d:%02d appender_file_base write_file error code:%" PRId32 ", trying open new file real_write_size : %" PRIu64 ", need_write_size : %" PRIu64 "\n",
-                is_gmt_time_ ? "UTC0" : "LOCAL",
+                time_zone_.get_time_zone_str().c_str(),
                 time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec,
                 error_code, static_cast<uint64_t>(real_write_size), static_cast<uint64_t>(need_write_size));
             string path = TO_ABSOLUTE_PATH("bqLog/write_file_error.log", 0);
@@ -207,14 +203,14 @@ namespace bq {
         if (need_create_new_file) {
             auto current_time_epoch = (handle.get_log_head()).timestamp_epoch;
             uint64_t ms_per_day = 60 * 60 * 24 * 1000;
-            current_file_expire_time_epoch_ms_ = static_cast<uint64_t>(static_cast<int64_t>(current_time_epoch) + time_zone_diff_to_gmt_ms_);
+            current_file_expire_time_epoch_ms_ = static_cast<uint64_t>(static_cast<int64_t>(current_time_epoch) + time_zone_.get_time_zone_diff_to_gmt_ms());
             // get next day ms
             uint64_t check_ms_ = (current_file_expire_time_epoch_ms_ / ms_per_day + 1) * ms_per_day;
             current_file_expire_time_epoch_ms_ = current_file_expire_time_epoch_ms_ - (current_file_expire_time_epoch_ms_ % ms_per_day) + ms_per_day;
             if (check_ms_ != current_file_expire_time_epoch_ms_) {
                 bq::util::log_device_console(bq::log_level::error, "exception: set expire_time in refresh_file_handle!!!");
             }
-            current_file_expire_time_epoch_ms_ = static_cast<uint64_t>(static_cast<int64_t>(current_file_expire_time_epoch_ms_) - time_zone_diff_to_gmt_ms_);
+            current_file_expire_time_epoch_ms_ = static_cast<uint64_t>(static_cast<int64_t>(current_file_expire_time_epoch_ms_) - time_zone_.get_time_zone_diff_to_gmt_ms());
             if (file_) {
                 flush_cache();
                 flush_io();
@@ -283,21 +279,6 @@ namespace bq {
         else {
             capacity_limit_ = 0;
         }
-
-        // Calculate time difference from UTC time to local time.
-        if (!is_gmt_time_) {
-            uint64_t epoch = bq::platform::high_performance_epoch_ms();
-            struct tm local_st, utc0_st;
-            bq::util::get_local_time_by_epoch(epoch, local_st);
-            time_t local_time = mktime(const_cast<struct tm*>(&local_st));
-            bq::util::get_gmt_time_by_epoch(epoch, utc0_st);
-            time_t utc_time = mktime(const_cast<struct tm*>(&utc0_st));
-            double timezone_offset = difftime(local_time, utc_time);
-            time_zone_diff_to_gmt_ms_ = (int64_t)(timezone_offset) * 1000;
-        }
-        else {
-            time_zone_diff_to_gmt_ms_ = 0;
-        }
     }
 
     void appender_file_base::open_new_indexed_file_by_name()
@@ -313,11 +294,7 @@ namespace bq {
         char time_str_buf[128];
         auto epoch = bq::platform::high_performance_epoch_ms();
         struct tm time_st;
-        if (is_gmt_time_) {
-            bq::util::get_gmt_time_by_epoch(epoch, time_st);
-        } else {
-            bq::util::get_local_time_by_epoch(epoch, time_st);
-        }
+        time_zone_.get_tm_by_epoch(epoch, time_st);
         strftime(time_str_buf, sizeof(time_str_buf), "_%Y%m%d_", &time_st);
 
         int32_t max_index = 0;

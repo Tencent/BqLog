@@ -939,7 +939,7 @@ namespace bq {
                 }
 
                 if ((current_tested_num % snapshot_idx_mode == 0) || true) {
-                    bq::string snapshot = log_inst_ptr->take_snapshot(false);
+                    bq::string snapshot = log_inst_ptr->take_snapshot("localtime");
                     if (!snapshot.is_empty()) {
                         result_ptr->add_result(snapshot.size() >= output_str_ptr->size(), "snapshot size test failed, index:%" PRIu64 ", \nstandard: %s\nstandard size:%" PRIu64 ", snapshot size:%" PRIu64 "\nsnapshot: %s", static_cast<uint64_t>(current_tested_num), output_str_ptr->c_str(), static_cast<uint64_t>(output_str_ptr->size()), static_cast<uint64_t>(snapshot.size()), snapshot.c_str());
                         if (snapshot.size() >= output_str_ptr->size()) {
@@ -1019,11 +1019,11 @@ namespace bq {
         {
             test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[all]
 						
 						appenders_config.CompressedAppender.type=compressed_file
-						appenders_config.CompressedAppender.time_zone=default local time
+						appenders_config.CompressedAppender.time_zone=localtime
 						appenders_config.CompressedAppender.levels=[error,fatal]
 						appenders_config.CompressedAppender.file_name=bqLog/UnitTestLog/test3
 						appenders_config.CompressedAppender.base_dir_type=0
@@ -1031,7 +1031,7 @@ namespace bq {
 						appenders_config.CompressedAppender.expire_time_days=2
 						
 						appenders_config.RawAppender.type=raw_file
-						appenders_config.RawAppender.time_zone=default local time
+						appenders_config.RawAppender.time_zone=localtime
 						appenders_config.RawAppender.levels=[error,fatal]
 						appenders_config.RawAppender.file_name=bqLog/UnitTestLog/test3
 						appenders_config.RawAppender.base_dir_type=0
@@ -1066,7 +1066,7 @@ namespace bq {
                     bq::test::create_test_log_3_file_appender(snapshot_config[(int32_t)(begin_epoch_ms % 4)]
                         + "\n" 
                         + get_encript_config());
-                    log_ptr->take_snapshot(false);
+                    log_ptr->take_snapshot("localtime");
                     //sleep(begin_epoch_ms % 10);
                 }
             }

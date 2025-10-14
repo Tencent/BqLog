@@ -17,7 +17,7 @@ namespace bq {
     void appender_file_text::log_impl(const log_entry_handle& handle)
     {
         appender_file_base::log_impl(handle);
-        auto layout_result = layout_ptr_->do_layout(handle, is_gmt_time_, &parent_log_->get_categories_name());
+        auto layout_result = layout_ptr_->do_layout(handle, time_zone_, &parent_log_->get_categories_name());
         if (layout_result != layout::enum_layout_result::finished) {
             bq::util::log_device_console(log_level::error, "text file layout error, result:%d, format str:%s", (int32_t)layout_result, handle.get_format_string_data());
             return;
@@ -27,6 +27,7 @@ namespace bq {
         auto write_handle = write_with_cache_alloc(data_len + sizeof('\n'));
         memcpy(write_handle.data(), write_data, data_len);
         write_handle.data()[data_len] = (uint8_t)'\n';
+        layout_ptr_->tidy_memory();
         write_with_cache_commit(write_handle);
     }
 

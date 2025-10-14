@@ -179,7 +179,7 @@ int32_t main(int32_t argc, char* argv[]) {
     while (true) {
         auto decode_result = decoder.decode();
         if (decode_result == bq::appender_decode_result::eof) {
-            CONSOLE_OUTPUT(bq::log_level::debug, "%s", output_cache.c_str());
+            printf("%s\n", output_cache.c_str());
             output_cache.clear();
             break;
         }
@@ -190,7 +190,7 @@ int32_t main(int32_t argc, char* argv[]) {
         output_cache += decoder.get_last_decoded_log_entry();
         output_cache.push_back('\n');
         if (output_cache.size() > 4 * 1024) { // Flush every 4K
-            CONSOLE_OUTPUT(bq::log_level::debug, "%s", output_cache.c_str());
+            printf("%s\n", output_cache.c_str());
             output_cache.clear();
         }
     }

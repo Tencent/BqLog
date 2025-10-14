@@ -18,7 +18,7 @@
 
 namespace bq {
     layout::layout()
-        : is_gmt_time_(false)
+        : time_zone_ptr_(nullptr)
         , time_cache_ { 0 }
         , time_cache_len_(0)
         , last_time_epoch_cache_(0)
@@ -28,9 +28,9 @@ namespace bq {
         thread_names_cache_.set_expand_rate(4);
     }
 
-    layout::enum_layout_result layout::do_layout(const bq::log_entry_handle& log_entry, bool gmt_time, const bq::array<bq::string>* categories_name_array_ptr)
+    layout::enum_layout_result layout::do_layout(const bq::log_entry_handle& log_entry, const time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr)
     {
-        is_gmt_time_ = gmt_time;
+        time_zone_ptr_ = &input_time_zone;
         categories_name_array_ptr_ = categories_name_array_ptr;
         format_content_cursor = 0;
         expand_format_content_buff_size(1024);
@@ -86,13 +86,9 @@ namespace bq {
 
         if (epoch != last_time_epoch_cache_) {
             struct tm time_st;
-            if (is_gmt_time_) {
-                bq::util::get_gmt_time_by_epoch(epoch, time_st);
-            } else {
-                bq::util::get_local_time_by_epoch(epoch, time_st);
-            }
+            time_zone_ptr_->get_tm_by_epoch(epoch, time_st);
             time_cache_len_ = static_cast<size_t>(snprintf(time_cache_, sizeof(time_cache_),
-                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? log_global_vars::get().utc_time_zone_str_ : log_global_vars::get().time_zone_str_, time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec));
+                "%s %d-%02d-%02d %02d:%02d:%02d.", time_zone_ptr_->get_time_zone_str().c_str(), time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec));
             last_time_epoch_cache_ = epoch;
         }
         memcpy(&format_content[format_content_cursor], time_cache_, time_cache_len_);
@@ -733,11 +729,6 @@ namespace bq {
                 format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
             }
         }
-    }
-
-    void layout::clear_format_content()
-    {
-        format_content_cursor = 0;
     }
 
     void layout::expand_format_content_buff_size(uint32_t new_size)

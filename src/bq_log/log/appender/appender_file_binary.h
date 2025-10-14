@@ -85,8 +85,12 @@ namespace bq {
         } BQ_PACK_END
 
         BQ_PACK_BEGIN struct appender_payload_metadata {
-            bool is_gmt;
             char magic_number[3];
+            bool use_local_time;
+            int32_t gmt_offset_hours;
+            int32_t gmt_offset_minutes;
+            int64_t time_zone_diff_to_gmt_ms;
+            char time_zone_str[32];
             uint32_t category_count;
         } BQ_PACK_END
     public:

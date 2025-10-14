@@ -112,8 +112,8 @@ export class log_invoker {
         return !!native_export("log_decode")(in_file_path, out_file_path, priv_key ? priv_key : "");
     }
 
-    public static __api_take_snapshot_string(log_id: bigint, use_gmt_time: boolean): string {
-        return native_export("take_snapshot_string")(log_id, !!use_gmt_time) as string;
+    public static __api_take_snapshot_string(log_id: bigint, time_zone_config?: string): string {
+        return native_export("take_snapshot_string")(log_id, time_zone_config ? time_zone_config : "") as string;
     }
 
     public static __api_set_console_callback(callback: Function | null): void {

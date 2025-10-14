@@ -441,14 +441,16 @@ namespace bq
         /// Works only when snapshot is configured.
         /// It will decode the snapshot buffer to text.
         /// </summary>
-        /// <param name="use_gmt_time">Whether the timestamp of each log is GMT time or local time</param>
+        /// <param name="time_zone_config">Use this to specify the time display of log text. such as : "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"</param>
         /// <returns>The decoded snapshot buffer</returns>
-        public string take_snapshot(bool use_gmt_time)
+        public string take_snapshot(string time_zone_config)
         {
             unsafe
             {
                 _api_string_def snapshot_def = new _api_string_def();
-                bq.impl.log_invoker.__api_take_snapshot_string(log_id_, use_gmt_time, &snapshot_def);
+                byte* utf8_time_zone_config_bytes = utf8_encoder.alloc_utf8_fixed_str(time_zone_config);
+                bq.impl.log_invoker.__api_take_snapshot_string(log_id_, utf8_time_zone_config_bytes, &snapshot_def);
+                utf8_encoder.release_utf8_fixed_str(utf8_time_zone_config_bytes);
                 string result = new string(snapshot_def.str, 0, (int)snapshot_def.len, System.Text.Encoding.UTF8);
                 bq.impl.log_invoker.__api_release_snapshot_string(log_id_, &snapshot_def);
                 return result;

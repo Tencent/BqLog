@@ -195,15 +195,18 @@ namespace bq {
 
     void appender_console::log_impl(const log_entry_handle& handle)
     {
-        auto layout_result = layout_ptr_->do_layout(handle, is_gmt_time_, &parent_log_->get_categories_name());
+        auto layout_result = layout_ptr_->do_layout(handle, time_zone_, &parent_log_->get_categories_name());
         if (layout_result != layout::enum_layout_result::finished) {
             bq::util::log_device_console(log_level::error, "console layout error, result:%d, format str:%s", (int32_t)layout_result, handle.get_format_string_data());
             return;
         }
         log_entry_cache_.erase(log_entry_cache_.begin() + static_cast<ptrdiff_t>(log_name_prefix_.size()), (log_entry_cache_.size() - log_name_prefix_.size()));
-        const char* text_log_data = layout_ptr_->get_formated_str();
-        uint32_t log_text_len = layout_ptr_->get_formated_str_len();
-        log_entry_cache_.insert_batch(log_entry_cache_.end(), text_log_data, log_text_len);
+        {
+            const char* text_log_data = layout_ptr_->get_formated_str();
+            uint32_t log_text_len = layout_ptr_->get_formated_str_len();
+            log_entry_cache_.insert_batch(log_entry_cache_.end(), text_log_data, log_text_len);
+            layout_ptr_->tidy_memory();
+        }
         auto level = handle.get_level();
         auto& console_misc = get_console_misc();
         auto& data = _tls_console_callback_data;

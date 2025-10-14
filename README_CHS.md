@@ -135,7 +135,7 @@ int main()
             #这个Appender的输出目标是控制台
             appenders_config.appender_0.type=console           
             #这个Appender的时间采用当地时区
-            appenders_config.appender_0.time_zone=default local time   
+            appenders_config.appender_0.time_zone=localtime   
             #这个Appender会输出这6种等级的日志，注意中间不要有空格
             appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
 
@@ -165,7 +165,7 @@ public class demo_main {
                 #这个Appender的输出目标是控制台
                 appenders_config.appender_0.type=console           
                 #这个Appender的时间采用当地时区
-                appenders_config.appender_0.time_zone=default local time   
+                appenders_config.appender_0.time_zone=localtime   
                 #这个Appender会输出这6种等级的日志，注意中间不要有空格
                 appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
             ";
@@ -193,7 +193,7 @@ public class demo_main {
                 #这个Appender的输出目标是控制台
                 appenders_config.appender_0.type=console           
                 #这个Appender的时间采用当地时区
-                appenders_config.appender_0.time_zone=default local time   
+                appenders_config.appender_0.time_zone=localtime   
                 #这个Appender会输出这6种等级的日志，注意中间不要有空格
                 appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
         """;
@@ -555,7 +555,7 @@ Appender代表日志的输出目标，这里Appender的概念和Log4j的Appender
     #第一个Appender名叫appender_0，他的类型是ConsoleAppender
     appenders_config.appender_0.type=console
     #appender_0对应的时区是系统当地时间
-    appenders_config.appender_0.time_zone=default local time
+    appenders_config.appender_0.time_zone=localtime
     #appender_0会输出所有6个等级的日志（注意，每个日志等级之间千万不要有空格，不然会解析失败）
     appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal]
             

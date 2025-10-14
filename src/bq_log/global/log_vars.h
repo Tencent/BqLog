@@ -40,10 +40,6 @@ namespace bq {
             { '[', 'E', ']' }, // ERROR
             { '[', 'F', ']' } // FATAL
         };
-        const char time_zone_str_[32] = { 0 };
-        const int32_t time_zone_str_len = 0;
-        const char* utc_time_zone_str_ = "UTC0 ";
-        const int32_t utc_time_zone_str_len = (int32_t)strlen(utc_time_zone_str_);
         const char digit3_array[3000 + 16] = {};
 #if defined(BQ_JAVA)
         jclass cls_bq_log_ = nullptr;

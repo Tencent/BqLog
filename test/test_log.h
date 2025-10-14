@@ -33,7 +33,7 @@ namespace bq {
         {
             test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[all]
                         log.buffer_size=65535
                         log.recovery=true
@@ -47,7 +47,7 @@ namespace bq {
         {
             test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[error,fatal]
 					
 						log.thread_mode=sync
@@ -61,7 +61,7 @@ namespace bq {
         {
             test_category_log::create_log("test_log3", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[error,fatal]
 					
 						log.thread_mode=sync
@@ -74,7 +74,7 @@ namespace bq {
         {
             test_category_log::create_log("test_log4", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[error,fatal]
 					
 						log.thread_mode=sync
@@ -88,7 +88,7 @@ namespace bq {
         {
             test_category_log::create_log("test_log5", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[error,fatal]
 					
 						log.thread_mode=sync

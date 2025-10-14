@@ -10,6 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_log/log/decoder/appender_decoder_base.h"
+#include "bq_log/utils/time_zone.h"
 
 static constexpr size_t DECODER_CACHE_READ_DEFAULT_SIZE = 32 * 1024;
 
@@ -176,7 +177,12 @@ void bq::appender_decoder_base::clear_read_cache()
 
 bq::appender_decode_result bq::appender_decoder_base::do_decode_by_log_entry_handle(const bq::log_entry_handle& item)
 {
-    auto layout_result = layout_.do_layout(item, payload_metadata_.is_gmt, &category_names_);
+    time_zone time_zone_tmp(payload_metadata_.use_local_time
+                            , payload_metadata_.gmt_offset_hours
+                            , payload_metadata_.gmt_offset_minutes
+                            , payload_metadata_.time_zone_diff_to_gmt_ms
+                            , payload_metadata_.time_zone_str);
+    auto layout_result = layout_.do_layout(item, time_zone_tmp, &category_names_);
     if (layout_result != layout::enum_layout_result::finished) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, layout error code:%d", (int32_t)layout_result);
         return appender_decode_result::failed_decode_error;
@@ -185,6 +191,7 @@ bq::appender_decode_result bq::appender_decoder_base::do_decode_by_log_entry_han
         decoded_text_.fill_uninitialized((size_t)layout_.get_formated_str_len());
         // todo, use string_view to enhance performance
         memcpy(decoded_text_.begin(), layout_.get_formated_str(), layout_.get_formated_str_len());
+        layout_.tidy_memory();
     } else {
         decoded_text_.clear();
     }

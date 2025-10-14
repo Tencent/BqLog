@@ -77,21 +77,21 @@ namespace bq {
                 bq::log::register_console_callback(test_4_console_callback);
                 auto log1 = test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[all]
 						log.thread_mode=sync
 						log.buffer_size=64000000
 			    )");
                 auto log2 = test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[all]
 						log.thread_mode=independent
 						log.buffer_size=64000000
 			    )");
                 auto log3 = test_category_log::create_log("test_log", R"(
 						appenders_config.ConsoleAppender.type=console
-						appenders_config.ConsoleAppender.time_zone=default local time
+						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[all]
 						log.thread_mode=async
 						log.buffer_size=64000000

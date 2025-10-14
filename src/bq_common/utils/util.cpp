@@ -18,7 +18,6 @@
 #elif defined(BQ_OHOS)
 #include <hilog/log.h>
 #endif
-#include <time.h>
 
 
 namespace bq {
@@ -37,48 +36,6 @@ namespace bq {
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
         string path = TO_ABSOLUTE_PATH(file_name, true);
         bq::file_manager::instance().append_all_text(path, msg);
-    }
-
-    bq::string util::get_current_gmt_time_string()
-    {
-        char error_text[256] = { 0 };
-        auto epoch = bq::platform::high_performance_epoch_ms();
-        struct tm result;
-        get_gmt_time_by_epoch(epoch, result);
-        snprintf(error_text, sizeof(error_text), "%04d-%02d-%02d %02d:%02d:%02d",
-            result.tm_year + 1900, result.tm_mon + 1, result.tm_mday, result.tm_hour, result.tm_min, result.tm_sec);
-        return error_text;
-    }
-
-    bq::string util::get_current_local_time_string()
-    {
-        char error_text[256] = { 0 };
-        auto epoch = bq::platform::high_performance_epoch_ms();
-        struct tm result;
-        get_local_time_by_epoch(epoch, result);
-        snprintf(error_text, sizeof(error_text), "%04d-%02d-%02d %02d:%02d:%02d",
-            result.tm_year + 1900, result.tm_mon + 1, result.tm_mday, result.tm_hour, result.tm_min, result.tm_sec);
-        return error_text;
-    }
-
-    bool util::get_local_time_by_epoch(uint64_t epoch, struct tm& result)
-    {
-        time_t epoch_sec = (time_t)(epoch / 1000);
-#if defined(BQ_WIN)
-        return localtime_s(&result, &epoch_sec) == 0;
-#else
-        return localtime_r(&epoch_sec, &result) != NULL;
-#endif
-    }
-
-    bool util::get_gmt_time_by_epoch(uint64_t epoch, struct tm& result)
-    {
-        time_t epoch_sec = (time_t)(epoch / 1000);
-#if defined(BQ_WIN)
-        return gmtime_s(&result, &epoch_sec) == 0;
-#else
-        return gmtime_r(&epoch_sec, &result) != NULL;
-#endif
     }
 
 #if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
@@ -177,6 +134,7 @@ namespace bq {
             fputs("\033[37m", output_target);
             break;
         }
+        fputs("[Bq]", output_target);
         fputs(text, output_target);
         fputs("\033[0m", output_target);
         fputs("\n", output_target);

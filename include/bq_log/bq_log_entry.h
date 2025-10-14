@@ -228,9 +228,9 @@ namespace bq {
         /// Works only when snapshot is configured.
         /// It will decode the snapshot buffer to text.
         /// </summary>
-        /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
+        /// <param name="time_zone_config">Use this to specify the time display of log text. such as : "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"</param>
         /// <returns>the decoded snapshot buffer</returns>
-        bq::string take_snapshot(bool use_gmt_time) const;
+        bq::string take_snapshot(const bq::string& time_zone_config) const;
 
     public:
         /// Core log functions, there are 6 log levels:
