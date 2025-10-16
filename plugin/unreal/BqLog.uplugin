@@ -1,0 +1,21 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "BqLog",
+	"Description": "",
+	"Category": "Other",
+	"CreatedBy": "",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+    "Modules": [
+      { "Name": "BqLog", "Type": "Runtime", "LoadingPhase": "Default" },
+      { "Name": "BqLogEditor", "Type": "Developer", "LoadingPhase": "Default" }
+    ]
+}
