@@ -33,6 +33,9 @@ namespace bq {
                 data.length_ = static_cast<int32_t>(strlen(text));
             }
             console_callback_(data.log_id_, data.category_idx_, static_cast<int32_t>(level), text, data.length_);
+            data.category_idx_ = 0;
+            data.length_ = 0;
+            data.log_id_ = 0;
         }
         else {
             bq::util::_default_console_output(level, text);
@@ -214,9 +217,6 @@ namespace bq {
         data.length_ = (int32_t)log_entry_cache_.size();
         data.log_id_ = parent_log_->id();
         util::log_device_console_plain_text(level, log_entry_cache_.c_str());
-        data.category_idx_ = 0;
-        data.length_ = 0;
-        data.log_id_ = 0;
         if (console_misc.buffer().is_enable()) {
             console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
         }

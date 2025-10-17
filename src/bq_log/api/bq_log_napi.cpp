@@ -555,7 +555,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         return bq::_make_bool(env, false);
     }
 
-    size_t aligned_format_data_size = bq::align_4(format_custom_formatter.get_size_seq().get_element().get_value());
+    size_t aligned_format_data_size = format_custom_formatter.get_size_seq().get_total();
     size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_format_data_size;
     for (size_t i = (has_category_arg ? 2 : 1); i < argc; ++i) {
         napi_valuetype input_param_type = napi_undefined;
