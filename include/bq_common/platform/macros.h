@@ -142,6 +142,7 @@ namespace bq {
 }
 #define BQ_TLS_DEFINE(Type, Name, ID)                                       \
     BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                   \
+    BQ_TLS bool  ____BQ_TSL_##Name##_recycled;                              \
     template <>                                                             \
     struct _bq_non_pod_holder_type<ID, Type> {                              \
         _bq_non_pod_holder_type()                                           \

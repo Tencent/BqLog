@@ -16,6 +16,7 @@
 #include "template/category_log_template_csharp.h"
 #include "template/category_log_template_java.h"
 #include "template/category_log_template_typescript.h"
+#include "template/category_log_template_unreal.h"
 
 namespace bq {
     bool category_generator::parse_config_file(const bq::string& file_path, category_node& category_root)
@@ -106,6 +107,11 @@ namespace bq {
         code = ts.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".ts"), code);
         bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".ts").c_str());
+
+        category_log_template_unreal unreal(class_name);
+        code = unreal.generate(root_node);
+        bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + "_for_UE.h"), code);
+        bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".cpp").c_str());
 
         return true;
     }

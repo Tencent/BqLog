@@ -22,6 +22,7 @@
 #include "Engine/DataAsset.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Engine/Engine.h"
+#include "bq_log/bq_log.h"
 #include "BqLog.generated.h"
 
 UENUM(BlueprintType)
@@ -43,9 +44,10 @@ enum class EBqLogLevel : uint8
 };
 
 UCLASS(BlueprintType)
-class UBqLog : public UDataAsset
+class BQLOG_API UBqLog : public UDataAsset
 {
     GENERATED_BODY()
+    friend class UBqLogFunctionLibrary;
 public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="BqLog")
     FName LogName = TEXT("");
@@ -61,15 +63,24 @@ public:
               meta=(MultiLine="true", EditCondition="IsCreateMode", EditConditionHides))
     FText LogConfig;
 
+    UFUNCTION()
+    void Ensure();
+
     // 实现基础接口
-    virtual FName GetLogTypeName() const { return TEXT("BasicBqLog"); }
     virtual bool SupportsCategoryEnum() const { return false; }
     virtual UEnum* GetCategoryEnum() const { return nullptr; }
 
 #if WITH_EDITOR
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-    virtual void PostLoad() override;
 #endif
+    virtual void PostLoad() override;
+
+protected:
+    virtual uint32_t get_category_count() const {return 0; }
+    virtual const char* const* get_category_names() const {return nullptr;}
+protected:
+    uint64_t log_id_ = 0;
+    bool need_renew_inst_ = true;
 };
 
 UENUM(BlueprintType)
@@ -115,6 +126,8 @@ struct BQLOG_API FBqLogAny
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FTransform   Xform = FTransform::Identity;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FColor       Color = FColor::White;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FLinearColor LColor = FLinearColor::White;
+
+    UPROPERTY(Transient)    FString FormattedString;
 };
 
 UENUM()

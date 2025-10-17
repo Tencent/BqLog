@@ -32,7 +32,7 @@ class BQLOG_API UBqLogFunctionLibrary : public UBlueprintFunctionLibrary
 public:
     // 统一使用 UBqLog，支持各类扩展子类；新增 CategoryValue 数值参数
     UFUNCTION(BlueprintCallable, Category="BqLog", meta=(BlueprintInternalUseOnly="true"))
-    static void DoBqLogFormat(const UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString, const TArray<FBqLogAny>& Args);
+    static bool DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString, const TArray<FBqLogAny>& Args);
     UFUNCTION(BlueprintCallable, Category="BqLog", meta=(BlueprintInternalUseOnly="true"))
-    static void DoBqLog(const UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString);
+    static bool DoBqLog(UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString);
 };

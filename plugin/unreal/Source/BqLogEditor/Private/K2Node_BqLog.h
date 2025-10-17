@@ -7,7 +7,7 @@
 #include "K2Node_BqLog.generated.h"
 
 UCLASS()
-class BQLOGEDITOR_API UK2Node_BqLogFormatRaw : public UK2Node, public IK2Node_AddPinInterface
+class BQLOGEDITOR_API UK2Node_BqLogFormat : public UK2Node, public IK2Node_AddPinInterface
 {
 	GENERATED_BODY()
 public:
@@ -16,6 +16,7 @@ public:
 	static const FName LogFormatStringPinName;
 	static const FName CategoryPinName; // 新增：动态分类枚举引脚
 	static const FName ArgPinPrefix;
+	static const FName ReturnPinName; // 新增：返回值引脚名
 
 	// UK2Node 接口
 	virtual void PostLoad() override;

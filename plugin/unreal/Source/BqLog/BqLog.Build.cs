@@ -26,14 +26,13 @@ public class BqLog : ModuleRules
                 AdditionalPropertiesForReceipt.Add("AndroidPlugin", APL);
             }
         }
-
-        if (Target.Platform == UnrealTargetPlatform.IOS)
-        {
-            // iOS 静态链接（如需系统框架在此添加）
-        }
-        else if (Target.Platform == UnrealTargetPlatform.Mac)
-        {
-            // PublicFrameworks.Add("Cocoa");
-        }
+        
+#if UE_5_0_OR_LATER
+        //OptimizeCode = CodeOptimization.Never; // 
+#else
+        //bOptimizeCode = false;
+#endif
+        //bUseUnity = false; // 
+        //MinFilesUsingPrecompiledHeaderOverride = 1;
     }
 }

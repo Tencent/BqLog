@@ -47,7 +47,7 @@ namespace bq {
         /// <param name="category_count">categories count</param>
         /// <param name="category_names_array_utf8">category names in utf8 encoding, it's char* array</param>
         /// <returns>log id, 0 means create failed</returns>
-        BQ_API uint64_t __api_create_log(const char* log_name_utf8, const char* config_content_utf8, uint32_t category_count, const char** category_names_array_utf8);
+        BQ_API uint64_t __api_create_log(const char* log_name_utf8, const char* config_content_utf8, uint32_t category_count, const char* const* category_names_array_utf8);
 
         /// <summary>
         /// 0 means reset failed

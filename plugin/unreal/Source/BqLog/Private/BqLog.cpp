@@ -19,16 +19,45 @@
  */
 #include "BqLog.h"
 
+void UBqLog::Ensure()
+{
+	if (need_renew_inst_)
+	{
+		bq::string log_name = bq::string(TCHAR_TO_UTF8(*LogName.ToString()));
+		if (CreateType == EBqLogInitType::BqLog_Create)
+		{
+            log_id_ = bq::api::__api_create_log(log_name.c_str(), TCHAR_TO_UTF8(*LogConfig.ToString()), get_category_count(), get_category_names());
+		}
+		else if (CreateType == EBqLogInitType::BqLog_Get)
+		{
+			uint32_t log_count = bq::api::__api_get_logs_count();
+			for (uint32_t i = 0; i < log_count; ++i) {
+				auto id = bq::api::__api_get_log_id_by_index(i);
+				bq::_api_string_def log_name_tmp;
+				if (bq::api::__api_get_log_name_by_id(id, &log_name_tmp)) {
+					if (log_name == log_name_tmp.str) {
+						log_id_ = id;
+						break;
+					}
+				}
+			}
+		}
+		need_renew_inst_ = false;
+	}
+}
+
 #if WITH_EDITOR
 void UBqLog::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	IsCreateMode = (CreateType == EBqLogInitType::BqLog_Create);
+	need_renew_inst_ = true;
 }
+#endif
 
 void UBqLog::PostLoad()
 {
 	Super::PostLoad();
 	IsCreateMode = (CreateType == EBqLogInitType::BqLog_Create);
+	need_renew_inst_ = true;
 }
-#endif
