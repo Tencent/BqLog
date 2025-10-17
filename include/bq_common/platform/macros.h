@@ -152,9 +152,10 @@ namespace bq {
             if (____BQ_TLS_##Name##_ptr) {                                  \
                 delete ____BQ_TLS_##Name##_ptr;                             \
                 ____BQ_TLS_##Name##_ptr = nullptr;                          \
+                ____BQ_TSL_##Name##_recycled = true;                        \
             }                                                               \
         }                                                                   \
-        bq_forceinline operator bool() { return (bool)____BQ_TLS_##Name##_ptr; }  \
+        bq_forceinline operator bool() { return !____BQ_TSL_##Name##_recycled; }  \
         bq_forceinline Type& get() {                                        \
             if (!____BQ_TLS_##Name##_ptr) {                                 \
                 ____BQ_TLS_##Name##_ptr = new Type();                       \
