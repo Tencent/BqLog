@@ -16,8 +16,8 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
     {
         FSoftObjectPath SoftPath(LogInstance);
         const FString ErrorLog = FString(TEXT("LogInstance is invalid: ")) + SoftPath.ToString();
-        const char* ErrorLogCStr = TCHAR_TO_UTF8(*ErrorLog);
-        bq::log::console(bq::log_level::error, ErrorLogCStr);
+        bq::string error_str = TCHAR_TO_UTF8(*ErrorLog);
+        bq::log::console(bq::log_level::error, error_str.c_str());
     }
     const uint64_t log_id = LogInstance->log_id_;
 
