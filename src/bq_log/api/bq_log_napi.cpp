@@ -932,12 +932,12 @@ BQ_NAPI_DEF(log_decode, napi_env, env, napi_callback_info, info)
     return bq::_make_bool(env, ok);
 }
 
-// take_snapshot_string(log_id: bigint, use_gmt_time: boolean): string
+// take_snapshot_string(log_id: bigint, time_zone_config_str: string): string
 BQ_NAPI_DEF(take_snapshot_string, napi_env, env, napi_callback_info, info)
 {
     size_t argc = 2; napi_value argv[2] = { 0,0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
-    if (argc < 2) { napi_throw_type_error(env, NULL, "log_id and use_gmt_time required"); return NULL; }
+    if (argc < 2) { napi_throw_type_error(env, NULL, "log_id and time_zone_config_str required"); return NULL; }
 
     uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
     bq::string time_zone_config_str = bq::_dup_string_from_napi(env, argv[1]);

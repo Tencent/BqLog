@@ -105,7 +105,7 @@ namespace bq.impl
         public static unsafe extern bool __api_fetch_and_remove_console_buffer(type_func_ptr_console_buffer_fetch_callback on_console_callback, IntPtr pass_through_param);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public unsafe static extern void __api_take_snapshot_string(ulong log_id, bool use_gmt_time, bq.def._api_string_def* out_snapshot_string);
+        public unsafe static extern void __api_take_snapshot_string(ulong log_id, byte* time_zone_config_str_utf8, bq.def._api_string_def* out_snapshot_string);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public unsafe static extern void __api_release_snapshot_string(ulong log_id, bq.def._api_string_def* snapshot_string);
