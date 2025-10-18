@@ -70,6 +70,8 @@ int32_t bq_tgkill(pid_t tgid, pid_t tid, int32_t sig)
 
 namespace bq {
     const char* get_bq_log_version();
+    BQ_TLS_NON_POD(bq::string, tls_base_dir_cache_);
+
     namespace api {
         static_assert(sizeof(uintptr_t) == sizeof(log_imp*), "invalid pointer size");
 
@@ -399,7 +401,12 @@ namespace bq {
 
         BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type)
         {
-            return bq::file_manager::get_base_dir(base_dir_type).c_str();
+            if (!tls_base_dir_cache_)
+            {
+                return "";
+            }
+            tls_base_dir_cache_.get() = bq::file_manager::get_base_dir(base_dir_type);
+            return tls_base_dir_cache_.get().c_str();
         }
 
         BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, const char* priv_key, uint32_t* out_handle)
