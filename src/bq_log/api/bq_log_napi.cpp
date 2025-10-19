@@ -736,7 +736,7 @@ BQ_NAPI_DEF(set_appender_enable, napi_env, env, napi_callback_info, info)
     auto appender_name = bq::_dup_string_from_napi(env, argv[1]);
     bool enable = bq::_get_bool(env, argv[2]);
 
-    bq::api::__api_set_appenders_enable(log_id, appender_name.c_str(), enable);
+    bq::api::__api_set_appender_enable(log_id, appender_name.c_str(), enable);
     return bq::_make_undefined(env);
 }
 

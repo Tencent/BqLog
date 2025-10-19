@@ -65,10 +65,10 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_set_appenders_enable
+ * Method:    __api_set_appender_enable
  * Signature: (JLjava/lang/String;Z)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1appenders_1enable
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1appender_1enable
   (JNIEnv *, jclass, jlong, jstring, jboolean);
 
 /*

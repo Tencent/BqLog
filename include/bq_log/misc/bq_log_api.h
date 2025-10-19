@@ -76,7 +76,7 @@ namespace bq {
         /// </summary>
         /// <param name="enable"></param>
         /// <returns></returns>
-        BQ_API void __api_set_appenders_enable(uint64_t log_id, const char* appender_name, bool enable);
+        BQ_API void __api_set_appender_enable(uint64_t log_id, const char* appender_name, bool enable);
 
         /// <summary>
         /// get the current logs count

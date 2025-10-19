@@ -27,7 +27,7 @@ public class log_invoker {
 	
 	public static native void __api_log_buffer_commit(long log_id);
 	
-	public static native void __api_set_appenders_enable(long log_id, String appender_name, boolean enable);
+	public static native void __api_set_appender_enable(long log_id, String appender_name, boolean enable);
 	
 	public static native long __api_get_logs_count();
 	

@@ -293,7 +293,7 @@ namespace bq {
             }
         }
 
-        BQ_API void __api_set_appenders_enable(uint64_t log_id, const char* appender_name, bool enable)
+        BQ_API void __api_set_appender_enable(uint64_t log_id, const char* appender_name, bool enable)
         {
             bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
             if (log) {

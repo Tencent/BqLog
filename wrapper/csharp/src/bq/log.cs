@@ -396,7 +396,7 @@ namespace bq
             unsafe
             {
                 byte* in_str = utf8_encoder.alloc_utf8_fixed_str(appender_name);
-                log_invoker.__api_set_appenders_enable(log_id_, in_str, enable);
+                log_invoker.__api_set_appender_enable(log_id_, in_str, enable);
                 utf8_encoder.release_utf8_fixed_str(in_str);
             }
         }

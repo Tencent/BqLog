@@ -213,7 +213,7 @@ export class log {
      * @param enable 
      */
     public set_appender_enable(appender_name: string, enable: boolean): void {
-        log_invoker.__api_set_appenders_enable(this.log_id_, appender_name, enable);
+        log_invoker.__api_set_appender_enable(this.log_id_, appender_name, enable);
     }
 
     /**

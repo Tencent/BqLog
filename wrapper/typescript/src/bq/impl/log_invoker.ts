@@ -53,7 +53,7 @@ export class log_invoker {
         return native_export("attach_category_base_inst")(category_inst, category_inst['index']);
     }
 
-    public static __api_set_appenders_enable(log_id: bigint, appender_name: string, enable: boolean): void {
+    public static __api_set_appender_enable(log_id: bigint, appender_name: string, enable: boolean): void {
         native_export("set_appender_enable")(log_id, appender_name, !!enable);
     }
 
