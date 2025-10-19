@@ -37,7 +37,11 @@ namespace bq {
 #else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 #endif
-        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 1;
+#if BQ_UNIT_TEST
+        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 5;
+#else
+        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 2;
+#endif
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL = 1000;
         static constexpr uint64_t OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS = 1000;
 
