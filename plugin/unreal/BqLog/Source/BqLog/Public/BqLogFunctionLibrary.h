@@ -29,10 +29,30 @@ class BQLOG_API UBqLogFunctionLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
+private:
+    static bool EnsureLogInstance(UBqLog* LogInstance);
+
 public:
-    // 统一使用 UBqLog，支持各类扩展子类；新增 CategoryValue 数值参数
     UFUNCTION(BlueprintCallable, Category="BqLog", meta=(BlueprintInternalUseOnly="true"))
     static bool DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString, const TArray<FBqLogAny>& Args);
     UFUNCTION(BlueprintCallable, Category="BqLog", meta=(BlueprintInternalUseOnly="true"))
     static bool DoBqLog(UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString);
+
+    UFUNCTION(BlueprintCallable, Category="BqLog")
+    static void BqLogForceFlushAllLogs();
+    
+    UFUNCTION(BlueprintCallable, Category="BqLog")
+    static void BqLogForceFlush(UBqLog* LogInstance);
+
+    UFUNCTION(BlueprintCallable, Category="BqLog")
+    static bool BqLogResetConfig(UBqLog* LogInstance, const FString& Config);
+
+    UFUNCTION(BlueprintCallable, Category="BqLog")
+    static void BqLogSetAppenderEnable(UBqLog* LogInstance, const FString& AppenderName, bool bEnable);
+
+    UFUNCTION(BlueprintCallable, Category="BqLog")
+    static bool BqLogIsValid(UBqLog* LogInstance);
+
+    UFUNCTION(BlueprintCallable, Category="BqLog")
+    static FString BqLogTakeSnapshot(UBqLog* LogInstance, const FString& TimeZoneConfigStr);
 };

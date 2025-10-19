@@ -4,7 +4,8 @@
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/log_manager.h"
 
-bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString, const TArray<FBqLogAny>& Args)
+
+bool UBqLogFunctionLibrary::EnsureLogInstance(UBqLog* LogInstance)
 {
     if (!LogInstance)
     {
@@ -18,6 +19,16 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
         const FString ErrorLog = FString(TEXT("LogInstance is invalid: ")) + SoftPath.ToString();
         bq::string error_str = TCHAR_TO_UTF8(*ErrorLog);
         bq::log::console(bq::log_level::error, error_str.c_str());
+        return false;
+    }
+    return true;
+}
+
+bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString, const TArray<FBqLogAny>& Args)
+{
+    if (!EnsureLogInstance(LogInstance))
+    {
+        return false;
     }
     const uint64_t log_id = LogInstance->log_id_;
 
@@ -203,4 +214,70 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
 bool UBqLogFunctionLibrary::DoBqLog(UBqLog* LogInstance, EBqLogLevel Level, int32 CategoryIndex, const FString& FormatString)
 {
     return DoBqLogFormat(LogInstance, Level, CategoryIndex, FormatString, TArray<FBqLogAny>());
+}
+
+void UBqLogFunctionLibrary::BqLogForceFlushAllLogs(){
+    bq::log::force_flush_all_logs();
+}
+    
+void UBqLogFunctionLibrary::BqLogForceFlush(UBqLog* LogInstance)
+{
+    if (!EnsureLogInstance(LogInstance))
+    {
+        return;
+    }
+    const uint64_t log_id = LogInstance->log_id_;
+    bq::api::__api_force_flush(log_id);
+}
+
+bool UBqLogFunctionLibrary::BqLogResetConfig(UBqLog* LogInstance, const FString& Config)
+{
+    if (!EnsureLogInstance(LogInstance))
+    {
+        return false;
+    }
+    const uint64_t log_id = LogInstance->log_id_;
+    return bq::api::__api_log_reset_config(TCHAR_TO_UTF8(*LogInstance->LogName.ToString()), TCHAR_TO_UTF8(*Config));
+}
+
+void UBqLogFunctionLibrary::BqLogSetAppenderEnable(UBqLog* LogInstance, const FString& AppenderName, bool bEnable)
+{
+    if (!EnsureLogInstance(LogInstance))
+    {
+        return;
+    }
+    const uint64_t log_id = LogInstance->log_id_;
+    bq::api::__api_set_appender_enable(log_id, TCHAR_TO_UTF8(*AppenderName), bEnable);
+}
+
+bool UBqLogFunctionLibrary::BqLogIsValid(UBqLog* LogInstance)
+{
+    if (!EnsureLogInstance(LogInstance))
+    {
+        return false;
+    }
+    const uint64_t log_id = LogInstance->log_id_;
+    return log_id != 0;
+}
+
+FString UBqLogFunctionLibrary::BqLogTakeSnapshot(UBqLog* LogInstance, const FString& TimeZoneConfigStr)
+{
+    if (!EnsureLogInstance(LogInstance))
+    {
+        return FString();
+    }
+    const uint64_t log_id = LogInstance->log_id_;
+    bq::_api_string_def snapshot_str_def;
+    snapshot_str_def.str = nullptr;
+    snapshot_str_def.len = 0;
+    bq::api::__api_take_snapshot_string(log_id, TCHAR_TO_UTF8(*TimeZoneConfigStr), &snapshot_str_def);
+    FString SnapshotString;
+    if (snapshot_str_def.len > 0 && snapshot_str_def.str != nullptr)
+    {
+        SnapshotString = snapshot_str_def.str;
+        FUTF8ToTCHAR Converter(reinterpret_cast<const ANSICHAR*>(snapshot_str_def.str), snapshot_str_def.len);
+        return FString(Converter.Get(), Converter.Length());
+    }
+    bq::api::__api_release_snapshot_string(log_id, &snapshot_str_def);
+    return SnapshotString;
 }

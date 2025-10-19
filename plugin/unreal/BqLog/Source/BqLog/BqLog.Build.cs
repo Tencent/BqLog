@@ -12,11 +12,11 @@ public class BqLog : ModuleRules
         });
         
 #if UE_5_0_OR_LATER
-        //OptimizeCode = CodeOptimization.Never; // 
+        OptimizeCode = CodeOptimization.Never; // 
 #else
-        //bOptimizeCode = false;
+        bOptimizeCode = false;
 #endif
-        //bUseUnity = false; // 
-        //MinFilesUsingPrecompiledHeaderOverride = 1;
+        bUseUnity = false; // 
+        MinFilesUsingPrecompiledHeaderOverride = 1;
     }
 }
