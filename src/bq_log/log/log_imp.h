@@ -40,7 +40,7 @@ namespace bq {
         const bq::string& get_category_name_by_index(uint32_t index) const;
         const bq::array<bq::string>& get_categories_name() const;
 
-        void set_appenders_enable(const bq::string& appender_name, bool enable);
+        void set_appender_enable(const bq::string& appender_name, bool enable);
 
         bq_forceinline log_buffer& get_buffer()
         {

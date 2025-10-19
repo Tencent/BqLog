@@ -456,7 +456,7 @@ namespace bq {
         return categories_name_array_;
     }
 
-    void log_imp::set_appenders_enable(const bq::string& appender_name, bool enable)
+    void log_imp::set_appender_enable(const bq::string& appender_name, bool enable)
     {
         bq::platform::scoped_spin_lock lock(spin_lock_);
         auto star_list = appender_name.split("*");

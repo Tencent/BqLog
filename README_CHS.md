@@ -422,7 +422,7 @@ STR参数类似于printf的第一个参数，其类型是各种常用类型的�
     /// </summary>
     /// <param name="appender_name"></param>
     /// <param name="enable"></param>
-    void set_appenders_enable(const bq::string& appender_name, bool enable);
+    void set_appender_enable(const bq::string& appender_name, bool enable);
 ```
 默认情况下配置中的Appender都是会生效的，但是这里提供了一种机制可以临时禁用和重新启用它们。  
   

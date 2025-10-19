@@ -297,7 +297,7 @@ namespace bq {
         {
             bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
             if (log) {
-                log->set_appenders_enable(appender_name, enable);
+                log->set_appender_enable(appender_name, enable);
             }
         }
 

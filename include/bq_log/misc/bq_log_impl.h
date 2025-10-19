@@ -94,7 +94,7 @@ namespace bq {
         return result;
     }
 
-    inline void log::set_appenders_enable(const bq::string& appender_name, bool enable)
+    inline void log::set_appender_enable(const bq::string& appender_name, bool enable)
     {
         api::__api_set_appenders_enable(log_id_, appender_name.c_str(), enable);
     }

@@ -189,7 +189,7 @@ namespace bq {
         /// </summary>
         /// <param name="appender_name"></param>
         /// <param name="enable"></param>
-        void set_appenders_enable(const bq::string& appender_name, bool enable);
+        void set_appender_enable(const bq::string& appender_name, bool enable);
 
         /// <summary>
         /// Synchronously flush the buffer of this log object

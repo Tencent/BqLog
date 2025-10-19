@@ -423,7 +423,7 @@ Sometimes you may want to modify the configuration of a log within your program.
     /// </summary>
     /// <param name="appender_name"></param>
     /// <param name="enable"></param>
-    void set_appenders_enable(const bq::string& appender_name, bool enable);
+    void set_appender_enable(const bq::string& appender_name, bool enable);
 ```
 By default, the Appenders in the configuration are active, but a mechanism is provided here to temporarily disable and re-enable them. 
   
@@ -604,7 +604,7 @@ appenders_config.appender_3.file_name=~/bqLog/compress_log
 
 # The fifth Appender is named appender_4 and its type is RawFileAppender
 appenders_config.appender_4.type=raw_file
-# appender_4 is disabled by default and can be enabled later using set_appenders_enable
+# appender_4 is disabled by default and can be enabled later using set_appender_enable
 appenders_config.appender_4.enable=false
 # appender_4 will output all levels of logs
 appenders_config.appender_4.levels=[all]
@@ -659,7 +659,7 @@ Specifies the type of the Appender.
 - `raw_file`: Represents [RawFileAppender](#rawfileappender)
 
 #### appenders_config.xxx.enable
-Defaults to `true`. If set to `false`, the Appender will be disabled by default and can be enabled later using `set_appenders_enable`.
+Defaults to `true`. If set to `false`, the Appender will be disabled by default and can be enabled later using `set_appender_enable`.
 
 #### appenders_config.xxx.levels
 An array enclosed in `[]`, containing any combination of `verbose`, `debug`, `info`, `warning`, `error`, `fatal`, or `[all]` to accept all levels. **Note: Do not include spaces between levels, or it will fail to parse.**

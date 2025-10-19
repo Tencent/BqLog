@@ -342,7 +342,7 @@ public class log {
      * @param appender_name
      * @param enable
      */
-    public void set_appenders_enable(String appender_name, boolean enable)
+    public void set_appender_enable(String appender_name, boolean enable)
     {
         log_invoker.__api_set_appenders_enable(log_id_, appender_name, enable);
     }

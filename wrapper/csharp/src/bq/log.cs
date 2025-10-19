@@ -391,7 +391,7 @@ namespace bq
         /// </summary>
         /// <param name="appender_name"></param>
         /// <param name="enable"></param>
-        public void set_appenders_enable(string appender_name, bool enable)
+        public void set_appender_enable(string appender_name, bool enable)
         {
             unsafe
             {

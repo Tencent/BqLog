@@ -725,8 +725,8 @@ BQ_NAPI_DEF(fatal, napi_env, env, napi_callback_info, info) {
     return napi_do_log(bq::log_level::fatal, env, info);
 }
 
-// set_appenders_enable(log_id: bigint, appender_name: string, enable: boolean): void
-BQ_NAPI_DEF(set_appenders_enable, napi_env, env, napi_callback_info, info)
+// set_appender_enable(log_id: bigint, appender_name: string, enable: boolean): void
+BQ_NAPI_DEF(set_appender_enable, napi_env, env, napi_callback_info, info)
 {
     size_t argc = 3; napi_value argv[3] = { 0,0,0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));

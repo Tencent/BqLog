@@ -54,7 +54,7 @@ export class log_invoker {
     }
 
     public static __api_set_appenders_enable(log_id: bigint, appender_name: string, enable: boolean): void {
-        native_export("set_appenders_enable")(log_id, appender_name, !!enable);
+        native_export("set_appender_enable")(log_id, appender_name, !!enable);
     }
 
     public static __api_get_logs_count(): number {
