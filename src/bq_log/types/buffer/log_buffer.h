@@ -37,7 +37,7 @@ namespace bq {
 #else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 #endif
-#if BQ_UNIT_TEST
+#if defined(BQ_UNIT_TEST)
         static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 5;
 #else
         static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 2;
