@@ -14,9 +14,11 @@
 #include "EdGraphSchema_K2.h"
 
 #if ENGINE_MAJOR_VERSION >= 5
+#if WITH_EDITOR
 #include "ToolMenus.h"
 #include "GraphEditorActions.h"
 #include "Framework/Commands/UIAction.h"
+#endif
 #endif
 
 const FName UK2Node_BqLogFormat::LogInstancePinName(TEXT("LogInstance"));
@@ -167,6 +169,7 @@ void UK2Node_BqLogFormat::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeC
     }
 }
 
+#if WITH_EDITOR
 int32 UK2Node_BqLogFormat::GetNumArguments() const
 {
     int32 Count = 0;
@@ -208,6 +211,7 @@ bool UK2Node_BqLogFormat::CanRemoveArgument(int32 Index) const
     bool CanRemove = (ArgCount > 0 && Index >= 0 && Index < ArgCount);
     return CanRemove;
 }
+#endif
 #endif
 
 void UK2Node_BqLogFormat::RemoveInputPin(UEdGraphPin* Pin)
@@ -435,6 +439,7 @@ void UK2Node_BqLogFormat::ExpandNode(FKismetCompilerContext& CompilerContext, UE
     for (UEdGraphPin* ArgPin : ArgPins)
     {
         UK2Node_MakeStruct* MakeAny = CompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, SourceGraph);
+        MakeAny->bMadeAfterOverridePinRemoval = true;
         MakeAny->StructType = FBqLogAny::StaticStruct();
         MakeAny->AllocateDefaultPins();
 

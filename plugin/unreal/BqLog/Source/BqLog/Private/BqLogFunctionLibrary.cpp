@@ -276,7 +276,7 @@ FString UBqLogFunctionLibrary::BqLogTakeSnapshot(UBqLog* LogInstance, const FStr
     {
         SnapshotString = snapshot_str_def.str;
         FUTF8ToTCHAR Converter(reinterpret_cast<const ANSICHAR*>(snapshot_str_def.str), snapshot_str_def.len);
-        return FString(Converter.Get(), Converter.Length());
+        SnapshotString = FString(Converter.Get(), Converter.Length());
     }
     bq::api::__api_release_snapshot_string(log_id, &snapshot_str_def);
     return SnapshotString;

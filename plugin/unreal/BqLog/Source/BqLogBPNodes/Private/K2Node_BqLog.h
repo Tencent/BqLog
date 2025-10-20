@@ -7,7 +7,7 @@
 #include "K2Node_BqLog.generated.h"
 
 UCLASS()
-class BQLOGEDITOR_API UK2Node_BqLogFormat : public UK2Node, public IK2Node_AddPinInterface
+class BQLOGBPNODES_API UK2Node_BqLogFormat : public UK2Node, public IK2Node_AddPinInterface
 {
 	GENERATED_BODY()
 public:
@@ -55,10 +55,12 @@ public:
 	virtual bool SupportsRemovePin() const { return true; }
 	
 	// UE5.6+ Details面板参数管理
+#if WITH_EDITOR
 	virtual int32 GetNumArguments() const;
 	virtual void AddArgument();
 	virtual void RemoveArgument(int32 Index);
 	virtual bool CanRemoveArgument(int32 Index) const;
+#endif
 #endif
 
 	// Wildcard 类型协商

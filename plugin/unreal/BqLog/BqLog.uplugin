@@ -16,6 +16,6 @@
 	"Installed": false,
     "Modules": [
       { "Name": "BqLog", "Type": "Runtime", "LoadingPhase": "Default" },
-      { "Name": "BqLogEditor", "Type": "Editor", "LoadingPhase": "Default" }
+			{ "Name": "BqLogBPNodes", "Type": "UncookedOnly", "LoadingPhase": "Default" }
     ]
 }
