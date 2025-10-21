@@ -48,6 +48,8 @@ namespace bq {
         gmt_offset_minutes_ = 0;
         time_zone_str_ = "";
         time_zone_diff_to_gmt_ms_ = 0;
+        time_cache_len_ = 0;
+        last_time_epoch_cache_ = 0;
     }
 
     void time_zone::parse_by_string(const bq::string& time_zone_str)
@@ -208,11 +210,21 @@ namespace bq {
     bq::string time_zone::get_time_str_by_epoch(uint64_t epoch_ms) const
     {
         char time_buffer[128];
-        struct tm result;
+        struct tm result = {};
         get_tm_by_epoch(epoch_ms, result);
         snprintf(time_buffer, sizeof(time_buffer), "%04d-%02d-%02d %02d:%02d:%02d",
             result.tm_year + 1900, result.tm_mon + 1, result.tm_mday, result.tm_hour, result.tm_min, result.tm_sec);
         return time_buffer;
     }
+
+    void time_zone::inner_refresh_time_string_cache(uint64_t epoch_ms)
+    {
+        struct tm time_st = {};
+        get_tm_by_epoch(epoch_ms, time_st);
+        time_cache_len_ = static_cast<size_t>(snprintf(time_cache_, sizeof(time_cache_),
+            "%s %d-%02d-%02d %02d:%02d:%02d.", get_time_zone_str().c_str(), time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec));
+        last_time_epoch_cache_ = epoch_ms;
+    }
+
 
 }

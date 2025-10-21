@@ -56,12 +56,30 @@ namespace bq {
         }
         bq_forceinline const bq::string& get_time_zone_str() const { return time_zone_str_; }
         bq_forceinline int64_t get_time_zone_diff_to_gmt_ms() const { return time_zone_diff_to_gmt_ms_; }
+        bq_forceinline void refresh_time_string_cache(uint64_t epoch_ms)
+        {
+            if (epoch_ms == last_time_epoch_cache_) {
+                return;
+            }
+            inner_refresh_time_string_cache(epoch_ms);
+        }
+        bq_forceinline const char* get_time_string_cache() const { return time_cache_; }
+        bq_forceinline size_t get_time_string_cache_len() const { return time_cache_len_; }
+    private:
+        void inner_refresh_time_string_cache(uint64_t epoch_ms);
+    public:
+        static constexpr uint32_t MAX_TIME_STR_LEN = 128;
     private:
         bool use_local_time_;
         int32_t gmt_offset_hours_;
         int32_t gmt_offset_minutes_;
         int64_t time_zone_diff_to_gmt_ms_;
         bq::string time_zone_str_;
+
+        //Cache for time string
+        char time_cache_[MAX_TIME_STR_LEN + 1];
+        size_t time_cache_len_;
+        uint64_t last_time_epoch_cache_ = 0;
     };
 
 }

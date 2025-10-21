@@ -62,7 +62,7 @@ namespace bq {
     public:
         layout();
 
-        enum_layout_result do_layout(const bq::log_entry_handle& log_entry, const time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr);
+        enum_layout_result do_layout(const bq::log_entry_handle& log_entry, time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr);
 
         inline const char* get_formated_str()
         {
@@ -137,11 +137,7 @@ namespace bq {
         void reverse(uint32_t begin_cursor, uint32_t end_cursor);
         //------------------------- insert functions end ----------------------//
     private:
-        const time_zone* time_zone_ptr_;
-        static constexpr uint32_t MAX_TIME_STR_LEN = 128;
-        char time_cache_[MAX_TIME_STR_LEN + 1];
-        size_t time_cache_len_;
-        uint64_t last_time_epoch_cache_ = 0;
+        time_zone* time_zone_ptr_;
         const bq::array<bq::string>* categories_name_array_ptr_;
         // todo: use bq::string instead, but need optimize performance
         bq::array<char> format_content;
