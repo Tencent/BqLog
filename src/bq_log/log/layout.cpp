@@ -19,16 +19,13 @@
 namespace bq {
     layout::layout()
         : time_zone_ptr_(nullptr)
-        , time_cache_ { 0 }
-        , time_cache_len_(0)
-        , last_time_epoch_cache_(0)
         , categories_name_array_ptr_(nullptr)
         , format_content_cursor(0)
     {
         thread_names_cache_.set_expand_rate(4);
     }
 
-    layout::enum_layout_result layout::do_layout(const bq::log_entry_handle& log_entry, const time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr)
+    layout::enum_layout_result layout::do_layout(const bq::log_entry_handle& log_entry, time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr)
     {
         time_zone_ptr_ = &input_time_zone;
         categories_name_array_ptr_ = categories_name_array_ptr;
@@ -81,21 +78,14 @@ namespace bq {
 
     layout::enum_layout_result layout::insert_time(const bq::log_entry_handle& log_entry)
     {
-        expand_format_content_buff_size(format_content_cursor + MAX_TIME_STR_LEN + 3);
-        uint64_t epoch = log_entry.get_log_head().timestamp_epoch;
+        expand_format_content_buff_size(format_content_cursor + time_zone::MAX_TIME_STR_LEN + 3);
+        uint64_t epoch_ms = log_entry.get_log_head().timestamp_epoch;
+        time_zone_ptr_->refresh_time_string_cache(epoch_ms);
+        memcpy(&format_content[format_content_cursor], time_zone_ptr_->get_time_string_cache(), time_zone_ptr_->get_time_string_cache_len());
+        format_content_cursor += static_cast<uint32_t>(time_zone_ptr_->get_time_string_cache_len());
 
-        if (epoch != last_time_epoch_cache_) {
-            struct tm time_st;
-            time_zone_ptr_->get_tm_by_epoch(epoch, time_st);
-            time_cache_len_ = static_cast<size_t>(snprintf(time_cache_, sizeof(time_cache_),
-                "%s %d-%02d-%02d %02d:%02d:%02d.", time_zone_ptr_->get_time_zone_str().c_str(), time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec));
-            last_time_epoch_cache_ = epoch;
-        }
-        memcpy(&format_content[format_content_cursor], time_cache_, time_cache_len_);
-        format_content_cursor += (uint32_t)time_cache_len_;
-
-        int32_t millsec = static_cast<int32_t>(epoch % 1000);
-        const char* ms_src = &log_global_vars::get().digit3_array[millsec * 3];
+        auto m_sec = static_cast<int32_t>(epoch_ms % 1000);
+        const char* ms_src = &log_global_vars::get().digit3_array[m_sec * 3];
         char* ms_dest = &format_content[format_content_cursor];
         ms_dest[0] = ms_src[0];
         ms_dest[1] = ms_src[1];
