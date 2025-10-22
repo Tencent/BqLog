@@ -25,7 +25,7 @@ namespace bq {
     {
 #if defined(BQ_ANDROID)
         platform::jni_onload_register register_(&bq::platform::android_jni_onload);
-#else defined(BQ_WIN)
+#elif defined(BQ_WIN)
         stack_trace_process_ = GetCurrentProcess();
 #endif
     }
