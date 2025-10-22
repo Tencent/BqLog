@@ -775,7 +775,7 @@ namespace bq {
         {
             HMODULE module = GetModuleHandleA(module_name);
             if (module) {
-                return static_cast<void*>(GetProcAddress(module, api_name));
+                return reinterpret_cast<void*>(GetProcAddress(module, api_name));
             }
             return nullptr;
         }
