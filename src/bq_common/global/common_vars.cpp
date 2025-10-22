@@ -14,6 +14,9 @@
 //  Created by Yu Cao on 2025/4/11.
 //
 #include "bq_common/global/common_vars.h"
+#ifdef BQ_WIN
+#include "bq_common/platform/win64_includes_begin.h"
+#endif
 
 namespace bq {
     static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();
@@ -22,6 +25,8 @@ namespace bq {
     {
 #if defined(BQ_ANDROID)
         platform::jni_onload_register register_(&bq::platform::android_jni_onload);
+#else defined(BQ_WIN)
+        stack_trace_process_ = GetCurrentProcess();
 #endif
     }
 
@@ -33,3 +38,6 @@ namespace bq {
     }
 
 }
+#ifdef BQ_WIN
+#include "bq_common/platform/win64_includes_end.h"
+#endif

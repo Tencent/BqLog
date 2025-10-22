@@ -56,11 +56,17 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
         case EBqLogAnyType::Bool:
             total_data_size += bq::tools::make_size_seq<true>(true).get_element().get_aligned_value();
             break;
+        case EBqLogAnyType::Int32:
+            total_data_size += bq::tools::make_size_seq<true>(static_cast<int32_t>(Arg.I32)).get_element().get_aligned_value();
+            break;
         case EBqLogAnyType::Int64:
-            total_data_size += bq::tools::make_size_seq<true>(static_cast<int64_t>(INT64_MAX)).get_element().get_aligned_value();
+            total_data_size += bq::tools::make_size_seq<true>(static_cast<int64_t>(Arg.I64)).get_element().get_aligned_value();
+            break;
+        case EBqLogAnyType::Float:
+            total_data_size += bq::tools::make_size_seq<true>(Arg.F).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Double:
-            total_data_size += bq::tools::make_size_seq<true>(static_cast<double>(1.0)).get_element().get_aligned_value();
+            total_data_size += bq::tools::make_size_seq<true>(Arg.D).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::String:
             total_data_size += bq::tools::make_size_seq<true>(Arg.S).get_element().get_aligned_value();
@@ -93,12 +99,10 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
                 total_data_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
             }
             break; 
-#if ENGINE_MAJOR_VERSION >= 5
         case EBqLogAnyType::SoftObject:
             Arg.FormattedString = Arg.SoftPath.ToString();
             total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
-#endif
         case EBqLogAnyType::Vector:
             Arg.FormattedString = Arg.V.ToString(); 
             total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
@@ -148,15 +152,23 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
             log_args_addr += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
         case EBqLogAnyType::Bool:
             bq::tools::_type_copy<true>(Arg.B, log_args_addr, bq::tools::make_size_seq<true>(Arg.B).get_value());
-            log_args_addr += bq::tools::make_size_seq<true>(true).get_element().get_aligned_value();
+            log_args_addr += bq::tools::make_size_seq<true>(Arg.B).get_element().get_aligned_value();
+            break;
+        case EBqLogAnyType::Int32:
+            bq::tools::_type_copy<true>(Arg.I32, log_args_addr, bq::tools::make_size_seq<true>(Arg.I32).get_value());
+            log_args_addr += bq::tools::make_size_seq<true>(static_cast<int32_t>(Arg.I32)).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Int64:
             bq::tools::_type_copy<true>(Arg.I64, log_args_addr, bq::tools::make_size_seq<true>(Arg.I64).get_value());
             log_args_addr += bq::tools::make_size_seq<true>(static_cast<int64_t>(Arg.I64)).get_element().get_aligned_value();
             break;
+        case EBqLogAnyType::Float:
+            bq::tools::_type_copy<true>(Arg.F, log_args_addr, bq::tools::make_size_seq<true>(Arg.F).get_value());
+            log_args_addr += bq::tools::make_size_seq<true>(Arg.F).get_element().get_aligned_value();
+            break;
         case EBqLogAnyType::Double:
             bq::tools::_type_copy<true>(Arg.D, log_args_addr, bq::tools::make_size_seq<true>(Arg.D).get_value());
-            log_args_addr += bq::tools::make_size_seq<true>(static_cast<double>(Arg.D)).get_element().get_aligned_value();
+            log_args_addr += bq::tools::make_size_seq<true>(Arg.D).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::String:
             bq::tools::_type_copy<true>(Arg.S, log_args_addr, bq::tools::make_size_seq<true>(Arg.S).get_value());
@@ -191,9 +203,7 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
                 log_args_addr += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             }                
             break;
-#if ENGINE_MAJOR_VERSION >= 5
             case EBqLogAnyType::SoftObject:
-#endif
             case EBqLogAnyType::Vector:
             case EBqLogAnyType::Rotator:
             case EBqLogAnyType::Transform:

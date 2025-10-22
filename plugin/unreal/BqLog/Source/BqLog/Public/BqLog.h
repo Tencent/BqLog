@@ -88,16 +88,16 @@ enum class EBqLogAnyType : uint8
 {
     None        UMETA(DisplayName="None"),
     Bool        UMETA(DisplayName="Bool"),
+    Int32       UMETA(DisplayName="Int32"),
     Int64       UMETA(DisplayName="Int64"),
+    Float       UMETA(DisplayName="Float"),
     Double      UMETA(DisplayName="Double"),
     String      UMETA(DisplayName="String"),
     Name        UMETA(DisplayName="Name"),
     Text        UMETA(DisplayName="Text"),
     Object      UMETA(DisplayName="Object"),
     Class       UMETA(DisplayName="Class"),
-#if ENGINE_MAJOR_VERSION >= 5
     SoftObject  UMETA(DisplayName="SoftObjectPath"),
-#endif
     Vector      UMETA(DisplayName="Vector"),
     Rotator     UMETA(DisplayName="Rotator"),
     Transform   UMETA(DisplayName="Transform"),
@@ -110,22 +110,23 @@ struct BQLOG_API FBqLogAny
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) EBqLogAnyType Type = EBqLogAnyType::None;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool         B = false;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) int64        I64 = 0;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) double       D = 0.0;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FString      S;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FName        N;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FText        T;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) UObject*     Obj = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) EBqLogAnyType   Type = EBqLogAnyType::None;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool            B = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int32           I32 = 0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int64           I64 = 0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) float           F = 0.0;
+    UPROPERTY(EditAnywhere)                     double          D = 0.0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FString         S;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FName           N;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FText           T;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) UObject*        Obj = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<UObject> Cls;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FSoftObjectPath SoftPath;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector      V = FVector::ZeroVector;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FRotator     R = FRotator::ZeroRotator;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FTransform   Xform = FTransform::Identity;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FColor       Color = FColor::White;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) FLinearColor LColor = FLinearColor::White;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector         V = FVector::ZeroVector;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FRotator        R = FRotator::ZeroRotator;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FTransform      Xform = FTransform::Identity;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FColor          Color = FColor::White;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FLinearColor    LColor = FLinearColor::White;
 
     UPROPERTY(Transient)    FString FormattedString;
 };

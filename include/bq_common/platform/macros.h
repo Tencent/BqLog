@@ -250,3 +250,9 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #define BQ_LIKELY_IF(expr) if (expr)
 #define BQ_UNLIKELY_IF(expr) if (expr)
 #endif
+
+#if defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING) || defined(UE_GAME) || defined(UE_EDITOR) || defined(UE_BUILD_SHIPPING_WITH_EDITOR) || defined(UE_BUILD_DOCS)
+#define BQ_IN_UNREAL 1
+#else
+#define BQ_IN_UNREAL 0
+#endif

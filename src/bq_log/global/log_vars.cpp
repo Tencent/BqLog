@@ -33,7 +33,7 @@ namespace bq {
     }
 #endif
 
-    void log_global_vars::init_layout_values()
+    void log_global_vars::init_layout_values() const
     {
         for (uint32_t i = 0; i < 1000; ++i) {
             // 16 may overflow, it only make compilers ignore warning.

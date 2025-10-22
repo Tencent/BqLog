@@ -11,6 +11,7 @@
  */
 #include "bq_common/platform/thread/thread_win64.h"
 #ifdef BQ_WIN
+#include "bq_common/platform/win64_includes_begin.h"
 #include "bq_common/bq_common.h"
 #include <processthreadsapi.h>
 #include <stringapiset.h>
@@ -142,8 +143,8 @@ namespace bq {
         static void init_thread_apis()
         {
             const auto& os_ver_info = bq::platform::get_windows_version_info();
-            if (os_ver_info.dwMajorVersion > 10
-                || (os_ver_info.dwMajorVersion == 10 && os_ver_info.dwBuildNumber >= 14393)) {
+            if (os_ver_info.major_version > 10
+                || (os_ver_info.major_version == 10 && os_ver_info.build_number >= 14393)) {
                 get_thread_desc_func_ = bq::platform::get_sys_api<decltype(get_thread_desc_func_)>("kernel32.dll", "GetThreadDescription");
                 set_thread_desc_func_ = bq::platform::get_sys_api<decltype(set_thread_desc_func_)>("kernel32.dll", "SetThreadDescription");
             }
@@ -307,4 +308,5 @@ namespace bq {
         }
     }
 }
+#include "bq_common/platform/win64_includes_end.h"
 #endif

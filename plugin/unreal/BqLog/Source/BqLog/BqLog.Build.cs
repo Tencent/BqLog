@@ -10,13 +10,10 @@ public class BqLog : ModuleRules
         PublicDependencyModuleNames.AddRange(new[] {
             "Core", "CoreUObject", "Engine"
         });
-        
-#if UE_5_0_OR_LATER
-        //OptimizeCode = CodeOptimization.Never; // 
-#else
-        //bOptimizeCode = false;
-#endif
-        //bUseUnity = false; // 
+
+
+        //OptimizeCode = CodeOptimization.Never;
+        //bUseUnity = false; 
         //MinFilesUsingPrecompiledHeaderOverride = 1;
     }
 }

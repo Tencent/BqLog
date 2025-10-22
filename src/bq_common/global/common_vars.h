@@ -34,6 +34,11 @@ namespace bq {
         }
     };
 
+    template <typename T>
+    struct _global_var_auto_destructor {
+        inline ~_global_var_auto_destructor();
+    };
+
     /// <summary>
     /// Base class template for managing global objects with controlled initialization and destruction.
     /// </summary>
@@ -65,33 +70,21 @@ namespace bq {
     template <typename T, typename Priority_Global_Var_Type = void>
     struct global_vars_base {
         friend struct global_var_holder;
-
+        friend struct _global_var_auto_destructor<T>;
     protected:
         static BQ_TLS T* global_vars_ptr_;
         alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
 
-    private:
-        struct global_var_holder {
-            global_var_holder()
-            {
-            }
-            ~global_var_holder()
-            {
-                //"To ensure these variables can be used at any time without being destroyed, we accept a small amount of memory leakage."
-                if (T::global_vars_ptr_) {
-                    (reinterpret_cast<global_vars_base*>(T::global_vars_ptr_))->partial_destruct();
-                    /*T::global_vars_ptr_->~T();
-                    bq::platform::aligned_free(T::global_vars_ptr_);
-                    T::global_vars_ptr_ = nullptr;*/
-                } else if (T::global_vars_buffer_) {
-                    (reinterpret_cast<global_vars_base*>(T::global_vars_buffer_))->partial_destruct();
-                }
-            }
-        };
+    protected:
+        static _global_var_auto_destructor<T> global_var_destructor_;
 
     protected:
         virtual void partial_destruct()
+        {
+        }
+
+        virtual ~global_vars_base()
         {
         }
 
@@ -104,7 +97,6 @@ namespace bq {
                     int32_t expected = 0;
                     if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
-                        static global_var_holder holder;
                         T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(8, sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
                         new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
@@ -133,6 +125,20 @@ namespace bq {
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
 
+    template <typename T, typename Priority_Global_Var_Type>
+    _global_var_auto_destructor<T> global_vars_base<T, Priority_Global_Var_Type>::global_var_destructor_;
+
+    template <typename T>
+    inline _global_var_auto_destructor<T>::~_global_var_auto_destructor()
+    {
+        //"To ensure these variables can be used at any time without being destroyed, we accept a small amount of memory leakage."
+        if (T::global_vars_ptr_) {
+            T::global_vars_ptr_->partial_destruct();
+        } else if (T::global_vars_buffer_) {
+            T::global_vars_buffer_->partial_destruct();
+        }
+    }
+
     struct common_global_vars : public global_vars_base<common_global_vars> {
 #if defined(BQ_WIN)
         bq::platform::mutex win_api_mutex_;
@@ -160,7 +166,7 @@ namespace bq {
         bq::platform::spin_lock apk_path_spin_lock_;
 #endif
 #if defined(BQ_WIN)
-        HANDLE stack_trace_process_ = GetCurrentProcess();
+        bq::platform::platform_file_handle stack_trace_process_ = bq::platform::invalid_platform_file_handle;
         bq::platform::atomic<bool> stack_trace_sym_initialized_ = false;
 #endif
         property_value null_property_value_;
@@ -168,7 +174,7 @@ namespace bq {
 
         common_global_vars();
 
-        virtual ~common_global_vars(){}
+        virtual ~common_global_vars() override{}
 
     protected:
         virtual void partial_destruct() override;

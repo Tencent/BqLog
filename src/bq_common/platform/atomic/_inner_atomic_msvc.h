@@ -21,9 +21,6 @@
  *  both arm and Intel architecture is supported for all memory order semantic.
  */
 #ifdef BQ_MSVC
-// although <winsock2.h> does nothing help to atomic, but we must include it before <windows.h> to avoid compiling error when develop net socket functionalities.
-#include <winsock2.h>
-#include <windows.h>
 #include <intrin.h>
 namespace bq {
     namespace platform {
@@ -681,14 +678,6 @@ namespace bq {
         SPECIALIZED_ATOMIC_BASE(4);
         SPECIALIZED_ATOMIC_BASE(8);
 #pragma warning(pop)
-
-        inline void atomic_thread_fence(memory_order order)
-        {
-            if (order != memory_order::relaxed) {
-                MemoryBarrier();
-            }
-        }
     }
 }
-
 #endif // BQ_WIN

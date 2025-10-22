@@ -61,7 +61,10 @@ public:
 	virtual void RemoveArgument(int32 Index);
 	virtual bool CanRemoveArgument(int32 Index) const;
 #endif
+#else
+	virtual void RemoveInputPin(class UEdGraphPin* Pin);
 #endif
+
 
 	// Wildcard 类型协商
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;

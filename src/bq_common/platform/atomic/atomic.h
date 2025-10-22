@@ -31,7 +31,6 @@ namespace bq {
             acq_rel,
             seq_cst
         };
-        void atomic_thread_fence(memory_order order = memory_order::seq_cst);
     }
 }
 

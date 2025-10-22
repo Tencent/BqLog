@@ -11,6 +11,7 @@
  */
 #include "bq_common/platform/thread/mutex_win64.h"
 #ifdef BQ_WIN
+#include "bq_common/platform/win64_includes_begin.h"
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -101,4 +102,5 @@ namespace bq {
         }
     }
 }
+#include "bq_common/platform/win64_includes_end.h"
 #endif

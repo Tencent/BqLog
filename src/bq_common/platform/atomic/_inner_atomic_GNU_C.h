@@ -784,22 +784,6 @@ namespace bq {
                 return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
         };
-
-        bq_forceinline void atomic_thread_fence(memory_order order)
-        {
-            switch (order) {
-            case memory_order::relaxed:
-                return __atomic_thread_fence(__ATOMIC_RELAXED);
-            case memory_order::acquire:
-                return __atomic_thread_fence(__ATOMIC_ACQUIRE);
-            case memory_order::release:
-                return __atomic_thread_fence(__ATOMIC_RELEASE);
-            case memory_order::acq_rel:
-                return __atomic_thread_fence(__ATOMIC_ACQ_REL);
-            default:
-                return __atomic_thread_fence(__ATOMIC_SEQ_CST);
-            }
-        }
     }
 }
 #endif

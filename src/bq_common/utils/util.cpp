@@ -17,6 +17,8 @@
 #include <android/log.h>
 #elif defined(BQ_OHOS)
 #include <hilog/log.h>
+#elif defined(BQ_WIN)
+#include "bq_common/platform/win64_includes_begin.h"
 #endif
 
 
@@ -309,3 +311,8 @@ namespace bq {
         return result_len;
     }
 }
+
+
+#if defined(BQ_WIN)
+#include "bq_common/platform/win64_includes_end.h"
+#endif

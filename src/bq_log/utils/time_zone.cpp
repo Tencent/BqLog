@@ -13,6 +13,7 @@
 #include "bq_log/utils/time_zone.h"
 #include "bq_common/bq_common.h"
 #ifdef BQ_WIN
+#include "bq_common/platform/win64_includes_begin.h"
 #include <timezoneapi.h>
 #endif
 
@@ -216,3 +217,6 @@ namespace bq {
     }
 
 }
+#ifdef BQ_WIN
+#include "bq_common/platform/win64_includes_end.h"
+#endif

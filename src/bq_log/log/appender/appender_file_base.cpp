@@ -10,6 +10,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_log/log/appender/appender_file_base.h"
+#if defined(BQ_WIN)
+#include "bq_common/platform/win64_includes_begin.h"
+#endif
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/utils/log_utils.h"
@@ -41,10 +44,10 @@ namespace bq {
         }
         current_file_size_ += real_write_size;
         if (error_code != 0 && error_code !=
-#if defined(BQ_POSIX)
-                ENOSPC
-#else
+#if defined(BQ_WIN)
                 ERROR_DISK_FULL
+#else
+                ENOSPC
 #endif
         ) {
             char error_text[256] = { 0 };
@@ -441,3 +444,7 @@ namespace bq {
     }
 
 }
+
+#if defined(BQ_WIN)
+#include "bq_common/platform/win64_includes_end.h"
+#endif

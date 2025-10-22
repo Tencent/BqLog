@@ -11,7 +11,9 @@
  */
 #include "bq_common/platform/win64_misc.h"
 #if defined(BQ_WIN)
-#include <windows.h>
+#include "bq_common/platform/win64_includes_begin.h"
+#include <shellapi.h>
+#include <winternl.h>
 #include <sys/stat.h>
 #include <direct.h>
 #include <fileapi.h>
@@ -343,9 +345,9 @@ namespace bq {
             auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
             bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
             file_node_info node_info;
-            node_info.volumn = file_info.dwVolumeSerialNumber;
-            node_info.idx_high = file_info.nFileIndexHigh;
-            node_info.idx_low = file_info.nFileIndexLow;
+            node_info.volumn = static_cast<uint32_t>(file_info.dwVolumeSerialNumber);
+            node_info.idx_high = static_cast<uint32_t>(file_info.nFileIndexHigh);
+            node_info.idx_low = static_cast<uint32_t>(file_info.nFileIndexLow);
             auto iter = file_exclusive_cache.find(node_info);
             if (iter == file_exclusive_cache.end()) {
                 file_exclusive_cache.add(node_info, mode);
@@ -367,9 +369,9 @@ namespace bq {
             auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
             bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
             file_node_info node_info;
-            node_info.volumn = file_info.dwVolumeSerialNumber;
-            node_info.idx_high = file_info.nFileIndexHigh;
-            node_info.idx_low = file_info.nFileIndexLow;
+            node_info.volumn = static_cast<uint32_t>(file_info.dwVolumeSerialNumber);
+            node_info.idx_high = static_cast<uint32_t>(file_info.nFileIndexHigh);
+            node_info.idx_low = static_cast<uint32_t>(file_info.nFileIndexLow);
             file_exclusive_cache.erase(node_info);
         }
 
@@ -747,23 +749,38 @@ namespace bq {
             return bq::util::get_hash_64(this, sizeof(file_node_info));
         }
 
-        static RTL_OSVERSIONINFOW win_version_info_;
-        const RTL_OSVERSIONINFOW& get_windows_version_info()
+        static windows_version_info win_version_info_;
+        const windows_version_info& get_windows_version_info()
         {
             bq::platform::scoped_mutex lock(common_global_vars::get().win_api_mutex_);
-            if (win_version_info_.dwMajorVersion == 0) {
+            if (win_version_info_.major_version == 0) {
                 NTSTATUS(WINAPI * get_rtl_get_version)(PRTL_OSVERSIONINFOW) = nullptr;
                 get_rtl_get_version = get_sys_api<decltype(get_rtl_get_version)>("ntdll.dll", "RtlGetVersion");
                 if (get_rtl_get_version) {
-                    NTSTATUS status = get_rtl_get_version(&win_version_info_);
-                    if (status == 0) {
+                    RTL_OSVERSIONINFOW tmp;
+                    NTSTATUS status = get_rtl_get_version(&tmp);
+                    if (0 == status) {
+                        win_version_info_.major_version = tmp.dwMajorVersion;
+                        win_version_info_.minor_version = tmp.dwMinorVersion;
+                        win_version_info_.build_number = tmp.dwBuildNumber;
                         return win_version_info_;
                     }
                 }
-                win_version_info_.dwMajorVersion = 0;
+                win_version_info_.major_version = 0;
             }
             return win_version_info_;
         }
+
+        void* get_process_adress(const char* module_name, const char* api_name)
+        {
+            HMODULE module = GetModuleHandleA(module_name);
+            if (module) {
+                return static_cast<void*>(GetProcAddress(module, api_name));
+            }
+            return nullptr;
+        }
+
     }
 }
+#include "bq_common/platform/win64_includes_end.h"
 #endif

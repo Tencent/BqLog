@@ -54,7 +54,7 @@ namespace bq {
 #if defined(BQ_JAVA)
         static void jni_onload_callback();
 #endif
-        void init_layout_values();
+        void init_layout_values() const;
 
     protected:
         virtual void partial_destruct() override;
@@ -62,6 +62,6 @@ namespace bq {
     public:
         log_global_vars();
 
-        virtual ~log_global_vars(){}
+        virtual ~log_global_vars() override{}
     };
 }
