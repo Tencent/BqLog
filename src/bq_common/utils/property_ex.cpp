@@ -120,7 +120,7 @@ namespace bq {
                 string new_value = value.substr(1, value.size() - 2);
                 auto values = new_value.split(",");
                 for (auto& cell_value : values) {
-                    root[key].add_array_item(parse_to_property_value(root, "", cell_value));
+                    root[key].add_array_item(parse_to_property_value(root, "", cell_value.trim()));
                 }
             }
             pv = property_value(enum_property_value_type::array_type);

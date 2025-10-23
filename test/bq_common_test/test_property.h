@@ -33,11 +33,11 @@ namespace bq {
 						name=abc
 						json_style:json......
 						open=true
-						object.f1=a
+						object.f1 = a
 						object.f2=b
 						deep.obj.notice=c=0+6=1+5=2+4=3+3
 						deep.obj.d2=1.0
-						configs=[name,object,deep]
+						configs = [    name, object, deep      ]
 						newtype=I want to go to the Park!\n\
 								I will fly a kite!\n\
 								\

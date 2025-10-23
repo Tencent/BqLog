@@ -41,8 +41,8 @@ namespace bq {
         array<bq::string> kv;
         for (size_t i = 1; i < line.size() - 1; i++) {
             if (line[i] == split_float && line[i - 1] != '\\') {
-                kv.push_back(line.substr(0, i));
-                kv.push_back(line.substr(i + 1, line.size() - i - 1));
+                kv.push_back(line.substr(0, i).trim());
+                kv.push_back(line.substr(i + 1, line.size() - i - 1).trim());
                 break;
             }
         }
@@ -67,8 +67,8 @@ namespace bq {
             if (kv.size() < 2)
                 kv = find_split(line, ':');
             if (kv.size() == 2) {
-                string key = kv[0].trim();
-                string value = line.substr(key.size() + 1, line.size() - key.size() - 1).trim();
+                bq::string key = kv[0].trim();
+                bq::string value = kv[1].trim();
                 if (value.is_empty())
                     continue;
                 while (true) {
