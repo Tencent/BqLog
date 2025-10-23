@@ -119,11 +119,7 @@ namespace bq {
                 sigaction(SIG, &original_sigaction, &tmp);
                 registered = false;
                 handler(sig, info, context);
-#if defined(BQ_APPLE)
-                kill(getpid(), sig);
-#else
                 bq_tgkill(getpid(), bq_gettid(), sig);
-#endif
 #endif
             }
 
