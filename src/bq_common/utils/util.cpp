@@ -182,17 +182,20 @@ namespace bq {
         }
         else if (has_console) {
             DWORD written = 0;
+            BOOL ret;
             if (use_color && color_len) { 
-                WriteFile(h, color, static_cast<DWORD>(color_len), &written, nullptr); 
+                ret = WriteFile(h, color, static_cast<DWORD>(color_len), &written, nullptr);
             }
-            WriteFile(h, prefix, static_cast<DWORD>(prefix_len), &written, nullptr);
+            ret = WriteFile(h, prefix, static_cast<DWORD>(prefix_len), &written, nullptr);
             if (msg_len) { 
-                WriteFile(h, msg, static_cast<DWORD>(msg_len), &written, nullptr); 
+                ret = WriteFile(h, msg, static_cast<DWORD>(msg_len), &written, nullptr);
             }
             if (use_color && reset_len) { 
-                WriteFile(h, reset, static_cast<DWORD>(reset_len), &written, nullptr); 
+                ret = WriteFile(h, reset, static_cast<DWORD>(reset_len), &written, nullptr);
             }
-            WriteFile(h, newline, static_cast<DWORD>(nl_len), &written, nullptr);
+            ret = WriteFile(h, newline, static_cast<DWORD>(nl_len), &written, nullptr);
+            (void)ret;
+            (void)written;
         }
 
 #if defined(BQ_MSVC)
@@ -208,7 +211,7 @@ namespace bq {
         const bool use_color = is_tty;
         const size_t total_len =
             (use_color ? color_len : 0) + prefix_len + msg_len + (use_color ? reset_len : 0) + nl_len;
-
+        ssize_t writen = 0;
         if (total_len <= STACK_CAP) {
             char buf[STACK_CAP];
             char* p = buf;
@@ -229,21 +232,22 @@ namespace bq {
             }
             memcpy(p, newline, nl_len);
             p += nl_len;
-            write(fd, buf, static_cast<size_t>(p - buf));
+            writen += write(fd, buf, static_cast<size_t>(p - buf));
         }
         else {
             if (use_color && color_len) { 
-                write(fd, color, color_len); 
+                writen += write(fd, color, color_len);
             }
-            write(fd, prefix, prefix_len);
+            writen += write(fd, prefix, prefix_len);
             if (msg_len) { 
-                write(fd, msg, msg_len); 
+                writen += write(fd, msg, msg_len);
             }
             if (use_color && reset_len) { 
-                write(fd, reset, reset_len); 
+                writen += write(fd, reset, reset_len);
             }
-            write(fd, newline, nl_len);
+            writen += write(fd, newline, nl_len);
         }
+        (void)writen;
 #endif 
 
 #endif 
