@@ -98,55 +98,155 @@ namespace bq {
             return;
         }
 #endif
+
 #if defined(BQ_ANDROID)
-        __android_log_write(ANDROID_LOG_VERBOSE + ((int32_t)level - (int32_t)bq::log_level::verbose), "Bq", text);
+        __android_log_write(ANDROID_LOG_VERBOSE + (static_cast<int32_t>(level) - static_cast<int32_t>(bq::log_level::verbose)),
+            "Bq", text ? text : "");
 #elif defined(BQ_OHOS)
-        if(level < bq::log_level::debug){
-            level = bq::log_level::debug; //HarmonyOS don't have verbose level;
+        {
+            auto oh_level = level < bq::log_level::debug ? bq::log_level::debug : level; //There is no verbose level in OHOS
+            OH_LOG_PrintMsg(LOG_APP,
+                static_cast<LogLevel>(static_cast<int32_t>(LOG_DEBUG) +
+                    static_cast<int32_t>(oh_level) - static_cast<int32_t>(bq::log_level::debug)), 0x8527, "Bq", text ? text : "");
         }
-        OH_LOG_PrintMsg(LOG_APP, static_cast<LogLevel>(static_cast<int32_t>(LOG_DEBUG) + static_cast<int32_t>(level) - static_cast<int32_t>(bq::log_level::debug)), 0x8527, "Bq", text);
 #elif defined(BQ_IOS)
         (void)level;
-        bq::platform::ios_print(text);
+        bq::platform::ios_print(text ? text : "");
 #else
-        decltype(stdout) output_target = stdout;
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
-        switch (level) {
-        case bq::log_level::verbose:
-            fputs("\033[3m", output_target);
-            break;
-        case bq::log_level::debug:
-            fputs("\033[92m", output_target);
-            break;
-        case bq::log_level::info:
-            fputs("\033[94m", output_target);
-            break;
-        case bq::log_level::warning:
-            fputs("\033[1;40;93m", output_target);
-            break;
-        case bq::log_level::error:
-            output_target = stderr;
-            fputs("\033[1;40;91m", output_target);
-            break;
-        case bq::log_level::fatal:
-            output_target = stderr;
-            fputs("\033[1;30;101m", output_target);
-            break;
-        default:
-            fputs("\033[37m", output_target);
-            break;
+
+        // Color code（ANSI VT）
+        const char* color =
+            (level == bq::log_level::verbose) ? "\x1b[3m" :
+            (level == bq::log_level::debug) ? "\x1b[92m" :
+            (level == bq::log_level::info) ? "\x1b[94m" :
+            (level == bq::log_level::warning) ? "\x1b[1;40;93m" :
+            (level == bq::log_level::error) ? "\x1b[1;40;91m" :
+            (level == bq::log_level::fatal) ? "\x1b[1;30;101m" :
+            "\x1b[37m";
+        const char* reset = "\x1b[0m";
+        const char* prefix = "[Bq]";
+        const char* newline = "\n";
+        const char* msg = text ? text : "";
+
+        const size_t color_len = strlen(color);
+        const size_t reset_len = strlen(reset);
+        const size_t prefix_len = strlen(prefix);
+        const size_t msg_len = strlen(msg);
+        const size_t nl_len = 1; // "\n"
+
+        bool to_stderr = (level == bq::log_level::error || level == bq::log_level::fatal);
+
+        const size_t STACK_CAP = 1024;
+#if defined(BQ_WIN)
+        HANDLE h = ::GetStdHandle(to_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+
+        static bool s_vt_inited = false;
+        static bool s_vt_enabled = false;
+        DWORD mode = 0;
+        bool has_console = (h && h != INVALID_HANDLE_VALUE && ::GetConsoleMode(h, &mode));
+
+        if (has_console && !s_vt_inited) {
+            s_vt_enabled = (::SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0);
+            s_vt_inited = true;
         }
-        fputs("[Bq]", output_target);
-        fputs(text, output_target);
-        fputs("\033[0m", output_target);
-        fputs("\n", output_target);
-        fflush(output_target);
+
+        const bool use_color = has_console && s_vt_enabled;
+
+        const size_t total_len =
+            (use_color ? color_len : 0) + prefix_len + msg_len + (use_color ? reset_len : 0) + nl_len;
+
+        if (has_console && total_len <= STACK_CAP) {
+            char buf[STACK_CAP];
+            char* p = buf;
+
+            if (use_color) { 
+                memcpy(p, color, color_len); 
+                p += color_len; 
+            }
+            memcpy(p, prefix, prefix_len); 
+            p += prefix_len;
+            if (msg_len) { 
+                memcpy(p, msg, msg_len);   
+                p += msg_len; 
+            }
+            if (use_color) { 
+                memcpy(p, reset, reset_len); 
+                p += reset_len; 
+            }
+            memcpy(p, newline, nl_len);
+            p += nl_len;
+
+            DWORD written = 0;
+            (void)WriteFile(h, buf, static_cast<DWORD>(p - buf), &written, nullptr);
+        }
+        else if (has_console) {
+            DWORD written = 0;
+            if (use_color && color_len) { 
+                (void)WriteFile(h, color, static_cast<DWORD>(color_len), &written, nullptr); 
+            }
+            (void)WriteFile(h, prefix, static_cast<DWORD>(prefix_len), &written, nullptr);
+            if (msg_len) { 
+                (void)WriteFile(h, msg, static_cast<DWORD>(msg_len), &written, nullptr); 
+            }
+            if (use_color && reset_len) { 
+                (void)WriteFile(h, reset, static_cast<DWORD>(reset_len), &written, nullptr); 
+            }
+            (void)WriteFile(h, newline, static_cast<DWORD>(nl_len), &written, nullptr);
+        }
+
 #if defined(BQ_MSVC)
-        OutputDebugStringA(text);
+        OutputDebugStringA(prefix);
+        OutputDebugStringA(msg);
         OutputDebugStringA("\n");
 #endif
 
-#endif
+#else
+        const int32_t fd = to_stderr ? STDERR_FILENO : STDOUT_FILENO;
+        const bool is_tty = (isatty(fd) == 1);
+
+        const bool use_color = is_tty;
+        const size_t total_len =
+            (use_color ? color_len : 0) + prefix_len + msg_len + (use_color ? reset_len : 0) + nl_len;
+
+        if (total_len <= STACK_CAP) {
+            char buf[STACK_CAP];
+            char* p = buf;
+
+            if (use_color) {
+                memcpy(p, color, color_len); 
+                p += color_len; 
+            }
+            memcpy(p, prefix, prefix_len); 
+            p += prefix_len;
+            if (msg_len) { 
+                memcpy(p, msg, msg_len);   
+                p += msg_len; 
+            }
+            if (use_color) { 
+                memcpy(p, reset, reset_len); 
+                p += reset_len; 
+            }
+            memcpy(p, newline, nl_len);
+            p += nl_len;
+            (void)write(fd, buf, static_cast<size_t>(p - buf));
+        }
+        else {
+            if (use_color && color_len) { 
+                (void)write(fd, color, color_len); 
+            }
+            (void)write(fd, prefix, prefix_len);
+            if (msg_len) { 
+                (void)write(fd, msg, msg_len); 
+            }
+            if (use_color && reset_len) { 
+                (void)write(fd, reset, reset_len); 
+            }
+            (void)write(fd, newline, nl_len);
+        }
+#endif 
+
+#endif 
     }
 
     uint32_t util::get_hash(const void* data, size_t size)
