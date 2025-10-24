@@ -11,7 +11,6 @@ public class BqLog : ModuleRules
             "Core", "CoreUObject", "Engine"
         });
 
-
         //OptimizeCode = CodeOptimization.Never;
         //bUseUnity = false; 
         //MinFilesUsingPrecompiledHeaderOverride = 1;

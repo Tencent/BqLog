@@ -20,13 +20,9 @@ public class BqLogBPNodes : ModuleRules
 				"UnrealEd",
 				"GraphEditor",
 				"Slate", "SlateCore",
-				"EditorStyle"
+				"EditorStyle", 
+				"ToolMenus"
 			});
-
-			if (Target.Version.MajorVersion >= 5)
-			{
-				PrivateDependencyModuleNames.Add("ToolMenus");
-			}
 		}
 	}
 }

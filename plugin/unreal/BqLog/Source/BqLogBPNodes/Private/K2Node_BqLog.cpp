@@ -13,12 +13,11 @@
 #include "Kismet/KismetTextLibrary.h"
 #include "EdGraphSchema_K2.h"
 
-#if ENGINE_MAJOR_VERSION >= 5
 #if WITH_EDITOR
 #include "ToolMenus.h"
 #include "GraphEditorActions.h"
 #include "Framework/Commands/UIAction.h"
-#endif
+#include "ScopedTransaction.h"
 #endif
 
 const FName UK2Node_BqLogFormat::LogInstancePinName(TEXT("LogInstance"));
@@ -112,11 +111,13 @@ UEdGraphPin* UK2Node_BqLogFormat::GetLogFormatStringPin() const { return FindPin
 
 void UK2Node_BqLogFormat::AddInputPin()
 {
+#if WITH_EDITOR
+    const FScopedTransaction Transaction(NSLOCTEXT("BqLog", "AddArgumentPin", "Add Argument Pin"));
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
+#endif
     FName NewArgName = GetUniqueArgumentName();
     ArgumentNames.Add(NewArgName);
-    
     ReconstructNode();
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
 }
 
 bool UK2Node_BqLogFormat::CanAddPin() const
@@ -124,7 +125,6 @@ bool UK2Node_BqLogFormat::CanAddPin() const
     return true;
 }
 
-#if ENGINE_MAJOR_VERSION >= 5
 bool UK2Node_BqLogFormat::CanRemovePin(const UEdGraphPin* Pin) const
 {
     if (!Pin || Pin->Direction != EGPD_Input) 
@@ -154,6 +154,10 @@ void UK2Node_BqLogFormat::RemoveArgumentPin(UEdGraphPin* Pin)
     {
         return;
     }
+#if WITH_EDITOR
+    const FScopedTransaction Transaction(NSLOCTEXT("BqLog", "RemoveArgumentPin", "Remove Argument Pin"));
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
+#endif
     RemoveInputPin(Pin);
 }
 
@@ -174,6 +178,29 @@ void UK2Node_BqLogFormat::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeC
                 const_cast<UK2Node_BqLogFormat*>(this)->AddInputPin();
             }))
         );
+
+        TArray<UEdGraphPin*> ArgPins;
+        GetArgPins(const_cast<TArray<UEdGraphPin*>&>(ArgPins));
+        
+        for (int32 i = 0; i < ArgPins.Num(); ++i)
+        {
+            UEdGraphPin* Pin = ArgPins[i];
+            if (Pin && CanRemovePin(Pin))
+            {
+                Section.AddMenuEntry(
+                    *FString::Printf(TEXT("RemoveArgument_%d"), i),
+                    FText::Format(NSLOCTEXT("BqLog", "RemoveArgument", "Remove {0}"), FText::FromName(Pin->PinName)),
+                    FText::Format(NSLOCTEXT("BqLog", "RemoveArgumentTooltip", "Remove argument {0}"), FText::FromName(Pin->PinName)),
+                    FSlateIcon(),
+                    FUIAction(FExecuteAction::CreateLambda([this, Pin]() {
+#if WITH_EDITOR
+                        const FScopedTransaction Transaction(NSLOCTEXT("BqLog", "RemoveArgumentPin", "Remove Argument Pin"));
+#endif
+                        const_cast<UK2Node_BqLogFormat*>(this)->RemoveArgumentPin(Pin);
+                    }))
+                );
+            }
+        }
     }
 }
 
@@ -219,7 +246,6 @@ bool UK2Node_BqLogFormat::CanRemoveArgument(int32 Index) const
     bool CanRemove = (ArgCount > 0 && Index >= 0 && Index < ArgCount);
     return CanRemove;
 }
-#endif
 #endif
 
 void UK2Node_BqLogFormat::RemoveInputPin(UEdGraphPin* Pin)
@@ -505,8 +531,13 @@ void UK2Node_BqLogFormat::ExpandNode(FKismetCompilerContext& CompilerContext, UE
 #if ENGINE_MAJOR_VERSION >= 5
         else if (Cat == UEdGraphSchema_K2::PC_Real)
         {
-            SetTypeEnum(EBqLogAnyType::Double);
-            if (UEdGraphPin* P = MakeAny->FindPin(TEXT("D"), EGPD_Input))
+            // SetTypeEnum(EBqLogAnyType::Double);
+            // if (UEdGraphPin* P = MakeAny->FindPin(TEXT("D"), EGPD_Input))
+            // {
+            //     CompilerContext.MovePinLinksToIntermediate(*ArgPin, *P);
+            // }
+            SetTypeEnum(EBqLogAnyType::Float);
+            if (UEdGraphPin* P = MakeAny->FindPin(TEXT("F"), EGPD_Input))
             {
                 CompilerContext.MovePinLinksToIntermediate(*ArgPin, *P);
             }
@@ -609,7 +640,7 @@ void UK2Node_BqLogFormat::ExpandNode(FKismetCompilerContext& CompilerContext, UE
                 SetTypeEnum(EBqLogAnyType::String);
                 if (UEdGraphPin* P = MakeAny->FindPin(TEXT("S"), EGPD_Input))
                 {
-                    CompilerContext.GetSchema()->TrySetDefaultValue(*P, TEXT(""));
+                    CompilerContext.GetSchema()->TrySetDefaultValue(*P, SubObj->GetName());
                 }
             }
         }
@@ -618,7 +649,7 @@ void UK2Node_BqLogFormat::ExpandNode(FKismetCompilerContext& CompilerContext, UE
             SetTypeEnum(EBqLogAnyType::String);
             if (UEdGraphPin* P = MakeAny->FindPin(TEXT("S"), EGPD_Input))
             {
-                CompilerContext.GetSchema()->TrySetDefaultValue(*P, TEXT(""));
+                CompilerContext.GetSchema()->TrySetDefaultValue(*P, SubObj ? SubObj->GetName() : TEXT(""));
             }
         }
 

@@ -14,11 +14,10 @@ public:
 	static const FName LogInstancePinName;
 	static const FName LogLevelPinName;
 	static const FName LogFormatStringPinName;
-	static const FName CategoryPinName; // 新增：动态分类枚举引脚
+	static const FName CategoryPinName; 
 	static const FName ArgPinPrefix;
-	static const FName ReturnPinName; // 新增：返回值引脚名
+	static const FName ReturnPinName; 
 
-	// UK2Node 接口
 	virtual void PostLoad() override;
 	virtual void AllocateDefaultPins() override;
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override;
@@ -30,46 +29,40 @@ public:
 	virtual void ValidateNodeDuringCompilation(class FCompilerResultsLog& MessageLog) const override;
 	virtual void ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& OldPins) override;
 
-	// UE4/UE5/UE6 兼容的动态pin接口
 	virtual bool CanAddPin() const override;
 	virtual void AddInputPin() override;
 	void RemoveArgumentPin(UEdGraphPin* Pin);
 
-#if ENGINE_MAJOR_VERSION >= 5
-	// UE5/UE6 特有的接口方法
 	virtual void AddPin() { AddInputPin(); }
-	virtual bool CanRemovePin(const UEdGraphPin* Pin) const override;
-	virtual void RemoveInputPin(class UEdGraphPin* Pin) override;
+
 	
-	// UE5.6+ Details面板支持
+	virtual bool CanRemovePin(const UEdGraphPin* Pin) const
+#if ENGINE_MAJOR_VERSION >= 5
+	override
+#endif
+	;
+	
+	virtual void RemoveInputPin(class UEdGraphPin* Pin) 
+#if ENGINE_MAJOR_VERSION >= 5
+	override
+#endif
+	;
+	
 	virtual void GetNodeContextMenuActions(class UToolMenu* Menu, class UGraphNodeContextMenuContext* Context) const override;
 	
-	// UE5.6+ Details面板属性支持
-	virtual bool ShouldShowNodeProperties() const override { return true; }
-	virtual bool IsNodePure() const override { return false; }
-	virtual bool CanUserDeleteNode() const override { return true; }
-	virtual bool CanDuplicateNode() const override { return true; }
-	
-	// UE5.6+ 参数管理UI支持
 	virtual bool SupportsAddPin() const { return true; }
 	virtual bool SupportsRemovePin() const { return true; }
 	
-	// UE5.6+ Details面板参数管理
 #if WITH_EDITOR
 	virtual int32 GetNumArguments() const;
 	virtual void AddArgument();
 	virtual void RemoveArgument(int32 Index);
 	virtual bool CanRemoveArgument(int32 Index) const;
 #endif
-#else
-	virtual void RemoveInputPin(class UEdGraphPin* Pin);
-#endif
 
 
-	// Wildcard 类型协商
 	virtual void NotifyPinConnectionListChanged(UEdGraphPin* Pin) override;
 
-	// 动态分类枚举支持
 	void OnLogInstanceChanged();
 	void RefreshCategoryPinStatus();
 
@@ -81,7 +74,7 @@ public:
 
 private:
 	/** When adding arguments to the node, their names are placed here and are generated as pins during construction */
-	UPROPERTY(EditAnywhere, Category = "Arguments", meta = (DisplayName = "Arguments"))
+	UPROPERTY(VisibleAnywhere, Category = "Arguments", meta = (DisplayName = "Arguments"))
 	TArray<FName> ArgumentNames;
 
 	
