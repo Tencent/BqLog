@@ -178,21 +178,21 @@ namespace bq {
             p += nl_len;
 
             DWORD written = 0;
-            (void)WriteFile(h, buf, static_cast<DWORD>(p - buf), &written, nullptr);
+            WriteFile(h, buf, static_cast<DWORD>(p - buf), &written, nullptr);
         }
         else if (has_console) {
             DWORD written = 0;
             if (use_color && color_len) { 
-                (void)WriteFile(h, color, static_cast<DWORD>(color_len), &written, nullptr); 
+                WriteFile(h, color, static_cast<DWORD>(color_len), &written, nullptr); 
             }
-            (void)WriteFile(h, prefix, static_cast<DWORD>(prefix_len), &written, nullptr);
+            WriteFile(h, prefix, static_cast<DWORD>(prefix_len), &written, nullptr);
             if (msg_len) { 
-                (void)WriteFile(h, msg, static_cast<DWORD>(msg_len), &written, nullptr); 
+                WriteFile(h, msg, static_cast<DWORD>(msg_len), &written, nullptr); 
             }
             if (use_color && reset_len) { 
-                (void)WriteFile(h, reset, static_cast<DWORD>(reset_len), &written, nullptr); 
+                WriteFile(h, reset, static_cast<DWORD>(reset_len), &written, nullptr); 
             }
-            (void)WriteFile(h, newline, static_cast<DWORD>(nl_len), &written, nullptr);
+            WriteFile(h, newline, static_cast<DWORD>(nl_len), &written, nullptr);
         }
 
 #if defined(BQ_MSVC)
@@ -229,20 +229,20 @@ namespace bq {
             }
             memcpy(p, newline, nl_len);
             p += nl_len;
-            (void)write(fd, buf, static_cast<size_t>(p - buf));
+            write(fd, buf, static_cast<size_t>(p - buf));
         }
         else {
             if (use_color && color_len) { 
-                (void)write(fd, color, color_len); 
+                write(fd, color, color_len); 
             }
-            (void)write(fd, prefix, prefix_len);
+            write(fd, prefix, prefix_len);
             if (msg_len) { 
-                (void)write(fd, msg, msg_len); 
+                write(fd, msg, msg_len); 
             }
             if (use_color && reset_len) { 
-                (void)write(fd, reset, reset_len); 
+                write(fd, reset, reset_len); 
             }
-            (void)write(fd, newline, nl_len);
+            write(fd, newline, nl_len);
         }
 #endif 
 
