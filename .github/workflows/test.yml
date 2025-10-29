@@ -20,7 +20,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MSVC.bat 14
+          .\run_test_msvc.bat 14
   
 
   win64_test_MSVC_Clang_cpp14:
@@ -38,7 +38,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_Clang.bat 14
+          .\run_test_clang.bat 14
 
   win64_test_MinGW_GCC_cpp14:
     runs-on: windows-latest
@@ -85,7 +85,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_GCC.bat 14
+          .\run_test_MinGW_GCC.bat 14
   
 
   win64_test_MinGW_Clang_cpp14:
@@ -103,7 +103,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_Clang.bat 14
+          .\run_test_MinGW_Clang.bat 14
 
   win64_test_MSVC_cpp17:
     runs-on: windows-latest
@@ -120,7 +120,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MSVC.bat 17
+          .\run_test_msvc.bat 17
   
 
   win64_test_MSVC_Clang_cpp17:
@@ -138,7 +138,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_Clang.bat 17
+          .\run_test_clang.bat 17
 
   win64_test_MinGW_GCC_cpp17:
     runs-on: windows-latest
@@ -185,7 +185,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_GCC.bat 17
+          .\run_test_MinGW_GCC.bat 17
   
 
   win64_test_MinGW_Clang_cpp17:
@@ -203,7 +203,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_Clang.bat 17
+          .\run_test_MinGW_Clang.bat 17
 
   win64_test_MSVC_cpp20:
     runs-on: windows-latest
@@ -220,7 +220,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MSVC.bat 20
+          .\run_test_msvc.bat 20
 
   win64_test_MSVC_Clang_cpp20:
     runs-on: windows-latest
@@ -237,7 +237,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_Clang.bat 20
+          .\run_test_clang.bat 20
 
   win64_test_MinGW_GCC_cpp20:
     runs-on: windows-latest
@@ -282,7 +282,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_GCC.bat 20
+          .\run_test_MinGW_GCC.bat 20
 
   win64_test_MinGW_Clang_cpp20:
     runs-on: windows-latest
@@ -299,7 +299,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_Clang.bat 20
+          .\run_test_MinGW_Clang.bat 20
 
   win64_test_MSVC_cpp23:
     runs-on: windows-latest
@@ -316,7 +316,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MSVC.bat 23
+          .\run_test_msvc.bat 23
   
 
   win64_test_MSVC_Clang_cpp23:
@@ -334,7 +334,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_Clang.bat 23
+          .\run_test_clang.bat 23
 
   win64_test_MinGW_GCC_cpp23:
     runs-on: windows-latest
@@ -379,7 +379,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_GCC.bat 23
+          .\run_test_MinGW_GCC.bat 23
   
 
   win64_test_MinGW_Clang_cpp23:
@@ -397,7 +397,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\RunTest_MinGW_Clang.bat 23      
+          .\run_test_MinGW_Clang.bat 23      
 
   #Windows ARM64
   win_arm64_test_MinGW_Clang_cpp14:
@@ -498,7 +498,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 11
+          ./run_test_clang.sh 11
   
   ubuntu_test_Clang_cpp11:
     runs-on: ubuntu-latest
@@ -521,7 +521,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 11
+          ./run_test_clang.sh 11
 
   ubuntu_test_GCC_cpp14:
     runs-on: ubuntu-latest
@@ -544,7 +544,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 14
+          ./run_test_clang.sh 14
 
   ubuntu_test_Clang_cpp14:
     runs-on: ubuntu-latest
@@ -567,7 +567,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 14
+          ./run_test_clang.sh 14
 
   ubuntu_test_GCC_cpp17:
     runs-on: ubuntu-latest
@@ -590,7 +590,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 17
+          ./run_test_clang.sh 17
 
   ubuntu_test_Clang_cpp17:
     runs-on: ubuntu-latest
@@ -613,7 +613,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 17
+          ./run_test_clang.sh 17
 
   ubuntu_test_GCC_cpp20:
     runs-on: ubuntu-latest
@@ -636,7 +636,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 20
+          ./run_test_clang.sh 20
 
   ubuntu_test_Clang_cpp20:
     runs-on: ubuntu-latest
@@ -659,7 +659,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 20
+          ./run_test_clang.sh 20
 
   ubuntu_test_GCC_cpp23:
     runs-on: ubuntu-latest
@@ -682,7 +682,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 23
+          ./run_test_clang.sh 23
 
   ubuntu_test_Clang_cpp23:
     runs-on: ubuntu-latest
@@ -705,7 +705,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 23
+          ./run_test_clang.sh 23
 
   #Linux-ubuntu-ARM64
   ubuntu_arm64_test_GCC_cpp11:
@@ -729,7 +729,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 11
+          ./run_test_clang.sh 11
 
   ubuntu_arm64_test_Clang_cpp11:
     runs-on: ubuntu-24.04-arm
@@ -752,7 +752,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 11
+          ./run_test_clang.sh 11
 
   ubuntu_arm64_test_GCC_cpp14:
     runs-on: ubuntu-24.04-arm
@@ -775,7 +775,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 14
+          ./run_test_clang.sh 14
 
   ubuntu_arm64_test_Clang_cpp14:
     runs-on: ubuntu-24.04-arm
@@ -798,7 +798,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 14
+          ./run_test_clang.sh 14
 
   ubuntu_arm64_test_GCC_cpp17:
     runs-on: ubuntu-24.04-arm
@@ -821,7 +821,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 17
+          ./run_test_clang.sh 17
 
   ubuntu_arm64_test_Clang_cpp17:
     runs-on: ubuntu-24.04-arm
@@ -844,7 +844,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 17
+          ./run_test_clang.sh 17
 
   ubuntu_arm64_test_GCC_cpp20:
     runs-on: ubuntu-24.04-arm
@@ -867,7 +867,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 20
+          ./run_test_clang.sh 20
 
   ubuntu_arm64_test_Clang_cpp20:
     runs-on: ubuntu-24.04-arm
@@ -890,7 +890,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 20
+          ./run_test_clang.sh 20
 
   ubuntu_arm64_test_GCC_cpp23:
     runs-on: ubuntu-24.04-arm
@@ -913,7 +913,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 23
+          ./run_test_clang.sh 23
 
   ubuntu_arm64_test_Clang_cpp23:
     runs-on: ubuntu-24.04-arm
@@ -936,7 +936,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 23
+          ./run_test_clang.sh 23
 
   #linux-debian
   debian_test_GCC_cpp17:
@@ -966,7 +966,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 
+          ./run_test_clang.sh 
   
   debian_test_Clang_cpp17:
     runs-on: ubuntu-latest
@@ -995,7 +995,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 
+          ./run_test_clang.sh 
 
   debian32_test_GCC_cpp17:
     runs-on: ubuntu-latest
@@ -1024,7 +1024,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_GCC.sh 
+          ./run_test_clang.sh 
 
   debian32_test_Clang_cpp17:
     runs-on: ubuntu-latest
@@ -1053,7 +1053,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./RunTest_Clang.sh 
+          ./run_test_clang.sh 
 
   #Mac
   mac_apple_silicon_test_cpp11:
@@ -1076,7 +1076,7 @@ jobs:
         run: |
           cd build/test/mac  
           chmod +x *.sh
-          ./RunTest.sh 11
+          ./run_test.sh 11
 
   mac_apple_silicon_test_cpp14:
     runs-on: macos-latest
@@ -1098,7 +1098,7 @@ jobs:
         run: |
           cd build/test/mac  
           chmod +x *.sh
-          ./RunTest.sh 14
+          ./run_test.sh 14
 
   mac_apple_silicon_test_cpp17:
     runs-on: macos-latest
@@ -1120,7 +1120,7 @@ jobs:
         run: |
           cd build/test/mac  
           chmod +x *.sh
-          ./RunTest.sh 17
+          ./run_test.sh 17
 
   mac_apple_silicon_test_cpp20:
     runs-on: macos-latest
@@ -1142,7 +1142,7 @@ jobs:
         run: |
           cd build/test/mac  
           chmod +x *.sh
-          ./RunTest.sh 20
+          ./run_test.sh 20
 
   mac_apple_silicon_test_cpp23:
     runs-on: macos-latest
@@ -1164,7 +1164,7 @@ jobs:
         run: |
           cd build/test/mac  
           chmod +x *.sh
-          ./RunTest.sh 23
+          ./run_test.sh 23
 
   #Unix-FreeBSD
   freeBSD_test_Clang_cpp17:
@@ -1192,7 +1192,7 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./RunTest_Clang.sh 
+            ./run_test_clang.sh 
 
   freeBSD_test_GCC_cpp17:
     runs-on: ubuntu-latest
@@ -1219,4 +1219,4 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./RunTest_GCC.sh 
+            ./run_test_clang.sh 
