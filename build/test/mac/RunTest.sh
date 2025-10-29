@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -e
 CPP_VER_PARAM=${1:-17}
-mkdir XCodeProj
+mkdir -p XCodeProj
 cd XCodeProj
 
 cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM -G "Xcode" OTHER_LDFLAGS="-ld_classic"

@@ -8,7 +8,7 @@ cmake --build . --target install
 cd ..
 
 rm -rf pack
-mkdir pack
+mkdir -p pack
 cd pack
 
 cmake ../../../../pack -DTARGET_PLATFORM:STRING=all -DPACKAGE_NAME:STRING=bqlog-nodejs-npm

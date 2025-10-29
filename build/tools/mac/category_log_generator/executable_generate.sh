@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 rm -rf XCodeProj
-mkdir XCodeProj
+mkdir -p XCodeProj
 cd XCodeProj
 
 cmake -DTARGET_PLATFORM:STRING=mac ../../../../../tools/category_log_generator/ -G "Xcode"

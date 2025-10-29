@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 rm -rf XCodeProj
-mkdir XCodeProj
+mkdir -p XCodeProj
 pushd "XCodeProj" >/dev/null
 
 cmake ../../../../src \

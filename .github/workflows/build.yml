@@ -998,7 +998,7 @@ jobs:
           robocopy ".\docs" ".\install\docs" /E /R:0 /W:0
           robocopy ".\" ".\install" *.md /R:0 /W:0
           cd .\build\wrapper\csharp\
-          mkdir pack
+          mkdir -p pack
           cd pack
           cmake ../../../../pack -G "Unix Makefiles" -DTARGET_PLATFORM:STRING=all -DPACKAGE_NAME:STRING=bqlog-c#-wrapper
           cmake --build . --config Release --target package

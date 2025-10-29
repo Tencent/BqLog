@@ -10,7 +10,7 @@ cd ../log_decoder
 cd ..
 
 rm -rf pack
-mkdir pack
+mkdir -p pack
 cd pack
 
 cmake ../../../../pack -DTARGET_PLATFORM:STRING=unix -DPACKAGE_NAME:STRING=bqlog-tools -DBQ_UNIX_VERSION=$UNIX_VERSION

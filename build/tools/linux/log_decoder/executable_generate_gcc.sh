@@ -2,7 +2,7 @@
 set -euo pipefail
 
 rm -rf CMakeFiles
-mkdir CMakeFiles;
+mkdir -p CMakeFiles;
 cd CMakeFiles;
 CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo ../../../../../tools/log_decoder/ ;
 cmake --build . --parallel

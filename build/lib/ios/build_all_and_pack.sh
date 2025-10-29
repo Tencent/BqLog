@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -e -u -o pipefail
 rm -rf XCodeProj
-mkdir XCodeProj
+mkdir -p XCodeProj
 pushd "XCodeProj" >/dev/null
 
 BUILD_LIB_TYPES=(dynamic_lib dynamic_lib static_lib static_lib)
@@ -44,7 +44,7 @@ done
 popd >/dev/null
 
 rm -rf pack
-mkdir pack
+mkdir -p pack
 pushd "pack" >/dev/null
 
 cmake ../../../../pack -DTARGET_PLATFORM:STRING=ios -DPACKAGE_NAME:STRING=bqlog-lib

@@ -10,7 +10,7 @@ pushd "log_decoder" >/dev/null
 popd >/dev/null
 
 rm -rf pack
-mkdir pack
+mkdir -p pack
 pushd "pack" >/dev/null
 
 cmake ../../../../pack -DTARGET_PLATFORM:STRING=mac -DPACKAGE_NAME:STRING=bqlog-tools
