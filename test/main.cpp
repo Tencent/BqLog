@@ -24,8 +24,10 @@
 #include "test_log_buffer.h"
 #include "test_log.h"
 #include <locale.h>
-#if defined(WIN32)
+#if defined(BQ_WIN)
 #include <windows.h>
+#elif defined(BQ_POSIX)
+#include <signal.h>
 #endif
 
 #ifdef BQ_POSIX
