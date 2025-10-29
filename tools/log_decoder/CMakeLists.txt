@@ -9,7 +9,7 @@ endif()
 #Parse version from version.cpp
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/version.cpp")
 
-project(BqLog_LogDecoder VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
+project(BqLog_LogDecoder VERSION ${BQ_VERSION} LANGUAGES CXX)
 
 if(NOT DEFINED CPP_VER)
     set(CMAKE_CXX_STANDARD 17)
@@ -127,8 +127,8 @@ endif()
 
 #Ensure the target carries version/soname metadata
 set_target_properties(BqLog_LogDecoder PROPERTIES
-        VERSION ${BQ_LOG_VERSION}
-        SOVERSION ${BQ_LOG_SOVERSION}
+        VERSION ${BQ_VERSION}
+        SOVERSION ${BQ_SOVERSION}
 )
 
 set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")

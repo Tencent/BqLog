@@ -10,24 +10,10 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt)
 endif()
 
-# Parse version from version.cpp (this should define BQ_LOG_VERSION or related variables)
+# Parse version from version.cpp (this should define BQ_VERSION or related variables)
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/version.cpp")
 
-# Fallbacks if BQ_LOG_VERSION is not defined by the parser
-if(NOT DEFINED BQ_LOG_VERSION)
-    if(DEFINED BQ_VERSION)
-        set(BQ_LOG_VERSION "${BQ_VERSION}")
-    elseif(DEFINED PROJECT_VERSION)
-        set(BQ_LOG_VERSION "${PROJECT_VERSION}")
-    elseif(DEFINED PROJ_VERSION)
-        set(BQ_LOG_VERSION "${PROJ_VERSION}")
-    else()
-        set(BQ_LOG_VERSION "0.0.0")
-    endif()
-endif()
-message(STATUS "BQ_LOG_VERSION=${BQ_LOG_VERSION}")
-
-project(${PROJ_NAME} VERSION ${BQ_LOG_VERSION})
+project(${PROJ_NAME} VERSION ${BQ_VERSION})
 
 # Java compile flags: UTF-8, suppress warnings, include debug info for IDE symbol mapping
 set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn" "-g" "-parameters" "-source" "1.8" "-target" "1.8")
@@ -73,17 +59,17 @@ add_jar(
     BqLogWrapper_Java
     SOURCES ${SRC_LIST}
     OUTPUT_DIR "${ARTIFACTS_DIR}"
-    OUTPUT_NAME "BqLogWrapper_Java-${BQ_LOG_VERSION}"
+    OUTPUT_NAME "BqLogWrapper_Java-${BQ_VERSION}"
     MANIFEST "${MANIFEST_FILE}"
 )
 message("Jar file generated at directory: (ProjectRoot)/artifacts/wrapper/java")
 
 # Sources jar
-set(SOURCES_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar")
+set(SOURCES_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_VERSION}-sources.jar")
 add_custom_command(
     OUTPUT "${SOURCES_JAR_PATH}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${ARTIFACTS_DIR}"
-    COMMAND "${Java_JAR_EXECUTABLE}" cfm "BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar" "${MANIFEST_FILE}" -C "${SRC_DIR}" .
+    COMMAND "${Java_JAR_EXECUTABLE}" cfm "BqLogWrapper_Java-${BQ_VERSION}-sources.jar" "${MANIFEST_FILE}" -C "${SRC_DIR}" .
     DEPENDS ${SRC_LIST} "${MANIFEST_FILE}"
     WORKING_DIRECTORY "${ARTIFACTS_DIR}"
     COMMENT "Creating sources jar: ${SOURCES_JAR_PATH}"
@@ -94,14 +80,14 @@ add_dependencies(BqLogWrapper_Java_sources BqLogWrapper_Java)
 
 # Javadoc
 set(JAVADOC_DIR "${ARTIFACTS_DIR}/javadoc")
-set(JAVADOC_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar")
+set(JAVADOC_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_VERSION}-javadoc.jar")
 add_custom_command(
     OUTPUT "${JAVADOC_JAR_PATH}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${JAVADOC_DIR}"
     COMMAND "${Java_JAVADOC_EXECUTABLE}" -encoding UTF-8 -quiet -Xdoclint:none
             -d "${JAVADOC_DIR}"
             ${SRC_LIST}
-    COMMAND "${Java_JAR_EXECUTABLE}" cfm "BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar" "${MANIFEST_FILE}" -C "${JAVADOC_DIR}" .
+    COMMAND "${Java_JAR_EXECUTABLE}" cfm "BqLogWrapper_Java-${BQ_VERSION}-javadoc.jar" "${MANIFEST_FILE}" -C "${JAVADOC_DIR}" .
     DEPENDS ${SRC_LIST} "${MANIFEST_FILE}"
     WORKING_DIRECTORY "${ARTIFACTS_DIR}"
     COMMENT "Generating javadoc and packaging: ${JAVADOC_JAR_PATH}"
@@ -115,7 +101,7 @@ add_custom_command(
     OUTPUT "log_invoker.h"
     COMMAND echo "Generating JNI header file"
     COMMAND javac -encoding UTF-8
-            -classpath "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/BqLogWrapper_Java-${BQ_LOG_VERSION}.jar"
+            -classpath "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/BqLogWrapper_Java-${BQ_VERSION}.jar"
             -h "${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/api/"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/bq/impl/log_invoker.java"
     DEPENDS BqLogWrapper_Java
@@ -131,9 +117,9 @@ if(POLICY CMP0177)
 endif()
 install(
         FILES
-            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}.jar"
-            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-sources.jar"
-            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_LOG_VERSION}-javadoc.jar"
+            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_VERSION}.jar"
+            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_VERSION}-sources.jar"
+            "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_VERSION}-javadoc.jar"
         DESTINATION "${BQ_LOG_INSTALL_DIR}"
     )
 

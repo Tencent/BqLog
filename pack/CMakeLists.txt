@@ -7,9 +7,9 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
 endif()
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../src/bq_log/global/version.cpp")
-message(STATUS "BqLog Version:${BQ_LOG_VERSION}")
+message(STATUS "BqLog Version:${BQ_VERSION}")
 
-project("${PACKAGE_NAME}Pack" VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
+project("${PACKAGE_NAME}Pack" VERSION ${BQ_VERSION} LANGUAGES CXX)
 BQ_DETECT_ARCH(DETECTED_ARCH)
 
 if(TARGET_PLATFORM STREQUAL "linux")

@@ -22,7 +22,7 @@ endif()
 #Parse version from version.cpp
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../src/bq_log/global/version.cpp")
 
-project(BqLog VERSION ${BQ_LOG_VERSION} LANGUAGES CXX)
+project(BqLog VERSION ${BQ_VERSION} LANGUAGES CXX)
 BQ_DETECT_ARCH(DETECTED_ARCH)
 
 

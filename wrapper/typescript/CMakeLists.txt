@@ -10,24 +10,11 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt)
 endif()
 
-# Parse version from version.cpp (this should define BQ_LOG_VERSION or related variables)
+# Parse version from version.cpp (this should define BQ_VERSION or related variables)
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/version.cpp")
 
-# Fallbacks if BQ_LOG_VERSION is not defined by the parser
-if(NOT DEFINED BQ_LOG_VERSION)
-    if(DEFINED BQ_VERSION)
-        set(BQ_LOG_VERSION "${BQ_VERSION}")
-    elseif(DEFINED PROJECT_VERSION)
-        set(BQ_LOG_VERSION "${PROJECT_VERSION}")
-    elseif(DEFINED PROJ_VERSION)
-        set(BQ_LOG_VERSION "${PROJ_VERSION}")
-    else()
-        set(BQ_LOG_VERSION "0.0.0")
-    endif()
-endif()
-message(STATUS "BQ_LOG_VERSION=${BQ_LOG_VERSION}")
 
-project(${PROJ_NAME} VERSION ${BQ_LOG_VERSION})
+project(${PROJ_NAME} VERSION ${BQ_VERSION})
 
 # Paths (adjust as needed)
 set(ARTIFACTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/wrapper/nodejs")
