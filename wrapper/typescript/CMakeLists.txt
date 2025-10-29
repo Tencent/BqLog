@@ -4,8 +4,8 @@ set(PROJ_NAME "BqLogWrapper_NodeJs")
 message(${PROJ_NAME})
 
 # Optional common utils include
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/BqCommon/CMake_utils.txt")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/BqCommon/CMake_utils.txt)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/CMake_utils.txt)
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt)
 endif()

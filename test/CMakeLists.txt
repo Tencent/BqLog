@@ -13,8 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 OPTION(JAVA_SUPPORT "Support Java" OFF)
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt)
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
 endif()
@@ -56,10 +56,10 @@ endif()
 ############################################################
 # Config Source Files
 ############################################################
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/src)
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/src)
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/include)
-set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/thirdparty)
+set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/include)
+set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/thirdparty)
 
 ############################################################
 # Search Include Dirs

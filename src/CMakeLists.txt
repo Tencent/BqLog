@@ -14,8 +14,8 @@ endif()
 OPTION(JAVA_SUPPORT "Support Java" OFF)
 OPTION(NODE_API_SUPPORT "Support Node-API(NodeJs)" OFF)
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/CMake_utils.txt)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt)
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
 endif()
@@ -72,9 +72,9 @@ endif()
 ############################################################
 # Config Source Dirs
 ############################################################
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/src)
-set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/include)
-set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../submodules/BqCommon/thirdparty)
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/src)
+set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/include)
+set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/thirdparty)
 ############################################################
 # Search Include Dirs
 ############################################################
