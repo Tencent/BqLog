@@ -17,6 +17,104 @@
 
 namespace bq {
     BQ_TLS_NON_POD(bq::array<napi_value>, tls_argv_array_);
+
+    BQ_TLS_NON_POD(bq::string, _tls_utf8_str);
+
+    // ----------------------------- helpers -----------------------------
+    bq::napi_str_result<bq::string, 256> read_utf8_str_tls(napi_env env, napi_value v, size_t u8string_bytes) {
+        auto& tls_str = bq::_tls_utf8_str.get();
+        if (!v) {
+            tls_str.clear();
+            return bq::napi_str_result<bq::string, 256>(tls_str);
+        }
+        if (tls_str.is_empty()) {
+            tls_str.fill_uninitialized(10);
+        }
+        size_t len8 = u8string_bytes;
+        if (u8string_bytes == SIZE_MAX) {
+            napi_get_value_string_utf16(env, v, nullptr, 0, &len8);
+        }
+        tls_str.clear();
+        if (len8 > 0) {
+            tls_str.fill_uninitialized(len8);
+            size_t got8 = 0;
+            napi_get_value_string_utf8(env, v, tls_str.begin(), len8 + 1, &got8);
+            assert(got8 == len8);
+        }
+        return bq::napi_str_result<bq::string, 256>(tls_str);
+    }
+
+    uint64_t get_u64_from_bigint(napi_env env, napi_value v) {
+        bool lossless = false;
+        uint64_t out = 0;
+        napi_valuetype t = napi_undefined;
+        if (napi_typeof(env, v, &t) == napi_ok) {
+            if (t == napi_bigint) {
+                napi_get_value_bigint_uint64(env, v, &out, &lossless);
+                return out;
+            }
+            else if (t == napi_number) {
+                // best-effort for JS number inputs (may lose precision > 2^53)
+                double d = 0;
+                napi_get_value_double(env, v, &d);
+                if (d < 0) d = 0;
+                out = (uint64_t)(d);
+                return out;
+            }
+            else if (t == napi_string) {
+                // parse decimal string (simple, without locale)
+                size_t len = 0;
+                napi_get_value_string_utf8(env, v, nullptr, 0, &len);
+                char* buf = (char*)malloc(len + 1);
+                if (!buf) return 0;
+                size_t got = 0;
+                napi_get_value_string_utf8(env, v, buf, len + 1, &got);
+                uint64_t acc = 0;
+                for (size_t i = 0; i < got; ++i) {
+                    char c = buf[i];
+                    if (c >= '0' && c <= '9') {
+                        acc = acc * 10 + (uint64_t)(c - '0');
+                    }
+                    else {
+                        break;
+                    }
+                }
+                free(buf);
+                return acc;
+            }
+        }
+        return out;
+    }
+
+    bq::string dup_string_from_napi(napi_env env, napi_value v) {
+        size_t len = 0;
+        napi_get_value_string_utf8(env, v, NULL, 0, &len);
+        bq::string out;
+        if (len > 0) {
+            out.fill_uninitialized(len);
+            size_t got = 0;
+            napi_get_value_string_utf8(env, v, (char*)out.begin(), len + 1, &got);
+            assert(got == len);
+        }
+        return out;
+    }
+
+    char* dup_cstr_from_napi(napi_env env, napi_value v) {
+        size_t len = 0;
+        napi_get_value_string_utf8(env, v, NULL, 0, &len);
+        char* out = (char*)malloc(len + 1);
+        if (!out) return NULL;
+        size_t got = 0;
+        napi_get_value_string_utf8(env, v, out, len + 1, &got);
+        out[got] = '\0';
+        return out;
+    }
+
+    void free_cstr_from_napi(char* p) {
+        if (p) free(p);
+    }
+
+
     namespace platform {
         //Only single env is supported for now
         static napi_threadsafe_function tsfn_dispatcher_for_native_func_ = nullptr;
@@ -114,7 +212,7 @@ namespace bq {
             napi_release_threadsafe_function(tsfn_dispatcher_for_js_func_, napi_tsfn_abort);
         }
 
-        // Module initializer 
+        // Module initializer
         napi_value napi_init(napi_env env, napi_value exports)
         {
             bq::platform::scoped_spin_lock lock(napi_init_mutex_);

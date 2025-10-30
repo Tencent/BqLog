@@ -16,170 +16,11 @@
 
 #include "bq_log/api/bq_log_napi.h"
 #if defined(BQ_NAPI)
-#include <math.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/global/log_vars.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/types/buffer/log_buffer.h"
-
-namespace bq {
-    BQ_TLS_NON_POD(bq::string, _tls_utf8_str);
-
-    template<typename T, size_t MAX_RESERVE_SIZE>
-    struct napi_str_result {
-    private:
-        T& str_;
-    public:
-        bq_forceinline const T& str() const { return str_; }
-        napi_str_result(T& str) : str_(str) {
-        }
-        ~napi_str_result() {
-            str_.clear();
-            if (str_.capacity() > MAX_RESERVE_SIZE) {
-                str_.set_capacity(MAX_RESERVE_SIZE - 1, true);
-            }
-        }
-    };
-
-    // ----------------------------- helpers -----------------------------
-
-    static inline napi_value _make_undefined(napi_env env) {
-        napi_value v; napi_get_undefined(env, &v); return v;
-    }
-    static inline napi_value _make_bool(napi_env env, bool b) {
-        napi_value v; napi_get_boolean(env, b, &v); return v;
-    }
-    static inline napi_value _make_i32(napi_env env, int32_t x) {
-        napi_value v; napi_create_int32(env, x, &v); return v;
-    }
-    static inline napi_value _make_u32(napi_env env, uint32_t x) {
-        napi_value v; napi_create_uint32(env, x, &v); return v;
-    }
-    static inline napi_value _make_u64(napi_env env, uint64_t x) {
-        napi_value v; napi_create_bigint_uint64(env, x, &v); return v;
-    }
-    static inline napi_value _make_str_utf8(napi_env env, const char* s) {
-        napi_value v; napi_create_string_utf8(env, s ? s : "", NAPI_AUTO_LENGTH, &v); return v;
-    }
-
-    static inline bool _get_bool(napi_env env, napi_value v) {
-        bool b = false; napi_get_value_bool(env, v, &b); return b;
-    }
-    static inline int32_t _get_i32(napi_env env, napi_value v) {
-        int32_t x = 0; napi_get_value_int32(env, v, &x); return x;
-    }
-    static inline uint32_t _get_u32(napi_env env, napi_value v) {
-        uint32_t x = 0; napi_get_value_uint32(env, v, &x); return x;
-    }
-
-    static inline bool js_is_integer(double d) {
-        return isfinite(d) && d == trunc(d);
-    }
-
-    static inline bool js_is_safe_integer(double d) {
-        if (!js_is_integer(d)) {
-            return false;
-        }
-        // |d| <= 2^53 - 1
-        return fabs(d) <= 9007199254740991.0; // 9007199254740991 = 2^53 - 1
-    }
-
-
-    static inline bq::napi_str_result<bq::string, 256> read_utf8_str_tls(napi_env env, napi_value v, size_t u8string_bytes) {
-        auto& tls_str = bq::_tls_utf8_str.get();
-        if (!v) {
-            tls_str.clear();
-            return bq::napi_str_result<bq::string, 256>(tls_str);
-        }
-        if (tls_str.is_empty()) {
-            tls_str.fill_uninitialized(10);
-        }
-        size_t len8 = u8string_bytes;
-        if (u8string_bytes == SIZE_MAX) {
-            napi_get_value_string_utf16(env, v, nullptr, 0, &len8);
-        }
-        tls_str.clear();
-        if (len8 > 0) {
-            tls_str.fill_uninitialized(len8);
-            size_t got8 = 0;
-            napi_get_value_string_utf8(env, v, tls_str.begin(), len8 + 1, &got8);
-            assert(got8 == len8);
-        }
-        return bq::napi_str_result<bq::string, 256>(tls_str);
-    }
-
-    static inline uint64_t _get_u64_from_bigint(napi_env env, napi_value v) {
-        bool lossless = false;
-        uint64_t out = 0;
-        napi_valuetype t = napi_undefined;
-        if (napi_typeof(env, v, &t) == napi_ok) {
-            if (t == napi_bigint) {
-                napi_get_value_bigint_uint64(env, v, &out, &lossless);
-                return out;
-            }
-            else if (t == napi_number) {
-                // best-effort for JS number inputs (may lose precision > 2^53)
-                double d = 0;
-                napi_get_value_double(env, v, &d);
-                if (d < 0) d = 0;
-                out = (uint64_t)(d);
-                return out;
-            }
-            else if (t == napi_string) {
-                // parse decimal string (simple, without locale)
-                size_t len = 0;
-                napi_get_value_string_utf8(env, v, nullptr, 0, &len);
-                char* buf = (char*)malloc(len + 1);
-                if (!buf) return 0;
-                size_t got = 0;
-                napi_get_value_string_utf8(env, v, buf, len + 1, &got);
-                uint64_t acc = 0;
-                for (size_t i = 0; i < got; ++i) {
-                    char c = buf[i];
-                    if (c >= '0' && c <= '9') {
-                        acc = acc * 10 + (uint64_t)(c - '0');
-                    }
-                    else {
-                        break;
-                    }
-                }
-                free(buf);
-                return acc;
-            }
-        }
-        return out;
-    }
-
-    static bq::string _dup_string_from_napi(napi_env env, napi_value v) {
-        size_t len = 0;
-        napi_get_value_string_utf8(env, v, NULL, 0, &len);
-        bq::string out;
-        if (len > 0) {
-            out.fill_uninitialized(len);
-            size_t got = 0;
-            napi_get_value_string_utf8(env, v, (char*)out.begin(), len + 1, &got);
-            assert(got == len);
-        }
-        return out;
-    }
-
-    static char* _dup_cstr_from_napi(napi_env env, napi_value v) {
-        size_t len = 0;
-        napi_get_value_string_utf8(env, v, NULL, 0, &len);
-        char* out = (char*)malloc(len + 1);
-        if (!out) return NULL;
-        size_t got = 0;
-        napi_get_value_string_utf8(env, v, out, len + 1, &got);
-        out[got] = '\0';
-        return out;
-    }
-
-    static void _free_cstr(char* p) {
-        if (p) free(p);
-    }
-}
-
 
 // ----------------------------- console TSFN -----------------------------
 
@@ -211,11 +52,11 @@ static void tsfn_console_call_js(napi_env env, void* param) {
     }
     if (msg && env && console_callback_) {
         napi_value argv[4];
-        argv[0] = bq::_make_u64(env, msg->log_id);
-        argv[1] = bq::_make_i32(env, msg->category_idx);
-        argv[2] = bq::_make_i32(env, msg->level);
+        argv[0] = bq::make_napi_u64(env, msg->log_id);
+        argv[1] = bq::make_napi_i32(env, msg->category_idx);
+        argv[2] = bq::make_napi_i32(env, msg->level);
         napi_create_string_utf8(env, (char*)(msg + 1), msg->length, &argv[3]);
-        napi_value undefined = bq::_make_undefined(env);
+        napi_value undefined = bq::make_napi_undefined(env);
         napi_value js_cb = NULL;
         napi_get_reference_value(env, console_callback_, &js_cb);
         napi_call_function(env, undefined, js_cb, 4, argv, NULL);
@@ -257,7 +98,7 @@ BQ_NAPI_DEF(get_log_version, napi_env, env, napi_callback_info, info)
 {
     (void)info;
     const char* ver = bq::api::__api_get_log_version();
-    return bq::_make_str_utf8(env, ver);
+    return bq::make_napi_str_utf8(env, ver);
 }
 
 // enable_auto_crash_handler(): void
@@ -265,7 +106,7 @@ BQ_NAPI_DEF(enable_auto_crash_handler, napi_env, env, napi_callback_info, info)
 {
     (void)env; (void)info;
     bq::log::enable_auto_crash_handle();
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 // create_log(name: string, config: string, categories_count: number, categories: string[]): bigint
@@ -279,12 +120,12 @@ BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
         return NULL;
     }
 
-    auto log_name = bq::_dup_string_from_napi(env, argv[0]);
-    auto log_config = bq::_dup_string_from_napi(env, argv[1]);
+    auto log_name = bq::dup_string_from_napi(env, argv[0]);
+    auto log_config = bq::dup_string_from_napi(env, argv[1]);
     uint32_t categories_count = 0;
     const char** category_names = NULL;
 
-    categories_count = bq::_get_u32(env, argv[2]);
+    categories_count = bq::get_napi_u32(env, argv[2]);
     bool is_array = false;
     napi_is_array(env, argv[3], &is_array);
     if (is_array) {
@@ -297,7 +138,7 @@ BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
             for (uint32_t i = 0; category_names && i < categories_count; ++i) {
                 napi_value elem = NULL;
                 napi_get_element(env, argv[3], i, &elem);
-                category_names[i] = bq::_dup_cstr_from_napi(env, elem);
+                category_names[i] = bq::dup_cstr_from_napi(env, elem);
             }
         }
     }
@@ -307,12 +148,12 @@ BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
     // free temp strings
     if (category_names) {
         for (uint32_t i = 0; i < categories_count; ++i) {
-            bq::_free_cstr(const_cast<char*>(category_names[i]));
+            bq::free_cstr_from_napi(const_cast<char*>(category_names[i]));
         }
         free((void*)category_names);
     }
 
-    return bq::_make_u64(env, log_id);
+    return bq::make_napi_u64(env, log_id);
 }
 
 // log_reset_config(log_name: string, config: string): void
@@ -322,10 +163,10 @@ BQ_NAPI_DEF(log_reset_config, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "log_name and config required"); return NULL; }
 
-    auto log_name = bq::_dup_string_from_napi(env, argv[0]);
-    auto log_config = bq::_dup_string_from_napi(env, argv[1]);
+    auto log_name = bq::dup_string_from_napi(env, argv[0]);
+    auto log_config = bq::dup_string_from_napi(env, argv[1]);
     bq::api::__api_log_reset_config(log_name.c_str(), log_config.c_str());
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 struct log_napi_wrap_inst {
@@ -356,12 +197,12 @@ BQ_NAPI_DEF(attach_log_inst, napi_env, env, napi_callback_info, info)
         napi_throw_type_error(env, NULL, "first arg must be object");
         return nullptr;
     }
-    uint64_t log_id = bq::_get_u64_from_bigint(env, argv[1]);
+    uint64_t log_id = bq::get_u64_from_bigint(env, argv[1]);
     if (log_id != 0) {
         log_napi_wrap_inst* wrap_inst = new log_napi_wrap_inst{ log_id };
         BQ_NAPI_CALL(env, nullptr, napi_wrap(env, argv[0], wrap_inst, log_inst_finalize, nullptr, nullptr));
     }
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 
@@ -393,10 +234,10 @@ BQ_NAPI_DEF(attach_category_base_inst, napi_env, env, napi_callback_info, info)
         napi_throw_type_error(env, NULL, "first arg must be object");
         return nullptr;
     }
-    uint32_t category_index = bq::_get_u32(env, argv[1]);
+    uint32_t category_index = bq::get_napi_u32(env, argv[1]);
     category_base_napi_wrap_inst* wrap_inst = new category_base_napi_wrap_inst{ category_index };
     BQ_NAPI_CALL(env, nullptr, napi_wrap(env, argv[0], wrap_inst, category_base_inst_finalize, nullptr, nullptr));
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 template<bool INCLUDE_TYPE_INFO>
@@ -441,7 +282,7 @@ public:
         if (dest) {
             size_t copied = 0;
             if (js_string_value1_) {
-                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head. 
+                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head.
                 // We only populate it after committing the buffer, so the temporary trailing u'\0' (two bytes) is harmless
                 // — it will be overwritten by later data or the bq::ext_log_entry_info_head write on this thread.
                 napi_get_value_string_utf16(env_, js_string_value1_, dest, data_size + 1, &copied);
@@ -451,7 +292,7 @@ public:
 #endif
             if (js_string_value2_) {
                 size_t left = data_size - copied;
-                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head. 
+                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head.
                 // We only populate it after committing the buffer, so the temporary trailing u'\0' (two bytes) is harmless
                 // — it will be overwritten by later data or the bq::ext_log_entry_info_head write on this thread.
                 napi_get_value_string_utf16(env_, js_string_value2_, dest + copied, left + 1, &copied);
@@ -477,7 +318,7 @@ struct arg_info {
                                         arg_info_ptr[i].custom_formatter_.reset(env, STRING_VALUE);\
                                         arg_info_array[i].data_size_ = arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value();\
                                         arg_info_array[i].storage_size_ = bq::align_4(arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value()); \
-                                        
+
 #define TRANS_AND_RECORD_STRING_ARG napi_value string_cast_value;\
                                         BQ_NAPI_CALL(env, nullptr, napi_coerce_to_string(env, argv_ptr[i], &string_cast_value));\
                                         RECORD_STRING_ARG(string_cast_value)
@@ -490,18 +331,18 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
     napi_value argv[max_static_argc] = { 0 };
     arg_info arg_info_array[max_static_argc] = {};
     napi_value this_arg;
-    BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_cb_info(env, info, &argc, argv, &this_arg, NULL));
+    BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_cb_info(env, info, &argc, argv, &this_arg, NULL));
     if (argc < 1) {
         napi_throw_type_error(env, NULL, "log.napi_do_log(level, [category], format_content[, args...]) arguments count error");
-        return bq::_make_bool(env, false);
+        return bq::make_napi_bool(env, false);
     }
 
     log_napi_wrap_inst* log_js_inst = nullptr;
-    BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_unwrap(env, this_arg, reinterpret_cast<void**>(&log_js_inst)));
+    BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_unwrap(env, this_arg, reinterpret_cast<void**>(&log_js_inst)));
     if (!log_js_inst)
     {
         napi_throw_type_error(env, NULL, "log.napi_do_log(level, [category], format_content[, args...]) failed to wrap log instance");
-        return bq::_make_bool(env, false);
+        return bq::make_napi_bool(env, false);
     }
     category_base_napi_wrap_inst* category_js_inst = nullptr;
     bool has_category_arg = false;
@@ -512,12 +353,12 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         category_index = category_js_inst->category_index_;
         if (argc < 2) {
             napi_throw_type_error(env, NULL, "log.napi_do_log(level, [category], format_content[, args...]) arguments count error");
-            return bq::_make_bool(env, false);
+            return bq::make_napi_bool(env, false);
         }
     }
     bq::log_imp* log_impl = bq::log_manager::get_log_by_id(log_js_inst->log_id_);
     if (!log_impl || !log_impl->is_enable_for(category_index, log_level)) {
-        return bq::_make_bool(env, false);
+        return bq::make_napi_bool(env, false);
     }
 
     napi_value* argv_ptr = argv;
@@ -529,37 +370,37 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         heap_arg_info.fill_uninitialized(argc);
         argv_ptr = heap_argv.begin();
         arg_info_ptr = heap_arg_info.begin();
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_cb_info(env, info, &argc, argv_ptr, NULL, NULL));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_cb_info(env, info, &argc, argv_ptr, NULL, NULL));
     }
 
     bool enable_stack_trace = log_impl->is_stack_trace_enable_for(log_level);
     napi_value stack_val = nullptr;
     if (enable_stack_trace) {
         napi_value empty_msg;
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_create_string_utf8(env, "", NAPI_AUTO_LENGTH, &empty_msg));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_create_string_utf8(env, "", NAPI_AUTO_LENGTH, &empty_msg));
 
         napi_value err;
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_create_error(env, nullptr, empty_msg, &err));
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_set_named_property(env, err, "name", empty_msg));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_create_error(env, nullptr, empty_msg, &err));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_set_named_property(env, err, "name", empty_msg));
 
         napi_value global, error_ctor, cap_fun;
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_global(env, &global));
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_named_property(env, global, "Error", &error_ctor));
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_named_property(env, error_ctor, "captureStackTrace", &cap_fun));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_global(env, &global));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_named_property(env, global, "Error", &error_ctor));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_named_property(env, error_ctor, "captureStackTrace", &cap_fun));
         napi_value argv_cap[1] = { err };
         napi_call_function(env, error_ctor, cap_fun, 1, argv_cap, nullptr);
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_named_property(env, err, "stack", &stack_val));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_named_property(env, err, "stack", &stack_val));
     }
     js_string_custom_formater<false> format_custom_formatter;
     if (!format_custom_formatter.reset(env, argv_ptr[has_category_arg ? 1 : 0], stack_val)) {
-        return bq::_make_bool(env, false);
+        return bq::make_napi_bool(env, false);
     }
 
     size_t aligned_format_data_size = format_custom_formatter.get_size_seq().get_total();
     size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_format_data_size;
     for (size_t i = (has_category_arg ? 2 : 1); i < argc; ++i) {
         napi_valuetype input_param_type = napi_undefined;
-        BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_typeof(env, argv_ptr[i], &input_param_type));
+        BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_typeof(env, argv_ptr[i], &input_param_type));
         arg_info_array[i].type_ = input_param_type;
         switch (input_param_type)
         {
@@ -572,7 +413,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         case napi_number:
         {
             double d = 0;
-            BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_value_double(env, argv_ptr[i], &d));
+            BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_value_double(env, argv_ptr[i], &d));
             if (bq::js_is_safe_integer(d)) {
                 int64_t int_value = (int64_t)d;
                 auto arg_size_seq = bq::tools::make_size_seq<true>(int_value);
@@ -601,10 +442,10 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         case napi_external:
         {
             void* p = NULL;
-            BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_value_external(env, argv_ptr[i], &p));
+            BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_value_external(env, argv_ptr[i], &p));
             char buf[64];
             size_t str_size = static_cast<size_t>(snprintf(buf, sizeof(buf), "[External %p]", p));
-            BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_create_string_utf8(env, buf, str_size, &(argv_ptr[i])));
+            BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_create_string_utf8(env, buf, str_size, &(argv_ptr[i])));
             RECORD_STRING_ARG(argv_ptr[i])
         }
         break;
@@ -612,7 +453,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         {
             bool lossless = false;
             uint64_t u64_value = 0;
-            BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_value_bigint_uint64(env, argv_ptr[i], &u64_value, &lossless));
+            BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_value_bigint_uint64(env, argv_ptr[i], &u64_value, &lossless));
             if (lossless) {
                 auto arg_size_seq = bq::tools::make_size_seq<true>(u64_value);
                 RECORD_ARG_BY_SIZE_SEQ(arg_size_seq)
@@ -638,7 +479,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
 
     auto handle = bq::api::__api_log_buffer_alloc(log_js_inst->log_id_, (uint32_t)total_data_size);
     if (handle.result != bq::enum_buffer_result_code::success) {
-        return bq::_make_bool(env, false);
+        return bq::make_napi_bool(env, false);
     }
     bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
     head->category_idx = category_index;
@@ -654,14 +495,14 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         switch (arg_info_ptr[i].type_) {
         case napi_boolean:
         {
-            bool bool_value = bq::_get_bool(env, argv[i]);
+            bool bool_value = bq::get_napi_bool(env, argv[i]);
             bq::tools::_type_copy<true>(bool_value, log_args_addr, arg_info_ptr[i].data_size_);
         }
         break;
         case napi_number:
         {
             double d = 0;
-            BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_value_double(env, argv_ptr[i], &d));
+            BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_value_double(env, argv_ptr[i], &d));
             if (bq::js_is_safe_integer(d)) {
                 int64_t int_value = (int64_t)d;
                 bq::tools::_type_copy<true>(int_value, log_args_addr, arg_info_ptr[i].data_size_);
@@ -685,7 +526,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         {
             bool lossless = false;
             uint64_t u64_value = 0;
-            BQ_NAPI_CALL(env, bq::_make_bool(env, false), napi_get_value_bigint_uint64(env, argv_ptr[i], &u64_value, &lossless));
+            BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_value_bigint_uint64(env, argv_ptr[i], &u64_value, &lossless));
             assert(log_args_offset && "[NAPI do_log bigint]impossible execution path!");
             bq::tools::_type_copy<true>(u64_value, log_args_addr, arg_info_ptr[i].data_size_);
         }
@@ -697,7 +538,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         log_args_addr += arg_info_ptr[i].storage_size_;
     }
     bq::api::__api_log_buffer_commit(log_js_inst->log_id_, handle);
-    return bq::_make_bool(env, true);
+    return bq::make_napi_bool(env, true);
 }
 
 // log.verbose([category: category_base], format_content: string, ...args: unknown[]): boolean
@@ -732,12 +573,12 @@ BQ_NAPI_DEF(set_appender_enable, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 3) { napi_throw_type_error(env, NULL, "id, appender_name, enable required"); return NULL; }
 
-    uint64_t log_id = bq::_get_u64_from_bigint(env, argv[0]);
-    auto appender_name = bq::_dup_string_from_napi(env, argv[1]);
-    bool enable = bq::_get_bool(env, argv[2]);
+    uint64_t log_id = bq::get_u64_from_bigint(env, argv[0]);
+    auto appender_name = bq::dup_string_from_napi(env, argv[1]);
+    bool enable = bq::get_napi_bool(env, argv[2]);
 
     bq::api::__api_set_appender_enable(log_id, appender_name.c_str(), enable);
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 // get_logs_count(): number
@@ -745,7 +586,7 @@ BQ_NAPI_DEF(get_logs_count, napi_env, env, napi_callback_info, info)
 {
     (void)info;
     uint32_t c = bq::api::__api_get_logs_count();
-    return bq::_make_u32(env, c);
+    return bq::make_napi_u32(env, c);
 }
 
 // get_log_id_by_index(index: number): bigint
@@ -754,9 +595,9 @@ BQ_NAPI_DEF(get_log_id_by_index, napi_env, env, napi_callback_info, info)
     size_t argc = 1; napi_value argv[1] = { 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "index required"); return NULL; }
-    uint32_t idx = bq::_get_u32(env, argv[0]);
+    uint32_t idx = bq::get_napi_u32(env, argv[0]);
     uint64_t id = bq::api::__api_get_log_id_by_index(idx);
-    return bq::_make_u64(env, id);
+    return bq::make_napi_u64(env, id);
 }
 
 // get_log_name_by_id(log_id: bigint): string|null
@@ -766,12 +607,12 @@ BQ_NAPI_DEF(get_log_name_by_id, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
 
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
+    uint64_t id = bq::get_u64_from_bigint(env, argv[0]);
     bq::_api_string_def name_def;
     if (!bq::api::__api_get_log_name_by_id(id, &name_def)) {
         return nullptr;
     }
-    return bq::_make_str_utf8(env, name_def.str);
+    return bq::make_napi_str_utf8(env, name_def.str);
 }
 
 // get_log_categories_count(log_id: bigint): number
@@ -780,9 +621,9 @@ BQ_NAPI_DEF(get_log_categories_count, napi_env, env, napi_callback_info, info)
     size_t argc = 1; napi_value argv[1] = { 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
+    uint64_t id = bq::get_u64_from_bigint(env, argv[0]);
     uint32_t count = bq::api::__api_get_log_categories_count(id);
-    return bq::_make_u32(env, count);
+    return bq::make_napi_u32(env, count);
 }
 
 // get_log_category_name_by_index(log_id: bigint, index: number): string|null
@@ -792,13 +633,13 @@ BQ_NAPI_DEF(get_log_category_name_by_index, napi_env, env, napi_callback_info, i
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "log_id and index required"); return NULL; }
 
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
-    uint32_t index = bq::_get_u32(env, argv[1]);
+    uint64_t id = bq::get_u64_from_bigint(env, argv[0]);
+    uint32_t index = bq::get_napi_u32(env, argv[1]);
     bq::_api_string_def name_def;
     if (!bq::api::__api_get_log_category_name_by_index(id, index, &name_def)) {
         return nullptr;
     }
-    return bq::_make_str_utf8(env, name_def.str);
+    return bq::make_napi_str_utf8(env, name_def.str);
 }
 
 // log_device_console(level: number, content: string): void
@@ -808,10 +649,10 @@ BQ_NAPI_DEF(log_device_console, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "level and content required"); return NULL; }
 
-    int32_t level = bq::_get_i32(env, argv[0]);
+    int32_t level = bq::get_napi_i32(env, argv[0]);
     auto tls_str = bq::read_utf8_str_tls(env, argv[1], SIZE_MAX);
     bq::api::__api_log_device_console((bq::log_level)level, tls_str.str().c_str());
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 // force_flush(log_id: bigint): void
@@ -820,9 +661,9 @@ BQ_NAPI_DEF(force_flush, napi_env, env, napi_callback_info, info)
     size_t argc = 1; napi_value argv[1] = { 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "log_id required"); return NULL; }
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
+    uint64_t id = bq::get_u64_from_bigint(env, argv[0]);
     bq::api::__api_force_flush(id);
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 // get_file_base_dir(base_dir_type: number): string
@@ -831,9 +672,9 @@ BQ_NAPI_DEF(get_file_base_dir, napi_env, env, napi_callback_info, info)
     size_t argc = 1; napi_value argv[1] = { 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "base_dir_type required"); return NULL; }
-    int32_t base_dir_type = bq::_get_i32(env, argv[0]);
+    int32_t base_dir_type = bq::get_napi_i32(env, argv[0]);
     const char* path = bq::api::__api_get_file_base_dir(base_dir_type);
-    return bq::_make_str_utf8(env, path);
+    return bq::make_napi_str_utf8(env, path);
 }
 
 struct decoder_napi_wrap_inst {
@@ -856,11 +697,11 @@ static void NAPI_CDECL decoder_inst_finalize(napi_env env,
 BQ_NAPI_DEF(log_decoder_create, napi_env, env, napi_callback_info, info)
 {
     size_t argc = 2; napi_value argv[2] = { 0,0 };
-    BQ_NAPI_CALL(env, bq::_make_i32(env, -1), napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
+    BQ_NAPI_CALL(env, bq::make_napi_i32(env, -1), napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "path and priv_key required"); return NULL; }
 
-    auto path = bq::_dup_string_from_napi(env, argv[0]);
-    auto priv_key = bq::_dup_string_from_napi(env, argv[1]);
+    auto path = bq::dup_string_from_napi(env, argv[0]);
+    auto priv_key = bq::dup_string_from_napi(env, argv[1]);
 
     uint32_t handle = 0;
     bq::appender_decode_result result = bq::api::__api_log_decoder_create(path.c_str(), priv_key.c_str(), &handle);
@@ -868,10 +709,10 @@ BQ_NAPI_DEF(log_decoder_create, napi_env, env, napi_callback_info, info)
 
     if (result != bq::appender_decode_result::success) {
         // negative error code in int32
-        return bq::_make_i32(env, (int32_t)result * (int32_t)(-1));
+        return bq::make_napi_i32(env, (int32_t)result * (int32_t)(-1));
     }
     else {
-        return bq::_make_i32(env, static_cast<int32_t>(handle));
+        return bq::make_napi_i32(env, static_cast<int32_t>(handle));
     }
 }
 
@@ -883,17 +724,17 @@ BQ_NAPI_DEF(attach_decoder_inst, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc != 2) {
         napi_throw_type_error(env, NULL, "decoder_inst and handle:number required in attach_decoder_inst");
-        return bq::_make_undefined(env);
+        return bq::make_napi_undefined(env);
     }
     napi_valuetype t0; napi_typeof(env, argv[0], &t0);
     if (t0 != napi_object) {
         napi_throw_type_error(env, NULL, "first arg must be object");
         return nullptr;
     }
-    uint32_t handle = bq::_get_u32(env, argv[1]);
+    uint32_t handle = bq::get_napi_u32(env, argv[1]);
     decoder_napi_wrap_inst* wrap_inst = new decoder_napi_wrap_inst{ handle };
     BQ_NAPI_CALL(env, nullptr, napi_wrap(env, argv[0], wrap_inst, decoder_inst_finalize, nullptr, nullptr));
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 
@@ -904,13 +745,13 @@ BQ_NAPI_DEF(log_decoder_decode, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "handle required"); return NULL; }
 
-    uint32_t handle = bq::_get_u32(env, argv[0]);
+    uint32_t handle = bq::get_napi_u32(env, argv[0]);
     bq::_api_string_def text = { NULL, 0 };
     bq::appender_decode_result result = bq::api::__api_log_decoder_decode(handle, &text);
 
     napi_value obj = NULL; napi_create_object(env, &obj);
-    napi_value v_code = bq::_make_i32(env, (int32_t)result);
-    napi_value v_text = bq::_make_str_utf8(env, (result == bq::appender_decode_result::success) ? text.str : "");
+    napi_value v_code = bq::make_napi_i32(env, (int32_t)result);
+    napi_value v_text = bq::make_napi_str_utf8(env, (result == bq::appender_decode_result::success) ? text.str : "");
     napi_set_named_property(env, obj, "code", v_code);
     napi_set_named_property(env, obj, "text", v_text);
     return obj;
@@ -923,13 +764,13 @@ BQ_NAPI_DEF(log_decode, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 3) { napi_throw_type_error(env, NULL, "in_path, out_path and priv_key required"); return NULL; }
 
-    auto in_path = bq::_dup_string_from_napi(env, argv[0]);
-    auto out_path = bq::_dup_string_from_napi(env, argv[1]);
-    auto priv_key = bq::_dup_string_from_napi(env, argv[2]);
+    auto in_path = bq::dup_string_from_napi(env, argv[0]);
+    auto out_path = bq::dup_string_from_napi(env, argv[1]);
+    auto priv_key = bq::dup_string_from_napi(env, argv[2]);
 
     bool ok = bq::api::__api_log_decode(in_path.c_str(), out_path.c_str(), priv_key.c_str());
 
-    return bq::_make_bool(env, ok);
+    return bq::make_napi_bool(env, ok);
 }
 
 // take_snapshot_string(log_id: bigint, time_zone_config_str: string): string
@@ -939,12 +780,12 @@ BQ_NAPI_DEF(take_snapshot_string, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "log_id and time_zone_config_str required"); return NULL; }
 
-    uint64_t id = bq::_get_u64_from_bigint(env, argv[0]);
-    bq::string time_zone_config_str = bq::_dup_string_from_napi(env, argv[1]);
+    uint64_t id = bq::get_u64_from_bigint(env, argv[0]);
+    bq::string time_zone_config_str = bq::dup_string_from_napi(env, argv[1]);
 
     bq::_api_string_def snapshot_str_def = { NULL, 0 };
     bq::api::__api_take_snapshot_string(id, time_zone_config_str.c_str(), &snapshot_str_def);
-    napi_value out = bq::_make_str_utf8(env, snapshot_str_def.str);
+    napi_value out = bq::make_napi_str_utf8(env, snapshot_str_def.str);
     bq::api::__api_release_snapshot_string(id, &snapshot_str_def);
     return out;
 }
@@ -971,7 +812,7 @@ BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
     }else {
         bq::log::unregister_console_callback(on_console_callback);
     }
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 // set_console_buffer_enable(enable: boolean): void
@@ -980,9 +821,9 @@ BQ_NAPI_DEF(set_console_buffer_enable, napi_env, env, napi_callback_info, info)
     size_t argc = 1; napi_value argv[1] = { 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 1) { napi_throw_type_error(env, NULL, "enable required"); return NULL; }
-    bool en = bq::_get_bool(env, argv[0]);
+    bool en = bq::get_napi_bool(env, argv[0]);
     bq::log::set_console_buffer_enable(en);
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 // reset_base_dir(base_dir_type: number, dir: string): void
@@ -991,10 +832,10 @@ BQ_NAPI_DEF(reset_base_dir, napi_env, env, napi_callback_info, info)
     size_t argc = 2; napi_value argv[2] = { 0, 0 };
     BQ_NAPI_CALL(env, nullptr, napi_get_cb_info(env, info, &argc, argv, NULL, NULL));
     if (argc < 2) { napi_throw_type_error(env, NULL, "reset_base_dir invalid parameters count, should be 2"); return NULL; }
-    int32_t base_dir_type = bq::_get_i32(env, argv[0]);
-    bq::string dir = bq::_dup_string_from_napi(env, argv[1]);
+    int32_t base_dir_type = bq::get_napi_i32(env, argv[0]);
+    bq::string dir = bq::dup_string_from_napi(env, argv[1]);
     bq::api::__api_reset_base_dir(base_dir_type, dir.c_str());
-    return bq::_make_undefined(env);
+    return bq::make_napi_undefined(env);
 }
 
 struct _napi_fetch_ctx {
@@ -1015,11 +856,11 @@ static void BQ_STDCALL _napi_console_buffer_fetch_callback(
     if (!ctx || !ctx->env || !ctx->js_cb) return;
 
     napi_value argv2[4];
-    argv2[0] = bq::_make_u64(ctx->env, log_id);
-    argv2[1] = bq::_make_i32(ctx->env, category_idx);
-    argv2[2] = bq::_make_i32(ctx->env, log_level);
-    argv2[3] = bq::_make_str_utf8(ctx->env, content ? content : "");
-    napi_value undefined = bq::_make_undefined(ctx->env);
+    argv2[0] = bq::make_napi_u64(ctx->env, log_id);
+    argv2[1] = bq::make_napi_i32(ctx->env, category_idx);
+    argv2[2] = bq::make_napi_i32(ctx->env, log_level);
+    argv2[3] = bq::make_napi_str_utf8(ctx->env, content ? content : "");
+    napi_value undefined = bq::make_napi_undefined(ctx->env);
     napi_call_function(ctx->env, undefined, ctx->js_cb, 4, argv2, NULL);
 }
 
@@ -1038,7 +879,7 @@ BQ_NAPI_DEF(fetch_and_remove_console_buffer, napi_env, env, napi_callback_info, 
         _napi_console_buffer_fetch_callback,
         &ctx);
 
-    return bq::_make_bool(env, ok);
+    return bq::make_napi_bool(env, ok);
 }
     
 
