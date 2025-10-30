@@ -1,4 +1,3 @@
-// 这是唯一的对外入口。只导出 bq 对象（包含 log 类）。
 /*
  * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
