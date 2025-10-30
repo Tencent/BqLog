@@ -44,10 +44,10 @@ android {
         }
     }
     
-    packagingOptions {
-      jniLibs {
-        useLegacyPackaging = true
-      }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     sourceSets {
