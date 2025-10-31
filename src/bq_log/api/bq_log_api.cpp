@@ -123,23 +123,36 @@ namespace bq {
 #endif
             }
 
+#ifdef BQ_IOS
+#if TARGET_OS_TV || TARGET_OS_WATCH
+#define BQ_SIGNAL_STACK_SUPPORT 0
+#endif
+#endif
+#ifndef BQ_SIGNAL_STACK_SUPPORT
+#define BQ_SIGNAL_STACK_SUPPORT 1
+#endif
+
         public:
             static void set_handler(sigaction_func_type func)
             {
 #ifdef BQ_PS
                 // TODO
 #else
+#if BQ_SIGNAL_STACK_SUPPORT
                 stack_t ss;
-
                 ss.ss_sp = signal_stack_holder.signal_stack;
                 ss.ss_size = static_cast<size_t>(SIGSTKSZ);
                 ss.ss_flags = 0;
                 if (sigaltstack(&ss, NULL) == -1) {
                     bq::util::log_device_console(log_level::error, "sigaltstack failed");
                 }
+#endif
                 struct sigaction new_sig;
                 new_sig.sa_sigaction = on_signal;
-                new_sig.sa_flags = SA_RESTART | SA_SIGINFO | SA_ONSTACK;
+                new_sig.sa_flags = SA_RESTART | SA_SIGINFO;
+#if BQ_SIGNAL_STACK_SUPPORT
+                new_sig.sa_flags |= SA_ONSTACK;
+#endif
                 sigemptyset(&new_sig.sa_mask);
 
                 int32_t result = 0;
