@@ -1622,6 +1622,24 @@ jobs:
           name: nodejs_npm
           path: ${{ github.workspace }}/dist
 
+  # Unreal plugin
+  unreal_plugin_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: build plugin
+        run: |
+          cd build/plugin/unreal
+          chmod +x *.sh
+          ./build_all_and_pack.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal_plugin
+          path: ${{ github.workspace }}/dist
 
   # Unity package
   unity_package_build:
