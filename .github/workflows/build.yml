@@ -1633,7 +1633,7 @@ jobs:
         run: |
           cd build/plugin/unreal
           chmod +x *.sh
-          ./build_all_and_pack.sh
+          ./linux_build_all_and_pack.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
