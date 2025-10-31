@@ -1785,8 +1785,8 @@ jobs:
           # -L to dereference symlink if any; final name must be libBqLog.so
           cp -Lf "$REAL_SO" "$LINUX_X64_DIR/libBqLog.so"
 
-          # iOS (BqLog.framework)
-          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/bqlog-lib-ios-${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.framework" | sort)
+          # iOS (BqLog.xcframework)
+          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/bqlog-lib-ios-${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.xcframework" | sort)
           if (( ${#ios_fw[@]} )); then
             copy_one "${ios_fw[0]}" "$IOS_DIR"
           else
