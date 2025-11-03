@@ -531,15 +531,10 @@ void UK2Node_BqLogFormat::ExpandNode(FKismetCompilerContext& CompilerContext, UE
 #if ENGINE_MAJOR_VERSION >= 5
         else if (Cat == UEdGraphSchema_K2::PC_Real)
         {
-            // SetTypeEnum(EBqLogAnyType::Double);
-            // if (UEdGraphPin* P = MakeAny->FindPin(TEXT("D"), EGPD_Input))
-            // {
-            //     CompilerContext.MovePinLinksToIntermediate(*ArgPin, *P);
-            // }
-            SetTypeEnum(EBqLogAnyType::Float);
-            if (UEdGraphPin* P = MakeAny->FindPin(TEXT("F"), EGPD_Input))
+            SetTypeEnum(EBqLogAnyType::Double);
+            if (UEdGraphPin* P = MakeAny->FindPin(TEXT("D"), EGPD_Input))
             {
-                CompilerContext.MovePinLinksToIntermediate(*ArgPin, *P);
+                 CompilerContext.MovePinLinksToIntermediate(*ArgPin, *P);
             }
         }
 #endif

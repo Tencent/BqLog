@@ -1623,7 +1623,7 @@ jobs:
           path: ${{ github.workspace }}/dist
 
   # Unreal plugin
-  unreal_plugin_build:
+  linux_unreal_plugin_build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1640,6 +1640,29 @@ jobs:
         with:
           name: unreal_plugin
           path: ${{ github.workspace }}/dist
+
+  win64_unreal_plugin_build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: build plugin
+        run: |
+          cd build\plugin\unreal
+          .\win_build_all_and_pack.bat
+
+  mac_unreal_plugin_build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: build plugin
+        run: |
+          cd build/plugin/unreal
+          chmod +x *.sh
+          ./mac_build_all_and_pack.sh
 
   # Unity package
   unity_package_build:
