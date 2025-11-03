@@ -1623,7 +1623,7 @@ jobs:
           path: ${{ github.workspace }}/dist
 
   # Unreal plugin
-  linux_unreal_plugin_build:
+  unreal_plugin_build_on_linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1641,7 +1641,7 @@ jobs:
           name: unreal_plugin
           path: ${{ github.workspace }}/dist
 
-  win64_unreal_plugin_build:
+  unreal_plugin_build_on_win64:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -1652,7 +1652,7 @@ jobs:
           cd build\plugin\unreal
           .\win_build_all_and_pack.bat
 
-  mac_unreal_plugin_build:
+  unreal_plugin_build_on_mac:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
