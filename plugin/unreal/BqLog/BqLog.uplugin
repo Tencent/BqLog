@@ -15,7 +15,7 @@
 	"IsExperimentalVersion": false,
 	"Installed": false,
     "Modules": [
-      { "Name": "BqLog", "Type": "Runtime", "LoadingPhase": "Default" },
+      { "Name": "BqLog", "Type": "Runtime", "LoadingPhase": "PreDefault" },
 			{ "Name": "BqLogBPNodes", "Type": "UncookedOnly", "LoadingPhase": "Default" }
     ]
 }
