@@ -1,8 +1,6 @@
 #include "BqLogFunctionLibrary.h"
 #include "BqLog.h"
 #include "bq_log/bq_log.h"
-#include "bq_log/log/log_imp.h"
-#include "bq_log/log/log_manager.h"
 
 
 bool UBqLogFunctionLibrary::EnsureLogInstance(UBqLog* LogInstance)
@@ -31,17 +29,15 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
         return false;
     }
     const uint64_t log_id = LogInstance->log_id_;
-
-    bq::log_imp* log_impl = bq::log_manager::get_log_by_id(log_id);
-    bq::log_level log_level = static_cast<bq::log_level>(static_cast<int32_t>(Level));
-    if (!log_impl || !log_impl->is_enable_for(static_cast<uint32_t>(CategoryIndex), log_level))
+    if (!(((*LogInstance->merged_log_level_bitmap_ & (1U << static_cast<int32_t>(Level))) != 0) && LogInstance->categories_mask_array_[CategoryIndex]))
     {
         return false;
     }
     bq::_api_u16string_def stack_string_def;
     stack_string_def.str = nullptr;
     stack_string_def.len = 0;
-    if(log_impl->is_stack_trace_enable_for(log_level)){
+    bool should_print_stack = (*LogInstance->print_stack_level_bitmap_ & (1 << static_cast<int32_t>(Level)));
+    if(should_print_stack){
         bq::api::__api_get_stack_trace_utf16(&stack_string_def, 0);
     }
     auto format_size_seq = bq::tools::make_size_seq<false>(FormatString);
@@ -98,17 +94,17 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
             {
                 total_data_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
             }
-            break; 
+            break;
         case EBqLogAnyType::SoftObject:
             Arg.FormattedString = Arg.SoftPath.ToString();
             total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Vector:
-            Arg.FormattedString = Arg.V.ToString(); 
+            Arg.FormattedString = Arg.V.ToString();
             total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
-            break;  
+            break;
         case EBqLogAnyType::Rotator:
-            Arg.FormattedString = Arg.R.ToString(); 
+            Arg.FormattedString = Arg.R.ToString();
             total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Transform:
@@ -133,7 +129,7 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
     }
     bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
     head->category_idx = CategoryIndex;
-    head->level = static_cast<uint8_t>(log_level);
+    head->level = static_cast<uint8_t>(static_cast<int32_t>(Level));
     head->log_format_str_type = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
     size_t log_args_offset = static_cast<size_t>(sizeof(bq::_log_entry_head_def) + aligned_format_data_size);
     head->log_args_offset = (uint32_t)log_args_offset;

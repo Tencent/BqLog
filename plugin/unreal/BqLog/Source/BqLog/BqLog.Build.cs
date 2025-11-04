@@ -17,7 +17,6 @@ public class BqLog : ModuleRules
         });
 
         ConfigurePrebuilt(Target);
-
         //OptimizeCode = CodeOptimization.Never;
         //bUseUnity = false;
         //MinFilesUsingPrecompiledHeaderOverride = 1;
@@ -28,43 +27,52 @@ public class BqLog : ModuleRules
         string moduleDir = ModuleDirectory;
         string pluginRoot = Path.GetFullPath(Path.Combine(moduleDir, "..", ".."));
         string thirdPartyRoot = Path.Combine(moduleDir, "ThirdParty", "BqLog");
-
         if (!Directory.Exists(thirdPartyRoot))
         {
             return;
         }
-
-        string sharedInclude = Path.Combine(thirdPartyRoot, "Shared", "include");
-        if (Directory.Exists(sharedInclude))
+        if (Target.Platform.Equals(UnrealTargetPlatform.Win64))
         {
-            PublicIncludePaths.Add(sharedInclude);
+            ConfigureWindows(Target, thirdPartyRoot, pluginRoot);
+        }else if (Target.Platform.Equals(UnrealTargetPlatform.Linux))
+        {
+            ConfigureLinux(thirdPartyRoot, pluginRoot, "x86_64", "Linux");
+        }else if (Target.Platform.Equals(UnrealTargetPlatform.LinuxAArch64))
+        {
+            ConfigureLinux(thirdPartyRoot, pluginRoot, "arm64", "LinuxArm64");
+        }else if (Target.Platform.Equals(UnrealTargetPlatform.Mac))
+        {
+            ConfigureMac(thirdPartyRoot, pluginRoot);
+        }else if (Target.Platform.Equals(UnrealTargetPlatform.IOS))
+        {
+            ConfigureIOS(thirdPartyRoot, pluginRoot);
+        }else if (Target.Platform.Equals(UnrealTargetPlatform.Android))
+        {
+            ConfigureAndroid(thirdPartyRoot, pluginRoot);
         }
+    }
 
-        switch (Target.Platform)
+    private void AddStaticInclude(string thirdPartyRoot)
+    {
+        string staticInclude = Path.Combine(thirdPartyRoot, "Shared", "Static", "include");
+        if (Directory.Exists(staticInclude) && !PublicIncludePaths.Contains(staticInclude))
         {
-            case UnrealTargetPlatform.Win64:
-                ConfigureWindows(Target, thirdPartyRoot, pluginRoot);
-                break;
-            case UnrealTargetPlatform.Linux:
-                ConfigureLinux(thirdPartyRoot, pluginRoot, "x86_64", "Linux");
-                break;
-            case UnrealTargetPlatform.LinuxAArch64:
-                ConfigureLinux(thirdPartyRoot, pluginRoot, "arm64", "LinuxArm64");
-                break;
-            case UnrealTargetPlatform.Mac:
-                ConfigureMac(thirdPartyRoot, pluginRoot);
-                break;
-            case UnrealTargetPlatform.IOS:
-                ConfigureIOS(thirdPartyRoot, pluginRoot);
-                break;
-            case UnrealTargetPlatform.Android:
-                ConfigureAndroid(thirdPartyRoot, pluginRoot);
-                break;
+            PublicIncludePaths.Add(staticInclude);
+        }
+    }
+
+    private void AddDynamicInclude(string thirdPartyRoot)
+    {
+        string dynamicInclude = Path.Combine(thirdPartyRoot, "Shared", "Dynamic", "include");
+        if (Directory.Exists(dynamicInclude) && !PublicIncludePaths.Contains(dynamicInclude))
+        {
+            PublicIncludePaths.Add(dynamicInclude);
         }
     }
 
     private void ConfigureWindows(ReadOnlyTargetRules Target, string thirdPartyRoot, string pluginRoot)
     {
+        AddDynamicInclude(thirdPartyRoot);
         string archKey = GetWindowsArchitecture(Target);
         string binariesFolder = archKey == "arm64" ? "Win64Arm64" : "Win64";
         string libDir = Path.Combine(thirdPartyRoot, "Win64", archKey, "lib");
@@ -75,16 +83,13 @@ public class BqLog : ModuleRules
         }
 
         string dllRelative = Path.Combine("Binaries", binariesFolder, "BqLog.dll");
-        if (AddRuntimeDependencyIfExists(pluginRoot, dllRelative))
-        {
-            AddDelayLoadOnce("BqLog.dll");
-        }
-
+        AddRuntimeDependencyIfExists(pluginRoot, dllRelative);
         AddRuntimeDependencyIfExists(pluginRoot, Path.Combine("Binaries", binariesFolder, "BqLog.pdb"));
     }
 
     private void ConfigureLinux(string thirdPartyRoot, string pluginRoot, string archKey, string binariesFolder)
     {
+        AddDynamicInclude(thirdPartyRoot);
         string libPath = Path.Combine(thirdPartyRoot, "Linux", archKey, "lib", "libBqLog.so");
         if (File.Exists(libPath))
         {
@@ -96,6 +101,7 @@ public class BqLog : ModuleRules
 
     private void ConfigureMac(string thirdPartyRoot, string pluginRoot)
     {
+        AddDynamicInclude(thirdPartyRoot);
         string dylibPath = Path.Combine(thirdPartyRoot, "Mac", "lib", "libBqLog.dylib");
         if (File.Exists(dylibPath))
         {
@@ -107,6 +113,7 @@ public class BqLog : ModuleRules
 
     private void ConfigureIOS(string thirdPartyRoot, string pluginRoot)
     {
+        AddStaticInclude(thirdPartyRoot);
         string xcframeworkPath = Path.Combine(thirdPartyRoot, "IOS", "BqLog.xcframework");
         if (Directory.Exists(xcframeworkPath))
         {
@@ -127,6 +134,7 @@ public class BqLog : ModuleRules
 
     private void ConfigureAndroid(string thirdPartyRoot, string pluginRoot)
     {
+        AddDynamicInclude(thirdPartyRoot);
         string androidRoot = Path.Combine(thirdPartyRoot, "Android");
         string[] abis = { "armeabi-v7a", "arm64-v8a", "x86", "x86_64" };
         foreach (string abi in abis)
@@ -145,14 +153,6 @@ public class BqLog : ModuleRules
         }
 
         AddRuntimeDependencyIfExists(pluginRoot, Path.Combine("Binaries", "Android", "bqlog.aar"));
-    }
-
-    private void AddDelayLoadOnce(string dllName)
-    {
-        if (!PublicDelayLoadDLLs.Contains(dllName))
-        {
-            PublicDelayLoadDLLs.Add(dllName);
-        }
     }
 
     private bool AddRuntimeDependencyIfExists(string pluginRoot, string relativePath)

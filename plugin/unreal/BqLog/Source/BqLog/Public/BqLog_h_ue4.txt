@@ -80,6 +80,9 @@ protected:
     virtual const char* const* get_category_names() const {return nullptr;}
 protected:
     uint64_t log_id_ = 0;
+    const uint32_t* merged_log_level_bitmap_ = nullptr;
+    const uint8_t* categories_mask_array_ = nullptr;
+    const uint32_t* print_stack_level_bitmap_ = nullptr;
     bool need_renew_inst_ = true;
 };
 
