@@ -53,5 +53,6 @@ for ue_version in "${UE_VERSIONS[@]}"; do
   ZIP_NAME="bqlog-unreal-plugin-${VERSION}-${ue_version}.zip"
   rm -f "$DIST_DIR/$ZIP_NAME"
   (cd "$TMP_DIR" && zip -rq "$DIST_DIR/$ZIP_NAME" "BqLog")
+  (cd "$DIST_DIR" && sha256sum "$ZIP_NAME" | tr '[:upper:]' '[:lower:]' > "$ZIP_NAME.sha256")
   echo "Created $DIST_DIR/$ZIP_NAME"
 done

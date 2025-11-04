@@ -60,6 +60,8 @@ for %%T in (ue4 ue5) do (
     if exist "%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip" del /q "%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip"
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
       "Compress-Archive -Path '%TARGET_DIR%' -DestinationPath '%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip' -Force"
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+      "$zipPath = '%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip'; if (-not (Test-Path -LiteralPath $zipPath)) { throw \"Missing file: $zipPath\" }; $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $zipPath; $line = $hash.Hash.ToLowerInvariant() + '  ' + [System.IO.Path]::GetFileName($zipPath); [System.IO.File]::WriteAllText($zipPath + '.sha256', $line, [System.Text.Encoding]::ASCII)"
     echo Created %DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip
 )
 

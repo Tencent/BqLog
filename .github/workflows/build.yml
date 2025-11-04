@@ -1640,7 +1640,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: unreal_plugin
+          name: unreal_plugin_sources
           path: ${{ github.workspace }}/dist
 
   unreal_plugin_build_on_win64:
@@ -1951,7 +1951,7 @@ jobs:
             zip_name="bqlog-unreal-plugin-prebuilt-${VERSION}-${ue}.zip"
             rm -f "$DIST_DIR/$zip_name" "$DIST_DIR/$zip_name.sha256"
             (cd "$stage_dir" && zip -rq "$DIST_DIR/$zip_name" "BqLog")
-            sha256sum "$DIST_DIR/$zip_name" > "$DIST_DIR/$zip_name.sha256"
+            sha256sum "$DIST_DIR/$zip_name" | tr '[:upper:]' '[:lower:]' > "$DIST_DIR/$zip_name.sha256"
           done
 
           echo "Packaged Unreal plugin archives:"
