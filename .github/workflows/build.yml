@@ -814,9 +814,6 @@ jobs:
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
 
-            # Install node-api-headers at repo root before build
-            npm install node-api-headers
-
             cd build/lib/unix_like
             chmod +x *.sh
             ls -l
@@ -1463,7 +1460,10 @@ jobs:
             export PATH="$JAVA_HOME/bin:$PATH"
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
-            
+
+            # Install node-api-headers at repo root before build
+            npm install node-api-headers
+
             cd build/lib/unix_like
             chmod +x *.sh
             ls -l
