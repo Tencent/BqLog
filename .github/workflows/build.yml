@@ -1675,7 +1675,7 @@ jobs:
       - build_ubuntu_arm64_lib_Clang
       - build_mac_lib
       - build_ios_lib
-      - build_windows_android
+      - build_linux_android
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
