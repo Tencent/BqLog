@@ -813,7 +813,11 @@ jobs:
             export PATH="$JAVA_HOME/bin:$PATH"
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/lib/unix_like  
+
+            # Install node-api-headers at repo root before build
+            npm install node-api-headers
+
+            cd build/lib/unix_like
             chmod +x *.sh
             ls -l
             export BQ_UNIX_VERSION=freebsd
@@ -877,6 +881,10 @@ jobs:
             export PATH="$JAVA_HOME/bin:$PATH"
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
+
+            # Install node-api-headers at repo root before build
+            npm install node-api-headers
+
             cd build/tools/unix_like  
             chmod +x category_log_generator/*.sh
             chmod +x log_decoder/*.sh
@@ -1663,6 +1671,303 @@ jobs:
           cd build/plugin/unreal
           chmod +x *.sh
           ./mac_build_all_and_pack.sh
+
+  unreal_plugin_pack_prebuilt:
+    runs-on: ubuntu-latest
+    needs:
+      - build_windows_x86_64_lib_MSVC
+      - build_windows_arm64_lib_MSVC
+      - build_ubuntu_x86_64_lib_Clang
+      - build_ubuntu_arm64_lib_Clang
+      - build_mac_lib
+      - build_ios_lib
+      - build_windows_android
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded_artifacts
+
+      - name: Install tooling
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y unzip zip rsync
+
+      - name: Extract version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
+          if [[ -z "$VERSION" ]]; then
+            echo "Failed to extract version" >&2
+            exit 1
+          fi
+          echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
+
+      - name: Expand artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p extracted
+          shopt -s nullglob
+
+          get_artifact_name() {
+            local path="$1"
+            basename "$(dirname "$path")"
+          }
+
+          for z in downloaded_artifacts/**/*.zip downloaded_artifacts/*.zip; do
+            artifact="$(get_artifact_name "$z")"
+            base="$(basename "${z%.*}")"
+            dest="extracted/${artifact}/${base}"
+            mkdir -p "$dest"
+            echo "::group::Unzip $z -> $dest"
+            unzip -l "$z" || true
+            unzip -qo "$z" -d "$dest"
+            /usr/bin/find "$dest" -maxdepth 2 -print | sort
+            echo "::endgroup::"
+          done
+
+          for t in downloaded_artifacts/**/*.tgz downloaded_artifacts/*.tgz downloaded_artifacts/**/*.tar.gz downloaded_artifacts/*.tar.gz; do
+            artifact="$(get_artifact_name "$t")"
+            fname="$(basename "$t")"
+            base="${fname%.tar.gz}"
+            base="${base%.tgz}"
+            dest="extracted/${artifact}/${base}"
+            mkdir -p "$dest"
+            echo "::group::Untar $t -> $dest"
+            tar -tzf "$t" | sed -n '1,200p' || true
+            tar -xzf "$t" -C "$dest"
+            /usr/bin/find "$dest" -maxdepth 2 -print | sort
+            echo "::endgroup::"
+          done
+
+      - name: Stage Unreal prebuilt plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${VERSION:-}" ]]; then
+            echo "VERSION env not set" >&2
+            exit 1
+          fi
+
+          ROOT="$(pwd)"
+          ARTIFACT_ROOT="$ROOT/extracted"
+          TMP_ROOT="$ROOT/artifacts/plugin/unreal/tmp_prebuilt"
+          DIST_DIR="$ROOT/dist"
+          TEMPLATE_DIR="$ROOT/plugin/unreal/BqLog"
+
+          mkdir -p "$TMP_ROOT" "$DIST_DIR"
+
+          find_preferred() {
+            local base="$1"
+            local name="$2"
+            local prefer="${3:-RelWithDebInfo}"
+            local result
+            result=$(find "$base" -type f -name "$name" 2>/dev/null | grep "$prefer" | head -n1 || true)
+            if [[ -z "$result" ]]; then
+              result=$(find "$base" -type f -name "$name" 2>/dev/null | head -n1 || true)
+            fi
+            echo "$result"
+          }
+
+          find_linux_so() {
+            local base="$1"
+            local version="$2"
+            local result
+            result=$(find "$base" -type f -name "libBqLog.so.${version}" 2>/dev/null | head -n1 || true)
+            if [[ -z "$result" ]]; then
+              result=$(find_preferred "$base" libBqLog.so)
+            fi
+            echo "$result"
+          }
+
+          find_mac_dylib() {
+            local base="$1"
+            local version="$2"
+            local result
+            result=$(find "$base" -type f -name "libBqLog.${version}.dylib" 2>/dev/null | head -n1 || true)
+            if [[ -z "$result" ]]; then
+              result=$(find_preferred "$base" libBqLog.dylib)
+            fi
+            echo "$result"
+          }
+
+          find_android_so() {
+            local base="$1"
+            local abi="$2"
+            local result
+            result=$(find "$base" -type f -path "*${abi}*/libBqLog.so" 2>/dev/null | grep "RelWithDebInfo" | head -n1 || true)
+            if [[ -z "$result" ]]; then
+              result=$(find "$base" -type f -path "*${abi}*/libBqLog.so" 2>/dev/null | head -n1 || true)
+            fi
+            echo "$result"
+          }
+
+          copy_file() {
+            local src="$1"
+            local dst="$2"
+            if [[ -f "$src" ]]; then
+              mkdir -p "$(dirname "$dst")"
+              cp -f "$src" "$dst"
+            fi
+          }
+
+          copy_file_follow() {
+            local src="$1"
+            local dst="$2"
+            if [[ -e "$src" ]]; then
+              mkdir -p "$(dirname "$dst")"
+              cp -fL "$src" "$dst"
+            fi
+          }
+
+          copy_dir() {
+            local src="$1"
+            local dst="$2"
+            if [[ -d "$src" ]]; then
+              rm -rf "$dst"
+              mkdir -p "$(dirname "$dst")"
+              cp -R "$src" "$dst"
+            fi
+          }
+
+          INCLUDE_SRC=$(find "$ARTIFACT_ROOT/windows_x86_64_libs" -type d -path "*/dynamic_lib/include" -print -quit)
+          if [[ -z "$INCLUDE_SRC" ]]; then
+            echo "ERROR: Failed to locate exported include directory" >&2
+            exit 1
+          fi
+
+          WIN_X64_BASE="$ARTIFACT_ROOT/windows_x86_64_libs"
+          WIN_ARM64_BASE="$ARTIFACT_ROOT/windows_arm64_libs"
+          LINUX_X64_BASE="$ARTIFACT_ROOT/linux_x86_64_libs"
+          LINUX_ARM64_BASE="$ARTIFACT_ROOT/linux_arm64_libs"
+          MAC_BASE="$ARTIFACT_ROOT/macos_universal_binary_libs"
+          IOS_BASE="$ARTIFACT_ROOT/ios_libs"
+          ANDROID_BASE="$ARTIFACT_ROOT/android_libs"
+
+          WIN_X64_DLL=$(find_preferred "$WIN_X64_BASE" BqLog.dll)
+          WIN_X64_LIB=$(find_preferred "$WIN_X64_BASE" BqLog.lib)
+          WIN_X64_PDB=$(find_preferred "$WIN_X64_BASE" BqLog.pdb)
+
+          WIN_ARM64_DLL=$(find_preferred "$WIN_ARM64_BASE" BqLog.dll)
+          WIN_ARM64_LIB=$(find_preferred "$WIN_ARM64_BASE" BqLog.lib)
+          WIN_ARM64_PDB=$(find_preferred "$WIN_ARM64_BASE" BqLog.pdb)
+
+          LINUX_X64_SO=$(find_linux_so "$LINUX_X64_BASE" "$VERSION")
+          LINUX_ARM64_SO=$(find_linux_so "$LINUX_ARM64_BASE" "$VERSION")
+          MAC_DYLIB=$(find_mac_dylib "$MAC_BASE" "$VERSION")
+          IOS_XCFRAMEWORK=$(find "$IOS_BASE" -type d -name "BqLog.xcframework" -print -quit)
+
+          declare -A ANDROID_SO
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            path=$(find_android_so "$ANDROID_BASE" "$abi")
+            if [[ -z "$path" ]]; then
+              echo "ERROR: Missing Android libBqLog.so for ABI ${abi}" >&2
+              exit 1
+            fi
+            ANDROID_SO[$abi]="$path"
+          done
+
+          ANDROID_AAR=$(find "$ANDROID_BASE" -type f -name "*bqlog*.aar" -print -quit)
+          if [[ -z "$ANDROID_AAR" ]]; then
+            echo "ERROR: Missing Android AAR package" >&2
+            exit 1
+          fi
+
+          if [[ -z "$WIN_X64_DLL" || -z "$WIN_X64_LIB" ]]; then
+            echo "ERROR: Missing Windows x86_64 binaries" >&2
+            exit 1
+          fi
+          if [[ -z "$WIN_ARM64_DLL" || -z "$WIN_ARM64_LIB" ]]; then
+            echo "ERROR: Missing Windows arm64 binaries" >&2
+            exit 1
+          fi
+          if [[ -z "$LINUX_X64_SO" || -z "$LINUX_ARM64_SO" ]]; then
+            echo "ERROR: Missing Linux shared libraries" >&2
+            exit 1
+          fi
+          if [[ -z "$MAC_DYLIB" ]]; then
+            echo "ERROR: Missing macOS dylib" >&2
+            exit 1
+          fi
+          if [[ -z "$IOS_XCFRAMEWORK" ]]; then
+            echo "ERROR: Missing iOS xcframework" >&2
+            exit 1
+          fi
+
+          UE_VARIANTS=(ue4 ue5)
+
+          for ue in "${UE_VARIANTS[@]}"; do
+            stage_dir="$TMP_ROOT/$ue"
+            rm -rf "$stage_dir"
+            mkdir -p "$stage_dir"
+            rsync -a "$TEMPLATE_DIR/" "$stage_dir/BqLog/"
+
+            plugin_dir="$stage_dir/BqLog"
+            public_dir="$plugin_dir/Source/BqLog/Public"
+            thirdparty_root="$plugin_dir/Source/BqLog/ThirdParty/BqLog"
+
+            rm -rf "$plugin_dir/Source/BqLog/ThirdParty"
+            rm -rf "$public_dir/ThirdParty"
+            mkdir -p "$thirdparty_root/Shared/include"
+            mkdir -p "$public_dir/ThirdParty/include"
+
+            cp -R "$INCLUDE_SRC/." "$thirdparty_root/Shared/include/"
+            cp -R "$INCLUDE_SRC/." "$public_dir/ThirdParty/include/"
+
+            if [[ -f "$public_dir/BqLog_h_${ue}.txt" ]]; then
+              mv "$public_dir/BqLog_h_${ue}.txt" "$public_dir/BqLog.h"
+            fi
+            rm -f "$public_dir"/BqLog_h_*.txt
+
+            rm -rf "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxArm64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS"
+            mkdir -p "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxArm64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS" "$plugin_dir/Binaries/Android"
+
+            copy_file "$WIN_X64_LIB" "$thirdparty_root/Win64/x86_64/lib/BqLog.lib"
+            copy_file "$WIN_ARM64_LIB" "$thirdparty_root/Win64/arm64/lib/BqLog.lib"
+
+            copy_file "$WIN_X64_DLL" "$plugin_dir/Binaries/Win64/BqLog.dll"
+            copy_file "$WIN_X64_PDB" "$plugin_dir/Binaries/Win64/BqLog.pdb"
+            copy_file "$WIN_ARM64_DLL" "$plugin_dir/Binaries/Win64Arm64/BqLog.dll"
+            copy_file "$WIN_ARM64_PDB" "$plugin_dir/Binaries/Win64Arm64/BqLog.pdb"
+
+            copy_file_follow "$LINUX_X64_SO" "$thirdparty_root/Linux/x86_64/lib/libBqLog.so"
+            copy_file_follow "$LINUX_X64_SO" "$plugin_dir/Binaries/Linux/libBqLog.so"
+            copy_file_follow "$LINUX_ARM64_SO" "$thirdparty_root/Linux/arm64/lib/libBqLog.so"
+            copy_file_follow "$LINUX_ARM64_SO" "$plugin_dir/Binaries/LinuxArm64/libBqLog.so"
+
+            copy_file_follow "$MAC_DYLIB" "$thirdparty_root/Mac/lib/libBqLog.dylib"
+            copy_file_follow "$MAC_DYLIB" "$plugin_dir/Binaries/Mac/libBqLog.dylib"
+
+            copy_dir "$IOS_XCFRAMEWORK" "$thirdparty_root/IOS/BqLog.xcframework"
+            copy_dir "$IOS_XCFRAMEWORK" "$plugin_dir/Binaries/IOS/BqLog.xcframework"
+
+            rm -f "$plugin_dir/Binaries/Android/bqlog.aar"
+            copy_file "$ANDROID_AAR" "$plugin_dir/Binaries/Android/bqlog.aar"
+            for abi in "${!ANDROID_SO[@]}"; do
+              copy_file_follow "${ANDROID_SO[$abi]}" "$thirdparty_root/Android/$abi/libBqLog.so"
+            done
+
+            zip_name="bqlog-unreal-plugin-prebuilt-${VERSION}-${ue}.zip"
+            rm -f "$DIST_DIR/$zip_name" "$DIST_DIR/$zip_name.sha256"
+            (cd "$stage_dir" && zip -rq "$DIST_DIR/$zip_name" "BqLog")
+            sha256sum "$DIST_DIR/$zip_name" > "$DIST_DIR/$zip_name.sha256"
+          done
+
+          echo "Packaged Unreal plugin archives:"
+          find "$DIST_DIR" -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Upload prebuilt Unreal plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal_plugin_prebuilt
+          path: ${{ github.workspace }}/dist
 
   # Unity package
   unity_package_build:

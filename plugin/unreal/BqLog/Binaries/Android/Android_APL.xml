@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidPlugin>
+    <!-- BqLog prebuilt Android deployment: aar for distribution, .so files consumed only during compilation -->
+
+    <gradleAdditions>
+        <insert>
+            repositories {
+                flatDir {
+                    dirs "$S(PluginDir)/Binaries/Android"
+                }
+            }
+            dependencies {
+                implementation(name: "bqlog", ext: "aar")
+            }
+        </insert>
+    </gradleAdditions>
+
+    <prebuildCopies>
+        <copyFile src="$S(PluginDir)/Binaries/Android/bqlog.aar" dst="$S(BuildDir)/libs/bqlog.aar" />
+    </prebuildCopies>
+</androidPlugin>
