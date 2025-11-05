@@ -1832,7 +1832,15 @@ jobs:
             fi
           }
 
-          DYNAMIC_INCLUDE_SRC=$(find "$ARTIFACT_ROOT/windows_x86_64_libs" -type d -path "*/dynamic_lib/include" -print -quit)
+          WIN_X64_BASE="$ARTIFACT_ROOT/windows_x86_64_libs"
+          WIN_ARM64_BASE="$ARTIFACT_ROOT/windows_arm64_libs"
+          LINUX_X64_BASE="$ARTIFACT_ROOT/linux_x86_64_libs"
+          LINUX_ARM64_BASE="$ARTIFACT_ROOT/linux_arm64_libs"
+          MAC_BASE="$ARTIFACT_ROOT/macos_universal_binary_libs"
+          IOS_BASE="$ARTIFACT_ROOT/ios_libs"
+          ANDROID_BASE="$ARTIFACT_ROOT/android_libs"
+
+          DYNAMIC_INCLUDE_SRC=$(find "$WIN_X64_BASE" -type d -path "*/dynamic_lib/include" -print -quit)
           if [[ -z "$DYNAMIC_INCLUDE_SRC" ]]; then
             echo "ERROR: Failed to locate dynamic_lib include directory" >&2
             exit 1
@@ -1843,14 +1851,6 @@ jobs:
             echo "ERROR: Failed to locate static_lib include directory for iOS" >&2
             exit 1
           fi
-
-          WIN_X64_BASE="$ARTIFACT_ROOT/windows_x86_64_libs"
-          WIN_ARM64_BASE="$ARTIFACT_ROOT/windows_arm64_libs"
-          LINUX_X64_BASE="$ARTIFACT_ROOT/linux_x86_64_libs"
-          LINUX_ARM64_BASE="$ARTIFACT_ROOT/linux_arm64_libs"
-          MAC_BASE="$ARTIFACT_ROOT/macos_universal_binary_libs"
-          IOS_BASE="$ARTIFACT_ROOT/ios_libs"
-          ANDROID_BASE="$ARTIFACT_ROOT/android_libs"
 
           WIN_X64_DLL=$(find_preferred "$WIN_X64_BASE" BqLog.dll "RelWithDebInfo" "dynamic_lib")
           WIN_X64_LIB=$(find_preferred "$WIN_X64_BASE" BqLog.lib "RelWithDebInfo" "dynamic_lib")
