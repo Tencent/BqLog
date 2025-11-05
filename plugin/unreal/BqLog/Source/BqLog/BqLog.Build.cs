@@ -36,10 +36,10 @@ public class BqLog : ModuleRules
             ConfigureWindows(Target, thirdPartyRoot, pluginRoot);
         }else if (Target.Platform.Equals(UnrealTargetPlatform.Linux))
         {
-            ConfigureLinux(thirdPartyRoot, pluginRoot, "x86_64", "Linux");
+            ConfigureLinux(thirdPartyRoot, pluginRoot, "x86_64", UnrealTargetPlatform.Linux.ToString());
         }else if (Target.Platform.Equals(UnrealTargetPlatform.LinuxAArch64))
         {
-            ConfigureLinux(thirdPartyRoot, pluginRoot, "arm64", "LinuxArm64");
+            ConfigureLinux(thirdPartyRoot, pluginRoot, "arm64", UnrealTargetPlatform.LinuxAArch64.ToString());
         }else if (Target.Platform.Equals(UnrealTargetPlatform.Mac))
         {
             ConfigureMac(thirdPartyRoot, pluginRoot);
@@ -82,9 +82,10 @@ public class BqLog : ModuleRules
             PublicAdditionalLibraries.Add(libPath);
         }
 
-        string dllRelative = Path.Combine("Binaries", binariesFolder, "BqLog.dll");
-        AddRuntimeDependencyIfExists(pluginRoot, dllRelative);
-        AddRuntimeDependencyIfExists(pluginRoot, Path.Combine("Binaries", binariesFolder, "BqLog.pdb"));
+        string runtimeSrcDir = Path.Combine(ModuleDirectory, "../.." , "Binaries", binariesFolder);
+        string runtimeDstDir = Path.Combine("$(ProjectDir)", "Binaries", binariesFolder);
+        RuntimeDependencies.Add(Path.Combine(runtimeDstDir, "BqLog.dll"), Path.Combine(runtimeSrcDir, "BqLog.dll"));
+        RuntimeDependencies.Add(Path.Combine(runtimeDstDir, "BqLog.pdb"), Path.Combine(runtimeSrcDir, "BqLog.pdb"));
     }
 
     private void ConfigureLinux(string thirdPartyRoot, string pluginRoot, string archKey, string binariesFolder)
@@ -95,8 +96,9 @@ public class BqLog : ModuleRules
         {
             PublicAdditionalLibraries.Add(libPath);
         }
-
-        AddRuntimeDependencyIfExists(pluginRoot, Path.Combine("Binaries", binariesFolder, "libBqLog.so"));
+        string runtimeSrcDir = Path.Combine(ModuleDirectory, "../..", "Binaries", binariesFolder);
+        string runtimeDstDir = Path.Combine("$(ProjectDir)", "Binaries", binariesFolder);
+        RuntimeDependencies.Add(Path.Combine(runtimeDstDir, "libBqLog.so"), Path.Combine(runtimeSrcDir, "libBqLog.so"));
     }
 
     private void ConfigureMac(string thirdPartyRoot, string pluginRoot)
@@ -107,8 +109,10 @@ public class BqLog : ModuleRules
         {
             PublicAdditionalLibraries.Add(dylibPath);
         }
-
-        AddRuntimeDependencyIfExists(pluginRoot, Path.Combine("Binaries", "Mac", "libBqLog.dylib"));
+        string binariesFolder = UnrealTargetPlatform.Mac.ToString();
+        string runtimeSrcDir = Path.Combine(ModuleDirectory, "../..", "Binaries", binariesFolder);
+        string runtimeDstDir = Path.Combine("$(ProjectDir)", "Binaries", binariesFolder);
+        RuntimeDependencies.Add(Path.Combine(runtimeDstDir, "libBqLog.dylib"), Path.Combine(runtimeSrcDir, "libBqLog.dylib"));
     }
 
     private void ConfigureIOS(string thirdPartyRoot, string pluginRoot)
@@ -151,25 +155,6 @@ public class BqLog : ModuleRules
         {
             AdditionalPropertiesForReceipt.Add("AndroidPlugin", "$(PluginDir)/Binaries/Android/Android_APL.xml");
         }
-
-        AddRuntimeDependencyIfExists(pluginRoot, Path.Combine("Binaries", "Android", "bqlog.aar"));
-    }
-
-    private bool AddRuntimeDependencyIfExists(string pluginRoot, string relativePath)
-    {
-        string absolutePath = Path.Combine(pluginRoot, relativePath);
-        if (!File.Exists(absolutePath))
-        {
-            return false;
-        }
-
-        string normalized = "$(PluginDir)/" + relativePath.Replace("\\", "/");
-        if (RuntimeDependencyCache.Add(normalized))
-        {
-            RuntimeDependencies.Add(normalized);
-        }
-
-        return true;
     }
 
     private string GetWindowsArchitecture(ReadOnlyTargetRules Target)

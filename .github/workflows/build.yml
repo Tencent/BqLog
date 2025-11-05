@@ -1927,8 +1927,8 @@ jobs:
             fi
             rm -f "$public_dir"/BqLog_h_*.txt
 
-            rm -rf "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxArm64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS"
-            mkdir -p "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxArm64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS" "$plugin_dir/Binaries/Android"
+            rm -rf "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxAArch64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS"
+            mkdir -p "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxAArch64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS" "$plugin_dir/Binaries/Android"
 
             copy_file "$WIN_X64_LIB" "$thirdparty_root/Win64/x86_64/lib/BqLog.lib"
             copy_file "$WIN_ARM64_LIB" "$thirdparty_root/Win64/arm64/lib/BqLog.lib"
@@ -1941,7 +1941,7 @@ jobs:
             copy_file_follow "$LINUX_X64_SO" "$thirdparty_root/Linux/x86_64/lib/libBqLog.so"
             copy_file_follow "$LINUX_X64_SO" "$plugin_dir/Binaries/Linux/libBqLog.so"
             copy_file_follow "$LINUX_ARM64_SO" "$thirdparty_root/Linux/arm64/lib/libBqLog.so"
-            copy_file_follow "$LINUX_ARM64_SO" "$plugin_dir/Binaries/LinuxArm64/libBqLog.so"
+            copy_file_follow "$LINUX_ARM64_SO" "$plugin_dir/Binaries/LinuxAArch64/libBqLog.so"
 
             copy_file_follow "$MAC_DYLIB" "$thirdparty_root/Mac/lib/libBqLog.dylib"
             copy_file_follow "$MAC_DYLIB" "$plugin_dir/Binaries/Mac/libBqLog.dylib"
