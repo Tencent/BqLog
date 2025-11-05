@@ -31,41 +31,6 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <pthread.h>
-
-// The BSDs don't define these so define them as their equivalents
-#if !defined(BQ_APPLE) && !defined(BQ_PS) && defined(BQ_UNIX)
-#ifndef __NR_tgkill
-#define __NR_tgkill SYS_thr_kill
-#endif
-
-#ifndef __NR_gettid
-#define __NR_gettid SYS_getgid
-#endif
-#endif
-
-#if defined(BQ_APPLE)
-pid_t bq_gettid()
-{
-    return static_cast<pid_t>(0);
-}
-
-int32_t bq_tgkill(pid_t tgid, pid_t tid, int32_t sig)
-{
-    (void)tid;
-    return static_cast<int32_t>(kill(tgid, sig));
-}
-#else
-pid_t bq_gettid()
-{
-    return static_cast<pid_t>(syscall(__NR_gettid));
-}
-
-int32_t bq_tgkill(pid_t tgid, pid_t tid, int32_t sig)
-{
-    return static_cast<int32_t>(syscall(__NR_tgkill, tgid, tid, sig));
-}
-#endif
-
 #endif
 
 namespace bq {
@@ -119,7 +84,7 @@ namespace bq {
                 sigaction(SIG, &original_sigaction, &tmp);
                 registered = false;
                 handler(sig, info, context);
-                bq_tgkill(getpid(), bq_gettid(), sig);
+                pthread_kill(pthread_self(), sig);
 #endif
             }
 

@@ -88,9 +88,6 @@ namespace bq {
             // get thread id of current thread which calls this function
             static thread_id get_current_thread_id();
 
-            // caution : thread_id maybe reused after thread exit.
-            static bool is_thread_alive(thread_id id);
-
             // get thread id of this bq::platform::thread instance.
             thread_id get_thread_id() const
             {
