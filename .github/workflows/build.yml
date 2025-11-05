@@ -1918,10 +1918,8 @@ jobs:
             rm -rf "$public_dir/ThirdParty"
             mkdir -p "$thirdparty_root/Shared/Dynamic/include"
             mkdir -p "$thirdparty_root/Shared/Static/include"
-            mkdir -p "$public_dir/ThirdParty/include"
 
             cp -R "$DYNAMIC_INCLUDE_SRC/." "$thirdparty_root/Shared/Dynamic/include/"
-            cp -R "$DYNAMIC_INCLUDE_SRC/." "$public_dir/ThirdParty/include/"
             cp -R "$STATIC_INCLUDE_SRC/." "$thirdparty_root/Shared/Static/include/"
 
             if [[ -f "$public_dir/BqLog_h_${ue}.txt" ]]; then
