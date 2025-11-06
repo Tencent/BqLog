@@ -182,7 +182,7 @@ namespace bq {
                 }
                 first_node = &get_block_head_by_index(head_cpy_ref.index());
                 head_desired.index() = first_node->next_.index();
-                head_desired.aba_mark() = head_cpy_ref.aba_mark() + static_cast<uint16_t>(1);
+                head_desired.aba_mark() = static_cast<uint16_t>(head_cpy_ref.aba_mark() + 1);
             } while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).compare_exchange_strong(head_cpy, head_desired.union_value(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
             return first_node;
         }
@@ -195,7 +195,7 @@ namespace bq {
             do {
                 new_block_node->next_.index() = head_cpy_ref.index();
                 head_desired.index() = get_index_by_block_head(new_block_node);
-                head_desired.aba_mark() = head_cpy_ref.aba_mark() + static_cast<uint16_t>(1);
+                head_desired.aba_mark() = static_cast<uint16_t>(head_cpy_ref.aba_mark() + 1);
             } while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).compare_exchange_strong(head_cpy, head_desired.union_value(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
         }
 
