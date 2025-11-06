@@ -20,13 +20,22 @@
 #include "bq_common/bq_common.h"
 namespace bq {
     namespace platform {
+
+#if defined(CLOCK_REALTIME_COARSE)
+#define BQ_CLOCK_REALTIME_FAST CLOCK_REALTIME_COARSE
+#elif defined(CLOCK_REALTIME_FAST) // FreeBSD
+#define BQ_CLOCK_REALTIME_FAST CLOCK_REALTIME_FAST
+#else
+#define BQ_CLOCK_REALTIME_FAST CLOCK_REALTIME
+#endif
+
         // According to test result, benifit from VDSO.
         //"CLOCK_REALTIME_COARSE clock_gettime"  has higher performance
         //  than "gettimeofday" and event "TSC" on Android and Linux.
         uint64_t high_performance_epoch_ms()
         {
             struct timespec ts;
-            clock_gettime(CLOCK_REALTIME_COARSE, &ts);
+            clock_gettime(BQ_CLOCK_REALTIME_FAST, &ts);
             uint64_t epoch_milliseconds = (uint64_t)(ts.tv_sec) * 1000 + (uint64_t)(ts.tv_nsec) / 1000000;
             return epoch_milliseconds;
         }
