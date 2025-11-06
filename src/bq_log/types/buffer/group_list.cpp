@@ -75,7 +75,7 @@ namespace bq {
 
     size_t group_node::get_group_data_size(const log_buffer_config& config, uint16_t max_block_count_per_group)
     {
-        size_t data_per_block = block_node_head::get_buffer_data_offset() + siso_ring_buffer::calculate_min_size_of_memory(config.default_buffer_size);
+        size_t data_per_block = static_cast<size_t>(block_node_head::get_buffer_data_offset()) + siso_ring_buffer::calculate_min_size_of_memory(config.default_buffer_size);
         size_t total_size_of_block_datas = data_per_block * max_block_count_per_group + sizeof(group_data_head);
         return total_size_of_block_datas;
     }

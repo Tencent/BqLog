@@ -194,7 +194,7 @@ namespace bq {
                 }
                 break;
             } else {
-                result = lp_buffer_.alloc_write_chunk(size + sizeof(context_head));
+                result = lp_buffer_.alloc_write_chunk(size + static_cast<uint32_t>(sizeof(context_head)));
                 if (enum_buffer_result_code::success == result.result) {
                     auto* context = reinterpret_cast<context_head*>(result.data_addr);
                     context->version_ = version_;
@@ -812,7 +812,7 @@ namespace bq {
                     continue;
                 }
                 over_size_buffer->buffer_lock_.read_lock();
-                over_size_handle = over_size_buffer->buffer_.alloc_write_chunk(size + sizeof(context_head));
+                over_size_handle = over_size_buffer->buffer_.alloc_write_chunk(size + static_cast<uint32_t>(sizeof(context_head)));
                 if (enum_buffer_result_code::success == over_size_handle.result) {
                     over_size_buffer->last_used_epoch_ms_ = current_epoch_ms;
                     tls_buffer.oversize_target_buffer_ = over_size_buffer.operator->();
@@ -841,7 +841,7 @@ namespace bq {
             oversize_buffer_context.seq_ = UINT32_MAX;
             oversize_buffer_context.is_external_ref_ = true;
             oversize_buffer_context.set_tls_info(&tls_buffer);
-            over_size_handle = new_buffer->buffer_.alloc_write_chunk(size + sizeof(context_head));
+            over_size_handle = new_buffer->buffer_.alloc_write_chunk(size + static_cast<uint32_t>(sizeof(context_head)));
             assert(enum_buffer_result_code::success == over_size_handle.result && "New created oversize buffer shouldn't fail when allocating");
             new_buffer->last_used_epoch_ms_ = current_epoch_ms;
             tls_buffer.oversize_target_buffer_ = new_buffer.operator->();
