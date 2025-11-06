@@ -1197,8 +1197,13 @@ jobs:
               developer/debug/gdb \
               shell/bash
             pkgutil -U || true
-            pkgutil -a openjdk || true
-            pkgutil -y -i openjdk17_jre || pkgutil -y -i openjdk11_jre || true
+            # 列出可用的 jdk/openjdk 包看看（调试可留）
+            pkgutil -a | egrep -i '(^|-)openjdk|(^|-)jdk|(^|-)java' || true
+              
+            # 尝试安装一个可用的 JRE/JDK（按 17 -> 11 -> 8）
+            for P in openjdk17_jre openjdk17 openjdk11_jre openjdk11 openjdk8_jre openjdk8; do
+            pkgutil -i -y "$P" && break
+            done || true
           run: |
             set -e -x
             if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
@@ -1438,7 +1443,6 @@ jobs:
           prepare: |
             set -e
             pkg refresh --full
-            # 确保 extra.omnios 存在（用于 ooce/* 包）
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
               [ -n "$REL" ] || REL="r151054"
@@ -1446,46 +1450,24 @@ jobs:
               pkg refresh --full
             fi
               
-              # 基础工具
             pkg install -v --accept shell/bash developer/build/gnu-make || true
-              
-              # cmake：优先 ooce/developer/cmake
-            if pkg info -r ooce/developer/cmake >/dev/null 2>&1; then
-              pkg install -v --accept ooce/developer/cmake
-            else
-              FMRI_CMAKE="$(pkg search -r -o pkg.fmri -H cmake 2>/dev/null | awk -F@ '{print $1}' | head -n1)"
-              [ -n "$FMRI_CMAKE" ] && pkg install -v --accept "$FMRI_CMAKE" || true
-            fi
-              
-              # gcc（你这次已经能装到 developer/gcc13，保留这个优先级）
-            pkg info -r developer/gcc13 >/dev/null 2>&1 && pkg install -v --accept developer/gcc13 || true
-            pkg info -r developer/gcc12 >/dev/null 2>&1 && pkg install -v --accept developer/gcc12 || true
-            pkg info -r developer/gcc11 >/dev/null 2>&1 && pkg install -v --accept developer/gcc11 || true
-              
-            # Java：先精确探测 openjdk11，再退回关键字
-            if pkg info -r runtime/java/openjdk11 >/dev/null 2>&1; then
-              pkg install -v --accept runtime/java/openjdk11
-            else
-              FMRI_JAVA="$(pkg search -r -s omnios -o pkg.fmri openjdk 2>/dev/null | awk -F@ '{print $1}' | head -n1)"
-              [ -n "$FMRI_JAVA" ] && pkg install -v --accept "$FMRI_JAVA" || echo "No OpenJDK package in current publishers."
-            fi
+            pkg install -v --accept ooce/developer/cmake
+            pkg install -v --accept developer/gcc13
+            pkg install -v --accept runtime/java/openjdk11
           run: |
             set -e -x
 
-            export PATH="/opt/gcc-13/bin:/opt/gcc-12/bin:/opt/gcc-11/bin:$PATH"
-
-            if [ -x /usr/jdk/openjdk11/bin/java ]; then
-              export JAVA_HOME="/usr/jdk/openjdk11"
-            elif [ -x /usr/jdk/instances/jdk-11/bin/java ]; then
-              export JAVA_HOME="/usr/jdk/instances/jdk-11"
-            else
-              command -v java >/dev/null 2>&1 || { echo "java not found; run: pkg install runtime/java/openjdk11"; exit 1; }
-              JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
+            export PATH="/opt/gcc-13/bin:$PATH"
+            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
+              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
+                JAVA_HOME="$JH"
+              fi
             fi
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version
 
-            command -v gcc >/dev/null 2>&1 || { echo "gcc not found; ensure ooce/gcc-13/12/11 installed"; exit 1; }
+            command -v gcc >/dev/null 2>&1 || { echo "gcc not found; ensure gcc installed"; exit 1; }
             echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
             
@@ -1525,33 +1507,19 @@ jobs:
               pkg refresh --full
             fi
 
-            pkg install -v --accept shell/bash developer/build/gnu-make developer/build/cmake runtime/java/openjdk11 || true
-
-            GCC_FOUND=0
-            for P in developer/gcc13 developer/gcc12 developer/gcc11; do
-              if pkg info -r "$P" >/dev/null 2>&1; then
-                pkg install -v --accept "$P"
-                GCC_FOUND=1
-                break
-              fi
-            done
-            if [ "$GCC_FOUND" -eq 0 ]; then
-                echo "Warning: gcc not found via IPS search"
-            fi
-            
-            curl "https://mirrors.omnios.org/openjdk/jdk-11.0.28+6.tar.gz"
+            pkg install -v --accept shell/bash developer/build/gnu-make || true
+            pkg install -v --accept ooce/developer/cmake
+            pkg install -v --accept developer/gcc13
+            pkg install -v --accept runtime/java/openjdk11
           run: |
             set -e -x
 
-            export PATH="/opt/gcc-13/bin:/opt/gcc-12/bin:/opt/gcc-11/bin:$PATH"
-
-            if [ -x /usr/jdk/openjdk11/bin/java ]; then
-              export JAVA_HOME="/usr/jdk/openjdk11"
-            elif [ -x /usr/jdk/instances/jdk-11/bin/java ]; then
-              export JAVA_HOME="/usr/jdk/instances/jdk-11"
-            else
-              command -v java >/dev/null 2>&1 || { echo "java not found; run: pkg install runtime/java/openjdk11"; exit 1; }
-              JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
+            export PATH="/opt/gcc-13/bin:$PATH"
+            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
+              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
+                JAVA_HOME="$JH"
+              fi
             fi
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version

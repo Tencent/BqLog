@@ -341,7 +341,7 @@ namespace bq {
         // 1.0000e+ -> 1.0000e+60
         do {
             int32_t digit = static_cast<int32_t>(e_count % 10);
-            format_content[format_content_cursor++] = '0' + (char)digit;
+            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
             e_count /= 10;
         } while (e_count != 0);
         if (temp <= 9)
@@ -415,7 +415,7 @@ namespace bq {
                         {
                             const void* arg_data_ptr = *((const void* const*)(args_data_ptr + args_data_cursor + 4));
                             insert_pointer(arg_data_ptr);
-                            args_data_cursor += 4 + sizeof(uint64_t); // use 64bit pointer for serialize
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); // use 64bit pointer for serialize
                         }
                         break;
                     case bq::log_arg_type_enum::bool_type:
@@ -468,11 +468,11 @@ namespace bq {
                         break;
                     case bq::log_arg_type_enum::float_type:
                         insert_decimal(*(const float*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += (4 + sizeof(float));
+                        args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
                         break;
                     case bq::log_arg_type_enum::double_type:
                         insert_decimal(*(const double*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += (4 + sizeof(double));
+                        args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                         break;
                     case bq::log_arg_type_enum::string_utf8_type: {
                         const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
@@ -557,7 +557,7 @@ namespace bq {
             }
             if (surrogate) {
                 if (c >= 0xDC00 && c <= 0xDFFF) {
-                    codepoint = 0x10000 + (c - 0xDC00) + ((surrogate - 0xD800) << 10);
+                    codepoint = static_cast<uint32_t>(0x10000) + (static_cast<uint32_t>(c) - static_cast<uint32_t>(0xDC00)) + static_cast<uint32_t>((surrogate - static_cast<uint32_t>(0xD800)) << 10);
                     surrogate = 0;
                 } else {
                     surrogate = 0;
@@ -607,7 +607,7 @@ namespace bq {
                             {
                                 const void* ptr_data = *((const void* const*)(args_data_ptr + args_data_cursor + 4));
                                 insert_pointer(ptr_data);
-                                args_data_cursor += 4 + sizeof(uint64_t); // use 64bit pointer for serialize
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); // use 64bit pointer for serialize
                             }
                             break;
                         case bq::log_arg_type_enum::bool_type:
@@ -644,27 +644,27 @@ namespace bq {
                             break;
                         case bq::log_arg_type_enum::int32_type:
                             insert_integral_signed(*(const int32_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(int32_t));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int32_t));
                             break;
                         case bq::log_arg_type_enum::uint32_type:
                             insert_integral_unsigned(*(const uint32_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(uint32_t));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint32_t));
                             break;
                         case bq::log_arg_type_enum::int64_type:
                             insert_integral_signed(*(const int64_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(int64_t));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int64_t));
                             break;
                         case bq::log_arg_type_enum::uint64_type:
                             insert_integral_unsigned(*(const uint64_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(uint64_t));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             break;
                         case bq::log_arg_type_enum::float_type:
                             insert_decimal(*(const float*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(float));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
                             break;
                         case bq::log_arg_type_enum::double_type:
                             insert_decimal(*(const double*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(double));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {
                             const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
@@ -757,7 +757,7 @@ namespace bq {
         while ((uint32_t)(p - s) < wchar_len && (c = *p++) != 0) {
             if (surrogate) {
                 if (c >= 0xDC00 && c <= 0xDFFF) {
-                    codepoint = 0x10000 + (c - 0xDC00) + ((surrogate - 0xD800) << 10);
+                    codepoint = static_cast<uint32_t>(0x10000) + (static_cast<uint32_t>(c) - static_cast<uint32_t>(0xDC00)) + static_cast<uint32_t>((surrogate - static_cast<uint32_t>(0xD800)) << 10);
                     surrogate = 0;
                 } else {
                     surrogate = 0;
@@ -837,7 +837,7 @@ namespace bq {
 
     void layout::insert_char(char value)
     {
-        expand_format_content_buff_size(format_content_cursor + sizeof(char));
+        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(sizeof(char)));
         format_content[format_content_cursor] = value;
         ++format_content_cursor;
     }
@@ -906,12 +906,12 @@ namespace bq {
         do {
             int32_t digit = static_cast<int32_t>(value % base);
             if (digit < 0xA) {
-                format_content[format_content_cursor] = '0' + (char)digit;
+                format_content[format_content_cursor] = static_cast<char>('0' + digit);
             } else {
                 if (format_info_.upper)
-                    format_content[format_content_cursor] = 'A' + (char)digit - (char)0xA;
+                    format_content[format_content_cursor] = static_cast<char>('A' + digit - 0xA);
                 else
-                    format_content[format_content_cursor] = 'a' + (char)digit - (char)0xA;
+                    format_content[format_content_cursor] = static_cast<char>('a' + digit - 0xA);
             }
             value /= base;
             ++format_content_cursor;
@@ -988,12 +988,12 @@ namespace bq {
         do {
             char digit = static_cast<char>(abs(static_cast<int32_t>(value % static_cast<int32_t>(base))));
             if (digit < 0xA) {
-                format_content[format_content_cursor] = '0' + digit;
+                format_content[format_content_cursor] = static_cast<char>('0' + digit);
             } else {
                 if (format_info_.upper)
-                    format_content[format_content_cursor] = 'A' + digit - 0xA;
+                    format_content[format_content_cursor] = static_cast<char>('A' + digit - 0xA);
                 else
-                    format_content[format_content_cursor] = 'a' + digit - 0xA;
+                    format_content[format_content_cursor] = static_cast<char>('a' + digit - 0xA);
             }
             value /= base;
             if (value > base)
@@ -1047,7 +1047,7 @@ namespace bq {
             int32_t digit = (int32_t)value;
             value -= (float)(digit);
             --precision;
-            format_content[format_content_cursor++] = '0' + (char)digit;
+            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
         }
 
         if (format_info_.type == 'Z') {
@@ -1105,7 +1105,7 @@ namespace bq {
             int32_t digit = (int32_t)value;
             value -= (double)(digit);
             --temp_precision;
-            format_content[format_content_cursor++] = '0' + (char)digit;
+            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
         }
         if (format_info_.type == 'Z') {
             format_info_.type = 'e';

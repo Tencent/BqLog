@@ -515,8 +515,8 @@ namespace bq {
                         break;
                     case bq::log_arg_type_enum::double_type:
                         memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4, sizeof(int64_t));
-                        log_data_cursor += sizeof(int64_t);
-                        args_data_cursor += (4 + sizeof(int64_t));
+                        log_data_cursor += static_cast<uint32_t>(sizeof(int64_t));
+                        args_data_cursor += static_cast<uint32_t>(4 + sizeof(int64_t));
                         break;
                     case bq::log_arg_type_enum::string_utf8_type: {
                         const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
