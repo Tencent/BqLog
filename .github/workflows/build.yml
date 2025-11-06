@@ -1548,6 +1548,29 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            # Bootstrap pkgin 
+            export PATH="/usr/sbin:/usr/bin:$PATH"
+            ARCH="$(uname -m)"
+            case "$ARCH" in
+              amd64|x86_64) PKG_ARCH="amd64" ;;
+              aarch64|arm64) PKG_ARCH="aarch64" ;;
+              *) PKG_ARCH="$ARCH" ;;
+            esac
+            REPO=""
+            for REL in 10.1 10.0; do
+              PKG_PATH="https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/${REL}/All/"
+              if /usr/sbin/pkg_add -v -K /var/db/pkg pkgin; then
+                REPO="$PKG_PATH"
+                break
+              fi
+            done
+            test -n "$REPO"
+            mkdir -p /usr/pkg/etc/pkgin
+            printf "%s\n" "${REPO%/}" > /usr/pkg/etc/pkgin/repositories.conf
+            # Install root certs to avoid TLS issues
+            /usr/pkg/sbin/pkgin -y update || true
+            /usr/pkg/sbin/pkgin -y install mozilla-rootcerts-openssl || true
+            /usr/sbin/mozilla-rootcerts-openssl install || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
             # Java: prefer openjdk11, fallback to openjdk17
