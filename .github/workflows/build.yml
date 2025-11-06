@@ -1037,7 +1037,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
+            pkg_add  cmake bash jdk%11
 
           run: |
             test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
@@ -1060,37 +1060,6 @@ jobs:
           name: openbsd_x86_64_libs
           path: ${{ github.workspace }}/dist
 
-  build_openbsd_x86_64_libs_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
-
-          run: |
-            set -e -x
-            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
-            export JAVA_HOME="/usr/local/jdk-11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-            
-            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-            echo "PATH=$PATH" >> "$GITHUB_ENV"
-            
-            cd build/lib/unix_like
-            chmod +x *.sh
-            ls -l
-            export BQ_UNIX_VERSION=openbsd
-            ./build_all_and_pack.sh native gcc YES NO
-
   build_openbsd_x86_64_tools_Clang:
     runs-on: ubuntu-latest
     steps:
@@ -1104,7 +1073,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
+            pkg_add  cmake bash jdk%11
 
           run: |
             set -e -x
@@ -1128,38 +1097,6 @@ jobs:
           name: openbsd_x86_64_tools
           path: ${{ github.workspace }}/dist
 
-  build_openbsd_x86_64_tools_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
-
-          run: |
-            set -e -x
-            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
-            export JAVA_HOME="/usr/local/jdk-11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-
-            cd build/tools/unix_like  
-            chmod +x category_log_generator/*.sh
-            chmod +x log_decoder/*.sh
-            chmod +x *.sh
-            ls -l
-            export BQ_UNIX_VERSION=openbsd
-            ./build_all_and_pack_gcc.sh
-
   #openbsd_arm64
   build_openbsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
@@ -1175,7 +1112,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
+            pkg_add  cmake bash jdk%11
 
           run: |
             set -e -x
@@ -1199,38 +1136,6 @@ jobs:
           name: openbsd_arm64_libs
           path: ${{ github.workspace }}/dist
 
-  build_openbsd_arm64_libs_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
-
-          run: |
-            set -e -x
-            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
-            export JAVA_HOME="/usr/local/jdk-11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-            
-            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-            echo "PATH=$PATH" >> "$GITHUB_ENV"
-            
-            cd build/lib/unix_like
-            chmod +x *.sh
-            ls -l
-            export BQ_UNIX_VERSION=openbsd
-            ./build_all_and_pack.sh native gcc YES NO
-
   build_openbsd_arm64_tools_Clang:
     runs-on: ubuntu-latest
     steps:
@@ -1245,7 +1150,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
+            pkg_add  cmake bash jdk%11
 
           run: |
             set -e -x
@@ -1269,39 +1174,6 @@ jobs:
         with:
           name: openbsd_arm64_tools
           path: ${{ github.workspace }}/dist
-
-  build_openbsd_arm64_tools_GCC:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash jdk%11 gcc%11 g++%11
-
-          run: |
-            set -e -x
-            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
-            export JAVA_HOME="/usr/local/jdk-11"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-
-            cd build/tools/unix_like  
-            chmod +x category_log_generator/*.sh
-            chmod +x log_decoder/*.sh
-            chmod +x *.sh
-            ls -l
-            export BQ_UNIX_VERSION=openbsd
-            ./build_all_and_pack_gcc.sh
 
   # solaris_x86_64
   build_solaris_x86_64_libs_Clang:
