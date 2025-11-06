@@ -182,7 +182,7 @@ namespace bq {
                 }
                 first_node = &get_block_head_by_index(head_cpy_ref.index());
                 head_desired.index() = first_node->next_.index();
-                head_desired.aba_mark() = head_cpy_ref.aba_mark() + 1;
+                head_desired.aba_mark() = head_cpy_ref.aba_mark() + static_cast<uint16_t>(1);
             } while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).compare_exchange_strong(head_cpy, head_desired.union_value(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
             return first_node;
         }
@@ -195,7 +195,7 @@ namespace bq {
             do {
                 new_block_node->next_.index() = head_cpy_ref.index();
                 head_desired.index() = get_index_by_block_head(new_block_node);
-                head_desired.aba_mark() = head_cpy_ref.aba_mark() + 1;
+                head_desired.aba_mark() = head_cpy_ref.aba_mark() + static_cast<uint16_t>(1);
             } while (!BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).compare_exchange_strong(head_cpy, head_desired.union_value(), bq::platform::memory_order::release, bq::platform::memory_order::acquire));
         }
 
@@ -210,8 +210,8 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             uint16_t new_index = get_index_by_block_head(new_block_node);
             uint16_t prev_index = get_index_by_block_head(prev_block_node);
-            assert(new_index >= 0 && new_index < max_blocks_count_ && "push_after_thread_unsafe assert failed, invalid new_block_node!");
-            assert((prev_index == (uint16_t)-1 || (prev_index >= 0 && prev_index < max_blocks_count_)) && "push_after_thread_unsafe assert failed, invalid prev_block_node!");
+            assert(new_index < max_blocks_count_ && "push_after_thread_unsafe assert failed, invalid new_block_node!");
+            assert((prev_index == (uint16_t)-1 || (prev_index < max_blocks_count_)) && "push_after_thread_unsafe assert failed, invalid prev_block_node!");
             block_node_head* test_node = first();
             bool found_prev = false;
             while (test_node) {
@@ -236,7 +236,7 @@ namespace bq {
         {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             uint16_t remove_index = get_index_by_block_head(remove_block_node);
-            assert(remove_index >= 0 && remove_index < max_blocks_count_ && "remove assert failed, invalid remove_block_node!");
+            assert(remove_index < max_blocks_count_ && "remove assert failed, invalid remove_block_node!");
             uint16_t prev_index = get_index_by_block_head(prev_block_node);
             block_node_head* test_node = first();
             bool found_prev = false;
@@ -256,7 +256,7 @@ namespace bq {
                 head_ = remove_block_node->next_;
             } else {
 #if defined(BQ_LOG_BUFFER_DEBUG)
-                assert(prev_index >= 0 && prev_index < max_blocks_count_ && "remove assert failed, invalid prev_block_node!");
+                assert(prev_index < max_blocks_count_ && "remove assert failed, invalid prev_block_node!");
                 assert(prev_block_node->next_.index() == remove_index);
 #endif
                 prev_block_node->next_ = remove_block_node->next_;

@@ -98,7 +98,7 @@ namespace bq {
         uint32_t bitmap = 0;
         bool have_level(bq::log_level level)
         {
-            return (bitmap & (1 << (int32_t)level)) != 0;
+            return (bitmap & static_cast<uint32_t>(1 << (int32_t)level)) != 0;
         }
     };
 

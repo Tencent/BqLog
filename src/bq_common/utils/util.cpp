@@ -307,7 +307,7 @@ namespace bq {
         while ((uint32_t)(p - s) < wchar_len && (c = *p++) != 0) {
             if (surrogate) {
                 if (c >= 0xDC00 && c <= 0xDFFF) {
-                    codepoint = 0x10000 + (c - 0xDC00) + ((surrogate - 0xD800) << 10);
+                    codepoint = static_cast<uint32_t>(0x10000u) + (static_cast<uint32_t>(c) - static_cast<uint32_t>(0xDC00u)) + static_cast<uint32_t>((surrogate - static_cast<uint32_t>(0xD800)) << 10);
                     surrogate = 0;
                 } else {
                     surrogate = 0;
