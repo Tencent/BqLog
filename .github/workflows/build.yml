@@ -1209,15 +1209,12 @@ jobs:
             elif command -v java >/dev/null 2>&1; then
               JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
             fi
-        
-            if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
-              export PATH="$JAVA_HOME/bin:$PATH"
-              java -version
-              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-              echo "PATH=$PATH" >> "$GITHUB_ENV"
-            else
-              echo "No JDK found on Solaris; proceeding with JAVA_SUPPORT=NO"
-              exit 1
+            
+            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
+              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
+                JAVA_HOME="$JH"
+              fi
             fi
 
             export CC=gcc
@@ -1268,15 +1265,12 @@ jobs:
             elif command -v java >/dev/null 2>&1; then
               JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
             fi
-
-            if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
-              export PATH="$JAVA_HOME/bin:$PATH"
-              java -version
-              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-              echo "PATH=$PATH" >> "$GITHUB_ENV"
-            else
-              echo "No JDK found on Solaris; proceeding with JAVA_SUPPORT=NO"
-              exit 1
+            
+            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
+              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
+                JAVA_HOME="$JH"
+              fi
             fi
 
             export CC=gcc
