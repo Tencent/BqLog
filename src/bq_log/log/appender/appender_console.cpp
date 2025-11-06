@@ -72,7 +72,7 @@ namespace bq {
         if (!is_enable()) {
             return;
         }
-        size_t write_length = sizeof(log_id) + sizeof(category_idx) + sizeof(log_level) + sizeof(int32_t) + static_cast<size_t>(length) + static_cast<size_t>(1);
+        size_t write_length = sizeof(log_id) + sizeof(category_idx) + sizeof(log_level) + sizeof(int32_t) + static_cast<size_t>(static_cast<uint32_t>(length > 0 ? length : 0)) + static_cast<size_t>(1);
 
         auto buffer = buffer_.load_relaxed();
         if (!buffer) {
