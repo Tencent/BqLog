@@ -920,7 +920,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_libs
+          name: freebsd_arm64_libs
           path: ${{ github.workspace }}/dist
 
   build_freebsd_arm64_libs_GCC:
@@ -987,7 +987,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_tools
+          name: freebsd_arm64_tools
           path: ${{ github.workspace }}/dist
 
   build_freebsd_arm64_tools_GCC:
@@ -1032,7 +1032,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
           mem: 8192
@@ -1066,7 +1066,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
           mem: 8192
@@ -1095,7 +1095,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
           mem: 8192
@@ -1131,7 +1131,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
           mem: 8192
@@ -1163,7 +1163,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
           usesh: true
@@ -1187,7 +1187,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openbsd_x86_64_libs
+          name: openbsd_arm64_libs
           path: ${{ github.workspace }}/dist
 
   build_openbsd_arm64_libs_GCC:
@@ -1198,7 +1198,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
           usesh: true
@@ -1228,7 +1228,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
           usesh: true
@@ -1254,7 +1254,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openbsd_x86_64_tools
+          name: openbsd_arm64_tools
           path: ${{ github.workspace }}/dist
 
   build_openbsd_arm64_tools_GCC:
@@ -1265,7 +1265,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@1
+        uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
           usesh: true
