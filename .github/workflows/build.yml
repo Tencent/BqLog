@@ -1202,60 +1202,47 @@ jobs:
             }
           run: |
             set -e -x
-            CSW_JDK="$(ls -d /opt/csw/java/jdk1.8* 2>/dev/null | head -n1 || true)"
-            if [ -n "$CSW_JDK" ] && [ -x "$CSW_JDK/bin/java" ]; then
-            if [ -d "$CSW_JDK/include" ] && [ -f "$CSW_JDK/include/jni.h" ]; then
-            JAVA_HOME="$CSW_JDK"
-            fi
-            fi
-            
-            # 2) 兜底：如果上面没命中，再看系统常见路径（很多是裁剪版，常缺 include）
-            if [ -z "$JAVA_HOME" ]; then
-            for d in \
-            /usr/jdk/instances/jdk1.8* \
-            /usr/jdk/jdk1.8* \
-            /usr/jdk/instances/jdk-1.8* \
-            ; do
-            if [ -x "$d/bin/java" ]; then
-            # 如果 java.home 指向的是 jre，优先试父目录
-            if [ -d "$d/include" ] && [ -f "$d/include/jni.h" ]; then
-            JAVA_HOME="$d"
-            break
-            elif [ -d "$(dirname "$d")/include" ] && [ -f "$(dirname "$d")/include/jni.h" ]; then
-            JAVA_HOME="$(dirname "$d")"
-            break
-            fi
-            fi
+            JAVA_HOME=""
+            for d in /opt/csw/java/jdk1.8*; do
+              if [ -x "$d/bin/java" ] && [ -f "$d/include/jni.h" ]; then
+                JAVA_HOME="$d"
+                break
+              fi
             done
+            
+            if [ -z "$JAVA_HOME" ]; then
+              for d in /usr/jdk/instances/jdk1.8* /usr/jdk/jdk1.8*; do
+                if [ -x "$d/bin/java" ] && [ -f "$d/include/jni.h" ]; then
+                  JAVA_HOME="$d"
+                  break
+                fi
+              done
             fi
             
-            # 3) 再兜底：从 java -XshowSettings:properties 解析 java.home，然后如果是 .../jre 就尝试其父目录
             if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-            JH="$(java -XshowSettings:properties -version 2>&1 \
-            | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
-            if [ -n "$JH" ]; then
-            CAND="$JH"
-            case "$JH" in
-            */jre) P="$(dirname "$JH")"; [ -x "$P/bin/java" ] && CAND="$P" ;;
-            esac
-            if [ -d "$CAND/include" ] && [ -f "$CAND/include/jni.h" ]; then
-            JAVA_HOME="$CAND"
-            fi
-            fi
+              JH=`java -XshowSettings:properties -version 2>&1 | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p'`
+              if [ -n "$JH" ]; then
+                D="$JH"
+                case "$JH" in
+                  */jre) D=`dirname "$JH"` ;;
+                esac
+                if [ -x "$D/bin/java" ] && [ -f "$D/include/jni.h" ]; then
+                  JAVA_HOME="$D"
+                fi
+              fi
             fi
             
-            # 4) 成功则导出并打印；失败则提示并退出（如你想继续，可改为仅关闭 Java 支持）
             if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] && [ -f "$JAVA_HOME/include/jni.h" ]; then
-            export JAVA_HOME
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-            echo "JAVA_HOME=$JAVA_HOME"
-            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-            echo "PATH=$PATH" >> "$GITHUB_ENV"
+              export JAVA_HOME
+              PATH="$JAVA_HOME/bin:$PATH"; export PATH
+              java -version
+              echo "JAVA_HOME=$JAVA_HOME"
+              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+              echo "PATH=$PATH" >> "$GITHUB_ENV"
             else
-            echo "No JDK with JNI headers found. Expected jni.h in \$JAVA_HOME/include." >&2
-            echo "诊断建议：运行 'pkgutil -f jdk8 | grep -E \"jni.h|/include/\"' 看看包内是否包含头文件；或者 'ls -l /opt/csw/java' 检查实际安装路径。" >&2
-            exit 1
+              echo "No JDK8 with JNI headers found (jni.h not present)."
+              # exit 1
+            fi
             
             ls "$JAVA_HOME"
             echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
@@ -1292,23 +1279,8 @@ jobs:
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
-            pkgutil -U || true
-            pkgutil -y -i jdk8 || {
-              echo "CSWjdk8 not available in this catalog; Java will be optional." >&2
-            }
           run: |
             set -e -x
-            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JAVA_HOME="$(java -XshowSettings:properties -version 2>&1 \
-              | awk -F'= ' '/^[[:space:]]*java\.home = /{print $2}' \
-              | sed 's/[[:space:]]*$//')"
-            fi
-            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0/"
-            ls -l "$JAVA_HOME"
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-            echo "JAVA_HOME=$JAVA_HOME"
-            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
             cd build/tools/unix_like
