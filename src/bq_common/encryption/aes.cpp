@@ -58,12 +58,13 @@ namespace bq {
             uint8_t p = 0;
             for (int32_t i = 0; i < 8; ++i) {
                 if (b & 1)
-                    p ^= a;
+                    p = static_cast<uint8_t>(p ^ a);
                 uint8_t hi = a & 0x80;
-                a <<= 1;
-                if (hi)
-                    a ^= 0x1b;
-                b >>= 1;
+                a = static_cast<uint8_t>(a << 1);
+                if (hi){
+                    a = static_cast<uint8_t>(a ^ 0x1b);
+                }
+                b = static_cast<uint8_t>(b >> 1);
             }
             return p;
         }
@@ -77,7 +78,7 @@ namespace bq {
         static inline void add_round_key(uint8_t* state, const uint8_t* round_key_)
         {
             for (int32_t i = 0; i < 16; ++i)
-                state[i] ^= round_key_[i];
+                state[i] = static_cast<uint8_t>(state[i] ^ round_key_[i]);
         }
 
         static inline uint8_t rcon(uint8_t i)
@@ -124,7 +125,7 @@ namespace bq {
                     temp[2] = sbox_[temp[2]];
                     temp[3] = sbox_[temp[3]];
                     // Rcon
-                    temp[0] ^= rcon(static_cast<uint8_t>(i / nk_));
+                    temp[0] = (temp[0] ^ rcon(static_cast<uint8_t>(i / nk_)));
                 } else if (nk_ > 6 && i % nk_ == 4) {
                     // ext subword for AES_256
                     temp[0] = sbox_[temp[0]];
@@ -210,10 +211,10 @@ namespace bq {
                 const uint8_t a3 = s[i + 3];
                 uint8_t t = static_cast<uint8_t>(a0 ^ a1 ^ a2 ^ a3);
                 uint8_t u = a0;
-                s[i + 0] ^= static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a0 ^ a1)));
-                s[i + 1] ^= static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a1 ^ a2)));
-                s[i + 2] ^= static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a2 ^ a3)));
-                s[i + 3] ^= static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a3 ^ u)));
+                s[i + 0] = static_cast<uint8_t>(s[i + 0] ^ static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a0 ^ a1))));
+                s[i + 1] = static_cast<uint8_t>(s[i + 1] ^ static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a1 ^ a2))));
+                s[i + 2] = static_cast<uint8_t>(s[i + 2] ^ static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a2 ^ a3))));
+                s[i + 3] = static_cast<uint8_t>(s[i + 3] ^ static_cast<uint8_t>(t ^ xtime(static_cast<uint8_t>(a3 ^ u))));
             }
         }
         static inline void inv_mix_columns(uint8_t* s)
