@@ -1197,24 +1197,22 @@ jobs:
               developer/debug/gdb \
               shell/bash
             pkgutil -U || true
-            # 列出可用的 jdk/openjdk 包看看（调试可留）
-            pkgutil -a | egrep -i '(^|-)openjdk|(^|-)jdk|(^|-)java' || true
-              
-            # 尝试安装一个可用的 JRE/JDK（按 17 -> 11 -> 8）
-            for P in openjdk17_jre openjdk17 openjdk11_jre openjdk11 openjdk8_jre openjdk8; do
-            pkgutil -i -y "$P" && break
-            done || true
+            pkgutil -y -i jdk8 || {
+              echo "CSWjdk8 not available in this catalog; Java will be optional." >&2
+            }
           run: |
             set -e -x
             if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
-              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
-                JAVA_HOME="$JH"
-              fi
+              JAVA_HOME="$(java -XshowSettings:properties -version 2>&1 \
+              | awk -F'= ' '/^[[:space:]]*java\.home = /{print $2}' \
+              | sed 's/[[:space:]]*$//')"
             fi
-
-            export CC=gcc
-            export CXX=g++
+            export JAVA_HOME
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME"
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
 
             cd build/lib/unix_like
             chmod +x *.sh 2>/dev/null || true
@@ -1247,19 +1245,23 @@ jobs:
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
-                        pkgutil -U || true
-            pkgutil -a openjdk || true
-            pkgutil -y -i openjdk17_jre || pkgutil -y -i openjdk11_jre || true
+            pkgutil -U || true
+            pkgutil -y -i jdk8 || {
+              echo "CSWjdk8 not available in this catalog; Java will be optional." >&2
+            }
           run: |
             set -e -x
             if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
-              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
-                JAVA_HOME="$JH"
-              fi
+              JAVA_HOME="$(java -XshowSettings:properties -version 2>&1 \
+              | awk -F'= ' '/^[[:space:]]*java\.home = /{print $2}' \
+              | sed 's/[[:space:]]*$//')"
             fi
-            export CC=gcc
-            export CXX=g++
+            export JAVA_HOME
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME"
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
 
             cd build/tools/unix_like
             [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
