@@ -1486,21 +1486,15 @@ jobs:
               [ -n "$FMRI" ] && pkg install -v --accept "$FMRI" || { echo "cmake not found in current publishers"; exit 1; }
             fi
             GCC_FOUND=0
-            for P in ooce/developer/gcc13 ooce/developer/gcc12 ooce/developer/gcc11; do
+            for P in developer/gcc13 developer/gcc12 developer/gcc11; do
               if pkg info -r "$P" >/dev/null 2>&1; then
                 pkg install -v --accept "$P"
                 GCC_FOUND=1
                 break
               fi
             done
-            
             if [ "$GCC_FOUND" -eq 0 ]; then
-              FMRI_GCC=`pkg search -r -s extra.omnios -o pkg.fmri -H gcc 2>/dev/null | awk -F@ '{print $1}' | grep -E '/ooce/.*/gcc(13|12|11)$|/ooce/.*/gcc-(13|12|11)$' | head -n1`
-              if [ -n "$FMRI_GCC" ]; then
-                pkg install -v --accept "$FMRI_GCC" || true
-              else
                 echo "Warning: gcc not found via IPS search"
-              fi
             fi
           run: |
             set -e -x
@@ -1559,21 +1553,15 @@ jobs:
             pkg install -v --accept shell/bash developer/build/gnu-make runtime/java/openjdk11 || true
 
             GCC_FOUND=0
-            for P in ooce/developer/gcc13 ooce/developer/gcc12 ooce/developer/gcc11; do
+            for P in developer/gcc13 developer/gcc12 developer/gcc11; do
               if pkg info -r "$P" >/dev/null 2>&1; then
                 pkg install -v --accept "$P"
                 GCC_FOUND=1
                 break
               fi
             done
-            
             if [ "$GCC_FOUND" -eq 0 ]; then
-              FMRI_GCC=`pkg search -r -s extra.omnios -o pkg.fmri -H gcc 2>/dev/null | awk -F@ '{print $1}' | grep -E '/ooce/.*/gcc(13|12|11)$|/ooce/.*/gcc-(13|12|11)$' | head -n1`
-              if [ -n "$FMRI_GCC" ]; then
-                pkg install -v --accept "$FMRI_GCC" || true
-              else
                 echo "Warning: gcc not found via IPS search"
-              fi
             fi
           run: |
             set -e -x
