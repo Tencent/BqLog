@@ -34,13 +34,13 @@ namespace bq {
     namespace platform {
         constexpr size_t thread_name_max_len() {
 #if defined(BQ_LINUX) || defined(BQ_ANDROID)
-            return 16 - 1;
+            return 16;
 #elif defined(BQ_APPLE)
-            return 64 - 1;
+            return 64;
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
-            return 64 - 1;
+            return 64;
 #else
-            return 32 - 1;
+            return 32;
 #endif
         }
 
