@@ -28,8 +28,8 @@
 #endif
 
 namespace bq {
-    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);
-    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_);
+    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_)
+    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_)
     namespace platform {
         static bq::u16string trans_to_windows_wide_string(const bq::string utf8_str)
         {

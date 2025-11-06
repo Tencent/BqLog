@@ -106,7 +106,7 @@ namespace bq {
         cur_buffer_info_ = nullptr;
     }
 
-    BQ_TLS_NON_POD(log_buffer::log_tls_info, log_tls_info_);
+    BQ_TLS_NON_POD(log_buffer::log_tls_info, log_tls_info_)
 
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
@@ -866,7 +866,7 @@ namespace bq {
         lp_buffer_.commit_write_chunk(tls_buffer_info.oversize_parent_handle_);
     }
 
-    BQ_TLS_NON_POD(log_buffer_read_handle, rt_oversize_parent_handle_);
+    BQ_TLS_NON_POD(log_buffer_read_handle, rt_oversize_parent_handle_)
     BQ_TLS void* rt_oversize_target_buffer_;
     bool log_buffer::rt_read_oversize_chunk(const log_buffer_read_handle& parent_handle, log_buffer_read_handle& out_oversize_handle)
     {

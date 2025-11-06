@@ -16,9 +16,8 @@
 #include "bq_common/bq_common.h"
 
 namespace bq {
-    BQ_TLS_NON_POD(bq::array<napi_value>, tls_argv_array_);
-
-    BQ_TLS_NON_POD(bq::string, _tls_utf8_str);
+    BQ_TLS_NON_POD(bq::array<napi_value>, tls_argv_array_)
+    BQ_TLS_NON_POD(bq::string, _tls_utf8_str)
 
     // ----------------------------- helpers -----------------------------
     bq::napi_str_result<bq::string, 256> read_utf8_str_tls(napi_env env, napi_value v, size_t u8string_bytes) {
