@@ -1190,32 +1190,17 @@ jobs:
           mem: 8192
           release: "11.4-gcc"
           prepare: |
+            pkg publisher
             pkg install -v --accept \
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
-            for P in developer/java/jdk-21 developer/java/jdk-17 runtime/java/openjdk21 runtime/java/openjdk-21 runtime/java/openjdk17 runtime/java/openjdk-17 runtime/java/openjdk; do
-              if pkg info -r "$P" >/dev/null 2>&1; then
-                pkg install -v --accept "$P" && break
-              fi
-            done || true
+            pkg search -r -o pkg.fmri -H 'jdk|openjdk|runtime/java|developer/java' 2>/dev/null || true
+            pkg install jdk-11.interim.update.patch
           run: |
             set -e -x
-            if   [ -x /usr/jdk/instances/jdk-21/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-21"
-            elif [ -x /usr/jdk/instances/jdk-17/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-17"
-            elif [ -x /usr/jdk/openjdk11/bin/java ]; then       export JAVA_HOME="/usr/jdk/openjdk11"
-            elif [ -x /usr/jdk/instances/openjdk11.0/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
-            elif command -v java >/dev/null 2>&1; then
-              JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
-            fi
-            
-            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
-              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
-                JAVA_HOME="$JH"
-              fi
-            fi
+            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
 
             export CC=gcc
             export CXX=g++
@@ -1258,21 +1243,10 @@ jobs:
             done || true
           run: |
             set -e -x
-            if   [ -x /usr/jdk/instances/jdk-21/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-21"
-            elif [ -x /usr/jdk/instances/jdk-17/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-17"
-            elif [ -x /usr/jdk/openjdk11/bin/java ]; then       export JAVA_HOME="/usr/jdk/openjdk11"
-            elif [ -x /usr/jdk/instances/openjdk11.0/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
-            elif command -v java >/dev/null 2>&1; then
-              JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
-            fi
-            
-            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
-              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
-                JAVA_HOME="$JH"
-              fi
-            fi
-
+            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
+            echo "ls /usr/jdk/instances/jdk1.8.0"
+            ls -l /usr/jdk/instances/jdk1.8.0/
+            ls -l /usr/jdk/instances/jdk1.8.0/include
             export CC=gcc
             export CXX=g++
 
@@ -1464,8 +1438,10 @@ jobs:
               pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
               pkg refresh --full
             fi
+            
+            pkg search -r -o pkg.fmri -H 'jdk-|openjdk|runtime/java|developer/java' 2>/dev/null || true
 
-            pkg install -v --accept shell/bash developer/build/gnu-make runtime/java/openjdk11 || true
+            pkg install -v --accept shell/bash developer/build/gnu-make developer/build/cmake runtime/java/openjdk11 || true
 
             CM_FOUND=0
             for P in ooce/cmake ooce/developer/cmake developer/build/cmake developer/cmake; do
@@ -1509,6 +1485,8 @@ jobs:
             command -v gcc >/dev/null 2>&1 || { echo "gcc not found; ensure ooce/gcc-13/12/11 installed"; exit 1; }
             echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
 
             cd build/lib/unix_like
             chmod +x *.sh 2>/dev/null || true
@@ -1544,7 +1522,7 @@ jobs:
               pkg refresh --full
             fi
 
-            pkg install -v --accept shell/bash developer/build/gnu-make runtime/java/openjdk11 || true
+            pkg install -v --accept shell/bash developer/build/gnu-make developer/build/cmake runtime/java/openjdk11 || true
 
             GCC_FOUND=0
             for P in developer/gcc13 developer/gcc12 developer/gcc11; do
@@ -1576,6 +1554,8 @@ jobs:
             command -v gcc >/dev/null 2>&1 || { echo "gcc not found; ensure ooce/gcc-13/12/11 installed"; exit 1; }
             echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
 
             cd build/tools/unix_like
             [ -d category_log_generator ] && chmod +x category_log_generator/*.sh

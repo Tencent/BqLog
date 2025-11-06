@@ -229,29 +229,29 @@ namespace bq {
         switch (length) {
         case 1:
             encoded_value = value - min_value_of_length<1>::value;
-            target_data_uint8[0] = prefix<1>::value + encoded_value_ptr[0];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<1>::value + encoded_value_ptr[0]);
             break;
         case 2:
             encoded_value = value - min_value_of_length<2>::value;
-            target_data_uint8[0] = prefix<2>::value + encoded_value_ptr[1];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<2>::value + encoded_value_ptr[1]);
             target_data_uint8[1] = encoded_value_ptr[0];
             break;
         case 3:
             encoded_value = value - min_value_of_length<3>::value;
-            target_data_uint8[0] = prefix<3>::value + encoded_value_ptr[2];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<3>::value + encoded_value_ptr[2]);
             target_data_uint8[1] = encoded_value_ptr[0];
             target_data_uint8[2] = encoded_value_ptr[1];
             break;
         case 4:
             encoded_value = value - min_value_of_length<4>::value;
-            target_data_uint8[0] = prefix<4>::value + encoded_value_ptr[3];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<4>::value + encoded_value_ptr[3]);
             target_data_uint8[1] = encoded_value_ptr[0];
             target_data_uint8[2] = encoded_value_ptr[1];
             target_data_uint8[3] = encoded_value_ptr[2];
             break;
         case 5:
             encoded_value = value - min_value_of_length<5>::value;
-            target_data_uint8[0] = prefix<5>::value + encoded_value_ptr[4];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<5>::value + encoded_value_ptr[4]);
             target_data_uint8[1] = encoded_value_ptr[0];
             target_data_uint8[2] = encoded_value_ptr[1];
             target_data_uint8[3] = encoded_value_ptr[2];
@@ -259,7 +259,7 @@ namespace bq {
             break;
         case 6:
             encoded_value = value - min_value_of_length<6>::value;
-            target_data_uint8[0] = prefix<6>::value + encoded_value_ptr[5];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<6>::value + encoded_value_ptr[5]);
             target_data_uint8[1] = encoded_value_ptr[0];
             target_data_uint8[2] = encoded_value_ptr[1];
             target_data_uint8[3] = encoded_value_ptr[2];
@@ -268,7 +268,7 @@ namespace bq {
             break;
         case 7:
             encoded_value = value - min_value_of_length<7>::value;
-            target_data_uint8[0] = prefix<7>::value + encoded_value_ptr[6];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<7>::value + encoded_value_ptr[6]);
             target_data_uint8[1] = encoded_value_ptr[0];
             target_data_uint8[2] = encoded_value_ptr[1];
             target_data_uint8[3] = encoded_value_ptr[2];
@@ -278,7 +278,7 @@ namespace bq {
             break;
         case 8:
             encoded_value = value - min_value_of_length<8>::value;
-            target_data_uint8[0] = prefix<8>::value + encoded_value_ptr[7];
+            target_data_uint8[0] = static_cast<uint8_t>(prefix<8>::value + encoded_value_ptr[7]);
             target_data_uint8[1] = encoded_value_ptr[0];
             target_data_uint8[2] = encoded_value_ptr[1];
             target_data_uint8[3] = encoded_value_ptr[2];
@@ -318,25 +318,25 @@ namespace bq {
         uint8_t* target_ptr = (uint8_t*)&target_value;
         switch (length) {
         case 1:
-            target_ptr[0] = src_data_uint8[0] - prefix<1>::value;
+            target_ptr[0] = static_cast<uint8_t>(src_data_uint8[0] - prefix<1>::value);
             target_value += min_value_of_length<1>::value;
             ;
             break;
         case 2:
-            target_ptr[1] = src_data_uint8[0] - prefix<2>::value;
+            target_ptr[1] = static_cast<uint8_t>(src_data_uint8[0] - prefix<2>::value);
             target_ptr[0] = src_data_uint8[1];
             target_value += min_value_of_length<2>::value;
             ;
             break;
         case 3:
-            target_ptr[2] = src_data_uint8[0] - prefix<3>::value;
+            target_ptr[2] = static_cast<uint8_t>(src_data_uint8[0] - prefix<3>::value);
             target_ptr[0] = src_data_uint8[1];
             target_ptr[1] = src_data_uint8[2];
             target_value += min_value_of_length<3>::value;
             ;
             break;
         case 4:
-            target_ptr[3] = src_data_uint8[0] - prefix<4>::value;
+            target_ptr[3] = static_cast<uint8_t>(src_data_uint8[0] - prefix<4>::value);
             target_ptr[0] = src_data_uint8[1];
             target_ptr[1] = src_data_uint8[2];
             target_ptr[2] = src_data_uint8[3];
@@ -344,7 +344,7 @@ namespace bq {
             ;
             break;
         case 5:
-            target_ptr[4] = src_data_uint8[0] - prefix<5>::value;
+            target_ptr[4] = static_cast<uint8_t>(src_data_uint8[0] - prefix<5>::value);
             target_ptr[0] = src_data_uint8[1];
             target_ptr[1] = src_data_uint8[2];
             target_ptr[2] = src_data_uint8[3];
@@ -353,7 +353,7 @@ namespace bq {
             ;
             break;
         case 6:
-            target_ptr[5] = src_data_uint8[0] - prefix<6>::value;
+            target_ptr[5] = static_cast<uint8_t>(src_data_uint8[0] - prefix<6>::value);
             target_ptr[0] = src_data_uint8[1];
             target_ptr[1] = src_data_uint8[2];
             target_ptr[2] = src_data_uint8[3];
@@ -363,7 +363,7 @@ namespace bq {
             ;
             break;
         case 7:
-            target_ptr[6] = src_data_uint8[0] - prefix<7>::value;
+            target_ptr[6] = static_cast<uint8_t>(src_data_uint8[0] - prefix<7>::value);
             target_ptr[0] = src_data_uint8[1];
             target_ptr[1] = src_data_uint8[2];
             target_ptr[2] = src_data_uint8[3];
@@ -374,7 +374,7 @@ namespace bq {
             ;
             break;
         case 8:
-            target_ptr[7] = src_data_uint8[0] - prefix<8>::value;
+            target_ptr[7] = static_cast<uint8_t>(src_data_uint8[0] - prefix<8>::value);
             target_ptr[0] = src_data_uint8[1];
             target_ptr[1] = src_data_uint8[2];
             target_ptr[2] = src_data_uint8[3];
