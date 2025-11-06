@@ -1196,11 +1196,17 @@ jobs:
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
-            pkg search -r -o pkg.fmri -H 'jdk|openjdk|runtime/java|developer/java' 2>/dev/null || true
-            pkg install jdk-11.interim.update.patch
+            pkgutil -U || true
+            pkgutil -a openjdk || true
+            pkgutil -y -i openjdk17_jre || pkgutil -y -i openjdk11_jre || true
           run: |
             set -e -x
-            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
+            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
+              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
+                JAVA_HOME="$JH"
+              fi
+            fi
 
             export CC=gcc
             export CXX=g++
@@ -1236,17 +1242,17 @@ jobs:
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
-            for P in developer/java/jdk-21 developer/java/jdk-17 runtime/java/openjdk21 runtime/java/openjdk-21 runtime/java/openjdk17 runtime/java/openjdk-17 runtime/java/openjdk; do
-              if pkg info -r "$P" >/dev/null 2>&1; then
-                pkg install -v --accept "$P" && break
-              fi
-            done || true
+                        pkgutil -U || true
+            pkgutil -a openjdk || true
+            pkgutil -y -i openjdk17_jre || pkgutil -y -i openjdk11_jre || true
           run: |
             set -e -x
-            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
-            echo "ls /usr/jdk/instances/jdk1.8.0"
-            ls -l /usr/jdk/instances/jdk1.8.0/
-            ls -l /usr/jdk/instances/jdk1.8.0/include
+            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
+              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
+                JAVA_HOME="$JH"
+              fi
+            fi
             export CC=gcc
             export CXX=g++
 
