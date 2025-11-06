@@ -1190,11 +1190,14 @@ jobs:
           mem: 8192
           release: "11.4-gcc"
           prepare: |
+            pkg publisher
             pkg install -v --accept \
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
+            pkg search -r -o pkg.fmri -H 'jdk|openjdk|runtime/java|developer/java' 2>/dev/null || true
+            pkg install jdk-11.interim.update.patch
           run: |
             set -e -x
             export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
@@ -1435,6 +1438,8 @@ jobs:
               pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
               pkg refresh --full
             fi
+            
+            pkg search -r -o pkg.fmri -H 'jdk-|openjdk|runtime/java|developer/java' 2>/dev/null || true
 
             pkg install -v --accept shell/bash developer/build/gnu-make developer/build/cmake runtime/java/openjdk11 || true
 
