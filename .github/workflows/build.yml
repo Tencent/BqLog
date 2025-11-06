@@ -1202,7 +1202,7 @@ jobs:
             }
           run: |
             set -e -x
-            export JAVA_HOME=”/usr/jdk/instances/jdk1.8.0/“
+            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0/"
             ls -l "$JAVA_HOME"
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version
@@ -1252,7 +1252,7 @@ jobs:
               | awk -F'= ' '/^[[:space:]]*java\.home = /{print $2}' \
               | sed 's/[[:space:]]*$//')"
             fi
-            export JAVA_HOME=”/usr/jdk/instances/jdk1.8.0/“
+            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0/"
             ls -l "$JAVA_HOME"
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version
@@ -1458,6 +1458,7 @@ jobs:
 
             export PATH="/opt/gcc-13/bin:$PATH"
             export JAVA_HOME="usr/jdk/instances/openjdk11.0"
+            ls -l "$JAVA_HOME"
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version
 
