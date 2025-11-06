@@ -13,6 +13,7 @@
 #ifdef BQ_POSIX
 #include <pthread.h>
 #include <signal.h>
+#include <sys/select.h>
 
 #if defined(__has_include)
 #if __has_include(<sys/prctl.h>)
@@ -81,7 +82,7 @@ namespace bq {
         // 2) pthread_get_name_np
         template <typename U, typename = void>
         struct get_thread_name_func_sfinae2 : bq::false_type {};
-#if defined(BQ_HAVE_PTHREAD_NP)
+#if defined(BQ_HAVE_PTHREAD_NP_FREEBSD)
         template <typename U>
         struct get_thread_name_func_sfinae2<U, bq::void_t<bq::enable_if_t<bq::is_same<decltype(accept_getname_param_ver2<U>(&::pthread_get_name_np)), int32_t>::value, int32_t>>> : bq::true_type {};
 #endif
@@ -110,7 +111,7 @@ namespace bq {
         // 3) pthread_set_name_np(pthread_t, const char*)
         template <typename U, typename = void>
         struct set_thread_name_func_sfinae3 : bq::false_type {};
-#if defined(BQ_HAVE_PTHREAD_NP)
+#if defined(BQ_HAVE_PTHREAD_NP_FREEBSD)
         template <typename U>
         struct set_thread_name_func_sfinae3<U, bq::void_t<bq::enable_if_t<bq::is_same<decltype(accept_setname_param_ver3<U>(&::pthread_set_name_np)), int32_t>::value, int32_t>>> : bq::true_type {};
 #endif

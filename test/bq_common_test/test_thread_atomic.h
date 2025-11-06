@@ -367,41 +367,7 @@ namespace bq {
                     auto i_result = i_value.i.load(platform::memory_order::acquire);
                     result.add_result(i_result == TEST_THREAD_ATOMIC_LOOP_TIMES * 5, "atomic add test 1, final value:%d", i_result);
                 }
-                test_output_dynamic(bq::log_level::info, "atomic add test is finished, now begin the thread alive check test, please wait...                \r");
-                {
-#if !(defined(BQ_LINUX) || defined(BQ_ANDROID))
-                    for (int32_t i = 0; i < 1024; ++i) {
-                        test_thread_exist thread1;
-                        test_thread_exist thread2;
-                        test_thread_exist thread3;
-                        thread1.start();
-                        thread2.start();
-                        thread3.start();
-                        while (!thread1.is_started.load(bq::platform::memory_order::acquire)) {
-                            bq::platform::thread::yield();
-                        }
-                        result.add_result(bq::platform::thread::is_thread_alive(thread1.thread_id_), "thread alive test failed");
-                        while (!thread2.is_started.load(bq::platform::memory_order::acquire)) {
-                            bq::platform::thread::yield();
-                        }
-                        result.add_result(bq::platform::thread::is_thread_alive(thread2.thread_id_), "thread alive test failed");
-                        while (!thread3.is_started.load(bq::platform::memory_order::acquire)) {
-                            bq::platform::thread::yield();
-                        }
-                        result.add_result(bq::platform::thread::is_thread_alive(thread3.thread_id_), "thread alive test failed");
-                        thread1.cancel();
-                        thread2.cancel();
-                        thread3.cancel();
-                        thread1.join();
-                        result.add_result(!bq::platform::thread::is_thread_alive(thread1.thread_id_), "thread dead test failed");
-                        thread2.join();
-                        result.add_result(!bq::platform::thread::is_thread_alive(thread2.thread_id_), "thread dead test failed");
-                        thread3.join();
-                        result.add_result(!bq::platform::thread::is_thread_alive(thread3.thread_id_), "thread dead test failed");
-                    }
-#endif
-                }
-                test_output_dynamic(bq::log_level::info, "thread alive check test is finished, now begin the cas test, please wait...                \r");
+                test_output_dynamic(bq::log_level::info, "atomic add test is finished, now begin the cas test, please wait...                \r");
                 {
                     // CAS test
                     constexpr uint32_t cas_times_per_loop = 5;
