@@ -1021,6 +1021,7 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack_gcc.sh
+  
 
   #openbsd_x86_64
   build_openbsd_x86_64_libs_Clang:
@@ -1029,9 +1030,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           usesh: true
           mem: 8192
@@ -1048,13 +1049,13 @@ jobs:
             cd build/lib/unix_like  
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native clang YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_libs
+          name: openbsd_x86_64_libs
           path: ${{ github.workspace }}/dist
 
   build_openbsd_x86_64_libs_GCC:
@@ -1063,9 +1064,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           usesh: true
           mem: 8192
@@ -1083,7 +1084,7 @@ jobs:
             cd build/lib/unix_like
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native gcc YES NO
 
   build_openbsd_x86_64_tools_Clang:
@@ -1092,9 +1093,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           usesh: true
           mem: 8192
@@ -1113,13 +1114,13 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack_clang.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_tools
+          name: openbsd_x86_64_tools
           path: ${{ github.workspace }}/dist
 
   build_openbsd_x86_64_tools_GCC:
@@ -1128,9 +1129,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           usesh: true
           mem: 8192
@@ -1150,7 +1151,7 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack_gcc.sh
 
   #openbsd_arm64
@@ -1160,9 +1161,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           arch: aarch64
           usesh: true
@@ -1180,13 +1181,13 @@ jobs:
             cd build/lib/unix_like  
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native clang YES NO
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_libs
+          name: openbsd_x86_64_libs
           path: ${{ github.workspace }}/dist
 
   build_openbsd_arm64_libs_GCC:
@@ -1195,9 +1196,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           arch: aarch64
           usesh: true
@@ -1216,7 +1217,7 @@ jobs:
             cd build/lib/unix_like
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native gcc YES NO
 
   build_openbsd_arm64_tools_Clang:
@@ -1225,9 +1226,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           arch: aarch64
           usesh: true
@@ -1247,13 +1248,13 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack_clang.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_tools
+          name: openbsd_x86_64_tools
           path: ${{ github.workspace }}/dist
 
   build_openbsd_arm64_tools_GCC:
@@ -1262,9 +1263,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
+      - name: Run in OpenBSD
         id: RunInOpenBSD
-        uses: vmactions/openbsd-vm@
+        uses: vmactions/openbsd-vm@1
         with:
           arch: aarch64
           usesh: true
@@ -1285,7 +1286,7 @@ jobs:
             chmod +x log_decoder/*.sh
             chmod +x *.sh
             ls -l
-            export BQ_UNIX_VERSION=freebsd
+            export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack_gcc.sh
 
   #iOS
