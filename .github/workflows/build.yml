@@ -1191,29 +1191,34 @@ jobs:
           release: "11.4-gcc"
           prepare: |
             pkg install -v --accept \
-              developer/java/jdk-11 \
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
+            for P in developer/java/jdk-21 developer/java/jdk-17 runtime/java/openjdk21 runtime/java/openjdk-21 runtime/java/openjdk17 runtime/java/openjdk-17 runtime/java/openjdk; do
+              if pkg info -r "$P" >/dev/null 2>&1; then
+                pkg install -v --accept "$P" && break
+              fi
+            done || true
           run: |
             set -e -x
-            if [ -x /opt/csw/java/jdk11/bin/java ]; then
-              export JAVA_HOME="/opt/csw/java/jdk11"
-            else
-              if command -v java >/dev/null 2>&1; then
-                JAVA_BIN="$(command -v java)"
-                export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
-              else
-                echo "java not found; did you pkgutil -y -i openjdk11?"
-                exit 1
-              fi
+            if   [ -x /usr/jdk/instances/jdk-21/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-21"
+            elif [ -x /usr/jdk/instances/jdk-17/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-17"
+            elif [ -x /usr/jdk/openjdk11/bin/java ]; then       export JAVA_HOME="/usr/jdk/openjdk11"
+            elif [ -x /usr/jdk/instances/openjdk11.0/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
+            elif command -v java >/dev/null 2>&1; then
+              JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
             fi
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-
-            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-            echo "PATH=$PATH" >> "$GITHUB_ENV"
+        
+            if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+              export PATH="$JAVA_HOME/bin:$PATH"
+              java -version
+              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+              echo "PATH=$PATH" >> "$GITHUB_ENV"
+            else
+              echo "No JDK found on Solaris; proceeding with JAVA_SUPPORT=NO"
+              exit 1
+            fi
 
             export CC=gcc
             export CXX=g++
@@ -1245,28 +1250,34 @@ jobs:
           release: "11.4-gcc"
           prepare: |
             pkg install -v --accept \
-              developer/java/jdk-11 \
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
+            for P in developer/java/jdk-21 developer/java/jdk-17 runtime/java/openjdk21 runtime/java/openjdk-21 runtime/java/openjdk17 runtime/java/openjdk-17 runtime/java/openjdk; do
+              if pkg info -r "$P" >/dev/null 2>&1; then
+                pkg install -v --accept "$P" && break
+              fi
+            done || true
           run: |
             set -e -x
-            if [ -x /opt/csw/java/jdk11/bin/java ]; then
-              export JAVA_HOME="/opt/csw/java/jdk11"
-            else
-              if command -v java >/dev/null 2>&1; then
-                JAVA_BIN="$(command -v java)"
-                export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
-              else
-                echo "java not found; did you pkgutil -y -i openjdk11?"
-                exit 1
-              fi
+            if   [ -x /usr/jdk/instances/jdk-21/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-21"
+            elif [ -x /usr/jdk/instances/jdk-17/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-17"
+            elif [ -x /usr/jdk/openjdk11/bin/java ]; then       export JAVA_HOME="/usr/jdk/openjdk11"
+            elif [ -x /usr/jdk/instances/openjdk11.0/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
+            elif command -v java >/dev/null 2>&1; then
+              JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
             fi
-            export PATH="$JAVA_HOME/bin:$PATH"
-            java -version
-            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+              export PATH="$JAVA_HOME/bin:$PATH"
+              java -version
+              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+              echo "PATH=$PATH" >> "$GITHUB_ENV"
+            else
+              echo "No JDK found on Solaris; proceeding with JAVA_SUPPORT=NO"
+              exit 1
+            fi
 
             export CC=gcc
             export CXX=g++
@@ -1476,7 +1487,17 @@ jobs:
             fi
 
             GCC_FOUND=0
-            for P in ooce/gcc-13 ooce/developer/gcc-13 ooce/gcc-12 ooce/developer/gcc-12 ooce/gcc-11 ooce/developer/gcc-11 developer/gcc-11; do
+            for P in \
+              ooce/developer/gcc-14 ooce/developer/gcc14 \
+              ooce/developer/gcc-13 ooce/developer/gcc13 \
+              ooce/developer/gcc-12 ooce/developer/gcc12 \
+              ooce/developer/gcc-11 ooce/developer/gcc11 \
+              ooce/gcc-14 ooce/gcc14 \
+              ooce/gcc-13 ooce/gcc13 \
+              ooce/gcc-12 ooce/gcc12 \
+              ooce/gcc-11 ooce/gcc11 \
+              developer/gcc-11
+            do
               if pkg info -r "$P" >/dev/null 2>&1; then
                 pkg install -v --accept "$P"
                 GCC_FOUND=1
@@ -1484,10 +1505,13 @@ jobs:
               fi
             done
             if [ "$GCC_FOUND" -eq 0 ]; then
-              FMRI="$(pkg search -r -o pkg.fmri -H gcc 2>/dev/null | awk -F@ '{print $1}' | grep -E '/gcc-(13|12|11)$' | head -n1)"
-              [ -n "$FMRI" ] && pkg install -v --accept "$FMRI" || echo "Warning: gcc not found via IPS search"
+              FMRI_GCC="$(pkg search -r -o pkg.fmri -H 'ooce/.*/gcc' 2>/dev/null | awk -F@ '{print $1}' | sort -r | head -n1)"
+              if [ -n "$FMRI_GCC" ]; then
+                pkg install -v --accept "$FMRI_GCC" || true
+              else
+                echo "Warning: gcc not found via IPS search"
+              fi
             fi
-
           run: |
             set -e -x
 
@@ -1544,21 +1568,18 @@ jobs:
 
             pkg install -v --accept shell/bash developer/build/gnu-make runtime/java/openjdk11 || true
 
-            CM_FOUND=0
-            for P in ooce/cmake ooce/developer/cmake developer/build/cmake developer/cmake; do
-              if pkg info -r "$P" >/dev/null 2>&1; then
-                pkg install -v --accept "$P"
-                CM_FOUND=1
-                break
-              fi
-            done
-            if [ "$CM_FOUND" -eq 0 ]; then
-              FMRI="$(pkg search -r -o pkg.fmri -H cmake 2>/dev/null | awk -F@ '{print $1}' | head -n1)"
-              [ -n "$FMRI" ] && pkg install -v --accept "$FMRI" || { echo "cmake not found in current publishers"; exit 1; }
-            fi
-
             GCC_FOUND=0
-            for P in ooce/gcc-13 ooce/developer/gcc-13 ooce/gcc-12 ooce/developer/gcc-12 ooce/gcc-11 ooce/developer/gcc-11 developer/gcc-11; do
+            for P in \
+              ooce/developer/gcc-14 ooce/developer/gcc14 \
+              ooce/developer/gcc-13 ooce/developer/gcc13 \
+              ooce/developer/gcc-12 ooce/developer/gcc12 \
+              ooce/developer/gcc-11 ooce/developer/gcc11 \
+              ooce/gcc-14 ooce/gcc14 \
+              ooce/gcc-13 ooce/gcc13 \
+              ooce/gcc-12 ooce/gcc12 \
+              ooce/gcc-11 ooce/gcc11 \
+              developer/gcc-11
+            do
               if pkg info -r "$P" >/dev/null 2>&1; then
                 pkg install -v --accept "$P"
                 GCC_FOUND=1
@@ -1566,10 +1587,13 @@ jobs:
               fi
             done
             if [ "$GCC_FOUND" -eq 0 ]; then
-              FMRI="$(pkg search -r -o pkg.fmri -H gcc 2>/dev/null | awk -F@ '{print $1}' | grep -E '/gcc-(13|12|11)$' | head -n1)"
-              [ -n "$FMRI" ] && pkg install -v --accept "$FMRI" || echo "Warning: gcc not found via IPS search"
+              FMRI_GCC="$(pkg search -r -o pkg.fmri -H 'ooce/.*/gcc' 2>/dev/null | awk -F@ '{print $1}' | sort -r | head -n1)"
+              if [ -n "$FMRI_GCC" ]; then
+                pkg install -v --accept "$FMRI_GCC" || true
+              else
+                echo "Warning: gcc not found via IPS search"
+              fi
             fi
-
           run: |
             set -e -x
 
