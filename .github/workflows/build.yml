@@ -1551,8 +1551,18 @@ jobs:
             /usr/sbin/pkg_add pkgin
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
-            # Java: prefer openjdk11, fallback to openjdk17
+            pkgin -y install clang gcc || true
             pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+            pkgin -y install libX11 libXi libXtst libXrender libxcb libXdmcp libXau libXext || true
+            pkgin -y install openjdk17 || true
+            if ! pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1; then
+              pkgin -y install openjdk11 || true
+            fi
+            if ! pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1 && \
+               ! pkg_info -e 'openjdk11-[0-9]*' >/dev/null 2>&1; then
+              echo "No OpenJDK 17/11 installed (check X11 libs or repository)."
+              exit 1
+            fi
           run: |
             set -e -x
             # Java HOME detection
