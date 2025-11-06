@@ -1037,16 +1037,18 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
-            set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/lib/unix_like  
+            java -version
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
             chmod +x *.sh
             ls -l
             export BQ_UNIX_VERSION=openbsd
@@ -1071,16 +1073,18 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
             set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-
+            java -version
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
             cd build/lib/unix_like
             chmod +x *.sh
             ls -l
@@ -1100,13 +1104,14 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
             set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/tools/unix_like  
@@ -1136,13 +1141,14 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
             set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
 
@@ -1169,16 +1175,19 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
             set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-            cd build/lib/unix_like  
+            java -version
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
             chmod +x *.sh
             ls -l
             export BQ_UNIX_VERSION=openbsd
@@ -1204,16 +1213,18 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
             set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
-            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-            echo "PATH=$PATH" >> $GITHUB_ENV
-
+            java -version
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
             cd build/lib/unix_like
             chmod +x *.sh
             ls -l
@@ -1234,13 +1245,15 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
             set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/tools/unix_like  
@@ -1271,13 +1284,14 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc
 
           run: |
             set -e -x
-            pkg info -l openjdk11 | grep 'bin/java'
-            export JAVA_HOME="/usr/local/openjdk11"
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
             export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
             echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
             echo "PATH=$PATH" >> $GITHUB_ENV
 
