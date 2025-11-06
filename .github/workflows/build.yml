@@ -1548,19 +1548,48 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
-            /usr/sbin/pkg_add pkgin
+            set -e
+
+            # 1) 安装 pkgin 并更新索引
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
+              
+            # 2) 安装编译工具（Clang/GCC、CMake、gmake、bash、gdb）
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
             pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang gcc || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
-            pkgin -y install libX11 libXi libXtst libXrender libxcb libXdmcp libXau libXext || true
+              
+            # 3) 安装 NetBSD 基础 X11 集：xbase（提供 /usr/X11R7/lib 下的 X 运行库）
+            ARCH="$(uname -m)"
+            case "$ARCH" in
+              amd64|x86_64) PORT="amd64" ;;
+              aarch64|arm64) PORT="evbarm" ;;  # NetBSD aarch64 所属发布目录为 evbarm
+              *) PORT="$ARCH" ;;
+            esac
+              
+            FOUND=0
+            for REL in 10.1 10.0; do
+              BASE_URL="https://cdn.NetBSD.org/pub/NetBSD/NetBSD-${REL}/${PORT}/binary/sets"
+              # 使用内置 ftp 获取并解包到根目录
+              if /usr/bin/ftp -o /tmp/xbase.tgz "${BASE_URL}/xbase.tgz"; then
+                tar -zxpf /tmp/xbase.tgz -C /
+                FOUND=1
+                break
+              fi
+            done
+            if [ "$FOUND" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tgz for ${PORT} (10.1/10.0)."
+              exit 1
+            fi
+              
+            # 4) 安装 JDK（优先 17，失败则 11），并用 pkg_info 校验是否真正装上
             pkgin -y install openjdk17 || true
             if ! pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1; then
               pkgin -y install openjdk11 || true
             fi
             if ! pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1 && \
-               ! pkg_info -e 'openjdk11-[0-9]*' >/dev/null 2>&1; then
-              echo "No OpenJDK 17/11 installed (check X11 libs or repository)."
+              ! pkg_info -e 'openjdk11-[0-9]*' >/dev/null 2>&1; then
+              echo "No OpenJDK 17/11 installed even after xbase; check repository mirror."
               exit 1
             fi
           run: |
