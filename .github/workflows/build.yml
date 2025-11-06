@@ -1195,137 +1195,9 @@ jobs:
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
-            for P in developer/java/jdk-21 developer/java/jdk-17 runtime/java/openjdk21 runtime/java/openjdk-21 runtime/java/openjdk17 runtime/java/openjdk-17 runtime/java/openjdk; do
-              if pkg info -r "$P" >/dev/null 2>&1; then
-                pkg install -v --accept "$P" && break
-              fi
-            done || true
           run: |
             set -e -x
-            # Debug header
-            echo "===== DEBUG: start Java detection ====="
-              echo "PATH=$PATH"
-            echo "Environment Java-related vars: JAVA_HOME=${JAVA_HOME:-}<unset>  JAVA_HOME env in ENV: $JAVA_HOME"
-              echo "Which java and all matches:"
-              type -a java || true
-              echo "command -v java => $(command -v java 2>/dev/null || true)"
-              
-              # Candidate installation locations to check
-              CANDIDATES=(
-              "/usr/jdk/instances/jdk-21"
-              "/usr/jdk/instances/jdk-17"
-              "/usr/jdk/instances/openjdk11.0"
-              "/usr/jdk/openjdk11"
-              "/usr/jdk"
-              "/usr"
-              )
-              
-              echo
-              echo "Checking candidate JAVA_HOME locations:"
-              for d in "${CANDIDATES[@]}"; do
-              if [ -x "${d}/bin/java" ]; then
-              echo "  [+] ${d}/bin/java exists and is executable"
-              else
-              echo "  [-] ${d}/bin/java MISSING"
-              fi
-              # also list directory if present
-              if [ -e "$d" ]; then
-              echo "    ls -ld $d:"
-              ls -ld "$d" || true
-              echo "    ls -l $d/bin  (if exists):"
-              ls -l "$d/bin" 2>/dev/null || true
-              fi
-              done
-              
-              echo
-              JAVA_CMD="$(command -v java 2>/dev/null || true)"
-              if [ -n "$JAVA_CMD" ]; then
-            echo "java program resolved to: $JAVA_CMD"
-              echo "ls -l of java:"
-              ls -l "$JAVA_CMD" || true
-              echo "file output for java:"
-              file "$JAVA_CMD" || true
-              echo "head of java file (if text wrapper):"
-              head -n 80 "$JAVA_CMD" || true
-            
-              echo
-            echo "Invoking: java -version"
-              java -version || true
-            
-              echo
-            echo "Invoking: java -XshowSettings:properties -version (to extract java.home)"
-              JAVA_SHOW="$(java -XshowSettings:properties -version 2>&1 || true)"
-              echo "---- java -XshowSettings output start ----"
-              echo "$JAVA_SHOW"
-              echo "---- java -XshowSettings output end ----"
-            
-              # parse java.home line
-              JAVA_HOME_CAND="$(printf "%s\n" "$JAVA_SHOW" | awk -F'= ' '/^[[:space:]]*java\.home = /{print $2; exit}' | sed 's/[[:space:]]*$//')"
-              if [ -n "$JAVA_HOME_CAND" ]; then
-            echo "Parsed java.home from java: '$JAVA_HOME_CAND'"
-                if [ -x "$JAVA_HOME_CAND/bin/java" ]; then
-                                                echo "[OK] $JAVA_HOME_CAND/bin/java exists and is executable"
-              else
-              echo "[WARN] $JAVA_HOME_CAND/bin/java NOT executable or missing"
-              echo "Listing $JAVA_HOME_CAND:"
-              ls -l "$JAVA_HOME_CAND" 2>/dev/null || true
-              fi
-              else
-              echo "No java.home line parsed from java output."
-              fi
-              else
-              echo "java not found in PATH (command -v java empty)"
-              fi
-              
-              echo
-            echo "FALLBACK: previous heuristic attempted dirname(dirname(command -v java))"
-              if [ -n "$JAVA_CMD" ]; then
-              D1="$(dirname "$JAVA_CMD")"
-              D2="$(dirname "$D1")"
-              echo "dirname(java) => $D1"
-              echo "dirname(dirname(java)) => $D2"
-              echo "Does $D2/bin/java exist?"; [ -x "$D2/bin/java" ] && echo "yes" || echo "no"
-              fi
-              
-              echo
-              echo "Pkg repo query (show if any jdk/openjdk FMRIs visible):"
-              pkg search -r -o pkg.fmri -H 'jdk-|openjdk' 2>/dev/null || true
-              echo "Also show any runtime/java or developer/java entries:"
-              pkg search -r -o pkg.fmri -H 'runtime/java|developer/java' 2>/dev/null || true
-              
-              # Decision: prefer explicit java.home if it's valid
-              if [ -n "$JAVA_HOME_CAND" ] && [ -x "$JAVA_HOME_CAND/bin/java" ]; then
-              export JAVA_HOME="$JAVA_HOME_CAND"
-            echo "Using JAVA_HOME from java output: $JAVA_HOME"
-              else
-              # check known common locations in order
-              for d in "${CANDIDATES[@]}"; do
-              if [ -x "${d}/bin/java" ]; then
-              export JAVA_HOME="$d"
-            echo "Using JAVA_HOME found at candidate: $JAVA_HOME"
-              break
-              fi
-              done
-              fi
-              
-              # final validation
-              if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
-              export PATH="$JAVA_HOME/bin:$PATH"
-              echo "Final JAVA_HOME=$JAVA_HOME"
-              echo "Final PATH=$PATH"
-              echo "Verify java -version now:"
-              java -version || true
-              echo "Dump java -XshowSettings again for completeness:"
-              java -XshowSettings:properties -version 2>&1 || true
-              else
-              echo "No usable JAVA_HOME found after diagnostics. Current JAVA_HOME='$JAVA_HOME'"
-              echo "If /usr/bin/java is a wrapper (not a full JDK), java -XshowSettings may still reveal the real home."
-            echo "You can: 1) install a JDK via pkg (if available), 2) set JAVA_HOME explicitly in the workflow, or 3) download a JDK tar and extract and set JAVA_HOME to that path."
-            # do not exit here if you want to continue without java; otherwise uncomment:
-            # exit 1
-              fi
-            
-            echo "===== DEBUG: end Java detection ====="
+            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
 
             export CC=gcc
             export CXX=g++
@@ -1368,20 +1240,7 @@ jobs:
             done || true
           run: |
             set -e -x
-            if   [ -x /usr/jdk/instances/jdk-21/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-21"
-            elif [ -x /usr/jdk/instances/jdk-17/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/jdk-17"
-            elif [ -x /usr/jdk/openjdk11/bin/java ]; then       export JAVA_HOME="/usr/jdk/openjdk11"
-            elif [ -x /usr/jdk/instances/openjdk11.0/bin/java ]; then export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
-            elif command -v java >/dev/null 2>&1; then
-              JAVA_BIN="$(command -v java)"; export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
-            fi
-            
-            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
-              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
-                JAVA_HOME="$JH"
-              fi
-            fi
+            export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
 
             export CC=gcc
             export CXX=g++
