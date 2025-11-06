@@ -887,6 +887,407 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack_gcc.sh
 
+  #freebsd_arm64
+  build_freebsd_arm64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like  
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES NO
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_freebsd_arm64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+  build_freebsd_arm64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_clang.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_tools
+          path: ${{ github.workspace }}/dist
+
+  build_freebsd_arm64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_gcc.sh
+
+  #openbsd_x86_64
+  build_openbsd_x86_64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like  
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES NO
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_openbsd_x86_64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+  build_openbsd_x86_64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_clang.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_tools
+          path: ${{ github.workspace }}/dist
+
+  build_openbsd_x86_64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_gcc.sh
+
+  #openbsd_arm64
+  build_openbsd_arm64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like  
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES NO
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_openbsd_arm64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+  build_openbsd_arm64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_clang.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd_x86_64_tools
+          path: ${{ github.workspace }}/dist
+
+  build_openbsd_arm64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInOpenBSD
+        uses: vmactions/openbsd-vm@
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_gcc.sh
+
   #iOS
   build_ios_lib:
     runs-on: macos-latest
