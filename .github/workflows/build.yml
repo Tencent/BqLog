@@ -1485,18 +1485,13 @@ jobs:
               FMRI="$(pkg search -r -o pkg.fmri -H cmake 2>/dev/null | awk -F@ '{print $1}' | head -n1)"
               [ -n "$FMRI" ] && pkg install -v --accept "$FMRI" || { echo "cmake not found in current publishers"; exit 1; }
             fi
-
+            echo "Gcc list:"
+            pkg list -a 'developer/gcc?'
             GCC_FOUND=0
             for P in \
-              ooce/developer/gcc-14 ooce/developer/gcc14 \
-              ooce/developer/gcc-13 ooce/developer/gcc13 \
-              ooce/developer/gcc-12 ooce/developer/gcc12 \
-              ooce/developer/gcc-11 ooce/developer/gcc11 \
-              ooce/gcc-14 ooce/gcc14 \
-              ooce/gcc-13 ooce/gcc13 \
-              ooce/gcc-12 ooce/gcc12 \
-              ooce/gcc-11 ooce/gcc11 \
-              developer/gcc-11
+              developer/gcc13 \
+              developer/gcc12 \
+              developer/gcc11
             do
               if pkg info -r "$P" >/dev/null 2>&1; then
                 pkg install -v --accept "$P"
@@ -1570,15 +1565,9 @@ jobs:
 
             GCC_FOUND=0
             for P in \
-              ooce/developer/gcc-14 ooce/developer/gcc14 \
-              ooce/developer/gcc-13 ooce/developer/gcc13 \
-              ooce/developer/gcc-12 ooce/developer/gcc12 \
-              ooce/developer/gcc-11 ooce/developer/gcc11 \
-              ooce/gcc-14 ooce/gcc14 \
-              ooce/gcc-13 ooce/gcc13 \
-              ooce/gcc-12 ooce/gcc12 \
-              ooce/gcc-11 ooce/gcc11 \
-              developer/gcc-11
+              developer/gcc13 \
+              developer/gcc12 \
+              developer/gcc11 \
             do
               if pkg info -r "$P" >/dev/null 2>&1; then
                 pkg install -v --accept "$P"
