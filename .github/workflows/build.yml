@@ -1552,8 +1552,6 @@ jobs:
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
             pkgin -y install clang gcc12 || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
-            pkgin -y install libX11 libXi libXtst libXrender libxcb libXdmcp libXau libXext || true
             pkgin -y install openjdk-bin || true
           run: |
             set -e -x
