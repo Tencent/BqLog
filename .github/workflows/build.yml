@@ -1202,25 +1202,7 @@ jobs:
             }
           run: |
             set -e -x
-            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 \
-                | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
-              if [ -n "$JH" ]; then
-                case "$JH" in
-                  */jre)
-                P="$(dirname "$JH")"
-                if [ -x "$P/bin/java" ] && [ -d "$P/include" ]; then
-                  JAVA_HOME="$P"
-                else
-                  JAVA_HOME="$JH"
-                fi
-                ;;
-              *)
-                JAVA_HOME="$JH"
-                ;;
-                esac
-              fi
-            fi
+            java -XshowSettings:properties -version
             export JAVA_HOME
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version
@@ -1474,25 +1456,7 @@ jobs:
             set -e -x
 
             export PATH="/opt/gcc-13/bin:$PATH"
-            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 \
-                | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
-              if [ -n "$JH" ]; then
-                case "$JH" in
-                  */jre)
-                P="$(dirname "$JH")"
-                if [ -x "$P/bin/java" ] && [ -d "$P/include" ]; then
-                  JAVA_HOME="$P"
-                else
-                  JAVA_HOME="$JH"
-                fi
-                ;;
-              *)
-                JAVA_HOME="$JH"
-                ;;
-                esac
-              fi
-            fi
+            export $JAVA_HOME="usr/jdk/instances/openjdk11.0"
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version
 
@@ -1544,12 +1508,7 @@ jobs:
             set -e -x
 
             export PATH="/opt/gcc-13/bin:$PATH"
-            if [ -z "$JAVA_HOME" ] && command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^\s*java\.home = /{print $2}' | sed 's/[[:space:]]*$//')"
-              if [ -n "$JH" ] && [ -x "$JH/bin/java" ]; then
-                JAVA_HOME="$JH"
-              fi
-            fi
+            export $JAVA_HOME="usr/jdk/instances/openjdk11.0"
             export PATH="$JAVA_HOME/bin:$PATH"
             java -version
 
