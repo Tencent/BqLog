@@ -13,6 +13,7 @@
 #ifdef BQ_POSIX
 #include <pthread.h>
 #include <signal.h>
+#include <sys/select.h>
 
 #if defined(__has_include)
 #if __has_include(<sys/prctl.h>)
