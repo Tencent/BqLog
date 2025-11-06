@@ -1073,7 +1073,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
 
           run: |
             set -e -x
@@ -1141,7 +1141,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
 
           run: |
             set -e -x
@@ -1213,7 +1213,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
 
           run: |
             set -e -x
@@ -1284,7 +1284,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
 
           run: |
             set -e -x
