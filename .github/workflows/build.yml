@@ -1303,6 +1303,202 @@ jobs:
             export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack_gcc.sh
 
+  # solaris_x86_64
+  build_solaris_x86_64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in Solaris (Clang)
+        id: RunInSolarisClang
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          # 安装所需工具（OpenCSW）
+          prepare: |
+            pkgutil -y -i cmake bash gmake gdb llvm clang openjdk11
+          run: |
+            set -e -x
+            # 解析并设置 JAVA_HOME（优先 OpenCSW 的 openjdk11）
+            if [ -x /opt/csw/java/jdk11/bin/java ]; then
+              export JAVA_HOME="/opt/csw/java/jdk11"
+            else
+              if command -v java >/dev/null 2>&1; then
+                JAVA_BIN="$(command -v java)"
+                # 退化：从 java 的路径反推两级为 JAVA_HOME
+                export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
+              else
+                echo "java not found; did you pkgutil -y -i openjdk11?"
+                exit 1
+              fi
+            fi
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            # 使用 Clang 构建
+            export CC=clang
+            export CXX=clang++
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack.sh native clang YES NO
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: solaris_x86_64_libs_clang
+          path: ${{ github.workspace }}/dist
+
+  build_solaris_x86_64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in Solaris (GCC)
+        id: RunInSolarisGcc
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          # 使用带 GCC 的镜像，减少编译器安装
+          release: "11.4-gcc"
+          prepare: |
+            pkgutil -y -i cmake bash gmake gdb openjdk11
+          run: |
+            set -e -x
+            # 解析并设置 JAVA_HOME
+            if [ -x /opt/csw/java/jdk11/bin/java ]; then
+              export JAVA_HOME="/opt/csw/java/jdk11"
+            else
+              if command -v java >/dev/null 2>&1; then
+                JAVA_BIN="$(command -v java)"
+                export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
+              else
+                echo "java not found; did you pkgutil -y -i openjdk11?"
+                exit 1
+              fi
+            fi
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            # 使用 GCC 构建
+            export CC=gcc
+            export CXX=g++
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack.sh native gcc YES NO
+
+  build_solaris_x86_64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in Solaris (Clang)
+        id: RunInSolarisToolsClang
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkgutil -y -i cmake bash gmake gdb llvm clang openjdk11
+          run: |
+            set -e -x
+            # 解析并设置 JAVA_HOME
+            if [ -x /opt/csw/java/jdk11/bin/java ]; then
+              export JAVA_HOME="/opt/csw/java/jdk11"
+            else
+              if command -v java >/dev/null 2>&1; then
+                JAVA_BIN="$(command -v java)"
+                export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
+              else
+                echo "java not found; did you pkgutil -y -i openjdk11?"
+                exit 1
+              fi
+            fi
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            # 使用 Clang 构建
+            export CC=clang
+            export CXX=clang++
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack_clang.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: solaris_x86_64_tools_clang
+          path: ${{ github.workspace }}/dist
+
+  build_solaris_x86_64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in Solaris (GCC)
+        id: RunInSolarisToolsGcc
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "11.4-gcc"
+          prepare: |
+            pkgutil -y -i cmake bash gmake gdb openjdk11
+          run: |
+            set -e -x
+            # 解析并设置 JAVA_HOME
+            if [ -x /opt/csw/java/jdk11/bin/java ]; then
+              export JAVA_HOME="/opt/csw/java/jdk11"
+            else
+              if command -v java >/dev/null 2>&1; then
+                JAVA_BIN="$(command -v java)"
+                export JAVA_HOME="$(dirname "$(dirname "$JAVA_BIN")")"
+              else
+                echo "java not found; did you pkgutil -y -i openjdk11?"
+                exit 1
+              fi
+            fi
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            # 使用 GCC 构建
+            export CC=gcc
+            export CXX=g++
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack_gcc.sh
+
   #iOS
   build_ios_lib:
     runs-on: macos-latest
