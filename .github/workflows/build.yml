@@ -1438,39 +1438,36 @@ jobs:
           prepare: |
             set -e
             pkg refresh --full
+            # 确保 extra.omnios 存在（用于 ooce/* 包）
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
               [ -n "$REL" ] || REL="r151054"
               pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
               pkg refresh --full
             fi
-            
-            pkg search -r -o pkg.fmri -H 'jdk-|openjdk|runtime/java|developer/java' 2>/dev/null || true
-
-            pkg install -v --accept shell/bash developer/build/gnu-make developer/build/cmake runtime/java/openjdk11 || true
-
-            CM_FOUND=0
-            for P in ooce/cmake ooce/developer/cmake developer/build/cmake developer/cmake; do
-              if pkg info -r "$P" >/dev/null 2>&1; then
-                pkg install -v --accept "$P"
-                CM_FOUND=1
-                break
-              fi
-            done
-            if [ "$CM_FOUND" -eq 0 ]; then
-              FMRI="$(pkg search -r -o pkg.fmri -H cmake 2>/dev/null | awk -F@ '{print $1}' | head -n1)"
-              [ -n "$FMRI" ] && pkg install -v --accept "$FMRI" || { echo "cmake not found in current publishers"; exit 1; }
+              
+              # 基础工具
+            pkg install -v --accept shell/bash developer/build/gnu-make || true
+              
+              # cmake：优先 ooce/developer/cmake
+            if pkg info -r ooce/developer/cmake >/dev/null 2>&1; then
+              pkg install -v --accept ooce/developer/cmake
+            else
+              FMRI_CMAKE="$(pkg search -r -o pkg.fmri -H cmake 2>/dev/null | awk -F@ '{print $1}' | head -n1)"
+              [ -n "$FMRI_CMAKE" ] && pkg install -v --accept "$FMRI_CMAKE" || true
             fi
-            GCC_FOUND=0
-            for P in developer/gcc13 developer/gcc12 developer/gcc11; do
-              if pkg info -r "$P" >/dev/null 2>&1; then
-                pkg install -v --accept "$P"
-                GCC_FOUND=1
-                break
-              fi
-            done
-            if [ "$GCC_FOUND" -eq 0 ]; then
-                echo "Warning: gcc not found via IPS search"
+              
+              # gcc（你这次已经能装到 developer/gcc13，保留这个优先级）
+            pkg info -r developer/gcc13 >/dev/null 2>&1 && pkg install -v --accept developer/gcc13 || true
+            pkg info -r developer/gcc12 >/dev/null 2>&1 && pkg install -v --accept developer/gcc12 || true
+            pkg info -r developer/gcc11 >/dev/null 2>&1 && pkg install -v --accept developer/gcc11 || true
+              
+            # Java：先精确探测 openjdk11，再退回关键字
+            if pkg info -r runtime/java/openjdk11 >/dev/null 2>&1; then
+              pkg install -v --accept runtime/java/openjdk11
+            else
+              FMRI_JAVA="$(pkg search -r -s omnios -o pkg.fmri openjdk 2>/dev/null | awk -F@ '{print $1}' | head -n1)"
+              [ -n "$FMRI_JAVA" ] && pkg install -v --accept "$FMRI_JAVA" || echo "No OpenJDK package in current publishers."
             fi
           run: |
             set -e -x
@@ -1541,6 +1538,8 @@ jobs:
             if [ "$GCC_FOUND" -eq 0 ]; then
                 echo "Warning: gcc not found via IPS search"
             fi
+            
+            curl "https://mirrors.omnios.org/openjdk/jdk-11.0.28+6.tar.gz"
           run: |
             set -e -x
 
