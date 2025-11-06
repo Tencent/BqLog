@@ -1535,6 +1535,394 @@ jobs:
           name: omnios_x86_64_tools
           path: ${{ github.workspace }}/dist
 
+  # netbsd_x86_64
+  build_netbsd_x86_64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (Clang, x86_64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            # Java: prefer openjdk11, fallback to openjdk17
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            # Java HOME detection
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            elif command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
+              if [ -n "$JH" ]; then
+                case "$JH" in */jre) P="$(dirname "$JH")"; [ -x "$P/bin/java" ] && JH="$P";; esac
+                [ -x "$JH/bin/java" ] && JAVA_HOME="$JH"
+              fi
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+              java -version || true
+            else
+              echo "No JDK found on NetBSD; proceeding without Java."
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            # Use Clang (NetBSD base provides clang)
+            export CC=clang CXX=clang++
+            clang --version || true
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES NO
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: netbsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_netbsd_x86_64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (GCC, x86_64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            # Prefer gcc12, fallback gcc13/gcc10
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+            # Java
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            # Add pkg paths and pick GCC
+            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
+            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
+            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
+            fi
+            export PATH
+            export CC=gcc CXX=g++
+            gcc --version || true
+
+            # Java HOME detection
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            elif command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
+              if [ -n "$JH" ]; then
+                case "$JH" in */jre) P="$(dirname "$JH")"; [ -x "$P/bin/java" ] && JH="$P";; esac
+                [ -x "$JH/bin/java" ] && JAVA_HOME="$JH"
+              fi
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:$PATH"
+              java -version || true
+            else
+              echo "No JDK found on NetBSD; proceeding without Java."
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+  build_netbsd_x86_64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (Clang, x86_64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            # Java HOME detection (optional)
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+              java -version || true
+            else
+              export PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            export CC=clang CXX=clang++
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_clang.sh
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: netbsd_x86_64_tools
+          path: ${{ github.workspace }}/dist
+
+  build_netbsd_x86_64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (GCC, x86_64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
+            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
+            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
+            fi
+            export PATH
+            export CC=gcc CXX=g++
+
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:$PATH"
+              java -version || true
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_gcc.sh
+
+  # netbsd_arm64 (aarch64)
+  build_netbsd_arm64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (Clang, arm64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+              java -version || true
+            else
+              export PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+              echo "No JDK found on NetBSD aarch64; proceeding without Java."
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            export CC=clang CXX=clang++
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES NO
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: netbsd_arm64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_netbsd_arm64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (GCC, arm64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
+            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
+            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
+            fi
+            export PATH
+            export CC=gcc CXX=g++
+
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:$PATH"
+              java -version || true
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+  build_netbsd_arm64_tools_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (Clang, arm64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+              java -version || true
+            else
+              export PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            export CC=clang CXX=clang++
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_clang.sh
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: netbsd_arm64_tools
+          path: ${{ github.workspace }}/dist
+
+  build_netbsd_arm64_tools_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (GCC, arm64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
+            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
+            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
+            fi
+            export PATH
+            export CC=gcc CXX=g++
+
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            fi
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:$PATH"
+              java -version || true
+            fi
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_gcc.sh
+
   #iOS
   build_ios_lib:
     runs-on: macos-latest
