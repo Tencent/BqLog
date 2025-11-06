@@ -40,7 +40,7 @@ namespace bq {
 
     void log_level_bitmap::add_level(bq::log_level level)
     {
-        bitmap_ |= (1 << (int32_t)level);
+        bitmap_ = static_cast<uint32_t>(bitmap_ | static_cast<uint32_t>(1 << (int32_t)level));
     }
 
     void log_level_bitmap::add_level(const bq::string& level_string)
