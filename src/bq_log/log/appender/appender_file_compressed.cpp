@@ -471,8 +471,8 @@ namespace bq {
                     case bq::log_arg_type_enum::pointer_type:
                         assert(sizeof(void*) >= 4);
                         memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4, sizeof(uint64_t));
-                        log_data_cursor += sizeof(uint64_t);
-                        args_data_cursor += 4 + sizeof(uint64_t); // use 64bit pointer for serialize
+                        log_data_cursor += static_cast<uint32_t>(sizeof(uint64_t));
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint64_t)); // use 64bit pointer for serialize
                         break;
                     case bq::log_arg_type_enum::bool_type:
                     case bq::log_arg_type_enum::char_type:
@@ -494,24 +494,24 @@ namespace bq {
                     case bq::log_arg_type_enum::char32_type:
                     case bq::log_arg_type_enum::uint32_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint32_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-                        args_data_cursor += (4 + sizeof(int32_t));
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int32_t));
                         break;
                     case bq::log_arg_type_enum::int32_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int32_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-                        args_data_cursor += (4 + sizeof(int32_t));
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int32_t));
                         break;
                     case bq::log_arg_type_enum::float_type:
                         memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4, sizeof(int32_t));
-                        log_data_cursor += sizeof(int32_t);
-                        args_data_cursor += (4 + sizeof(int32_t));
+                        log_data_cursor += static_cast<uint32_t>(sizeof(int32_t));
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int32_t));
                         break;
                     case bq::log_arg_type_enum::uint64_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint64_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
-                        args_data_cursor += (4 + sizeof(int64_t));
+                        args_data_cursor +=  static_cast<uint32_t>(4U + sizeof(int64_t));
                         break;
                     case bq::log_arg_type_enum::int64_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int64_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
-                        args_data_cursor += (4 + sizeof(int64_t));
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int64_t));
                         break;
                     case bq::log_arg_type_enum::double_type:
                         memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4, sizeof(int64_t));

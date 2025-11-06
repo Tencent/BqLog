@@ -1241,7 +1241,9 @@ jobs:
           run: |
             set -e -x
             export JAVA_HOME="/usr/jdk/instances/jdk1.8.0"
-
+            echo "ls /usr/jdk/instances/jdk1.8.0"
+            ls -l /usr/jdk/instances/jdk1.8.0/
+            ls -l /usr/jdk/instances/jdk1.8.0/include
             export CC=gcc
             export CXX=g++
 
@@ -1434,7 +1436,7 @@ jobs:
               pkg refresh --full
             fi
 
-            pkg install -v --accept shell/bash developer/build/gnu-make runtime/java/openjdk11 || true
+            pkg install -v --accept shell/bash developer/build/gnu-make developer/build/cmake runtime/java/openjdk11 || true
 
             CM_FOUND=0
             for P in ooce/cmake ooce/developer/cmake developer/build/cmake developer/cmake; do
@@ -1515,7 +1517,7 @@ jobs:
               pkg refresh --full
             fi
 
-            pkg install -v --accept shell/bash developer/build/gnu-make runtime/java/openjdk11 || true
+            pkg install -v --accept shell/bash developer/build/gnu-make developer/build/cmake runtime/java/openjdk11 || true
 
             GCC_FOUND=0
             for P in developer/gcc13 developer/gcc12 developer/gcc11; do
