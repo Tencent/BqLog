@@ -1037,7 +1037,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  cmake bash jdk%11 gdb%11 gcc%11
 
           run: |
             test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
@@ -1073,7 +1073,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
+            pkg_add  cmake bash jdk%11 gdb%11 gcc%11
 
           run: |
             set -e -x
@@ -1104,7 +1104,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  cmake bash jdk%11 gdb%11 gcc%11
 
           run: |
             set -e -x
@@ -1141,7 +1141,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
+            pkg_add  cmake bash jdk%11 gdb%11 gcc%11
 
           run: |
             set -e -x
@@ -1175,7 +1175,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  cmake bash jdk%11 gdb%11 gcc%11
 
           run: |
             set -e -x
@@ -1213,7 +1213,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
+            pkg_add  cmake bash jdk%11 gdb%11 gcc%11
 
           run: |
             set -e -x
@@ -1245,7 +1245,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc
+            pkg_add  cmake bash jdk%11 gdb%11 gcc%11
 
           run: |
             set -e -x
@@ -1284,7 +1284,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  llvm cmake bash jdk%11 gdb gcc g++
+            pkg_add  cmake bash jdk%11 gdb gcc%11 g++%11
 
           run: |
             set -e -x
