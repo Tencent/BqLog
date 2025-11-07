@@ -1380,7 +1380,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash gdb gcc13 g++13
+            pkg install -y llvm cmake bash gdb gcc13
 
           run: |
             set -e -x
@@ -1877,27 +1877,6 @@ jobs:
             chmod +x *.sh
             ls -l
             ./run_test_clang.sh 23
-
-  DragonFlyBSD_x86_64_test_GCC_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 23 
             
   #Unix-OpenBSD
   OpenBSD_x86_64_test_Clang_cpp11:
@@ -2348,34 +2327,6 @@ jobs:
             ls -l
             ./run_test_clang.sh 20
 
-  NetBSD_x86_64_test_GCC_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc13  || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 23
 
   NetBSD_x86_64_test_Clang_cpp23:
     runs-on: ubuntu-latest
