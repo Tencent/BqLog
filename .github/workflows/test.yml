@@ -1897,13 +1897,78 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash
+            pkg_add cmake bash gdb
           run: |
             set -e -x
-            cd build/test/unix_like  
+
+            # 启用 core dump：文件名 core.<pid>
+            sysctl kern.defcorename=core.%pid || true
+            sysctl kern.defcorename
+            ulimit -c unlimited || true
+            ulimit -a | grep 'core file'
+
+            cd build/test/unix_like
             chmod +x *.sh
             ls -l
+
+            # 不让 set -e 直接终止，手动处理退出码
+            set +e
             ./run_test_clang.sh 11
+            EXIT_CODE=$?
+            set -e
+            echo "run_test_clang.sh exit code: $EXIT_CODE"
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Test failed, searching for core files..."
+              # 取第一个 core / core.*
+              CORE_FILE=""
+              for f in core core.*; do
+                if [ -f "$f" ]; then
+                  CORE_FILE="$f"
+                  break
+                fi
+              done
+
+              if [ -n "$CORE_FILE" ]; then
+                echo "Found core file: $CORE_FILE"
+                if command -v gdb >/dev/null 2>&1; then
+                  echo "=== GDB core backtrace ==="
+                  gdb --batch -q \
+                      -ex "set pagination off" \
+                      -ex "info threads" \
+                      -ex "thread apply all bt full" \
+                      -ex "quit" \
+                      ./CMakeFiles/BqLogUnitTest.dir/* >/dev/null 2>&1 && echo "NOTE: object dir scanned" || true
+                  # 主二进制通常在当前目录
+                  if [ -f ./BqLogUnitTest ]; then
+                    gdb --batch -q \
+                        -ex "set pagination off" \
+                        -ex "info threads" \
+                        -ex "thread apply all bt full" \
+                        -ex "quit" \
+                        ./BqLogUnitTest "$CORE_FILE" || echo "gdb core analysis failed"
+                  else
+                    echo "Executable BqLogUnitTest not found (adjust path if needed)."
+                  fi
+                else
+                  echo "gdb not installed? (should have been)."
+                fi
+              else
+                echo "No core file produced. Running once under gdb for live stack..."
+                if command -v gdb >/dev/null 2>&1 && [ -f ./BqLogUnitTest ]; then
+                  gdb --batch -q \
+                      -ex "set pagination off" \
+                      -ex "run" \
+                      -ex "info threads" \
+                      -ex "thread apply all bt full" \
+                      -ex "quit" \
+                      ./BqLogUnitTest || true
+                fi
+              fi
+              exit $EXIT_CODE
+            else
+              echo "Test succeeded."
+            fi
 
   OpenBSD_x86_64_test_Clang_cpp14:
     runs-on: ubuntu-latest
