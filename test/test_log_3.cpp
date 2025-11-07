@@ -89,41 +89,41 @@ namespace bq {
 
         struct custom_type3 {
         private:
-            const char16_t* data = u"custom_type3";
+            const char16_t* data_ = u"custom_type3";
         public:
             const char16_t* bq_log_format_str_chars() const
             {
-                return data;
+                return data_;
             }
 
             size_t bq_log_format_str_size() const
             {
-                return (uint32_t)bq::___string_len(data);
+                return (uint32_t)bq::___string_len(data_);
             }
         };
 
         struct custom_type4 {
         private:
-            const char16_t* data = u"custom_type4";
+            const char16_t* data_ = u"custom_type4";
 
         public:
             size_t bq_log_format_str_size() const
             {
-                return (uint32_t)bq::___string_len(data);
+                return (uint32_t)bq::___string_len(data_);
             }
 
             void bq_log_custom_format(char* dest, size_t data_size) const{
                 assert(data_size >= bq_log_format_str_size());
-                bq::util::utf16_to_utf8(data, static_cast<uint32_t>(bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
+                bq::util::utf16_to_utf8(data_, static_cast<uint32_t>(bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
             }
         };
 
         struct custom_type5 {
-            const char16_t* data = u"custom_type5";
+            const char16_t* data_ = u"custom_type5";
 
             size_t bq_log_format_str_size() const
             {
-                return (uint32_t)bq::___string_len(data);
+                return (uint32_t)bq::___string_len(data_);
             }
         };
 
@@ -354,13 +354,15 @@ namespace bq {
                 char32_t str[] = { c, U'\0' };
                 return get_utf8_from_utf32(str);
             }
-            static bq::enable_if_t<!bq::is_same<int8_t, char>::value, bq::string> trans(int8_t value)
+            template<typename>
+            bq::enable_if_t<!bq::is_same<int8_t, char>::value, bq::string> trans(int8_t value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRId8, value);
                 return tmp;
             }
-            static bq::enable_if_t<!bq::is_same<uint8_t, char>::value, bq::string> trans(uint8_t value)
+            template<typename>
+            bq::enable_if_t<!bq::is_same<uint8_t, char>::value, bq::string> trans(uint8_t value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRIu8, value);

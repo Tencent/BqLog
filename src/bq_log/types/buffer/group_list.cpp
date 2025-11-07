@@ -254,7 +254,12 @@ namespace bq {
                 current_group_index_.store(u64_value, bq::platform::memory_order::seq_cst);
             }
             auto* new_node = bq::util::aligned_new<group_node>(BQ_CACHE_LINE_SIZE, this, max_block_count_per_group_, u64_value);
-            new_node->get_next_ptr().node_ = head_.node_;
+            if (new_node) {
+                new_node->get_next_ptr().node_ = head_.node_;
+            }
+            else {
+                assert(false && "group_list alloc group_node failed");
+            }
             head_.node_ = new_node;
         }
     }
