@@ -1921,19 +1921,19 @@ jobs:
               echo "Test failed with exit $EXIT_CODE. Searching for core..."
               # 查 core（包含 '*.core'，并搜索到 CMakeFiles/）
               CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' \) 2>/dev/null | head -n1)"
-              
+
               # 定位可执行（优先常见路径）
               EXE=""
               for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
                 if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
               done
-            
+
               echo "exe: ${EXE:-<not found>}"
               echo "core: ${CORE_FILE:-<not found>}"
-              
+
               if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
                 echo "=== GDB core backtrace ==="
-                gdb --batch -q \
+                /usr/local/bin/gdb --batch -q \
                   -ex "set pagination off" \
                   -ex "info threads" \
                   -ex "thread apply all bt full" \
@@ -1942,7 +1942,7 @@ jobs:
               else
                 echo "Core or executable not found; run once under gdb for live backtrace (if exe found)"
                 if [ -n "$EXE" ]; then
-                  gdb --batch -q \
+                  /usr/local/bin/gdb --batch -q \
                     -ex "run" \
                     -ex "info threads" \
                     -ex "thread apply all bt full" \
