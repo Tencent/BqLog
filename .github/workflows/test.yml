@@ -1897,21 +1897,38 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add cmake bash gdb
+            set -x
+            # 明确设置 PKG_PATH 以防万一
+            export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/"
+            # 安装依赖，并增加详细输出和错误检查
+            pkg_add -v -I cmake bash gdb
+
+            # 打印 PATH 并查找 gdb
+            echo "--- Prepare step diagnostics ---"
+            echo "PATH=$PATH"
+            find /usr -name "gdb" -type f
+            find /usr -name "egdb" -type f
+            echo "--- End of diagnostics ---"
+
           run: |
             set -e -x
-            # OpenBSD: 启用 core dump，并尽量设置 core 文件名（不保证占位符支持，失败忽略）
+            # OpenBSD: 启用 core dump
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
             sysctl kern.corefile=core.%p 2>/dev/null || sysctl kern.corefile=core || true
-            sysctl kern.coredump || true
-            sysctl kern.corefile || true
 
             cd build/test/unix_like
             chmod +x *.sh
-            ls -l
 
-            # 运行并在失败时尝试抓取 core 栈
+            # 动态查找 gdb 的可执行文件
+            GDB_CMD=$(find /usr/local/bin -name "*gdb*" | head -n1)
+            if [ -z "$GDB_CMD" ]; then
+              echo "!!! GDB not found in /usr/local/bin, trying system default"
+              GDB_CMD="gdb"
+            fi
+            echo "Using GDB at: $GDB_CMD"
+
+            # 运行测试
             set +e
             ./run_test_clang.sh 11
             EXIT_CODE=$?
@@ -1919,10 +1936,8 @@ jobs:
 
             if [ $EXIT_CODE -ne 0 ]; then
               echo "Test failed with exit $EXIT_CODE. Searching for core..."
-              # 查 core（包含 '*.core'，并搜索到 CMakeFiles/）
               CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' \) 2>/dev/null | head -n1)"
 
-              # 定位可执行（优先常见路径）
               EXE=""
               for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
                 if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
@@ -1933,22 +1948,20 @@ jobs:
 
               if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
                 echo "=== GDB core backtrace ==="
-                /usr/local/bin/gdb --batch -q \
+                $GDB_CMD --batch -q \
                   -ex "set pagination off" \
                   -ex "info threads" \
                   -ex "thread apply all bt full" \
                   -ex "quit" \
                   "$EXE" "$CORE_FILE" || echo "gdb core analysis failed"
-              else
-                echo "Core or executable not found; run once under gdb for live backtrace (if exe found)"
-                if [ -n "$EXE" ]; then
-                  /usr/local/bin/gdb --batch -q \
-                    -ex "run" \
-                    -ex "info threads" \
-                    -ex "thread apply all bt full" \
-                    -ex "quit" \
-                    "$EXE" || true
-                fi
+              elif [ -n "$EXE" ]; then
+                echo "Core not found; run once under gdb for live backtrace"
+                $GDB_CMD --batch -q \
+                  -ex "run" \
+                  -ex "info threads" \
+                  -ex "thread apply all bt full" \
+                  -ex "quit" \
+                  "$EXE" || true
               fi
               exit $EXIT_CODE
             fi
