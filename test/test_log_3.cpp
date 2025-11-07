@@ -355,14 +355,14 @@ namespace bq {
                 return get_utf8_from_utf32(str);
             }
             template<typename T>
-            bq::enable_if_t<bq::is_same<int8_t, T>::value && !bq::is_same<int8_t, char>::value, bq::string> trans(T value)
+            static bq::enable_if_t<bq::is_same<int8_t, T>::value && !bq::is_same<int8_t, char>::value, bq::string> trans(T value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRId8, value);
                 return tmp;
             }
             template<typename T>
-            bq::enable_if_t<bq::is_same<uint8_t, T>::value && !bq::is_same<uint8_t, char>::value, bq::string> trans(T value)
+            static bq::enable_if_t<bq::is_same<uint8_t, T>::value && !bq::is_same<uint8_t, char>::value, bq::string> trans(T value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRIu8, value);
