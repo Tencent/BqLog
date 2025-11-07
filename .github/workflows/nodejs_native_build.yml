@@ -651,8 +651,9 @@ jobs:
               echo "pkgutil not found; skipping OpenCSW packages." >&2
             fi
             
+            pkg search -r jdk
             pkg search -r nodejs
-            pkg info developer/nodejs
+            pkg install runtime/nodejs
           run: |
             set -e -x
             PATH="/opt/csw/bin:$PATH"; export PATH
