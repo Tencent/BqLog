@@ -1555,6 +1555,7 @@ jobs:
             pkgin -y install openjdk-bin || true
           run: |
             set -e -x
+            java -XshowSettings:properties
             # Java HOME detection
             JAVA_HOME=""
             if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
