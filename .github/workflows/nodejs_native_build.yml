@@ -461,3 +461,632 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native gcc YES YES
+
+  build_freebsd_arm64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSDArmClang
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+        run: |
+          set -e -x
+          pkg info -l openjdk11 | grep 'bin/java'
+          export JAVA_HOME="/usr/local/openjdk11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+          echo "PATH=$PATH" >> $GITHUB_ENV
+
+          npm install node-api-headers
+
+          cd build/lib/unix_like
+          chmod +x *.sh
+          ls -l
+          export BQ_UNIX_VERSION=freebsd
+          ./build_all_and_pack.sh native clang YES YES
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_freebsd_arm64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_freebsd_arm64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSDArmGcc
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+        run: |
+          set -e -x
+          pkg info -l openjdk11 | grep 'bin/java'
+          export JAVA_HOME="/usr/local/openjdk11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+          echo "PATH=$PATH" >> $GITHUB_ENV
+
+          npm install node-api-headers
+
+          cd build/lib/unix_like
+          chmod +x *.sh
+          ls -l
+          export BQ_UNIX_VERSION=freebsd
+          ./build_all_and_pack.sh native gcc YES YES
+
+  build_openbsd_x86_64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in OpenBSD
+        id: RunInOpenBSDLibsClang
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add cmake bash jdk%11
+            pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
+        run: |
+          set -e -x
+          test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+          export JAVA_HOME="/usr/local/jdk-11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          npm install node-api-headers
+
+          cd build/lib/unix_like
+          chmod +x *.sh
+          ls -l
+          export BQ_UNIX_VERSION=openbsd
+          ./build_all_and_pack.sh native clang YES YES
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_openbsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_openbsd_arm64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in OpenBSD
+        id: RunInOpenBSDArmLibsClang
+        uses: vmactions/openbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add cmake bash jdk%11
+            pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
+        run: |
+          set -e -x
+          test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+          export JAVA_HOME="/usr/local/jdk-11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          npm install node-api-headers
+
+          cd build/lib/unix_like
+          chmod +x *.sh
+          ls -l
+          export BQ_UNIX_VERSION=openbsd
+          ./build_all_and_pack.sh native clang YES YES
+
+  build_solaris_x86_64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in Solaris (GCC)
+        id: RunInSolarisGccNode
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "11.4-gcc"
+          prepare: |
+            pkg publisher
+            pkg install -v --accept \
+              developer/build/cmake \
+              developer/build/gnu-make \
+              developer/debug/gdb \
+              shell/bash
+            pkgutil -U || true
+            pkgutil -y -i jdk8 || {
+              echo "CSWjdk8 not available in this catalog; Java will be optional." >&2
+            }
+            pkgutil -y -i nodejs18 || pkgutil -y -i nodejs20 || true
+        run: |
+          set -e -x
+          PATH="/opt/csw/bin:$PATH"; export PATH
+          JAVA_HOME=""; export JAVA_HOME
+          for d in /opt/csw/java/jdk1.8*; do
+            if [ -x "$d/bin/java" ] && [ -f "$d/include/jni.h" ]; then
+              JAVA_HOME="$d"
+              break
+            fi
+          done
+
+          if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] && [ -f "$JAVA_HOME/include/jni.h" ]; then
+            export JAVA_HOME
+            PATH="$JAVA_HOME/bin:$PATH"; export PATH
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+          else
+            echo "No JDK8 with JNI headers found (jni.h not present)."
+          fi
+
+          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+          npm install node-api-headers
+
+          ls "$JAVA_HOME" || true
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=solaris
+          ./build_all_and_pack.sh native gcc YES YES
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_solaris_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_omnios_x86_64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in OmniOS (GCC only)
+        id: RunInOmniOSLibsNode
+        uses: vmactions/omnios-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            set -e
+            pkg refresh --full
+            if ! pkg publisher | grep -q '^extra\.omnios'; then
+              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
+              [ -n "$REL" ] || REL="r151054"
+              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
+              pkg refresh --full
+            fi
+
+            pkg install -v --accept shell/bash developer/build/gnu-make || true
+            pkg install -v --accept ooce/developer/cmake
+            pkg install -v --accept developer/gcc13
+            pkg install -v --accept runtime/java/openjdk11
+            pkg install -v --accept runtime/nodejs-22 || pkg install -v --accept runtime/nodejs-20 || true
+        run: |
+          set -e -x
+
+          export PATH="/opt/gcc-13/bin:$PATH"
+          export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
+          ls -l "$JAVA_HOME"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+          npm install node-api-headers
+
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
+
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=omnios
+          ./build_all_and_pack.sh native gcc YES YES
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_omnios_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_dragonflybsd_x86_64_libs_clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in DragonFlyBSD
+        id: RunInDragonFlyBSDLibsClang
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
+        run: |
+          set -e -x
+          pkg info -l openjdk11 | grep 'bin/java'
+          export JAVA_HOME="/usr/local/openjdk11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          npm install node-api-headers
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=dragonflybsd
+
+          export LANG=en_US.UTF-8
+          export LC_ALL=en_US.UTF-8
+          export LC_CTYPE=en_US.UTF-8
+          export MM_CHARSET=UTF-8
+          ./build_all_and_pack.sh native clang YES YES
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_dragonflybsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_dragonflybsd_x86_64_libs_gcc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in DragonFlyBSD
+        id: RunInDragonFlyBSDLibsGcc
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
+        run: |
+          set -e -x
+          pkg info -l openjdk11 | grep 'bin/java'
+          export JAVA_HOME="/usr/local/openjdk11"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          npm install node-api-headers
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=dragonflybsd
+
+          export LANG=en_US.UTF-8
+          export LC_ALL=en_US.UTF-8
+          export LC_CTYPE=en_US.UTF-8
+          export MM_CHARSET=UTF-8
+          ./build_all_and_pack.sh native gcc YES YES
+
+  build_netbsd_x86_64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (Clang, x86_64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+        run: |
+          set -e -x
+          export JAVA_HOME="/usr/pkg/java/openjdk17"
+          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+          java -version
+          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+          npm install node-api-headers
+          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          export CC=clang CXX=clang++
+          clang --version || true
+
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=netbsd
+          ./build_all_and_pack.sh native clang YES YES
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_netbsd_x86_64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_netbsd_x86_64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (GCC, x86_64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+        run: |
+          set -e -x
+          export JAVA_HOME="/usr/pkg/java/openjdk17"
+          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+          java -version
+          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+          npm install node-api-headers
+          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=netbsd
+          ./build_all_and_pack.sh native gcc YES YES
+
+  build_netbsd_arm64_libs_Clang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (Clang, arm64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+        run: |
+          set -e -x
+          export JAVA_HOME="/usr/pkg/java/openjdk17"
+          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+          java -version
+          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+          npm install node-api-headers
+          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          export CC=clang CXX=clang++
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=netbsd
+          ./build_all_and_pack.sh native clang YES YES
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_netbsd_arm64_libs
+          path: ${{ github.workspace }}/dist
+
+  build_netbsd_arm64_libs_GCC:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run in NetBSD (GCC, arm64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+        run: |
+          set -e -x
+          export JAVA_HOME="/usr/pkg/java/openjdk17"
+          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+          java -version
+          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+          npm install node-api-headers
+          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+          cd build/lib/unix_like
+          chmod +x *.sh 2>/dev/null || true
+          ls -l
+          export BQ_UNIX_VERSION=netbsd
+          ./build_all_and_pack.sh native gcc YES YES

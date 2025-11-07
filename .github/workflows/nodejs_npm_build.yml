@@ -70,8 +70,22 @@ jobs:
             elif [[ "$lowered" == *windows* ]]; then
               # default windows x64
               echo "win32-x64"
+            elif [[ "$lowered" == *freebsd*arm64* ]]; then
+              echo "freebsd-arm64"
             elif [[ "$lowered" == *freebsd* ]]; then
               echo "freebsd-x64"
+            elif [[ "$lowered" == *openbsd*arm64* ]]; then
+              echo "openbsd-arm64"
+            elif [[ "$lowered" == *openbsd* ]]; then
+              echo "openbsd-x64"
+            elif [[ "$lowered" == *netbsd*arm64* ]]; then
+              echo "netbsd-arm64"
+            elif [[ "$lowered" == *netbsd* ]]; then
+              echo "netbsd-x64"
+            elif [[ "$lowered" == *dragonfly* ]]; then
+              echo "dragonfly-x64"
+            elif [[ "$lowered" == *omnios* || "$lowered" == *solaris* || "$lowered" == *sunos* ]]; then
+              echo "sunos-x64"
             elif [[ "$lowered" == *linux*arm64* ]]; then
               echo "linux-arm64"
             elif [[ "$lowered" == *linux*x86_64* || "$lowered" == *linux*amd64* ]]; then
@@ -108,7 +122,7 @@ jobs:
               for tdir in "darwin-x64" "darwin-arm64"; do
                 mkdir -p "$PREBUILDS_DIR/$tdir"
                 cp -f "$node_src" "$PREBUILDS_DIR/$tdir/BqLog.node"
-                # Copy optional PDB (Windows only; on mac不会有)
+                # Copy optional PDB (Windows only; mac builds do not ship one)
               done
             else
               mkdir -p "$PREBUILDS_DIR/$target"
