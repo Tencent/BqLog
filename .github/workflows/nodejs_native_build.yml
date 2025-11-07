@@ -635,6 +635,7 @@ jobs:
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
+              developer/gcc-14 \
               shell/bash
 
             if ! command -v pkgutil >/dev/null 2>&1; then

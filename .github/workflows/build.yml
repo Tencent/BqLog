@@ -1195,6 +1195,7 @@ jobs:
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
+              developer/gcc-14 \
               shell/bash
             pkgutil -U || true
             pkgutil -y -i jdk8 || {
@@ -1256,6 +1257,7 @@ jobs:
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
+              developer/gcc-14 \
               shell/bash
           run: |
             set -e -x
