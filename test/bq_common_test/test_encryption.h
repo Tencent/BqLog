@@ -41,7 +41,9 @@ namespace bq {
                     int32_t ret = system(cmd.c_str());
                     if (ret != 0) {
                         bq::string err_str = bq::file_manager::read_all_text(std_err_file);
+                        bq::string out_str = bq::file_manager::read_all_text(std_out_file);
                         result.add_result(false, "RSA_%" PRId32 " ssh-keygen failed at iteration %" PRId32 ", cmd: %s, error:%s", key_bits, i, cmd.c_str(), err_str.c_str());
+                        bq::util::log_device_console(bq::log_level::error, "ssh-key-gen out:%s", out_str.c_str());
                         continue;
                     }
                     bq::string pub_key_text = bq::file_manager::read_all_text(bq::file_manager::combine_path(output_dir, "id_rsa.pub"));
