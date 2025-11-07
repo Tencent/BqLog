@@ -36,7 +36,6 @@ namespace bq {
                 thread* thread_ptr = (thread*)data;
                 thread_ptr->internal_run();
                 return 0;
-                std::is_convertible<DWORD, void>::value;
             }
         };
 
