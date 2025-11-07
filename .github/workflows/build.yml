@@ -1551,14 +1551,12 @@ jobs:
             set -e
             export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
 
-            # 1) 包管理与基础工具
             /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
             pkgin -y install clang || true
             pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
 
-            # 2) 解包 NetBSD base 的 X 集（提供 /usr/X11R7/lib/*，openjdk11/17 需要）
             ARCH="$(uname -m)"
             URLS=""
             case "$ARCH" in
@@ -1588,43 +1586,14 @@ jobs:
               echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
               exit 1
             fi
-            # 基本校验
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
           
-            # 3) 安装 JDK（必须带 JNI 头），优先 17 再 11；用 pkg_info 确认是否装成
             pkgin -y install openjdk17 || true
-            /usr/sbin/pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1 || pkgin -y install openjdk11 || true
-          
-            if ! /usr/sbin/pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1 && \
-              ! /usr/sbin/pkg_info -e 'openjdk11-[0-9]*'  >/dev/null 2>&1; then
-              echo "No OpenJDK 17/11 installed even after xbase; check repository mirror." >&2
-              exit 1
-            fi
-
-            # 提示：不要用 pkgin 装 libX11/libXi/... 它们来自 base 的 xbase，已通过上面解包就绪
-
           run: |
             set -e -x
-            # Java HOME detection
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            elif [ -x /usr/pkg/java/openjdk21/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk21"
-            elif command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
-              if [ -n "$JH" ]; then
-                case "$JH" in */jre) P="$(dirname "$JH")"; [ -x "$P/bin/java" ] && JH="$P";; esac
-                [ -x "$JH/bin/java" ] && JAVA_HOME="$JH"
-              fi
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-              java -version || true
-            else
-              echo "No JDK found on NetBSD; proceeding without Java."
-            fi
-            ls "$JAVA_HOME"
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
@@ -1655,42 +1624,52 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
-            # Prefer gcc12, fallback gcc13/gcc10
+            pkgin -y install clang || true
             pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-            # Java
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            # Add pkg paths and pick GCC
-            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
-            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
-            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
-            fi
-            export PATH
-            export CC=gcc CXX=g++
-            gcc --version || true
-
-            # Java HOME detection
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            elif command -v java >/dev/null 2>&1; then
-              JH="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
-              if [ -n "$JH" ]; then
-                case "$JH" in */jre) P="$(dirname "$JH")"; [ -x "$P/bin/java" ] && JH="$P";; esac
-                [ -x "$JH/bin/java" ] && JAVA_HOME="$JH"
-              fi
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:$PATH"
-              java -version || true
-            else
-              echo "No JDK found on NetBSD; proceeding without Java."
-            fi
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
@@ -1712,23 +1691,52 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            # Java HOME detection (optional)
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-              java -version || true
-            else
-              export PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-            fi
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
@@ -1758,29 +1766,52 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
             pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
-            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
-            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
-            fi
-            export PATH
-            export CC=gcc CXX=g++
-
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:$PATH"
-              java -version || true
-            fi
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
@@ -1806,23 +1837,52 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-              java -version || true
-            else
-              export PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-              echo "No JDK found on NetBSD aarch64; proceeding without Java."
-            fi
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
@@ -1851,29 +1911,52 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
             pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
-            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
-            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
-            fi
-            export PATH
-            export CC=gcc CXX=g++
-
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:$PATH"
-              java -version || true
-            fi
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
@@ -1896,22 +1979,52 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-              java -version || true
-            else
-              export PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-            fi
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
@@ -1942,29 +2055,52 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
             pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            PATH="/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-            if   [ -x /usr/pkg/gcc12/bin/gcc ]; then PATH="/usr/pkg/gcc12/bin:$PATH"
-            elif [ -x /usr/pkg/gcc13/bin/gcc ]; then PATH="/usr/pkg/gcc13/bin:$PATH"
-            elif [ -x /usr/pkg/gcc10/bin/gcc ]; then PATH="/usr/pkg/gcc10/bin:$PATH"
-            fi
-            export PATH
-            export CC=gcc CXX=g++
-
-            JAVA_HOME=""
-            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
-            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
-            fi
-            if [ -n "$JAVA_HOME" ]; then
-              export JAVA_HOME
-              export PATH="$JAVA_HOME/bin:$PATH"
-              java -version || true
-            fi
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
 
