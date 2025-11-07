@@ -41,79 +41,13 @@ normalize_arch() {
     arm64) echo "arm64" ;;
     x86) echo "x86" ;;
     x86_64|amd64|x64) echo "x86_64" ;;
-    native)
-      os="$(uname -s 2>/dev/null || echo unknown)"
-      m="$(uname -m 2>/dev/null || echo unknown)"
-      p="$(uname -p 2>/dev/null || true)"
-      mach_arch=""
-      if command -v sysctl >/dev/null 2>&1; then
-        mach_arch="$(sysctl -n hw.machine_arch 2>/dev/null || true)"
-      fi
-      isainfo_n=""
-      if command -v isainfo >/dev/null 2>&1; then
-        isainfo_n="$(isainfo -n 2>/dev/null || true)"
-      fi
-
-      arch_guess="$m"
-      case "$os" in
-        SunOS)
-          case "$m" in
-            i86pc)
-              case "$isainfo_n" in
-                amd64) arch_guess="x86_64" ;;
-                i386)  arch_guess="x86" ;;
-                *)     arch_guess="x86_64" ;;
-              esac
-              ;;
-            sun4u|sun4v)
-              arch_guess="sparc64"
-              ;;
-          esac
-          ;;
-        NetBSD)
-          if [ "$m" = "evbarm" ] || echo "$m" | grep -qi 'arm'; then
-            a="${mach_arch:-$p}"
-            case "$a" in
-              aarch64) arch_guess="arm64" ;;
-              earmv7hf*|earmv7*) arch_guess="armv7" ;;
-              arm*) arch_guess="arm" ;;
-            esac
-          fi
-          ;;
-        FreeBSD|DragonFly|OpenBSD)
-          case "$m" in
-            aarch64|arm64) arch_guess="arm64" ;;
-          esac
-          ;;
-        Darwin)
-          case "$m" in
-            arm64) arch_guess="arm64" ;;
-            x86_64) arch_guess="x86_64" ;;
-          esac
-          ;;
-      esac
-
-      case "$arch_guess" in
-        x86_64|amd64)            echo "x86_64" ;;
-        i386|i486|i586|i686|i86pc|i86) echo "x86" ;;
-        aarch64|arm64)           echo "arm64" ;;
-        armv8*|armv7*|armv6*|armv5*|arm|earm*|earmv*) echo "arm" ;;
-        ppc64le)                 echo "ppc64le" ;;
-        ppc64|powerpc64|ppc64*)  echo "ppc64" ;;
-        ppc|powerpc|powerpcspe)  echo "ppc" ;;
-        mips64el)                echo "mips64el" ;;
-        mips64)                  echo "mips64" ;;
-        mips|mipsel|mipseb)      echo "mips" ;;
-        riscv64|riscv64gc)       echo "riscv64" ;;
-        s390x)                   echo "s390x" ;;
-        sparc64|sun4u|sun4v)     echo "sparc64" ;;
-        sparc)                   echo "sparc" ;;
-        ia64)                    echo "ia64" ;;
-        *)
-          echo "$arch_guess"
-          ;;
-      esac
-      ;;
+    native) unamearch=$(uname -m)
+      case "$unamearch" in
+        aarch64) echo "arm64" ;;
+        x86_64|amd64) echo "x86_64" ;;
+        i*86) echo "x86" ;;
+        *) echo "$unamearch" ;;
+      esac ;;
     "") echo "" ;;
     *) echo "" ;;
   esac
