@@ -647,11 +647,12 @@ jobs:
               /opt/csw/bin/pkgutil -y -i jdk8 || {
                 echo "CSWjdk8 not available in OpenCSW; Java will be optional." >&2
               }
-              /opt/csw/bin/pkgutil -y -i nodejs || true
-              /usr/sbin/pkgchk -L CSWnodejs || true
             else
               echo "pkgutil not found; skipping OpenCSW packages." >&2
             fi
+            
+            pkg search -r nodejs
+            pkg info developer/nodejs
           run: |
             set -e -x
             PATH="/opt/csw/bin:$PATH"; export PATH
