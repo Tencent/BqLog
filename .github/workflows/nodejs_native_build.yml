@@ -1099,17 +1099,17 @@ jobs:
             export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
             java -version
             command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES YES
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: node_netbsd_arm64_libs_gcc
           path: ${{ github.workspace }}/dist
-          npm install node-api-headers
-          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=netbsd
-          ./build_all_and_pack.sh native gcc YES YES
