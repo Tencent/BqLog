@@ -1563,7 +1563,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
@@ -1639,7 +1639,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
@@ -1706,7 +1706,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
@@ -1781,7 +1781,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
@@ -1852,7 +1852,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
@@ -1926,7 +1926,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
@@ -1994,7 +1994,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
@@ -2070,7 +2070,7 @@ jobs:
               amd64|x86_64)
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
-              aarch64|arm64)
+              aarch64|arm64|evbarm)
                 # aarch64
                 URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
