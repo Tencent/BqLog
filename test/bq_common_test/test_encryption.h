@@ -32,6 +32,7 @@ namespace bq {
                 snprintf(thread_id_str, sizeof(thread_id_str), "%" PRIu64 "", bq::platform::thread::get_current_thread_id());
                 bq::string parent_dir = bq::file_manager::combine_path(base_dir, bq::string("enc_output"));
                 bq::string output_dir = bq::file_manager::combine_path(parent_dir, bq::string("rsa_") + key_bits_str + "_tid_" + thread_id_str);
+                bq::file_manager::create_directory(output_dir);
                 bq::string std_out_file = bq::file_manager::combine_path(output_dir, "stdout.txt");
                 bq::string std_err_file = bq::file_manager::combine_path(output_dir, "stderr.txt");
                 for (int32_t i = 0; i < test_count; ++i) {
