@@ -153,7 +153,7 @@ public class BqLog : ModuleRules
         string aplPath = Path.Combine(pluginRoot, "Binaries", "Android", "Android_APL.xml");
         if (File.Exists(aplPath))
         {
-            AdditionalPropertiesForReceipt.Add("AndroidPlugin", "$(PluginDir)/Binaries/Android/Android_APL.xml");
+            AdditionalPropertiesForReceipt.Add("AndroidPlugin", aplPath);
         }
     }
 
