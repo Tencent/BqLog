@@ -188,7 +188,7 @@ namespace bq {
         {
             using func_type = int32_t(*)(pthread_t, const char*, void*);
             auto func_ptr = reinterpret_cast<func_type>(reinterpret_cast<void*>(&::pthread_setname_np));
-            int32_t set_name_result = func_ptr(thread_handle, "%s", thread_name.c_str());
+            int32_t set_name_result = func_ptr(thread_handle, "%s", const_cast<char*>(thread_name.c_str()));
             return set_name_result == 0;
         }
 #endif
