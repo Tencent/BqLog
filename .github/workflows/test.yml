@@ -1380,13 +1380,14 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash gdb gcc
+            pkg install -y llvm cmake bash gdb gcc13 g++13
 
           run: |
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            export LD_LIBRARY_PATH=/usr/local/lib/gcc13  #Adjust according to installed GCC version
             ./run_test_gcc.sh 17
   
 

@@ -81,6 +81,7 @@ int32_t main()
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR2, &sa, NULL);
     main_thread_id = pthread_self();
+    bq::log::enable_auto_crash_handle();
 #endif
 #if defined(WIN32)
     SetConsoleOutputCP(CP_UTF8);

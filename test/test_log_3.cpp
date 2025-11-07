@@ -252,7 +252,7 @@ namespace bq {
             while ((uint32_t)(p - s) < wchar_len && (c = *p++) != 0) {
                 if (surrogate) {
                     if (c >= 0xDC00 && c <= 0xDFFF) {
-                        codepoint = 0x10000 + (c - 0xDC00) + ((surrogate - 0xD800) << 10);
+                        codepoint = static_cast<uint32_t>(0x10000) + static_cast<uint32_t>(c - 0xDC00) + static_cast<uint32_t>((surrogate - static_cast<uint32_t>(0xD800)) << 10);
                         surrogate = 0;
                     } else {
                         surrogate = 0;
@@ -354,15 +354,15 @@ namespace bq {
                 char32_t str[] = { c, U'\0' };
                 return get_utf8_from_utf32(str);
             }
-            template<typename>
-            bq::enable_if_t<!bq::is_same<int8_t, char>::value, bq::string> trans(int8_t value)
+            template<typename T>
+            bq::enable_if_t<bq::is_same<int8_t, T>::value && !bq::is_same<int8_t, char>::value, bq::string> trans(T value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRId8, value);
                 return tmp;
             }
-            template<typename>
-            bq::enable_if_t<!bq::is_same<uint8_t, char>::value, bq::string> trans(uint8_t value)
+            template<typename T>
+            bq::enable_if_t<bq::is_same<uint8_t, T>::value && !bq::is_same<uint8_t, char>::value, bq::string> trans(T value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRIu8, value);
@@ -555,7 +555,7 @@ namespace bq {
             static bq::string trans(test_log_enum value)
             {
                 char str[2];
-                str[0] = '0' + (char)value;
+                str[0] = static_cast<char>('0' + static_cast<char>(value));
                 str[1] = '\0';
                 return str;
             }
@@ -576,7 +576,7 @@ namespace bq {
                 char buffer_idx[fmt_text_count];
                 for (size_t i = 0; i < fmt_text_count; ++i) {
                     auto idx_char_count = (size_t)snprintf(buffer_idx, fmt_text_count, "%d_", (int32_t)i);
-                    buffer[i] = 'a' + (char)(i % 26);
+                    buffer[i] = static_cast<char>('a' + (i % 26));
                     log_str_templates_standard_utf8[i] = "test log:";
                     log_str_templates_standard_utf8[i].insert_batch(log_str_templates_standard_utf8[i].begin(), buffer, i);
                     log_str_templates_standard_utf8[i].insert_batch(log_str_templates_standard_utf8[i].begin(), buffer_idx, idx_char_count);
@@ -596,7 +596,7 @@ namespace bq {
                 for (size_t i = 0; i < fmt_text_count; ++i) {
                     auto idx_char_count = (size_t)snprintf(buffer_idx, fmt_text_count, "%d_", (int32_t)i);
                     idx_char_count = (size_t)bq::util::utf8_to_utf16(buffer_idx, (uint32_t)idx_char_count, buffer_idx_utf16, (uint32_t)fmt_text_count);
-                    buffer[i] = u'唉' + (char16_t)i;
+                    buffer[i] = static_cast<char16_t>(u'唉' + i);
                     log_str_templates_standard_utf16[i] = u"test log:";
                     log_str_templates_standard_utf16[i].insert_batch(log_str_templates_standard_utf16[i].begin(), buffer, i);
                     log_str_templates_standard_utf16[i].insert_batch(log_str_templates_standard_utf16[i].begin(), buffer_idx_utf16, idx_char_count);
