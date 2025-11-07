@@ -629,16 +629,32 @@ jobs:
           mem: 8192
           release: "11.4-gcc"
           prepare: |
+            set -e
             pkg publisher
             pkg install -v --accept \
               developer/build/cmake \
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
+
+            if ! command -v pkgutil >/dev/null 2>&1; then
+              echo "Bootstrapping OpenCSW pkgutil..."
+              pkgadd -n -d http://get.opencsw.org/now CSWpkgutil || true
+            fi
+
+            if [ -x /opt/csw/bin/pkgutil ]; then
+              /opt/csw/bin/pkgutil -U || true
+              /opt/csw/bin/pkgutil -y -i jdk8 || {
+                echo "CSWjdk8 not available in OpenCSW; Java will be optional." >&2
+              }
+              /opt/csw/bin/pkgutil -y -i nodejs || true
+              /usr/sbin/pkgchk -L CSWnodejs || true
+            else
+              echo "pkgutil not found; skipping OpenCSW packages." >&2
+            fi
+
+            # Fallback to IPS catalogs if pkgutil failed to provide Node.js
             pkgutil -U || true
-            pkgutil -y -i jdk8 || {
-              echo "CSWjdk8 not available in this catalog; Java will be optional." >&2
-            }
             pkgutil -y -i nodejs18 || pkgutil -y -i nodejs20 || true
           run: |
             set -e -x
@@ -702,11 +718,21 @@ jobs:
               pkg refresh --full
             fi
 
+            echo "Searching available nodejs packages (OmniOS main catalogs)..."
+            pkg search -o pkg.name -r nodejs || true
+            echo "Searching available npm packages (OmniOS main catalogs)..."
+            pkg search -o pkg.name -r npm || true
+
             pkg install -v --accept shell/bash developer/build/gnu-make || true
             pkg install -v --accept ooce/developer/cmake
             pkg install -v --accept developer/gcc13
             pkg install -v --accept runtime/java/openjdk11
-            pkg install -v --accept runtime/nodejs-22 || pkg install -v --accept runtime/nodejs-20 || true
+            pkg install -v --accept ooce/runtime/nodejs-22 || \
+              pkg install -v --accept ooce/runtime/nodejs-20 || \
+              pkg install -v --accept ooce/runtime/nodejs || \
+              pkg install -v --accept runtime/nodejs-22 || \
+              pkg install -v --accept runtime/nodejs-20 || \
+              pkg install -v --accept runtime/nodejs || true
           run: |
             set -e -x
   
@@ -749,6 +775,12 @@ jobs:
           mem: 8192
           prepare: |
             pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm || true
+            echo "Listing available node* packages (DragonFlyBSD)..."
+            pkg search -x '^node' || true
+            echo "Listing available npm* packages (DragonFlyBSD)..."
+            pkg search -x '^npm' || true
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm || true
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -790,6 +822,11 @@ jobs:
           mem: 8192
           prepare: |
             pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm || true
+            echo "Listing available node* packages (DragonFlyBSD)..."
+            pkg search -x '^node' || true
+            echo "Listing available npm* packages (DragonFlyBSD)..."
+            pkg search -x '^npm' || true
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
