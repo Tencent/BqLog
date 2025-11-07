@@ -153,7 +153,7 @@ namespace bq {
 
         void bq_log_custom_format(const custom_type5& obj, char* dest, size_t data_size) {
             assert(data_size >= obj.bq_log_format_str_size());
-            bq::util::utf16_to_utf8(obj.data, static_cast<uint32_t>(obj.bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
+            bq::util::utf16_to_utf8(obj.data_, static_cast<uint32_t>(obj.bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
         }
 
         constexpr auto null_params = test_make_array<std::nullptr_t>(nullptr);
