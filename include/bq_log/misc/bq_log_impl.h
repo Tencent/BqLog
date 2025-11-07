@@ -235,7 +235,7 @@ namespace bq {
         if (!is_enable_for(category_index, level)) {
             return false;
         }
-        bool should_print_stack = (*print_stack_level_bitmap_ & (1 << (int32_t)level));
+        bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
         auto format_size_seq = bq::tools::make_size_seq<false>(log_format_content);
         size_t aligned_format_data_size = bq::align_4(format_size_seq.get_element().get_value() + bq::get<1>(stack_info));
@@ -265,7 +265,7 @@ namespace bq {
         if (!is_enable_for(category_index, level)) {
             return false;
         }
-        bool should_print_stack = (*print_stack_level_bitmap_ & (1 << (int32_t)level));
+        bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
         auto format_size_seq = bq::tools::make_size_seq<false>(log_format_content);
         auto args_size_seq = bq::tools::make_size_seq<true>(args...);

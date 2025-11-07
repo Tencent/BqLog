@@ -1410,6 +1410,7 @@ jobs:
               developer/build/gnu-make \
               developer/debug/gdb \
               shell/bash
+            pkg list -a 'developer/gcc*'
           run: |
             set -e -x
             cd build/test/unix_like  
@@ -1586,7 +1587,7 @@ jobs:
             ls -l
             ./run_test_gcc.sh 14 
 
-  mnisOS_x86_64_test_GCC_cpp17:
+  OmnisOS_x86_64_test_GCC_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1894,7 +1895,7 @@ jobs:
             ./run_test_gcc.sh 23 
             
   #Unix-OpenBSD
-  OpenBSD_x86_64_test_GCC_cpp11:
+  OpenBSD_x86_64_test_Clang_cpp11:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1913,9 +1914,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 11
+            ./run_test_clang.sh 11
 
-  OpenBSD_x86_64_test_GCC_cpp14:
+  OpenBSD_x86_64_test_Clang_cpp14:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1934,9 +1935,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 14
+            ./run_test_clang.sh 14
 
-  OpenBSD_x86_64_test_GCC_cpp17:
+  OpenBSD_x86_64_test_Clang_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1955,9 +1956,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 17
+            ./run_test_clang.sh 17
 
-  OpenBSD_x86_64_test_GCC_cpp20:
+  OpenBSD_x86_64_test_Clang_cpp20:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1976,9 +1977,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 20
+            ./run_test_clang.sh 20
 
-  OpenBSD_x86_64_test_GCC_cpp23:
+  OpenBSD_x86_64_test_Clang_cpp23:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1997,31 +1998,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 23
+            ./run_test_clang.sh 23
 
-  OpenBSD_arm64_test_GCC_cpp11:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 11
-
-  OpenBSD_arm64_test_GCC_cpp14:
+  OpenBSD_arm64_test_Clang_cpp11:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2041,9 +2020,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 14
+            ./run_test_clang.sh 11
 
-  OpenBSD_arm64_test_GCC_cpp17:
+  OpenBSD_arm64_test_Clang_cpp14:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2063,9 +2042,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 17
+            ./run_test_clang.sh 14
 
-  OpenBSD_arm64_test_GCC_cpp20:
+  OpenBSD_arm64_test_Clang_cpp17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2085,9 +2064,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 20
+            ./run_test_clang.sh 17
 
-  OpenBSD_arm64_test_GCC_cpp23:
+  OpenBSD_arm64_test_Clang_cpp20:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2107,7 +2086,29 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 23
+            ./run_test_clang.sh 20
+
+  OpenBSD_arm64_test_Clang_cpp23:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in OpenBSD
+        id: OpenBSD
+        uses: vmactions/openbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add  cmake bash
+          run: |
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./run_test_clang.sh 23
 
   #Unix-NetBSD
   NetBSD_x86_64_test_GCC_cpp11:
@@ -2363,7 +2364,7 @@ jobs:
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
             pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+            pkgin -y install gcc13  || true
           run: |
             set -e -x
             cd build/test/unix_like  

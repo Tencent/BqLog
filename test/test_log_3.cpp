@@ -354,13 +354,13 @@ namespace bq {
                 char32_t str[] = { c, U'\0' };
                 return get_utf8_from_utf32(str);
             }
-            static bq::string trans(int8_t value)
+            static bq::enable_if_t<!bq::is_same<int8_t, char>::value, bq::string> trans(int8_t value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRId8, value);
                 return tmp;
             }
-            static bq::string trans(uint8_t value)
+            static bq::enable_if_t<!bq::is_same<uint8_t, char>::value, bq::string> trans(uint8_t value)
             {
                 char tmp[128];
                 snprintf(tmp, sizeof(tmp), "%" PRIu8, value);
