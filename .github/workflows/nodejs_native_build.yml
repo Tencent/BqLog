@@ -532,12 +532,6 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native gcc YES YES
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: node_freebsd_arm64_libs_gcc
-          path: ${{ github.workspace }}/dist
-
   build_openbsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
     steps:
@@ -828,12 +822,6 @@ jobs:
             export LC_CTYPE=en_US.UTF-8
             export MM_CHARSET=UTF-8
             ./build_all_and_pack.sh native gcc YES YES
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: node_dragonflybsd_x86_64_libs_gcc
-          path: ${{ github.workspace }}/dist
 
   build_netbsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
@@ -1126,8 +1114,3 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native gcc YES YES
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: node_netbsd_arm64_libs_gcc
-          path: ${{ github.workspace }}/dist
