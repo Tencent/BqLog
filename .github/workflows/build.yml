@@ -1548,12 +1548,61 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
-            /usr/sbin/pkg_add pkgin
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            # 1) 包管理与基础工具
+            /usr/sbin/pkg_add -v pkgin || true
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang gcc12 || true
-            pkgin -y install libX11 libXi libXtst libXrender libxcb libXdmcp libXau libXext || true
-            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            # 2) 解包 NetBSD base 的 X 集（提供 /usr/X11R7/lib/*，openjdk11/17 需要）
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+          
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            # 基本校验
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+          
+            # 3) 安装 JDK（必须带 JNI 头），优先 17 再 11；用 pkg_info 确认是否装成
+            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1 || pkgin -y install openjdk11 || true
+          
+            if ! /usr/sbin/pkg_info -e 'openjdk17-[0-9]*' >/dev/null 2>&1 && \
+              ! /usr/sbin/pkg_info -e 'openjdk11-[0-9]*'  >/dev/null 2>&1; then
+              echo "No OpenJDK 17/11 installed even after xbase; check repository mirror." >&2
+              exit 1
+            fi
+
+            # 提示：不要用 pkgin 装 libX11/libXi/... 它们来自 base 的 xbase，已通过上面解包就绪
+
           run: |
             set -e -x
             # Java HOME detection
