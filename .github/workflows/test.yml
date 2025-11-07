@@ -1387,6 +1387,11 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ln -sf /usr/local/bin/gcc13 /usr/local/bin/gcc
+            ln -sf /usr/local/bin/g++13 /usr/local/bin/g++
+            ln -sf /usr/local/bin/gcov13 /usr/local/bin/gcov 2>/dev/null || true
+            ln -sf /usr/local/bin/gcc-ar13 /usr/local/bin/gcc-ar 2>/dev/null || true
+            ln -sf /usr/local/bin/gcc-ranlib13 /usr/local/bin/gcc-ranlib 2>/dev/null || true
             export LD_LIBRARY_PATH=/usr/local/lib/gcc13  #Adjust according to installed GCC version
             ./run_test_gcc.sh 17
   
@@ -2326,6 +2331,7 @@ jobs:
             chmod +x *.sh
             ls -l
             ./run_test_clang.sh 20
+
 
 
   NetBSD_x86_64_test_Clang_cpp23:
