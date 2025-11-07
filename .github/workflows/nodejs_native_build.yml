@@ -554,21 +554,21 @@ jobs:
             pkg_add cmake bash jdk%11
             pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
           run: |
-          set -e -x
-          test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
-          export JAVA_HOME="/usr/local/jdk-11"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          java -version
-          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          npm install node-api-headers
-
-          cd build/lib/unix_like
-          chmod +x *.sh
-          ls -l
-          export BQ_UNIX_VERSION=openbsd
-          ./build_all_and_pack.sh native clang YES YES
+            set -e -x
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            npm install node-api-headers
+  
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack.sh native clang YES YES
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -593,21 +593,21 @@ jobs:
             pkg_add cmake bash jdk%11
             pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
           run: |
-          set -e -x
-          test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
-          export JAVA_HOME="/usr/local/jdk-11"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          java -version
-          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          npm install node-api-headers
-
-          cd build/lib/unix_like
-          chmod +x *.sh
-          ls -l
-          export BQ_UNIX_VERSION=openbsd
-          ./build_all_and_pack.sh native clang YES YES
+            set -e -x
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            npm install node-api-headers
+  
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack.sh native clang YES YES
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -641,38 +641,38 @@ jobs:
             }
             pkgutil -y -i nodejs18 || pkgutil -y -i nodejs20 || true
           run: |
-          set -e -x
-          PATH="/opt/csw/bin:$PATH"; export PATH
-          JAVA_HOME=""; export JAVA_HOME
-          for d in /opt/csw/java/jdk1.8*; do
-            if [ -x "$d/bin/java" ] && [ -f "$d/include/jni.h" ]; then
-              JAVA_HOME="$d"
-              break
+            set -e -x
+            PATH="/opt/csw/bin:$PATH"; export PATH
+            JAVA_HOME=""; export JAVA_HOME
+            for d in /opt/csw/java/jdk1.8*; do
+              if [ -x "$d/bin/java" ] && [ -f "$d/include/jni.h" ]; then
+                JAVA_HOME="$d"
+                break
+              fi
+            done
+  
+            if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] && [ -f "$JAVA_HOME/include/jni.h" ]; then
+              export JAVA_HOME
+              PATH="$JAVA_HOME/bin:$PATH"; export PATH
+              java -version
+              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+              echo "PATH=$PATH" >> "$GITHUB_ENV"
+            else
+              echo "No JDK8 with JNI headers found (jni.h not present)."
             fi
-          done
-
-          if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] && [ -f "$JAVA_HOME/include/jni.h" ]; then
-            export JAVA_HOME
-            PATH="$JAVA_HOME/bin:$PATH"; export PATH
-            java -version
+  
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+  
+            ls "$JAVA_HOME" || true
             echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
-          else
-            echo "No JDK8 with JNI headers found (jni.h not present)."
-          fi
-
-          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
-          npm install node-api-headers
-
-          ls "$JAVA_HOME" || true
-          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=solaris
-          ./build_all_and_pack.sh native gcc YES YES
+  
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack.sh native gcc YES YES
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -708,26 +708,26 @@ jobs:
             pkg install -v --accept runtime/java/openjdk11
             pkg install -v --accept runtime/nodejs-22 || pkg install -v --accept runtime/nodejs-20 || true
           run: |
-          set -e -x
-
-          export PATH="/opt/gcc-13/bin:$PATH"
-          export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
-          ls -l "$JAVA_HOME"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          java -version
-          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
-          npm install node-api-headers
-
-          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
-
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=omnios
-          ./build_all_and_pack.sh native gcc YES YES
+            set -e -x
+  
+            export PATH="/opt/gcc-13/bin:$PATH"
+            export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
+            ls -l "$JAVA_HOME"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+  
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
+  
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=omnios
+            ./build_all_and_pack.sh native gcc YES YES
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -750,25 +750,25 @@ jobs:
           prepare: |
             pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
           run: |
-          set -e -x
-          pkg info -l openjdk11 | grep 'bin/java'
-          export JAVA_HOME="/usr/local/openjdk11"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          java -version
-          npm install node-api-headers
-          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=dragonflybsd
-
-          export LANG=en_US.UTF-8
-          export LC_ALL=en_US.UTF-8
-          export LC_CTYPE=en_US.UTF-8
-          export MM_CHARSET=UTF-8
-          ./build_all_and_pack.sh native clang YES YES
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            npm install node-api-headers
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+  
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack.sh native clang YES YES
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -791,25 +791,25 @@ jobs:
           prepare: |
             pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
           run: |
-          set -e -x
-          pkg info -l openjdk11 | grep 'bin/java'
-          export JAVA_HOME="/usr/local/openjdk11"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          java -version
-          npm install node-api-headers
-          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=dragonflybsd
-
-          export LANG=en_US.UTF-8
-          export LC_ALL=en_US.UTF-8
-          export LC_CTYPE=en_US.UTF-8
-          export MM_CHARSET=UTF-8
-          ./build_all_and_pack.sh native gcc YES YES
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            npm install node-api-headers
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+  
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack.sh native gcc YES YES
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -871,23 +871,23 @@ jobs:
             pkgin -y install openjdk17 || true
             pkgin -y install nodejs npm || true
           run: |
-          set -e -x
-          export JAVA_HOME="/usr/pkg/java/openjdk17"
-          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-          java -version
-          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
-          npm install node-api-headers
-          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          export CC=clang CXX=clang++
-          clang --version || true
-
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=netbsd
-          ./build_all_and_pack.sh native clang YES YES
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            export CC=clang CXX=clang++
+            clang --version || true
+  
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES YES
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -948,20 +948,20 @@ jobs:
             pkgin -y install openjdk17 || true
             pkgin -y install nodejs npm || true
           run: |
-          set -e -x
-          export JAVA_HOME="/usr/pkg/java/openjdk17"
-          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-          java -version
-          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
-          npm install node-api-headers
-          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=netbsd
-          ./build_all_and_pack.sh native gcc YES YES
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES YES
 
   build_netbsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
@@ -1018,21 +1018,21 @@ jobs:
             pkgin -y install openjdk17 || true
             pkgin -y install nodejs npm || true
           run: |
-          set -e -x
-          export JAVA_HOME="/usr/pkg/java/openjdk17"
-          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-          java -version
-          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
-          npm install node-api-headers
-          echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
-
-          export CC=clang CXX=clang++
-          cd build/lib/unix_like
-          chmod +x *.sh 2>/dev/null || true
-          ls -l
-          export BQ_UNIX_VERSION=netbsd
-          ./build_all_and_pack.sh native clang YES YES
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+  
+            export CC=clang CXX=clang++
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES YES
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1094,11 +1094,11 @@ jobs:
             pkgin -y install openjdk17 || true
             pkgin -y install nodejs npm || true
           run: |
-          set -e -x
-          export JAVA_HOME="/usr/pkg/java/openjdk17"
-          export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
-          java -version
-          command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
