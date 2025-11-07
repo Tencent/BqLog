@@ -652,10 +652,6 @@ jobs:
             else
               echo "pkgutil not found; skipping OpenCSW packages." >&2
             fi
-
-            # Fallback to IPS catalogs if pkgutil failed to provide Node.js
-            pkgutil -U || true
-            pkgutil -y -i nodejs18 || pkgutil -y -i nodejs20 || true
           run: |
             set -e -x
             PATH="/opt/csw/bin:$PATH"; export PATH
@@ -678,6 +674,9 @@ jobs:
             fi
   
             command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            node -v
+            npm -v
+            npm config set strict-ssl false
             npm install node-api-headers
   
             ls "$JAVA_HOME" || true
@@ -718,21 +717,11 @@ jobs:
               pkg refresh --full
             fi
 
-            echo "Searching available nodejs packages (OmniOS main catalogs)..."
-            pkg search -o pkg.name -r nodejs || true
-            echo "Searching available npm packages (OmniOS main catalogs)..."
-            pkg search -o pkg.name -r npm || true
-
             pkg install -v --accept shell/bash developer/build/gnu-make || true
             pkg install -v --accept ooce/developer/cmake
             pkg install -v --accept developer/gcc13
             pkg install -v --accept runtime/java/openjdk11
-            pkg install -v --accept ooce/runtime/nodejs-22 || \
-              pkg install -v --accept ooce/runtime/nodejs-20 || \
-              pkg install -v --accept ooce/runtime/nodejs || \
-              pkg install -v --accept runtime/nodejs-22 || \
-              pkg install -v --accept runtime/nodejs-20 || \
-              pkg install -v --accept runtime/nodejs || true
+            pkg install -v --accept ooce/runtime/node-22
           run: |
             set -e -x
   
@@ -774,13 +763,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm || true
-            echo "Listing available node* packages (DragonFlyBSD)..."
-            pkg search -x '^node' || true
-            echo "Listing available npm* packages (DragonFlyBSD)..."
-            pkg search -x '^npm' || true
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm || true
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -821,12 +804,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm || true
-            echo "Listing available node* packages (DragonFlyBSD)..."
-            pkg search -x '^node' || true
-            echo "Listing available npm* packages (DragonFlyBSD)..."
-            pkg search -x '^npm' || true
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
