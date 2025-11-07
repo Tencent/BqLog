@@ -1900,64 +1900,43 @@ jobs:
             pkg_add cmake bash gdb
           run: |
             set -e -x
-
-            # 启用 core dump：文件名 core.<pid>
-            sysctl kern.defcorename=core.%pid || true
-            sysctl kern.defcorename
+            # OpenBSD: 启用 core dump，并尽量设置 core 文件名（不保证占位符支持，失败忽略）
             ulimit -c unlimited || true
-            ulimit -a | grep 'core file'
+            sysctl kern.coredump=1 || true
+            sysctl kern.corefile=core.%p 2>/dev/null || sysctl kern.corefile=core || true
+            sysctl kern.coredump || true
+            sysctl kern.corefile || true
 
             cd build/test/unix_like
             chmod +x *.sh
             ls -l
 
-            # 不让 set -e 直接终止，手动处理退出码
+            # 运行并在失败时尝试抓取 core 栈
             set +e
             ./run_test_clang.sh 11
             EXIT_CODE=$?
             set -e
-            echo "run_test_clang.sh exit code: $EXIT_CODE"
 
             if [ $EXIT_CODE -ne 0 ]; then
-              echo "Test failed, searching for core files..."
-              # 取第一个 core / core.*
-              CORE_FILE=""
-              for f in core core.*; do
-                if [ -f "$f" ]; then
-                  CORE_FILE="$f"
-                  break
-                fi
-              done
+              echo "Test failed with exit $EXIT_CODE. Searching for core..."
+              # 在当前及子目录找 core/core.*
+              CORE_FILE="$( (ls -1 core core.* 2>/dev/null || true) | head -n1 )"
+              if [ -z "$CORE_FILE" ]; then
+                CORE_FILE="$(find . -maxdepth 3 -type f \( -name core -o -name 'core.*' \) 2>/dev/null | head -n1)"
+              fi
 
-              if [ -n "$CORE_FILE" ]; then
-                echo "Found core file: $CORE_FILE"
-                if command -v gdb >/dev/null 2>&1; then
-                  echo "=== GDB core backtrace ==="
-                  gdb --batch -q \
-                      -ex "set pagination off" \
-                      -ex "info threads" \
-                      -ex "thread apply all bt full" \
-                      -ex "quit" \
-                      ./CMakeFiles/BqLogUnitTest.dir/* >/dev/null 2>&1 && echo "NOTE: object dir scanned" || true
-                  # 主二进制通常在当前目录
-                  if [ -f ./BqLogUnitTest ]; then
-                    gdb --batch -q \
-                        -ex "set pagination off" \
-                        -ex "info threads" \
-                        -ex "thread apply all bt full" \
-                        -ex "quit" \
-                        ./BqLogUnitTest "$CORE_FILE" || echo "gdb core analysis failed"
-                  else
-                    echo "Executable BqLogUnitTest not found (adjust path if needed)."
-                  fi
-                else
-                  echo "gdb not installed? (should have been)."
-                fi
+              if [ -n "$CORE_FILE" ] && [ -f ./BqLogUnitTest ]; then
+                echo "Found core: $CORE_FILE"
+                gdb --batch -q \
+                    -ex "set pagination off" \
+                    -ex "info threads" \
+                    -ex "thread apply all bt full" \
+                    -ex "quit" \
+                    ./BqLogUnitTest "$CORE_FILE" || echo "gdb core analysis failed"
               else
-                echo "No core file produced. Running once under gdb for live stack..."
-                if command -v gdb >/dev/null 2>&1 && [ -f ./BqLogUnitTest ]; then
+                echo "No core found or executable not at ./BqLogUnitTest; running once under gdb to get live backtrace"
+                if [ -f ./BqLogUnitTest ]; then
                   gdb --batch -q \
-                      -ex "set pagination off" \
                       -ex "run" \
                       -ex "info threads" \
                       -ex "thread apply all bt full" \
@@ -1966,8 +1945,6 @@ jobs:
                 fi
               fi
               exit $EXIT_CODE
-            else
-              echo "Test succeeded."
             fi
 
   OpenBSD_x86_64_test_Clang_cpp14:
