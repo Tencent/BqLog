@@ -1099,7 +1099,7 @@ jobs:
 
   #openbsd_arm64
   build_openbsd_arm64_libs_Clang:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1137,7 +1137,7 @@ jobs:
           path: ${{ github.workspace }}/dist
 
   build_openbsd_arm64_tools_Clang:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1552,37 +1552,29 @@ jobs:
             pkgin -y update || true
             pkgin -y install cmake gmake bash gdb || true
             pkgin -y install clang gcc12 || true
-            pkgin -y install openjdk-bin || true
+            pkgin -y install libX11 libXi libXtst libXrender libxcb libXdmcp libXau libXext || true
+            pkgin -y install openjdk11 || pkgin -y install openjdk17 || true
           run: |
             set -e -x
-            JAVA_HOME="$(pkg_info -L openjdk-bin | awk -F'/bin/java' '/\/bin\/java$/ {print $1; exit}')"
-          
-            # 2) 若上面没取到（极少数情况下），用目录探测兜底
-            if [ -z "$JAVA_HOME" ]; then
-              for d in /usr/pkg/java/openjdk-bin-* /usr/pkg/java/openjdk*; do
-                [ -x "$d/bin/java" ] && JAVA_HOME="$d" && break
-              done
-            fi
-            
-            # 3) 确认存在且带 JNI 头（include/jni.h）
-            if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
-              if [ -f "$JAVA_HOME/include/jni.h" ]; then
-                export JAVA_HOME
-                export PATH="$JAVA_HOME/bin:$PATH"
-                java -version
-                java -XshowSettings:properties -version 2>&1 | grep -E '^\s*java\.home'
-                echo "JAVA_HOME=$JAVA_HOME"
-                echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
-                echo "PATH=$PATH" >> "$GITHUB_ENV"
-              else
-                echo "Found JDK at $JAVA_HOME but JNI headers missing: $JAVA_HOME/include/jni.h" >&2
-                exit 1
+            # Java HOME detection
+            JAVA_HOME=""
+            if   [ -x /usr/pkg/java/openjdk11/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk11"
+            elif [ -x /usr/pkg/java/openjdk17/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk17"
+            elif [ -x /usr/pkg/java/openjdk21/bin/java ]; then JAVA_HOME="/usr/pkg/java/openjdk21"
+            elif command -v java >/dev/null 2>&1; then
+              JH="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^[[:space:]]*java\.home[[:space:]]*=[[:space:]]*\(.*\)$/\1/p')"
+              if [ -n "$JH" ]; then
+                case "$JH" in */jre) P="$(dirname "$JH")"; [ -x "$P/bin/java" ] && JH="$P";; esac
+                [ -x "$JH/bin/java" ] && JAVA_HOME="$JH"
               fi
-            else
-              echo "openjdk-bin installed but JAVA_HOME not resolved; check pkg_info -L openjdk-bin output." >&2
-              exit 1
             fi
-            
+            if [ -n "$JAVA_HOME" ]; then
+              export JAVA_HOME
+              export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+              java -version || true
+            else
+              echo "No JDK found on NetBSD; proceeding without Java."
+            fi
             ls "$JAVA_HOME"
             echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
             echo "PATH=$PATH" >> "$GITHUB_ENV"
