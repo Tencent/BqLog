@@ -1903,16 +1903,16 @@ jobs:
             # 安装依赖，并增加详细输出和错误检查
             pkg_add -v -I cmake bash gdb
 
-            # 打印 PATH 并查找 gdb
-            echo "--- Prepare step diagnostics ---"
+            # --- Prepare step diagnostics ---
+            echo "--- GDB installation diagnostics ---"
             echo "PATH=$PATH"
-            find /usr -name "gdb" -type f
-            find /usr -name "egdb" -type f
+            pkg_info | grep gdb
+            ls -l /usr/local/bin/gdb* /usr/bin/gdb*
             echo "--- End of diagnostics ---"
 
           run: |
             set -e -x
-            # OpenBSD: 启用 core dump
+            # 启用 core dump
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
             sysctl kern.corefile=core.%p 2>/dev/null || sysctl kern.corefile=core || true
@@ -1920,13 +1920,28 @@ jobs:
             cd build/test/unix_like
             chmod +x *.sh
 
-            # 动态查找 gdb 的可执行文件
-            GDB_CMD=$(find /usr/local/bin -name "*gdb*" | head -n1)
-            if [ -z "$GDB_CMD" ]; then
-              echo "!!! GDB not found in /usr/local/bin, trying system default"
-              GDB_CMD="gdb"
+            # 优先查找 /usr/local/bin (来自 pkg_add) 下的 gdb 或 egdb
+            # 如果找不到，再查找系统路径下的
+            GDB_CMD=""
+            if [ -x "/usr/local/bin/gdb" ]; then
+              GDB_CMD="/usr/local/bin/gdb"
+            elif [ -x "/usr/local/bin/egdb" ]; then
+              GDB_CMD="/usr/local/bin/egdb"
+            elif [ -x "/usr/bin/gdb" ]; then
+              GDB_CMD="/usr/bin/gdb"
             fi
-            echo "Using GDB at: $GDB_CMD"
+
+            # 确认找到的是真正的 GDB
+            if [ -n "$GDB_CMD" ]; then
+              echo "Found GDB at: $GDB_CMD"
+              if ! $GDB_CMD --version | grep "GNU gdb"; then
+                echo "!!! Command '$GDB_CMD' is not a valid GNU gdb. Aborting."
+                exit 1
+              fi
+            else
+              echo "!!! GNU gdb not found. Aborting."
+              exit 1
+            fi
 
             # 运行测试
             set +e
