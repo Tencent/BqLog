@@ -148,7 +148,7 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
             bq::_api_string_def stack_trace_str;
             bq::api::__api_get_stack_trace(&stack_trace_str, 0);
-            bq::util::log_device_console(log_level::fatal, "crash occurred, signal:%d, Stack, Trace:%s", stack_trace_str.str);
+            bq::util::log_device_console(log_level::fatal, "crash occurred, signal:%d, Stack, Trace:%s", signal, stack_trace_str.str);
 #endif
             bq::util::log_device_console(log_level::error, "crash occurred, signal:%d, now try to force flush logs", signal);
             log_manager::instance().force_flush_all();
