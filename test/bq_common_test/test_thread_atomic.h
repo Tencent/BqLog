@@ -598,7 +598,7 @@ namespace bq {
                     thread1.join();
                     auto end_time = bq::platform::high_performance_epoch_ms();
                     auto diff = end_time - start_time;
-                    result.add_result(diff > 4000 && diff < 6000, "condition variable timeout test");
+                    result.add_result(diff > 4000 && diff < 6000, "condition variable timeout test, real time elapsed:%" PRIu64, "ms, expect (4000, 6000)ms", diff);
                 }
 
                 {
