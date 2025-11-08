@@ -83,32 +83,8 @@ namespace bq {
         {
             const uint64_t wait_ns_total = wait_time_ms * 1000000ULL;
 
-            // Single-shot absolute timeout when the condvar uses CLOCK_MONOTONIC
-            if (platform_data_->use_monotonic_clock) {
-                struct timespec now{};
-                if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
-                    if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
-                        struct timeval tv{};
-                        gettimeofday(&tv, nullptr);
-                        now.tv_sec = static_cast<decltype(now.tv_sec)>(tv.tv_sec);
-                        now.tv_nsec = static_cast<decltype(now.tv_nsec)>(tv.tv_usec * 1000L);
-                    }
-                }
-                struct timespec outtime{};
-                add_timespec_ns(now, wait_ns_total, &outtime);
-
-                int32_t result = pthread_cond_timedwait(&platform_data_->cond_handle,
-                                                    (pthread_mutex_t*)(lock.get_platform_handle()),
-                                                    &outtime);
-                if (result == ETIMEDOUT) return false;
-                if (result != 0) {
-                    bq::util::log_device_console(log_level::error, "pthread_cond_timedwait failed: %d", result);
-                }
-                return true;
-            }
-
             // Chunked waits with REALTIME deadlines but MONOTONIC measurement
-            const uint64_t quantum_ns = 50ULL * 1000000ULL; // 50ms
+            const uint64_t quantum_ns =50ULL * 1000000ULL; // 50ms
 
             uint64_t start_ns = bq::platform::high_performance_epoch_ms() * 1000000ULL;
             uint64_t deadline_ns = start_ns + wait_ns_total;
