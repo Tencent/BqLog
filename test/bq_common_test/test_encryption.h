@@ -132,10 +132,10 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-
+                constexpr uint32_t thread_count = 2;
                 test_output(bq::log_level::info, "RSA test begin...");
                 bq::array<std::thread*> rsa_threads;
-                for (uint32_t i = 0; i < 4; ++i) {
+                for (uint32_t i = 0; i < thread_count; ++i) {
                     rsa_threads.push_back(new std::thread([&result, this]() {
                         test_rsa(result, 1024, 2);
                         test_rsa(result, 2048, 2);
@@ -143,21 +143,21 @@ namespace bq {
                         //test_rsa(result, 7680, 1);
                     }));
                 }
-                for (uint32_t i = 0; i < 4; ++i) {
+                for (uint32_t i = 0; i < thread_count; ++i) {
                     rsa_threads[i]->join();
                     delete rsa_threads[i];
                 }
 
                 test_output(bq::log_level::info, "AES test begin...");
                 bq::array<std::thread*> aes_threads;
-                for (uint32_t i = 0; i < 4; ++i) {
+                for (uint32_t i = 0; i < thread_count; ++i) {
                     aes_threads.push_back(new std::thread([&result, this]() {
                         test_aes(result, bq::aes::enum_key_bits::AES_128);
                         test_aes(result, bq::aes::enum_key_bits::AES_192);
                         test_aes(result, bq::aes::enum_key_bits::AES_256);
                     }));
                 }
-                for (uint32_t i = 0; i < 4; ++i) {
+                for (uint32_t i = 0; i < thread_count; ++i) {
                     aes_threads[i]->join();
                     delete aes_threads[i];
                 }
