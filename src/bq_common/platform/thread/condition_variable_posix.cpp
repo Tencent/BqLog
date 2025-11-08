@@ -83,11 +83,16 @@ namespace bq {
 
         static uint64_t get_current_ns(bool prefer_monotonic)
         {
+            struct timespec ts {};
+#if defined(BQ_POSIX_MONOTONIC_SUPPORTED)
             if (prefer_monotonic) {
-                struct timespec ts {};
                 if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
                     return static_cast<uint64_t>(ts.tv_sec) * one_billion + static_cast<uint64_t>(ts.tv_nsec);
                 }
+            }
+#endif
+            if (clock_gettime(CLOCK_REALTIME, &ts) == 0) {
+                return static_cast<uint64_t>(ts.tv_sec) * one_billion + static_cast<uint64_t>(ts.tv_nsec);
             }
             return bq::platform::high_performance_epoch_ms() * 1000000ULL;
         }
