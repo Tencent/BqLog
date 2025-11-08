@@ -16,6 +16,10 @@
 #include <time.h>
 #include "bq_common/bq_common.h"
 
+#if defined(CLOCK_MONOTONIC) && !defined(BQ_APPLE)
+#define BQ_POSIX_MONOTONIC_SUPPORTED 1
+#endif
+
 namespace bq {
     namespace platform {
         struct condition_variable_platform_def {
@@ -32,12 +36,12 @@ namespace bq {
             pthread_condattr_t cond_attr;
             pthread_condattr_init(&cond_attr);
 
-        #if defined(CLOCK_MONOTONIC) && !defined(BQ_APPLE)
+#if defined(BQ_POSIX_MONOTONIC_SUPPORTED)
             // Prefer CLOCK_MONOTONIC when supported
             if (0 == pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC)) {
                 platform_data_->use_monotonic_clock = true;
             }
-        #endif
+#endif
 
             int32_t cond_init_result = pthread_cond_init(&platform_data_->cond_handle, platform_data_->use_monotonic_clock ? &cond_attr : nullptr);
             if (cond_init_result != 0) {
@@ -60,6 +64,7 @@ namespace bq {
             free(platform_data_);
             platform_data_ = nullptr;
         }
+        static constexpr uint64_t one_billion = 1000000000ULL;
 
         void condition_variable::wait(bq::platform::mutex& lock)
         {
@@ -71,28 +76,27 @@ namespace bq {
 
         static inline void add_timespec_ns(const struct timespec& base, uint64_t add_ns, struct timespec* out)
         {
-            const uint64_t one_billion = 1000000000ULL;
             uint64_t ns = static_cast<uint64_t>(base.tv_nsec) + add_ns;
             out->tv_sec  = static_cast<decltype(out->tv_sec)>(static_cast<int64_t>(base.tv_sec) + static_cast<int64_t>(ns / one_billion));
             out->tv_nsec = static_cast<decltype(out->tv_nsec)>(ns % one_billion);
+        }
+
+        static uint64_t get_current_ns(bool prefer_monotonic)
+        {
+            if (prefer_monotonic) {
+                struct timespec ts {};
+                if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+                    return static_cast<uint64_t>(ts.tv_sec) * one_billion + static_cast<uint64_t>(ts.tv_nsec);
+                }
+            }
+            return bq::platform::high_performance_epoch_ms() * 1000000ULL;
         }
 
         bool condition_variable::wait_for(bq::platform::mutex& lock, uint64_t wait_time_ms)
         {
             const uint64_t wait_ns_total = wait_time_ms * 1000000ULL;
             const uint64_t quantum_ns = 50ULL * 1000000ULL; // 50ms
-            const uint64_t one_billion = 1000000000ULL;
             const bool use_monotonic = platform_data_->use_monotonic_clock;
-
-            auto get_current_ns = [&](bool prefer_monotonic) -> uint64_t {
-                if (prefer_monotonic) {
-                    struct timespec ts {};
-                    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-                        return static_cast<uint64_t>(ts.tv_sec) * one_billion + static_cast<uint64_t>(ts.tv_nsec);
-                    }
-                }
-                return bq::platform::high_performance_epoch_ms() * 1000000ULL;
-            };
 
             uint64_t start_ns = get_current_ns(use_monotonic);
             uint64_t deadline_ns = start_ns + wait_ns_total;
@@ -106,6 +110,8 @@ namespace bq {
                 if (remain_ns > quantum_ns) remain_ns = quantum_ns;
 
                 struct timespec outtime {};
+
+#if defined(BQ_POSIX_MONOTONIC_SUPPORTED)
                 if (use_monotonic) {
                     struct timespec now_mono {};
                     if (clock_gettime(CLOCK_MONOTONIC, &now_mono) != 0) {
@@ -113,7 +119,9 @@ namespace bq {
                         now_mono.tv_nsec = static_cast<decltype(now_mono.tv_nsec)>(now_ns % one_billion);
                     }
                     add_timespec_ns(now_mono, remain_ns, &outtime);
-                } else {
+                } else
+#endif
+                {
                     struct timespec now_rt {};
                     if (clock_gettime(CLOCK_REALTIME, &now_rt) != 0) {
                         struct timeval tv {};
