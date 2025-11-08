@@ -276,25 +276,6 @@ namespace bq {
             }
         };
 
-        class test_thread_condition_variable_timeout : public bq::platform::thread {
-        private:
-            bq::platform::mutex mutex;
-            bq::platform::condition_variable condition_variable;
-
-        public:
-            test_thread_condition_variable_timeout()
-                : mutex(false)
-            {
-            }
-
-            virtual void run() override
-            {
-                mutex.lock();
-                condition_variable.wait_for(mutex, 5000);
-                mutex.unlock();
-            }
-        };
-
         class test_thread_condition_variable_waitfor : public bq::platform::thread {
         private:
             bq::platform::mutex mutex;
@@ -592,10 +573,12 @@ namespace bq {
                     thread1.join();
                 }
                 {
-                    test_thread_condition_variable_timeout thread1;
-                    thread1.start();
                     auto start_time = bq::platform::high_performance_epoch_ms();
-                    thread1.join();
+                    bq::platform::mutex condition_timeout_mutex_;
+                    bq::platform::condition_variable condition_timeout_variable_;
+                    condition_timeout_mutex_.lock();
+                    condition_timeout_variable_.wait_for(condition_timeout_mutex_, 5000);
+                    condition_timeout_mutex_.unlock();
                     auto end_time = bq::platform::high_performance_epoch_ms();
                     auto diff = end_time - start_time;
                     result.add_result(diff > 4000 && diff < 6000, "condition variable timeout test, real time elapsed:%" PRIu64 "ms, expect (4000, 6000)ms", diff);
