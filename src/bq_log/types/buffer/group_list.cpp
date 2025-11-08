@@ -310,13 +310,13 @@ namespace bq {
                 src_node = pool_.pop();
                 if (!src_node) {
                     src_node = bq::util::aligned_new<group_node>(BQ_CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1, bq::platform::memory_order::relaxed));
-                }
 #if defined(BQ_UNIT_TEST)
-                if (src_node->get_memory_map_status() == create_memory_map_result::use_existed) {
-                    bq::util::log_device_console(bq::log_level::error, "group index:");
-                    assert(false && "must use new memory map");
-                }
+                    if (src_node->get_memory_map_status() == create_memory_map_result::use_existed) {
+                        bq::util::log_device_console(bq::log_level::error, "group index:");
+                        assert(false && "must use new memory map");
+                    }
 #endif
+                }
                 result = src_node->get_data_head().free_.pop();
                 src_node->get_next_ptr().node_ = head_.node_;
                 head_.node_ = src_node;

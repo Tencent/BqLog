@@ -749,6 +749,15 @@ namespace bq {
             assert(current_lock_iterator == rt_reading.cur_group_ && "try lock removing group failed");
             if ((!current_lock_iterator.value().get_data_head().used_.first())
                 && (!current_lock_iterator.value().get_data_head().stage_.first())) {
+#ifdef BQ_UNIT_TEST
+                size_t free_blocks = 0;
+                auto free_block_iter = current_lock_iterator.value().get_data_head().free_.first();
+                while (free_block_iter) {
+                    ++free_blocks;
+                    free_block_iter = current_lock_iterator.value().get_data_head().free_.next(free_block_iter);
+                }
+                assert(free_blocks == hp_buffer_.get_max_block_count_per_group() && "all blocks should be free when group is removed");
+#endif
                 // remove it
                 group_removed = true;
                 assert(!rt_reading.cur_group_.value().is_range_include(rt_reading.last_block_));
