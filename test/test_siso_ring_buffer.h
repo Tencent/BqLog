@@ -156,7 +156,7 @@ namespace bq {
                     } else {
                         buffers[i] = (uint8_t*)bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, buffer_size);
                     }
-                    ring_buffers[i] = new bq::siso_ring_buffer(buffers[i], buffer_size, with_mmap);
+                    ring_buffers[i] = new bq::siso_ring_buffer(buffers[i], buffer_size, false /*It's a new created memory map file, dont recover from it*/);
                     siso_write_task write_task(chunk_count_per_task, ring_buffers[i]);
                     std::thread write_task_thread(write_task);
                     write_task_thread.detach();
