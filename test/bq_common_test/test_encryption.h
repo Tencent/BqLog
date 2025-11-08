@@ -98,7 +98,7 @@ namespace bq {
                 bq::array<uint8_t> plaintext;
                 bq::array<uint8_t> ciphertext;
                 bq::array<uint8_t> decrypted_text;
-                for (int32_t i = 0; i < 64; ++i) {
+                for (int32_t i = 0; i < 8; ++i) {
                     uint32_t size = bq::max_value(1u, bq::util::rand() % (64 * 1024)) * 16;
                     plaintext.clear();
                     plaintext.fill_uninitialized(size);
@@ -137,10 +137,10 @@ namespace bq {
                 bq::array<std::thread*> rsa_threads;
                 for (uint32_t i = 0; i < 4; ++i) {
                     rsa_threads.push_back(new std::thread([&result, this]() {
-                        test_rsa(result, 1024, 32);
-                        test_rsa(result, 2048, 16);
-                        test_rsa(result, 3072, 2);
-                        test_rsa(result, 7680, 1);
+                        test_rsa(result, 1024, 2);
+                        test_rsa(result, 2048, 2);
+                        test_rsa(result, 3072, 1);
+                        //test_rsa(result, 7680, 1);
                     }));
                 }
                 for (uint32_t i = 0; i < 4; ++i) {

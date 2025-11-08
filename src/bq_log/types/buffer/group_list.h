@@ -37,7 +37,8 @@ namespace bq {
         block_list free_;
         block_list stage_;
         group_data_head(uint16_t max_blocks_count, uint8_t* group_data_addr, size_t group_data_size, bool is_memory_recovery);
-    } BQ_PACK_END static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
+    } BQ_PACK_END
+    static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
 
     class group_node : public bq::memory_pool_obj_base<group_node, true> {
     public:
@@ -64,6 +65,9 @@ namespace bq {
         group_data_head* head_ptr_ = nullptr;
         uint64_t in_pool_epoch_ms_ = 0;
         class group_list* parent_list_ = nullptr;
+#if defined(BQ_UNIT_TEST)
+        create_memory_map_result memory_map_result_ = create_memory_map_result::failed;
+#endif
 
     public:
         group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index);
@@ -85,6 +89,11 @@ namespace bq {
         {
             return head_ptr_->used_.is_range_include(block);
         }
+#if defined(BQ_UNIT_TEST)
+        bq_forceinline create_memory_map_result get_memory_map_status() const {
+            return memory_map_result_;
+        }
+#endif
     };
 
     class group_list {

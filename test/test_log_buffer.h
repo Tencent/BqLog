@@ -780,6 +780,7 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
+                do_recovery_test(result);
                 //do_linked_list_test(result);
                 //do_memory_pool_test(result);
                 log_buffer_config config;
@@ -809,8 +810,6 @@ namespace bq {
                 do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
                 do_basic_test(result, config);
-
-                do_recovery_test(result);
                 return result;
             }
         };
