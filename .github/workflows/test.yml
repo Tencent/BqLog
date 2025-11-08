@@ -1945,6 +1945,9 @@ jobs:
 
             # 运行测试
             set +e
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 11
             EXIT_CODE=$?
             set -e
@@ -2203,6 +2206,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_gcc.sh 11
 
   NetBSD_x86_64_test_Clang_cpp11:
