@@ -32,19 +32,20 @@ namespace bq {
             pthread_condattr_t cond_attr;
             pthread_condattr_init(&cond_attr);
 
-#if defined(CLOCK_MONOTONIC) && !defined(BQ_APPLE)
+        #if defined(CLOCK_MONOTONIC) && !defined(BQ_APPLE)
+            // Prefer CLOCK_MONOTONIC when supported
             if (0 == pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC)) {
                 platform_data_->use_monotonic_clock = true;
             }
-#endif
+        #endif
 
-            int cond_init_result = pthread_cond_init(&platform_data_->cond_handle, platform_data_->use_monotonic_clock ? &cond_attr : nullptr);
+            int32_t cond_init_result = pthread_cond_init(&platform_data_->cond_handle, platform_data_->use_monotonic_clock ? &cond_attr : nullptr);
             if (cond_init_result != 0) {
-                bq::util::log_device_console(log_level::warning, "pthread_cond_init failed with custom clock, error code : %d, fallback to default clock", cond_init_result);
+                bq::util::log_device_console(log_level::warning, "pthread_cond_init with custom clock failed: %d, falling back", cond_init_result);
                 platform_data_->use_monotonic_clock = false;
                 cond_init_result = pthread_cond_init(&platform_data_->cond_handle, nullptr);
                 if (cond_init_result != 0) {
-                    bq::util::log_device_console(log_level::fatal, "%s : %d : pthread_cond_init failed, error code:%d", __FILE__, __LINE__, cond_init_result);
+                    bq::util::log_device_console(log_level::fatal, "%s:%d pthread_cond_init failed: %d", __FILE__, __LINE__, cond_init_result);
                 }
             }
 
@@ -62,46 +63,85 @@ namespace bq {
 
         void condition_variable::wait(bq::platform::mutex& lock)
         {
-            auto result = pthread_cond_wait(&platform_data_->cond_handle, (pthread_mutex_t*)(lock.get_platform_handle()));
+            int32_t result = pthread_cond_wait(&platform_data_->cond_handle, (pthread_mutex_t*)(lock.get_platform_handle()));
             if (result != 0) {
-                bq::util::log_device_console(log_level::error, "pthread_cond_wait failed, error code : %d", result);
+                bq::util::log_device_console(log_level::error, "pthread_cond_wait failed: %d", result);
             }
         }
 
+        static inline void add_timespec_ns(const struct timespec& base, uint64_t add_ns, struct timespec* out)
+        {
+            const uint64_t one_billion = 1000000000ULL;
+            uint64_t ns = static_cast<uint64_t>(base.tv_nsec) + add_ns;
+            out->tv_sec  = static_cast<decltype(out->tv_sec)>(base.tv_sec + static_cast<time_t>(ns / one_billion));
+            out->tv_nsec = static_cast<decltype(out->tv_nsec)>(ns % one_billion);
+        }
+
+        // On platforms without monotonic condvar (e.g., NetBSD), REALTIME is affected by clock changes.
+        // Use chunked waits driven by MONOTONIC to keep overall timeout accurate.
         bool condition_variable::wait_for(bq::platform::mutex& lock, uint64_t wait_time_ms)
         {
-            struct timespec now;
-            struct timespec outtime;
-            bool clock_success = false;
+            const uint64_t wait_ns_total = wait_time_ms * 1000000ULL;
 
-            clockid_t clock_id = platform_data_->use_monotonic_clock ? CLOCK_MONOTONIC : CLOCK_REALTIME;
-            if (0 == clock_gettime(clock_id, &now)) {
-                clock_success = true;
-            }
-            uint64_t total_nsec = 0;
-            if (!clock_success) {
-                struct timeval now_tv;
-                gettimeofday(&now_tv, NULL);
-                total_nsec = static_cast<uint64_t>(now_tv.tv_sec) * 1000000000 + static_cast<uint64_t>(now_tv.tv_usec) * 1000;
-                total_nsec += wait_time_ms * 1000000;
-                outtime.tv_sec = static_cast<decltype(outtime.tv_sec)>(total_nsec / 1000000000);
-                outtime.tv_nsec = static_cast<decltype(outtime.tv_nsec)>(total_nsec % 1000000000);
-            } else {
-                uint64_t add_seconds = wait_time_ms / 1000;
-                uint64_t add_nanoseconds = (wait_time_ms % 1000) * 1000000ULL;
-                total_nsec = static_cast<uint64_t>(now.tv_nsec) + add_nanoseconds;
-                outtime.tv_sec = now.tv_sec + static_cast<decltype(outtime.tv_nsec)>(add_seconds + (total_nsec / 1000000000ULL));
-                outtime.tv_nsec = static_cast<decltype(outtime.tv_nsec)>(total_nsec % 1000000000ULL);
+            // Single-shot absolute timeout when the condvar uses CLOCK_MONOTONIC
+            if (platform_data_->use_monotonic_clock) {
+                struct timespec now{};
+                if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+                    if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
+                        struct timeval tv{};
+                        gettimeofday(&tv, nullptr);
+                        now.tv_sec = static_cast<decltype(now.tv_sec)>(tv.tv_sec);
+                        now.tv_nsec = static_cast<decltype(now.tv_nsec)>(tv.tv_usec * 1000L);
+                    }
+                }
+                struct timespec outtime{};
+                add_timespec_ns(now, wait_ns_total, &outtime);
+
+                int32_t result = pthread_cond_timedwait(&platform_data_->cond_handle,
+                                                    (pthread_mutex_t*)(lock.get_platform_handle()),
+                                                    &outtime);
+                if (result == ETIMEDOUT) return false;
+                if (result != 0) {
+                    bq::util::log_device_console(log_level::error, "pthread_cond_timedwait failed: %d", result);
+                }
+                return true;
             }
 
-            auto result = pthread_cond_timedwait(&platform_data_->cond_handle, (pthread_mutex_t*)(lock.get_platform_handle()), &outtime);
-            if (result == ETIMEDOUT) {
-                return false;
+            // Chunked waits with REALTIME deadlines but MONOTONIC measurement
+            const uint64_t quantum_ns = 50ULL * 1000000ULL; // 50ms
+            const uint64_t one_billion = 1000000000ULL;
+
+            uint64_t start_ns = bq::platform::high_performance_epoch_ms() * 1000000ULL;
+            uint64_t deadline_ns = start_ns + wait_ns_total;
+
+            for (;;) {
+                uint64_t now_ns = bq::platform::high_performance_epoch_ms() * 1000000ULL;
+
+                if (now_ns >= deadline_ns) return false;
+
+                uint64_t remain_ns = deadline_ns - now_ns;
+                if (remain_ns > quantum_ns) remain_ns = quantum_ns;
+
+                struct timespec now_rt{};
+                if (clock_gettime(CLOCK_REALTIME, &now_rt) != 0) {
+                    struct timeval tv{};
+                    gettimeofday(&tv, nullptr);
+                    now_rt.tv_sec = static_cast<decltype(now_rt.tv_sec)>(tv.tv_sec);
+                    now_rt.tv_nsec = static_cast<decltype(now_rt.tv_nsec)>(tv.tv_usec * 1000L);
+                }
+
+                struct timespec out_rt{};
+                add_timespec_ns(now_rt, remain_ns, &out_rt);
+
+                int32_t result = pthread_cond_timedwait(&platform_data_->cond_handle,
+                                                    (pthread_mutex_t*)(lock.get_platform_handle()),
+                                                    &out_rt);
+                if (result == 0) return true;
+                if (result == ETIMEDOUT) continue;
+
+                bq::util::log_device_console(log_level::error, "pthread_cond_timedwait failed: %d", result);
+                return true;
             }
-            if (result != 0) {
-                bq::util::log_device_console(log_level::error, "pthread_cond_timedwait failed,  error code : %d, time nsec:%" PRIu64 "", result, total_nsec);
-            }
-            return true;
         }
 
         void condition_variable::notify_one() noexcept
@@ -113,6 +153,7 @@ namespace bq {
         {
             pthread_cond_broadcast(&platform_data_->cond_handle);
         }
-    }
-}
+
+    } // namespace platform
+} // namespace bq
 #endif
