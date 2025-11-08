@@ -91,6 +91,7 @@ namespace bq {
                 }
             }
 #endif
+            (void)prefer_monotonic;
             if (clock_gettime(CLOCK_REALTIME, &ts) == 0) {
                 return static_cast<uint64_t>(ts.tv_sec) * one_billion + static_cast<uint64_t>(ts.tv_nsec);
             }
