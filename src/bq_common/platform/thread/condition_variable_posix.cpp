@@ -109,7 +109,6 @@ namespace bq {
 
             // Chunked waits with REALTIME deadlines but MONOTONIC measurement
             const uint64_t quantum_ns = 50ULL * 1000000ULL; // 50ms
-            const uint64_t one_billion = 1000000000ULL;
 
             uint64_t start_ns = bq::platform::high_performance_epoch_ms() * 1000000ULL;
             uint64_t deadline_ns = start_ns + wait_ns_total;
