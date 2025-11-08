@@ -1898,9 +1898,7 @@ jobs:
           mem: 8192
           prepare: |
             set -x
-            # 明确设置 PKG_PATH 以防万一
             export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/"
-            # 安装依赖，并增加详细输出和错误检查
             pkg_add -v -I cmake bash gdb
 
             # --- Prepare step diagnostics ---
@@ -1912,7 +1910,6 @@ jobs:
 
           run: |
             set -e -x
-            # 启用 core dump
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
             sysctl kern.corefile=core.%p 2>/dev/null || sysctl kern.corefile=core || true
@@ -1920,8 +1917,6 @@ jobs:
             cd build/test/unix_like
             chmod +x *.sh
 
-            # 优先查找 /usr/local/bin (来自 pkg_add) 下的 gdb 或 egdb
-            # 如果找不到，再查找系统路径下的
             GDB_CMD=""
             if [ -x "/usr/local/bin/gdb" ]; then
               GDB_CMD="/usr/local/bin/gdb"
@@ -1931,7 +1926,6 @@ jobs:
               GDB_CMD="/usr/bin/gdb"
             fi
 
-            # 确认找到的是真正的 GDB
             if [ -n "$GDB_CMD" ]; then
               echo "Found GDB at: $GDB_CMD"
               if ! $GDB_CMD --version | grep "GNU gdb"; then
@@ -1943,7 +1937,6 @@ jobs:
               exit 1
             fi
 
-            # 运行测试
             set +e
             ulimit -n
             ulimit -Hn
@@ -2003,6 +1996,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 14
 
   OpenBSD_x86_64_test_Clang_cpp17:
@@ -2024,6 +2020,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 17
 
   OpenBSD_x86_64_test_Clang_cpp20:
@@ -2045,6 +2044,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 20
 
   OpenBSD_x86_64_test_Clang_cpp23:
@@ -2066,6 +2068,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 23
 
   OpenBSD_arm64_test_Clang_cpp11:
@@ -2088,6 +2093,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 11
 
   OpenBSD_arm64_test_Clang_cpp14:
@@ -2110,6 +2118,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 14
 
   OpenBSD_arm64_test_Clang_cpp17:
@@ -2132,6 +2143,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 17
 
   OpenBSD_arm64_test_Clang_cpp20:
@@ -2154,6 +2168,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 20
 
   OpenBSD_arm64_test_Clang_cpp23:
@@ -2176,6 +2193,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 23
 
   #Unix-NetBSD
@@ -2238,6 +2258,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 11
 
   NetBSD_x86_64_test_GCC_cpp14:
@@ -2267,6 +2290,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_gcc.sh 14
 
   NetBSD_x86_64_test_Clang_cpp14:
@@ -2296,6 +2322,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 14
 
   NetBSD_x86_64_test_GCC_cpp17:
@@ -2325,6 +2354,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_gcc.sh 17
 
   NetBSD_x86_64_test_Clang_cpp17:
@@ -2354,6 +2386,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 17
 
   NetBSD_x86_64_test_GCC_cpp20:
@@ -2383,6 +2418,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_gcc.sh 20
 
   NetBSD_x86_64_test_Clang_cpp20:
@@ -2412,6 +2450,9 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 20
 
 
@@ -2443,4 +2484,7 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
             ./run_test_clang.sh 23
