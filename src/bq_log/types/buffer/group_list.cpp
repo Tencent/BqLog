@@ -169,7 +169,7 @@ namespace bq {
         uintptr_t node_head_addr_value = (uintptr_t)node_data_ + (uintptr_t)(BQ_CACHE_LINE_SIZE - 1);
         node_head_addr_value -= (node_head_addr_value % BQ_CACHE_LINE_SIZE);
         auto node_head_addr = (uint8_t*)node_head_addr_value;
-        new (node_head_addr, bq::enum_new_dummy::dummy) group_data_head(max_block_count_per_group, node_head_addr + sizeof(group_data_head), desired_size - sizeof(group_data_head), config.need_recovery);
+        new (node_head_addr, bq::enum_new_dummy::dummy) group_data_head(max_block_count_per_group, node_head_addr + sizeof(group_data_head), desired_size - sizeof(group_data_head), false);
         head_ptr_ = (group_data_head*)node_head_addr;
     }
 
