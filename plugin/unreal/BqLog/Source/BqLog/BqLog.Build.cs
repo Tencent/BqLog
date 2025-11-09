@@ -37,9 +37,15 @@ public class BqLog : ModuleRules
         }else if (Target.Platform.Equals(UnrealTargetPlatform.Linux))
         {
             ConfigureLinux(thirdPartyRoot, pluginRoot, "x86_64", UnrealTargetPlatform.Linux.ToString());
-        }else if (Target.Platform.Equals(UnrealTargetPlatform.LinuxAArch64))
+        }else if (Target.Platform.Equals(UnrealTargetPlatform
+#if UE_5_0_OR_LATER
+                      .LinuxArm64
+#else
+                      .LinuxAArch64
+#endif
+                      ))
         {
-            ConfigureLinux(thirdPartyRoot, pluginRoot, "arm64", UnrealTargetPlatform.LinuxAArch64.ToString());
+            ConfigureLinux(thirdPartyRoot, pluginRoot, "arm64", "LinuxAArch64");
         }else if (Target.Platform.Equals(UnrealTargetPlatform.Mac))
         {
             ConfigureMac(thirdPartyRoot, pluginRoot);
