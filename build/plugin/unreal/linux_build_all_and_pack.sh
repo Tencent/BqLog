@@ -30,6 +30,7 @@ for ue_version in "${UE_VERSIONS[@]}"; do
   mkdir -p "$TMP_DIR"
 
   cp -R "$ROOT_DIR/plugin/unreal/BqLog" "$TMP_DIR/"
+  rm -rf "$TARGET_DIR/Binaries"
   mkdir -p "$PUBLIC_DIR" "$PRIVATE_DIR"
 
   cp -R "$ROOT_DIR/include/." "$PUBLIC_DIR/"

@@ -39,6 +39,9 @@ for %%T in (ue4 ue5) do (
     robocopy "%ROOT_DIR%\plugin\unreal\BqLog" "%TARGET_DIR%" /E >nul
     if errorlevel 8 exit /b 8
 
+    rmdir /S /Q "%TARGET_DIR%\Binaries"
+    if errorlevel 8 exit /b 8
+
     robocopy "%ROOT_DIR%\include" "%PUBLIC_DIR%" /E >nul
     if errorlevel 8 exit /b 8
 
