@@ -394,8 +394,16 @@ namespace bq {
 #endif
         void thread::sleep(uint64_t millsec)
         {
-            if (millsec <= 0)
+            if (millsec <= 0) {
+                struct timeval tv {};
+                tv.tv_sec = static_cast<decltype(tv.tv_sec)>(0);
+                tv.tv_usec = static_cast<decltype(tv.tv_usec)>(0);
+                int32_t r = static_cast<int32_t>(select(0, nullptr, nullptr, nullptr, &tv));
+                if (r != 0) {
+                    cpu_relax();
+                }
                 return;
+            }
 
             constexpr int64_t QUANTUM_MS = 50;
             constexpr int64_t NS_PER_MS = 1000000LL;

@@ -39,7 +39,7 @@ protected:
     void run() override
     {
         auto start_epoch = bq::platform::high_performance_epoch_ms();
-        constexpr uint64_t time_out = 120 * 60 * 1000;
+        constexpr uint64_t time_out = 180 * 60 * 1000;
         while (true) {
             if (is_cancelled()) {
                 break;
