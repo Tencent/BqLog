@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 //
-//  vars.h
+//  common_vars.h
 //  Created by Yu Cao on 2025/4/11.
 //  Manages the lifecycle and initialization order of global variables uniformly,
 //  used to avoid the Static Initialization Order Fiasco.

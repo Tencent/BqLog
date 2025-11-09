@@ -10,7 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 //
-//  vars.cpp
+//  common_vars.cpp
 //  Created by Yu Cao on 2025/4/11.
 //
 #include "bq_common/global/common_vars.h"
