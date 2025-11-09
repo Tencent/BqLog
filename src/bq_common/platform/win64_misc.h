@@ -38,8 +38,7 @@ namespace bq {
             }
         } BQ_PACK_END
 
-        struct windows_version_info
-        {
+            struct windows_version_info {
             uint32_t major_version = 0;
             uint32_t minor_version = 0;
             uint32_t build_number = 0;
@@ -53,7 +52,7 @@ namespace bq {
         {
 #if defined(BQ_MSVC)
 #pragma warning(push)
-#pragma warning(disable: 4191)
+#pragma warning(disable : 4191)
 #endif
             return reinterpret_cast<API_DEC_TYPE>((void*)get_process_adress(module_name, api_name));
 #if defined(BQ_MSVC)

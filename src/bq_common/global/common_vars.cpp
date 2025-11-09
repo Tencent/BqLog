@@ -30,7 +30,6 @@ namespace bq {
 #endif
     }
 
-
     void common_global_vars::partial_destruct()
     {
         delete file_manager_inst_;

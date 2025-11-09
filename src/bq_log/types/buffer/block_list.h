@@ -86,8 +86,7 @@ namespace bq {
         }
     } BQ_PACK_END
 
-    BQ_PACK_BEGIN
-    class alignas(BQ_CACHE_LINE_SIZE) block_list {
+        BQ_PACK_BEGIN class alignas(BQ_CACHE_LINE_SIZE) block_list {
         friend struct group_data_head;
 
     private:

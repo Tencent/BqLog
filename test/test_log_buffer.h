@@ -210,7 +210,8 @@ namespace bq {
 
         public:
             log_buffer_write_task(int32_t id, int32_t left_write_count, bq::log_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter, bq::platform::atomic<bool>& mark)
-                : counter_ref_(counter), mark_ref_(mark)
+                : counter_ref_(counter)
+                , mark_ref_(mark)
             {
                 this->id_ = id;
                 this->left_write_count_ = left_write_count;
@@ -430,20 +431,17 @@ namespace bq {
                 bq::string config_debug_str = "";
                 if (config.policy == log_memory_policy::auto_expand_when_full) {
                     config_debug_str += ", auto expand";
-                }
-                else {
+                } else {
                     config_debug_str += ", block when full";
                 }
                 if (config.need_recovery) {
                     config_debug_str += ", recovery";
-                }
-                else {
+                } else {
                     config_debug_str += ", no recovery";
                 }
                 if (config.high_frequency_threshold_per_second == 1000) {
                     config_debug_str += ", high performance mode";
-                }
-                else {
+                } else {
                     config_debug_str += ", normal mode";
                 }
                 int32_t chunk_count_per_task = 1024 * 128;
@@ -469,7 +467,7 @@ namespace bq {
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     if (write_finished) {
-                        //double check, inter-thread happens before to each thread.
+                        // double check, inter-thread happens before to each thread.
                         for (int32_t i = 0; i < log_buffer_total_task; ++i) {
                             if (!write_end_marker[i].load(bq::platform::memory_order::acquire)) {
                                 write_finished = false;
@@ -480,7 +478,7 @@ namespace bq {
                     bq::scoped_log_buffer_handle<log_buffer> read_handle(test_buffer, handle);
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
                     if (write_finished && read_empty) {
-                            break;
+                        break;
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
                         continue;
@@ -774,7 +772,6 @@ namespace bq {
 
                 test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test end...\n");
             }
-
 
         public:
             virtual test_result test() override

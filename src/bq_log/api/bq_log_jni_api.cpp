@@ -369,7 +369,7 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv
     return ret;
 }
 
- /*
+/*
  * Class:     bq_impl_log_invoker
  * Method:    __api_take_snapshot_string
  * Signature: (JLjava/lang/String;)Ljava/lang/String;

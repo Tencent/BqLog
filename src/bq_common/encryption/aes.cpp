@@ -61,7 +61,7 @@ namespace bq {
                     p = static_cast<uint8_t>(p ^ a);
                 uint8_t hi = a & 0x80;
                 a = static_cast<uint8_t>(a << 1);
-                if (hi){
+                if (hi) {
                     a = static_cast<uint8_t>(a ^ 0x1b);
                 }
                 b = static_cast<uint8_t>(b >> 1);

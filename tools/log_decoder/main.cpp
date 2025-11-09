@@ -17,26 +17,28 @@
 
 struct Options {
     bq::string input_path;
-    bq::string output_path;    // "-" or empty => stdout
+    bq::string output_path; // "-" or empty => stdout
     bq::string private_key_path; // File path to RSA-2048 PEM private key
     bool show_help = false;
     bool show_version = false;
 };
 
-#define CONSOLE_OUTPUT(level, /* format, ... */ ...) \
-    do { \
+#define CONSOLE_OUTPUT(level, /* format, ... */...)                         \
+    do {                                                                    \
         bq::util::set_log_device_console_min_level(bq::log_level::verbose); \
-        bq::util::log_device_console((level), __VA_ARGS__); \
-        bq::util::set_log_device_console_min_level(bq::log_level::error); \
+        bq::util::log_device_console((level), __VA_ARGS__);                 \
+        bq::util::set_log_device_console_min_level(bq::log_level::error);   \
     } while (0)
 
-static void print_version() {
+static void print_version()
+{
     CONSOLE_OUTPUT(bq::log_level::debug, "Supported appender format versions:");
     CONSOLE_OUTPUT(bq::log_level::debug, "  raw file format version:        %" PRIu32 "", bq::appender_file_raw::format_version);
     CONSOLE_OUTPUT(bq::log_level::debug, "  compressed file format version:        %" PRIu32 "", bq::appender_file_compressed::format_version);
 }
 
-static void print_help(const char* prog) {
+static void print_help(const char* prog)
+{
     bq::string output = bq::string("")
         + "Usage:\n"
         + "  " + prog + " [OPTIONS] <input_log_file>\n"
@@ -63,7 +65,8 @@ static void print_help(const char* prog) {
     CONSOLE_OUTPUT(bq::log_level::debug, "%s", output.c_str());
 }
 
-static bool parse_args(int argc, char* argv[], Options& opt) {
+static bool parse_args(int argc, char* argv[], Options& opt)
+{
     if (argc <= 1) {
         opt.show_help = true;
         return true;
@@ -73,36 +76,29 @@ static bool parse_args(int argc, char* argv[], Options& opt) {
         if (arg == "-h" || arg == "--help") {
             opt.show_help = true;
             return true;
-        }
-        else if (arg == "-V" || arg == "--version") {
+        } else if (arg == "-V" || arg == "--version") {
             opt.show_version = true;
             return true;
-        }
-        else if (arg == "-o" || arg == "--output") {
+        } else if (arg == "-o" || arg == "--output") {
             if (i + 1 >= argc) {
                 CONSOLE_OUTPUT(bq::log_level::error, "error: missing value for %s\n", arg.c_str());
                 return false;
             }
             opt.output_path = argv[++i];
-        }
-        else if (arg.find("--output=", 0) == 0) {
+        } else if (arg.find("--output=", 0) == 0) {
             opt.output_path = arg.substr(strlen("--output="));
-        }
-        else if (arg == "-k" || arg == "--key") {
+        } else if (arg == "-k" || arg == "--key") {
             if (i + 1 >= argc) {
                 CONSOLE_OUTPUT(bq::log_level::error, "error: missing value for %s\n", arg.c_str());
                 return false;
             }
             opt.private_key_path = argv[++i];
-        }
-        else if (arg.find("--key=", 0) == 0) {
+        } else if (arg.find("--key=", 0) == 0) {
             opt.private_key_path = arg.substr(strlen("--key="));
-        }
-        else if (!arg.is_empty() && arg[0] == '-') {
+        } else if (!arg.is_empty() && arg[0] == '-') {
             CONSOLE_OUTPUT(bq::log_level::error, "error: unknown option '%s'\n", arg.c_str());
             return false;
-        }
-        else {
+        } else {
             if (!opt.input_path.is_empty()) {
                 CONSOLE_OUTPUT(bq::log_level::error, "error: multiple input files provided: '%s' and '%s'\n",
                     opt.input_path.c_str(), arg.c_str());
@@ -118,15 +114,18 @@ static bool parse_args(int argc, char* argv[], Options& opt) {
     return true;
 }
 
-static bool looks_like_openssh_format(const bq::string& key) {
+static bool looks_like_openssh_format(const bq::string& key)
+{
     return key.find("BEGIN OPENSSH PRIVATE KEY") != bq::string::npos;
 }
-static bool looks_like_pem_pkcs1(const bq::string& key) {
-    
+static bool looks_like_pem_pkcs1(const bq::string& key)
+{
+
     return key.find("BEGIN RSA PRIVATE KEY") != bq::string::npos;
 }
 
-int32_t main(int32_t argc, char* argv[]) {
+int32_t main(int32_t argc, char* argv[])
+{
     Options opt;
     if (!parse_args(argc, argv, opt)) {
         print_help(argv[0]);
@@ -152,14 +151,16 @@ int32_t main(int32_t argc, char* argv[]) {
         }
         if (looks_like_openssh_format(priv_key_str)) {
             CONSOLE_OUTPUT(bq::log_level::error, "error: unsupported key format: OpenSSH private key.\n"
-                "       Please convert to PEM (RSA-2048) with:\n"
-                "         ssh-keygen -p -m PEM -N \"\" -f %s\n", abs_key_path.c_str());
+                                                 "       Please convert to PEM (RSA-2048) with:\n"
+                                                 "         ssh-keygen -p -m PEM -N \"\" -f %s\n",
+                abs_key_path.c_str());
             return 3;
         }
         if (!looks_like_pem_pkcs1(priv_key_str)) {
             CONSOLE_OUTPUT(bq::log_level::error, "error: unsupported key format: not PEM (PKCS#1).\n"
-                "       Please convert to PEM (RSA-2048) with:\n"
-                "         ssh-keygen -p -m PEM -N \"\" -f %s\n", abs_key_path.c_str());
+                                                 "       Please convert to PEM (RSA-2048) with:\n"
+                                                 "         ssh-keygen -p -m PEM -N \"\" -f %s\n",
+                abs_key_path.c_str());
         }
     }
 
@@ -182,8 +183,7 @@ int32_t main(int32_t argc, char* argv[]) {
             printf("%s\n", output_cache.c_str());
             output_cache.clear();
             break;
-        }
-        else if (decode_result != bq::appender_decode_result::success) {
+        } else if (decode_result != bq::appender_decode_result::success) {
             CONSOLE_OUTPUT(bq::log_level::error, "error: decode failed, reason:%" PRId32 "", static_cast<int32_t>(decoder.get_last_decode_result()));
             return -1 * static_cast<int32_t>(decode_result);
         }

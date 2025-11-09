@@ -44,7 +44,6 @@ namespace bq {
         return block->get_misc_data<log_buffer::block_misc_data>().need_reallocate_;
     }
 
-
     log_buffer::log_tls_buffer_info::~log_tls_buffer_info()
     {
 #if defined(BQ_JAVA)
@@ -285,8 +284,7 @@ namespace bq {
         bool loop_finished = false;
         if (rt_cache_.mem_optimize_.is_block_marked_removed && rt_reading.cur_block_) {
             rt_reading.traverse_end_block_is_working_ = false;
-        }
-        else {
+        } else {
             rt_reading.traverse_end_block_is_working_ = true;
             rt_reading.traverse_end_block_ = rt_reading.cur_block_;
         }
@@ -331,22 +329,19 @@ namespace bq {
 #endif
                 if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
                     rt_reading.traverse_end_block_is_working_ = false;
-                }
-                else if (rt_reading.traverse_end_block_is_working_ && rt_reading.traverse_end_block_ == rt_reading.cur_block_) {
+                } else if (rt_reading.traverse_end_block_is_working_ && rt_reading.traverse_end_block_ == rt_reading.cur_block_) {
                     if (rt_reading.version_ == version_) {
                         rt_reading.state_ = read_state::traversal_completed;
-                    }
-                    else {
+                    } else {
                         ++rt_reading.version_;
                     }
-                }else if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
+                } else if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
                     rt_reading.traverse_end_block_is_working_ = true;
                     rt_reading.traverse_end_block_ = rt_reading.cur_block_;
                 }
 
                 if (context_verify_result::valid == verify_result
-                    && read_state::traversal_completed != rt_reading.state_
-                ) {
+                    && read_state::traversal_completed != rt_reading.state_) {
                     rt_reading.state_ = read_state::hp_block_reading;
                 }
                 break;
@@ -358,13 +353,11 @@ namespace bq {
                         if (rt_reading.traverse_end_block_ == nullptr) {
                             if (rt_reading.version_ == version_) {
                                 rt_reading.state_ = read_state::traversal_completed;
-                            }
-                            else {
+                            } else {
                                 ++rt_reading.version_;
                             }
                         }
-                    }
-                    else {
+                    } else {
                         rt_reading.traverse_end_block_is_working_ = true;
                         rt_reading.traverse_end_block_ = nullptr;
                     }
@@ -502,7 +495,6 @@ namespace bq {
         return result;
     }
 #endif
-
 
     bq::block_node_head* log_buffer::alloc_new_hp_block()
     {
@@ -1036,7 +1028,8 @@ namespace bq {
                     iter->value() = bq::min_value(iter->value(), context.seq_);
                 }
             }
-        }, this);
+        },
+            this);
         lp_buffer_.set_thread_check_enable(true);
 
         auto group = hp_buffer_.first(group_list::lock_type::no_lock);

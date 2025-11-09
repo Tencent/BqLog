@@ -90,6 +90,7 @@ namespace bq {
         struct custom_type3 {
         private:
             const char16_t* data_ = u"custom_type3";
+
         public:
             const char16_t* bq_log_format_str_chars() const
             {
@@ -112,7 +113,8 @@ namespace bq {
                 return (uint32_t)bq::___string_len(data_);
             }
 
-            void bq_log_custom_format(char* dest, size_t data_size) const{
+            void bq_log_custom_format(char* dest, size_t data_size) const
+            {
                 assert(data_size >= bq_log_format_str_size());
                 bq::util::utf16_to_utf8(data_, static_cast<uint32_t>(bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
             }
@@ -151,7 +153,8 @@ namespace bq {
             return (size_t)strlen("custom_type2");
         }
 
-        void bq_log_custom_format(const custom_type5& obj, char* dest, size_t data_size) {
+        void bq_log_custom_format(const custom_type5& obj, char* dest, size_t data_size)
+        {
             assert(data_size >= obj.bq_log_format_str_size());
             bq::util::utf16_to_utf8(obj.data_, static_cast<uint32_t>(obj.bq_log_format_str_size()), dest, static_cast<uint32_t>(data_size));
         }
@@ -354,14 +357,14 @@ namespace bq {
                 char32_t str[] = { c, U'\0' };
                 return get_utf8_from_utf32(str);
             }
-            template<typename T>
+            template <typename T>
             static bq::enable_if_t<bq::is_same<int8_t, T>::value && !bq::is_same<int8_t, char>::value, bq::string> trans(T value)
             {
                 char tmp_str[128];
                 snprintf(tmp_str, sizeof(tmp_str), "%" PRId8, value);
                 return tmp_str;
             }
-            template<typename T>
+            template <typename T>
             static bq::enable_if_t<bq::is_same<uint8_t, T>::value && !bq::is_same<uint8_t, char>::value, bq::string> trans(T value)
             {
                 char tmp_str[128];
@@ -770,27 +773,27 @@ namespace bq {
         log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str);                \
     }
 #endif
-#define CUSTOM_TYPE_ADDITIONAL_TEST()                                                               \
-    {                                                                                                \
-        custom_type1 test_var1;                                                                       \
+#define CUSTOM_TYPE_ADDITIONAL_TEST()                                                                  \
+    {                                                                                                  \
+        custom_type1 test_var1;                                                                        \
         auto new_param_tuple_with_test_str1 = std::tuple_cat(param_tuple, std::make_tuple(test_var1)); \
-        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str1);                \
-        custom_type2 test_var2;                                                                       \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str1);                 \
+        custom_type2 test_var2;                                                                        \
         auto new_param_tuple_with_test_str2 = std::tuple_cat(param_tuple, std::make_tuple(test_var2)); \
-        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str2);                \
-        custom_type3 test_var3;                                                                       \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str2);                 \
+        custom_type3 test_var3;                                                                        \
         auto new_param_tuple_with_test_str3 = std::tuple_cat(param_tuple, std::make_tuple(test_var3)); \
-        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str3);                \
-        custom_type4 test_var4;                                                                       \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str3);                 \
+        custom_type4 test_var4;                                                                        \
         auto new_param_tuple_with_test_str4 = std::tuple_cat(param_tuple, std::make_tuple(test_var4)); \
-        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str4);                \
-        custom_type5 test_var5;                                                                       \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str4);                 \
+        custom_type5 test_var5;                                                                        \
         auto new_param_tuple_with_test_str5 = std::tuple_cat(param_tuple, std::make_tuple(test_var5)); \
-        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str5);                \
+        log_param_test_level1<LEFT_PARAM_COUNT - 1>()(new_param_tuple_with_test_str5);                 \
     }
 
-#define CUSTOM_TYPE2_ADDITIONAL_TEST()                                                               \
-    {                                                                                                \
+#define CUSTOM_TYPE2_ADDITIONAL_TEST() \
+    {                                  \
     }
 
         template <size_t LEFT_PARAM_COUNT, size_t TYPE_INDEX, size_t OBJ_INDEX, typename PARAM_TUPLE>
@@ -1006,8 +1009,9 @@ namespace bq {
 
         static bq::platform::mutex encript_config_mutex_;
         static bq::string encript_config_;
-        
-        static bq::string get_encript_config() {
+
+        static bq::string get_encript_config()
+        {
             bq::platform::scoped_mutex lock(encript_config_mutex_);
             return encript_config_;
         }
@@ -1043,7 +1047,7 @@ namespace bq {
 						log.thread_mode=sync
 						log.categories_mask=[ModuleA.SystemA,ModuleB]
 			        )"
-                + extra_config_);
+                    + extra_config_);
         }
 
         class snapshot_thread : public bq::platform::thread {
@@ -1066,10 +1070,10 @@ namespace bq {
                 auto begin_epoch_ms = bq::platform::high_performance_epoch_ms();
                 while (!is_cancelled()) {
                     bq::test::create_test_log_3_file_appender(snapshot_config[(int32_t)(begin_epoch_ms % 4)]
-                        + "\n" 
+                        + "\n"
                         + get_encript_config());
                     log_ptr->take_snapshot("localtime");
-                    //sleep(begin_epoch_ms % 10);
+                    // sleep(begin_epoch_ms % 10);
                 }
             }
         };
@@ -1095,7 +1099,6 @@ namespace bq {
             }
         }
 
-
         void test_log::test_3(test_result& result, const test_category_log& log_inst)
         {
             snapshot_thread snapeshot1(log_inst);
@@ -1114,11 +1117,9 @@ namespace bq {
             output_str_ptr = &test_log::log_str;
             invalid_utf16_test(result, log_inst);
 
-
             test_output(bq::log_level::info, "plaintext log test begin                           \n");
             full_log_test();
             test_output(bq::log_level::info, "plaintext log test end                           \n");
-
 
             pub_key = bq::string("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+FonyOHuS2uC6IZc16bfd6qQk4ykBOt3nTfBFc")
                 + "Nr8ZWvvcf4H0hFkrpMtQ0AJO057GhVTQCCfnvfStSq2Yra+O5VGpI5Q6NLrUuVERimjNgwtxbXt3P8Nw87jEIJiY/8m2FUXhZE"
@@ -1156,7 +1157,6 @@ namespace bq {
                 + "appenders_config.RawAppender.pub_key="
                 + pub_key + "\n");
             create_test_log_3_file_appender("snapshot.buffer_size=65536\n" + get_encript_config());
-
 
             test_output(bq::log_level::info, "encrypted log test begin\n");
             full_log_test();

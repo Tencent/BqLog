@@ -55,7 +55,7 @@ namespace bq {
                     && p_ == other.p_ && q_ == other.q_
                     && dp_ == other.dp_ && dq_ == other.dq_ && qinv_ == other.qinv_;
             }
-            bool operator!=(const private_key & other) const
+            bool operator!=(const private_key& other) const
             {
                 return !(*this == other);
             }

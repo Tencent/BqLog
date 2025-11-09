@@ -380,8 +380,7 @@ namespace bq {
 
         BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type)
         {
-            if (!tls_base_dir_cache_)
-            {
+            if (!tls_base_dir_cache_) {
                 return "";
             }
             tls_base_dir_cache_.get() = bq::file_manager::get_base_dir(base_dir_type);
@@ -433,11 +432,9 @@ namespace bq {
         {
             if (0 == base_dir_type) {
                 return common_global_vars::get().base_dir_init_inst_.set_base_dir_0(dir);
-            }
-            else if(1 == base_dir_type){
+            } else if (1 == base_dir_type) {
                 return common_global_vars::get().base_dir_init_inst_.set_base_dir_1(dir);
-            }
-            else {
+            } else {
                 bq::util::log_device_console(bq::log_level::warning, "[reset_base_dir] unknown base dir type:%d", base_dir_type);
             }
         }

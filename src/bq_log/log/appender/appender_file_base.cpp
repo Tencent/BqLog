@@ -234,52 +234,45 @@ namespace bq {
         return true;
     }
 
-    void appender_file_base::set_basic_configs(const bq::property_value& config_obj) 
+    void appender_file_base::set_basic_configs(const bq::property_value& config_obj)
     {
         config_file_name_.clear();
         if (!config_obj["file_name"].is_string()) {
             util::log_device_console(bq::log_level::error, "init appender \"%s\" failed, can not find valid \"file_name\" token", ((string)config_obj["name"]).c_str());
             return;
-        }
-        else {
+        } else {
             config_file_name_ = ((string)config_obj["file_name"]).trim();
         }
 
         if (config_obj["base_dir_type"].is_integral()) {
             base_dir_type_ = static_cast<int32_t>((bq::property_value::integral_type)config_obj["base_dir_type"]);
-        }
-        else {
+        } else {
             base_dir_type_ = 0;
         }
 
         if (config_obj["always_create_new_file"].is_bool()) {
             always_create_new_file_ = (bool)config_obj["always_create_new_file"];
-        }
-        else {
+        } else {
             always_create_new_file_ = false;
         }
 
         if (config_obj["max_file_size"].is_integral()) {
             max_file_size_ = (size_t)(int64_t)config_obj["max_file_size"];
-        }
-        else {
+        } else {
             max_file_size_ = 0;
         }
 
         if (config_obj["expire_time_seconds"].is_integral()) {
             expire_time_ms_ = (uint64_t)config_obj["expire_time_seconds"] * 1000;
-        }
-        else if (config_obj["expire_time_days"].is_integral()) {
+        } else if (config_obj["expire_time_days"].is_integral()) {
             expire_time_ms_ = (uint64_t)config_obj["expire_time_days"] * 3600 * 24 * 1000;
-        }
-        else {
+        } else {
             expire_time_ms_ = 0;
         }
 
         if (config_obj["capacity_limit"].is_integral()) {
             capacity_limit_ = (uint64_t)config_obj["capacity_limit"];
-        }
-        else {
+        } else {
             capacity_limit_ = 0;
         }
     }

@@ -403,7 +403,7 @@ namespace bq {
         if (size() < str.size()) {
             return false;
         }
-        if ((nullptr != c_str()) && (nullptr != str.c_str()) ) {
+        if ((nullptr != c_str()) && (nullptr != str.c_str())) {
             return memcmp(c_str() + (size() - str.size()), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
         }
         return false;

@@ -62,11 +62,7 @@ bq::appender_decode_result bq::appender_decoder_base::init(const bq::file_handle
         }
         xor_key_blob_.clear();
         xor_key_blob_.fill_uninitialized(appender_file_binary::get_xor_key_blob_size());
-        if (!aes_obj.decrypt(aes_key, aes_iv
-                            , read_handle.data() + aes_key_ciphertext_size + aes_iv_size
-                            , appender_file_binary::get_xor_key_blob_size()
-                            , xor_key_blob_.begin()
-                            , appender_file_binary::get_xor_key_blob_size())) {
+        if (!aes_obj.decrypt(aes_key, aes_iv, read_handle.data() + aes_key_ciphertext_size + aes_iv_size, appender_file_binary::get_xor_key_blob_size(), xor_key_blob_.begin(), appender_file_binary::get_xor_key_blob_size())) {
             bq::util::log_device_console(log_level::error, "decode log file failed, decrypt XOR key failed");
             return appender_decode_result::failed_decode_error;
         }
@@ -76,8 +72,7 @@ bq::appender_decode_result bq::appender_decoder_base::init(const bq::file_handle
     if (payload_metadata_.magic_number[0] != 2 || payload_metadata_.magic_number[1] != 2 || payload_metadata_.magic_number[2] != 7) {
         if (xor_key_blob_.is_empty()) {
             bq::util::log_device_console(log_level::error, "decode log file failed, magic number mismatch");
-        }
-        else {
+        } else {
             bq::util::log_device_console(log_level::error, "decode log file failed, magic number mismatch, please check your private key");
         }
         return appender_decode_result::failed_decode_error;
@@ -151,11 +146,7 @@ bq::appender_decoder_base::read_with_cache_handle bq::appender_decoder_base::rea
             cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(left_size + read_size), fill_size - read_size);
         }
         if (!xor_key_blob_.is_empty() && read_size > 0) {
-            bq::appender_file_binary::xor_stream_inplace_u64_aligned(cache_read_.begin() + static_cast<ptrdiff_t>(left_size)
-                                        , read_size
-                                        , xor_key_blob_.begin()
-                                        , xor_key_blob_.size()
-                                        , current_file_cursor_ - bq::appender_file_binary::get_encryption_base_pos());
+            bq::appender_file_binary::xor_stream_inplace_u64_aligned(cache_read_.begin() + static_cast<ptrdiff_t>(left_size), read_size, xor_key_blob_.begin(), xor_key_blob_.size(), current_file_cursor_ - bq::appender_file_binary::get_encryption_base_pos());
         }
         current_file_cursor_ += read_size;
     }
@@ -177,11 +168,7 @@ void bq::appender_decoder_base::clear_read_cache()
 
 bq::appender_decode_result bq::appender_decoder_base::do_decode_by_log_entry_handle(const bq::log_entry_handle& item)
 {
-    time_zone time_zone_tmp(payload_metadata_.use_local_time
-                            , payload_metadata_.gmt_offset_hours
-                            , payload_metadata_.gmt_offset_minutes
-                            , payload_metadata_.time_zone_diff_to_gmt_ms
-                            , payload_metadata_.time_zone_str);
+    time_zone time_zone_tmp(payload_metadata_.use_local_time, payload_metadata_.gmt_offset_hours, payload_metadata_.gmt_offset_minutes, payload_metadata_.time_zone_diff_to_gmt_ms, payload_metadata_.time_zone_str);
     auto layout_result = layout_.do_layout(item, time_zone_tmp, &category_names_);
     if (layout_result != layout::enum_layout_result::finished) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, layout error code:%d", (int32_t)layout_result);

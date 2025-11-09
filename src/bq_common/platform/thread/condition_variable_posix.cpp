@@ -77,7 +77,7 @@ namespace bq {
         static inline void add_timespec_ns(const struct timespec& base, uint64_t add_ns, struct timespec* out)
         {
             uint64_t ns = static_cast<uint64_t>(base.tv_nsec) + add_ns;
-            out->tv_sec  = static_cast<decltype(out->tv_sec)>(static_cast<int64_t>(base.tv_sec) + static_cast<int64_t>(ns / one_billion));
+            out->tv_sec = static_cast<decltype(out->tv_sec)>(static_cast<int64_t>(base.tv_sec) + static_cast<int64_t>(ns / one_billion));
             out->tv_nsec = static_cast<decltype(out->tv_nsec)>(ns % one_billion);
         }
 
@@ -110,10 +110,12 @@ namespace bq {
             for (;;) {
                 uint64_t now_ns = get_current_ns(use_monotonic);
 
-                if (now_ns >= deadline_ns) return false;
+                if (now_ns >= deadline_ns)
+                    return false;
 
                 uint64_t remain_ns = deadline_ns - now_ns;
-                if (remain_ns > quantum_ns) remain_ns = quantum_ns;
+                if (remain_ns > quantum_ns)
+                    remain_ns = quantum_ns;
 
                 struct timespec outtime {};
 
@@ -139,10 +141,12 @@ namespace bq {
                 }
 
                 int32_t result = pthread_cond_timedwait(&platform_data_->cond_handle,
-                                                    (pthread_mutex_t*)(lock.get_platform_handle()),
-                                                    &outtime);
-                if (result == 0) return true;
-                if (result == ETIMEDOUT) continue;
+                    (pthread_mutex_t*)(lock.get_platform_handle()),
+                    &outtime);
+                if (result == 0)
+                    return true;
+                if (result == ETIMEDOUT)
+                    continue;
 
                 bq::util::log_device_console(log_level::error, "pthread_cond_timedwait failed: %d", result);
                 return true;

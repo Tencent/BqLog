@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (C) 2025 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -258,8 +258,7 @@ namespace bq {
             auto* new_node = bq::util::aligned_new<group_node>(BQ_CACHE_LINE_SIZE, this, max_block_count_per_group_, u64_value);
             if (new_node) {
                 new_node->get_next_ptr().node_ = head_.node_;
-            }
-            else {
+            } else {
                 assert(false && "group_list alloc group_node failed");
             }
             head_.node_ = new_node;

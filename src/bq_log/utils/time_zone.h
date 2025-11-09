@@ -10,17 +10,17 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
- 
- /*!
-  * \file time_zone.h
-  * 
-  * Mode 1: local time, DST supported by OS
-  * Mode 2: Fixed time zone offset to UTC time, no DST support.
-  *
-  * \author pippocao
-  * \date 2025
+
+/*!
+ * \file time_zone.h
  *
- * 
+ * Mode 1: local time, DST supported by OS
+ * Mode 2: Fixed time zone offset to UTC time, no DST support.
+ *
+ * \author pippocao
+ * \date 2025
+ *
+ *
  */
 
 #include "bq_common/bq_common_public_include.h"
@@ -51,7 +51,8 @@ namespace bq {
         bq_forceinline bool is_use_local_time() const { return use_local_time_; }
         bq_forceinline int32_t get_gmt_offset_hours() const { return gmt_offset_hours_; }
         bq_forceinline int32_t get_gmt_offset_minutes() const { return gmt_offset_minutes_; }
-        bq_forceinline int32_t get_offset_to_epoch_ms() const {
+        bq_forceinline int32_t get_offset_to_epoch_ms() const
+        {
             return (gmt_offset_hours_ * 3600 + gmt_offset_minutes_ * 60) * 1000;
         }
         bq_forceinline const bq::string& get_time_zone_str() const { return time_zone_str_; }
@@ -65,10 +66,13 @@ namespace bq {
         }
         bq_forceinline const char* get_time_string_cache() const { return time_cache_; }
         bq_forceinline size_t get_time_string_cache_len() const { return time_cache_len_; }
+
     private:
         void inner_refresh_time_string_cache(uint64_t epoch_ms);
+
     public:
         static constexpr uint32_t MAX_TIME_STR_LEN = 128;
+
     private:
         bool use_local_time_;
         int32_t gmt_offset_hours_;
@@ -76,7 +80,7 @@ namespace bq {
         int64_t time_zone_diff_to_gmt_ms_;
         bq::string time_zone_str_;
 
-        //Cache for time string
+        // Cache for time string
         char time_cache_[MAX_TIME_STR_LEN + 1];
         size_t time_cache_len_;
         uint64_t last_time_epoch_cache_ = 0;

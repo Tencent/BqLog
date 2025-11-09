@@ -71,6 +71,7 @@ namespace bq {
     struct global_vars_base {
         friend struct global_var_holder;
         friend struct _global_var_auto_destructor<T>;
+
     protected:
         static BQ_TLS T* global_vars_ptr_;
         alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
@@ -174,7 +175,7 @@ namespace bq {
 
         common_global_vars();
 
-        virtual ~common_global_vars() override{}
+        virtual ~common_global_vars() override { }
 
     protected:
         virtual void partial_destruct() override;

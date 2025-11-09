@@ -173,7 +173,7 @@ namespace bq {
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::value_type *() const
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::value_type*() const
     {
         return data_;
     }

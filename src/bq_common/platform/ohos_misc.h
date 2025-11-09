@@ -18,7 +18,7 @@
 // On OHOS (and most non-Windows platforms), calling convention macro is not needed.
 // Node's node_api.h defines NAPI_CDECL (notably for Windows). If it's missing, make it empty.
 #ifndef NAPI_CDECL
-  #define NAPI_CDECL
+#define NAPI_CDECL
 #endif
 
 namespace bq {

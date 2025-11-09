@@ -69,7 +69,8 @@ namespace bq {
         template <typename Predicate>
         bool condition_variable::wait_for(bq::platform::mutex& lock, uint64_t wait_time_ms, Predicate stop_waiting)
         {
-            uint64_t last_epoch = platform::high_performance_epoch_ms();;
+            uint64_t last_epoch = platform::high_performance_epoch_ms();
+            ;
             uint64_t current_epoch = last_epoch;
             while (!stop_waiting()) {
                 if (current_epoch >= last_epoch + wait_time_ms) {

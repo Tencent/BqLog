@@ -17,7 +17,7 @@
 //  Created by Yu Cao on 2022/8/31.
 //
 
-//Basic includes
+// Basic includes
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>

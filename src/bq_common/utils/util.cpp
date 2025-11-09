@@ -21,7 +21,6 @@
 #include "bq_common/platform/win64_includes_begin.h"
 #endif
 
-
 namespace bq {
     static uint32_t rand_seed = 0;
     static util::type_func_ptr_bq_util_consle_callback consle_callback_ = nullptr;
@@ -77,17 +76,18 @@ namespace bq {
         log_device_console_plain_text(level, device_console_buffer.begin().operator->());
     }
 
-    void util::log_device_console_plain_text(bq::log_level level, const char* text) {
+    void util::log_device_console_plain_text(bq::log_level level, const char* text)
+    {
         auto callback = consle_callback_;
         if (callback) {
             callback(level, text);
-        }
-        else {
+        } else {
             _default_console_output(level, text);
         }
     }
 
-    void util::set_console_output_callback(type_func_ptr_bq_util_consle_callback callback) {
+    void util::set_console_output_callback(type_func_ptr_bq_util_consle_callback callback)
+    {
         consle_callback_ = callback;
     }
 
@@ -104,10 +104,9 @@ namespace bq {
             "Bq", text ? text : "");
 #elif defined(BQ_OHOS)
         {
-            auto oh_level = level < bq::log_level::debug ? bq::log_level::debug : level; //There is no verbose level in OHOS
+            auto oh_level = level < bq::log_level::debug ? bq::log_level::debug : level; // There is no verbose level in OHOS
             OH_LOG_PrintMsg(LOG_APP,
-                static_cast<LogLevel>(static_cast<int32_t>(LOG_DEBUG) +
-                    static_cast<int32_t>(oh_level) - static_cast<int32_t>(bq::log_level::debug)), 0x8527, "Bq", text ? text : "");
+                static_cast<LogLevel>(static_cast<int32_t>(LOG_DEBUG) + static_cast<int32_t>(oh_level) - static_cast<int32_t>(bq::log_level::debug)), 0x8527, "Bq", text ? text : "");
         }
 #elif defined(BQ_IOS)
         (void)level;
@@ -116,14 +115,12 @@ namespace bq {
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
 
         // Color code（ANSI VT）
-        const char* color =
-            (level == bq::log_level::verbose) ? "\x1b[3m" :
-            (level == bq::log_level::debug) ? "\x1b[92m" :
-            (level == bq::log_level::info) ? "\x1b[94m" :
-            (level == bq::log_level::warning) ? "\x1b[1;40;93m" :
-            (level == bq::log_level::error) ? "\x1b[1;40;91m" :
-            (level == bq::log_level::fatal) ? "\x1b[1;30;101m" :
-            "\x1b[37m";
+        const char* color = (level == bq::log_level::verbose) ? "\x1b[3m" : (level == bq::log_level::debug) ? "\x1b[92m"
+            : (level == bq::log_level::info)                                                                ? "\x1b[94m"
+            : (level == bq::log_level::warning)                                                             ? "\x1b[1;40;93m"
+            : (level == bq::log_level::error)                                                               ? "\x1b[1;40;91m"
+            : (level == bq::log_level::fatal)                                                               ? "\x1b[1;30;101m"
+                                                                                                            : "\x1b[37m";
         const char* reset = "\x1b[0m";
         const char* prefix = "[Bq]";
         const char* newline = "\n";
@@ -153,44 +150,42 @@ namespace bq {
 
         const bool use_color = has_console && s_vt_enabled;
 
-        const size_t total_len =
-            (use_color ? color_len : 0) + prefix_len + msg_len + (use_color ? reset_len : 0) + nl_len;
+        const size_t total_len = (use_color ? color_len : 0) + prefix_len + msg_len + (use_color ? reset_len : 0) + nl_len;
 
         if (has_console && total_len <= STACK_CAP) {
             char buf[STACK_CAP];
             char* p = buf;
 
-            if (use_color) { 
-                memcpy(p, color, color_len); 
-                p += color_len; 
+            if (use_color) {
+                memcpy(p, color, color_len);
+                p += color_len;
             }
-            memcpy(p, prefix, prefix_len); 
+            memcpy(p, prefix, prefix_len);
             p += prefix_len;
-            if (msg_len) { 
-                memcpy(p, msg, msg_len);   
-                p += msg_len; 
+            if (msg_len) {
+                memcpy(p, msg, msg_len);
+                p += msg_len;
             }
-            if (use_color) { 
-                memcpy(p, reset, reset_len); 
-                p += reset_len; 
+            if (use_color) {
+                memcpy(p, reset, reset_len);
+                p += reset_len;
             }
             memcpy(p, newline, nl_len);
             p += nl_len;
 
             DWORD written = 0;
             WriteFile(h, buf, static_cast<DWORD>(p - buf), &written, nullptr);
-        }
-        else if (has_console) {
+        } else if (has_console) {
             DWORD written = 0;
             BOOL ret;
-            if (use_color && color_len) { 
+            if (use_color && color_len) {
                 ret = WriteFile(h, color, static_cast<DWORD>(color_len), &written, nullptr);
             }
             ret = WriteFile(h, prefix, static_cast<DWORD>(prefix_len), &written, nullptr);
-            if (msg_len) { 
+            if (msg_len) {
                 ret = WriteFile(h, msg, static_cast<DWORD>(msg_len), &written, nullptr);
             }
-            if (use_color && reset_len) { 
+            if (use_color && reset_len) {
                 ret = WriteFile(h, reset, static_cast<DWORD>(reset_len), &written, nullptr);
             }
             ret = WriteFile(h, newline, static_cast<DWORD>(nl_len), &written, nullptr);
@@ -209,48 +204,46 @@ namespace bq {
         const bool is_tty = (isatty(fd) == 1);
 
         const bool use_color = is_tty;
-        const size_t total_len =
-            (use_color ? color_len : 0) + prefix_len + msg_len + (use_color ? reset_len : 0) + nl_len;
+        const size_t total_len = (use_color ? color_len : 0) + prefix_len + msg_len + (use_color ? reset_len : 0) + nl_len;
         ssize_t writen = 0;
         if (total_len <= STACK_CAP) {
             char buf[STACK_CAP];
             char* p = buf;
 
             if (use_color) {
-                memcpy(p, color, color_len); 
-                p += color_len; 
+                memcpy(p, color, color_len);
+                p += color_len;
             }
-            memcpy(p, prefix, prefix_len); 
+            memcpy(p, prefix, prefix_len);
             p += prefix_len;
-            if (msg_len) { 
-                memcpy(p, msg, msg_len);   
-                p += msg_len; 
+            if (msg_len) {
+                memcpy(p, msg, msg_len);
+                p += msg_len;
             }
-            if (use_color) { 
-                memcpy(p, reset, reset_len); 
-                p += reset_len; 
+            if (use_color) {
+                memcpy(p, reset, reset_len);
+                p += reset_len;
             }
             memcpy(p, newline, nl_len);
             p += nl_len;
             writen += write(fd, buf, static_cast<size_t>(p - buf));
-        }
-        else {
-            if (use_color && color_len) { 
+        } else {
+            if (use_color && color_len) {
                 writen += write(fd, color, color_len);
             }
             writen += write(fd, prefix, prefix_len);
-            if (msg_len) { 
+            if (msg_len) {
                 writen += write(fd, msg, msg_len);
             }
-            if (use_color && reset_len) { 
+            if (use_color && reset_len) {
                 writen += write(fd, reset, reset_len);
             }
             writen += write(fd, newline, nl_len);
         }
         (void)writen;
-#endif 
+#endif
 
-#endif 
+#endif
     }
 
     uint32_t util::get_hash(const void* data, size_t size)
@@ -415,7 +408,6 @@ namespace bq {
         return result_len;
     }
 }
-
 
 #if defined(BQ_WIN)
 #include "bq_common/platform/win64_includes_end.h"

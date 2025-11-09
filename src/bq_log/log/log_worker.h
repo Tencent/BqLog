@@ -73,8 +73,8 @@ namespace bq {
         virtual void run() override;
     };
 
-    //Sometime, the log worker thread may be terminated by external code(for example, on the console callback in Mono)
-    //We need a watch dog to restart the thread.
+    // Sometime, the log worker thread may be terminated by external code(for example, on the console callback in Mono)
+    // We need a watch dog to restart the thread.
     struct log_worker_watch_dog {
         bq::platform::thread::thread_id thread_id_;
         log_worker* worker_ptr_;

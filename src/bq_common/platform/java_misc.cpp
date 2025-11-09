@@ -109,7 +109,8 @@ namespace bq {
             jobj_big_endian_value_ = env->NewGlobalRef(env->GetStaticObjectField(cls_byte_order, big_endian_field));
         }
 
-        jint jni_init(JavaVM* vm, void* reserved) {
+        jint jni_init(JavaVM* vm, void* reserved)
+        {
             (void)reserved;
             java_vm = vm;
             bq::util::log_device_console(bq::log_level::info, "Bq JNI_Onload is called");

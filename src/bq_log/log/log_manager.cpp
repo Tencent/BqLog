@@ -230,7 +230,7 @@ namespace bq {
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
         bq::platform::scoped_spin_lock scoped_lock_uninit(uninit_lock_);
-        //avoid worker thread call console callback which may cause dead lock when main thread is calling this method(for example, in Unity)
+        // avoid worker thread call console callback which may cause dead lock when main thread is calling this method(for example, in Unity)
         appender_console::register_console_callback(nullptr);
         phase expected_phase = phase::working;
         if (!phase_.compare_exchange_strong(expected_phase, phase::uninitialized)) {

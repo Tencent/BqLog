@@ -51,7 +51,7 @@ namespace bq {
         uint32_t format_version = get_binary_format_version();
         seek_read_file_absolute(0);
 
-        //parse file type
+        // parse file type
         auto read_handle = read_with_cache(sizeof(appender_file_header));
         if (read_handle.len() < sizeof(appender_file_header)) {
             context.log_parse_fail_reason("read appender_file_header failed");
@@ -79,7 +79,7 @@ namespace bq {
         memcpy(&enc_head, read_handle.data(), sizeof(enc_head));
         if (enc_head.encryption_type != appender_encryption_type::plaintext
             || enc_head.encryption_type != encryption_type_) {
-            //can not parse encryption type, it's not an error.
+            // can not parse encryption type, it's not an error.
             return false;
         }
         context.parsed_size += sizeof(enc_head);
@@ -144,7 +144,7 @@ namespace bq {
             return;
         }
 
-        //write file header and initialize encryption information
+        // write file header and initialize encryption information
         appender_file_header file_head;
         file_head.format = get_appender_format();
         file_head.version = get_binary_format_version();
@@ -251,8 +251,7 @@ namespace bq {
             need_encrypt_size,
             xor_key_blob_.begin(),
             get_xor_key_blob_size(),
-            xor_key_blob_start_pos
-        );
+            xor_key_blob_start_pos);
         encryption_start_pos_ += need_encrypt_size;
         appender_file_base::flush_cache();
     }

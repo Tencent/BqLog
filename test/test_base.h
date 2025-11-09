@@ -47,7 +47,7 @@ namespace bq {
         bq::test::add_to_test_output_str(false, LEVEL, FORMAT);             \
         bq::util::set_log_device_console_min_level(bq::log_level::verbose); \
         bq::util::log_device_console(LEVEL, FORMAT);                        \
-        bq::util::set_log_device_console_min_level(bq::log_level::warning);   \
+        bq::util::set_log_device_console_min_level(bq::log_level::warning); \
     }
 
 #define test_output_dynamic(LEVEL, FORMAT)                     \
@@ -62,7 +62,7 @@ namespace bq {
         bq::test::add_to_test_output_str(false, LEVEL, FORMAT, __VA_ARGS__); \
         bq::util::set_log_device_console_min_level(bq::log_level::verbose);  \
         bq::util::log_device_console(LEVEL, FORMAT, __VA_ARGS__);            \
-        bq::util::set_log_device_console_min_level(bq::log_level::warning);    \
+        bq::util::set_log_device_console_min_level(bq::log_level::warning);  \
     }
 
 #define test_output_dynamic_param(LEVEL, FORMAT, ...)                       \

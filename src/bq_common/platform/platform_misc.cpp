@@ -20,11 +20,9 @@ namespace bq {
             bq::platform::scoped_spin_lock lock(lock_);
             if (base_dir_type == 0) {
                 return common_global_vars::get().base_dir_init_inst_.get_base_dir_0();
-            }
-            else if (base_dir_type == 1) {
+            } else if (base_dir_type == 1) {
                 return common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
-            }
-            else {
+            } else {
                 bq::util::log_device_console(bq::log_level::warning, "[get_base_dir] unknown base dir type:%d", base_dir_type);
                 return common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
             }
@@ -44,5 +42,3 @@ namespace bq {
         }
     }
 }
-
-

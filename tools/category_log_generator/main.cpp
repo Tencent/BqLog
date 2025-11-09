@@ -14,18 +14,19 @@
 
 #include <iostream>
 
-static void print_usage(std::ostream& os) {
+static void print_usage(std::ostream& os)
+{
     os << "Usage:\n"
-        << "  BqLog_CategoryLogGenerator ClassName CategoryConfigFile [OutputFolder]\n"
-        << "  BqLog_CategoryLogGenerator -h | --help\n\n"
-        << "Arguments:\n"
-        << "  ClassName            Name of the generated category log class.\n"
-        << "  CategoryConfigFile   Path to the category configuration text file (format described below).\n"
-        << "  OutputFolder         Optional output directory (default: current directory \"./\").\n\n"
-        << "Options:\n"
-        << "  -h, --help           Show detailed help and the CategoryConfigFile format and examples.\n\n"
-        << "Example:\n"
-        << "  BqLog_CategoryLogGenerator DemoCategoryLog ./categories.txt ./out\n\n";
+       << "  BqLog_CategoryLogGenerator ClassName CategoryConfigFile [OutputFolder]\n"
+       << "  BqLog_CategoryLogGenerator -h | --help\n\n"
+       << "Arguments:\n"
+       << "  ClassName            Name of the generated category log class.\n"
+       << "  CategoryConfigFile   Path to the category configuration text file (format described below).\n"
+       << "  OutputFolder         Optional output directory (default: current directory \"./\").\n\n"
+       << "Options:\n"
+       << "  -h, --help           Show detailed help and the CategoryConfigFile format and examples.\n\n"
+       << "Example:\n"
+       << "  BqLog_CategoryLogGenerator DemoCategoryLog ./categories.txt ./out\n\n";
 }
 
 int32_t main(int32_t argc, char* argv[])

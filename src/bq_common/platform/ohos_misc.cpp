@@ -20,7 +20,6 @@
 #include <string.h>
 #include "bq_common/bq_common.h"
 
-
 namespace bq {
     BQ_TLS_NON_POD(bq::string, stack_trace_current_str_)
     BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_)
@@ -46,7 +45,6 @@ namespace bq {
             auto bundle = OH_NativeBundle_GetCurrentApplicationInfo();
             return bundle.bundleName;
         }
-
 
         static constexpr size_t max_stack_size_ = 128;
 

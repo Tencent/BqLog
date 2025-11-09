@@ -507,7 +507,7 @@ namespace bq {
                         break;
                     case bq::log_arg_type_enum::uint64_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint64_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
-                        args_data_cursor +=  static_cast<uint32_t>(4U + sizeof(int64_t));
+                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int64_t));
                         break;
                     case bq::log_arg_type_enum::int64_type:
                         log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int64_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);

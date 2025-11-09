@@ -200,7 +200,7 @@ namespace bq {
             for (const auto& name_key : appender_names) {
                 auto old_iter = tmp_list.find_if([&name_key](const appender_base* appender) {
                     return appender->get_name() == name_key;
-                    });
+                });
                 if (old_iter != tmp_list.end()) {
                     if ((*old_iter)->reset(all_apenders_config[name_key])) {
                         appenders_list_.push_back(*old_iter);

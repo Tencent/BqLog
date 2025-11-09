@@ -79,12 +79,12 @@ namespace bq {
             char padding[3];
         } BQ_PACK_END
 
-        BQ_PACK_BEGIN struct appender_encryption_header {
+            BQ_PACK_BEGIN struct appender_encryption_header {
             appender_encryption_type encryption_type;
             char padding[7];
         } BQ_PACK_END
 
-        BQ_PACK_BEGIN struct appender_payload_metadata {
+            BQ_PACK_BEGIN struct appender_payload_metadata {
             char magic_number[3];
             bool use_local_time;
             int32_t gmt_offset_hours;
@@ -92,24 +92,27 @@ namespace bq {
             int64_t time_zone_diff_to_gmt_ms;
             char time_zone_str[32];
             uint32_t category_count;
-        } BQ_PACK_END
-    public:
-        bq_forceinline static size_t get_xor_key_blob_size() {
+    } BQ_PACK_END public : bq_forceinline static size_t get_xor_key_blob_size()
+        {
             return 32 * 1024; // 32 KiB
-        } 
-        bq_forceinline static size_t get_encryption_info_size() {
+        }
+        bq_forceinline static size_t get_encryption_info_size()
+        {
             return 256 // size of RSA-2048 ciphertext of AES key
-            + 16 // size of AES IV in plaintext
-            + get_xor_key_blob_size(); // size of AES-encrypted XOR key blob
-        } 
-        bq_forceinline static size_t get_encryption_base_pos() {
+                + 16 // size of AES IV in plaintext
+                + get_xor_key_blob_size(); // size of AES-encrypted XOR key blob
+        }
+        bq_forceinline static size_t get_encryption_base_pos()
+        {
             return sizeof(appender_file_header)
                 + sizeof(appender_encryption_header)
                 + get_encryption_info_size();
         }
+
     public:
         static void xor_stream_inplace_u64_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset);
-    protected : 
+
+    protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
         virtual bool reset_impl(const bq::property_value& config_obj) override;
         virtual bool parse_exist_log_file(parse_file_context& context) override;
@@ -117,6 +120,7 @@ namespace bq {
         virtual void flush_cache() override;
         virtual appender_format_type get_appender_format() const = 0;
         virtual uint32_t get_binary_format_version() const = 0;
+
     private:
         appender_encryption_type encryption_type_ = appender_encryption_type::plaintext;
         bq::rsa::public_key rsa_pub_key_;

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2025 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -10,7 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_log/global/version.h"
-namespace  bq {
+namespace bq {
     const char* const BQ_LOG_VERSION = "2.0.1";
 
     const char* get_bq_log_version()

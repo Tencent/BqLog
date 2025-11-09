@@ -67,10 +67,9 @@ namespace bq {
             }
         };
 
-
         struct alignas(BQ_CACHE_LINE_SIZE) log_tls_buffer_info {
 #if defined(BQ_JAVA)
-            struct java_info{
+            struct java_info {
                 jobjectArray buffer_obj_for_lp_buffer_ = NULL; // miso_ring_buffer shared between low frequency threads;
                 jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
                 jobjectArray buffer_obj_for_oversize_buffer_ = NULL; // oversize buffer;
@@ -123,11 +122,11 @@ namespace bq {
             uintptr_t dummy;
         } BQ_PACK_END
 
-        BQ_PACK_BEGIN struct alignas(8) pointer_8_bytes_for_64_bits_system {
+            BQ_PACK_BEGIN struct alignas(8) pointer_8_bytes_for_64_bits_system {
             log_tls_buffer_info* ptr;
         } BQ_PACK_END
 
-        BQ_PACK_BEGIN struct alignas(8) context_head {
+            BQ_PACK_BEGIN struct alignas(8) context_head {
         public:
             uint16_t version_;
             bool is_thread_finished_;
@@ -143,9 +142,7 @@ namespace bq {
             {
                 tls_info_.ptr = tls_info;
             }
-        } 
-        BQ_PACK_END 
-        static_assert(sizeof(context_head) == 16, "context_head size must be 16");
+        } BQ_PACK_END static_assert(sizeof(context_head) == 16, "context_head size must be 16");
         static_assert(sizeof(context_head) % 8 == 0, "context_head size must be a multiple of 8");
 
         BQ_PACK_BEGIN
@@ -153,10 +150,7 @@ namespace bq {
             alignas(8) bool is_removed_;
             alignas(8) bool need_reallocate_;
             alignas(8) context_head context_;
-        } 
-        BQ_PACK_END 
-    public : 
-        log_buffer(log_buffer_config& config);
+    } BQ_PACK_END public : log_buffer(log_buffer_config& config);
 
         ~log_buffer();
 
@@ -218,7 +212,8 @@ namespace bq {
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
-private:
+
+    private:
         bool rt_try_traverse_to_next_group();
 
         // For oversize data.

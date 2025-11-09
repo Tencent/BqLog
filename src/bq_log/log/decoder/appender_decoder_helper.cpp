@@ -15,7 +15,6 @@
 #include "bq_log/log/appender/appender_file_compressed.h"
 #include "bq_log/log/appender/appender_file_raw.h"
 
-
 bool bq::appender_decoder_helper::decode(const bq::string& in_file_path, const bq::string& out_file_path, const bq::string& priv_key)
 {
     uint32_t handle = 0;

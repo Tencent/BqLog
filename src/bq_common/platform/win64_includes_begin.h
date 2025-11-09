@@ -13,10 +13,10 @@
 #include "bq_common/bq_common_public_include.h"
 #ifdef BQ_WIN
 #if BQ_IN_UNREAL
-	#include "Windows/AllowWindowsPlatformTypes.h"
-	#include <WinSock2.h>
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include <WinSock2.h>
 #else
-	#include <WinSock2.h>
-	#include <windows.h>
+#include <WinSock2.h>
+#include <windows.h>
 #endif
 #endif

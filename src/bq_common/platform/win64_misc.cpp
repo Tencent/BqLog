@@ -550,8 +550,7 @@ namespace bq {
 
         bool share_file(const char* file_path)
         {
-            if (!file_path || !*file_path)
-            {
+            if (!file_path || !*file_path) {
                 return false;
             }
             bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(file_path)));

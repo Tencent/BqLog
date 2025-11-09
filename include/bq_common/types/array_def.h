@@ -86,7 +86,7 @@ namespace bq {
         using value_type = typename bq::decay<T>::type;
         using size_type = size_t;
         using iterator = BQ_ARRAY_ITER_CLS_NAME<value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
-        using difference_type = typename iterator::difference_type ;
+        using difference_type = typename iterator::difference_type;
         using const_iterator = BQ_ARRAY_ITER_CLS_NAME<const value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
         using allocator_type = Allocator;
 

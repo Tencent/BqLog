@@ -20,18 +20,18 @@
 namespace bq {
 
 #if defined(BQ_WIN)
-#define BQ_LOCALTIME(dst, tptr) (localtime_s((dst),(tptr)) == 0)
-#define BQ_GMTIME(dst, tptr)    (gmtime_s((dst),(tptr)) == 0)
+#define BQ_LOCALTIME(dst, tptr) (localtime_s((dst), (tptr)) == 0)
+#define BQ_GMTIME(dst, tptr) (gmtime_s((dst), (tptr)) == 0)
 #else
-#define BQ_LOCALTIME(dst, tptr) (localtime_r((tptr),(dst)) != NULL)
-#define BQ_GMTIME(dst, tptr)    (gmtime_r((tptr),(dst)) != NULL)
+#define BQ_LOCALTIME(dst, tptr) (localtime_r((tptr), (dst)) != NULL)
+#define BQ_GMTIME(dst, tptr) (gmtime_r((tptr), (dst)) != NULL)
 #endif
 
-    time_zone::time_zone(const bq::string& time_zone_str /*= "localtime" */) {
+    time_zone::time_zone(const bq::string& time_zone_str /*= "localtime" */)
+    {
         reset();
         parse_by_string(time_zone_str);
     }
-
 
     time_zone::time_zone(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int64_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str)
     {
@@ -112,10 +112,9 @@ namespace bq {
             if (gmt_offset_hours_ < 0) {
                 gmt_offset_minutes_ = -gmt_offset_minutes_;
             }
-        }while(0);
-        
+        } while (0);
 
-        //generate time_zone_str_ and time_zone_diff_to_gmt_ms_;
+        // generate time_zone_str_ and time_zone_diff_to_gmt_ms_;
         if (use_local_time_) {
             time_zone_str_ = get_local_timezone_name();
             time_t now = time(NULL);
@@ -123,25 +122,21 @@ namespace bq {
             struct tm gt;
             if (!BQ_LOCALTIME(&lt, &now)) {
                 time_zone_diff_to_gmt_ms_ = 0;
-            }
-            else {
+            } else {
                 (void)BQ_GMTIME(&gt, &now);
                 time_t local_epoch_sec = mktime(const_cast<struct tm*>(&lt));
                 time_t utc_epoch_sec = mktime(const_cast<struct tm*>(&gt));
                 double timezone_offset = difftime(local_epoch_sec, utc_epoch_sec);
                 time_zone_diff_to_gmt_ms_ = (int64_t)(timezone_offset) * 1000;
             }
-        }
-        else {
+        } else {
             if (gmt_offset_hours_ == 0 && gmt_offset_minutes_ == 0) {
                 time_zone_str_ = "UTC0";
-            }
-            else if (gmt_offset_minutes_ == 0) {
+            } else if (gmt_offset_minutes_ == 0) {
                 char buffer[32];
                 snprintf(buffer, sizeof(buffer), "UTC%+" PRId32, gmt_offset_hours_);
                 time_zone_str_ = buffer;
-            }
-            else {
+            } else {
                 char buffer[64];
                 snprintf(buffer, sizeof(buffer), "UTC%+d:%02" PRId32, gmt_offset_hours_, abs(gmt_offset_minutes_));
                 time_zone_str_ = buffer;
@@ -149,7 +144,6 @@ namespace bq {
             time_zone_diff_to_gmt_ms_ = ((int64_t)gmt_offset_hours_ * 3600 + (int64_t)gmt_offset_minutes_ * 60) * 1000;
         }
     }
-
 
     void time_zone::restore_by_config(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int64_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str)
     {
@@ -160,7 +154,8 @@ namespace bq {
         time_zone_str_ = time_zone_str;
     }
 
-    bq::string time_zone::get_local_timezone_name() {
+    bq::string time_zone::get_local_timezone_name()
+    {
         time_t now = time(NULL);
         struct tm lt;
         if (!BQ_LOCALTIME(&lt, &now)) {
@@ -188,7 +183,6 @@ namespace bq {
         return "localtime";
     }
 
-
     bool time_zone::get_tm_by_epoch(uint64_t epoch_ms, struct tm& result) const
     {
         time_t base_sec = static_cast<time_t>(epoch_ms / static_cast<uint64_t>(1000));
@@ -198,15 +192,12 @@ namespace bq {
         }
 
         // Fixed UTC offset in seconds (no DST)
-        int64_t delta_sec =
-            (int64_t)gmt_offset_hours_ * static_cast<int64_t>(3600) +
-            (int64_t)gmt_offset_minutes_ * static_cast<int64_t>(60); // minutes are 0 in current parsing
+        int64_t delta_sec = (int64_t)gmt_offset_hours_ * static_cast<int64_t>(3600) + (int64_t)gmt_offset_minutes_ * static_cast<int64_t>(60); // minutes are 0 in current parsing
 
         time_t adjusted = (time_t)((int64_t)base_sec + delta_sec);
 
         return BQ_GMTIME(&result, &adjusted) ? true : false;
     }
-
 
     bq::string time_zone::get_time_str_by_epoch(uint64_t epoch_ms) const
     {

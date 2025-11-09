@@ -146,7 +146,8 @@ namespace bq {
             if (static_cast<uint32_t>(new_cursor - read_cursor_ref) > aligned_blocks_count_) {
                 read_cursor_ref = cursors_.read_cursor_.load_acquire();
                 if (static_cast<uint32_t>(new_cursor - read_cursor_ref) > aligned_blocks_count_) {
-                    BQ_UNLIKELY_IF ((need_block_count << 1) > aligned_blocks_count_) {
+                    BQ_UNLIKELY_IF((need_block_count << 1) > aligned_blocks_count_)
+                    {
                         // not enough space
 #if defined(BQ_LOG_BUFFER_DEBUG)
                         ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];
@@ -173,7 +174,8 @@ namespace bq {
                         // fall back
                         uint32_t expected = next_write_cursor;
                         if (cursors_.write_cursor_.compare_exchange_strong(expected, current_write_cursor, platform::memory_order::relaxed, platform::memory_order::relaxed)) {
-                            BQ_UNLIKELY_IF ((need_block_count << 1) > aligned_blocks_count_) {
+                            BQ_UNLIKELY_IF((need_block_count << 1) > aligned_blocks_count_)
+                            {
                                 // not enough space
 #if defined(BQ_LOG_BUFFER_DEBUG)
                                 ++result_code_statistics_[(int32_t)enum_buffer_result_code::err_alloc_size_invalid];

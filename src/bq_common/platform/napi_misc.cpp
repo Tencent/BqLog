@@ -20,7 +20,8 @@ namespace bq {
     BQ_TLS_NON_POD(bq::string, _tls_utf8_str)
 
     // ----------------------------- helpers -----------------------------
-    bq::napi_str_result<bq::string, 256> read_utf8_str_tls(napi_env env, napi_value v, size_t u8string_bytes) {
+    bq::napi_str_result<bq::string, 256> read_utf8_str_tls(napi_env env, napi_value v, size_t u8string_bytes)
+    {
         auto& tls_str = bq::_tls_utf8_str.get();
         if (!v) {
             tls_str.clear();
@@ -43,7 +44,8 @@ namespace bq {
         return bq::napi_str_result<bq::string, 256>(tls_str);
     }
 
-    uint64_t get_u64_from_bigint(napi_env env, napi_value v) {
+    uint64_t get_u64_from_bigint(napi_env env, napi_value v)
+    {
         bool lossless = false;
         uint64_t out = 0;
         napi_valuetype t = napi_undefined;
@@ -51,21 +53,21 @@ namespace bq {
             if (t == napi_bigint) {
                 napi_get_value_bigint_uint64(env, v, &out, &lossless);
                 return out;
-            }
-            else if (t == napi_number) {
+            } else if (t == napi_number) {
                 // best-effort for JS number inputs (may lose precision > 2^53)
                 double d = 0;
                 napi_get_value_double(env, v, &d);
-                if (d < 0) d = 0;
+                if (d < 0)
+                    d = 0;
                 out = (uint64_t)(d);
                 return out;
-            }
-            else if (t == napi_string) {
+            } else if (t == napi_string) {
                 // parse decimal string (simple, without locale)
                 size_t len = 0;
                 napi_get_value_string_utf8(env, v, nullptr, 0, &len);
                 char* buf = (char*)malloc(len + 1);
-                if (!buf) return 0;
+                if (!buf)
+                    return 0;
                 size_t got = 0;
                 napi_get_value_string_utf8(env, v, buf, len + 1, &got);
                 uint64_t acc = 0;
@@ -73,8 +75,7 @@ namespace bq {
                     char c = buf[i];
                     if (c >= '0' && c <= '9') {
                         acc = acc * 10 + (uint64_t)(c - '0');
-                    }
-                    else {
+                    } else {
                         break;
                     }
                 }
@@ -85,7 +86,8 @@ namespace bq {
         return out;
     }
 
-    bq::string dup_string_from_napi(napi_env env, napi_value v) {
+    bq::string dup_string_from_napi(napi_env env, napi_value v)
+    {
         size_t len = 0;
         napi_get_value_string_utf8(env, v, NULL, 0, &len);
         bq::string out;
@@ -98,24 +100,27 @@ namespace bq {
         return out;
     }
 
-    char* dup_cstr_from_napi(napi_env env, napi_value v) {
+    char* dup_cstr_from_napi(napi_env env, napi_value v)
+    {
         size_t len = 0;
         napi_get_value_string_utf8(env, v, NULL, 0, &len);
         char* out = (char*)malloc(len + 1);
-        if (!out) return NULL;
+        if (!out)
+            return NULL;
         size_t got = 0;
         napi_get_value_string_utf8(env, v, out, len + 1, &got);
         out[got] = '\0';
         return out;
     }
 
-    void free_cstr_from_napi(char* p) {
-        if (p) free(p);
+    void free_cstr_from_napi(char* p)
+    {
+        if (p)
+            free(p);
     }
 
-
     namespace platform {
-        //Only single env is supported for now
+        // Only single env is supported for now
         static napi_threadsafe_function tsfn_dispatcher_for_native_func_ = nullptr;
         static napi_threadsafe_function tsfn_dispatcher_for_js_func_ = nullptr;
 
@@ -124,10 +129,10 @@ namespace bq {
         static bq::array<napi_property_descriptor>* napi_registered_init_functions_ = nullptr;
 
         struct native_func_call_ctx {
-            void(*fn)(napi_env, void*);
+            void (*fn)(napi_env, void*);
             void* param;
         };
-        bool napi_call_native_func_in_js_thread(void(*fn)(napi_env, void*), void* param)
+        bool napi_call_native_func_in_js_thread(void (*fn)(napi_env, void*), void* param)
         {
             native_func_call_ctx* ctx = new native_func_call_ctx();
             ctx->fn = fn;
@@ -164,24 +169,26 @@ namespace bq {
         {
             bq::platform::scoped_spin_lock lock(napi_init_mutex_);
             if (is_napi_initialized_) {
-                //already initialized, ignore new registrations
+                // already initialized, ignore new registrations
                 return;
             }
             if (!napi_registered_init_functions_) {
                 napi_registered_init_functions_ = new bq::array<napi_property_descriptor>();
             }
-            napi_registered_init_functions_->push_back(napi_property_descriptor{name, 0, func, 0, 0, 0, napi_default, 0});
+            napi_registered_init_functions_->push_back(napi_property_descriptor { name, 0, func, 0, 0, 0, napi_default, 0 });
         }
 
-        static void dispatcher_call_native(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data) {
+        static void dispatcher_call_native(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data)
+        {
             native_func_call_ctx* ctx = reinterpret_cast<native_func_call_ctx*>(data);
-            if (ctx){
+            if (ctx) {
                 ctx->fn(env, ctx->param);
                 delete ctx;
             }
         }
 
-        static void dispatcher_call_js(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data) {
+        static void dispatcher_call_js(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data)
+        {
             js_func_call_ctx* ctx = reinterpret_cast<js_func_call_ctx*>(data);
             if (ctx && ctx->js_func_ref) {
                 napi_value this_context = nullptr;
@@ -205,7 +212,8 @@ namespace bq {
             }
         }
 
-        static void cleanup_hook(void* p) {
+        static void cleanup_hook(void* p)
+        {
             (void)p;
             napi_release_threadsafe_function(tsfn_dispatcher_for_native_func_, napi_tsfn_abort);
             napi_release_threadsafe_function(tsfn_dispatcher_for_js_func_, napi_tsfn_abort);
@@ -215,25 +223,17 @@ namespace bq {
         napi_value napi_init(napi_env env, napi_value exports)
         {
             bq::platform::scoped_spin_lock lock(napi_init_mutex_);
-            if(is_napi_initialized_){
+            if (is_napi_initialized_) {
                 return nullptr;
             }
             is_napi_initialized_ = true;
 
-            napi_value name_native{};
+            napi_value name_native {};
             BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-native-wrapper", NAPI_AUTO_LENGTH, &name_native));
-            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(
-                env, nullptr, nullptr, name_native,
-                1024, 1, nullptr, nullptr, nullptr,
-                dispatcher_call_native, &tsfn_dispatcher_for_native_func_
-            ));
-            napi_value name_js{};
+            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(env, nullptr, nullptr, name_native, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_native, &tsfn_dispatcher_for_native_func_));
+            napi_value name_js {};
             BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-js-wrapper", NAPI_AUTO_LENGTH, &name_js));
-            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(
-                env, nullptr, nullptr, name_js,
-                1024, 1, nullptr, nullptr, nullptr,
-                dispatcher_call_js, &tsfn_dispatcher_for_js_func_
-            ));
+            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(env, nullptr, nullptr, name_js, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_js, &tsfn_dispatcher_for_js_func_));
             BQ_NAPI_CALL(env, nullptr, napi_add_env_cleanup_hook(env, cleanup_hook, nullptr));
 
             for (auto callback : common_global_vars::get().napi_init_callbacks_inst_) {

@@ -77,7 +77,8 @@ namespace bq {
             return format_content_cursor;
         }
 
-        inline void tidy_memory() {
+        inline void tidy_memory()
+        {
             if (format_content.capacity() > 1024) {
                 format_content.clear();
                 format_content.set_capacity(1024, true);

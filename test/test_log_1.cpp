@@ -27,7 +27,7 @@ namespace bq {
             (void)log_level;
             (void)length;
             if (log_id == 0) {
-                return; //It's not a log callback
+                return; // It's not a log callback
             }
             log_str = content;
             log_c_str = log_str.c_str();
@@ -114,7 +114,7 @@ namespace bq {
             }
 
             {
-                //test time zone;
+                // test time zone;
                 time_zone utc8("UTC+8");
                 result.add_result(utc8.get_time_zone_diff_to_gmt_ms() == static_cast<int64_t>(8 * 3600 * 1000), "time zone differ time test UTC8");
                 result.add_result(utc8.get_time_zone_str() == "UTC+8", "time zone str test UTC8");

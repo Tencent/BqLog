@@ -19,7 +19,7 @@
 namespace bq {
     struct console_callback_tls_data {
         uint64_t log_id_;
-        int32_t category_idx_; 
+        int32_t category_idx_;
         int32_t length_;
     };
     static BQ_TLS console_callback_tls_data _tls_console_callback_data;
@@ -36,8 +36,7 @@ namespace bq {
             data.category_idx_ = 0;
             data.length_ = 0;
             data.log_id_ = 0;
-        }
-        else {
+        } else {
             bq::util::_default_console_output(level, text);
         }
     }
@@ -48,8 +47,7 @@ namespace bq {
         console_callback_ = callback;
         if (callback) {
             bq::util::set_console_output_callback(&_default_console_callback_dispacher);
-        }
-        else {
+        } else {
             bq::util::set_console_output_callback(nullptr);
         }
     }

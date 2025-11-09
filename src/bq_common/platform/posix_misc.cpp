@@ -588,7 +588,7 @@ namespace bq {
                             stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], static_cast<size_t>(demangled_str - stacks[i]));
                             stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), demangled, (size_t)str_len);
                             free(demangled);
-                        }else {
+                        } else {
                             demangled_str = nullptr;
                         }
                     }

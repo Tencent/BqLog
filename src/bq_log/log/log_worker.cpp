@@ -119,7 +119,7 @@ namespace bq {
         if (bq::platform::thread::get_current_thread_id() != thread_id_) {
             return;
         }
-        //Reliable in most cases, except log_manager is destructing in other thread.
+        // Reliable in most cases, except log_manager is destructing in other thread.
         if (log_global_vars::get().log_manager_inst_) {
             log_global_vars::get().log_manager_inst_->try_restart_worker(worker_ptr_);
         }

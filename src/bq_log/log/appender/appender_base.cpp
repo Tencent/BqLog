@@ -133,8 +133,7 @@ namespace bq {
             uint8_t mask = 0;
             if (categories_mask_config_.size() == 0) {
                 mask = 1;
-            }
-            else {
+            } else {
                 for (const bq::string& mask_config : categories_mask_config_) {
                     if (mask_config == "*" || category_name.begin_with(mask_config)) {
                         mask = 1;
@@ -146,8 +145,7 @@ namespace bq {
         }
         if (parent_log_->get_thread_mode() == log_thread_mode::async) {
             layout_ptr_ = &log_manager::instance().get_public_layout();
-        }
-        else {
+        } else {
             layout_ptr_ = const_cast<layout*>(&(parent_log_->get_layout()));
         }
     }

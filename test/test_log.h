@@ -112,7 +112,6 @@ namespace bq {
             }
         };
 
-
         class test_log : public test_base {
             friend class log_test_wrapper;
 

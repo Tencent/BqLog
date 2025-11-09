@@ -355,7 +355,7 @@ namespace bq {
 
 #define __BQ_FACADE_CPP11_PART(FUNCTION_NAME)                                                                                     \
     template <typename FunctionType>                                                                                              \
-    struct EBCO dispatcher {};                                                                                                    \
+    struct EBCO dispatcher { };                                                                                                   \
     template <typename Class, typename Ret, typename... Args>                                                                     \
     struct EBCO dispatcher<Ret (Class::*)(Args...)> {                                                                             \
         static Ret dispatch(void* obj, Args... args)                                                                              \
@@ -371,7 +371,7 @@ namespace bq {
         }                                                                                                                         \
     };                                                                                                                            \
     template <typename Proxy, typename FunctionType>                                                                              \
-    struct EBCO facade_impl {};                                                                                                   \
+    struct EBCO facade_impl { };                                                                                                  \
     template <typename Proxy, typename Ret, typename... Args>                                                                     \
     struct EBCO facade_impl<Proxy, Ret(Args...)> {                                                                                \
         template <typename... Facades>                                                                                            \

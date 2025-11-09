@@ -48,8 +48,7 @@ namespace bq {
             if (pos != bq::string::npos) {
                 comment = line.substr(pos + 2);
                 category = line.substr(0, pos);
-            }
-            else {
+            } else {
                 category = line;
             }
             category = category.trim();
@@ -102,7 +101,7 @@ namespace bq {
         code = java.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".java"), code);
         bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".java").c_str());
-        
+
         category_log_template_typescript ts(class_name);
         code = ts.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".ts"), code);

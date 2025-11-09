@@ -65,7 +65,7 @@ namespace bq {
             {
                 auto this_thread_id = bq::platform::thread::get_current_thread_id();
                 auto old_value = node.owner_.exchange_relaxed(this_thread_id);
-                (void)old_value; //avoid unused warning in release mode
+                (void)old_value; // avoid unused warning in release mode
                 assert((old_value == 0 || old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread");
                 if (node.lock_counter_.load_raw() > 0) {
                     node.lock_counter_.fetch_add_raw(1); // reentrant
@@ -91,7 +91,7 @@ namespace bq {
             {
                 auto this_thread_id = bq::platform::thread::get_current_thread_id();
                 auto old_value = node.owner_.exchange_relaxed(this_thread_id);
-                (void)old_value; //avoid unused warning in release mode
+                (void)old_value; // avoid unused warning in release mode
                 assert((old_value == this_thread_id) && "a mcs_spin_lock::lock_node only can be used by one thread, and lock() must be called before unlock()");
                 auto old_counter = node.lock_counter_.fetch_sub_raw(1);
                 if (old_counter > 1) {
@@ -124,16 +124,18 @@ namespace bq {
         /// </summary>
         class spin_lock_zero_init {
         protected:
-            alignas(8) bool value_;   // 0 by zero init
+            alignas(8) bool value_; // 0 by zero init
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-            alignas(8) bq::platform::thread::thread_id thread_id_;  // 0 by zero init
+            alignas(8) bq::platform::thread::thread_id thread_id_; // 0 by zero init
 #endif
         protected:
-            bq::platform::atomic<bool>& value() {
+            bq::platform::atomic<bool>& value()
+            {
                 return BQ_PACK_ACCESS_BY_TYPE(value_, bq::platform::atomic<bool>);
             }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-            bq::platform::atomic<bq::platform::thread::thread_id>& thread_id() {
+            bq::platform::atomic<bq::platform::thread::thread_id>& thread_id()
+            {
                 return BQ_PACK_ACCESS_BY_TYPE(thread_id_, bq::platform::atomic<bq::platform::thread::thread_id>);
             }
 #endif
@@ -183,7 +185,8 @@ namespace bq {
 
         class spin_lock : public spin_lock_zero_init {
         public:
-            spin_lock() {
+            spin_lock()
+            {
                 value_ = false;
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 thread_id_ = 0;
@@ -208,7 +211,7 @@ namespace bq {
         class spin_lock_rw_crazy {
         private:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
-            static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 
         public:
@@ -221,8 +224,6 @@ namespace bq {
             spin_lock_rw_crazy(spin_lock_rw_crazy&&) noexcept = delete;
             spin_lock_rw_crazy& operator=(const spin_lock_rw_crazy&) = delete;
             spin_lock_rw_crazy& operator=(spin_lock_rw_crazy&&) noexcept = delete;
-
-
 
             inline void read_lock()
             {
@@ -274,8 +275,7 @@ namespace bq {
             inline bool try_write_lock()
             {
                 counter_type expected_counter = 0;
-                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) 
-                {
+                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                     return true;
                 }
                 return false;

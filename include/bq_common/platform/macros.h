@@ -140,30 +140,31 @@ namespace bq {
     template <size_t ID, typename T>
     struct _bq_non_pod_holder_type { };
 }
-#define BQ_TLS_DEFINE(Type, Name, ID)                                       \
-    BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                   \
-    BQ_TLS bool  ____BQ_TSL_##Name##_recycled;                              \
-    template <>                                                             \
-    struct _bq_non_pod_holder_type<ID, Type> {                              \
-        _bq_non_pod_holder_type()                                           \
-        {                                                                   \
-        }                                                                   \
-        ~_bq_non_pod_holder_type()                                          \
-        {                                                                   \
-            if (____BQ_TLS_##Name##_ptr) {                                  \
-                delete ____BQ_TLS_##Name##_ptr;                             \
-                ____BQ_TLS_##Name##_ptr = nullptr;                          \
-                ____BQ_TSL_##Name##_recycled = true;                        \
-            }                                                               \
-        }                                                                   \
-        bq_forceinline operator bool() { return !____BQ_TSL_##Name##_recycled; }  \
-        bq_forceinline Type& get() {                                        \
-            if (!____BQ_TLS_##Name##_ptr) {                                 \
-                ____BQ_TLS_##Name##_ptr = new Type();                       \
-            }                                                               \
-            return *____BQ_TLS_##Name##_ptr;                                \
-        }                                                                   \
-    };                                                                      \
+#define BQ_TLS_DEFINE(Type, Name, ID)                                            \
+    BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                        \
+    BQ_TLS bool ____BQ_TSL_##Name##_recycled;                                    \
+    template <>                                                                  \
+    struct _bq_non_pod_holder_type<ID, Type> {                                   \
+        _bq_non_pod_holder_type()                                                \
+        {                                                                        \
+        }                                                                        \
+        ~_bq_non_pod_holder_type()                                               \
+        {                                                                        \
+            if (____BQ_TLS_##Name##_ptr) {                                       \
+                delete ____BQ_TLS_##Name##_ptr;                                  \
+                ____BQ_TLS_##Name##_ptr = nullptr;                               \
+                ____BQ_TSL_##Name##_recycled = true;                             \
+            }                                                                    \
+        }                                                                        \
+        bq_forceinline operator bool() { return !____BQ_TSL_##Name##_recycled; } \
+        bq_forceinline Type& get()                                               \
+        {                                                                        \
+            if (!____BQ_TLS_##Name##_ptr) {                                      \
+                ____BQ_TLS_##Name##_ptr = new Type();                            \
+            }                                                                    \
+            return *____BQ_TLS_##Name##_ptr;                                     \
+        }                                                                        \
+    };                                                                           \
     thread_local _bq_non_pod_holder_type<ID, Type> Name;
 #define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name, __COUNTER__)
 
