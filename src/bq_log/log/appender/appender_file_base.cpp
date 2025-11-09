@@ -329,9 +329,9 @@ namespace bq {
             snprintf(idx_buff, sizeof(idx_buff), "%d", max_index++);
             bq::string file_relative_path = config_file_name_ + time_str_buf + idx_buff + ext_name_with_dot;
             bq::string absolute_file_path = TO_ABSOLUTE_PATH(file_relative_path, base_dir_type_);
-            parse_file_context parse_context(file_relative_path);
+            parse_file_context parse_context(absolute_file_path);
 
-            need_open_new_file = !open_file_with_write_exclusive(file_relative_path) || is_file_oversize();
+            need_open_new_file = !open_file_with_write_exclusive(absolute_file_path) || is_file_oversize();
             if (!need_open_new_file) {
                 need_open_new_file |= (current_file_size_ > 0 && !parse_exist_log_file(parse_context));
             }
