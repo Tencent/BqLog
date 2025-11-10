@@ -61,6 +61,7 @@ namespace bq {
                 for (uint32_t loop = 0; loop < TEST_THREAD_ATOMIC_LOOP_TIMES; ++loop) {
                     uint32_t value = base_value_;
                     while (!i_.compare_exchange_strong(value, value + 1, platform::memory_order::acq_rel)) {
+                        bq::platform::thread::cpu_relax();
                         value = base_value_;
                     }
                     a_[value] = value;
