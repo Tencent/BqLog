@@ -2,6 +2,12 @@ name: AutoTest
 
 on:
   workflow_dispatch:  # manually trigger
+    inputs:
+      run_arm_tests:
+        description: 'Run slow ARM test jobs'
+        required: false
+        type: boolean
+        default: false
   workflow_call:
 jobs:
   #Windows X86_64
@@ -1344,6 +1350,7 @@ jobs:
             ./run_test_gcc.sh 23
   
   freeBSD_arm64_test_Clang_cpp17:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1394,6 +1401,7 @@ jobs:
 
 
   freeBSD_arm64_test_GCC_cpp17:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2101,6 +2109,7 @@ jobs:
             ./run_test_clang.sh 23
 
   OpenBSD_arm64_test_Clang_cpp11:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2126,6 +2135,7 @@ jobs:
             ./run_test_clang.sh 11
 
   OpenBSD_arm64_test_Clang_cpp14:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2151,6 +2161,7 @@ jobs:
             ./run_test_clang.sh 14
 
   OpenBSD_arm64_test_Clang_cpp17:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2176,6 +2187,7 @@ jobs:
             ./run_test_clang.sh 17
 
   OpenBSD_arm64_test_Clang_cpp20:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2201,6 +2213,7 @@ jobs:
             ./run_test_clang.sh 20
 
   OpenBSD_arm64_test_Clang_cpp23:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -2396,6 +2409,74 @@ jobs:
         id: RunInNetBSD
         uses: vmactions/netbsd-vm@v1
         with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+          run: |
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            ./run_test_clang.sh 17
+
+  NetBSD_arm64_test_GCC_cpp17:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in NetBSD
+        id: RunInNetBSDArm64GCC
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+          run: |
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            ./run_test_gcc.sh 17
+
+  NetBSD_arm64_test_Clang_cpp17:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in NetBSD
+        id: RunInNetBSDArm64Clang
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
           usesh: true
           mem: 8192
           release: "10.1"
