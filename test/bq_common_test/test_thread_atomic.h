@@ -47,37 +47,37 @@ namespace bq {
 
         class test_thread_cas : public bq::platform::thread {
         public:
-            bq::array<uint32_t>* a_ptr = nullptr;
-            test_atomic_struct<uint32_t>* i_ptr = nullptr;
-            uint32_t cas_times_per_loop = 0;
-            uint32_t base_value;
+            bq::array<uint32_t>& a_;
+            bq::platform::atomic<uint32_t>& i_;
+            bq::platform::atomic<uint32_t>& write_index_;
+            uint32_t cas_times_per_loop_ = 0;
+            uint32_t base_value_;
 
-            test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a, uint32_t in_cas_times_per_loop, uint32_t in_base_value)
+            test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a, bq::platform::atomic<uint32_t>& write_index, uint32_t cas_times_per_loop, uint32_t base_value)
+                : a_(a), i_(i.i), write_index_(write_index), cas_times_per_loop_(cas_times_per_loop), base_value_(base_value)
             {
-                i_ptr = &i;
-                a_ptr = &a;
-                base_value = in_base_value;
-                cas_times_per_loop = in_cas_times_per_loop;
             }
 
             virtual void run() override
             {
-                for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
-                    uint32_t value = base_value;
+                for (uint32_t loop = 0; loop < TEST_THREAD_ATOMIC_LOOP_TIMES; ++loop) {
+                    uint32_t value = base_value_;
                     auto magic_number_cpy = MAGIC_NUMBER;
-                    while (!i_ptr->i.compare_exchange_strong(magic_number_cpy, value + 1, platform::memory_order::release)) {
+                    while (!i_.compare_exchange_strong(magic_number_cpy, value + 1, platform::memory_order::acq_rel)) {
                         magic_number_cpy = MAGIC_NUMBER;
                     }
-                    a_ptr->push_back(value);
-                    for (uint32_t j = 1; j < cas_times_per_loop; ++j) {
+                    auto index = write_index_.fetch_add_acq_rel(1);
+                    a_[index] = value;
+                    for (uint32_t j = 1; j < cas_times_per_loop_; ++j) {
                         ++value;
-                        if (i_ptr->i.compare_exchange_strong(value, value + 1, platform::memory_order::release)) {
-                            a_ptr->push_back(value);
-                        } else {
-                            a_ptr->push_back(MAGIC_NUMBER); // impossible branch
+                        auto recorded_value = MAGIC_NUMBER;
+                        if (i_.compare_exchange_strong(value, value + 1, platform::memory_order::acq_rel)) {
+                            recorded_value = value;
                         }
+                        auto inner_index = write_index_.fetch_add_acquire(1);
+                        a_[inner_index] = recorded_value;
                     }
-                    i_ptr->i.store(MAGIC_NUMBER, platform::memory_order::release);
+                    i_.store(MAGIC_NUMBER, platform::memory_order::release);
                 }
             }
         };
@@ -355,24 +355,25 @@ namespace bq {
                     test_atomic_struct<uint32_t> i_value;
                     i_value.i.store_seq_cst(MAGIC_NUMBER);
                     bq::array<uint32_t> test_array;
-                    test_array.set_capacity(TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5);
-                    test_thread_cas thread1(i_value, test_array, cas_times_per_loop, 0);
+                    test_array.fill_uninitialized(TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5);
+                    bq::platform::atomic<uint32_t> write_index = 0;
+                    test_thread_cas thread1(i_value, test_array, write_index, cas_times_per_loop, 0);
                     thread1.set_thread_name("thread1");
                     thread1.start();
 
-                    test_thread_cas thread2(i_value, test_array, cas_times_per_loop, 10);
+                    test_thread_cas thread2(i_value, test_array, write_index, cas_times_per_loop, 10);
                     thread2.set_thread_name("thread2");
                     thread2.start();
 
-                    test_thread_cas thread3(i_value, test_array, cas_times_per_loop, 20);
+                    test_thread_cas thread3(i_value, test_array, write_index, cas_times_per_loop, 20);
                     thread3.set_thread_name("thread3");
                     thread3.start();
 
-                    test_thread_cas thread4(i_value, test_array, cas_times_per_loop, 30);
+                    test_thread_cas thread4(i_value, test_array, write_index, cas_times_per_loop, 30);
                     thread4.set_thread_name("thread4");
                     thread4.start();
 
-                    test_thread_cas thread5(i_value, test_array, cas_times_per_loop, 40);
+                    test_thread_cas thread5(i_value, test_array, write_index, cas_times_per_loop, 40);
                     thread5.set_thread_name("thread5");
                     thread5.start();
 
