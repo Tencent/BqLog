@@ -28,12 +28,14 @@ namespace bq {
 
         class miso_linked_list_test_insert_task {
         private:
+            bq::platform::atomic<bool>& task_status_;
             bq::miso_linked_list<int32_t>& linked_list_;
             test_result& result_;
 
         public:
-            miso_linked_list_test_insert_task(bq::miso_linked_list<int32_t>& linked_list, test_result& result)
-                : linked_list_(linked_list)
+            miso_linked_list_test_insert_task(bq::platform::atomic<bool>& task_status, bq::miso_linked_list<int32_t>& linked_list, test_result& result)
+                : task_status_(task_status)
+                , linked_list_(linked_list)
                 , result_(result)
             {
                 (void)result_;
@@ -45,21 +47,20 @@ namespace bq {
                     auto iter = linked_list_.insert(number);
                     (void)iter;
                 }
-                while (linked_list_test_number_generator_.load_acquire() < linked_list_test_number_per_thread * log_buffer_total_task) {
-                    bq::platform::thread::yield();
-                }
-                linked_list_test_number_generator_.fetch_add_release(1);
+                task_status_.store_seq_cst(true);
             }
         };
 
         class miso_linked_list_test_remove_task {
         private:
+            bq::platform::atomic<bool>(&miso_linked_insert_task_status_array_)[log_buffer_total_task];
             bq::miso_linked_list<int32_t>& linked_list_;
             test_result& result_;
 
         public:
-            miso_linked_list_test_remove_task(bq::miso_linked_list<int32_t>& linked_list, test_result& result)
-                : linked_list_(linked_list)
+            miso_linked_list_test_remove_task(bq::platform::atomic<bool>(&miso_linked_insert_task_status_array)[log_buffer_total_task], bq::miso_linked_list<int32_t>& linked_list, test_result& result)
+                : miso_linked_insert_task_status_array_(miso_linked_insert_task_status_array)
+                , linked_list_(linked_list)
                 , result_(result)
             {
             }
@@ -71,8 +72,17 @@ namespace bq {
                 mark_array.fill_uninitialized((size_t)max_value);
                 memset(mark_array.begin(), 0, (size_t)max_value);
                 int32_t total_read_number = 0;
+                bool done_status[log_buffer_total_task] = { false };
                 while (true) {
-                    bool all_insert_done = (linked_list_test_number_generator_.load_acquire() == max_value + log_buffer_total_task);
+                    bool all_insert_done = true;
+                    for (int32_t i = 0; i < log_buffer_total_task; ++i) {
+                        if (!done_status[i]) {
+                            done_status[i] = miso_linked_insert_task_status_array_[i].load_seq_cst();
+                            if (!done_status[i]) {
+                                all_insert_done = false;
+                            }
+                        }
+                    }
                     auto iter = linked_list_.first();
                     uint32_t idx = 0;
                     while (iter) {
@@ -263,10 +273,12 @@ namespace bq {
                 test_output_dynamic(bq::log_level::info, "[memory pool] miso linked list test begin\n");
                 bq::miso_linked_list<int32_t> linked_list;
                 std::vector<std::thread> insert_tasks;
+                bq::platform::atomic<bool> miso_linked_insert_task_status_array[log_buffer_total_task];
                 for (int32_t i = 0; i < log_buffer_total_task; ++i) {
-                    insert_tasks.emplace_back(miso_linked_list_test_insert_task(linked_list, result));
+                    miso_linked_insert_task_status_array[i].store(false, bq::platform::memory_order::seq_cst);
+                    insert_tasks.emplace_back(miso_linked_list_test_insert_task(miso_linked_insert_task_status_array[i], linked_list, result));
                 }
-                std::thread remove_task(miso_linked_list_test_remove_task(linked_list, result));
+                std::thread remove_task(miso_linked_list_test_remove_task(miso_linked_insert_task_status_array, linked_list, result));
                 remove_task.join();
                 for (auto& task : insert_tasks) {
                     task.join();
