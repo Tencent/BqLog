@@ -13,6 +13,7 @@
 #ifdef BQ_WIN
 #include <processthreadsapi.h>
 #include <windows.h>
+#include <winternl.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <inttypes.h>
