@@ -39,12 +39,6 @@ namespace bq {
             set_base_dir_0(&tmp[0]);
             set_base_dir_1(&tmp[0]);
         }
-
-        bool share_file(const char* file_path)
-        {
-            (void)file_path;
-            return false;
-        }
     }
 }
 #endif
