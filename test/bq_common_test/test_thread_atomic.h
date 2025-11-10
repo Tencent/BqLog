@@ -10,7 +10,6 @@ namespace bq {
         };
 
         constexpr uint32_t TEST_THREAD_ATOMIC_LOOP_TIMES = 1000000;
-        constexpr uint32_t MAGIC_NUMBER = 0x4323;
 
         class test_thread_exist : public bq::platform::thread {
         public:
@@ -49,12 +48,11 @@ namespace bq {
         public:
             bq::array<uint32_t>& a_;
             bq::platform::atomic<uint32_t>& i_;
-            bq::platform::atomic<uint32_t>& write_index_;
-            uint32_t cas_times_per_loop_ = 0;
             uint32_t base_value_;
+            uint32_t gap_;
 
-            test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a, bq::platform::atomic<uint32_t>& write_index, uint32_t cas_times_per_loop, uint32_t base_value)
-                : a_(a), i_(i.i), write_index_(write_index), cas_times_per_loop_(cas_times_per_loop), base_value_(base_value)
+            test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a, uint32_t base_value, uint32_t gap)
+                : a_(a), i_(i.i), base_value_(base_value), gap_(gap)
             {
             }
 
@@ -62,22 +60,11 @@ namespace bq {
             {
                 for (uint32_t loop = 0; loop < TEST_THREAD_ATOMIC_LOOP_TIMES; ++loop) {
                     uint32_t value = base_value_;
-                    auto magic_number_cpy = MAGIC_NUMBER;
-                    while (!i_.compare_exchange_strong(magic_number_cpy, value + 1, platform::memory_order::acq_rel)) {
-                        magic_number_cpy = MAGIC_NUMBER;
+                    while (!i_.compare_exchange_strong(value, value + 1, platform::memory_order::acq_rel)) {
+                        value = base_value_;
                     }
-                    auto index = write_index_.fetch_add_acq_rel(1);
-                    a_[index] = value;
-                    for (uint32_t j = 1; j < cas_times_per_loop_; ++j) {
-                        ++value;
-                        auto recorded_value = MAGIC_NUMBER;
-                        if (i_.compare_exchange_strong(value, value + 1, platform::memory_order::acq_rel)) {
-                            recorded_value = value;
-                        }
-                        auto inner_index = write_index_.fetch_add_acquire(1);
-                        a_[inner_index] = recorded_value;
-                    }
-                    i_.store(MAGIC_NUMBER, platform::memory_order::release);
+                    a_[value] = value;
+                    base_value_ += gap_;
                 }
             }
         };
@@ -351,52 +338,26 @@ namespace bq {
                 test_output_dynamic(bq::log_level::info, "atomic add test is finished, now begin the cas test, please wait...                \r");
                 {
                     // CAS test
-                    constexpr uint32_t cas_times_per_loop = 5;
+                    constexpr uint32_t task_number = 5;
                     test_atomic_struct<uint32_t> i_value;
-                    i_value.i.store_seq_cst(MAGIC_NUMBER);
+                    i_value.i.store_seq_cst(0);
                     bq::array<uint32_t> test_array;
-                    test_array.fill_uninitialized(TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5);
-                    bq::platform::atomic<uint32_t> write_index = 0;
-                    test_thread_cas thread1(i_value, test_array, write_index, cas_times_per_loop, 0);
-                    thread1.set_thread_name("thread1");
-                    thread1.start();
-
-                    test_thread_cas thread2(i_value, test_array, write_index, cas_times_per_loop, 10);
-                    thread2.set_thread_name("thread2");
-                    thread2.start();
-
-                    test_thread_cas thread3(i_value, test_array, write_index, cas_times_per_loop, 20);
-                    thread3.set_thread_name("thread3");
-                    thread3.start();
-
-                    test_thread_cas thread4(i_value, test_array, write_index, cas_times_per_loop, 30);
-                    thread4.set_thread_name("thread4");
-                    thread4.start();
-
-                    test_thread_cas thread5(i_value, test_array, write_index, cas_times_per_loop, 40);
-                    thread5.set_thread_name("thread5");
-                    thread5.start();
-
-                    thread1.join();
-                    thread2.join();
-                    thread3.join();
-                    thread4.join();
-                    thread5.join();
-
-                    result.add_result(test_array.size() == TEST_THREAD_ATOMIC_LOOP_TIMES * cas_times_per_loop * 5, "atomic CAS test 1, final size:%d", test_array.size());
-                    bool check_result = true;
-                    uint32_t test_base_value = 0;
-                    for (uint32_t i = 0; i < test_array.size(); ++i) {
-                        uint32_t add_value = i % cas_times_per_loop;
-                        if (add_value == 0) {
-                            test_base_value = test_array[i];
-                        }
-                        if (test_array[i] - test_base_value != add_value) {
-                            check_result = false;
-                            break;
-                        }
+                    test_array.fill_uninitialized(TEST_THREAD_ATOMIC_LOOP_TIMES * task_number);
+                    bq::array<bq::unique_ptr<test_thread_cas>> threads_array;
+                    for (uint32_t i = 0; i < task_number; ++i) {
+                        threads_array.emplace_back(bq::make_unique<test_thread_cas>(i_value, test_array, i, task_number));
+                        threads_array[i]->start();
                     }
 
+                    for (uint32_t i = 0; i < task_number; ++i) {
+                        threads_array[i]->join();
+                    }
+                    bool check_result = true;
+                    for (uint32_t i = 0; i < test_array.size(); ++i) {
+                        if (test_array[i] != i) {
+                            check_result = false;
+                        }
+                    }
                     result.add_result(check_result, "atomic CAS test2");
                 }
                 test_output_dynamic(bq::log_level::info, "cas test is finished, now begin the thread cancel test, please wait...                \r");
