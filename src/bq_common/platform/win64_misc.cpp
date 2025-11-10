@@ -12,7 +12,6 @@
 #include "bq_common/platform/win64_misc.h"
 #if defined(BQ_WIN)
 #include "bq_common/platform/win64_includes_begin.h"
-#include <shellapi.h>
 #include <winternl.h>
 #include <sys/stat.h>
 #include <direct.h>
@@ -546,18 +545,6 @@ namespace bq {
                 }
             }
             return list;
-        }
-
-        bool share_file(const char* file_path)
-        {
-            if (!file_path || !*file_path) {
-                return false;
-            }
-            bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(file_path)));
-            // Open directory by default file explorer
-            HINSTANCE result = ShellExecuteW(NULL, L"open", (LPCWSTR)file_path_w.c_str(), NULL, NULL, SW_SHOWNORMAL);
-            // 检查操作是否成功
-            return reinterpret_cast<int64_t>(result) > 32;
         }
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)

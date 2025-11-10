@@ -42,12 +42,13 @@ namespace bq {
 
     void log_global_vars::partial_destruct()
     {
-        delete log_manager_inst_;
+        /*delete log_manager_inst_;
         log_manager_inst_ = nullptr;
         delete appender_decoder_manager_inst_;
         appender_decoder_manager_inst_ = nullptr;
         delete console_static_misc_;
-        console_static_misc_ = nullptr;
+        console_static_misc_ = nullptr;*/
+        log_manager_inst_->force_flush_all();
     }
 
     log_global_vars::log_global_vars()
