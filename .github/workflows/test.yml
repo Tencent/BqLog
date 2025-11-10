@@ -1364,7 +1364,34 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            set +e
             ./run_test_clang.sh 17
+            EXIT_CODE=$?
+            set -e
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Test failed with exit code $EXIT_CODE"
+              CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' \) 2>/dev/null | head -n1)"
+              EXE=""
+              for cand in ./BqLogUnitTest ./BqLogUnitTest.exe $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
+                if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
+              done
+              echo "exe: ${EXE:-<not found>}"
+              echo "core: ${CORE_FILE:-<not found>}"
+              if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
+                echo "=== GDB core backtrace (FreeBSD aarch64) ==="
+                gdb --batch -q \
+                  -ex "set pagination off" \
+                  -ex "info threads" \
+                  -ex "thread apply all bt full" \
+                  -ex "quit" \
+                  "$EXE" "$CORE_FILE" || echo "gdb analysis failed"
+              else
+                echo "Core file or executable not found, listing candidates:"
+                find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' -o -name 'BqLogUnitTest' \) 2>/dev/null || true
+              fi
+              exit $EXIT_CODE
+            fi
+
 
   freeBSD_arm64_test_GCC_cpp17:
     runs-on: ubuntu-latest
