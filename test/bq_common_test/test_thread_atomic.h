@@ -50,15 +50,16 @@ namespace bq {
             bq::platform::atomic<uint32_t>& i_;
             uint32_t base_value_;
             uint32_t gap_;
+            uint32_t loop_times_;
 
-            test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a, uint32_t base_value, uint32_t gap)
-                : a_(a), i_(i.i), base_value_(base_value), gap_(gap)
+            test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a, uint32_t base_value, uint32_t gap, uint32_t loop_times)
+                : a_(a), i_(i.i), base_value_(base_value), gap_(gap), loop_times_(loop_times)
             {
             }
 
             virtual void run() override
             {
-                for (uint32_t loop = 0; loop < TEST_THREAD_ATOMIC_LOOP_TIMES; ++loop) {
+                for (uint32_t loop = 0; loop < loop_times_; ++loop) {
                     uint32_t value = base_value_;
                     while (!i_.compare_exchange_strong(value, value + 1, platform::memory_order::acq_rel)) {
                         bq::platform::thread::cpu_relax();
@@ -340,13 +341,14 @@ namespace bq {
                 {
                     // CAS test
                     constexpr uint32_t task_number = 5;
+                    constexpr uint32_t cas_loop_times = 10000;
                     test_atomic_struct<uint32_t> i_value;
                     i_value.i.store_seq_cst(0);
                     bq::array<uint32_t> test_array;
-                    test_array.fill_uninitialized(TEST_THREAD_ATOMIC_LOOP_TIMES * task_number);
+                    test_array.fill_uninitialized(cas_loop_times * task_number);
                     bq::array<bq::unique_ptr<test_thread_cas>> threads_array;
                     for (uint32_t i = 0; i < task_number; ++i) {
-                        threads_array.emplace_back(bq::make_unique<test_thread_cas>(i_value, test_array, i, task_number));
+                        threads_array.emplace_back(bq::make_unique<test_thread_cas>(i_value, test_array, i, task_number, cas_loop_times));
                         threads_array[i]->start();
                     }
 
