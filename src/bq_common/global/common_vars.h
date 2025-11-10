@@ -34,10 +34,21 @@ namespace bq {
         }
     };
 
-    template <typename T>
-    struct _global_var_auto_destructor {
-        inline ~_global_var_auto_destructor();
+    struct global_var_destructiable {
+        friend struct global_vars_destructor;
+    protected:
+        virtual void partial_destruct()
+        {
+        }
     };
+
+    struct global_vars_destructor {
+    public:
+        void register_destructible_var(global_var_destructiable* var);
+        ~global_vars_destructor();
+    };
+
+    global_vars_destructor& get_global_var_destructor();
 
     /// <summary>
     /// Base class template for managing global objects with controlled initialization and destruction.
@@ -68,9 +79,8 @@ namespace bq {
     /// Here, HighPriorityVars initializes before LowPriorityVars and destructs after it, with safe nested calls.
     /// </remarks>
     template <typename T, typename Priority_Global_Var_Type = void>
-    struct global_vars_base {
+    struct global_vars_base : public global_var_destructiable {
         friend struct global_var_holder;
-        friend struct _global_var_auto_destructor<T>;
 
     protected:
         static BQ_TLS T* global_vars_ptr_;
@@ -78,13 +88,6 @@ namespace bq {
         static T* global_vars_buffer_;
 
     protected:
-        static _global_var_auto_destructor<T> global_var_destructor_;
-
-    protected:
-        virtual void partial_destruct()
-        {
-        }
-
         virtual ~global_vars_base()
         {
         }
@@ -101,6 +104,7 @@ namespace bq {
                         T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(8, sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
                         new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
+                        get_global_var_destructor().register_destructible_var(T::global_vars_ptr_);
                         atomic_status.store_release(2);
                         return *T::global_vars_ptr_;
                     }
@@ -125,20 +129,6 @@ namespace bq {
 
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
-
-    template <typename T, typename Priority_Global_Var_Type>
-    _global_var_auto_destructor<T> global_vars_base<T, Priority_Global_Var_Type>::global_var_destructor_;
-
-    template <typename T>
-    inline _global_var_auto_destructor<T>::~_global_var_auto_destructor()
-    {
-        //"To ensure these variables can be used at any time without being destroyed, we accept a small amount of memory leakage."
-        if (T::global_vars_ptr_) {
-            T::global_vars_ptr_->partial_destruct();
-        } else if (T::global_vars_buffer_) {
-            T::global_vars_buffer_->partial_destruct();
-        }
-    }
 
     struct common_global_vars : public global_vars_base<common_global_vars> {
 #if defined(BQ_WIN)
