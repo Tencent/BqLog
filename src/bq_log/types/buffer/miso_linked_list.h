@@ -112,6 +112,11 @@ namespace bq {
                 delete it.current_node_;
                 return iterator_type(head_, next);
             }
+            if (expected_head == it.current_node_) {
+                // spurious failure, sometimes occurs in CAS operation, especially under high contention and ARM architecture.
+                bq::platform::thread::cpu_relax();
+                continue;
+            }
             last_ptr = &expected_head->next_;
             while (last_ptr->load_raw() != it.current_node_) {
                 last_ptr = &last_ptr->load_raw()->next_;
