@@ -52,7 +52,7 @@ namespace bq {
 
 		void ios_print(const char* __restrict content)
 		{
-            NSLog(@"%@", [NSString stringWithUTF8String : content]);
+            NSLog(@"[Bq]%@", [NSString stringWithUTF8String : content]);
 		}
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
