@@ -235,37 +235,37 @@ namespace bq {
             {
                 switch (success_order) {
                 case memory_order::relaxed:
-                    return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+                    return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
                 case memory_order::acquire:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::release:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::acq_rel:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::seq_cst:
                 default:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
                     case memory_order::acquire:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
                     }
                 }
             }
