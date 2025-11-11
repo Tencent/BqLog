@@ -150,12 +150,12 @@ extern "C" int32_t __cxa_guard_acquire(_guard_t* gv)
         if (old_value == CONSTRUCTION_COMPLETE) {
             return 0;
         } else if (old_value == CONSTRUCTION_NOT_YET_STARTED) {
-            if (!gv->get_atomic_state().compare_exchange_weak(old_value, CONSTRUCTION_UNDERWAY_WITHOUT_WAITER, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+            if (!gv->get_atomic_state().compare_exchange_strong(old_value, CONSTRUCTION_UNDERWAY_WITHOUT_WAITER, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                 continue;
             }
             return 1;
         } else if (old_value == CONSTRUCTION_UNDERWAY_WITHOUT_WAITER) {
-            if (!gv->get_atomic_state().compare_exchange_weak(old_value, CONSTRUCTION_UNDERWAY_WITH_WAITER, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+            if (!gv->get_atomic_state().compare_exchange_strong(old_value, CONSTRUCTION_UNDERWAY_WITH_WAITER, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                 continue;
             }
         }
