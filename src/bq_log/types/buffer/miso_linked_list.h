@@ -106,21 +106,27 @@ namespace bq {
         }
         node<T>* next = it.current_node_->next_.load_raw();
         bq::platform::atomic<node<T>*>* last_ptr = it.last_ptr_;
-        if (&head_ == last_ptr) {
-            node<T>* expected_head = it.current_node_;
-            if (head_.compare_exchange_strong(expected_head, next, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-                delete it.current_node_;
-                return iterator_type(head_, next);
+        while (true) {
+            if (&head_ == last_ptr) {
+                node<T>* expected_head = it.current_node_;
+                if (head_.compare_exchange_strong(expected_head, next, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                    delete it.current_node_;
+                    return iterator_type(head_, next);
+                }
+
+                if (expected_head == it.current_node_) {
+                    // spurious failure, sometimes occurs in CAS operation, especially under high contention and ARM architecture.
+                    bq::platform::thread::cpu_relax();
+                    continue;
+                }
+
+                last_ptr = &expected_head->next_;
+                while (last_ptr->load_raw() != it.current_node_) {
+                    last_ptr = &last_ptr->load_raw()->next_;
+                }
+                break;
             }
-            if (expected_head == it.current_node_) {
-                // spurious failure, sometimes occurs in CAS operation, especially under high contention and ARM architecture.
-                bq::platform::thread::cpu_relax();
-                continue;
-            }
-            last_ptr = &expected_head->next_;
-            while (last_ptr->load_raw() != it.current_node_) {
-                last_ptr = &last_ptr->load_raw()->next_;
-            }
+            break;
         }
         last_ptr->store_raw(next);
         delete it.current_node_;
