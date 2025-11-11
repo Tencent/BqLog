@@ -3059,6 +3059,21 @@ jobs:
             fi
           }
 
+          copy_directory_all() {
+            local file_path="$1"
+            local dst_dir="$2"
+            if [[ -z "$file_path" ]]; then
+              return
+            fi
+            local src_dir
+            src_dir="$(dirname "$file_path")"
+            if [[ ! -d "$src_dir" ]]; then
+              return
+            fi
+            mkdir -p "$dst_dir"
+            cp -a "$src_dir/." "$dst_dir/"
+          }
+
           WIN_X64_BASE="$ARTIFACT_ROOT/windows_x86_64_libs"
           WIN_ARM64_BASE="$ARTIFACT_ROOT/windows_arm64_libs"
           LINUX_X64_BASE="$ARTIFACT_ROOT/linux_x86_64_libs"
@@ -3165,13 +3180,15 @@ jobs:
             copy_file "$WIN_ARM64_DLL" "$plugin_dir/Binaries/Win64Arm64/BqLog.dll"
             copy_file "$WIN_ARM64_PDB" "$plugin_dir/Binaries/Win64Arm64/BqLog.pdb"
 
-            copy_file_follow "$LINUX_X64_SO" "$thirdparty_root/Linux/x86_64/lib/libBqLog.so"
-            copy_file_follow "$LINUX_X64_SO" "$plugin_dir/Binaries/Linux/libBqLog.so"
-            copy_file_follow "$LINUX_ARM64_SO" "$thirdparty_root/Linux/arm64/lib/libBqLog.so"
-            copy_file_follow "$LINUX_ARM64_SO" "$plugin_dir/Binaries/LinuxAArch64/libBqLog.so"
+            copy_directory_all "$LINUX_X64_SO" "$thirdparty_root/Linux/x86_64/lib"
+            copy_directory_all "$LINUX_X64_SO" "$plugin_dir/Binaries/Linux"
+            copy_directory_all "$LINUX_ARM64_SO" "$thirdparty_root/Linux/arm64/lib"
+            copy_directory_all "$LINUX_ARM64_SO" "$plugin_dir/Binaries/LinuxAArch64"
 
-            copy_file_follow "$MAC_DYLIB" "$thirdparty_root/Mac/lib/libBqLog.dylib"
-            copy_file_follow "$MAC_DYLIB" "$plugin_dir/Binaries/Mac/libBqLog.dylib"
+            copy_directory_all "$MAC_DYLIB" "$thirdparty_root/Mac/lib"
+            rm -rf "$thirdparty_root/Mac/lib/"*.framework
+            copy_directory_all "$MAC_DYLIB" "$plugin_dir/Binaries/Mac"
+            rm -rf "$plugin_dir/Binaries/Mac/"*.framework
 
             copy_dir "$IOS_XCFRAMEWORK" "$thirdparty_root/IOS/BqLog.xcframework"
             copy_dir "$IOS_XCFRAMEWORK" "$plugin_dir/Binaries/IOS/BqLog.xcframework"
