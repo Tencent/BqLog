@@ -3201,7 +3201,7 @@ jobs:
 
             zip_name="bqlog-unreal-plugin-prebuilt-${VERSION}-${ue}.zip"
             rm -f "$DIST_DIR/$zip_name" "$DIST_DIR/$zip_name.sha256"
-            (cd "$stage_dir" && zip -rq "$DIST_DIR/$zip_name" "BqLog")
+            (cd "$stage_dir" && zip -qry "$DIST_DIR/$zip_name" "BqLog")
             sha256sum "$DIST_DIR/$zip_name" | tr '[:upper:]' '[:lower:]' > "$DIST_DIR/$zip_name.sha256"
           done
 
