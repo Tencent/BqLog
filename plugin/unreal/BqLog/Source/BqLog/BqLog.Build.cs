@@ -118,7 +118,7 @@ public class BqLog : ModuleRules
         string binariesFolder = UnrealTargetPlatform.Mac.ToString();
         string runtimeSrcDir = Path.Combine(ModuleDirectory, "../..", "Binaries", binariesFolder);
         string runtimeDstDir = Path.Combine("$(ProjectDir)", "Binaries", binariesFolder);
-        AddRuntimeDependencyVariants(runtimeSrcDir, runtimeDstDir, "libBqLog.dylib");
+        AddRuntimeDependencyVariants(runtimeSrcDir, runtimeDstDir, "libBqLog.");
     }
 
     private void ConfigureIOS(string thirdPartyRoot, string pluginRoot)
