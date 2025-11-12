@@ -3071,7 +3071,7 @@ jobs:
               return
             fi
             mkdir -p "$dst_dir"
-            cp -a "$src_dir/." "$dst_dir/"
+            rsync -a "$src_dir/" "$dst_dir/"
           }
 
           WIN_X64_BASE="$ARTIFACT_ROOT/windows_x86_64_libs"
