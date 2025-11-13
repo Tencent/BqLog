@@ -2599,7 +2599,7 @@ jobs:
             ./run_test_clang.sh 17
 
   android_armv7_emulator_test:
-    runs-on: ubuntu-24.04-arm
+    runs-on: macos-latest
     env:
       ANDROID_PLATFORM: "24"
       API_LEVEL: "30"
@@ -2612,33 +2612,20 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
       - name: Set up NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
           local-cache: false
-      - name: Install Android SDK (cmdline-tools)
+      - name: Install SDK packages
         shell: bash
         run: |
           set -e
-          SDK="$HOME/android-sdk"
-          mkdir -p "$SDK/cmdline-tools"
-          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -o /tmp/clt.zip
-          unzip -q -o /tmp/clt.zip -d /tmp/clt
-          mv /tmp/clt/cmdline-tools "$SDK/cmdline-tools/latest"
-          echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
-          echo "$SDK/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$SDK/platform-tools" >> $GITHUB_PATH
-          echo "$SDK/emulator" >> $GITHUB_PATH
-      - name: Accept licenses and install SDK packages (canary channel)
-        shell: bash
-        run: |
-          set -e
-          yes | sdkmanager --licenses
-          sdkmanager --channel=3 --install "platform-tools" "emulator"
-          sdkmanager --install "platforms;android-${API_LEVEL}" "build-tools;35.0.0"
-          sdkmanager --install "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
       - name: Build Debug
         shell: bash
         run: |
@@ -2688,7 +2675,7 @@ jobs:
           target: google_apis
           arch: ${{ env.EMU_ARCH }}
           force-avd-creation: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect -accel off
+          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
           script: |
             set -e
@@ -2700,7 +2687,7 @@ jobs:
             adb shell /data/local/tmp/BqLogUnitTest_rel
 
   android_arm64_emulator_test:
-    runs-on: ubuntu-24.04-arm
+    runs-on: macos-latest
     env:
       ANDROID_PLATFORM: "24"
       API_LEVEL: "30"
@@ -2712,33 +2699,20 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+      - name: Set up Android SDK (with NDK)
+        id: setup-android
+        uses: android-actions/setup-android@v3
       - name: Set up NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
           local-cache: false
-      - name: Install Android SDK (cmdline-tools)
+      - name: Install SDK packages
         shell: bash
         run: |
           set -e
-          SDK="$HOME/android-sdk"
-          mkdir -p "$SDK/cmdline-tools"
-          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -o /tmp/clt.zip
-          unzip -q -o /tmp/clt.zip -d /tmp/clt
-          mv /tmp/clt/cmdline-tools "$SDK/cmdline-tools/latest"
-          echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
-          echo "$SDK/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$SDK/platform-tools" >> $GITHUB_PATH
-          echo "$SDK/emulator" >> $GITHUB_PATH
-      - name: Accept licenses and install SDK packages (canary channel)
-        shell: bash
-        run: |
-          set -e
-          yes | sdkmanager --licenses
-          sdkmanager --channel=3 --install "platform-tools" "emulator"
-          sdkmanager --install "platforms;android-${API_LEVEL}" "build-tools;35.0.0"
-          sdkmanager --install "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
       - name: Build Debug
         shell: bash
         run: |
@@ -2788,7 +2762,7 @@ jobs:
           target: google_apis
           arch: ${{ env.ANDROID_ABI }}
           force-avd-creation: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect -accel off
+          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
           script: |
             set -e
