@@ -15,6 +15,7 @@
 #include "bq_common/bq_common.h"
 #if defined(BQ_ANDROID)
 #include <android/log.h>
+#include <unistd.h>
 #elif defined(BQ_OHOS)
 #include <hilog/log.h>
 #elif defined(BQ_WIN)
@@ -99,7 +100,7 @@ namespace bq {
         }
 #endif
 
-#if defined(BQ_ANDROID)
+#if defined(BQ_ANDROID) && !defined(BQ_UNIT_TEST)
         __android_log_write(ANDROID_LOG_VERBOSE + (static_cast<int32_t>(level) - static_cast<int32_t>(bq::log_level::verbose)),
             "Bq", text ? text : "");
 #elif defined(BQ_OHOS)

@@ -69,11 +69,7 @@ void sig_handler(int)
 }
 #endif
 
-#if defined(BQ_ANDROID)
-int32_t test_main()
-#else
-int32_t main()
-#endif
+int32_t main_logic()
 {
 #ifdef BQ_POSIX
     struct sigaction sa = {};
@@ -129,3 +125,16 @@ int32_t main()
         return -1;
     }
 }
+
+int32_t main(int32_t argc, char** argv)
+{
+    (void)argc;
+    (void)argv;
+    return main_logic();
+}
+
+#if defined(BQ_ANDROID)
+int32_t test_main() {
+    return main_logic();
+}
+#endif

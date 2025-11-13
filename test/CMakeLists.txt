@@ -93,14 +93,20 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-if(TARGET_PLATFORM STREQUAL "android" OR TARGET_PLATFORM STREQUAL "ios")
-    # build shared library
-    add_library(BqLogUnitTest
-            SHARED
+if(TARGET_PLATFORM STREQUAL "android")
+    # build static library
+    add_executable(BqLogUnitTest
             ${SRC_LIST}
             ${TEST_LIST}
             ${THIRD_PARTY_LIST}
             ${INC_LIST})
+elseif(TARGET_PLATFORM STREQUAL "ios")
+    add_library(BqLogUnitTest
+        STATIC
+        ${SRC_LIST}
+        ${TEST_LIST}
+        ${THIRD_PARTY_LIST}
+        ${INC_LIST})
 else()
     if(JAVA_SUPPORT)
 		if(DEFINED ENV{JAVA_HOME})

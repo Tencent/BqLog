@@ -22,6 +22,7 @@
 #include <unwind.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <unistd.h>
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -114,6 +115,7 @@ namespace bq {
             return true;
         }
 
+#ifndef BQ_UNIT_TEST
         static bool is_valid_pkg(const bq::string& name)
         {
             size_t n = name.size();
@@ -174,6 +176,7 @@ namespace bq {
             }
             return false;
         }
+#endif
 
         /**
          * Try to analyze "Internal files dir" and "External files dir" without
@@ -181,6 +184,15 @@ namespace bq {
          */
         base_dir_initializer::base_dir_initializer()
         {
+#ifdef BQ_UNIT_TEST
+            bq::array<char> tmp;
+            tmp.fill_uninitialized(1024);
+            while (getcwd(&tmp[0], tmp.size()) == NULL) {
+                tmp.fill_uninitialized(1024);
+            }
+            set_base_dir_0(&tmp[0]);
+            set_base_dir_1(&tmp[0]);
+#else
             bq::string package_name;
             bq::string maps_str;
             // Derive the package name from /proc/self/maps first. This is more reliable than using /proc/self/cmdline,
@@ -272,6 +284,7 @@ namespace bq {
             } else if (can_write_0) {
                 set_base_dir_1(base_dir0_candidate);
             }
+#endif
         }
 
         bq::string get_files_dir()
