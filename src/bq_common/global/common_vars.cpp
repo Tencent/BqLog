@@ -62,8 +62,8 @@ namespace bq {
 
     void common_global_vars::partial_destruct()
     {
-        delete file_manager_inst_;
-        file_manager_inst_ = nullptr;
+        /*delete file_manager_inst_;
+        file_manager_inst_ = nullptr;*/
     }
 
 }
