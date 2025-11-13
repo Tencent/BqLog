@@ -88,6 +88,7 @@ namespace bq {
     protected:
         virtual ~global_vars_base()
         {
+            assert(false && "global_vars_base should not be directly destructed");
         }
 
     public:
