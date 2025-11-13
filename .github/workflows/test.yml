@@ -2599,14 +2599,23 @@ jobs:
             ./run_test_clang.sh 17
 
   android_armv7_emulator_test:
-    runs-on: macos-latest
+    runs-on: macos-14
     env:
       ANDROID_PLATFORM: "24"
-      API_LEVEL: "30"
+      API_LEVEL: "29"
       BUILD_ABI: "armeabi-v7a"
-      EMU_ARCH: "arm64-v8a"
+      EMU_ARCH: "armeabi-v7a"
     steps:
       - uses: actions/checkout@v4
+      - name: Host diagnostics
+        run: |
+          uname -a
+          sysctl hw.optional.arm64 2>/dev/null || true
+          echo "Runner arch: $(uname -m)"
+          if [ "$(uname -m)" != "arm64" ]; then
+            echo "Apple Silicon runner required for ARM emulator."
+            exit 1
+          fi
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -2619,21 +2628,20 @@ jobs:
           ndk-version: r28c
           local-cache: false
       - name: Install SDK packages
-        shell: bash
         run: |
           set -e
           sdkmanager --update
-          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" \
+            "platforms;android-${API_LEVEL}" \
+            "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
           adb kill-server || true
       - name: Build Debug
-        shell: bash
         run: |
           set -e
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${BUILD_ABI}/debug
           cd build/test/android/${BUILD_ABI}/debug
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${BUILD_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
@@ -2642,14 +2650,12 @@ jobs:
             -DTARGET_PLATFORM:STRING=android
           cmake --build . -- -j10
       - name: Build RelWithDebInfo
-        shell: bash
         run: |
           set -e
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${BUILD_ABI}/relwithdebinfo
           cd build/test/android/${BUILD_ABI}/relwithdebinfo
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${BUILD_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
@@ -2658,7 +2664,6 @@ jobs:
             -DTARGET_PLATFORM:STRING=android
           cmake --build . -- -j10
       - name: Locate artifacts
-        shell: bash
         run: |
           set -e
           DBG="build/test/android/${BUILD_ABI}/debug/BqLogUnitTest"
@@ -2675,7 +2680,7 @@ jobs:
           force-avd-creation: true
           emulator-boot-timeout: 1200000
           disable-animations: false
-          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -qemu -accel tcg
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off -engine classic -qemu -accel tcg
           script: |
             set -e
             adb wait-for-device
@@ -2698,13 +2703,21 @@ jobs:
             adb shell /data/local/tmp/BqLogUnitTest_rel
 
   android_arm64_emulator_test:
-    runs-on: macos-latest
+    runs-on: macos-14
     env:
       ANDROID_PLATFORM: "24"
       API_LEVEL: "30"
       ANDROID_ABI: "arm64-v8a"
     steps:
       - uses: actions/checkout@v4
+      - name: Host diagnostics
+        run: |
+          uname -a
+          echo "Runner arch: $(uname -m)"
+          if [ "$(uname -m)" != "arm64" ]; then
+            echo "Apple Silicon runner required for arm64 emulator."
+            exit 1
+          fi
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -2717,21 +2730,20 @@ jobs:
           ndk-version: r28c
           local-cache: false
       - name: Install SDK packages
-        shell: bash
         run: |
           set -e
           sdkmanager --update
-          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" \
+            "platforms;android-${API_LEVEL}" \
+            "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
           adb kill-server || true
       - name: Build Debug
-        shell: bash
         run: |
           set -e
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/debug
           cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
@@ -2740,14 +2752,12 @@ jobs:
             -DTARGET_PLATFORM:STRING=android
           cmake --build . -- -j10
       - name: Build RelWithDebInfo
-        shell: bash
         run: |
           set -e
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
           cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
@@ -2756,7 +2766,6 @@ jobs:
             -DTARGET_PLATFORM:STRING=android
           cmake --build . -- -j10
       - name: Locate artifacts
-        shell: bash
         run: |
           set -e
           DBG="build/test/android/${ANDROID_ABI}/debug/BqLogUnitTest"
@@ -2773,7 +2782,7 @@ jobs:
           force-avd-creation: true
           emulator-boot-timeout: 1200000
           disable-animations: false
-          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -qemu -accel tcg
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off -engine classic -qemu -accel tcg
           script: |
             set -e
             adb wait-for-device
@@ -2819,16 +2828,20 @@ jobs:
         run: |
           set -e
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
-            libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
-            libdbus-1-3 libfontconfig1 libasound2
+          DEPS="libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
+                libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
+                libdbus-1-3 libfontconfig1 libjpeg-turbo8 libpng16-16 libvulkan1 libwayland-client0 libudev1"
+          sudo apt-get install -y --no-install-recommends $DEPS libasound2t64 || \
+            sudo apt-get install -y --no-install-recommends $DEPS libasound2 || true
+          sudo apt-get clean
       - name: Install SDK packages
         shell: bash
         run: |
           set -e
           sdkmanager --update
-          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" \
+            "platforms;android-${API_LEVEL}" \
+            "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
           adb kill-server || true
       - name: Build Debug
         shell: bash
@@ -2837,8 +2850,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/debug
           cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
@@ -2853,8 +2865,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
           cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
@@ -2926,16 +2937,20 @@ jobs:
         run: |
           set -e
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
-            libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
-            libdbus-1-3 libfontconfig1 libasound2
+          DEPS="libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
+                libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
+                libdbus-1-3 libfontconfig1 libjpeg-turbo8 libpng16-16 libvulkan1 libwayland-client0 libudev1"
+          sudo apt-get install -y --no-install-recommends $DEPS libasound2t64 || \
+            sudo apt-get install -y --no-install-recommends $DEPS libasound2 || true
+          sudo apt-get clean
       - name: Install SDK packages
         shell: bash
         run: |
           set -e
           sdkmanager --update
-          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" \
+            "platforms;android-${API_LEVEL}" \
+            "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
           adb kill-server || true
       - name: Build Debug
         shell: bash
@@ -2944,8 +2959,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/debug
           cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
@@ -2960,8 +2974,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
           cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
+          cmake ../../../../../test -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
             -DANDROID_NDK=${NDK} \
