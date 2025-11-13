@@ -34,29 +34,43 @@ namespace BqLog.Editor
 #if UNITY_2017_1_OR_NEWER
             AssemblyReloadEvents.afterAssemblyReload -= on_after_assembly_reload;
             AssemblyReloadEvents.afterAssemblyReload += on_after_assembly_reload;
+            EditorApplication.wantsToQuit += on_quit;
 #elif UNITY_5_3_OR_NEWER
             // 5.3+：Use DidReloadScripts
             // delayCall has already been used to register once after domain reload
+            EditorApplication.quitting += on_quit;
 #else
             // 5.0–5.2：no hook for domain reload, poll compilation state
             was_compiling_ = EditorApplication.isCompiling;
             EditorApplication.update -= poll_compilation_and_register;
             EditorApplication.update += poll_compilation_and_register;
+            EditorApplication.quitting += on_quit;
 #endif
         }
 
+
 #if UNITY_2017_1_OR_NEWER
+        private static bool on_quit(){
+            bq.log.register_console_callback(null);
+            return true;
+        }
         private static void on_after_assembly_reload()
         {
             register_callback();
         }
 #elif UNITY_5_3_OR_NEWER
+        private static void on_quit(){
+            bq.log.register_console_callback(null);
+        }
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void on_after_assembly_reload()
         {
             register_callback();
         }
 #else
+        private static void on_quit(){
+            bq.log.register_console_callback(null);
+        }
         private static void poll_compilation_and_register()
         {
             bool now = EditorApplication.isCompiling;
