@@ -2674,11 +2674,22 @@ jobs:
           arch: ${{ env.EMU_ARCH }}
           force-avd-creation: true
           emulator-boot-timeout: 1200000
+          disable-animations: false
           emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect
-          disable-animations: true
           script: |
             set -e
-            adb devices
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
@@ -2761,11 +2772,22 @@ jobs:
           arch: ${{ env.ANDROID_ABI }}
           force-avd-creation: true
           emulator-boot-timeout: 1200000
+          disable-animations: false
           emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect
-          disable-animations: true
           script: |
             set -e
-            adb devices
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
@@ -2848,11 +2870,22 @@ jobs:
           arch: ${{ env.ANDROID_ABI }}
           force-avd-creation: true
           emulator-boot-timeout: 1200000
+          disable-animations: false
           emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
-          disable-animations: true
           script: |
             set -e
-            adb devices
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
@@ -2935,11 +2968,22 @@ jobs:
           arch: ${{ env.ANDROID_ABI }}
           force-avd-creation: true
           emulator-boot-timeout: 1200000
+          disable-animations: false
           emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
-          disable-animations: true
           script: |
             set -e
-            adb devices
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
