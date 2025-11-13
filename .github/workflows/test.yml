@@ -2598,413 +2598,413 @@ jobs:
             ulimit -n 4096
             ./run_test_clang.sh 17
 
-android_armv7_emulator_test:
-  runs-on: macos-latest
-  env:
-    ANDROID_PLATFORM: "24"
-    API_LEVEL: "30"
-    BUILD_ABI: "armeabi-v7a"
-    EMU_ARCH: "arm64-v8a"
-  steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - id: setup-android
-      uses: android-actions/setup-android@v3
-    - id: setup-ndk
-      uses: nttld/setup-ndk@v1
-      with:
-        ndk-version: r28c
-        local-cache: false
-    - name: Install SDK packages
-      shell: bash
-      run: |
-        set -e
-        sdkmanager --update
-        sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
-        adb kill-server || true
-    - name: Build Debug
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${BUILD_ABI}/debug
-        cd build/test/android/${BUILD_ABI}/debug
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${BUILD_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Build RelWithDebInfo
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${BUILD_ABI}/relwithdebinfo
-        cd build/test/android/${BUILD_ABI}/relwithdebinfo
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${BUILD_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Locate artifacts
-      shell: bash
-      run: |
-        set -e
-        DBG="build/test/android/${BUILD_ABI}/debug/BqLogUnitTest"
-        REL="build/test/android/${BUILD_ABI}/relwithdebinfo/BqLogUnitTest"
-        [ -f "$DBG" ] || DBG="$(find build/test/android/${BUILD_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
-        [ -f "$REL" ] || REL="$(find build/test/android/${BUILD_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
-        echo "BIN_DBG=$DBG" >> $GITHUB_ENV
-        echo "BIN_REL=$REL" >> $GITHUB_ENV
-    - uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: ${{ env.API_LEVEL }}
-        target: google_apis
-        arch: ${{ env.EMU_ARCH }}
-        force-avd-creation: true
-        emulator-boot-timeout: 1200000
-        disable-animations: false
-        emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -qemu -accel tcg
-        script: |
+  android_armv7_emulator_test:
+    runs-on: macos-latest
+    env:
+      ANDROID_PLATFORM: "24"
+      API_LEVEL: "30"
+      BUILD_ABI: "armeabi-v7a"
+      EMU_ARCH: "arm64-v8a"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - id: setup-android
+        uses: android-actions/setup-android@v3
+      - id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          local-cache: false
+      - name: Install SDK packages
+        shell: bash
+        run: |
           set -e
-          adb wait-for-device
-          for i in $(seq 1 60); do
-            v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-            [ "$v" = "1" ] && break
-            sleep 5
-          done
-          for i in $(seq 1 5); do
-            (adb shell settings put global window_animation_scale 0.0 && \
-             adb shell settings put global transition_animation_scale 0.0 && \
-             adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
-          done
-          adb shell input keyevent 82 || true
-          adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
-          adb shell /data/local/tmp/BqLogUnitTest_dbg
-          adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
-          adb shell /data/local/tmp/BqLogUnitTest_rel
+          sdkmanager --update
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
+          adb kill-server || true
+      - name: Build Debug
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${BUILD_ABI}/debug
+          cd build/test/android/${BUILD_ABI}/debug
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${BUILD_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Build RelWithDebInfo
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${BUILD_ABI}/relwithdebinfo
+          cd build/test/android/${BUILD_ABI}/relwithdebinfo
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${BUILD_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Locate artifacts
+        shell: bash
+        run: |
+          set -e
+          DBG="build/test/android/${BUILD_ABI}/debug/BqLogUnitTest"
+          REL="build/test/android/${BUILD_ABI}/relwithdebinfo/BqLogUnitTest"
+          [ -f "$DBG" ] || DBG="$(find build/test/android/${BUILD_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
+          [ -f "$REL" ] || REL="$(find build/test/android/${BUILD_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
+          echo "BIN_DBG=$DBG" >> $GITHUB_ENV
+          echo "BIN_REL=$REL" >> $GITHUB_ENV
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: google_apis
+          arch: ${{ env.EMU_ARCH }}
+          force-avd-creation: true
+          emulator-boot-timeout: 1200000
+          disable-animations: false
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -qemu -accel tcg
+          script: |
+            set -e
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
+            adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
+            adb shell /data/local/tmp/BqLogUnitTest_dbg
+            adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
+            adb shell /data/local/tmp/BqLogUnitTest_rel
 
-android_arm64_emulator_test:
-  runs-on: macos-latest
-  env:
-    ANDROID_PLATFORM: "24"
-    API_LEVEL: "30"
-    ANDROID_ABI: "arm64-v8a"
-  steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - id: setup-android
-      uses: android-actions/setup-android@v3
-    - id: setup-ndk
-      uses: nttld/setup-ndk@v1
-      with:
-        ndk-version: r28c
-        local-cache: false
-    - name: Install SDK packages
-      shell: bash
-      run: |
-        set -e
-        sdkmanager --update
-        sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
-        adb kill-server || true
-    - name: Build Debug
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${ANDROID_ABI}/debug
-        cd build/test/android/${ANDROID_ABI}/debug
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${ANDROID_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Build RelWithDebInfo
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
-        cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${ANDROID_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Locate artifacts
-      shell: bash
-      run: |
-        set -e
-        DBG="build/test/android/${ANDROID_ABI}/debug/BqLogUnitTest"
-        REL="build/test/android/${ANDROID_ABI}/relwithdebinfo/BqLogUnitTest"
-        [ -f "$DBG" ] || DBG="$(find build/test/android/${ANDROID_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
-        [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
-        echo "BIN_DBG=$DBG" >> $GITHUB_ENV
-        echo "BIN_REL=$REL" >> $GITHUB_ENV
-    - uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: ${{ env.API_LEVEL }}
-        target: google_apis
-        arch: ${{ env.ANDROID_ABI }}
-        force-avd-creation: true
-        emulator-boot-timeout: 1200000
-        disable-animations: false
-        emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -qemu -accel tcg
-        script: |
+  android_arm64_emulator_test:
+    runs-on: macos-latest
+    env:
+      ANDROID_PLATFORM: "24"
+      API_LEVEL: "30"
+      ANDROID_ABI: "arm64-v8a"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - id: setup-android
+        uses: android-actions/setup-android@v3
+      - id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          local-cache: false
+      - name: Install SDK packages
+        shell: bash
+        run: |
           set -e
-          adb wait-for-device
-          for i in $(seq 1 60); do
-            v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-            [ "$v" = "1" ] && break
-            sleep 5
-          done
-          for i in $(seq 1 5); do
-            (adb shell settings put global window_animation_scale 0.0 && \
-             adb shell settings put global transition_animation_scale 0.0 && \
-             adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
-          done
-          adb shell input keyevent 82 || true
-          adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
-          adb shell /data/local/tmp/BqLogUnitTest_dbg
-          adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
-          adb shell /data/local/tmp/BqLogUnitTest_rel
+          sdkmanager --update
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          adb kill-server || true
+      - name: Build Debug
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${ANDROID_ABI}/debug
+          cd build/test/android/${ANDROID_ABI}/debug
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Build RelWithDebInfo
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cd build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Locate artifacts
+        shell: bash
+        run: |
+          set -e
+          DBG="build/test/android/${ANDROID_ABI}/debug/BqLogUnitTest"
+          REL="build/test/android/${ANDROID_ABI}/relwithdebinfo/BqLogUnitTest"
+          [ -f "$DBG" ] || DBG="$(find build/test/android/${ANDROID_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
+          [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
+          echo "BIN_DBG=$DBG" >> $GITHUB_ENV
+          echo "BIN_REL=$REL" >> $GITHUB_ENV
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: google_apis
+          arch: ${{ env.ANDROID_ABI }}
+          force-avd-creation: true
+          emulator-boot-timeout: 1200000
+          disable-animations: false
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -qemu -accel tcg
+          script: |
+            set -e
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
+            adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
+            adb shell /data/local/tmp/BqLogUnitTest_dbg
+            adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
+            adb shell /data/local/tmp/BqLogUnitTest_rel
 
-android_x86_emulator_test:
-  runs-on: ubuntu-latest
-  env:
-    ANDROID_PLATFORM: "24"
-    API_LEVEL: "30"
-    ANDROID_ABI: "x86"
-  steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - id: setup-android
-      uses: android-actions/setup-android@v3
-    - id: setup-ndk
-      uses: nttld/setup-ndk@v1
-      with:
-        ndk-version: r28c
-        local-cache: false
-    - name: Install emulator dependencies
-      shell: bash
-      run: |
-        set -e
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
-          libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
-          libdbus-1-3 libfontconfig1 libasound2
-    - name: Install SDK packages
-      shell: bash
-      run: |
-        set -e
-        sdkmanager --update
-        sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
-        adb kill-server || true
-    - name: Build Debug
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${ANDROID_ABI}/debug
-        cd build/test/android/${ANDROID_ABI}/debug
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${ANDROID_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Build RelWithDebInfo
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
-        cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${ANDROID_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Locate artifacts
-      shell: bash
-      run: |
-        set -e
-        DBG="build/test/android/${ANDROID_ABI}/debug/BqLogUnitTest"
-        REL="build/test/android/${ANDROID_ABI}/relwithdebinfo/BqLogUnitTest"
-        [ -f "$DBG" ] || DBG="$(find build/test/android/${ANDROID_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
-        [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
-        echo "BIN_DBG=$DBG" >> $GITHUB_ENV
-        echo "BIN_REL=$REL" >> $GITHUB_ENV
-    - uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: ${{ env.API_LEVEL }}
-        target: google_apis
-        arch: ${{ env.ANDROID_ABI }}
-        force-avd-creation: true
-        emulator-boot-timeout: 1200000
-        disable-animations: false
-        emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
-        script: |
+  android_x86_emulator_test:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_PLATFORM: "24"
+      API_LEVEL: "30"
+      ANDROID_ABI: "x86"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - id: setup-android
+        uses: android-actions/setup-android@v3
+      - id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          local-cache: false
+      - name: Install emulator dependencies
+        shell: bash
+        run: |
           set -e
-          adb wait-for-device
-          for i in $(seq 1 60); do
-            v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-            [ "$v" = "1" ] && break
-            sleep 5
-          done
-          for i in $(seq 1 5); do
-            (adb shell settings put global window_animation_scale 0.0 && \
-             adb shell settings put global transition_animation_scale 0.0 && \
-             adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
-          done
-          adb shell input keyevent 82 || true
-          adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
-          adb shell /data/local/tmp/BqLogUnitTest_dbg
-          adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
-          adb shell /data/local/tmp/BqLogUnitTest_rel
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
+            libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
+            libdbus-1-3 libfontconfig1 libasound2
+      - name: Install SDK packages
+        shell: bash
+        run: |
+          set -e
+          sdkmanager --update
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          adb kill-server || true
+      - name: Build Debug
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${ANDROID_ABI}/debug
+          cd build/test/android/${ANDROID_ABI}/debug
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Build RelWithDebInfo
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cd build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Locate artifacts
+        shell: bash
+        run: |
+          set -e
+          DBG="build/test/android/${ANDROID_ABI}/debug/BqLogUnitTest"
+          REL="build/test/android/${ANDROID_ABI}/relwithdebinfo/BqLogUnitTest"
+          [ -f "$DBG" ] || DBG="$(find build/test/android/${ANDROID_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
+          [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
+          echo "BIN_DBG=$DBG" >> $GITHUB_ENV
+          echo "BIN_REL=$REL" >> $GITHUB_ENV
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: google_apis
+          arch: ${{ env.ANDROID_ABI }}
+          force-avd-creation: true
+          emulator-boot-timeout: 1200000
+          disable-animations: false
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
+          script: |
+            set -e
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
+            adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
+            adb shell /data/local/tmp/BqLogUnitTest_dbg
+            adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
+            adb shell /data/local/tmp/BqLogUnitTest_rel
 
-android_x86_64_emulator_test:
-  runs-on: ubuntu-latest
-  env:
-    ANDROID_PLATFORM: "24"
-    API_LEVEL: "30"
-    ANDROID_ABI: "x86_64"
-  steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - id: setup-android
-      uses: android-actions/setup-android@v3
-    - id: setup-ndk
-      uses: nttld/setup-ndk@v1
-      with:
-        ndk-version: r28c
-        local-cache: false
-    - name: Install emulator dependencies
-      shell: bash
-      run: |
-        set -e
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
-          libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
-          libdbus-1-3 libfontconfig1 libasound2
-    - name: Install SDK packages
-      shell: bash
-      run: |
-        set -e
-        sdkmanager --update
-        sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
-        adb kill-server || true
-    - name: Build Debug
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${ANDROID_ABI}/debug
-        cd build/test/android/${ANDROID_ABI}/debug
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${ANDROID_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Build RelWithDebInfo
-      shell: bash
-      run: |
-        set -e
-        NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
-        mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
-        cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-        cmake ../../../../../test \
-          -G "Unix Makefiles" \
-          -DANDROID_ABI=${ANDROID_ABI} \
-          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-          -DANDROID_NDK=${NDK} \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-          -DTARGET_PLATFORM:STRING=android
-        cmake --build . -- -j10
-    - name: Locate artifacts
-      shell: bash
-      run: |
-        set -e
-        DBG="build/test/android/${ANDROID_ABI}/debug/BqLogUnitTest"
-        REL="build/test/android/${ANDROID_ABI}/relwithdebinfo/BqLogUnitTest"
-        [ -f "$DBG" ] || DBG="$(find build/test/android/${ANDROID_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
-        [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
-        echo "BIN_DBG=$DBG" >> $GITHUB_ENV
-        echo "BIN_REL=$REL" >> $GITHUB_ENV
-    - uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: ${{ env.API_LEVEL }}
-        target: google_apis
-        arch: ${{ env.ANDROID_ABI }}
-        force-avd-creation: true
-        emulator-boot-timeout: 1200000
-        disable-animations: false
-        emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
-        script: |
+  android_x86_64_emulator_test:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_PLATFORM: "24"
+      API_LEVEL: "30"
+      ANDROID_ABI: "x86_64"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - id: setup-android
+        uses: android-actions/setup-android@v3
+      - id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          local-cache: false
+      - name: Install emulator dependencies
+        shell: bash
+        run: |
           set -e
-          adb wait-for-device
-          for i in $(seq 1 60); do
-            v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-            [ "$v" = "1" ] && break
-            sleep 5
-          done
-          for i in $(seq 1 5); do
-            (adb shell settings put global window_animation_scale 0.0 && \
-             adb shell settings put global transition_animation_scale 0.0 && \
-             adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
-          done
-          adb shell input keyevent 82 || true
-          adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
-          adb shell /data/local/tmp/BqLogUnitTest_dbg
-          adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
-          adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
-          adb shell /data/local/tmp/BqLogUnitTest_rel
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpulse0 libxkbfile1 libglib2.0-0 libnss3 libxshmfence1 libxcb1 libxcomposite1 \
+            libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libxinerama1 libxxf86vm1 \
+            libdbus-1-3 libfontconfig1 libasound2
+      - name: Install SDK packages
+        shell: bash
+        run: |
+          set -e
+          sdkmanager --update
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          adb kill-server || true
+      - name: Build Debug
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${ANDROID_ABI}/debug
+          cd build/test/android/${ANDROID_ABI}/debug
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Build RelWithDebInfo
+        shell: bash
+        run: |
+          set -e
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cd build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${NDK} \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+      - name: Locate artifacts
+        shell: bash
+        run: |
+          set -e
+          DBG="build/test/android/${ANDROID_ABI}/debug/BqLogUnitTest"
+          REL="build/test/android/${ANDROID_ABI}/relwithdebinfo/BqLogUnitTest"
+          [ -f "$DBG" ] || DBG="$(find build/test/android/${ANDROID_ABI}/debug -type f -name BqLogUnitTest | head -n1)"
+          [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
+          echo "BIN_DBG=$DBG" >> $GITHUB_ENV
+          echo "BIN_REL=$REL" >> $GITHUB_ENV
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: google_apis
+          arch: ${{ env.ANDROID_ABI }}
+          force-avd-creation: true
+          emulator-boot-timeout: 1200000
+          disable-animations: false
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
+          script: |
+            set -e
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              v="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$v" = "1" ] && break
+              sleep 5
+            done
+            for i in $(seq 1 5); do
+              (adb shell settings put global window_animation_scale 0.0 && \
+               adb shell settings put global transition_animation_scale 0.0 && \
+               adb shell settings put global animator_duration_scale 0.0) && break || sleep 2
+            done
+            adb shell input keyevent 82 || true
+            adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
+            adb shell /data/local/tmp/BqLogUnitTest_dbg
+            adb push "$BIN_REL" /data/local/tmp/BqLogUnitTest_rel
+            adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
+            adb shell /data/local/tmp/BqLogUnitTest_rel
