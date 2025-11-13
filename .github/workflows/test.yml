@@ -2611,21 +2611,34 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
-      - name: Set up Android SDK (with NDK)
-        id: setup-android
-        uses: android-actions/setup-android@v3
+          distribution: 'temurin'
       - name: Set up NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
           local-cache: false
-      - name: Install SDK packages
+      - name: Install Android SDK (cmdline-tools)
         shell: bash
         run: |
           set -e
-          sdkmanager --install "platform-tools" "emulator" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}" "build-tools;35.0.0"
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -o /tmp/clt.zip
+          unzip -q -o /tmp/clt.zip -d /tmp/clt
+          mv /tmp/clt/cmdline-tools "$SDK/cmdline-tools/latest"
+          echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
+          echo "$SDK/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$SDK/platform-tools" >> $GITHUB_PATH
+          echo "$SDK/emulator" >> $GITHUB_PATH
+      - name: Accept licenses and install SDK packages (canary channel)
+        shell: bash
+        run: |
+          set -e
+          yes | sdkmanager --licenses
+          sdkmanager --channel=3 --install "platform-tools" "emulator"
+          sdkmanager --install "platforms;android-${API_LEVEL}" "build-tools;35.0.0"
+          sdkmanager --install "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
       - name: Build Debug
         shell: bash
         run: |
@@ -2633,7 +2646,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${BUILD_ABI}/debug
           cd build/test/android/${BUILD_ABI}/debug
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${BUILD_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
@@ -2649,7 +2662,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${BUILD_ABI}/relwithdebinfo
           cd build/test/android/${BUILD_ABI}/relwithdebinfo
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${BUILD_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
@@ -2698,21 +2711,34 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
-      - name: Set up Android SDK (with NDK)
-        id: setup-android
-        uses: android-actions/setup-android@v3
+          distribution: 'temurin'
       - name: Set up NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
           local-cache: false
-      - name: Install SDK packages
+      - name: Install Android SDK (cmdline-tools)
         shell: bash
         run: |
           set -e
-          sdkmanager --install "platform-tools" "emulator" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}" "build-tools;35.0.0"
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -o /tmp/clt.zip
+          unzip -q -o /tmp/clt.zip -d /tmp/clt
+          mv /tmp/clt/cmdline-tools "$SDK/cmdline-tools/latest"
+          echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
+          echo "$SDK/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$SDK/platform-tools" >> $GITHUB_PATH
+          echo "$SDK/emulator" >> $GITHUB_PATH
+      - name: Accept licenses and install SDK packages (canary channel)
+        shell: bash
+        run: |
+          set -e
+          yes | sdkmanager --licenses
+          sdkmanager --channel=3 --install "platform-tools" "emulator"
+          sdkmanager --install "platforms;android-${API_LEVEL}" "build-tools;35.0.0"
+          sdkmanager --install "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
       - name: Build Debug
         shell: bash
         run: |
@@ -2720,7 +2746,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/debug
           cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
@@ -2736,7 +2762,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
           cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
@@ -2785,7 +2811,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
+          distribution: 'temurin'
       - name: Set up Android SDK (with NDK)
         id: setup-android
         uses: android-actions/setup-android@v3
@@ -2807,7 +2833,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/debug
           cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
@@ -2823,7 +2849,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
           cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
@@ -2872,7 +2898,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
+          distribution: 'temurin'
       - name: Set up Android SDK (with NDK)
         id: setup-android
         uses: android-actions/setup-android@v3
@@ -2894,7 +2920,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/debug
           cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
@@ -2910,7 +2936,7 @@ jobs:
           NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
           mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
           cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../test \
+          cmake ../../../../../test \
             -G "Unix Makefiles" \
             -DANDROID_ABI=${ANDROID_ABI} \
             -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
