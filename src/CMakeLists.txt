@@ -256,7 +256,7 @@ elseif(TARGET_PLATFORM STREQUAL "ohos")
             ${ACE_NAPI_LIB}
             ${HILOG_LIB}
             ${BUNDLE_LIB}
-            dl            # 如果你代码里用到了 dladdr/dlopen/dlsym 等
+            dl
     )
 elseif(TARGET_PLATFORM STREQUAL "mac")
     if(APPLE_LIB_FORMAT STREQUAL "framework")

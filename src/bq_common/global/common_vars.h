@@ -80,8 +80,6 @@ namespace bq {
     /// </remarks>
     template <typename T, typename Priority_Global_Var_Type = void>
     struct global_vars_base : public global_var_destructiable {
-        friend struct global_var_holder;
-
     protected:
         static BQ_TLS T* global_vars_ptr_;
         alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
@@ -90,6 +88,7 @@ namespace bq {
     protected:
         virtual ~global_vars_base()
         {
+            assert(false && "global_vars_base should not be directly destructed");
         }
 
     public:
