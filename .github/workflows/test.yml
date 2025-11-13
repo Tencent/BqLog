@@ -2607,16 +2607,13 @@ jobs:
       EMU_ARCH: "arm64-v8a"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Set up Android SDK (with NDK)
-        id: setup-android
+      - id: setup-android
         uses: android-actions/setup-android@v3
-      - name: Set up NDK
-        id: setup-ndk
+      - id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
@@ -2625,7 +2622,9 @@ jobs:
         shell: bash
         run: |
           set -e
+          sdkmanager --update
           sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${EMU_ARCH}"
+          adb kill-server || true
       - name: Build Debug
         shell: bash
         run: |
@@ -2668,17 +2667,18 @@ jobs:
           [ -f "$REL" ] || REL="$(find build/test/android/${BUILD_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
           echo "BIN_DBG=$DBG" >> $GITHUB_ENV
           echo "BIN_REL=$REL" >> $GITHUB_ENV
-      - name: Run on emulator
-        uses: reactivecircus/android-emulator-runner@v2
+      - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: ${{ env.EMU_ARCH }}
           force-avd-creation: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          emulator-boot-timeout: 1200000
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect
           disable-animations: true
           script: |
             set -e
+            adb devices
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
@@ -2694,16 +2694,13 @@ jobs:
       ANDROID_ABI: "arm64-v8a"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Set up Android SDK (with NDK)
-        id: setup-android
+      - id: setup-android
         uses: android-actions/setup-android@v3
-      - name: Set up NDK
-        id: setup-ndk
+      - id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
@@ -2712,7 +2709,9 @@ jobs:
         shell: bash
         run: |
           set -e
+          sdkmanager --update
           sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          adb kill-server || true
       - name: Build Debug
         shell: bash
         run: |
@@ -2755,17 +2754,18 @@ jobs:
           [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
           echo "BIN_DBG=$DBG" >> $GITHUB_ENV
           echo "BIN_REL=$REL" >> $GITHUB_ENV
-      - name: Run on emulator
-        uses: reactivecircus/android-emulator-runner@v2
+      - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: ${{ env.ANDROID_ABI }}
           force-avd-creation: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          emulator-boot-timeout: 1200000
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect
           disable-animations: true
           script: |
             set -e
+            adb devices
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
@@ -2781,16 +2781,13 @@ jobs:
       ANDROID_ABI: "x86"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Set up Android SDK (with NDK)
-        id: setup-android
+      - id: setup-android
         uses: android-actions/setup-android@v3
-      - name: Set up NDK
-        id: setup-ndk
+      - id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
@@ -2799,7 +2796,9 @@ jobs:
         shell: bash
         run: |
           set -e
-          sdkmanager --install "platform-tools" "emulator" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}" "build-tools;35.0.0"
+          sdkmanager --update
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          adb kill-server || true
       - name: Build Debug
         shell: bash
         run: |
@@ -2842,17 +2841,18 @@ jobs:
           [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
           echo "BIN_DBG=$DBG" >> $GITHUB_ENV
           echo "BIN_REL=$REL" >> $GITHUB_ENV
-      - name: Run on emulator
-        uses: reactivecircus/android-emulator-runner@v2
+      - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: ${{ env.ANDROID_ABI }}
           force-avd-creation: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          emulator-boot-timeout: 1200000
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
           disable-animations: true
           script: |
             set -e
+            adb devices
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
@@ -2868,16 +2868,13 @@ jobs:
       ANDROID_ABI: "x86_64"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Set up Android SDK (with NDK)
-        id: setup-android
+      - id: setup-android
         uses: android-actions/setup-android@v3
-      - name: Set up NDK
-        id: setup-ndk
+      - id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r28c
@@ -2886,7 +2883,9 @@ jobs:
         shell: bash
         run: |
           set -e
-          sdkmanager --install "platform-tools" "emulator" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}" "build-tools;35.0.0"
+          sdkmanager --update
+          sdkmanager --install "platform-tools" "emulator" "build-tools;35.0.0" "platforms;android-${API_LEVEL}" "system-images;android-${API_LEVEL};google_apis;${ANDROID_ABI}"
+          adb kill-server || true
       - name: Build Debug
         shell: bash
         run: |
@@ -2929,17 +2928,18 @@ jobs:
           [ -f "$REL" ] || REL="$(find build/test/android/${ANDROID_ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
           echo "BIN_DBG=$DBG" >> $GITHUB_ENV
           echo "BIN_REL=$REL" >> $GITHUB_ENV
-      - name: Run on emulator
-        uses: reactivecircus/android-emulator-runner@v2
+      - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ env.API_LEVEL }}
           target: google_apis
           arch: ${{ env.ANDROID_ABI }}
           force-avd-creation: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          emulator-boot-timeout: 1200000
+          emulator-options: -no-snapshot -no-snapshot-save -wipe-data -no-boot-anim -noaudio -gpu swiftshader_indirect -accel off
           disable-animations: true
           script: |
             set -e
+            adb devices
             adb push "$BIN_DBG" /data/local/tmp/BqLogUnitTest_dbg
             adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
             adb shell /data/local/tmp/BqLogUnitTest_dbg
