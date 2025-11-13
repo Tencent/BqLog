@@ -6,6 +6,7 @@ using System.IO;
 public class BqLog : ModuleRules
 {
     private readonly HashSet<string> RuntimeDependencyCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private const string BqLogMajorVersion = "2";
 
     public BqLog(ReadOnlyTargetRules Target) : base(Target)
     {
@@ -104,7 +105,9 @@ public class BqLog : ModuleRules
         }
         string runtimeSrcDir = Path.Combine(ModuleDirectory, "../..", "Binaries", binariesFolder);
         string runtimeDstDir = Path.Combine("$(ProjectDir)", "Binaries", binariesFolder);
-        AddRuntimeDependencyVariants(runtimeSrcDir, runtimeDstDir, "libBqLog.so");
+        string destName = "libBqLog.so." + BqLogMajorVersion;
+        string exact = Path.Combine(runtimeSrcDir, destName);
+        RuntimeDependencies.Add(Path.Combine(runtimeDstDir, destName), exact);
     }
 
     private void ConfigureMac(string thirdPartyRoot, string pluginRoot)
@@ -118,7 +121,9 @@ public class BqLog : ModuleRules
         string binariesFolder = UnrealTargetPlatform.Mac.ToString();
         string runtimeSrcDir = Path.Combine(ModuleDirectory, "../..", "Binaries", binariesFolder);
         string runtimeDstDir = Path.Combine("$(ProjectDir)", "Binaries", binariesFolder);
-        AddRuntimeDependencyVariants(runtimeSrcDir, runtimeDstDir, "libBqLog.");
+        string destName = "libBqLog." + BqLogMajorVersion + ".dylib";
+        string exact = Path.Combine(runtimeSrcDir, destName);
+        RuntimeDependencies.Add(Path.Combine(runtimeDstDir, destName), exact);
     }
 
     private void ConfigureIOS(string thirdPartyRoot, string pluginRoot)
@@ -160,31 +165,6 @@ public class BqLog : ModuleRules
         if (File.Exists(aplPath))
         {
             AdditionalPropertiesForReceipt.Add("AndroidPlugin", aplPath);
-        }
-    }
-
-    private void AddRuntimeDependencyVariants(string runtimeSrcDir, string runtimeDstDir, string fileNamePrefix)
-    {
-        if (string.IsNullOrEmpty(runtimeSrcDir) || string.IsNullOrEmpty(runtimeDstDir) || string.IsNullOrEmpty(fileNamePrefix))
-        {
-            return;
-        }
-
-        string normalizedSrcDir = Path.GetFullPath(runtimeSrcDir);
-        if (!Directory.Exists(normalizedSrcDir))
-        {
-            return;
-        }
-
-        foreach (string file in Directory.GetFiles(normalizedSrcDir, fileNamePrefix + "*", SearchOption.TopDirectoryOnly))
-        {
-            string fileName = Path.GetFileName(file);
-            if (string.IsNullOrEmpty(fileName))
-            {
-                continue;
-            }
-
-            RuntimeDependencies.Add(Path.Combine(runtimeDstDir, fileName), file);
         }
     }
 
