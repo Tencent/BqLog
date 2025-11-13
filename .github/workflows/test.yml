@@ -2598,7 +2598,7 @@ jobs:
             ulimit -n 4096
             ./run_test_clang.sh 17
 
-  android_armv7_emulator_test:
+android_armv7_emulator_test:
   runs-on: macos-latest
   env:
     ANDROID_PLATFORM: "24"
