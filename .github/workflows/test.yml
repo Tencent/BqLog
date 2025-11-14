@@ -120,8 +120,15 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
-          distribution: 'adopt'
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Clang
+        if: ${{ matrix.runner == 'windows-11-arm' }}
+        run: |
+          choco uninstall -y llvm --all-versions
+          choco install -y llvm
+        shell: powershell
 
       - name: Install MSYS2
         if: ${{ matrix.cc == 'mingw_gcc' }}
