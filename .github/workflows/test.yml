@@ -355,7 +355,7 @@ jobs:
 
             
   #Unix-OpenBSD
-  openBSD_test_X86_64_Clang_cpp11:
+  openBSD_test_X86_64_Clang:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -454,7 +454,7 @@ jobs:
               exit $EXIT_CODE
             fi
 
-  openBSD_test_arm64_Clang_cpp11:
+  openBSD_test_arm64_Clang:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
     runs-on: ubuntu-latest
     strategy:
