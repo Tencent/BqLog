@@ -51,9 +51,9 @@ namespace bq {
     void util::log_device_console(bq::log_level level, const char* format, ...)
     {
 #if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
-        if (level < log_device_min_level) {
+        /*if (level < log_device_min_level) {
             return;
-        }
+        }*/
 #endif
         auto& device_console_buffer = common_global_vars::get().device_console_buffer_;
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
@@ -95,9 +95,9 @@ namespace bq {
     void util::_default_console_output(bq::log_level level, const char* text)
     {
 #if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
-        if (level < log_device_min_level) {
+        /*if (level < log_device_min_level) {
             return;
-        }
+        }*/
 #endif
 
 #if defined(BQ_ANDROID) && !defined(BQ_UNIT_TEST)
