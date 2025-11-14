@@ -78,7 +78,10 @@ COLLECT_SRC_FILES(THIRD_PARTY_LIST "${THIRD_PARTY_DIR}")
 COLLECT_SRC_FILES(TEST_LIST "${TEST_DIR}")
 
 add_compile_definitions(BQ_UNIT_TEST)
-
+if(DEFINED ENV{GITHUB_ACTIONS} AND "$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+    message(STATUS "Detected: running inside GitHub Actions")
+    add_compile_definitions(BQ_IN_GITHUB_ACTIONS=1)
+endif()
 ############################################################
 # IDE Sources Group
 ############################################################

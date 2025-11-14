@@ -100,6 +100,31 @@ namespace bq {
         }
 #endif
 
+#if defined(BQ_IN_GITHUB_ACTIONS)
+        switch (level) {
+        case bq::log_level::verbose:
+            printf("[Bq][V] %s\n", text ? text : "");
+            break;
+        case bq::log_level::debug:
+            printf("[Bq][D] %s\n", text ? text : "");
+            break;
+        case bq::log_level::info:
+            printf("[Bq][I] %s\n", text ? text : "");
+            break;
+        case bq::log_level::warning:
+            printf("[Bq][W] %s\n", text ? text : "");
+            break;
+        case bq::log_level::error:
+            printf("[Bq][E] %s\n", text ? text : "");
+            break;
+        case bq::log_level::fatal:
+            printf("[Bq][F] %s\n", text ? text : "");
+            break;
+        default:
+            break;
+        }
+#else
+
 #if defined(BQ_ANDROID) && !defined(BQ_UNIT_TEST)
         __android_log_write(ANDROID_LOG_VERBOSE + (static_cast<int32_t>(level) - static_cast<int32_t>(bq::log_level::verbose)),
             "Bq", text ? text : "");
@@ -245,6 +270,8 @@ namespace bq {
 #endif
 
 #endif
+#endif
+
     }
 
     uint32_t util::get_hash(const void* data, size_t size)
