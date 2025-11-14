@@ -2600,7 +2600,7 @@ jobs:
 
 
   android_test:
-    runs-on: ${{ matrix.runs_on }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -2608,19 +2608,15 @@ jobs:
           - abi: armeabi-v7a
             arch: armeabi-v7a
             api-level: 29
-            runs_on: ubuntu-24.04-arm
           - abi: arm64-v8a
             arch: arm64-v8a
             api-level: 30
-            runs_on: ubuntu-24.04-arm
           - abi: x86
             arch: x86
             api-level: 30
-            runs_on: ubuntu-latest
           - abi: x86_64
             arch: x86_64
             api-level: 30
-            runs_on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
