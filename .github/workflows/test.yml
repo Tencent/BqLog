@@ -12,106 +12,106 @@ on:
 jobs:
   #Windows
   win64_test:
-    runs-on: ${{ matrix.runner }}
+    runs-on: windows-${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - cc: msvc
             cpp_ver: 11
-            runner: windows-latest
+            runner: latest
           - cc: msvc
             cpp_ver: 14
-            runner: windows-latest
+            runner: latest
           - cc: msvc
             cpp_ver: 17
-            runner: windows-latest
+            runner: latest
           - cc: msvc
             cpp_ver: 20
-            runner: windows-latest
+            runner: latest
           - cc: msvc
             cpp_ver: 23
-            runner: windows-latest
+            runner: latest
 
           - cc: clang
             cpp_ver: 11
-            runner: windows-latest
+            runner: latest
           - cc: clang
             cpp_ver: 14
-            runner: windows-latest
+            runner: latest
           - cc: clang
             cpp_ver: 17
-            runner: windows-latest
+            runner: latest
           - cc: clang
             cpp_ver: 20
-            runner: windows-latest
+            runner: latest
           - cc: clang
             cpp_ver: 23
-            runner: windows-latest
+            runner: latest
 
           - cc: mingw_clang
             cpp_ver: 11
-            runner: windows-latest
+            runner: latest
           - cc: mingw_clang
             cpp_ver: 14
-            runner: windows-latest
+            runner: latest
           - cc: mingw_clang
             cpp_ver: 17
-            runner: windows-latest
+            runner: latest
           - cc: mingw_clang
             cpp_ver: 20
-            runner: windows-latest
+            runner: latest
           - cc: mingw_clang
             cpp_ver: 23
-            runner: windows-latest
+            runner: latest
 
           - cc: mingw_gcc
             cpp_ver: 11
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 14
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 17
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 20
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 23
-            runner: windows-latest
+            runner: latest
 
           - cc: mingw_gcc
             cpp_ver: 11
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 14
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 17
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 20
-            runner: windows-latest
+            runner: latest
           - cc: mingw_gcc
             cpp_ver: 23
-            runner: windows-latest
+            runner: latest
 
           - cc: mingw_clang
             cpp_ver: 11
-            runner: windows-11-arm
+            runner: 11-arm
           - cc: mingw_clang
             cpp_ver: 14
-            runner: windows-11-arm
+            runner: 11-arm
           - cc: mingw_clang
             cpp_ver: 17
-            runner: windows-11-arm
+            runner: 11-arm
           - cc: mingw_clang
             cpp_ver: 20
-            runner: windows-11-arm
+            runner: 11-arm
           - cc: mingw_clang
             cpp_ver: 23
-            runner: windows-11-arm
+            runner: 11-arm
 
     steps:
       - name: Checkout repository
@@ -168,9 +168,15 @@ jobs:
           .\run_test_${{ matrix.cc }}.bat ${{ matrix.cpp_ver }}
 
 
-  #Linux-ubuntu-X86_64
-  ubuntu_x86_64_testGCC_cpp11:
-    runs-on: ubuntu-latest
+  #Linux-ubuntu
+  ubuntu_test:
+    runs-on: ubuntu-${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ latest, 24.04-arm ]
+        cc: [ clang, gcc ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -191,444 +197,6 @@ jobs:
           cd build/test/linux  
           chmod +x *.sh
           ./run_test_clang.sh 11
-  
-  ubuntu_x86_64_testClang_cpp11:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 11
-
-  ubuntu_x86_64_testGCC_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 14
-
-  ubuntu_x86_64_testClang_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 14
-
-  ubuntu_x86_64_testGCC_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 17
-
-  ubuntu_x86_64_testClang_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 17
-
-  ubuntu_x86_64_testGCC_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 20
-
-  ubuntu_x86_64_testClang_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 20
-
-  ubuntu_x86_64_testGCC_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 23
-
-  ubuntu_x86_64_testClang_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 23
-
-  #Linux-ubuntu-ARM64
-  ubuntu_arm64_test_GCC_cpp11:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 11
-
-  ubuntu_arm64_test_Clang_cpp11:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 11
-
-  ubuntu_arm64_test_GCC_cpp14:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 14
-
-  ubuntu_arm64_test_Clang_cpp14:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 14
-
-  ubuntu_arm64_test_GCC_cpp17:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 17
-
-  ubuntu_arm64_test_Clang_cpp17:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 17
-
-  ubuntu_arm64_test_GCC_cpp20:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 20
-
-  ubuntu_arm64_test_Clang_cpp20:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 20
-
-  ubuntu_arm64_test_GCC_cpp23:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 23
-
-  ubuntu_arm64_test_Clang_cpp23:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install GDB
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
-
-      - name: Build for Linux
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 23
 
   #linux-debian
   debian_x86_64_test_GCC_cpp17:
