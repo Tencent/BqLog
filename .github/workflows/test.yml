@@ -16,101 +16,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - cc: msvc
-            cpp_ver: 11
-            runner: latest
-          - cc: msvc
-            cpp_ver: 14
-            runner: latest
-          - cc: msvc
-            cpp_ver: 17
-            runner: latest
-          - cc: msvc
-            cpp_ver: 20
-            runner: latest
-          - cc: msvc
-            cpp_ver: 23
-            runner: latest
-
-          - cc: clang
-            cpp_ver: 11
-            runner: latest
-          - cc: clang
-            cpp_ver: 14
-            runner: latest
-          - cc: clang
-            cpp_ver: 17
-            runner: latest
-          - cc: clang
-            cpp_ver: 20
-            runner: latest
-          - cc: clang
-            cpp_ver: 23
-            runner: latest
-
-          - cc: mingw_clang
-            cpp_ver: 11
-            runner: latest
-          - cc: mingw_clang
-            cpp_ver: 14
-            runner: latest
-          - cc: mingw_clang
-            cpp_ver: 17
-            runner: latest
-          - cc: mingw_clang
-            cpp_ver: 20
-            runner: latest
-          - cc: mingw_clang
-            cpp_ver: 23
-            runner: latest
-
+        cc: [ msvc, clang, mingw_clang, mingw_gcc ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
+        runner: [ latest, 11-arm ]
+        exclude:
           - cc: mingw_gcc
-            cpp_ver: 11
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 14
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 17
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 20
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 23
-            runner: latest
-
-          - cc: mingw_gcc
-            cpp_ver: 11
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 14
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 17
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 20
-            runner: latest
-          - cc: mingw_gcc
-            cpp_ver: 23
-            runner: latest
-
-          - cc: mingw_clang
-            cpp_ver: 11
-            runner: 11-arm
-          - cc: mingw_clang
-            cpp_ver: 14
-            runner: 11-arm
-          - cc: mingw_clang
-            cpp_ver: 17
-            runner: 11-arm
-          - cc: mingw_clang
-            cpp_ver: 20
-            runner: 11-arm
-          - cc: mingw_clang
-            cpp_ver: 23
             runner: 11-arm
 
     steps:
@@ -174,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ latest, 24.04-arm ]
+        runner: [ latest, 24.04-arm ]
         cc: [ clang, gcc ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
@@ -196,13 +106,18 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./run_test_clang.sh 11
+          ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
   #linux-debian
-  debian_x86_64_test_GCC_cpp17:
+  debian_test_cpp17:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ '', 'i386_' ]
+        cc: [ clang, gcc ]
     container:
-      image: ghcr.io/pippocao/bqlog/debian:latest
+      image: ghcr.io/pippocao/bqlog/${{ matrix.arch }}debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -226,98 +141,15 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./run_test_clang.sh 
-  
-  debian_x86_64_test_Clang_cpp17:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pippocao/bqlog/debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-          apt-get install -y openssh-client
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Build for Debian
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 
-
-  debian_x86_test_GCC_cpp17:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pippocao/bqlog/i386_debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-          apt-get install -y openssh-client
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
-
-      - name: Build for Debian 32
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 
-
-  debian_x86_test_Clang_cpp17:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pippocao/bqlog/i386_debian:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install necessary tools (gcc and clang)
-        run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-          apt-get install -y openssh-client
-
-      - name: Set up Java
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-i386" >> $GITHUB_ENV
-
-      - name: Build for Debian 32
-        run: |
-          cd build/test/linux  
-          chmod +x *.sh
-          ./run_test_clang.sh 
+          ./run_test_${{ matrix.cc }}.sh 17
 
   #Mac
   mac_apple_silicon_test_cpp11:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -336,99 +168,16 @@ jobs:
         run: |
           cd build/test/mac  
           chmod +x *.sh
-          ./run_test.sh 11
-
-  mac_apple_silicon_test_cpp14:
-    runs-on: macos-latest
-    steps:
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for macOS
-        run: |
-          cd build/test/mac  
-          chmod +x *.sh
-          ./run_test.sh 14
-
-  mac_apple_silicon_test_cpp17:
-    runs-on: macos-latest
-    steps:
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for macOS
-        run: |
-          cd build/test/mac  
-          chmod +x *.sh
-          ./run_test.sh 17
-
-  mac_apple_silicon_test_cpp20:
-    runs-on: macos-latest
-    steps:
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for macOS
-        run: |
-          cd build/test/mac  
-          chmod +x *.sh
-          ./run_test.sh 20
-
-  mac_apple_silicon_test_cpp23:
-    runs-on: macos-latest
-    steps:
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for macOS
-        run: |
-          cd build/test/mac  
-          chmod +x *.sh
-          ./run_test.sh 23
+          ./run_test.sh ${{ matrix.cpp_ver }}
 
   #Unix-FreeBSD
-  freeBSD_x86_64_test_Clang_cpp11:
+  freeBSD_x86_64_test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [ gcc, clang ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -447,165 +196,15 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_clang.sh 11
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
-  freeBSD_x86_64_test_GCC_cpp11:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 11
-            
-  freeBSD_x86_64_test_Clang_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_clang.sh 17
-
-  freeBSD_x86_64_test_GCC_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 17
-            
-  freeBSD_x86_64_test_Clang_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_clang.sh 20
-
-  freeBSD_x86_64_test_GCC_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 20
-            
-  freeBSD_x86_64_test_Clang_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_clang.sh 23
-
-  freeBSD_x86_64_test_GCC_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 23
-  
-  freeBSD_arm64_test_Clang_cpp17:
+  freeBSD_arm64_test_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [ gcc, clang ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -626,7 +225,7 @@ jobs:
             chmod +x *.sh
             ls -l
             set +e
-            ./run_test_clang.sh 17
+            ./run_test_${{ matrix.cc }}.sh 17
             EXIT_CODE=$?
             set -e
             if [ $EXIT_CODE -ne 0 ]; then
@@ -654,40 +253,14 @@ jobs:
             fi
 
 
-  freeBSD_arm64_test_GCC_cpp17:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
-        uses: vmactions/freebsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y llvm cmake bash gdb gcc13
-
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ln -sf /usr/local/bin/gcc13 /usr/local/bin/gcc
-            ln -sf /usr/local/bin/g++13 /usr/local/bin/g++
-            ln -sf /usr/local/bin/gcov13 /usr/local/bin/gcov 2>/dev/null || true
-            ln -sf /usr/local/bin/gcc-ar13 /usr/local/bin/gcc-ar 2>/dev/null || true
-            ln -sf /usr/local/bin/gcc-ranlib13 /usr/local/bin/gcc-ranlib 2>/dev/null || true
-            export LD_LIBRARY_PATH=/usr/local/lib/gcc13  #Adjust according to installed GCC version
-            ./run_test_gcc.sh 17
-  
 
   #Unix-Solaris
-  solaris_x86_64_test_GCC_cpp11:
+  solaris_x86_64_test_GCC:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -711,119 +284,15 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 11 
-
-  solaris_x86_64_test_GCC_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in Solaris
-        id: RunInSolaris
-        uses: vmactions/solaris-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg publisher
-            pkg install -v --accept \
-              developer/build/cmake \
-              developer/build/gnu-make \
-              developer/debug/gdb \
-              developer/gcc-14 \
-              shell/bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 14
-
-  solaris_x86_64_test_GCC_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in Solaris
-        id: RunInSolaris
-        uses: vmactions/solaris-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg publisher
-            pkg install -v --accept \
-              developer/build/cmake \
-              developer/build/gnu-make \
-              developer/debug/gdb \
-              developer/gcc-14 \
-              shell/bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 17
-
-  solaris_x86_64_test_GCC_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in Solaris
-        id: RunInSolaris
-        uses: vmactions/solaris-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg publisher
-            pkg install -v --accept \
-              developer/build/cmake \
-              developer/build/gnu-make \
-              developer/debug/gdb \
-              developer/gcc-14 \
-              shell/bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 20
-
-  solaris_x86_64_test_GCC_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in Solaris
-        id: RunInSolaris
-        uses: vmactions/solaris-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg publisher
-            pkg install -v --accept \
-              developer/build/cmake \
-              developer/build/gnu-make \
-              developer/debug/gdb \
-              developer/gcc-14 \
-              shell/bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 23 
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
 
   #Unix-OmnisOS
-  omnisOS_x86_64_test_GCC_cpp11:
+  omnisOS_x86_64_test_GCC:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -852,139 +321,19 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh 11 
-
-  omnisOS_x86_64_test_GCC_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OmnisOS
-        id: RunInOmnisOS
-        uses: vmactions/omnios-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            set -e
-            pkg refresh --full
-            if ! pkg publisher | grep -q '^extra\.omnios'; then
-              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
-              [ -n "$REL" ] || REL="r151054"
-              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
-              pkg refresh --full
-            fi
-            
-            pkg install -v --accept shell/bash developer/build/gnu-make || true
-            pkg install -v --accept ooce/developer/cmake
-            pkg install -v --accept developer/gcc13
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 14 
-
-  omnisOS_x86_64_test_GCC_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OmnisOS
-        id: RunInOmnisOS
-        uses: vmactions/omnios-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            set -e
-            pkg refresh --full
-            if ! pkg publisher | grep -q '^extra\.omnios'; then
-              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
-              [ -n "$REL" ] || REL="r151054"
-              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
-              pkg refresh --full
-            fi
-            
-            pkg install -v --accept shell/bash developer/build/gnu-make || true
-            pkg install -v --accept ooce/developer/cmake
-            pkg install -v --accept developer/gcc13
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 17 
-
-  omnisOS_x86_64_test_GCC_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OmnisOS
-        id: RunInOmnisOS
-        uses: vmactions/omnios-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            set -e
-            pkg refresh --full
-            if ! pkg publisher | grep -q '^extra\.omnios'; then
-              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
-              [ -n "$REL" ] || REL="r151054"
-              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
-              pkg refresh --full
-            fi
-            
-            pkg install -v --accept shell/bash developer/build/gnu-make || true
-            pkg install -v --accept ooce/developer/cmake
-            pkg install -v --accept developer/gcc13
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 20 
-            
-  omnisOS_x86_64_test_GCC_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OmnisOS
-        id: RunInOmnisOS
-        uses: vmactions/omnios-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            set -e
-            pkg refresh --full
-            if ! pkg publisher | grep -q '^extra\.omnios'; then
-              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
-              [ -n "$REL" ] || REL="r151054"
-              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
-              pkg refresh --full
-            fi
-            
-            pkg install -v --accept shell/bash developer/build/gnu-make || true
-            pkg install -v --accept ooce/developer/cmake
-            pkg install -v --accept developer/gcc13
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 23 
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
 
   #Unix-DragonFlyBSD
-  dragonflyBSD_x86_64_test_Clang_cpp11:
+  dragonflyBSD_x86_64_test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [ clang, gcc ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
+        exclude:
+            - cc: gcc
+              cpp_ver: 23
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1002,179 +351,17 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_clang.sh 11 
+            ./run_test_${{ matrix.cc }} .sh ${{ matrix.cpp_ver }}  
 
-  dragonflyBSD_x86_64_test_GCC_cpp11:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 11 
-
-  dragonflyBSD_x86_64_test_Clang_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_clang.sh 14
-
-  dragonflyBSD_x86_64_test_GCC_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 14
-
-  dragonflyBSD_x86_64_test_Clang_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_clang.sh 17
-
-  dragonflyBSD_x86_64_test_GCC_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 17 
-
-  dragonflyBSD_x86_64_test_Clang_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_clang.sh 20
-
-  dragonflyBSD_x86_64_test_GCC_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh 20
-
-  dragonflyBSD_x86_64_test_Clang_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_clang.sh 23
             
   #Unix-OpenBSD
   openBSD_x86_64_test_Clang_cpp11:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x86_64, aarch64 ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1185,6 +372,7 @@ jobs:
         with:
           usesh: true
           mem: 8192
+          arch: ${{ matrix.arch }}
           prepare: |
             set -x
             export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/"
@@ -1230,7 +418,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_clang.sh 11
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
             EXIT_CODE=$?
             set -e
 
@@ -1266,708 +454,81 @@ jobs:
               exit $EXIT_CODE
             fi
 
-  openBSD_x86_64_test_Clang_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 14
-
-  openBSD_x86_64_test_Clang_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 17
-
-  openBSD_x86_64_test_Clang_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 20
-
-  openBSD_x86_64_test_Clang_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 23
-
-  openBSD_arm64_test_Clang_cpp11:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 11
-
-  openBSD_arm64_test_Clang_cpp14:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 14
-
-  openBSD_arm64_test_Clang_cpp17:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 17
-
-  openBSD_arm64_test_Clang_cpp20:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 20
-
-  openBSD_arm64_test_Clang_cpp23:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in OpenBSD
-        id: OpenBSD
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            pkg_add  cmake bash
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 23
-
-  #Unix-NetBSD
-  netBSD_x86_64_test_GCC_cpp11:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_gcc.sh 11
-
-  netBSD_x86_64_test_Clang_cpp11:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 11
-
-  netBSD_x86_64_test_GCC_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_gcc.sh 14
-
-  netBSD_x86_64_test_Clang_cpp14:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 14
-
-  netBSD_x86_64_test_GCC_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_gcc.sh 17
-
-  netBSD_x86_64_test_Clang_cpp17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 17
-
-  netBSD_x86_64_test_GCC_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_gcc.sh 20
-
-  netBSD_x86_64_test_Clang_cpp20:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 20
-
-
-
-  netBSD_x86_64_test_Clang_cpp23:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSD
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 23
-  
-
-  netBSD_arm64_test_GCC_cpp17:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSDArm64GCC
-        uses: vmactions/netbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_gcc.sh 17
-
-  netBSD_arm64_test_Clang_cpp17:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run in NetBSD
-        id: RunInNetBSDArm64Clang
-        uses: vmactions/netbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            set -e
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-          run: |
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh 17
-
-
-  android_test:
+  #NetBSD
+  netBSD_x86_64_test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - abi: arm64-v8a
-            api-level: 30
-          - abi: x86
-            api-level: 30
-          - abi: x86_64
-            api-level: 30
-
+        cc: [ clang, gcc ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
+        exclude:
+            - cc: gcc
+              cpp_ver: 23
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - name: Run in NetBSD
+        id: RunInNetBSD
+        uses: vmactions/netbsd-vm@v1
         with:
-          java-version: '17'
-          distribution: 'adopt'
-
-      - id: setup-android
-        uses: android-actions/setup-android@v3
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-          ls -l /dev/kvm || true
-
-      - id: setup-ndk
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r28c
-          local-cache: false
-
-      - name: Build Debug
-        env:
-          ANDROID_ABI: ${{ matrix.abi }}
-          ANDROID_PLATFORM: ${{ matrix.api-level }}
-          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          set -e
-          mkdir -p build/test/android/${ANDROID_ABI}/debug
-          cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
-            -DANDROID_ABI=${ANDROID_ABI} \
-            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-            -DANDROID_NDK=${ANDROID_NDK} \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DTARGET_PLATFORM:STRING=android
-          cmake --build . -- -j10
-
-      - name: Build RelWithDebInfo
-        env:
-          ANDROID_ABI: ${{ matrix.abi }}
-          ANDROID_PLATFORM: ${{ matrix.api-level }}
-          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          set -e
-          mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
-            -DANDROID_ABI=${ANDROID_ABI} \
-            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-            -DANDROID_NDK=${ANDROID_NDK} \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DTARGET_PLATFORM:STRING=android
-          cmake --build . -- -j10
-
-      - name: Locate artifacts
-        id: locate
-        env:
-          ABI: ${{ matrix.abi }}
-        run: |
-          set -e
-          DBG="build/test/android/${ABI}/debug/BqLogUnitTest"
-          REL="build/test/android/${ABI}/relwithdebinfo/BqLogUnitTest"
-          [ -f "$DBG" ] || DBG="$(find build/test/android/${ABI}/debug -type f -name BqLogUnitTest | head -n1)"
-          [ -f "$REL" ] || REL="$(find build/test/android/${ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
-          echo "dbg=$DBG" >> $GITHUB_OUTPUT
-          echo "rel=$REL" >> $GITHUB_OUTPUT
-
-      - name: Create AVD snapshot (if missing)
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          arch: ${{ matrix.abi }}
-          force-avd-creation: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: false
-          cores: 4
-          script: echo "AVD snapshot created."
-
-      - name: Run tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          arch: ${{ matrix.abi }}
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          cores: 4
-          script: |
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
             set -e
-            adb devices
-            adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
-            adb shell chmod +x /data/local/tmp/BqLogUnitTest_dbg
-            adb shell /data/local/tmp/BqLogUnitTest_dbg
-            adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
-            adb shell chmod +x /data/local/tmp/BqLogUnitTest_rel
-            adb shell /data/local/tmp/BqLogUnitTest_rel
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+          run: |
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+
+  netBSD_arm64_test_cpp17:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [ clang, gcc ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in NetBSD
+        id: RunInNetBSDArm64${{ matrix.cc }}
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+          run: |
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            ./run_test_${{ matrix.cc }}.sh 17
