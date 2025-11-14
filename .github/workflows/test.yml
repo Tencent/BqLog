@@ -355,8 +355,7 @@ jobs:
 
             
   #Unix-OpenBSD
-  openBSD_test_Clang_cpp11:
-    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' || matrix.arch == 'x86_64' }}
+  openBSD_test_X86_64_Clang_cpp11:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -455,6 +454,105 @@ jobs:
               exit $EXIT_CODE
             fi
 
+  openBSD_test_arm64_Clang_cpp11:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x86_64, aarch64 ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in OpenBSD
+        id: OpenBSD
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          arch: ${{ matrix.arch }}
+          prepare: |
+            set -x
+            export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/"
+            pkg_add -v -I cmake bash gdb
+
+            # --- Prepare step diagnostics ---
+            echo "--- GDB installation diagnostics ---"
+            echo "PATH=$PATH"
+            pkg_info | grep gdb
+            ls -l /usr/local/bin/gdb* /usr/bin/gdb*
+            echo "--- End of diagnostics ---"
+
+          run: |
+            set -e -x
+            ulimit -c unlimited || true
+            sysctl kern.coredump=1 || true
+            sysctl kern.corefile=core.%p 2>/dev/null || sysctl kern.corefile=core || true
+
+            cd build/test/unix_like
+            chmod +x *.sh
+
+            GDB_CMD=""
+            if [ -x "/usr/local/bin/gdb" ]; then
+              GDB_CMD="/usr/local/bin/gdb"
+            elif [ -x "/usr/local/bin/egdb" ]; then
+              GDB_CMD="/usr/local/bin/egdb"
+            elif [ -x "/usr/bin/gdb" ]; then
+              GDB_CMD="/usr/bin/gdb"
+            fi
+
+            if [ -n "$GDB_CMD" ]; then
+              echo "Found GDB at: $GDB_CMD"
+              if ! $GDB_CMD --version | grep "GNU gdb"; then
+                echo "!!! Command '$GDB_CMD' is not a valid GNU gdb. Aborting."
+                exit 1
+              fi
+            else
+              echo "!!! GNU gdb not found. Aborting."
+              exit 1
+            fi
+
+            set +e
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            EXIT_CODE=$?
+            set -e
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Test failed with exit $EXIT_CODE. Searching for core..."
+              CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' \) 2>/dev/null | head -n1)"
+
+              EXE=""
+              for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
+                if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
+              done
+
+              echo "exe: ${EXE:-<not found>}"
+              echo "core: ${CORE_FILE:-<not found>}"
+
+              if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
+                echo "=== GDB core backtrace ==="
+                $GDB_CMD --batch -q \
+                  -ex "set pagination off" \
+                  -ex "info threads" \
+                  -ex "thread apply all bt full" \
+                  -ex "quit" \
+                  "$EXE" "$CORE_FILE" || echo "gdb core analysis failed"
+              elif [ -n "$EXE" ]; then
+                echo "Core not found; run once under gdb for live backtrace"
+                $GDB_CMD --batch -q \
+                  -ex "run" \
+                  -ex "info threads" \
+                  -ex "thread apply all bt full" \
+                  -ex "quit" \
+                  "$EXE" || true
+              fi
+              exit $EXIT_CODE
+            fi
   #NetBSD
   netBSD_x86_64_test:
     runs-on: ubuntu-latest
