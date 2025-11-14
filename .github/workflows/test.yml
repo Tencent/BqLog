@@ -10,243 +10,109 @@ on:
         default: false
   workflow_call:
 jobs:
-  #Windows X86_64
-  win64_x86_64_testMSVC_cpp14:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #Windows
+  win64_test:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: msvc
+            cpp_ver: 11
+            runner: windows-latest
+          - cc: msvc
+            cpp_ver: 14
+            runner: windows-latest
+          - cc: msvc
+            cpp_ver: 17
+            runner: windows-latest
+          - cc: msvc
+            cpp_ver: 20
+            runner: windows-latest
+          - cc: msvc
+            cpp_ver: 23
+            runner: windows-latest
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
+          - cc: clang
+            cpp_ver: 11
+            runner: windows-latest
+          - cc: clang
+            cpp_ver: 14
+            runner: windows-latest
+          - cc: clang
+            cpp_ver: 17
+            runner: windows-latest
+          - cc: clang
+            cpp_ver: 20
+            runner: windows-latest
+          - cc: clang
+            cpp_ver: 23
+            runner: windows-latest
 
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_msvc.bat 14
-  
+          - cc: mingw_clang
+            cpp_ver: 11
+            runner: windows-latest
+          - cc: mingw_clang
+            cpp_ver: 14
+            runner: windows-latest
+          - cc: mingw_clang
+            cpp_ver: 17
+            runner: windows-latest
+          - cc: mingw_clang
+            cpp_ver: 20
+            runner: windows-latest
+          - cc: mingw_clang
+            cpp_ver: 23
+            runner: windows-latest
 
-  win64_x86_64_testMSVC_Clang_cpp14:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+          - cc: mingw_gcc
+            cpp_ver: 11
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 14
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 17
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 20
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 23
+            runner: windows-latest
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
+          - cc: mingw_gcc
+            cpp_ver: 11
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 14
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 17
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 20
+            runner: windows-latest
+          - cc: mingw_gcc
+            cpp_ver: 23
+            runner: windows-latest
 
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_clang.bat 14
+          - cc: mingw_clang
+            cpp_ver: 11
+            runner: windows-11-arm
+          - cc: mingw_clang
+            cpp_ver: 14
+            runner: windows-11-arm
+          - cc: mingw_clang
+            cpp_ver: 17
+            runner: windows-11-arm
+          - cc: mingw_clang
+            cpp_ver: 20
+            runner: windows-11-arm
+          - cc: mingw_clang
+            cpp_ver: 23
+            runner: windows-11-arm
 
-  win64_x86_64_testMinGW_GCC_cpp14:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-
-
-      - name: Install MSYS2
-        uses: msys2/setup-msys2@v2
-        id: msys2
-        with:
-          msystem: MINGW64
-          release: true
-          path-type: inherit
-          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
-          update: true
-
-      - name: Ensure MSYS2 packages
-        shell: msys2 {0}
-        run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
-          echo "MSYS2 Root: $MSYSTEM_CARCH"
-          which gcc
-          which mingw32-make
-      - name: Remove conflicting MinGW paths
-        run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
-          echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
-      - name: Add MSYS2 to PATH
-        run: |
-          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
-          echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_MinGW_GCC.bat 14
-  
-
-  win64_x86_64_testMinGW_Clang_cpp14:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_MinGW_Clang.bat 14
-
-  win64_x86_64_testMSVC_cpp17:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_msvc.bat 17
-  
-
-  win64_x86_64_testMSVC_Clang_cpp17:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_clang.bat 17
-
-  win64_x86_64_testMinGW_GCC_cpp17:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-
-
-      - name: Install MSYS2
-        uses: msys2/setup-msys2@v2
-        id: msys2
-        with:
-          msystem: MINGW64
-          release: true
-          path-type: inherit
-          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
-          update: true
-
-      - name: Ensure MSYS2 packages
-        shell: msys2 {0}
-        run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
-          echo "MSYS2 Root: $MSYSTEM_CARCH"
-          which gcc
-          which mingw32-make
-      - name: Remove conflicting MinGW paths
-        run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
-          echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
-      - name: Add MSYS2 to PATH
-        run: |
-          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
-          echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_MinGW_GCC.bat 17
-  
-
-  win64_x86_64_testMinGW_Clang_cpp17:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_MinGW_Clang.bat 17
-
-  win64_x86_64_testMSVC_cpp20:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_msvc.bat 20
-
-  win64_x86_64_testMSVC_Clang_cpp20:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_clang.bat 20
-
-  win64_x86_64_testMinGW_GCC_cpp20:
-    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -258,6 +124,7 @@ jobs:
           distribution: 'adopt'
 
       - name: Install MSYS2
+        if: ${{ matrix.cc == 'mingw_gcc' }}
         uses: msys2/setup-msys2@v2
         id: msys2
         with:
@@ -268,6 +135,7 @@ jobs:
           update: true
 
       - name: Ensure MSYS2 packages
+        if: ${{ matrix.cc == 'mingw_gcc' }}
         shell: msys2 {0}
         run: |
           pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
@@ -275,11 +143,13 @@ jobs:
           which gcc
           which mingw32-make
       - name: Remove conflicting MinGW paths
+        if: ${{ matrix.cc == 'mingw_gcc' }}
         run: |
           $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
       - name: Add MSYS2 to PATH
+        if: ${{ matrix.cc == 'mingw_gcc' }}
         run: |
           $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
@@ -288,198 +158,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd build\test\win64  
-          .\run_test_MinGW_GCC.bat 20
-
-  win64_x86_64_testMinGW_Clang_cpp20:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_MinGW_Clang.bat 20
-
-  win64_x86_64_testMSVC_cpp23:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_msvc.bat 23
-  
-
-  win64_x86_64_testMSVC_Clang_cpp23:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_clang.bat 23
-
-  win64_x86_64_testMinGW_GCC_cpp23:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Install MSYS2
-        uses: msys2/setup-msys2@v2
-        id: msys2
-        with:
-          msystem: MINGW64
-          release: true
-          path-type: inherit
-          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
-          update: true
-
-      - name: Ensure MSYS2 packages
-        shell: msys2 {0}
-        run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
-          echo "MSYS2 Root: $MSYSTEM_CARCH"
-          which gcc
-          which mingw32-make
-      - name: Remove conflicting MinGW paths
-        run: |
-          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
-          echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
-      - name: Add MSYS2 to PATH
-        run: |
-          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
-          echo "PATH=$env:Path" >> $env:GITHUB_ENV
-        shell: powershell
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_MinGW_GCC.bat 23
-  
-
-  win64_x86_64_testMinGW_Clang_cpp23:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          .\run_test_MinGW_Clang.bat 23      
-
-  #Windows ARM64
-  win_arm64_test_MinGW_Clang_cpp14:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Clang
-        run: |
-          choco uninstall -y llvm --all-versions
-          choco install -y llvm
-        shell: powershell
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          mkdir build_folder
-          cd build_folder
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make
-          objdump -f BqLogUnitTest.exe
-          .\BqLogUnitTest.exe
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=14 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make -j4
-          .\BqLogUnitTest.exe
-
-  win_arm64_test_MinGW_Clang_cpp17:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Clang
-        run: |
-          choco uninstall -y llvm --all-versions
-          choco install -y llvm
-        shell: powershell
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          mkdir build_folder
-          cd build_folder
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=17 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make
-          objdump -f BqLogUnitTest.exe
-          .\BqLogUnitTest.exe
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=17 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make -j4
-          .\BqLogUnitTest.exe
-
-  win_arm64_test_MinGW_Clang_cpp20:
-    runs-on: windows-11-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Clang
-        run: |
-          choco uninstall -y llvm --all-versions
-          choco install -y llvm
-        shell: powershell
-
-      - name: Build for Windows
-        run: |
-          cd build\test\win64  
-          mkdir build_folder
-          cd build_folder
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=20 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make
-          objdump -f BqLogUnitTest.exe
-          .\BqLogUnitTest.exe
-          cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          make -j4
-          .\BqLogUnitTest.exe
+          .\run_test_${{ matrix.cc }}.bat ${{ matrix.cpp_ver }}
 
 
   #Linux-ubuntu-X86_64
