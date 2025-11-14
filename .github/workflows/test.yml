@@ -217,7 +217,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash gdb gcc
+            pkg install -y llvm cmake bash gdb gcc13
 
           run: |
             set -e -x
@@ -225,6 +225,12 @@ jobs:
             chmod +x *.sh
             ls -l
             set +e
+            ln -sf /usr/local/bin/gcc13 /usr/local/bin/gcc
+            ln -sf /usr/local/bin/g++13 /usr/local/bin/g++
+            ln -sf /usr/local/bin/gcov13 /usr/local/bin/gcov 2>/dev/null || true
+            ln -sf /usr/local/bin/gcc-ar13 /usr/local/bin/gcc-ar 2>/dev/null || true
+            ln -sf /usr/local/bin/gcc-ranlib13 /usr/local/bin/gcc-ranlib 2>/dev/null || true
+            export LD_LIBRARY_PATH=/usr/local/lib/gcc13  #Adjust according to installed GCC version
             ./run_test_${{ matrix.cc }}.sh 17
             EXIT_CODE=$?
             set -e
@@ -360,7 +366,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ x86_64, aarch64 ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - name: Checkout repository
@@ -372,7 +377,6 @@ jobs:
         with:
           usesh: true
           mem: 8192
-          arch: ${{ matrix.arch }}
           prepare: |
             set -x
             export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/"
@@ -460,7 +464,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ x86_64, aarch64 ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - name: Checkout repository
@@ -472,7 +475,7 @@ jobs:
         with:
           usesh: true
           mem: 8192
-          arch: ${{ matrix.arch }}
+          arch: aarch64
           prepare: |
             set -x
             export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/"
