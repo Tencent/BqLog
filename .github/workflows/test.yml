@@ -351,11 +351,12 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_${{ matrix.cc }} .sh ${{ matrix.cpp_ver }}  
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}  
 
             
   #Unix-OpenBSD
-  openBSD_x86_64_test_Clang_cpp11:
+  openBSD_test_Clang_cpp11:
+    if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' || matrix.arch == 'x86_64' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -418,7 +419,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            ./run_test_clang.sh ${{ matrix.cpp_ver }}
             EXIT_CODE=$?
             set -e
 
