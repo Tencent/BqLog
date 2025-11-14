@@ -507,7 +507,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run in NetBSD
-        id: RunInNetBSDArm64${{ matrix.cc }}
+        id: RunInNetBSDArm64
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
