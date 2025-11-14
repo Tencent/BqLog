@@ -2605,17 +2605,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - abi: armeabi-v7a
-            arch: armeabi-v7a
-            api-level: 29
           - abi: arm64-v8a
-            arch: arm64-v8a
             api-level: 30
           - abi: x86
-            arch: x86
             api-level: 30
           - abi: x86_64
-            arch: x86_64
             api-level: 30
 
     steps:
@@ -2694,21 +2688,11 @@ jobs:
           echo "dbg=$DBG" >> $GITHUB_OUTPUT
           echo "rel=$REL" >> $GITHUB_OUTPUT
 
-      - name: AVD cache
-        uses: actions/cache@v4
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-${{ matrix.api-level }}-${{ matrix.arch }}
-
       - name: Create AVD snapshot (if missing)
-        if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.abi }}
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
@@ -2719,7 +2703,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.abi }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
