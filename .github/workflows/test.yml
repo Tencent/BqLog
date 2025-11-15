@@ -117,7 +117,7 @@ jobs:
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
   #linux-debian
-  debian_test_cpp17:
+  debian:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -128,6 +128,7 @@ jobs:
           - label: "x86"
             runs_on: "i386_"
         cc: [ clang, gcc ]
+        cpp_ver: [ 11, 14, 17, 20, 23 ]
     container:
       image: ghcr.io/pippocao/bqlog/${{ matrix.arch.runs_on }}debian:latest
     steps:
@@ -153,7 +154,7 @@ jobs:
         run: |
           cd build/test/linux  
           chmod +x *.sh
-          ./run_test_${{ matrix.cc }}.sh 17
+          ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
   #Mac
   mac_silicon:
