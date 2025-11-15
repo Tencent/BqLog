@@ -19,10 +19,10 @@ jobs:
         cc: [ msvc, clang, mingw_clang, mingw_gcc ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
         runner:
-          - runs_on: windows-latest
-            label: "x86_64"
-          - runs_on: windows-11-arm
-            label: "arm64"
+          - label: "x86_64"
+            runs_on: windows-latest
+          - label: "arm64"
+            runs_on: windows-11-arm
         exclude:
           - cc: mingw_gcc
             runner: 11-arm
@@ -84,11 +84,15 @@ jobs:
 
   #Linux-ubuntu
   ubuntu_test:
-    runs-on: ubuntu-${{ matrix.runner }}
+    runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
       matrix:
-        runner: [ latest, 24.04-arm ]
+        runner:
+          - label: "x86_64"
+            runs_on: ubuntu-latest
+          - label: "arm64"
+            runs_on: ubuntu-24.04-arm
         cc: [ clang, gcc ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
@@ -570,3 +574,119 @@ jobs:
             ulimit -Hn
             ulimit -n 4096
             ./run_test_${{ matrix.cc }}.sh 17
+
+  #Android Test
+  test_x86:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: x86
+            api-level: 21
+          - abi: x86_64
+            api-level: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+
+      - id: setup-android
+        uses: android-actions/setup-android@v3
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm || true
+
+      - id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          local-cache: false
+
+      - name: Build Debug
+        env:
+          ANDROID_ABI: ${{ matrix.abi }}
+          ANDROID_PLATFORM: ${{ matrix.api-level }}
+          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          set -e
+          mkdir -p build/test/android/${ANDROID_ABI}/debug
+          cd build/test/android/${ANDROID_ABI}/debug
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${ANDROID_NDK} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+
+      - name: Build RelWithDebInfo
+        env:
+          ANDROID_ABI: ${{ matrix.abi }}
+          ANDROID_PLATFORM: ${{ matrix.api-level }}
+          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          set -e
+          mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cd build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${ANDROID_NDK} \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
+
+      - name: Locate artifacts
+        id: locate
+        env:
+          ABI: ${{ matrix.abi }}
+        run: |
+          set -e
+          DBG="build/test/android/${ABI}/debug/BqLogUnitTest"
+          REL="build/test/android/${ABI}/relwithdebinfo/BqLogUnitTest"
+          [ -f "$DBG" ] || DBG="$(find build/test/android/${ABI}/debug -type f -name BqLogUnitTest | head -n1)"
+          [ -f "$REL" ] || REL="$(find build/test/android/${ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
+          echo "dbg=$DBG" >> $GITHUB_OUTPUT
+          echo "rel=$REL" >> $GITHUB_OUTPUT
+
+      - name: Create AVD snapshot (if missing)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: ${{ matrix.abi }}
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          cores: 4
+          script: echo "AVD snapshot created."
+
+      - name: Run tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: ${{ matrix.abi }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          cores: 4
+          script: |
+            set -e
+            adb devices
+            adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
+            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_dbg && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg"
+            adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
+            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_rel && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel"
