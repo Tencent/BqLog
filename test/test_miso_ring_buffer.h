@@ -79,10 +79,11 @@ namespace bq {
                 config.need_recovery = with_mmap;
                 bq::miso_ring_buffer ring_buffer(config);
                 int32_t chunk_count_per_task = 1024000;
-                bq::platform::atomic<bool> write_finish_marks_array[miso_total_task] = {false};
+                bq::platform::atomic<bool> write_finish_marks_array[miso_total_task];
                 bq::array<int32_t> task_check_vector;
                 for (int32_t i = 0; i < miso_total_task; ++i) {
                     task_check_vector.push_back(0);
+                    write_finish_marks_array[i].store_seq_cst(false);
                     miso_write_task task(i, chunk_count_per_task, &ring_buffer, write_finish_marks_array[i]);
                     std::thread task_thread(task);
                     task_thread.detach();
