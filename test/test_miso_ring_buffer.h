@@ -99,7 +99,7 @@ namespace bq {
                 while (true) {
                     bool write_finished = true;
                     for (auto i = 0; i < miso_total_task; ++i) {
-                        if (write_finish_marks_array->load_acquire() == false) {
+                        if (write_finish_marks_array[i].load_acquire() == false) {
                             write_finished = false;
                             break;
                         }
