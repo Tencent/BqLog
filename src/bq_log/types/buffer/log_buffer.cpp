@@ -742,13 +742,22 @@ namespace bq {
             if ((!current_lock_iterator.value().get_data_head().used_.first())
                 && (!current_lock_iterator.value().get_data_head().stage_.first())) {
 #ifdef BQ_UNIT_TEST
-                size_t free_blocks = 0;
+                uint16_t free_blocks = 0;
                 auto free_block_iter = current_lock_iterator.value().get_data_head().free_.first();
                 while (free_block_iter) {
                     ++free_blocks;
                     free_block_iter = current_lock_iterator.value().get_data_head().free_.next(free_block_iter);
                 }
-                assert(free_blocks == hp_buffer_.get_max_block_count_per_group() && "all blocks should be free when group is removed");
+                if (free_blocks != hp_buffer_.get_max_block_count_per_group()) {
+                    bq::util::log_device_console(bq::log_level::fatal, "free_blocks != hp_buffer_.get_max_block_count_per_group() failed, free_blocks:%" PRIu16 ", max_blocks:%" PRIu16 "\n", free_blocks, hp_buffer_.get_max_block_count_per_group());
+                    bq::util::log_device_console(bq::log_level::fatal, "used head:%p, stage head:%p\n", (void*)current_lock_iterator.value().get_data_head().used_.first(), (void*)current_lock_iterator.value().get_data_head().stage_.first());
+                    free_block_iter = current_lock_iterator.value().get_data_head().free_.first();
+                    while (free_block_iter) {
+                        bq::util::log_device_console(bq::log_level::fatal, "free item, addr:%" PRIu16, current_lock_iterator.value().get_data_head().free_.get_index_by_block_head(free_block_iter));
+                        free_block_iter = current_lock_iterator.value().get_data_head().free_.next(free_block_iter);
+                    }
+                    assert(false && "all blocks should be free when group is removed");
+                }
 #endif
                 // remove it
                 group_removed = true;
