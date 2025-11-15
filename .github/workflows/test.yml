@@ -11,7 +11,7 @@ on:
   workflow_call:
 jobs:
   #Windows
-  win64_test:
+  win64:
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
@@ -83,7 +83,7 @@ jobs:
 
 
   #Linux-ubuntu
-  ubuntu_test:
+  ubuntu:
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
@@ -152,7 +152,7 @@ jobs:
           ./run_test_${{ matrix.cc }}.sh 17
 
   #Mac
-  mac_apple_silicon_test_cpp11:
+  mac_silicon:
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -179,7 +179,7 @@ jobs:
           ./run_test.sh ${{ matrix.cpp_ver }}
 
   #Unix-FreeBSD
-  freeBSD_x86_64_test:
+  freeBSD_x86_64:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -269,7 +269,7 @@ jobs:
 
 
   #Unix-Solaris
-  solaris_x86_64_test_GCC:
+  solaris_x86_64_GCC:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -301,7 +301,7 @@ jobs:
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
 
   #Unix-OmnisOS
-  omnisOS_x86_64_test_GCC:
+  omnisOS_x86_64_GCC:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -338,7 +338,7 @@ jobs:
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
 
   #Unix-DragonFlyBSD
-  dragonflyBSD_x86_64_test:
+  dragonflyBSD_x86_64:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -369,7 +369,7 @@ jobs:
 
             
   #Unix-OpenBSD
-  openBSD_test_X86_64_Clang:
+  openBSD_X86_64_Clang:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -466,7 +466,7 @@ jobs:
               exit $EXIT_CODE
             fi
 
-  openBSD_test_arm64_Clang:
+  openBSD_arm64_Clang:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
     runs-on: ubuntu-latest
     strategy:
@@ -497,7 +497,7 @@ jobs:
             ./run_test_clang.sh ${{ matrix.cpp_ver }}
 
   #NetBSD
-  netBSD_x86_64_test:
+  netBSD_x86_64:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -537,7 +537,7 @@ jobs:
             ulimit -n 4096
             ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
-  netBSD_arm64_test_cpp17:
+  netBSD_arm64_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
     strategy:
@@ -576,7 +576,7 @@ jobs:
             ./run_test_${{ matrix.cc }}.sh 17
 
   #Android Test
-  android_test:
+  android:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
