@@ -28,13 +28,13 @@ namespace bq {
             int32_t id_;
             bq::miso_ring_buffer* ring_buffer_ptr_;
             int32_t left_write_count_;
-            bq::platform::atomic<int32_t>& counter_ref_;
+            bq::platform::atomic<bool>& mark_ref_;
 
         public:
             const static int32_t min_chunk_size = 12;
             const static int32_t max_chunk_size = 1024;
-            miso_write_task(int32_t id, int32_t left_write_count, bq::miso_ring_buffer* ring_buffer_ptr, bq::platform::atomic<int32_t>& counter)
-                : counter_ref_(counter)
+            miso_write_task(int32_t id, int32_t left_write_count, bq::miso_ring_buffer* ring_buffer_ptr, bq::platform::atomic<bool>& mark_ref)
+                : mark_ref_(mark_ref)
             {
                 this->id_ = id;
                 this->left_write_count_ = left_write_count;
@@ -64,7 +64,7 @@ namespace bq {
                     ring_buffer_ptr_->commit_write_chunk(handle);
                     ++miso_ring_buffer_test_total_write_count_;
                 }
-                counter_ref_.fetch_add(-1, bq::platform::memory_order::release);
+                mark_ref_.store_release(true);
             }
         };
 
@@ -79,11 +79,11 @@ namespace bq {
                 config.need_recovery = with_mmap;
                 bq::miso_ring_buffer ring_buffer(config);
                 int32_t chunk_count_per_task = 1024000;
-                bq::platform::atomic<int32_t> counter(miso_total_task);
+                bq::platform::atomic<bool> write_finish_marks_array[miso_total_task] = {false};
                 bq::array<int32_t> task_check_vector;
                 for (int32_t i = 0; i < miso_total_task; ++i) {
                     task_check_vector.push_back(0);
-                    miso_write_task task(i, chunk_count_per_task, &ring_buffer, counter);
+                    miso_write_task task(i, chunk_count_per_task, &ring_buffer, write_finish_marks_array[i]);
                     std::thread task_thread(task);
                     task_thread.detach();
                 }
@@ -96,7 +96,13 @@ namespace bq {
                 test_output_dynamic_param(bq::log_level::info, "[miso ring buffer] test %s\n", with_mmap ? "with mmap" : "without mmap");
                 test_output_dynamic_param(bq::log_level::info, "[miso ring buffer] test progress:%d%%, time cost:%dms\r", percent, 0);
                 while (true) {
-                    bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
+                    bool write_finished = true;
+                    for (auto i = 0; i < miso_total_task; ++i) {
+                        if (write_finish_marks_array->load_acquire() == false) {
+                            write_finished = false;
+                            break;
+                        }
+                    }
                     auto handle = ring_buffer.read_chunk();
                     bq::scoped_log_buffer_handle<miso_ring_buffer> read_handle(ring_buffer, handle);
                     bool read_empty = handle.result == bq::enum_buffer_result_code::err_empty_log_buffer;
