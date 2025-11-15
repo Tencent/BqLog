@@ -122,10 +122,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ '', 'i386_' ]
+        arch:
+          - label: "x86_64"
+            runs_on: ""
+          - label: "x86"
+            runs_on: "i386_"
         cc: [ clang, gcc ]
     container:
-      image: ghcr.io/pippocao/bqlog/${{ matrix.arch }}debian:latest
+      image: ghcr.io/pippocao/bqlog/${{ matrix.arch.runs_on }}debian:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
