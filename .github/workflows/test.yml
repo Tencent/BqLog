@@ -576,7 +576,7 @@ jobs:
             ./run_test_${{ matrix.cc }}.sh 17
 
   #Android Test
-  test_x86:
+  android_test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
