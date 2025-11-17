@@ -780,6 +780,7 @@ namespace bq {
         if (!next_group) {
             mem_opt.left_holes_num_ = 0;
             rt_reading.cur_block_ = nullptr;
+            rt_reading.last_block_ = nullptr;
         }
         rt_reading.cur_group_ = next_group;
         return next_group;

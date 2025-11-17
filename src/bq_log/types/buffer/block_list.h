@@ -109,6 +109,9 @@ namespace bq {
 
         bq_forceinline block_node_head& get_block_head_by_index(uint16_t index)
         {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            assert(index < max_blocks_count_ && "invalid block index!");
+#endif
             return *reinterpret_cast<block_node_head*>(reinterpret_cast<uint8_t*>(this) + static_cast<ptrdiff_t>(*bq::launder(&offset_)) + static_cast<ptrdiff_t>(*bq::launder(&buffer_size_per_block_) * index));
         }
 
@@ -234,31 +237,35 @@ namespace bq {
         /// <returns></returns>
         bq_forceinline void remove_thread_unsafe(block_node_head* prev_block_node, block_node_head* remove_block_node)
         {
-#if defined(BQ_LOG_BUFFER_DEBUG)
-            uint16_t remove_index = get_index_by_block_head(remove_block_node);
-            assert(remove_index < max_blocks_count_ && "remove assert failed, invalid remove_block_node!");
-            uint16_t prev_index = get_index_by_block_head(prev_block_node);
-            block_node_head* test_node = first();
-            bool found_prev = false;
-            bool found_remove = false;
-            while (test_node) {
-                found_remove |= (remove_block_node == test_node);
-                found_prev |= (prev_block_node == test_node);
-                test_node = next(test_node);
+            bool check_prev = true;
+            if (prev_block_node) {
+                auto next_block = next(prev_block_node);
+                if (next_block != remove_block_node) {
+                    check_prev = false;
+                }
             }
-            assert(found_remove);
-            assert(found_prev || !prev_block_node);
+            else {
+                if (first() != remove_block_node) {
+                    check_prev = false;
+                }
+            }
+            if (!check_prev) {
+#if BQ_UNIT_TEST
+                assert(false && "remove_thread_unsafe assert failed, prev_block_node equals to remove_block_node!");
 #endif
+                // try to fix the actual prev_block_node when bug happens
+                block_node_head* actual_prev = nullptr;
+                block_node_head* cursor = first();
+                while (cursor && cursor != remove_block_node) {
+                    actual_prev = cursor;
+                    cursor = next(cursor);
+                }
+                prev_block_node = actual_prev;
+            }
             if (!prev_block_node) {
-#if defined(BQ_LOG_BUFFER_DEBUG)
-                assert(head_.index() == remove_index && "remove assert failed!");
-#endif
                 head_ = remove_block_node->next_;
-            } else {
-#if defined(BQ_LOG_BUFFER_DEBUG)
-                assert(prev_index < max_blocks_count_ && "remove assert failed, invalid prev_block_node!");
-                assert(prev_block_node->next_.index() == remove_index);
-#endif
+            }
+            else {
                 prev_block_node->next_ = remove_block_node->next_;
             }
         }
