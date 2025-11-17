@@ -170,7 +170,9 @@ namespace bq {
         bq::string& text = snapshot_text_[snapshot_text_index_];
         text.clear();
         if (!snapshot_buffer_) {
+#ifndef BQ_UNIT_TEST
             bq::util::log_device_console_plain_text(log_level::warning, "calling take_snapshot without enable snapshot");
+#endif
             return snapshot_text_[snapshot_text_index_];
         }
         time_zone time_zone_tmp(time_zone_config);
