@@ -36,7 +36,9 @@
 #elif defined(__OHOS__)
 #define BQ_OHOS 1
 #define BQ_POSIX 1
+#ifndef BQ_UNIT_TEST
 #define BQ_NAPI 1
+#endif
 #elif defined(__ANDROID__)
 #define BQ_ANDROID 1
 #define BQ_POSIX 1

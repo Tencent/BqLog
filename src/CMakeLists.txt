@@ -58,6 +58,9 @@ else()
             -Wnull-dereference -Wformat=2 -Wuninitialized
             ${EXTRA_FLAGS}
     )
+    if (TARGET_PLATFORM STREQUAL "ohos" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
+    endif()
 endif()
 if(ANDROID_STL STREQUAL "none")
     add_compile_definitions(BQ_NO_LIBCPP=1)
@@ -245,17 +248,10 @@ elseif(TARGET_PLATFORM STREQUAL "unix")
 elseif(TARGET_PLATFORM STREQUAL "ohos")
     find_library(ACE_NAPI_LIB ace_napi.z REQUIRED)
     find_library(HILOG_LIB hilog_ndk.z REQUIRED)
-    find_library(BUNDLE_LIB NAMES
-            bundle_ndk.z
-            bundlemanager_ndk.z
-            bundlemanager.z
-            bundle_ndk
-            REQUIRED)
     target_link_libraries(BqLog
             PRIVATE
             ${ACE_NAPI_LIB}
             ${HILOG_LIB}
-            ${BUNDLE_LIB}
             dl
     )
 elseif(TARGET_PLATFORM STREQUAL "mac")

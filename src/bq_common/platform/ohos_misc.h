@@ -23,7 +23,6 @@
 
 namespace bq {
     namespace platform {
-        const bq::string get_bundle_name();
 
     }
 }

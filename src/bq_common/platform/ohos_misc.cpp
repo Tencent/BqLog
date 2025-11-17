@@ -18,6 +18,7 @@
 #include <unwind.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <unistd.h>
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -37,13 +38,18 @@ namespace bq {
 
         base_dir_initializer::base_dir_initializer()
         {
+#ifdef BQ_UNIT_TEST
+            bq::array<char> tmp;
+            tmp.fill_uninitialized(1024);
+            while (getcwd(&tmp[0], tmp.size()) == NULL) {
+                tmp.fill_uninitialized(1024);
+            }
+            set_base_dir_0(&tmp[0]);
+            set_base_dir_1(&tmp[0]);
+#else
             set_base_dir_0("/data/storage/el2/base/files");
             set_base_dir_1("/data/storage/el2/base/cache");
-        }
-        const bq::string get_bundle_name()
-        {
-            auto bundle = OH_NativeBundle_GetCurrentApplicationInfo();
-            return bundle.bundleName;
+#endif
         }
 
         static constexpr size_t max_stack_size_ = 128;

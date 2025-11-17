@@ -40,6 +40,9 @@ else()
             -Wnull-dereference -Wuninitialized
             ${EXTRA_FLAGS}
     )
+    if (TARGET_PLATFORM STREQUAL "ohos" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
+    endif()
 endif()
 
 #log test use template to generate millions test case, that makes object files become bigger
@@ -96,7 +99,7 @@ include_directories(
     ${ALL_INC_DIRS}
 )
 
-if(TARGET_PLATFORM STREQUAL "android")
+if(TARGET_PLATFORM STREQUAL "android" OR TARGET_PLATFORM STREQUAL "ohos")
     # build static library
     add_executable(BqLogUnitTest
             ${SRC_LIST}
@@ -139,9 +142,16 @@ endif()
 
 if(TARGET_PLATFORM STREQUAL "android")
     find_library(log-lib log)
-    target_link_libraries(BqLogUnitTest ${log-lib} )
+    target_link_libraries(BqLogUnitTest ${log-lib})
     find_library(android-lib android)
-    target_link_libraries(BqLogUnitTest ${android-lib} )
+    target_link_libraries(BqLogUnitTest ${android-lib})
+elseif(TARGET_PLATFORM STREQUAL "ohos")
+    find_library(HILOG_LIB hilog_ndk.z REQUIRED)
+    target_link_libraries(BqLogUnitTest
+            PRIVATE
+            ${HILOG_LIB}
+            dl
+    )
 elseif(TARGET_PLATFORM STREQUAL "linux")
     target_link_libraries(BqLogUnitTest pthread dl)
 elseif(TARGET_PLATFORM STREQUAL "unix")

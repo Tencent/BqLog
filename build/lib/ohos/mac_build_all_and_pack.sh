@@ -34,7 +34,6 @@ for build_target in "${BUILD_TARGET[@]}"; do
       pushd "cmake_build" >/dev/null
       cmake ../../../../src \
         -DOHOS_ARCH="$build_target" \
-        -DOHOS_PLATFORM=ohos \
         -DCMAKE_BUILD_TYPE="$build_config" \
         -DBUILD_LIB_TYPE="$build_lib_type" \
         -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/ohos.toolchain.cmake" \
