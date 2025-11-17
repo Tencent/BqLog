@@ -27,6 +27,7 @@ namespace bq {
             (void)log_level;
             (void)length;
             if (log_id == 0) {
+                bq::util::_default_console_output(static_cast<bq::log_level>(log_level), content);
                 return; // It's not a log callback
             }
             log_str = content;

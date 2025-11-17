@@ -1091,11 +1091,12 @@ namespace bq {
             bq::log::force_flush_all_logs();
 
             // decode test
+            bool is_encrypted = !get_encript_config().is_empty();
             for (size_t i = 0; i < test_log_3_all_console_outputs.size(); ++i) {
                 const bq::string& raw_item = decode_raw_item();
-                result_ptr->add_result(test_log_3_all_console_outputs[i] == (raw_item), "encrypted test idx:%" PRIu64 ", raw test, \ndecoded: %s, \nconsole: %s", static_cast<uint64_t>(i), raw_item.c_str(), test_log_3_all_console_outputs[i].c_str());
+                result_ptr->add_result(test_log_3_all_console_outputs[i] == (raw_item), "%s test idx:%" PRIu64 ", raw test, \ndecoded: %s, \nconsole: %s", (is_encrypted ? "encrypt" : ""), static_cast<uint64_t>(i), raw_item.c_str(), test_log_3_all_console_outputs[i].c_str());
                 const bq::string& compressed_item = decode_compressed_item();
-                result_ptr->add_result(test_log_3_all_console_outputs[i] == (compressed_item), "encrypted idx:%" PRIu64 ", compressed test, \ndecoded: %s, \nconsole: %s", static_cast<uint64_t>(i), compressed_item.c_str(), test_log_3_all_console_outputs[i].c_str());
+                result_ptr->add_result(test_log_3_all_console_outputs[i] == (compressed_item), "%s test idx:%" PRIu64 ", compressed test, \ndecoded: %s, \nconsole: %s", (is_encrypted ? "encrypt" : ""), static_cast<uint64_t>(i), compressed_item.c_str(), test_log_3_all_console_outputs[i].c_str());
             }
         }
 

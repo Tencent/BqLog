@@ -336,6 +336,9 @@ namespace bq {
                 need_open_new_file |= (current_file_size_ > 0 && !parse_exist_log_file(parse_context));
             }
         }
+#ifdef BQ_UNIT_TEST
+        printf("open log appender file : %s\n", file_.abs_file_path().c_str());
+#endif
         file_manager::instance().seek(file_, file_manager::seek_option::end, 0);
         on_file_open(current_file_size_ == 0);
     }
