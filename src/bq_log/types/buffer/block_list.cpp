@@ -22,8 +22,11 @@
 
 namespace bq {
 
-    block_node_head::block_node_head(void* buffer, size_t buffer_size, bool is_memory_recovery)
+    block_node_head::block_node_head(block_list_type type, void* buffer, size_t buffer_size, bool is_memory_recovery)
     {
+        if (type != block_list_type::list_keep_prev) {
+            type_ = type;
+        }
         (void)padding_;
         if (!is_memory_recovery) {
             next_.index() = static_cast<uint16_t>(-1);
@@ -97,6 +100,9 @@ namespace bq {
                 return false;
             }
             const block_node_head& next_block_head = get_block_head_by_index(current_ptr->index());
+            if (next_block_head.get_type() != type_) {
+                return false;
+            }
             current_ptr = &(next_block_head.next_);
         }
         if (current_blocks_count > prev_max_blocks_count) {
@@ -111,13 +117,14 @@ namespace bq {
     {
         block_node_head* current_node = first();
         while (current_node) {
-            new (static_cast<void*>(current_node), bq::enum_new_dummy::dummy) block_node_head(
+            new (static_cast<void*>(current_node), bq::enum_new_dummy::dummy) block_node_head(block_list_type::list_keep_prev, 
                 reinterpret_cast<uint8_t*>(current_node) + block_node_head::get_buffer_data_offset(), buffer_size_per_block_ - (size_t)block_node_head::get_buffer_data_offset(), true);
             current_node = next(current_node);
         }
     }
 
-    block_list::block_list(uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_recovery)
+    block_list::block_list(block_list_type type, uint16_t max_blocks_count, uint8_t* buffers_base_addr, size_t blocks_total_buffer_size, bool is_memory_recovery)
+        : type_(type)
     {
         assert(reinterpret_cast<uintptr_t>(buffers_base_addr) % BQ_CACHE_LINE_SIZE == 0 && "buffers_base_addr is not properly aligned!");
         if (!is_memory_recovery) {

@@ -53,16 +53,24 @@ namespace bq {
         uint32_t data_size;
     };
 
-    enum memory_map_buffer_state {
+    enum class memory_map_buffer_state {
         init_with_memory,
         recover_from_memory_map,
         init_with_memmap
     };
 
-    enum create_memory_map_result {
+    enum class create_memory_map_result {
         failed,
         use_existed,
         new_created
+    };
+
+    enum class block_list_type : uint8_t {
+        list_none,
+        list_free,
+        list_stage,
+        list_used,
+        list_keep_prev,
     };
 
     /// <summary>

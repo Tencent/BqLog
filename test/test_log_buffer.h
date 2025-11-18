@@ -377,10 +377,10 @@ namespace bq {
                 const uintptr_t base_addr = reinterpret_cast<uintptr_t>(static_cast<uint8_t*>(buffer.begin()));
                 uintptr_t aligned_addr = (base_addr + (uintptr_t)(BQ_CACHE_LINE_SIZE - 1)) & ~(static_cast<uintptr_t>(BQ_CACHE_LINE_SIZE) - 1);
                 const uintptr_t buffer_addr = aligned_addr + 2 * sizeof(block_list);
-                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
+                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(block_list_type::list_free, BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
                 block_list& list_from = *reinterpret_cast<block_list*>(aligned_addr);
                 aligned_addr += sizeof(block_list);
-                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
+                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(block_list_type::list_free, BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
                 block_list& list_to = *reinterpret_cast<block_list*>(aligned_addr);
 
                 if (config.need_recovery) {
@@ -398,7 +398,7 @@ namespace bq {
 
                 for (uint16_t i = 0; i < BLOCK_COUNT; ++i) {
                     auto* block_head_addr = reinterpret_cast<uint8_t*>(buffer_addr + i * config.default_buffer_size);
-                    new (static_cast<void*>(block_head_addr), bq::enum_new_dummy::dummy) block_node_head(block_head_addr + block_node_head::get_buffer_data_offset(), config.default_buffer_size - static_cast<size_t>(block_node_head::get_buffer_data_offset()), config.need_recovery);
+                    new (static_cast<void*>(block_head_addr), bq::enum_new_dummy::dummy) block_node_head(block_list_type::list_none, block_head_addr + block_node_head::get_buffer_data_offset(), config.default_buffer_size - static_cast<size_t>(block_node_head::get_buffer_data_offset()), config.need_recovery);
                     auto* block = reinterpret_cast<block_node_head*>(block_head_addr);
                     list_from.push(block);
                 }
@@ -653,11 +653,13 @@ namespace bq {
                             result.add_result(handle.result == enum_buffer_result_code::success, "recovery test read chunk, version:%" PRIu32 "index:%" PRIu32 "", version, i);
                             bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
                             bool valid = true;
-                            for (size_t pos = 0; pos + sizeof(uint64_t) <= handle.data_size; pos += sizeof(uint64_t)) {
-                                uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
-                                if (ptr[0] != version || ptr[1] != i) {
-                                    valid = false;
-                                    break;
+                            if (handle.result == enum_buffer_result_code::success) {
+                                for (size_t pos = 0; pos + sizeof(uint64_t) <= handle.data_size; pos += sizeof(uint64_t)) {
+                                    uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
+                                    if (ptr[0] != version || ptr[1] != i) {
+                                        valid = false;
+                                        break;
+                                    }
                                 }
                             }
                             result.add_result(valid, "recovery test read content, version:%" PRIu32 "index:%" PRIu32 "", version, i);

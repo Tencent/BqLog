@@ -25,9 +25,9 @@
 namespace bq {
 
     group_data_head::group_data_head(uint16_t max_blocks_count, uint8_t* group_data_addr, size_t group_data_size, bool is_memory_recovery)
-        : used_(max_blocks_count, group_data_addr, group_data_size, is_memory_recovery)
-        , free_(max_blocks_count, group_data_addr, group_data_size, false)
-        , stage_(max_blocks_count, group_data_addr, group_data_size, is_memory_recovery)
+        : used_(block_list_type::list_used, max_blocks_count, group_data_addr, group_data_size, is_memory_recovery)
+        , free_(block_list_type::list_free, max_blocks_count, group_data_addr, group_data_size, false)
+        , stage_(block_list_type::list_stage, max_blocks_count, group_data_addr, group_data_size, is_memory_recovery)
     {
         assert(((uintptr_t)group_data_addr % BQ_CACHE_LINE_SIZE) == 0);
         bq::hash_map<uint8_t*, bool> used_map;
@@ -60,7 +60,7 @@ namespace bq {
             uint8_t* block_head_addr = (uint8_t*)(&stage_.get_block_head_by_index(i));
             if ((used_map.find(block_head_addr) == used_map.end())
                 && (stage_map.find(block_head_addr) == stage_map.end())) {
-                new ((void*)block_head_addr, bq::enum_new_dummy::dummy) block_node_head(block_head_addr + block_node_head::get_buffer_data_offset(), (size_t)(group_data_size / max_blocks_count) - (size_t)block_node_head::get_buffer_data_offset(), false);
+                new ((void*)block_head_addr, bq::enum_new_dummy::dummy) block_node_head(block_list_type::list_none, block_head_addr + block_node_head::get_buffer_data_offset(), (size_t)(group_data_size / max_blocks_count) - (size_t)block_node_head::get_buffer_data_offset(), false);
                 block_node_head* block = (block_node_head*)block_head_addr;
                 free_.push(block);
             }
