@@ -136,7 +136,11 @@ namespace bq {
 
                 test_output_dynamic_param(bq::log_level::info, "[siso ring buffer] test %s\n", with_mmap ? "with mmap" : "without mmap");
                 test_output_dynamic_param(bq::log_level::info, "[siso ring buffer] test progress:%d%%, time cost:%dms\r", 0, 0);
-                int32_t chunk_count_per_task = 1024000;
+#ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
+                constexpr int32_t chunk_count_per_task = 1024000 / 8;
+#else
+                constexpr int32_t chunk_count_per_task = 1024000;
+#endif
                 for (size_t i = 0; i < task_size; ++i) {
                     size_t buffer_size = (size_t)(1024 * (4 << i) + 64 + 64); // 1024 blocks and 64 bytes for mmap head, 64 redundant bytes for alignment.
                     if (with_mmap) {

@@ -85,6 +85,13 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND "$ENV{GITHUB_ACTIONS}" STREQUAL "true")
     message(STATUS "Detected: running inside GitHub Actions")
     add_compile_definitions(BQ_IN_GITHUB_ACTIONS=1)
 endif()
+
+if(DEFINED ENV{BQ_LOW_PERFORMANCE_TESTS} AND "$ENV{BQ_LOW_PERFORMANCE_TESTS}" STREQUAL "true")
+    message(STATUS "Detected: low performance GitHub Actions")
+    add_compile_definitions(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE=1)
+endif()
+
+
 ############################################################
 # IDE Sources Group
 ############################################################

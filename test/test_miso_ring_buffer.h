@@ -78,7 +78,11 @@ namespace bq {
                 config.log_categories_name = { "_default", "category1" };
                 config.need_recovery = with_mmap;
                 bq::miso_ring_buffer ring_buffer(config);
-                int32_t chunk_count_per_task = 1024000;
+#ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
+                constexpr int32_t chunk_count_per_task = 1024000 / 8;
+#else
+                constexpr int32_t chunk_count_per_task = 1024000;
+#endif
                 bq::platform::atomic<bool> write_finish_marks_array[miso_total_task];
                 bq::array<int32_t> task_check_vector;
                 for (int32_t i = 0; i < miso_total_task; ++i) {

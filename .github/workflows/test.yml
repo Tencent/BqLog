@@ -244,6 +244,7 @@ jobs:
             ln -sf /usr/local/bin/gcc-ar13 /usr/local/bin/gcc-ar 2>/dev/null || true
             ln -sf /usr/local/bin/gcc-ranlib13 /usr/local/bin/gcc-ranlib 2>/dev/null || true
             export LD_LIBRARY_PATH=/usr/local/lib/gcc13  #Adjust according to installed GCC version
+            export BQ_LOW_PERFORMANCE_TESTS=true
             ./run_test_${{ matrix.cc }}.sh 17
             EXIT_CODE=$?
             set -e
@@ -499,6 +500,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
+            export BQ_LOW_PERFORMANCE_TESTS=true
             ./run_test_clang.sh ${{ matrix.cpp_ver }}
 
   #NetBSD
@@ -578,6 +580,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
+            export BQ_LOW_PERFORMANCE_TESTS=true
             ./run_test_${{ matrix.cc }}.sh 17
 
   #Android Test

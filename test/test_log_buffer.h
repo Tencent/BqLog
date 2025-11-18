@@ -24,7 +24,12 @@ namespace bq {
         static bq::platform::atomic<int32_t> linked_list_test_number_generator_ = 0;
         static bq::platform::atomic<int32_t> log_buffer_test_total_write_count_ = 0;
         constexpr int32_t log_buffer_total_task = 5;
+
+#ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
+        constexpr int32_t linked_list_test_number_per_thread = 200000;
+#else
         constexpr int32_t linked_list_test_number_per_thread = 2000000;
+#endif
 
         class miso_linked_list_test_insert_task {
         private:
@@ -289,7 +294,11 @@ namespace bq {
             void do_memory_pool_test(test_result& result)
             {
                 {
+#ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
+                    constexpr int32_t LOOP_COUNT = 100000;
+#else
                     constexpr int32_t LOOP_COUNT = 1000000;
+#endif
                     constexpr int32_t OBJ_COUNT = 1024;
                     constexpr int32_t THREAD_COUNT = 4;
                     bq::memory_pool<memory_pool_test_obj_aligned> pool_aligned_form, pool_aligned_to;
@@ -393,7 +402,11 @@ namespace bq {
                     auto* block = reinterpret_cast<block_node_head*>(block_head_addr);
                     list_from.push(block);
                 }
+#ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
+                constexpr int32_t LOOP_COUNT = 100000;
+#else
                 constexpr int32_t LOOP_COUNT = 1000000;
+#endif
                 log_block_list_test_task task1(&list_from, &list_to, LOOP_COUNT);
                 log_block_list_test_task task2(&list_to, &list_from, LOOP_COUNT);
                 task1.start();
@@ -456,7 +469,11 @@ namespace bq {
                 } else {
                     config_debug_str += ", normal mode";
                 }
-                int32_t chunk_count_per_task = 1024 * 128;
+#ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
+                constexpr int32_t chunk_count_per_task = 1024 * 16;
+#else
+                constexpr int32_t chunk_count_per_task = 1024 * 128;
+#endif
                 bq::platform::atomic<int32_t> counter(log_buffer_total_task);
                 bq::platform::atomic<bool> write_end_marker[log_buffer_total_task];
                 bq::array<int32_t> task_check_vector;
@@ -570,7 +587,11 @@ namespace bq {
                     return;
                 }
                 constexpr uint32_t WRITE_VERSION_COUNT = 5;
+#ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
+                constexpr uint32_t MESSAGE_PER_VERSION = 10000;
+#else
                 constexpr uint32_t MESSAGE_PER_VERSION = 100000;
+#endif
                 test_output_dynamic(bq::log_level::info, "=======================\n[log buffer] do recovery test begin...\n");
 
                 // Single Thread Test
