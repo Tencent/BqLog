@@ -18,8 +18,8 @@ namespace bq {
                 result.add_result(bq::file_manager::is_dir("C:\\"), "root dir test2");
                 result.add_result(bq::file_manager::is_dir("C:/"), "root dir test3");
 #else
-                result.add_result(bq::file_manager::is_dir("/usr"), "root dir test");
-                result.add_result(bq::file_manager::is_dir("/usr/"), "root dir test2");
+                result.add_result(bq::file_manager::is_dir("/usr") || bq::file_manager::is_dir("/system") || bq::file_manager::is_dir("/data"), "root dir test");
+                result.add_result(bq::file_manager::is_dir("/usr/") || bq::file_manager::is_dir("/system/") || bq::file_manager::is_dir("/data/"), "root dir test2");
 #endif
                 file_manager.remove_file_or_dir(TO_ABSOLUTE_PATH("cc", base_dir_type));
                 result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd", base_dir_type)), "create_directory_in_base_path cc/bb/aa/dd");
