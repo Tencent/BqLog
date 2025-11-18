@@ -136,7 +136,7 @@ namespace bq {
                 && (reinterpret_cast<const uint8_t*>(block) < data_range_end_);
         }
 
-#if defined(BQ_LOG_BUFFER_DEBUG)
+#if defined(BQ_LOG_BUFFER_DEBUG) || defined(BQ_UNIT_TEST)
         bq_forceinline bool is_include(const block_node_head* block_node)
         {
             if (!block_node) {
@@ -154,6 +154,16 @@ namespace bq {
                 test_node = next(test_node);
             }
             return false;
+        }
+
+        bq_forceinline void debug_output() {
+            auto block_iter = first();
+            while (block_iter) {
+                printf("=>%" PRIu16, get_index_by_block_head(block_iter));
+                block_iter = next(block_iter);
+            }
+            printf("\n");
+            fflush(stdout);
         }
 #endif
 
@@ -234,9 +244,14 @@ namespace bq {
         /// </summary>
         /// <param name="prev_block_node">prev node of `remove_block_node`, nullptr means remove_block_node is head node</param>
         /// <param name="remove_block_node"></param>
-        /// <returns></returns>
-        bq_forceinline void remove_thread_unsafe(block_node_head* prev_block_node, block_node_head* remove_block_node)
+        /// <returns>true if remove successfully</returns>
+        bq_forceinline bool remove_thread_unsafe(block_node_head* prev_block_node, block_node_head* remove_block_node)
         {
+#if defined(BQ_UNIT_TEST) || defined(BQ_LOG_BUFFER_DEBUG)
+            //make sure remove_block_node is in the list
+            if (!is_include(remove_block_node)) {
+                return false;
+            }
             bool check_prev = true;
             if (prev_block_node) {
                 auto next_block = next(prev_block_node);
@@ -250,24 +265,16 @@ namespace bq {
                 }
             }
             if (!check_prev) {
-#if BQ_UNIT_TEST
-                assert(false && "remove_thread_unsafe assert failed, prev_block_node equals to remove_block_node!");
-#endif
-                // try to fix the actual prev_block_node when bug happens
-                block_node_head* actual_prev = nullptr;
-                block_node_head* cursor = first();
-                while (cursor && cursor != remove_block_node) {
-                    actual_prev = cursor;
-                    cursor = next(cursor);
-                }
-                prev_block_node = actual_prev;
+                return false;
             }
+#endif
             if (!prev_block_node) {
                 head_ = remove_block_node->next_;
             }
             else {
                 prev_block_node->next_ = remove_block_node->next_;
             }
+            return true;
         }
     } BQ_PACK_END static_assert(sizeof(block_list) == BQ_CACHE_LINE_SIZE, "invalid block_list size");
 }

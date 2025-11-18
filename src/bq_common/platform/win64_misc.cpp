@@ -214,7 +214,9 @@ namespace bq {
         {
             bq::string result;
             result.set_capacity(original_path.size());
-            bq::array<bq::string> split = original_path.replace("\\", "/").split("/");
+            bq::string trans_path = original_path.replace("\\", "/");
+            bool end_with_slash = (trans_path.is_empty() ? false : (trans_path[trans_path.size() - 1] == '/'));
+            bq::array<bq::string> split = trans_path.split("/");
             bq::array<bq::string> result_split;
             result_split.set_capacity(split.size());
             for (decltype(split)::size_type i = 0; i < split.size(); ++i) {
@@ -243,6 +245,9 @@ namespace bq {
             if (original_path.size() > 0 && original_path[0] == '/')
                 result = "/" + result;
 
+            if (end_with_slash) {
+                result += "/";
+            }
             return result;
         }
 

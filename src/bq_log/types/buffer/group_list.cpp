@@ -334,8 +334,21 @@ namespace bq {
     void group_list::recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block)
     {
         recycle_block->get_buffer().set_thread_check_enable(false);
-        group.value().get_data_head().used_.remove_thread_unsafe(prev_block, recycle_block);
-        group.value().get_data_head().free_.push(recycle_block);
+        bool remove_result = group.value().get_data_head().used_.remove_thread_unsafe(prev_block, recycle_block);
+        if (remove_result) {
+            group.value().get_data_head().free_.push(recycle_block);
+        }
+        else {
+#ifdef BQ_UNIT_TEST
+            bq::util::log_device_console(bq::log_level::error, "free list:");
+            group.value().get_data_head().free_.debug_output();
+            bq::util::log_device_console(bq::log_level::error, "used list:");
+            group.value().get_data_head().used_.debug_output();
+            bq::util::log_device_console(bq::log_level::error, "stage list:");
+            group.value().get_data_head().stage_.debug_output();
+            assert(false && "recycle_block_thread_unsafe failed, block not found in used list");    
+#endif
+        }
     }
 
     void group_list::garbage_collect()

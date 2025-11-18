@@ -83,7 +83,7 @@ namespace bq {
 
     bool file_manager::create_directory(const bq::string& path)
     {
-        if (platform::is_dir(path.c_str())) {
+        if (is_dir(path.c_str())) {
             return true;
         }
         int32_t error_code = platform::make_dir(path.c_str());
@@ -160,6 +160,11 @@ namespace bq {
     bool file_manager::is_dir(const bq::string& path)
     {
         bq::string real_path = get_lexically_path(path);
+        if (!real_path.is_empty()) {
+            if (real_path[real_path.size() - 1] != '/' && real_path[real_path.size() - 1] != '\\') {
+                real_path += "/";
+            }
+        }
         return bq::platform::is_dir(real_path.c_str());
     }
 
