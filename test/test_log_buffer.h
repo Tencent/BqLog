@@ -380,7 +380,7 @@ namespace bq {
                 new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(block_list_type::list_free, BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
                 block_list& list_from = *reinterpret_cast<block_list*>(aligned_addr);
                 aligned_addr += sizeof(block_list);
-                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(block_list_type::list_free, BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
+                new (reinterpret_cast<void*>(aligned_addr), bq::enum_new_dummy::dummy) block_list(block_list_type::list_stage, BLOCK_COUNT, reinterpret_cast<uint8_t*>(buffer_addr), size - static_cast<size_t>(buffer_addr - base_addr), config.need_recovery);
                 block_list& list_to = *reinterpret_cast<block_list*>(aligned_addr);
 
                 if (config.need_recovery) {
