@@ -154,26 +154,38 @@ namespace bq {
         private:
             test_result& result_;
             bq::platform::spin_lock_rw_crazy& spin_lock_;
-            uint64_t& counter_;
+            uint64_t& counter_modify_by_write_;
+            bq::platform::atomic<uint64_t>& counter_modify_by_read_;
 
         public:
-            test_thread_spin_lock_read(test_result& result, bq::platform::spin_lock_rw_crazy& lock, uint64_t& counter)
+            test_thread_spin_lock_read(test_result& result, bq::platform::spin_lock_rw_crazy& lock, uint64_t& counter_modify_by_write, bq::platform::atomic<uint64_t>& counter_modify_by_read)
                 : result_(result)
                 , spin_lock_(lock)
-                , counter_(counter)
+                , counter_modify_by_write_(counter_modify_by_write)
+                , counter_modify_by_read_(counter_modify_by_read)
             {
             }
             virtual void run() override
             {
                 uint32_t error_count = 0;
-                for (uint32_t i = 0; i < 1000000; ++i) {
+                for (uint32_t i = 0; i < 10000000; ++i) {
                     {
                         bq::platform::scoped_spin_lock_read_crazy lock(spin_lock_);
-                        error_count += (counter_ % 10 == 0) ? 0 : 1;
+                        error_count += (counter_modify_by_write_ % 10 == 0) ? 0 : 1;
+                        counter_modify_by_read_.fetch_add_relaxed(1);
+                        counter_modify_by_read_.fetch_add_relaxed(1);
+                        counter_modify_by_read_.fetch_add_relaxed(1);
+                        counter_modify_by_read_.fetch_add_relaxed(1);
+                        counter_modify_by_read_.fetch_add_relaxed(1);
+                        counter_modify_by_read_.add_fetch_relaxed(1);
+                        counter_modify_by_read_.add_fetch_relaxed(1);
+                        counter_modify_by_read_.add_fetch_relaxed(1);
+                        counter_modify_by_read_.add_fetch_relaxed(1);
+                        counter_modify_by_read_.add_fetch_relaxed(1);
                     }
                     bq::platform::thread::yield();
                 }
-                result_.add_result(error_count == 0, "spin_lock_rw_crazy test");
+                result_.add_result(error_count == 0, "spin_lock_rw_crazy test(read lock thread)");
             }
         };
 
@@ -181,33 +193,38 @@ namespace bq {
         private:
             test_result& result_;
             bq::platform::spin_lock_rw_crazy& spin_lock_;
-            uint64_t& counter_;
+            uint64_t& counter_modify_by_write_;
+            bq::platform::atomic<uint64_t>& counter_modify_by_read_;
 
         public:
-            test_thread_spin_lock_write(test_result& result, bq::platform::spin_lock_rw_crazy& lock, uint64_t& counter)
+            test_thread_spin_lock_write(test_result& result, bq::platform::spin_lock_rw_crazy& lock, uint64_t& counter_modify_by_write, bq::platform::atomic<uint64_t>& counter_modify_by_read)
                 : result_(result)
                 , spin_lock_(lock)
-                , counter_(counter)
+                , counter_modify_by_write_(counter_modify_by_write)
+                , counter_modify_by_read_(counter_modify_by_read)
             {
                 (void)result_;
             }
             virtual void run() override
             {
-                for (uint32_t i = 0; i < 1000000; ++i) {
+                uint32_t error_count = 0;
+                for (uint32_t i = 0; i < 10000000; ++i) {
                     {
                         bq::platform::scoped_spin_lock_write_crazy lock(spin_lock_);
-                        counter_++;
-                        counter_++;
-                        counter_++;
-                        counter_++;
-                        counter_++;
-                        ++counter_;
-                        ++counter_;
-                        ++counter_;
-                        ++counter_;
-                        ++counter_;
+                        error_count += (counter_modify_by_read_.load_relaxed() % 10 == 0) ? 0 : 1;
+                        counter_modify_by_write_++;
+                        counter_modify_by_write_++;
+                        counter_modify_by_write_++;
+                        counter_modify_by_write_++;
+                        counter_modify_by_write_++;
+                        ++counter_modify_by_write_;
+                        ++counter_modify_by_write_;
+                        ++counter_modify_by_write_;
+                        ++counter_modify_by_write_;
+                        ++counter_modify_by_write_;
                     }
                     bq::platform::thread::yield();
+                    result_.add_result(error_count == 0, "spin_lock_rw_crazy test(write lock thread)");
                 }
             }
         };
@@ -485,17 +502,18 @@ namespace bq {
 
                 test_output_dynamic(bq::log_level::info, "spin lock test is finished, now begin the spin_lock_rw_crazy test, please wait...                \r");
                 {
-                    uint64_t counter = 0;
+                    bq::platform::atomic<uint64_t> counter_modify_by_read = 0;
+                    uint64_t counter_modify_by_write = 0;
                     bq::platform::spin_lock_rw_crazy test_lock;
-                    test_thread_spin_lock_read thread1(result, test_lock, counter);
-                    test_thread_spin_lock_read thread2(result, test_lock, counter);
-                    test_thread_spin_lock_read thread3(result, test_lock, counter);
-                    test_thread_spin_lock_read thread4(result, test_lock, counter);
-                    test_thread_spin_lock_read thread5(result, test_lock, counter);
+                    test_thread_spin_lock_read thread1(result, test_lock, counter_modify_by_write, counter_modify_by_read);
+                    test_thread_spin_lock_read thread2(result, test_lock, counter_modify_by_write, counter_modify_by_read);
+                    test_thread_spin_lock_read thread3(result, test_lock, counter_modify_by_write, counter_modify_by_read);
+                    test_thread_spin_lock_read thread4(result, test_lock, counter_modify_by_write, counter_modify_by_read);
+                    test_thread_spin_lock_read thread5(result, test_lock, counter_modify_by_write, counter_modify_by_read);
 
-                    test_thread_spin_lock_write thread_write1(result, test_lock, counter);
-                    test_thread_spin_lock_write thread_write2(result, test_lock, counter);
-                    test_thread_spin_lock_write thread_write3(result, test_lock, counter);
+                    test_thread_spin_lock_write thread_write1(result, test_lock, counter_modify_by_write, counter_modify_by_read);
+                    test_thread_spin_lock_write thread_write2(result, test_lock, counter_modify_by_write, counter_modify_by_read);
+                    test_thread_spin_lock_write thread_write3(result, test_lock, counter_modify_by_write, counter_modify_by_read);
                     thread1.start();
                     thread2.start();
                     thread3.start();
