@@ -182,20 +182,22 @@ namespace bq {
 
         bq_forceinline block_node_head* first()
         {
-            auto index_tmp = head_.index();
-            if (block_node_head::pointer_type::is_empty_index(index_tmp)) {
+            auto head_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load_relaxed();
+            block_node_head::pointer_type head_copy;
+            head_copy.union_value() = head_union;
+            if (head_copy.is_empty()) {
                 return nullptr;
             }
-            return &get_block_head_by_index(index_tmp);
+            return &get_block_head_by_index(head_copy.index());
         }
 
         bq_forceinline block_node_head* next(const block_node_head* current)
         {
-            auto index_tmp = current->next_.index();
-            if (block_node_head::pointer_type::is_empty_index(index_tmp)) {
+            auto next_index = current->next_.index();
+            if (block_node_head::pointer_type::is_empty_index(next_index)) {
                 return nullptr;
             }
-            return &get_block_head_by_index(index_tmp);
+            return &get_block_head_by_index(next_index);
         }
 
         bq_forceinline block_node_head* pop()
