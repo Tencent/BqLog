@@ -795,7 +795,7 @@ namespace bq {
                             }
                             result.add_result(valid, "recovery multi thread test read content check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
                             if (valid) {
-                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
+                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "read index:%" PRIu32 ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
                                 ++message_verify_group[read_version][read_thread_idx];
                             }
                         }
