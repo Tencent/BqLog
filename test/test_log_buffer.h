@@ -398,7 +398,7 @@ namespace bq {
 
                 for (uint16_t i = 0; i < BLOCK_COUNT; ++i) {
                     auto* block_head_addr = reinterpret_cast<uint8_t*>(buffer_addr + i * config.default_buffer_size);
-                    new (static_cast<void*>(block_head_addr), bq::enum_new_dummy::dummy) block_node_head(block_list_type::list_none, block_head_addr + block_node_head::get_buffer_data_offset(), config.default_buffer_size - static_cast<size_t>(block_node_head::get_buffer_data_offset()), config.need_recovery);
+                    new (static_cast<void*>(block_head_addr), bq::enum_new_dummy::dummy) block_node_head(block_list_type::list_none, block_head_addr + block_node_head::get_buffer_data_offset(), config.default_buffer_size - static_cast<size_t>(block_node_head::get_buffer_data_offset()), false);
                     auto* block = reinterpret_cast<block_node_head*>(block_head_addr);
                     list_from.push(block);
                 }
