@@ -278,56 +278,50 @@ namespace bq {
     block_node_head* group_list::alloc_new_block(const void* misc_data_src, size_t misc_data_size)
     {
         // try alloc from current exist groups
-        group_node::pointer_type* current_read_pointer = &head_;
-        current_read_pointer->lock_.read_lock();
-        block_node_head* result = nullptr;
-        group_node* src_node = nullptr;
-        while (!current_read_pointer->is_empty()) {
-            src_node = current_read_pointer->node_;
-            result = src_node->get_data_head().free_.pop();
+        auto iter = first(lock_type::read_lock);
+        while (iter) {
+            block_node_head* result = iter.value().get_data_head().free_.pop();
             if (result) {
                 result->set_misc_data(misc_data_src, misc_data_size);
                 result->get_buffer().set_thread_check_enable(true);
-                src_node->get_data_head().stage_.push(result);
-                break;
+                iter.value().get_data_head().stage_.push(result);
+                next(iter, lock_type::no_lock);
+                return result;
             }
-            src_node->get_next_ptr().lock_.read_lock();
-            current_read_pointer->lock_.read_unlock();
-            current_read_pointer = &src_node->get_next_ptr();
+            iter = next(iter, group_list::lock_type::read_lock);
         }
-        current_read_pointer->lock_.read_unlock();
 
-        if (!result) {
-            // alloc new group
-            head_.lock_.write_lock();
-            // double check
-            if (!head_.is_empty()) {
-                src_node = head_.node_;
-                result = src_node->get_data_head().free_.pop();
-            }
-            if (!result) {
-                src_node = pool_.pop();
-                if (!src_node) {
-                    src_node = bq::util::aligned_new<group_node>(BQ_CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1, bq::platform::memory_order::relaxed));
-#if defined(BQ_UNIT_TEST)
-                    if (src_node && src_node->get_memory_map_status() == create_memory_map_result::use_existed) {
-                        bq::util::log_device_console(bq::log_level::error, "group index:");
-                        assert(false && "must use new memory map");
-                    }
-#endif
-                }
-                result = src_node->get_data_head().free_.pop();
-                src_node->get_next_ptr().node_ = head_.node_;
-                head_.node_ = src_node;
-#if defined(BQ_UNIT_TEST)
-                groups_count_.fetch_add_seq_cst(1);
-#endif
-            }
-            result->set_misc_data(misc_data_src, misc_data_size);
-            result->get_buffer().set_thread_check_enable(true);
-            src_node->get_data_head().stage_.push(result);
-            head_.lock_.write_unlock();
+        // alloc new group
+        head_.lock_.write_lock();
+        // double check
+        block_node_head* result = nullptr;
+        group_node* node = nullptr;
+        if (!head_.is_empty()) {
+            node = head_.node_;
+            result = node->get_data_head().free_.pop();
         }
+        if (!result) {
+            node = pool_.pop();
+            if (!node) {
+                node = bq::util::aligned_new<group_node>(BQ_CACHE_LINE_SIZE, this, max_block_count_per_group_, current_group_index_.add_fetch(1, bq::platform::memory_order::relaxed));
+#if defined(BQ_UNIT_TEST)
+                if (node && node->get_memory_map_status() == create_memory_map_result::use_existed) {
+                    bq::util::log_device_console(bq::log_level::error, "group index:");
+                    assert(false && "must use new memory map");
+                }
+#endif
+            }
+            result = node->get_data_head().free_.pop();
+            node->get_next_ptr().node_ = head_.node_;
+            head_.node_ = node;
+#if defined(BQ_UNIT_TEST)
+            groups_count_.fetch_add_seq_cst(1);
+#endif
+        }
+        result->set_misc_data(misc_data_src, misc_data_size);
+        result->get_buffer().set_thread_check_enable(true);
+        node->get_data_head().stage_.push(result);
+        head_.lock_.write_unlock();
         return result;
     }
 
