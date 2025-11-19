@@ -171,7 +171,7 @@ namespace bq {
                 for (uint32_t i = 0; i < 10000000; ++i) {
                     {
                         bq::platform::scoped_spin_lock_read_crazy lock(spin_lock_);
-                        error_count += (counter_modify_by_write_ % 10 == 0) ? 0 : 1;
+                        error_count += (counter_modify_by_write_ % 10 == 0) ? 0U : 1U;
                         counter_modify_by_read_.fetch_add_relaxed(1);
                         counter_modify_by_read_.fetch_add_relaxed(1);
                         counter_modify_by_read_.fetch_add_relaxed(1);
@@ -211,7 +211,7 @@ namespace bq {
                 for (uint32_t i = 0; i < 10000000; ++i) {
                     {
                         bq::platform::scoped_spin_lock_write_crazy lock(spin_lock_);
-                        error_count += (counter_modify_by_read_.load_relaxed() % 10 == 0) ? 0 : 1;
+                        error_count += (counter_modify_by_read_.load_relaxed() % 10 == 0) ? 0U : 1U;
                         counter_modify_by_write_++;
                         counter_modify_by_write_++;
                         counter_modify_by_write_++;
