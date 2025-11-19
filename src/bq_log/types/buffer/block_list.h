@@ -182,7 +182,7 @@ namespace bq {
 
         bq_forceinline block_node_head* first()
         {
-            auto head_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load_relaxed();
+            auto head_union = BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_.union_value(), uint32_t).load_acquire();
             block_node_head::pointer_type head_copy;
             head_copy.union_value() = head_union;
             if (head_copy.is_empty()) {
