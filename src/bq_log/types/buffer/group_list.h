@@ -229,7 +229,13 @@ namespace bq {
 
         bq_forceinline void delete_and_unlock_thread_unsafe(iterator& current)
         {
-            current.last_pointer_->node_ = current.value().get_next_ptr().node_;
+            //Make sure no other thread can traverse to next node
+            current.value_->get_next_ptr().lock_.write_lock();
+            group_node* next_node = current.value().get_next_ptr().node_;
+            current.value_->get_next_ptr().lock_.write_unlock();
+
+            //Now we can safely remove current node from the list
+            current.last_pointer_->node_ = next_node;
 
             switch (current.last_lock_type_) {
             case bq::group_list::lock_type::no_lock:
