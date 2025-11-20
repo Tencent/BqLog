@@ -2210,6 +2210,7 @@ jobs:
   #HarmonyOS
   build_harmony_os_on_mac:
     runs-on: macos-latest
+    needs: extract_version
     env:
       REPO: pippocao/Images
       TAG: OHOS_Mac_Arm64_CommandLineTool_6.0.0
