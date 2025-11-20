@@ -100,9 +100,11 @@ namespace bq {
         size_t min_file_size = bq::memory_map::get_min_size_of_memory_map_file(0, desired_size);
 
         create_memory_map_result result = create_memory_map_result::failed;
+        bq::file_manager::get_and_clear_last_file_error(); //clear error no first
         size_t current_file_size = bq::file_manager::instance().get_file_size(memory_map_file_);
-        if (bq::file_manager::get_and_clear_last_file_error() != 0) {
-            bq::util::log_device_console(log_level::warning, "group node get file size of \"%s\" failed, error code:%" PRId32 ", use memory instead.", memory_map_file_.abs_file_path().c_str(), bq::file_manager::get_and_clear_last_file_error());
+        auto get_size_error = bq::file_manager::get_and_clear_last_file_error();
+        if (get_size_error != 0) {
+            bq::util::log_device_console(log_level::warning, "group node get file size of \"%s\" failed, error code:%" PRId32 ", use memory instead.", memory_map_file_.abs_file_path().c_str(), get_size_error);
             bq::file_manager::instance().close_file(memory_map_file_);
             return create_memory_map_result::failed;
         }
