@@ -25,7 +25,7 @@ jobs:
             exit 1
           fi
           echo "VERSION=$VERSION"
-          echo "::set-output name=version::$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
   #########################################################Common Libs Build####################################################
   #Windows
