@@ -556,23 +556,31 @@ namespace bq {
                     thread1.join();
                 }
                 {
+#ifdef BQ_IN_GITHUB_ACTIONS
+                    constexpr uint64_t precision_ms = 2000;   //Github runners have very bad timer precision
+#else
+                    constexpr uint64_t precision_ms = 500;
+#endif
+                    constexpr uint64_t sleep_time_ms = 5000;
+                    constexpr uint64_t min_sleep_time_ms = sleep_time_ms - precision_ms;
+                    constexpr uint64_t max_sleep_time_ms = sleep_time_ms + precision_ms;
                     for (int32_t i = 0; i < 5; ++i) {
                         auto start_time = bq::platform::high_performance_epoch_ms();
                         bq::platform::mutex condition_timeout_mutex_;
                         bq::platform::condition_variable condition_timeout_variable_;
                         condition_timeout_mutex_.lock();
-                        condition_timeout_variable_.wait_for(condition_timeout_mutex_, 5000);
+                        condition_timeout_variable_.wait_for(condition_timeout_mutex_, sleep_time_ms);
                         condition_timeout_mutex_.unlock();
                         auto end_time = bq::platform::high_performance_epoch_ms();
                         auto diff = end_time - start_time;
-                        result.add_result(diff > 4000 && diff < 6000, "condition variable timeout test, real time elapsed:%" PRIu64 "ms, expect (4000, 6000)ms", diff);
+                        result.add_result(diff > min_sleep_time_ms&& diff < max_sleep_time_ms, "condition variable timeout test, real time elapsed:%" PRIu64 "ms, expect (%" PRIu64 ", %" PRIu64 ")ms", diff, max_sleep_time_ms, min_sleep_time_ms);
                     }
                     for (int32_t i = 0; i < 5; ++i) {
                         auto start_time = bq::platform::high_performance_epoch_ms();
-                        bq::platform::thread::sleep(5000);
+                        bq::platform::thread::sleep(sleep_time_ms);
                         auto end_time = bq::platform::high_performance_epoch_ms();
                         auto diff = end_time - start_time;
-                        result.add_result(diff > 4000 && diff < 6000, "sleep test, real time elapsed:%" PRIu64 "ms, expect (4000, 6000)ms", diff);
+                        result.add_result(diff > min_sleep_time_ms&& diff < max_sleep_time_ms, "sleep test, real time elapsed:%" PRIu64 "ms, expect (%" PRIu64 ", %" PRIu64 ")ms", diff, max_sleep_time_ms, min_sleep_time_ms);
                     }
                 }
 
