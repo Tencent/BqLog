@@ -7,10 +7,31 @@ permissions:
   contents: write
 
 jobs:
+  #########################################################Extract Version######################################################
+  extract_version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: extract
+        run: |
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
+          if [[ -z "$VERSION" ]]; then
+            echo "Failed to extract version"
+            exit 1
+          fi
+          echo "VERSION=$VERSION"
+          echo "::set-output name=version::$VERSION"
+
   #########################################################Common Libs Build####################################################
   #Windows
   build_windows_x86_64_lib_MSVC:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,11 +50,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows_x86_64_libs
+          name: windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_windows_x86_64_lib_Clang:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,6 +73,7 @@ jobs:
 
   build_windows_x86_64_lib_MinGW:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -104,11 +127,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows_mingw_x86_64_libs
+          name: windows_mingw_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_windows_x86_64_tools:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -127,11 +151,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows_x86_64_tools
+          name: windows_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_windows_arm64_lib_MSVC:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -150,11 +175,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows_arm64_libs
+          name: windows_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_windows_arm64_lib_Clang:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -172,6 +198,7 @@ jobs:
 
   build_windows_arm64_lib_MinGW:
     runs-on: windows-11-arm
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -225,11 +252,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows_mingw_arm64_libs
+          name: windows_mingw_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_windows_arm64_tools:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -248,12 +276,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows_arm64_tools
+          name: windows_arm64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #Android
   build_windows_android:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -284,6 +313,7 @@ jobs:
 
   build_mac_android:
     runs-on: macos-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -315,6 +345,7 @@ jobs:
 
   build_linux_android:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -347,13 +378,14 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android_libs
+          name: android_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
 
   #Linux-ubuntu-x86_64
   build_ubuntu_x86_64_lib_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -373,11 +405,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_x86_64_libs
+          name: linux_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_ubuntu_x86_64_lib_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -396,6 +429,7 @@ jobs:
 
   build_ubuntu_x86_64_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -417,11 +451,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_x86_64_tools
+          name: linux_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_ubuntu_x86_64_tools_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -444,6 +479,7 @@ jobs:
   #Linux-ubuntu-arm64
   build_ubuntu_arm64_lib_Clang:
     runs-on: ubuntu-24.04-arm
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -463,11 +499,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_arm64_libs
+          name: linux_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_ubuntu_arm64_lib_GCC:
     runs-on: ubuntu-24.04-arm
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -486,6 +523,7 @@ jobs:
 
   build_ubuntu_arm64_tools_Clang:
     runs-on: ubuntu-24.04-arm
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -507,11 +545,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_arm64_tools
+          name: linux_arm64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_ubuntu_arm64_tools_GCC:
     runs-on: ubuntu-24.04-arm
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -533,6 +572,7 @@ jobs:
   #Linux-debian-x86
   build_debian_x86_lib_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
@@ -576,11 +616,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_x86_libs
+          name: linux_x86_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_debian_x86_lib_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
@@ -623,6 +664,7 @@ jobs:
 
   build_debian_x86_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
@@ -668,11 +710,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux_x86_tools
+          name: linux_x86_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_debian_x86_tools_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
@@ -719,6 +762,7 @@ jobs:
   #Mac
   build_mac_lib:
     runs-on: macos-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -732,11 +776,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos_universal_binary_libs
+          name: macos_universal_binary_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_mac_tools:
     runs-on: macos-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -752,13 +797,14 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos_universal_binary_tools
+          name: macos_universal_binary_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
 
   #freebsd_x86_64
   build_freebsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -788,11 +834,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_libs
+          name: freebsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_freebsd_x86_64_libs_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -822,6 +869,7 @@ jobs:
 
   build_freebsd_x86_64_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -853,11 +901,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_x86_64_tools
+          name: freebsd_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_freebsd_x86_64_tools_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -890,6 +939,7 @@ jobs:
   #freebsd_arm64
   build_freebsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -920,11 +970,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_arm64_libs
+          name: freebsd_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_freebsd_arm64_libs_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -955,6 +1006,7 @@ jobs:
 
   build_freebsd_arm64_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -987,11 +1039,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: freebsd_arm64_tools
+          name: freebsd_arm64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_freebsd_arm64_tools_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1026,6 +1079,7 @@ jobs:
   #openbsd_x86_64
   build_openbsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1057,11 +1111,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openbsd_x86_64_libs
+          name: openbsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_openbsd_x86_64_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1094,12 +1149,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openbsd_x86_64_tools
+          name: openbsd_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #openbsd_arm64
   build_openbsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1133,11 +1189,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openbsd_arm64_libs
+          name: openbsd_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_openbsd_arm64_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1172,12 +1229,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openbsd_arm64_tools
+          name: openbsd_arm64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   # solaris_x86_64
   build_solaris_x86_64_libs_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1236,11 +1294,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: solaris_x86_64_libs
+          name: solaris_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_solaris_x86_64_tools_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1273,12 +1332,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: solaris_x86_64_tools
+          name: solaris_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   # DragonFlyBSD
   build_dragonflybsd_x86_64_libs_clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1315,11 +1375,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dragonflybsd_x86_64_libs
+          name: dragonflybsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_dragonflybsd_x86_64_libs_gcc:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1355,6 +1416,7 @@ jobs:
 
   build_dragonflybsd_x86_64_tools_clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1391,11 +1453,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dragonflybsd_x86_64_tools
+          name: dragonflybsd_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_dragonflybsd_x86_64_tools_gcc:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1432,6 +1495,7 @@ jobs:
   # OmniOS
   build_omnios_x86_64_libs_gcc:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1480,11 +1544,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: omnios_x86_64_libs
+          name: omnios_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_omnios_x86_64_tools_gcc:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1534,12 +1599,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: omnios_x86_64_tools
+          name: omnios_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   # netbsd_x86_64
   build_netbsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1611,11 +1677,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: netbsd_x86_64_libs
+          name: netbsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_netbsd_x86_64_libs_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1683,6 +1750,7 @@ jobs:
 
   build_netbsd_x86_64_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1753,11 +1821,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: netbsd_x86_64_tools
+          name: netbsd_x86_64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_netbsd_x86_64_tools_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1828,6 +1897,7 @@ jobs:
   # netbsd_arm64 (aarch64)
   build_netbsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1897,11 +1967,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: netbsd_arm64_libs
+          name: netbsd_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_netbsd_arm64_libs_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1970,6 +2041,7 @@ jobs:
 
   build_netbsd_arm64_tools_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2041,11 +2113,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: netbsd_arm64_tools
+          name: netbsd_arm64_tools_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   build_netbsd_arm64_tools_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2117,6 +2190,7 @@ jobs:
   #iOS
   build_ios_lib:
     runs-on: macos-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2130,7 +2204,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ios_libs
+          name: ios_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #HarmonyOS
@@ -2187,12 +2261,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: harmony_os_libs
+          name: harmony_os_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #Java wrapper
-  build_windows_java11_wrapper:
-    runs-on: windows-latest
+  build_windows_java11_wrapper:    runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2211,12 +2285,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: java_wrapper
+          name: java_wrapper_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #C# wrapper
   build_windows_csharp_wrapper:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2236,7 +2311,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: c#_wrapper
+          name: c#_wrapper_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
 
@@ -2245,6 +2320,7 @@ jobs:
   #Windows
   nodejs_build_windows_x86_64_lib_MSVC:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2274,11 +2350,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_windows_x86_64_libs
+          name: node_windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_windows_x86_64_lib_Clang:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2307,6 +2384,7 @@ jobs:
 
   nodejs_build_windows_arm64_lib_MSVC:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2336,11 +2414,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_windows_arm64_libs
+          name: node_windows_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_windows_arm64_lib_Clang:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2370,6 +2449,7 @@ jobs:
   #Linux-ubuntu-x86_64
   nodejs_build_ubuntu_x86_64_lib_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2399,12 +2479,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_linux_x86_64_libs
+          name: node_linux_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #Linux-ubuntu-x86_64
   nodejs_build_ubuntu_x86_64_lib_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2434,6 +2515,7 @@ jobs:
   #Linux-ubuntu-arm64
   nodejs_build_ubuntu_arm64_lib_Clang:
     runs-on: ubuntu-24.04-arm
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2463,11 +2545,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_linux_arm64_libs
+          name: node_linux_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_ubuntu_arm64_lib_GCC:
     runs-on: ubuntu-24.04-arm
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2497,6 +2580,7 @@ jobs:
   #Linux-debian-x86
   nodejs_build_debian_x86_lib_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
@@ -2545,11 +2629,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_linux_x86_libs
+          name: node_linux_x86_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_debian_x86_lib_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     container:
       image: ghcr.io/pippocao/bqlog/i386_debian:latest
     steps:
@@ -2599,6 +2684,7 @@ jobs:
   #Mac
   nodejs_build_mac_lib:
     runs-on: macos-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2622,12 +2708,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_macos_universal_binary_libs
+          name: node_macos_universal_binary_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #freebsd_x86_64
   nodejs_build_freebsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2661,12 +2748,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_freebsd_x86_64_libs
+          name: node_freebsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #freebsd_x86_64
   nodejs_build_freebsd_x86_64_libs_GCC:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2848,12 +2936,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nodejs_npm
+          name: nodejs_npm_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   # Unreal plugin
   unreal_plugin_build_on_linux:
     runs-on: ubuntu-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2867,11 +2956,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: unreal_plugin_sources
+          name: unreal_plugin_sources_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   unreal_plugin_build_on_win64:
     runs-on: windows-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2883,6 +2973,7 @@ jobs:
 
   unreal_plugin_build_on_mac:
     runs-on: macos-latest
+    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -3211,13 +3302,13 @@ jobs:
       - name: Upload prebuilt Unreal plugin
         uses: actions/upload-artifact@v4
         with:
-          name: unreal_plugin_prebuilt
+          name: unreal_plugin_prebuilt_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   # Unity package
   unity_package_build:
     runs-on: ubuntu-latest
-    needs: [build_linux_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC]
+    needs: [extract_version, build_linux_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -3427,5 +3518,5 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: unity_package
+          name: unity_package_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
