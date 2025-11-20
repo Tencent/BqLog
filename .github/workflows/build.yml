@@ -2265,7 +2265,8 @@ jobs:
           path: ${{ github.workspace }}/dist
 
   #Java wrapper
-  build_windows_java11_wrapper:    runs-on: windows-latest
+  build_windows_java11_wrapper:
+    runs-on: windows-latest
     needs: extract_version
     steps:
       - name: Checkout repository
