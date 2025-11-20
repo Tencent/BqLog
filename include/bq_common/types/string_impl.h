@@ -403,8 +403,11 @@ namespace bq {
         if (size() < str.size()) {
             return false;
         }
-        if ((nullptr != c_str()) && (nullptr != str.c_str())) {
-            return memcmp(c_str() + (size() - str.size()), str.c_str(), str.size() * sizeof(CHAR_TYPE)) == 0;
+        auto offset = static_cast<ptrdiff_t>(size() - str.size());
+        const char_type* s1 = c_str() + offset;
+        const char_type* s2 = str.c_str();
+        if (s1 && s2) {
+            return memcmp(s1, s2, str.size() * sizeof(CHAR_TYPE)) == 0;
         }
         return false;
     }
