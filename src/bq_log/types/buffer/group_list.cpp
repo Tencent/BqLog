@@ -101,6 +101,11 @@ namespace bq {
 
         create_memory_map_result result = create_memory_map_result::failed;
         size_t current_file_size = bq::file_manager::instance().get_file_size(memory_map_file_);
+        if (current_file_size == 0) {
+            bq::util::log_device_console(log_level::warning, "group node get file size of \"%s\" failed, error code:%d, use memory instead.", memory_map_file_.abs_file_path().c_str(), get_size_error);
+            bq::file_manager::instance().close_file(memory_map_file_);
+            return create_memory_map_result::failed;
+        }
         if (current_file_size != min_file_size) {
             if (!bq::file_manager::instance().truncate_file(memory_map_file_, min_file_size)) {
                 bq::util::log_device_console(log_level::warning, "group node truncate memory map file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
