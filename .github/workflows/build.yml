@@ -4043,16 +4043,18 @@ jobs:
           fi
 
           # Linux x86_64 (libBqLog.so) - use exact versioned real .so (.so.${VERSION}) and copy as libBqLog.so
-          LINUX_PKG_BASE="$BASE/linux_x86_64_libs_${VERSION}"
-          LINUX_INNER_DIR="$LINUX_PKG_BASE/*/dynamic_lib/lib/RelWithDebInfo"
-          if [[ ! -d "$LINUX_INNER_DIR" ]]; then
-          echo "ERROR: Expected directory not found: $LINUX_INNER_DIR" >&2
-          exit 1
-          fi
-          REAL_SO="$LINUX_INNER_DIR/libBqLog.so.${VERSION}"
-          if [[ ! -f "$REAL_SO" ]]; then
-          echo "ERROR: Expected real .so not found: $REAL_SO" >&2
-          exit 1
+          mapfile -t linux_real_so < <(find "$BASE" -type f -path "*/linux_x86_64_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so.${VERSION}" | sort)
+          if (( ${#linux_real_so[@]} )); then
+            REAL_SO="${linux_real_so[0]}"
+          else
+            # Fallback to unversioned .so if versioned one not found
+            mapfile -t linux_real_so < <(find "$BASE" -type f -path "*/linux_x86_64_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so" | sort)
+            if (( ${#linux_real_so[@]} )); then
+              REAL_SO="${linux_real_so[0]}"
+            else
+              echo "ERROR: Expected libBqLog.so for Linux x86_64 not found" >&2
+              exit 1
+            fi
           fi
           echo "Copy (real .so): $REAL_SO -> $LINUX_X64_DIR/libBqLog.so"
           mkdir -p "$LINUX_X64_DIR"
@@ -4068,18 +4070,19 @@ jobs:
             exit 1
           fi
 
-          # macOS universal (libBqLog.dylib) - use exact versioned real .dylib (BqLog.${VERSION}.dylib) and copy as libBqLog.dylib
-          MACOS_PKG_BASE="$BASE/macos_universal_binary_libs_${VERSION}"
-          MACOS_INNER_DIR="$MACOS_PKG_BASE/*/dynamic_lib/lib/RelWithDebInfo"
-          MACOS_INNER_DIR="$MACOS_PKG_BASE/*/dynamic_lib/lib/RelWithDebInfo"
-          if [[ ! -d "$MACOS_INNER_DIR" ]]; then
-            echo "ERROR: Expected directory not found: $MACOS_INNER_DIR" >&2
-            exit 1
-          fi
-          REAL_DYLIB="$MACOS_INNER_DIR/libBqLog.${VERSION}.dylib"
-          if [[ ! -f "$REAL_DYLIB" ]]; then
-            echo "ERROR: Expected real .dylib not found: $REAL_DYLIB" >&2
-            exit 1
+          # macOS universal (libBqLog.dylib) - prefer exact versioned real .dylib (libBqLog.${VERSION}.dylib) and copy as libBqLog.dylib
+          mapfile -t macos_real_dylib < <(find "$BASE" -type f -path "*/macos_universal_binary_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.${VERSION}.dylib" | sort)
+          if (( ${#macos_real_dylib[@]} )); then
+            REAL_DYLIB="${macos_real_dylib[0]}"
+          else
+            # Fallback to unversioned .dylib if versioned one not found
+            mapfile -t macos_real_dylib < <(find "$BASE" -type f -path "*/macos_universal_binary_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.dylib" | sort)
+            if (( ${#macos_real_dylib[@]} )); then
+              REAL_DYLIB="${macos_real_dylib[0]}"
+            else
+              echo "ERROR: Expected libBqLog.dylib for macOS not found" >&2
+              exit 1
+            fi
           fi
           echo "Copy (real .dylib): $REAL_DYLIB -> $MACOS_DIR/libBqLog.dylib"
           mkdir -p "$MACOS_DIR"
