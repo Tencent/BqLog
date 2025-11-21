@@ -3792,13 +3792,13 @@ jobs:
             rsync -a "$src_dir/" "$dst_dir/"
           }
 
-          WIN_X64_BASE="$ARTIFACT_ROOT/bqlog-lib-windows-x86_64-libs_${VERSION}"
-          WIN_ARM64_BASE="$ARTIFACT_ROOT/bqlog-lib-windows-arm64-libs_${VERSION}"
-          LINUX_X64_BASE="$ARTIFACT_ROOT/bqlog-lib-linux-x86_64-libs-${VERSION}"
-          LINUX_ARM64_BASE="$ARTIFACT_ROOT/bqlog-lib-linux-arm64-libs-${VERSION}"
-          MAC_BASE="$ARTIFACT_ROOT/bqlog-lib-macos-universal-binary-libs-${VERSION}"
-          IOS_BASE="$ARTIFACT_ROOT/bqlog-lib-ios-libs-${VERSION}"
-          ANDROID_BASE="$ARTIFACT_ROOT/bqlog-lib-android-libs-${VERSION}"
+          WIN_X64_BASE="$ARTIFACT_ROOT/windows_x86_64_libs_${VERSION}"
+          WIN_ARM64_BASE="$ARTIFACT_ROOT/windows_arm64_libs_${VERSION}"
+          LINUX_X64_BASE="$ARTIFACT_ROOT/linux_x86_64_libs_${VERSION}"
+          LINUX_ARM64_BASE="$ARTIFACT_ROOT/linux_arm64_libs_${VERSION}"
+          MAC_BASE="$ARTIFACT_ROOT/macos_universal_binary_libs_${VERSION}"
+          IOS_BASE="$ARTIFACT_ROOT/ios_libs_${VERSION}"
+          ANDROID_BASE="$ARTIFACT_ROOT/android_libs_${VERSION}"
 
           DYNAMIC_INCLUDE_SRC=$(find "$WIN_X64_BASE" -type d -path "*/dynamic_lib/include" -print -quit)
           if [[ -z "$DYNAMIC_INCLUDE_SRC" ]]; then
@@ -4016,7 +4016,7 @@ jobs:
           }
 
           # Android (.aar) -> rename to bqlog.aar
-          mapfile -t android_aar < <(find "$BASE" -type f -path "*/bqlog-lib-android-${VERSION}/*/dynamic_lib/*bqlog-release.aar" | sort)
+          mapfile -t android_aar < <(find "$BASE" -type f -path "*/android_libs_${VERSION}/dynamic_lib/*bqlog-release.aar" | sort)
           if (( ${#android_aar[@]} )); then
             echo "Copy: ${android_aar[0]} -> $ANDROID_DIR/bqlog.aar"
             cp -f "${android_aar[0]}" "$ANDROID_DIR/bqlog.aar"
@@ -4025,7 +4025,7 @@ jobs:
           fi
 
           # Windows x86_64 (BqLog.dll + optional BqLog.pdb + optional BqLog.lib)
-          mapfile -t win_dll < <(find "$BASE" -type f -path "*/bqlog-lib-windows-x86_64-${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/BqLog.dll" | sort)
+          mapfile -t win_dll < <(find "$BASE" -type f -path "*/windows_x86_64_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/BqLog.dll" | sort)
           if (( ${#win_dll[@]} )); then
             dll="${win_dll[0]}"
             win_dir="$(dirname "$dll")"
@@ -4041,8 +4041,8 @@ jobs:
           fi
 
           # Linux x86_64 (libBqLog.so) - use exact versioned real .so (.so.${VERSION}) and copy as libBqLog.so
-          LINUX_PKG_BASE="$BASE/linux_x86_64_libs/bqlog-lib-linux-x86_64-${VERSION}"
-          LINUX_INNER_DIR="$LINUX_PKG_BASE/bqlog-lib-linux-x86_64-${VERSION}/dynamic_lib/lib/RelWithDebInfo"
+          LINUX_PKG_BASE="$BASE/linux_x86_64_libs_${VERSION}"
+          LINUX_INNER_DIR="$LINUX_PKG_BASE/dynamic_lib/lib/RelWithDebInfo"
           if [[ ! -d "$LINUX_INNER_DIR" ]]; then
           echo "ERROR: Expected directory not found: $LINUX_INNER_DIR" >&2
           exit 1
@@ -4058,7 +4058,7 @@ jobs:
           cp -Lf "$REAL_SO" "$LINUX_X64_DIR/libBqLog.so"
 
           # iOS (BqLog.xcframework)
-          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/bqlog-lib-ios-${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.xcframework" | sort)
+          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/ios_libs_${VERSION}/static_lib/lib/RelWithDebInfo/BqLog.xcframework" | sort)
           if (( ${#ios_fw[@]} )); then
             copy_one "${ios_fw[0]}" "$IOS_DIR"
           else
@@ -4066,8 +4066,8 @@ jobs:
           fi
 
           # macOS universal (libBqLog.dylib) - use exact versioned real .dylib (BqLog.${VERSION}.dylib) and copy as libBqLog.dylib
-          MACOS_PKG_BASE="$BASE/macos_universal_binary_libs/bqlog-lib-macos-universal-${VERSION}"
-          MACOS_INNER_DIR="$MACOS_PKG_BASE/bqlog-lib-macos-universal-${VERSION}/dynamic_lib/lib/RelWithDebInfo"
+          MACOS_PKG_BASE="$BASE/macos_universal_binary_libs_${VERSION}"
+          MACOS_INNER_DIR="$MACOS_PKG_BASE/dynamic_lib/lib/RelWithDebInfo"
           if [[ ! -d "$MACOS_INNER_DIR" ]]; then
             echo "ERROR: Expected directory not found: $MACOS_INNER_DIR" >&2
             exit 1
