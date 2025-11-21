@@ -9,7 +9,7 @@ endif()
 #Parse version from version.cpp
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/version.cpp")
 
-project(bq_category_generator VERSION ${BQ_VERSION} LANGUAGES CXX)
+project(BqLog_CategoryLogGenerator VERSION ${BQ_VERSION} LANGUAGES CXX)
 
 if(NOT DEFINED CPP_VER)
     set(CMAKE_CXX_STANDARD 17)
@@ -97,7 +97,7 @@ if(TARGET_PLATFORM STREQUAL "mac")
 endif()
 
 # generate executable
-add_executable(bq_category_generator
+add_executable(BqLog_CategoryLogGenerator
 	${TOOLS_LIST}
 	${SRC_LIST}
 	${INC_LIST}
@@ -109,16 +109,16 @@ add_executable(bq_category_generator
 if(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(bq_category_generator PRIVATE -ldbghelp)
+        target_link_libraries(BqLog_CategoryLogGenerator PRIVATE -ldbghelp)
     endif()
-   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT bq_category_generator)
+   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLog_CategoryLogGenerator)
 elseif(TARGET_PLATFORM STREQUAL "linux")
-    target_link_libraries(bq_category_generator PRIVATE pthread)
+    target_link_libraries(BqLog_CategoryLogGenerator PRIVATE pthread)
 elseif(TARGET_PLATFORM STREQUAL "unix")
-    target_link_libraries(bq_category_generator PRIVATE pthread)
+    target_link_libraries(BqLog_CategoryLogGenerator PRIVATE pthread)
     find_library(EXECINFO_LIBRARY execinfo)
     if(EXECINFO_LIBRARY)
-        target_link_libraries(bq_category_generator PRIVATE ${EXECINFO_LIBRARY})
+        target_link_libraries(BqLog_CategoryLogGenerator PRIVATE ${EXECINFO_LIBRARY})
     endif()
 endif()
 
@@ -126,7 +126,7 @@ endif()
 
 
 #Ensure the target carries version/soname metadata
-set_target_properties(bq_category_generator PROPERTIES
+set_target_properties(BqLog_CategoryLogGenerator PROPERTIES
         VERSION ${BQ_VERSION}
         SOVERSION ${BQ_SOVERSION}
 )
@@ -134,14 +134,14 @@ set_target_properties(bq_category_generator PROPERTIES
 set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
 
 
-install(TARGETS bq_category_generator
+install(TARGETS BqLog_CategoryLogGenerator
         ARCHIVE DESTINATION "${INSTALL_SUB_DIR}"
         LIBRARY DESTINATION "${INSTALL_SUB_DIR}"
         RUNTIME DESTINATION "${INSTALL_SUB_DIR}"
         FRAMEWORK DESTINATION "${INSTALL_SUB_DIR}"
 )
 
-install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/bq_category_generator.pdb"
+install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/BqLog_CategoryLogGenerator.pdb"
         DESTINATION "${INSTALL_SUB_DIR}"
         OPTIONAL
 )
