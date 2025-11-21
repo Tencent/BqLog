@@ -4148,6 +4148,12 @@ jobs:
           sudo apt-get install -y unzip
           sudo apt-get install -y nodejs npm
 
+      - name: Copy from unity folder to tuanjie folder
+        run: |
+          set -euo pipefail
+          rm -rf plugin/tuanjie
+          cp -R plugin/unity plugin/tuanjie
+
       - name: update package.json
         shell: bash
         env:
@@ -4155,23 +4161,23 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Update plugin/unity/package.json (ensure VERSION is visible to node)
-          if [[ -f plugin/unity/package.json ]]; then
-            node -e "const fs=require('fs');const p='plugin/unity/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));if(!j.name)throw new Error('package.json missing name');if(!process.env.VERSION)throw new Error('VERSION env missing');j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('Updated',p,'to version',j.version);"
+          # Update plugin/tuanjie/package.json (ensure VERSION is visible to node)
+          if [[ -f plugin/tuanjie/package.json ]]; then
+            node -e "const fs=require('fs');const p='plugin/tuanjie/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));if(!j.name)throw new Error('package.json missing name');if(!process.env.VERSION)throw new Error('VERSION env missing');j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('Updated',p,'to version',j.version);"
           else
-            echo 'plugin/unity/package.json not found!' >&2
+            echo 'plugin/tuanjie/package.json not found!' >&2
             exit 1
           fi
           
           # Sanity check: ensure version exists after write
-          if ! grep -q '"version"' plugin/unity/package.json; then
-            echo 'ERROR: version field missing in plugin/unity/package.json after update' >&2
-            cat plugin/unity/package.json
+          if ! grep -q '"version"' plugin/tuanjie/package.json; then
+            echo 'ERROR: version field missing in plugin/tuanjie/package.json after update' >&2
+            cat plugin/tuanjie/package.json
             exit 1
           fi
           
           echo 'Sanity check package.json:'
-          cat plugin/unity/package.json
+          cat plugin/tuanjie/package.json
 
       - name: List all archives
         shell: bash
@@ -4179,7 +4185,7 @@ jobs:
           set -euo pipefail
           ls -l downloaded_artifacts
 
-      - name: Stage libs into plugin/unity/Runtime/Plugins
+      - name: Stage libs into plugin/tuanjie/Runtime/Plugins
         shell: bash
         env:
           VERSION: ${{ needs.extract_version.outputs.version }}
@@ -4189,12 +4195,12 @@ jobs:
           BASE="downloaded_artifacts"
 
           # Target folders
-          ANDROID_DIR="plugin/unity/Runtime/Plugins/Android"
-          OHOS_DIR="plugin/unity/Runtime/Plugins/OpenHarmony"
-          WIN_X64_DIR="plugin/unity/Runtime/Plugins/Windows/x86_64"
-          LINUX_X64_DIR="plugin/unity/Runtime/Plugins/Linux/x86_64"
-          IOS_DIR="plugin/unity/Runtime/Plugins/iOS"
-          MACOS_DIR="plugin/unity/Runtime/Plugins/macOS"
+          ANDROID_DIR="plugin/tuanjie/Runtime/Plugins/Android"
+          OHOS_DIR="plugin/tuanjie/Runtime/Plugins/OpenHarmony"
+          WIN_X64_DIR="plugin/tuanjie/Runtime/Plugins/Windows/x86_64"
+          LINUX_X64_DIR="plugin/tuanjie/Runtime/Plugins/Linux/x86_64"
+          IOS_DIR="plugin/tuanjie/Runtime/Plugins/iOS"
+          MACOS_DIR="plugin/tuanjie/Runtime/Plugins/macOS"
 
           mkdir -p "$ANDROID_DIR" "$WIN_X64_DIR" "$LINUX_X64_DIR" "$IOS_DIR" "$MACOS_DIR"
 
@@ -4291,30 +4297,30 @@ jobs:
           cp -Lf "$REAL_DYLIB" "$MACOS_DIR/libBqLog.dylib"
 
           echo "Staged files/directories (Plugins subtree, up to depth 6):"
-          /usr/bin/find plugin/unity/Runtime/Plugins -maxdepth 6 -print | sort
+          /usr/bin/find plugin/tuanjie/Runtime/Plugins -maxdepth 6 -print | sort
 
       - name: Copy source codes
         run: |
           set -euo pipefail
           # Copy the contents of wrapper/csharp/src into Runtime/src (avoid nesting src/src)
-          mkdir -p plugin/unity/Runtime/src
-          cp -r wrapper/csharp/src/. plugin/unity/Runtime/src/
+          mkdir -p plugin/tuanjie/Runtime/src
+          cp -r wrapper/csharp/src/. plugin/tuanjie/Runtime/src/
 
 
-      - name: Build Unity Package
+      - name: Build Tuanjie Package
         run: |
           set -euo pipefail
           echo "Verifying package.json before pack:"
-          test -f plugin/unity/package.json && cat plugin/unity/package.json || (echo "package.json missing"; exit 1)
+          test -f plugin/tuanjie/package.json && cat plugin/tuanjie/package.json || (echo "package.json missing"; exit 1)
           echo "::group::npm pack --dry-run"
-          cd plugin/unity
+          cd plugin/tuanjie
           npm pack --dry-run || true
           echo "::endgroup::"
-          mkdir -p ../../dist/plugins/unity
-          npm pack --pack-destination ../../dist/plugins/unity
+          mkdir -p ../../dist/plugins/tuanjie
+          npm pack --pack-destination ../../dist/plugins/tuanjie
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: unity_package_${{ needs.extract_version.outputs.version }}
+          name: tuanjie_package_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
