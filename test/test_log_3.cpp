@@ -645,9 +645,14 @@ namespace bq {
                 bq::array<bq::string> file_list;
                 bq::string path = TO_ABSOLUTE_PATH("bqLog/UnitTestLog", 1);
                 bq::file_manager::get_all_files(path, file_list);
+                uint64_t earliest_modify_epoch_ms = UINT64_MAX;
                 for (auto iter = file_list.begin(); iter != file_list.end(); ++iter) {
                     if (iter->end_with(ext_name)) {
-                        file_path = *iter;
+                        uint64_t modify_time = bq::file_manager::get_file_last_modified_epoch_ms(*iter);
+                        if (modify_time < earliest_modify_epoch_ms) {
+                            file_path = *iter;
+                            earliest_modify_epoch_ms = modify_time;
+                        }
                     }
                 }
                 assert(!file_path.is_empty() && "failed to read test output log file");
