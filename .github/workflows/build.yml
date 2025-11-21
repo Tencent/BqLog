@@ -4117,3 +4117,201 @@ jobs:
         with:
           name: unity_package_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
+
+  # Tuanjie package
+  tuanjie_package_build:
+    runs-on: ubuntu-latest
+    needs:
+      - extract_version
+      - build_linux_android
+      - build_ios_lib
+      - build_ubuntu_x86_64_lib_Clang
+      - build_mac_lib
+      - build_windows_x86_64_lib_MSVC
+      - build_harmony_os_on_mac
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts from native builds
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded_artifacts
+
+      - name: Prepare tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          sudo apt-get install -y nodejs npm
+
+      - name: update package.json
+        shell: bash
+        env:
+          VERSION: ${{ needs.extract_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          
+          # Update plugin/unity/package.json (ensure VERSION is visible to node)
+          if [[ -f plugin/unity/package.json ]]; then
+            node -e "const fs=require('fs');const p='plugin/unity/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));if(!j.name)throw new Error('package.json missing name');if(!process.env.VERSION)throw new Error('VERSION env missing');j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('Updated',p,'to version',j.version);"
+          else
+            echo 'plugin/unity/package.json not found!' >&2
+            exit 1
+          fi
+          
+          # Sanity check: ensure version exists after write
+          if ! grep -q '"version"' plugin/unity/package.json; then
+            echo 'ERROR: version field missing in plugin/unity/package.json after update' >&2
+            cat plugin/unity/package.json
+            exit 1
+          fi
+          
+          echo 'Sanity check package.json:'
+          cat plugin/unity/package.json
+
+      - name: List all archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -l downloaded_artifacts
+
+      - name: Stage libs into plugin/unity/Runtime/Plugins
+        shell: bash
+        env:
+          VERSION: ${{ needs.extract_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          : "${VERSION:?VERSION env not set}"
+          BASE="downloaded_artifacts"
+
+          # Target folders
+          ANDROID_DIR="plugin/unity/Runtime/Plugins/Android"
+          OHOS_DIR="plugin/unity/Runtime/Plugins/OHOS"
+          WIN_X64_DIR="plugin/unity/Runtime/Plugins/Windows/x86_64"
+          LINUX_X64_DIR="plugin/unity/Runtime/Plugins/Linux/x86_64"
+          IOS_DIR="plugin/unity/Runtime/Plugins/iOS"
+          MACOS_DIR="plugin/unity/Runtime/Plugins/macOS"
+
+          mkdir -p "$ANDROID_DIR" "$WIN_X64_DIR" "$LINUX_X64_DIR" "$IOS_DIR" "$MACOS_DIR"
+
+          copy_one() {
+            local src="$1"
+            local dst="$2"
+            echo "Copy: $src -> $dst/"
+            mkdir -p "$dst"
+            cp -a "$src" "$dst/"
+          }
+
+          # Android (.aar) -> rename to bqlog.aar
+          mapfile -t android_aar < <(find "$BASE" -type f -path "*/android_libs_${VERSION}/*/dynamic_lib/*bqlog-release.aar" | sort)
+          if (( ${#android_aar[@]} )); then
+            echo "Copy: ${android_aar[0]} -> $ANDROID_DIR/bqlog.aar"
+            cp -f "${android_aar[0]}" "$ANDROID_DIR/bqlog.aar"
+          else
+            echo "WARN: Android AAR not found for version ${VERSION}"
+            exit 1
+          fi
+
+          # HarmonyOS (.har) -> rename to bqlog.har
+          mapfile -t ohos_aar < <(find "$BASE" -type f -path "*/harmony_os_libs_${VERSION}/*/dynamic_lib/bqlog.har" | sort)
+          if (( ${#ohos_aar[@]} )); then
+            echo "Copy: ${ohos_aar[0]} -> OHOS_DIR/bqlog.har"
+            cp -f "${ohos_aar[0]}" "OHOS_DIR/bqlog.har"
+          else
+            echo "WARN: HarmonyOS HAR not found for version ${VERSION}"
+            exit 1
+          fi
+
+          # Windows x86_64 (BqLog.dll + optional BqLog.pdb + optional BqLog.lib)
+          mapfile -t win_dll < <(find "$BASE" -type f -path "*/windows_x86_64_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/BqLog.dll" | sort)
+          if (( ${#win_dll[@]} )); then
+            dll="${win_dll[0]}"
+            win_dir="$(dirname "$dll")"
+            mkdir -p "$WIN_X64_DIR"
+            echo "Copy: $dll -> $WIN_X64_DIR/"
+            cp -f "$dll" "$WIN_X64_DIR/"
+            if [[ -f "$win_dir/BqLog.pdb" ]]; then
+              echo "Copy: $win_dir/BqLog.pdb -> $WIN_X64_DIR/"
+              cp -f "$win_dir/BqLog.pdb" "$WIN_X64_DIR/"
+            fi
+          else
+            echo "WARN: Windows x86_64 DLL not found for version ${VERSION}"
+            exit 1
+          fi
+
+          # Linux x86_64 (libBqLog.so) - use exact versioned real .so (.so.${VERSION}) and copy as libBqLog.so
+          mapfile -t linux_real_so < <(find "$BASE" -type f -path "*/linux_x86_64_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so.${VERSION}" | sort)
+          if (( ${#linux_real_so[@]} )); then
+            REAL_SO="${linux_real_so[0]}"
+          else
+            # Fallback to unversioned .so if versioned one not found
+            mapfile -t linux_real_so < <(find "$BASE" -type f -path "*/linux_x86_64_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so" | sort)
+            if (( ${#linux_real_so[@]} )); then
+              REAL_SO="${linux_real_so[0]}"
+            else
+              echo "ERROR: Expected libBqLog.so for Linux x86_64 not found" >&2
+              exit 1
+            fi
+          fi
+          echo "Copy (real .so): $REAL_SO -> $LINUX_X64_DIR/libBqLog.so"
+          mkdir -p "$LINUX_X64_DIR"
+          # -L to dereference symlink if any; final name must be libBqLog.so
+          cp -Lf "$REAL_SO" "$LINUX_X64_DIR/libBqLog.so"
+
+          # iOS (BqLog.xcframework)
+          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/ios_libs_${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.xcframework" | sort)
+          if (( ${#ios_fw[@]} )); then
+            copy_one "${ios_fw[0]}" "$IOS_DIR"
+          else
+            echo "WARN: iOS framework not found for version ${VERSION}"
+            exit 1
+          fi
+
+          # macOS universal (libBqLog.dylib) - prefer exact versioned real .dylib (libBqLog.${VERSION}.dylib) and copy as libBqLog.dylib
+          mapfile -t macos_real_dylib < <(find "$BASE" -type f -path "*/macos_universal_binary_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.${VERSION}.dylib" | sort)
+          if (( ${#macos_real_dylib[@]} )); then
+            REAL_DYLIB="${macos_real_dylib[0]}"
+          else
+            # Fallback to unversioned .dylib if versioned one not found
+            mapfile -t macos_real_dylib < <(find "$BASE" -type f -path "*/macos_universal_binary_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.dylib" | sort)
+            if (( ${#macos_real_dylib[@]} )); then
+              REAL_DYLIB="${macos_real_dylib[0]}"
+            else
+              echo "ERROR: Expected libBqLog.dylib for macOS not found" >&2
+              exit 1
+            fi
+          fi
+          echo "Copy (real .dylib): $REAL_DYLIB -> $MACOS_DIR/libBqLog.dylib"
+          mkdir -p "$MACOS_DIR"
+          # -L to dereference symlink if any; final name must be libBqLog.dylib
+          cp -Lf "$REAL_DYLIB" "$MACOS_DIR/libBqLog.dylib"
+
+          echo "Staged files/directories (Plugins subtree, up to depth 6):"
+          /usr/bin/find plugin/unity/Runtime/Plugins -maxdepth 6 -print | sort
+
+      - name: Copy source codes
+        run: |
+          set -euo pipefail
+          # Copy the contents of wrapper/csharp/src into Runtime/src (avoid nesting src/src)
+          mkdir -p plugin/unity/Runtime/src
+          cp -r wrapper/csharp/src/. plugin/unity/Runtime/src/
+
+
+      - name: Build Unity Package
+        run: |
+          set -euo pipefail
+          echo "Verifying package.json before pack:"
+          test -f plugin/unity/package.json && cat plugin/unity/package.json || (echo "package.json missing"; exit 1)
+          echo "::group::npm pack --dry-run"
+          cd plugin/unity
+          npm pack --dry-run || true
+          echo "::endgroup::"
+          mkdir -p ../../dist/plugins/unity
+          npm pack --pack-destination ../../dist/plugins/unity
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity_package_${{ needs.extract_version.outputs.version }}
+          path: ${{ github.workspace }}/dist
