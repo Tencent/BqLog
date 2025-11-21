@@ -2352,7 +2352,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
+          name: .node_windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_windows_x86_64_lib_Clang:
@@ -2416,7 +2416,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_windows_arm64_libs_${{ needs.extract_version.outputs.version }}
+          name: .node_windows_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_windows_arm64_lib_Clang:
@@ -2481,7 +2481,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_linux_x86_64_libs_${{ needs.extract_version.outputs.version }}
+          name: .node_linux_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #Linux-ubuntu-x86_64
@@ -2547,7 +2547,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_linux_arm64_libs_${{ needs.extract_version.outputs.version }}
+          name: .node_linux_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_ubuntu_arm64_lib_GCC:
@@ -2631,7 +2631,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_linux_x86_libs_${{ needs.extract_version.outputs.version }}
+          name: .node_linux_x86_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_debian_x86_lib_GCC:
@@ -2710,7 +2710,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_macos_universal_binary_libs_${{ needs.extract_version.outputs.version }}
+          name: .node_macos_universal_binary_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #freebsd_x86_64
@@ -2750,7 +2750,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: node_freebsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
+          name: .node_freebsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #freebsd_x86_64
@@ -2789,7 +2789,15 @@ jobs:
 
   nodejs_collect_and_stage_prebuilds:
     runs-on: ubuntu-latest
-    needs: [nodejs_build_windows_x86_64_lib_MSVC, nodejs_build_windows_arm64_lib_MSVC, nodejs_build_ubuntu_x86_64_lib_Clang, nodejs_build_ubuntu_arm64_lib_Clang, nodejs_build_debian_x86_lib_Clang, nodejs_build_mac_lib, nodejs_build_freebsd_x86_64_libs_Clang]
+    needs:
+      - extract_version
+      - nodejs_build_windows_x86_64_lib_MSVC
+      - nodejs_build_windows_arm64_lib_MSVC
+      - nodejs_build_ubuntu_x86_64_lib_Clang
+      - nodejs_build_ubuntu_arm64_lib_Clang
+      - nodejs_build_debian_x86_lib_Clang
+      - nodejs_build_mac_lib
+      - nodejs_build_freebsd_x86_64_libs_Clang
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -2803,50 +2811,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y unzip
-
-      - name: Extract all archives (zip and tar.gz) with artifact prefix and list contents
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p extracted
-          shopt -s nullglob
-
-          get_artifact_name() {
-            # downloaded_artifacts/<artifact-name>/<file>
-            local p="$1"
-            basename "$(dirname "$p")"
-          }
-
-          # unzip *.zip（unzip to extracted/<artifact>/<base>）
-          for z in downloaded_artifacts/**/*.zip downloaded_artifacts/*.zip; do
-            artifact="$(get_artifact_name "$z")"
-            base="$(basename "${z%.*}")"
-            d="extracted/${artifact}/${base}"
-            mkdir -p "$d"
-            echo "::group::Unzip $z -> $d"
-            unzip -l "$z" || true
-            unzip -o "$z" -d "$d"
-            /usr/bin/find "$d" -maxdepth 2 -print | sort
-            echo "::endgroup::"
-          done
-
-          # tar -xzf *.tgz / *.tar.gz（unzip to extracted/<artifact>/<base>）
-          for t in downloaded_artifacts/**/*.tgz downloaded_artifacts/*.tgz downloaded_artifacts/**/*.tar.gz downloaded_artifacts/*.tar.gz; do
-            artifact="$(get_artifact_name "$t")"
-            fname="$(basename "$t")"
-            base="${fname%.tar.gz}"
-            base="${base%.tgz}"
-            d="extracted/${artifact}/${base}"
-            mkdir -p "$d"
-            echo "::group::Untar $t -> $d"
-            echo "Listing contents of $t"
-            tar -tzf "$t" | sed -n '1,200p' || true
-            echo "--- extracting (verbose) ---"
-            tar -xvzf "$t" -C "$d"
-            echo "--- extracted tree ---"
-            /usr/bin/find "$d" -maxdepth 2 -print | sort
-            echo "::endgroup::"
-          done
 
       - name: Stage RelWithDebInfo BqLog.node (+pdb) into wrapper/typescript/prebuilds
         shell: bash
@@ -2884,7 +2848,7 @@ jobs:
 
           copied_any=0
           shopt -s globstar nullglob
-          for d in extracted/*/*; do
+          for d in downloaded_artifacts/*/*; do
             base="$(basename "$d")"
             target="$(map_target "$base")"
             if [[ -z "$target" ]]; then
@@ -2989,6 +2953,7 @@ jobs:
   unreal_plugin_pack_prebuilt:
     runs-on: ubuntu-latest
     needs:
+      - extract_version
       - build_windows_x86_64_lib_MSVC
       - build_windows_arm64_lib_MSVC
       - build_ubuntu_x86_64_lib_Clang
@@ -3011,57 +2976,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y unzip zip rsync
 
-      - name: Extract version
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
-          if [[ -z "$VERSION" ]]; then
-            echo "Failed to extract version" >&2
-            exit 1
-          fi
-          echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
-
-      - name: Expand artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p extracted
-          shopt -s nullglob
-
-          get_artifact_name() {
-            local path="$1"
-            basename "$(dirname "$path")"
-          }
-
-          for z in downloaded_artifacts/**/*.zip downloaded_artifacts/*.zip; do
-            artifact="$(get_artifact_name "$z")"
-            base="$(basename "${z%.*}")"
-            dest="extracted/${artifact}/${base}"
-            mkdir -p "$dest"
-            echo "::group::Unzip $z -> $dest"
-            unzip -l "$z" || true
-            unzip -qo "$z" -d "$dest"
-            /usr/bin/find "$dest" -maxdepth 2 -print | sort
-            echo "::endgroup::"
-          done
-
-          for t in downloaded_artifacts/**/*.tgz downloaded_artifacts/*.tgz downloaded_artifacts/**/*.tar.gz downloaded_artifacts/*.tar.gz; do
-            artifact="$(get_artifact_name "$t")"
-            fname="$(basename "$t")"
-            base="${fname%.tar.gz}"
-            base="${base%.tgz}"
-            dest="extracted/${artifact}/${base}"
-            mkdir -p "$dest"
-            echo "::group::Untar $t -> $dest"
-            tar -tzf "$t" | sed -n '1,200p' || true
-            tar -xzf "$t" -C "$dest"
-            /usr/bin/find "$dest" -maxdepth 2 -print | sort
-            echo "::endgroup::"
-          done
-
       - name: Stage Unreal prebuilt plugin
         shell: bash
+        env:
+          VERSION: ${{ needs.extract_version.outputs.version }}
         run: |
           set -euo pipefail
 
@@ -3071,7 +2989,7 @@ jobs:
           fi
 
           ROOT="$(pwd)"
-          ARTIFACT_ROOT="$ROOT/extracted"
+          ARTIFACT_ROOT="$ROOT/downloaded_artifacts"
           TMP_ROOT="$ROOT/artifacts/plugin/unreal/tmp_prebuilt"
           DIST_DIR="$ROOT/dist"
           TEMPLATE_DIR="$ROOT/plugin/unreal/BqLog"
@@ -3095,7 +3013,7 @@ jobs:
             local base="$1"
             local version="$2"
             local result
-            result=$(find "$base" -type f -path "*dynamic_lib*/libBqLog.so.${version}" 2>/dev/null | head -n1 || true)
+            result=$(find "$base" -type f -path "*dynamic_lib*/libBqLog.so.${VERSION}" 2>/dev/null | head -n1 || true)
             if [[ -z "$result" ]]; then
               result=$(find_preferred "$base" libBqLog.so "RelWithDebInfo" "dynamic_lib")
             fi
@@ -3106,7 +3024,7 @@ jobs:
             local base="$1"
             local version="$2"
             local result
-            result=$(find "$base" -type f -path "*dynamic_lib*/libBqLog.${version}.dylib" 2>/dev/null | head -n1 || true)
+            result=$(find "$base" -type f -path "*dynamic_lib*/libBqLog.${VERSION}.dylib" 2>/dev/null | head -n1 || true)
             if [[ -z "$result" ]]; then
               result=$(find_preferred "$base" libBqLog.dylib "RelWithDebInfo" "dynamic_lib")
             fi
@@ -3310,7 +3228,13 @@ jobs:
   # Unity package
   unity_package_build:
     runs-on: ubuntu-latest
-    needs: [extract_version, build_linux_android, build_ios_lib, build_ubuntu_x86_64_lib_Clang, build_mac_lib, build_windows_x86_64_lib_MSVC]
+    needs:
+      - extract_version
+      - build_linux_android
+      - build_ios_lib
+      - build_ubuntu_x86_64_lib_Clang
+      - build_mac_lib
+      - build_windows_x86_64_lib_MSVC
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -3327,23 +3251,16 @@ jobs:
           sudo apt-get install -y unzip
           sudo apt-get install -y nodejs npm
 
-      - name: Extract version from source and update package.json
+      - name: update package.json
         shell: bash
+        env:
+          VERSION: ${{ needs.extract_version.outputs.version }}
         run: |
           set -euo pipefail
-          # Parse version from src/bq_log/global/version.cpp
-          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
-          if [[ -z "$VERSION" ]]; then
-            echo "Failed to extract version from src/bq_log/global/version.cpp"
-            exit 1
-          fi
-          # Make VERSION available to both this and subsequent steps
-          echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
-          export VERSION
           
           # Update plugin/unity/package.json (ensure VERSION is visible to node)
           if [[ -f plugin/unity/package.json ]]; then
-            VERSION="$VERSION" node -e "const fs=require('fs');const p='plugin/unity/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));if(!j.name)throw new Error('package.json missing name');if(!process.env.VERSION)throw new Error('VERSION env missing');j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('Updated',p,'to version',j.version);"
+            node -e "const fs=require('fs');const p='plugin/unity/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));if(!j.name)throw new Error('package.json missing name');if(!process.env.VERSION)throw new Error('VERSION env missing');j.version=process.env.VERSION;fs.writeFileSync(p,JSON.stringify(j,null,2));console.log('Updated',p,'to version',j.version);"
           else
             echo 'plugin/unity/package.json not found!' >&2
             exit 1
@@ -3359,56 +3276,18 @@ jobs:
           echo 'Sanity check package.json:'
           cat plugin/unity/package.json
 
-      - name: Extract all archives (zip and tar.gz) with artifact prefix and list contents
+      - name: List all archives
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p extracted
-          shopt -s nullglob
-
-          # Derive artifact name from downloaded_artifacts/<artifact>/<file>
-          get_artifact_name() {
-            local p="$1"
-            basename "$(dirname "$p")"
-          }
-
-          # Unzip *.zip -> extracted/<artifact>/<base>
-          for z in downloaded_artifacts/**/*.zip downloaded_artifacts/*.zip; do
-            artifact="$(get_artifact_name "$z")"
-            base="$(basename "${z%.*}")"
-            d="extracted/${artifact}/${base}"
-            mkdir -p "$d"
-            echo "::group::Unzip $z -> $d"
-            unzip -l "$z" || true
-            unzip -o "$z" -d "$d"
-            /usr/bin/find "$d" -maxdepth 2 -print | sort
-            echo "::endgroup::"
-          done
-
-          # Untar *.tgz / *.tar.gz -> extracted/<artifact>/<base>
-          for t in downloaded_artifacts/**/*.tgz downloaded_artifacts/*.tgz downloaded_artifacts/**/*.tar.gz downloaded_artifacts/*.tar.gz; do
-            artifact="$(get_artifact_name "$t")"
-            fname="$(basename "$t")"
-            base="${fname%.tar.gz}"
-            base="${base%.tgz}"
-            d="extracted/${artifact}/${base}"
-            mkdir -p "$d"
-            echo "::group::Untar $t -> $d"
-            echo "Listing contents of $t"
-            tar -tzf "$t" | sed -n '1,200p' || true
-            echo "--- extracting (verbose) ---"
-            tar -xvzf "$t" -C "$d"
-            echo "--- extracted tree ---"
-            /usr/bin/find "$d" -maxdepth 2 -print | sort
-            echo "::endgroup::"
-          done
+          ls -l downloaded_artifacts
 
       - name: Stage libs into plugin/unity/Runtime/Plugins
         shell: bash
         run: |
           set -euo pipefail
           : "${VERSION:?VERSION env not set}"
-          BASE="extracted"
+          BASE="downloaded_artifacts"
 
           # Target folders
           ANDROID_DIR="plugin/unity/Runtime/Plugins/Android"

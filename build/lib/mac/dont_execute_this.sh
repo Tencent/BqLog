@@ -308,6 +308,9 @@ enforce_napi_rule_if_needed() {
   fi
 }
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 # Dispatch
 case "$ACTION" in
   all)

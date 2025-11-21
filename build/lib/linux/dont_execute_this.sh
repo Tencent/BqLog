@@ -390,6 +390,9 @@ do_pack() {
   popd >/dev/null
 }
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 # Dispatch
 if [[ "$ACTION" == "all" ]]; then
   ensure_common_params

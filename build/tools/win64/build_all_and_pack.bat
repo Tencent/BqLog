@@ -14,6 +14,9 @@ echo "Architecture: %ARCH_PARAM%"
 set "GEN_PLATFORM_ARG="
 if defined ARCH_PARAM set "GEN_PLATFORM_ARG=-A %ARCH_PARAM%"
 
+if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
+if exist "..\..\..\install" rmdir /s /q "..\..\..\install"
+
 cd category_log_generator
 call ./executable_generate.bat %ARCH_PARAM% || exit /b 1
 cd ../log_decoder

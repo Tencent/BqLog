@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 pushd "category_log_generator" >/dev/null
 ./executable_generate_gcc.sh
 popd >/dev/null

@@ -26,6 +26,9 @@ if not defined VERSION (
   exit /b 1
 )
 
+if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
+if exist "..\..\..\install" rmdir /s /q "..\..\..\install"
+
 echo Parsed VERSION=%VERSION%
 
 for %%T in (ue4 ue5) do (

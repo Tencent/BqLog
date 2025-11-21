@@ -1,4 +1,8 @@
 set -euo pipefail
+
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 mkdir -p makeProj
 cd makeProj
 

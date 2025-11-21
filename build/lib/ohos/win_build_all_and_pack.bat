@@ -15,6 +15,9 @@ if not defined PARALLEL_JOBS set "PARALLEL_JOBS=%NUMBER_OF_PROCESSORS%"
 echo NDK: %NDK_PATH%
 echo Parallel jobs: %PARALLEL_JOBS%
 
+if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
+if exist "..\..\..\install" rmdir /s /q "..\..\..\install"
+
 for %%T in (armeabi-v7a arm64-v8a x86_64) do (
   for %%C in (Debug RelWithDebInfo MinSizeRel Release) do (
     for %%L in (static_lib dynamic_lib) do (

@@ -265,6 +265,9 @@ do_pack() {
   cd ..
 }
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 if [ "$ACTION" = "all" ]; then
   ensure_common_params
   build_one dynamic_lib

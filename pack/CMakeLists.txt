@@ -12,6 +12,16 @@ message(STATUS "BqLog Version:${BQ_VERSION}")
 project("${PACKAGE_NAME}Pack" VERSION ${BQ_VERSION} LANGUAGES CXX)
 BQ_DETECT_ARCH(DETECTED_ARCH)
 
+# ========================================================
+# 1. Always clean the dist directory first
+# ========================================================
+set(BQ_DIST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../dist")
+message(STATUS "Cleaning dist directory: ${BQ_DIST_DIR}")
+file(REMOVE_RECURSE "${BQ_DIST_DIR}")
+file(MAKE_DIRECTORY "${BQ_DIST_DIR}")
+
+
+# Platform specific naming logic
 if(TARGET_PLATFORM STREQUAL "linux")
     set(BQ_PACK_FILE_NAME "${PACKAGE_NAME}-linux-${DETECTED_ARCH}-${PROJECT_VERSION}")
 elseif(TARGET_PLATFORM STREQUAL "win64")
@@ -34,26 +44,38 @@ else()
     set(BQ_PACK_FILE_NAME "${PACKAGE_NAME}-${PROJECT_VERSION}")
 endif()
 
+# ========================================================
+# 2. Branch Logic: GitHub Actions vs Normal Packaging
+# ========================================================
+if(DEFINED ENV{GITHUB_ACTIONS} AND "$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+    # --- Branch A: GitHub Actions (Copy only) ---
+    message(STATUS "Detected: running inside GitHub Actions")
+    message(STATUS "Skipping CPack generation. Copying install directory to dist...")
 
-set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/../install/;.")
-set(CPACK_PACKAGE_BASE_NAME "${PACKAGE_NAME}")
-set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_FILE_NAME "${BQ_PACK_FILE_NAME}")
-set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../dist")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../install")
+        file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/../install" DESTINATION "${BQ_DIST_DIR}/BQ_PACK_FILE_NAME")
+    else()
+        message(WARNING "Install directory not found at ${CMAKE_CURRENT_SOURCE_DIR}/../install")
+    endif()
 
-# 生成包的同时生成 SHA256 校验文件（同名加 .sha256 后缀）
-set(CPACK_PACKAGE_CHECKSUM "SHA256")
-
-# choose binary generator per target platform
-if(TARGET_PLATFORM STREQUAL "win64" OR TARGET_PLATFORM STREQUAL "android")
-    set(CPACK_GENERATOR "ZIP")
 else()
-    # linux/unix/mac -> tar.gz (TGZ)
-    set(CPACK_GENERATOR "TGZ")
+    # --- Branch B: Normal Packaging (CPack ZIP/TGZ) ---
+
+    set(CPACK_INSTALLED_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/../install/;.")
+    set(CPACK_PACKAGE_BASE_NAME "${PACKAGE_NAME}")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_PACKAGE_FILE_NAME "${BQ_PACK_FILE_NAME}")
+    # Note: CPACK_OUTPUT_FILE_PREFIX points to the dist folder we cleaned above
+    set(CPACK_OUTPUT_FILE_PREFIX "${BQ_DIST_DIR}")
+    set(CPACK_PACKAGE_CHECKSUM "SHA256")
+
+    # choose binary generator per target platform
+    if(TARGET_PLATFORM STREQUAL "win64" OR TARGET_PLATFORM STREQUAL "android")
+        set(CPACK_GENERATOR "ZIP")
+    else()
+        # linux/unix/mac -> tar.gz (TGZ)
+        set(CPACK_GENERATOR "TGZ")
+    endif()
+
+    include(CPack)
 endif()
-
-
-include(CPack)
-
-
-

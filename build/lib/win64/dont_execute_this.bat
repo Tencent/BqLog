@@ -47,6 +47,9 @@ call :normalize_onoff "%ARG3%" JAVA_SUPPORT
 call :normalize_onoff "%ARG4%" NODE_API_SUPPORT
 call :normalize_build_lib_type "%ARG5%" BUILD_LIB_TYPE
 
+if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
+if exist "..\..\..\install" rmdir /s /q "..\..\..\install"
+
 if /I "%ACTION%"=="all" (
   call :ensure_common_params
   call :build_one dynamic_lib || exit /b 1

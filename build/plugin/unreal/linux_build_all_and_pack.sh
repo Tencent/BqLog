@@ -25,6 +25,9 @@ fi
 
 mkdir -p "$DIST_DIR"
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 for ue_version in "${UE_VERSIONS[@]}"; do
   rm -rf "$TMP_DIR"
   mkdir -p "$TMP_DIR"

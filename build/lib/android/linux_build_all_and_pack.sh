@@ -42,6 +42,9 @@ echo "Using NDK toolchain: $HOST_TAG"
 BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64 x86)
 BUILD_CONFIGS=(Debug RelWithDebInfo MinSizeRel Release)
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 for build_target in "${BUILD_TARGET[@]}"; do
   rm -rf "$build_target"
   mkdir -p "$build_target"

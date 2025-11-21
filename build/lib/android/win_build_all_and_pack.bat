@@ -31,6 +31,8 @@ if exist "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\windows-arm64\bin" (
     )
 )
 
+if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
+if exist "..\..\..\install" rmdir /s /q "..\..\..\install"
 
 set BUILD_TARGET[0]=armeabi-v7a
 set BUILD_TARGET[1]=arm64-v8a

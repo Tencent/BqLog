@@ -1,6 +1,8 @@
 @echo off
 SETLOCAL ENABLEEXTENSIONS
 
+if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
+if exist "..\..\..\install" rmdir /s /q "..\..\..\install"
 
 md makeProj
 cd makeProj

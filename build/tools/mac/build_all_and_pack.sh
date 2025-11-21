@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 pushd "category_log_generator" >/dev/null
 ./executable_generate.sh
 popd >/dev/null

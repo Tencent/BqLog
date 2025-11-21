@@ -48,6 +48,9 @@ echo "NDK: $NDK_PATH"
 echo "HOST_TAG: $HOST_TAG"
 echo "Parallel jobs: $PARALLEL_JOBS"
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 for build_target in "${BUILD_TARGET[@]}"; do
   rm -rf "$build_target"
   mkdir -p "$build_target"

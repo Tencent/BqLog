@@ -3,6 +3,9 @@ set -euo pipefail
 
 UNIX_VERSION=${1:-}
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 cd category_log_generator
 ./executable_generate_clang.sh
 cd ../log_decoder

@@ -25,6 +25,9 @@ BUILD_LIB_TYPES=(static_lib dynamic_lib)
 echo "NDK: $NDK_PATH"
 echo "Parallel jobs: $PARALLEL_JOBS"
 
+rm -rf "../../../artifacts"
+rm -rf "../../../install"
+
 for build_target in "${BUILD_TARGET[@]}"; do
   for build_config in "${BUILD_CONFIGS[@]}"; do
     for build_lib_type in "${BUILD_LIB_TYPES[@]}"; do
