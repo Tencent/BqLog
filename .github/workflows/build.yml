@@ -2352,7 +2352,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: .node_windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
+          name: tmp_node_windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_windows_x86_64_lib_Clang:
@@ -2416,7 +2416,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: .node_windows_arm64_libs_${{ needs.extract_version.outputs.version }}
+          name: tmp_node_windows_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_windows_arm64_lib_Clang:
@@ -2481,7 +2481,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: .node_linux_x86_64_libs_${{ needs.extract_version.outputs.version }}
+          name: tmp_node_linux_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #Linux-ubuntu-x86_64
@@ -2547,7 +2547,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: .node_linux_arm64_libs_${{ needs.extract_version.outputs.version }}
+          name: tmp_node_linux_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_ubuntu_arm64_lib_GCC:
@@ -2631,7 +2631,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: .node_linux_x86_libs_${{ needs.extract_version.outputs.version }}
+          name: tmp_node_linux_x86_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   nodejs_build_debian_x86_lib_GCC:
@@ -2710,7 +2710,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: .node_macos_universal_binary_libs_${{ needs.extract_version.outputs.version }}
+          name: tmp_node_macos_universal_binary_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #freebsd_x86_64
@@ -2750,7 +2750,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: .node_freebsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
+          name: tmp_node_freebsd_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
   #freebsd_x86_64
@@ -2805,7 +2805,15 @@ jobs:
       - name: Download all artifacts from native builds
         uses: actions/download-artifact@v4
         with:
+          pattern: tmp_node_*
+          merge-multiple: false
           path: downloaded_artifacts
+
+      - name: List all archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -l downloaded_artifacts
 
       - name: Prepare tools
         run: |
@@ -2904,6 +2912,12 @@ jobs:
         with:
           name: nodejs_npm_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
+          
+      - name: Delete intermediate artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: tmp_node_* 
+          failOnError: false
 
   # Unreal plugin
   unreal_plugin_build_on_linux:
@@ -2969,6 +2983,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: downloaded_artifacts
+
+      - name: List all archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -l downloaded_artifacts
 
       - name: Install tooling
         run: |
@@ -3085,13 +3105,13 @@ jobs:
             rsync -a "$src_dir/" "$dst_dir/"
           }
 
-          WIN_X64_BASE="$ARTIFACT_ROOT/windows_x86_64_libs"
-          WIN_ARM64_BASE="$ARTIFACT_ROOT/windows_arm64_libs"
-          LINUX_X64_BASE="$ARTIFACT_ROOT/linux_x86_64_libs"
-          LINUX_ARM64_BASE="$ARTIFACT_ROOT/linux_arm64_libs"
-          MAC_BASE="$ARTIFACT_ROOT/macos_universal_binary_libs"
-          IOS_BASE="$ARTIFACT_ROOT/ios_libs"
-          ANDROID_BASE="$ARTIFACT_ROOT/android_libs"
+          WIN_X64_BASE="$ARTIFACT_ROOT/bqlog-lib-windows-x86_64-libs_${VERSION}"
+          WIN_ARM64_BASE="$ARTIFACT_ROOT/bqlog-lib-windows-arm64-libs_${VERSION}"
+          LINUX_X64_BASE="$ARTIFACT_ROOT/bqlog-lib-linux-x86_64-libs-${VERSION}"
+          LINUX_ARM64_BASE="$ARTIFACT_ROOT/bqlog-lib-linux-arm64-libs-${VERSION}"
+          MAC_BASE="$ARTIFACT_ROOT/bqlog-lib-macos-universal-binary-libs-${VERSION}"
+          IOS_BASE="$ARTIFACT_ROOT/bqlog-lib-ios-libs-${VERSION}"
+          ANDROID_BASE="$ARTIFACT_ROOT/bqlog-lib-android-libs-${VERSION}"
 
           DYNAMIC_INCLUDE_SRC=$(find "$WIN_X64_BASE" -type d -path "*/dynamic_lib/include" -print -quit)
           if [[ -z "$DYNAMIC_INCLUDE_SRC" ]]; then
@@ -3284,6 +3304,8 @@ jobs:
 
       - name: Stage libs into plugin/unity/Runtime/Plugins
         shell: bash
+        env:
+          VERSION: ${{ needs.extract_version.outputs.version }}
         run: |
           set -euo pipefail
           : "${VERSION:?VERSION env not set}"
