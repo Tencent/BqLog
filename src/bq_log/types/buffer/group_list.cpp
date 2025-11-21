@@ -41,6 +41,20 @@ namespace bq {
             current = stage_.first();
             while (current) {
                 if (used_map.find((uint8_t*)current) != used_map.end()) {
+                    bq::util::log_device_console(bq::log_level::warning, "found block_node_head existed in both used list and stage list during recovery, break link from stage list");
+                    block_node_head* last = nullptr;
+                    block_node_head* next = stage_.first();
+                    bool break_link = false;
+                    while (next) {
+                        if (next == current) {
+                            stage_.remove_thread_unsafe(last, next);
+                            break_link = true;
+                            break;
+                        }
+                        last = next;
+                        next = stage_.next(next);
+                    }
+                    assert(break_link && "failed to break link from stage list during recovery");
                     break;
                 }
                 stage_map[(uint8_t*)current] = true;
