@@ -52,11 +52,15 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND "$ENV{GITHUB_ACTIONS}" STREQUAL "true")
     message(STATUS "Detected: running inside GitHub Actions")
     message(STATUS "Skipping CPack generation. Copying install directory to dist...")
 
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../install")
-        file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/../install" DESTINATION "${BQ_DIST_DIR}/BQ_PACK_FILE_NAME")
-    else()
-        message(WARNING "Install directory not found at ${CMAKE_CURRENT_SOURCE_DIR}/../install")
-    endif()
+    # Manually define a 'package' target that copies the files, 
+    # satisfying the 'cmake --build . --target package' command in external scripts.
+    add_custom_target(package
+        COMMAND ${CMAKE_COMMAND} -E echo "GitHub Actions: Copying install directory to dist..."
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${BQ_DIST_DIR}/${BQ_PACK_FILE_NAME}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../install" "${BQ_DIST_DIR}/${BQ_PACK_FILE_NAME}"
+        COMMENT "Copying files to dist folder instead of packing"
+        VERBATIM
+    )
 
 else()
     # --- Branch B: Normal Packaging (CPack ZIP/TGZ) ---
