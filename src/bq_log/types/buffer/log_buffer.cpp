@@ -697,7 +697,7 @@ namespace bq {
         if (next_block) {
             auto& context = next_block->get_misc_data<block_misc_data>().context_;
             out_verify_result = verify_context(context);
-            mem_opt.is_block_marked_removed = (out_verify_result == context_verify_result::valid && is_block_removed(next_block))
+            mem_opt.is_block_marked_removed = (out_verify_result == context_verify_result::valid && (is_block_removed(next_block) || (context.version_ != version_)))
                 || out_verify_result == context_verify_result::version_invalid
                 || out_verify_result == context_verify_result::seq_invalid;
             mem_opt.verify_result = out_verify_result;
