@@ -211,6 +211,12 @@ namespace bq {
                 need_remove_mmap_file = true;
             }
             node_data_ = nullptr;
+#ifdef BQ_UNIT_TEST
+            // Don't force flush in production — it hurts performance and may still fail.
+            // Memory-mapped recovery depends on the OS and underlying I/O, so it is not 100% reliable.
+            // In unit tests only: perform explicit flush/unmap to make recovery deterministic.
+            bq::memory_map::flush_memory_map(memory_map_handle_);
+#endif
             bq::memory_map::release_memory_map(memory_map_handle_);
             if (need_remove_mmap_file) {
                 bq::string file_abs_path = memory_map_file_.abs_file_path();
