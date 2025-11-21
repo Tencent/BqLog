@@ -5,7 +5,7 @@ If not Defined ANDROID_NDK_ROOT (
     Echo ANDROID_NDK_ROOT is not defined! Build Cancelled!
 	goto :fail
 )
-If not exist %ANDROID_NDK_ROOT% (
+If not exist "%ANDROID_NDK_ROOT%" (
     Echo Folder %ANDROID_NDK_ROOT% Is Not Found! Build Cancelled!
 	goto :fail
 )
@@ -58,10 +58,10 @@ for /l %%a in (0,1,3) do (
 				 -G="MinGW Makefiles"^
 				 -DANDROID_ABI=%%j^
 				 -DANDROID_PLATFORM=%ANDROID_PLATFORM%^
-				 -DANDROID_NDK=%ANDROID_NDK_ROOT%^
+				 -DANDROID_NDK="%ANDROID_NDK_ROOT%"^
 				 -DCMAKE_BUILD_TYPE="%%p"^
 				 -DBUILD_LIB_TYPE=dynamic_lib^
-				 -DCMAKE_TOOLCHAIN_FILE=%ANDROID_NDK_ROOT%/build/cmake/android.toolchain.cmake^
+				 -DCMAKE_TOOLCHAIN_FILE="%ANDROID_NDK_ROOT%/build/cmake/android.toolchain.cmake"^
 				 -DTARGET_PLATFORM:STRING=android^
 				 -DANDROID_STL=none^
 				 || exit /b 1
