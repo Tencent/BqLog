@@ -4000,12 +4000,15 @@ jobs:
 
           # Target folders
           ANDROID_DIR="plugin/unity/Runtime/Plugins/Android"
+          OHOS_DIR="plugin/unity/Runtime/Plugins/OpenHarmony"
           WIN_X64_DIR="plugin/unity/Runtime/Plugins/Windows/x86_64"
           LINUX_X64_DIR="plugin/unity/Runtime/Plugins/Linux/x86_64"
           IOS_DIR="plugin/unity/Runtime/Plugins/iOS"
           MACOS_DIR="plugin/unity/Runtime/Plugins/macOS"
 
           mkdir -p "$ANDROID_DIR" "$WIN_X64_DIR" "$LINUX_X64_DIR" "$IOS_DIR" "$MACOS_DIR"
+          rm -rf OHOS_DIR
+          rm -rf $OHOS_DIR.meta
 
           copy_one() {
             local src="$1"
@@ -4187,7 +4190,7 @@ jobs:
 
           # Target folders
           ANDROID_DIR="plugin/unity/Runtime/Plugins/Android"
-          OHOS_DIR="plugin/unity/Runtime/Plugins/OHOS"
+          OHOS_DIR="plugin/unity/Runtime/Plugins/OpenHarmony"
           WIN_X64_DIR="plugin/unity/Runtime/Plugins/Windows/x86_64"
           LINUX_X64_DIR="plugin/unity/Runtime/Plugins/Linux/x86_64"
           IOS_DIR="plugin/unity/Runtime/Plugins/iOS"
@@ -4216,8 +4219,8 @@ jobs:
           # HarmonyOS (.har) -> rename to bqlog.har
           mapfile -t ohos_aar < <(find "$BASE" -type f -path "*/harmony_os_libs_${VERSION}/*/dynamic_lib/bqlog.har" | sort)
           if (( ${#ohos_aar[@]} )); then
-            echo "Copy: ${ohos_aar[0]} -> OHOS_DIR/bqlog.har"
-            cp -f "${ohos_aar[0]}" "OHOS_DIR/bqlog.har"
+            echo "Copy: ${ohos_aar[0]} -> $OHOS_DIR/bqlog.har"
+            cp -f "${ohos_aar[0]}" "$OHOS_DIR/bqlog.har"
           else
             echo "WARN: HarmonyOS HAR not found for version ${VERSION}"
             exit 1
