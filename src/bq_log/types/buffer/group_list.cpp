@@ -38,19 +38,13 @@ namespace bq {
                 used_map[(uint8_t*)current] = true;
                 current = used_.next(current);
             }
-            bool repeat = false;
             current = stage_.first();
             while (current) {
                 if (used_map.find((uint8_t*)current) != used_map.end()) {
-                    repeat = true;
-                    stage_map.clear();
                     break;
                 }
                 stage_map[(uint8_t*)current] = true;
                 current = stage_.next(current);
-            }
-            if (repeat) {
-                stage_.reset(max_blocks_count, group_data_addr, group_data_size);
             }
             used_.recovery_blocks();
             stage_.recovery_blocks();
