@@ -1008,6 +1008,14 @@ namespace bq {
         }
     }
 
+
+#if defined(BQ_UNIT_TEST)
+    const log_buffer::log_tls_buffer_info& log_buffer::get_buffer_info_for_this_thread() const
+    {
+        return log_tls_info_.get().get_buffer_info(this);
+    }
+#endif
+
     /**
      * @brief Fixes mmap data errors by invalidating data with the same version as the current run.
      *

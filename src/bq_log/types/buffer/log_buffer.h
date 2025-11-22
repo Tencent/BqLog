@@ -175,6 +175,8 @@ namespace bq {
         }
 
 #if defined(BQ_UNIT_TEST)
+        const log_tls_buffer_info& get_buffer_info_for_this_thread() const;
+
         int32_t get_groups_count() const { return hp_buffer_.get_groups_count(); }
         void garbage_collect() { hp_buffer_.garbage_collect(); }
         size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
