@@ -1170,7 +1170,7 @@ namespace bq {
         bq::util::set_log_device_console_min_level(bq::log_level::info);
         bq::util::log_device_console(bq::log_level::info, "log_buffer recovery records:");
         for (size_t i = 0; i < rt_cache_.current_reading_.recovery_records_.size(); ++i) {
-            bq::util::log_device_console(bq::log_level::info, " version :%zu", static_cast<size_t>(version_ - 1U - i));
+            bq::util::log_device_console(bq::log_level::info, " version :%" PRIu64, static_cast<uint64_t>(version_ - 1U - i));
             for (const auto& record : rt_cache_.current_reading_.recovery_records_[i]) {
                 const auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[i][record.key()];
                 bq::util::log_device_console(bq::log_level::info, "\t\t tls_info addr: %p, min valid seq: %" PRIu32 ", seq num:%" PRIu64, record.key(), record.value(), static_cast<uint64_t>(seq_map.size()));
