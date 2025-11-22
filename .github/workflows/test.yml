@@ -326,7 +326,7 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            for i in 1 2 3 4 5; do
+            for i in 1; do
               (
                 pkg publisher && \
                 pkg install -v --accept \
@@ -363,6 +363,13 @@ jobs:
             exit 1
           fi
           echo "Test passed successfully."
+
+      - name: Cleanup Previous VM Resources
+        if: steps.RunInSolaris1.outcome == 'failure'
+        run: |
+          echo "Cleaning up previous VM resources..."
+          sudo killall qemu-system-x86_64 || true
+          sleep 5
 
       - name: Run in Solaris（Attempt 2）
         if: steps.RunInSolaris1.outcome == 'failure'
