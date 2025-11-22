@@ -381,11 +381,10 @@ jobs:
                 sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
               done
             fi
-            
-            sudo ps -ef | grep qemu
-            sudo killall -9 qemu-system-x86_64 || true
-            sudo ps -ef | grep qemu
-            
+          
+            echo "--- Removing potentially corrupted VM images ---"
+            find . -name "*.qcow2" -delete || true
+            sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
             sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
             sleep 5
             echo "Cleanup complete."
