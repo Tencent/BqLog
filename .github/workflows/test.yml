@@ -340,13 +340,13 @@ jobs:
             done
             exit 1
           run: |
-            touch ../../../UNIT_TEST_STARTED
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
-            touch ../../../UNIT_TEST_SUCCESS
+            touch UNIT_TEST_SUCCESS
 
       - name: Check Retry
         id: CheckRetry
