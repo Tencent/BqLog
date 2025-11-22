@@ -329,7 +329,7 @@ jobs:
               (
                 pkg publisher && \
                 pkg install -v --accept \
-                  developer/build/cmake \
+                  developer/build/cm1ake \
                   developer/build/gnu-make \
                   developer/debug/gdb \
                   developer/gcc-14 \
