@@ -318,8 +318,54 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in Solaris
-        id: RunInSolaris
+      - name: Run in Solaris（Attempt 1）
+        id: RunInSolaris1
+        uses: vmactions/solaris-vm@v1
+        continue-on-error: true
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            for i in 1 2 3 4 5; do
+              (
+                pkg publisher && \
+                pkg install -v --accept \
+                  developer/build/cma1ke \
+                  developer/build/gnu-make \
+                  developer/debug/gdb \
+                  developer/gcc-14 \
+                  shell/bash
+              ) && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+          run: |
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -ne 0 ]; then
+                echo "Test FAILED with code $EXIT_CODE"
+                touch ../../../UNIT_TEST_FAILED
+            else
+                echo "Test PASSED"
+            fi
+            exit 0
+
+      - name: Check Logical Failure
+        if: steps.RunInSolaris1.outcome == 'success'
+        run: |
+          if [ -f "UNIT_TEST_FAILED" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+          echo "Test passed successfully."
+
+      - name: Run in Solaris（Attempt 2）
+        if: steps.RunInSolaris1.outcome == 'failure'
         uses: vmactions/solaris-vm@v1
         with:
           usesh: true
