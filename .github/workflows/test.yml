@@ -319,7 +319,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run in Solaris（Attempt 1）
-        id: RunInSolaris1
         uses: vmactions/solaris-vm@v1
         continue-on-error: true
         with:
@@ -341,31 +340,27 @@ jobs:
             done
             exit 1
           run: |
+            touch ../../../UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
-            EXIT_CODE=$?
-            if [ $EXIT_CODE -ne 0 ]; then
-                echo "Test FAILED with code $EXIT_CODE"
-                touch ../../../UNIT_TEST_FAILED
-            else
-                echo "Test PASSED"
-            fi
-            exit 0
+            touch ../../../UNIT_TEST_SUCCESS
 
-      - name: Check Logical Failure
-        if: steps.RunInSolaris1.outcome == 'success'
+      - name: Check Retry
+        id: CheckRetry
         run: |
-          if [ -f "UNIT_TEST_FAILED" ]; then
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
             exit 1
           fi
-          echo "Test passed successfully."
 
       - name: Cleanup Before Retry
-        if: steps.RunInSolaris1.outcome == 'failure'
+        if: steps.CheckRetry.outputs.retry == 'true'
         run: |
             echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
             
@@ -390,7 +385,7 @@ jobs:
             echo "Cleanup complete."
 
       - name: Run in Solaris（Attempt 2）
-        if: steps.RunInSolaris1.outcome == 'failure'
+        if: steps.CheckRetry.outputs.retry == 'true'
         uses: vmactions/solaris-vm@v1
         with:
           usesh: true
