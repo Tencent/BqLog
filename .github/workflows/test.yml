@@ -39,10 +39,15 @@ jobs:
 
       - name: Install Clang
         if: ${{ matrix.runner == 'windows-11-arm' }}
+        shell: bash
         run: |
-          choco uninstall -y llvm --all-versions
-          choco install -y llvm
-        shell: powershell
+          choco uninstall -y llvm --all-versions || true
+          for i in {1..5}; do
+            choco install -y llvm && exit 0
+            echo "Install failed, retrying in 60s... ($i/5)"
+            sleep 60
+          done
+          exit 1
 
       - name: Install MSYS2
         if: ${{ matrix.cc == 'mingw_gcc' }}
@@ -52,17 +57,27 @@ jobs:
           msystem: MINGW64
           release: true
           path-type: inherit
-          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
           update: true
 
-      - name: Ensure MSYS2 packages
+      - name: Ensure MSYS2 packages (Retry Enabled)
         if: ${{ matrix.cc == 'mingw_gcc' }}
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          retry_pacman() {
+            for i in {1..5}; do
+              pacman "$@" && return 0
+              echo "Pacman failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            echo "Failed to install packages after 5 attempts."
+            return 1
+          }
+          retry_pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
+
       - name: Remove conflicting MinGW paths
         if: ${{ matrix.cc == 'mingw_gcc' }}
         run: |
@@ -107,8 +122,12 @@ jobs:
 
       - name: Install GDB
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gdb
+          for i in {1..5}; do
+            sudo apt-get update && sudo apt-get install -y gdb && exit 0
+            echo "Install failed, retrying in 60s... ($i/5)"
+            sleep 60
+          done
+          exit 1
 
       - name: Build for Linux
         run: |
@@ -137,13 +156,20 @@ jobs:
 
       - name: Install necessary tools (gcc and clang)
         run: |
-          apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
-
-          apt-get install -y software-properties-common
-          apt-get update
-          apt-get install -y openjdk-17-jdk
-          apt-get install -y openssh-client
+          for i in {1..5}; do
+            (
+              apt-get update && \
+              apt-get install -y gcc clang g++ make cmake gdb && \
+              apt-get install -y software-properties-common && \
+              apt-get update && \
+              apt-get install -y openjdk-17-jdk && \
+              apt-get install -y openssh-client
+            ) && exit 0
+          
+            echo "Install failed, retrying in 60s... ($i/5)"
+            sleep 60
+          done
+          exit 1
 
       - name: Set up Java
         run: |
@@ -202,7 +228,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash gdb gcc
+            for i in 1 2 3 4 5; do
+              pkg install -y llvm cmake bash gdb gcc && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
 
           run: |
             set -e -x
@@ -230,8 +261,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash gdb gcc13
-
+            for i in 1 2 3 4 5; do
+                pkg install -y llvm cmake bash gdb gcc13 && exit 0
+                echo "Install failed, retrying in 60s... ($i/5)"
+                sleep 60
+            done
+            exit 1
           run: |
             set -e -x
             cd build/test/unix_like  
@@ -272,8 +307,6 @@ jobs:
               exit $EXIT_CODE
             fi
 
-
-
   #Unix-Solaris
   solaris_x86_64_GCC:
     runs-on: ubuntu-latest
@@ -292,13 +325,20 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg publisher
-            pkg install -v --accept \
-              developer/build/cmake \
-              developer/build/gnu-make \
-              developer/debug/gdb \
-              developer/gcc-14 \
-              shell/bash
+            for i in 1 2 3 4 5; do
+              (
+                pkg publisher && \
+                pkg install -v --accept \
+                  developer/build/cmake \
+                  developer/build/gnu-make \
+                  developer/debug/gdb \
+                  developer/gcc-14 \
+                  shell/bash
+              ) && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
           run: |
             set -e -x
             cd build/test/unix_like  
@@ -324,18 +364,24 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            set -e
-            pkg refresh --full
-            if ! pkg publisher | grep -q '^extra\.omnios'; then
-              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
-              [ -n "$REL" ] || REL="r151054"
-              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
-              pkg refresh --full
-            fi
-            
-            pkg install -v --accept shell/bash developer/build/gnu-make || true
-            pkg install -v --accept ooce/developer/cmake
-            pkg install -v --accept developer/gcc13
+            for i in 1 2 3 4 5; do
+              (
+                set -e
+                pkg refresh --full
+                if ! pkg publisher | grep -q '^extra\.omnios'; then
+                  REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
+                  [ -n "$REL" ] || REL="r151054"
+                  pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
+                  pkg refresh --full
+                fi
+                pkg install -v --accept shell/bash developer/build/gnu-make || true
+                pkg install -v --accept ooce/developer/cmake
+                pkg install -v --accept developer/gcc13
+              ) && exit 0
+              echo "Prepare failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
           run: |
             set -e -x
             cd build/test/unix_like  
@@ -365,7 +411,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            for i in 1 2 3 4 5; do
+              pkg install -y cmake bash gmake gdb openjdk11 gcc llvm && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
           run: |
             set -e -x
             cd build/test/unix_like  
@@ -393,15 +444,20 @@ jobs:
           mem: 8192
           prepare: |
             set -x
-            export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/"
-            pkg_add -v -I cmake bash gdb
-
-            # --- Prepare step diagnostics ---
-            echo "--- GDB installation diagnostics ---"
-            echo "PATH=$PATH"
-            pkg_info | grep gdb
-            ls -l /usr/local/bin/gdb* /usr/bin/gdb*
-            echo "--- End of diagnostics ---"
+            for i in 1 2 3 4 5; do
+              (
+                export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/" && \
+                pkg_add -v -I cmake bash gdb
+              ) && {
+                echo "PATH=$PATH"
+                pkg_info | grep gdb
+                ls -l /usr/local/bin/gdb* /usr/bin/gdb*
+                exit 0
+              }
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
 
           run: |
             set -e -x
@@ -491,7 +547,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash
+            for i in 1 2 3 4 5; do
+              pkg_add cmake bash && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
           run: |
             set -e -x
             cd build/test/unix_like  
@@ -526,14 +587,21 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
-            set -e
             export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+            for i in 1 2 3 4 5; do
+              (
+                set -e
+                /usr/sbin/pkg_add -v pkgin || true
+                pkgin -y update
+                pkgin -y install cmake gmake bash gdb
+                pkgin -y install clang
+                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10
+              ) && exit 0
+            
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
           run: |
             set -e -x
             cd build/test/unix_like  
@@ -564,14 +632,21 @@ jobs:
           mem: 8192
           release: "10.1"
           prepare: |
-            set -e
             export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+            for i in 1 2 3 4 5; do
+              (
+                set -e
+                /usr/sbin/pkg_add -v pkgin || true
+                pkgin -y update
+                pkgin -y install cmake gmake bash gdb
+                pkgin -y install clang
+                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10
+              ) && exit 0
 
-            /usr/sbin/pkg_add -v pkgin || true
-            pkgin -y update || true
-            pkgin -y install cmake gmake bash gdb || true
-            pkgin -y install clang || true
-            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
           run: |
             set -e -x
             cd build/test/unix_like  
