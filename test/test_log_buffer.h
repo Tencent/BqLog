@@ -722,7 +722,7 @@ namespace bq {
                                 }
                             }
                             const auto& tls_info = test_recovery_buffer.get_buffer_info_for_this_thread();
-                            printf("Final write_seq for version:%" PRIu32 " tls_info addr:%p is %" PRIu32 "\n", version, (void*)&tls_info, tls_info.wt_data_.current_write_seq_);
+                            printf("Final write_seq for version:%" PRIu32 " tls_info addr:%p is %" PRIu32 "\n", version, static_cast<const void*>(&tls_info), tls_info.wt_data_.current_write_seq_);
                         });
                     }
 
