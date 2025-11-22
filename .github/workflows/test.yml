@@ -364,12 +364,31 @@ jobs:
           fi
           echo "Test passed successfully."
 
-      - name: Cleanup Previous VM Resources
+      - name: Cleanup Before Retry
         if: steps.RunInSolaris1.outcome == 'failure'
         run: |
-          echo "Cleaning up previous VM resources..."
-          sudo killall qemu-system-x86_64 || true
-          sleep 5
+            echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+            
+            DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+            
+            if [ -z "$DOMAINS" ]; then
+              echo "No lingering domains found."
+            else
+              echo "Found domains: $DOMAINS"
+              for DOMAIN in $DOMAINS; do
+                echo "Processing domain: $DOMAIN"
+                sudo virsh destroy "$DOMAIN" || true
+                sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              done
+            fi
+            
+            sudo ps -ef | grep qemu
+            sudo killall -9 qemu-system-x86_64 || true
+            sudo ps -ef | grep qemu
+            
+            sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+            sleep 5
+            echo "Cleanup complete."
 
       - name: Run in Solaris（Attempt 2）
         if: steps.RunInSolaris1.outcome == 'failure'
