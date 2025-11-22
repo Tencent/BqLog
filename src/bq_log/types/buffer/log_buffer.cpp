@@ -1020,6 +1020,9 @@ namespace bq {
     {
         for (uint32_t i = 0; i < MAX_RECOVERY_VERSION_RANGE; ++i) {
             rt_cache_.current_reading_.recovery_records_.push_back(decltype(rt_cache_.current_reading_.recovery_records_)::value_type());
+#ifdef BQ_UNIT_TEST
+            rt_cache_.current_reading_.recovery_seq_records_.push_back(decltype(rt_cache_.current_reading_.recovery_seq_records_)::value_type());
+#endif
         }
         lp_buffer_.set_thread_check_enable(false);
         lp_buffer_.data_traverse([](uint8_t* data, uint32_t size, void* user_data) {
@@ -1027,6 +1030,9 @@ namespace bq {
             log_buffer& buffer = *reinterpret_cast<log_buffer*>(user_data);
             context_head& context = *reinterpret_cast<context_head*>(data);
             if (context.version_ == buffer.version_) {
+#ifdef BQ_UNIT_TEST
+                bq::util::log_device_console(bq::log_level::error, "fix invalid log data in lp_buffer when recovering, version:%" PRIu16 ", seq:%" PRIu32 "", context.version_, context.seq_);
+#endif
                 context.version_++; // mark invalid
             } else if (static_cast<uint16_t>(buffer.version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                 auto& recovery_map = buffer.rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(buffer.version_ - 1 - context.version_)];
@@ -1036,6 +1042,14 @@ namespace bq {
                 } else {
                     iter->value() = bq::min_value(iter->value(), context.seq_);
                 }
+#ifdef BQ_UNIT_TEST
+                auto& seq_map = buffer.rt_cache_.current_reading_.recovery_seq_records_[static_cast<uint16_t>(buffer.version_ - 1 - context.version_)];
+                auto seq_iter = seq_map.find(context.get_tls_info());
+                if (seq_iter == seq_map.end()) {
+                    seq_map[context.get_tls_info()] = bq::hash_map<uint32_t, uint16_t>();
+                }
+                seq_map[context.get_tls_info()][context.seq_]++;
+#endif
             }
         },
             this);
@@ -1047,6 +1061,9 @@ namespace bq {
             while (block) {
                 auto& context = block->get_misc_data<block_misc_data>().context_;
                 if (context.version_ == version_) {
+#ifdef BQ_UNIT_TEST
+                    bq::util::log_device_console(bq::log_level::error, "fix invalid log data in hp_buffer used list when recovering, version:%" PRIu16 ", seq:%" PRIu32 "", context.version_, context.seq_);
+#endif
                     context.version_++; // mark invalid
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
@@ -1056,6 +1073,14 @@ namespace bq {
                     } else {
                         iter->value() = bq::min_value(iter->value(), context.seq_);
                     }
+#ifdef BQ_UNIT_TEST
+                    auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
+                    auto seq_iter = seq_map.find(context.get_tls_info());
+                    if (seq_iter == seq_map.end()) {
+                        seq_map[context.get_tls_info()] = bq::hash_map<uint32_t, uint16_t>();
+                    }
+                    seq_map[context.get_tls_info()][context.seq_]++;
+#endif
                 }
                 block = group.value().get_data_head().used_.next(block);
             }
@@ -1063,6 +1088,9 @@ namespace bq {
             while (block) {
                 auto& context = block->get_misc_data<block_misc_data>().context_;
                 if (context.version_ == version_) {
+#ifdef BQ_UNIT_TEST
+                    bq::util::log_device_console(bq::log_level::error, "fix invalid log data in hp_buffer stage list when recovering, version:%" PRIu16 ", seq:%" PRIu32 "", context.version_, context.seq_);
+#endif
                     context.version_++; // mark invalid
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
@@ -1072,6 +1100,14 @@ namespace bq {
                     } else {
                         iter->value() = bq::min_value(iter->value(), context.seq_);
                     }
+#ifdef BQ_UNIT_TEST
+                    auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
+                    auto seq_iter = seq_map.find(context.get_tls_info());
+                    if (seq_iter == seq_map.end()) {
+                        seq_map[context.get_tls_info()] = bq::hash_map<uint32_t, uint16_t>();
+                    }
+                    seq_map[context.get_tls_info()][context.seq_]++;
+#endif
                 }
                 block = group.value().get_data_head().stage_.next(block);
             }
@@ -1129,6 +1165,31 @@ namespace bq {
                 }
             }
         }
+#ifdef BQ_UNIT_TEST
+        //Debug output
+        bq::util::set_log_device_console_min_level(bq::log_level::info);
+        bq::util::log_device_console(bq::log_level::info, "log_buffer recovery records:");
+        for (size_t i = 0; i < rt_cache_.current_reading_.recovery_records_.size(); ++i) {
+            bq::util::log_device_console(bq::log_level::info, " version :%zu", static_cast<size_t>(version_ - 1U - i));
+            for (const auto& record : rt_cache_.current_reading_.recovery_records_[i]) {
+                const auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[i][record.key()];
+                bq::util::log_device_console(bq::log_level::info, "\t\t tls_info addr: %p, min valid seq: %" PRIu32 ", seq num:%" PRIu64, record.key(), record.value(), static_cast<uint64_t>(seq_map.size()));
+                auto cur_min_seq = record.value();
+                auto left_count = static_cast<uint32_t>(seq_map.size());
+                while (left_count > 0) {
+                    auto seq_iter = seq_map.find(cur_min_seq);
+                    if (seq_iter == seq_map.end()) {
+                        bq::util::log_device_console(bq::log_level::error, "miss seq:%" PRIu32, cur_min_seq);
+                    }else if (seq_iter->value() != 1) {
+                        bq::util::log_device_console(bq::log_level::error, "duplicate seq:%" PRIu32 ", count:%" PRIu16 "", cur_min_seq, seq_iter->value());
+                    }
+                    --left_count;
+                    ++cur_min_seq;
+                }
+            }
+        }
+        bq::util::set_log_device_console_min_level(bq::log_level::warning);
+#endif
     }
 
     void log_buffer::clear_recovery_data()
