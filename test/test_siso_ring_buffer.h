@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <vector>
 #include <thread>
+#include <chrono>
 #include "test_base.h"
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 
@@ -39,13 +40,18 @@ namespace bq {
 
             void operator()()
             {
+                uint32_t sleep_strategy = 0;
                 while (left_write_count_ > 0) {
                     uint32_t size = (uint32_t)(left_write_count_ % (8 * 1024));
                     size = bq::max_value((uint32_t)1, size);
                     size = bq::min_value(size, (uint32_t)(ring_buffer_ptr_->get_block_size() * ring_buffer_ptr_->get_total_blocks_count()) >> 1);
                     auto handle = ring_buffer_ptr_->alloc_write_chunk(size);
                     if (handle.result != enum_buffer_result_code::success) {
-                        bq::platform::thread::yield();
+                        if ((++sleep_strategy) % 8 != 0) {
+                            bq::platform::thread::yield();
+                        }else {
+                            std::this_thread::sleep_for(std::chrono::microseconds(10));
+                        }
                         continue;
                     }
                     int32_t write_index = 0;
@@ -80,11 +86,16 @@ namespace bq {
 
             void operator()()
             {
+                uint32_t sleep_strategy = 0;
                 while (left_read_count_ > 0) {
                     auto handle = ring_buffer_ptr_->read_chunk();
                     bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*ring_buffer_ptr_, handle);
                     if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
-                        bq::platform::thread::yield();
+                        if ((++sleep_strategy) % 2 != 0) {
+                            bq::platform::thread::yield();
+                        }else {
+                            std::this_thread::sleep_for(std::chrono::microseconds(10));
+                        }
                         continue;
                     } else if (handle.result != enum_buffer_result_code::success) {
                         test_result_ptr_->add_result(false, "[siso ring buffer %s] error read return code:%d", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap", (int32_t)handle.result);

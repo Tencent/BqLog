@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <vector>
 #include <thread>
+#include <chrono>
 #include "test_base.h"
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/memory_pool.h"
@@ -235,6 +236,7 @@ namespace bq {
 
             void operator()()
             {
+                uint32_t sleep_strategy = 0;
                 std::random_device sd;
                 std::minstd_rand linear_ran(sd());
                 std::uniform_int_distribution<uint32_t> rand_seq(min_chunk_size, max_chunk_size);
@@ -246,13 +248,17 @@ namespace bq {
                         alloc_size = rand_seq_oversize(linear_ran_oversize);
                     }
                     if (left_write_count_ % auto_expand_sleep_frequency == 0) {
-                        bq::platform::thread::sleep(1);
+                        std::this_thread::sleep_for(std::chrono::microseconds(10));
                     }
                     auto handle = log_buffer_ptr_->alloc_write_chunk(alloc_size, bq::platform::high_performance_epoch_ms());
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited
                         || handle.result == bq::enum_buffer_result_code::err_wait_and_retry) {
-                        bq::platform::thread::yield();
+                        if ((++sleep_strategy) % 8 != 0) {
+                            bq::platform::thread::yield();
+                        }else {
+                            std::this_thread::sleep_for(std::chrono::microseconds(10));
+                        }
                         continue;
                     }
                     --left_write_count_;
@@ -493,6 +499,7 @@ namespace bq {
                 test_output_dynamic_param(bq::log_level::info, "================\n[log buffer] recovery:%s, auto expand:%s, high performance mode:%s\n", config.need_recovery ? "Y" : "-", config.policy == log_memory_policy::auto_expand_when_full ? "Y" : "-", config.high_frequency_threshold_per_second < UINT64_MAX ? "Y" : "-");
                 test_output_dynamic_param(bq::log_level::info, "[log buffer] test progress:%d%%, time cost:%dms\r", percent, 0);
 
+                uint32_t sleep_strategy = 0;
                 while (true) {
                     bool write_finished = (counter.load(bq::platform::memory_order::acquire) <= 0);
                     if (write_finished) {
@@ -510,6 +517,11 @@ namespace bq {
                         break;
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
+                        if ((++sleep_strategy) % 2 != 0) {
+                            bq::platform::thread::yield();
+                        }else {
+                            std::this_thread::sleep_for(std::chrono::microseconds(10));
+                        }
                         continue;
                     }
                     auto size = handle.data_size;

@@ -59,7 +59,8 @@ namespace bq {
     {
         while (wait_flag_.load(platform::memory_order::acquire) != false) {
             // wait previous awake request finish.
-            bq::platform::thread::sleep(1);
+            bq::platform::thread::yield();
+            bq::platform::thread::sleep(0);
         }
         if (thread_mode_ == log_thread_mode::async) {
             log_target_ = log_target_for_pub_worker;
@@ -71,7 +72,8 @@ namespace bq {
     void log_worker::awake_and_wait_join()
     {
         while (wait_flag_.load(platform::memory_order::acquire) != false) {
-            bq::platform::thread::sleep(1);
+            bq::platform::thread::yield();
+            bq::platform::thread::sleep(0);
         }
     }
 
