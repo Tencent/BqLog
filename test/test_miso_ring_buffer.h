@@ -14,7 +14,6 @@
 #include <atomic>
 #include <cstdio>
 #include <vector>
-#include <chrono>
 #include <thread>
 #include "test_base.h"
 #include "bq_log/types/buffer/miso_ring_buffer.h"
@@ -44,7 +43,6 @@ namespace bq {
 
             void operator()()
             {
-                uint32_t sleep_strategy = 0;
                 std::random_device sd;
                 std::minstd_rand linear_ran(sd());
                 std::uniform_int_distribution<int32_t> rand_seq(min_chunk_size, max_chunk_size);
@@ -53,11 +51,6 @@ namespace bq {
                     auto handle = ring_buffer_ptr_->alloc_write_chunk(alloc_size);
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited) {
-                        if ((++sleep_strategy) % 1024 != 0) {
-                            bq::platform::thread::yield();
-                        }else {
-                            std::this_thread::sleep_for(std::chrono::microseconds(10));
-                        }
                         continue;
                     }
                     --left_write_count_;
@@ -79,7 +72,6 @@ namespace bq {
         private:
             void do_miso_test(test_result& result, bool with_mmap)
             {
-                uint32_t sleep_strategy = 0;
                 miso_ring_buffer_test_total_write_count_.store_seq_cst(0);
                 log_buffer_config config;
                 config.log_name = "test_miso_log_buffer";
@@ -123,11 +115,6 @@ namespace bq {
                         break;
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
-                        if ((++sleep_strategy) % 256 != 0) {
-                            bq::platform::thread::yield();
-                        }else {
-                            std::this_thread::sleep_for(std::chrono::microseconds(10));
-                        }
                         continue;
                     }
                     int32_t size = (int32_t)handle.data_size;
