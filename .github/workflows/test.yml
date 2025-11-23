@@ -279,7 +279,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -404,7 +403,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -536,7 +534,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -644,7 +641,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -751,7 +747,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -913,7 +908,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -1080,7 +1074,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -1192,7 +1185,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
@@ -1310,7 +1302,6 @@ jobs:
         id: CheckRetry
         run: |
           if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "::error::Test prepare failed! (Retrying)"
             echo "retry=true" >> $GITHUB_OUTPUT
           elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
             echo "::error::Test script execution failed! (Not retrying)"
