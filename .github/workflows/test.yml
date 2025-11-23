@@ -57,27 +57,8 @@ jobs:
         run: |
           choco install -y llvm
 
-      - name: Install MSYS2(Attempt 1)
+      - name: Install MSYS2
         if: ${{ matrix.cc == 'mingw_gcc' }}
-        continue-on-error: true
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          release: true
-          path-type: inherit
-          update: true
-      - name: Install MSYS2(Attempt 2)
-        if: ${{ matrix.cc == 'mingw_gcc' }}
-        continue-on-error: true
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          release: true
-          path-type: inherit
-          update: true
-      - name: Install MSYS2(Attempt 3)
-        if: ${{ matrix.cc == 'mingw_gcc' }}
-        continue-on-error: true
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
