@@ -1070,7 +1070,6 @@ jobs:
 
       - name: Run in OpenBSD (Attempt 1)
         continue-on-error: true
-        id: OpenBSD
         uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
@@ -1133,7 +1132,6 @@ jobs:
 
       - name: Run in OpenBSD (Attempt 2)
         if: steps.CheckRetry.outputs.retry == 'true'
-        id: OpenBSD
         uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
