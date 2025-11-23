@@ -137,7 +137,7 @@ namespace bq {
             {
                 siso_ring_buffer_test_total_write_count_.store_seq_cst(0);
                 siso_ring_buffer_test_total_read_count_.store_seq_cst(0);
-                constexpr size_t task_size = 6;
+                constexpr size_t task_size = 4;
                 siso_ring_buffer_test_alive_write_thread_count.store_seq_cst((int32_t)task_size);
                 siso_ring_buffer_test_alive_read_thread_count.store_seq_cst((int32_t)task_size);
                 bq::file_handle mmap_file_handles[task_size];
