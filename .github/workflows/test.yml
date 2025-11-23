@@ -61,7 +61,6 @@ jobs:
         if: ${{ matrix.cc == 'mingw_gcc' }}
         continue-on-error: true
         uses: msys2/setup-msys2@v2
-        id: msys2
         with:
           msystem: MINGW64
           release: true
@@ -71,7 +70,6 @@ jobs:
         if: ${{ matrix.cc == 'mingw_gcc' }}
         continue-on-error: true
         uses: msys2/setup-msys2@v2
-        id: msys2
         with:
           msystem: MINGW64
           release: true
@@ -81,7 +79,6 @@ jobs:
         if: ${{ matrix.cc == 'mingw_gcc' }}
         continue-on-error: true
         uses: msys2/setup-msys2@v2
-        id: msys2
         with:
           msystem: MINGW64
           release: true
