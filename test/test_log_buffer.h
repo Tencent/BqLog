@@ -248,7 +248,7 @@ namespace bq {
                         alloc_size = rand_seq_oversize(linear_ran_oversize);
                     }
                     if (left_write_count_ % auto_expand_sleep_frequency == 0) {
-                        if ((++sleep_strategy) % 128 != 0) {
+                        if ((++sleep_strategy) % 1024 != 0) {
                             bq::platform::thread::yield();
                         }else {
                             std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -258,7 +258,7 @@ namespace bq {
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited
                         || handle.result == bq::enum_buffer_result_code::err_wait_and_retry) {
-                        if ((++sleep_strategy) % 128 != 0) {
+                        if ((++sleep_strategy) % 1024 != 0) {
                             bq::platform::thread::yield();
                         }else {
                             std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -521,7 +521,7 @@ namespace bq {
                         break;
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
-                        if ((++sleep_strategy) % 32 != 0) {
+                        if ((++sleep_strategy) % 256 != 0) {
                             bq::platform::thread::yield();
                         }else {
                             std::this_thread::sleep_for(std::chrono::microseconds(10));
