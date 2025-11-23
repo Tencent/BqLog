@@ -53,7 +53,7 @@ namespace bq {
                     auto handle = ring_buffer_ptr_->alloc_write_chunk(alloc_size);
                     if (handle.result == bq::enum_buffer_result_code::err_not_enough_space
                         || handle.result == bq::enum_buffer_result_code::err_buffer_not_inited) {
-                        if ((++sleep_strategy) % 8 != 0) {
+                        if ((++sleep_strategy) % 128 != 0) {
                             bq::platform::thread::yield();
                         }else {
                             std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -123,7 +123,7 @@ namespace bq {
                         break;
                     }
                     if (handle.result != bq::enum_buffer_result_code::success) {
-                        if ((++sleep_strategy) % 2 != 0) {
+                        if ((++sleep_strategy) % 32 != 0) {
                             bq::platform::thread::yield();
                         }else {
                             std::this_thread::sleep_for(std::chrono::microseconds(10));

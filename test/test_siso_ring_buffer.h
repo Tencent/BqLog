@@ -47,7 +47,7 @@ namespace bq {
                     size = bq::min_value(size, (uint32_t)(ring_buffer_ptr_->get_block_size() * ring_buffer_ptr_->get_total_blocks_count()) >> 1);
                     auto handle = ring_buffer_ptr_->alloc_write_chunk(size);
                     if (handle.result != enum_buffer_result_code::success) {
-                        if ((++sleep_strategy) % 8 != 0) {
+                        if ((++sleep_strategy) % 128 != 0) {
                             bq::platform::thread::yield();
                         }else {
                             std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -91,7 +91,7 @@ namespace bq {
                     auto handle = ring_buffer_ptr_->read_chunk();
                     bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*ring_buffer_ptr_, handle);
                     if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
-                        if ((++sleep_strategy) % 2 != 0) {
+                        if ((++sleep_strategy) % 32 != 0) {
                             bq::platform::thread::yield();
                         }else {
                             std::this_thread::sleep_for(std::chrono::microseconds(10));
