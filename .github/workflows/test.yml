@@ -37,20 +37,49 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install Clang
+      - name: Install Clang(Attempt 1)
         if: ${{ matrix.runner == 'windows-11-arm' }}
+        continue-on-error: true
         shell: bash
         run: |
           choco uninstall -y llvm --all-versions || true
-          for i in {1..5}; do
-            choco install -y llvm && exit 0
-            echo "Install failed, retrying in 60s... ($i/5)"
-            sleep 60
-          done
-          exit 1
+          choco install -y llvm
+      - name: Install Clang(Attempt 2)
+        if: ${{ matrix.runner == 'windows-11-arm' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          choco install -y llvm
+      - name: Install Clang(Attempt 3)
+        if: ${{ matrix.runner == 'windows-11-arm' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          choco install -y llvm
 
-      - name: Install MSYS2
+      - name: Install MSYS2(Attempt 1)
         if: ${{ matrix.cc == 'mingw_gcc' }}
+        continue-on-error: true
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MINGW64
+          release: true
+          path-type: inherit
+          update: true
+      - name: Install MSYS2(Attempt 2)
+        if: ${{ matrix.cc == 'mingw_gcc' }}
+        continue-on-error: true
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MINGW64
+          release: true
+          path-type: inherit
+          update: true
+      - name: Install MSYS2(Attempt 3)
+        if: ${{ matrix.cc == 'mingw_gcc' }}
+        continue-on-error: true
         uses: msys2/setup-msys2@v2
         id: msys2
         with:
@@ -59,21 +88,30 @@ jobs:
           path-type: inherit
           update: true
 
-      - name: Ensure MSYS2 packages (Retry Enabled)
+      - name: Ensure MSYS2 packages (Attempt 1)
         if: ${{ matrix.cc == 'mingw_gcc' }}
+        continue-on-error: true
         shell: msys2 {0}
         run: |
-          retry_pacman() {
-            for i in {1..5}; do
-              pacman "$@" && return 0
-              echo "Pacman failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            echo "Failed to install packages after 5 attempts."
-            return 1
-          }
-          retry_pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
-          
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Ensure MSYS2 packages (Attempt 2)
+        if: ${{ matrix.cc == 'mingw_gcc' }}
+        continue-on-error: true
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          echo "MSYS2 Root: $MSYSTEM_CARCH"
+          which gcc
+          which mingw32-make
+      - name: Ensure MSYS2 packages (Attempt 3)
+        if: ${{ matrix.cc == 'mingw_gcc' }}
+        continue-on-error: true
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
@@ -120,14 +158,18 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Install GDB
+      - name: Install GDB(Attempt 1)
+        continue-on-error: true
         run: |
-          for i in {1..5}; do
-            sudo apt-get update && sudo apt-get install -y gdb && exit 0
-            echo "Install failed, retrying in 60s... ($i/5)"
-            sleep 60
-          done
-          exit 1
+          sudo apt-get update && sudo apt-get install -y gdb
+      - name: Install GDB(Attempt 2)
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y gdb
+      - name: Install GDB(Attempt 3)
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y gdb       
 
       - name: Build for Linux
         run: |
@@ -154,22 +196,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install necessary tools (gcc and clang)
+      - name: Install necessary tools (Attempt 1)
+        continue-on-error: true
         run: |
-          for i in {1..5}; do
-            (
-              apt-get update && \
-              apt-get install -y gcc clang g++ make cmake gdb && \
-              apt-get install -y software-properties-common && \
-              apt-get update && \
-              apt-get install -y openjdk-17-jdk && \
-              apt-get install -y openssh-client
-            ) && exit 0
-          
-            echo "Install failed, retrying in 60s... ($i/5)"
-            sleep 60
-          done
-          exit 1
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+      - name: Install necessary tools (Attempt 2)
+        continue-on-error: true
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client
+      - name: Install necessary tools (Attempt 3)
+        continue-on-error: true
+        run: |
+          apt-get update
+          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y software-properties-common
+          apt-get update
+          apt-get install -y openjdk-17-jdk
+          apt-get install -y openssh-client   
 
       - name: Set up Java
         run: |
@@ -221,8 +274,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
+      - name: Run in FreeBSD(Attempt 1)
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -236,11 +289,71 @@ jobs:
             exit 1
 
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
             ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            touch ../../../UNIT_TEST_SUCCESS
+
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in FreeBSD(Attempt 2)
+        if: steps.CheckRetry.outputs.retry == 'true'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            for i in 1 2 3 4 5; do
+              pkg install -y llvm cmake bash gdb gcc && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            touch ../../../UNIT_TEST_SUCCESS
 
   freeBSD_arm64_test_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -253,8 +366,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in FreeBSD
-        id: RunInFreeBSD
+      - name: Run in FreeBSD(Attempt 1)
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
@@ -268,6 +381,7 @@ jobs:
             done
             exit 1
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
@@ -306,6 +420,98 @@ jobs:
               fi
               exit $EXIT_CODE
             fi
+            touch ../../../UNIT_TEST_SUCCESS
+
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in FreeBSD(Attempt 2)
+        if: steps.CheckRetry.outputs.retry == 'true'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            for i in 1 2 3 4 5; do
+                pkg install -y llvm cmake bash gdb gcc13 && exit 0
+                echo "Install failed, retrying in 60s... ($i/5)"
+                sleep 60
+            done
+            exit 1
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            set +e
+            ln -sf /usr/local/bin/gcc13 /usr/local/bin/gcc
+            ln -sf /usr/local/bin/g++13 /usr/local/bin/g++
+            ln -sf /usr/local/bin/gcov13 /usr/local/bin/gcov 2>/dev/null || true
+            ln -sf /usr/local/bin/gcc-ar13 /usr/local/bin/gcc-ar 2>/dev/null || true
+            ln -sf /usr/local/bin/gcc-ranlib13 /usr/local/bin/gcc-ranlib 2>/dev/null || true
+            export LD_LIBRARY_PATH=/usr/local/lib/gcc13  #Adjust according to installed GCC version
+            export BQ_LOW_PERFORMANCE_TESTS=true
+            ./run_test_${{ matrix.cc }}.sh 17
+            EXIT_CODE=$?
+            set -e
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Test failed with exit code $EXIT_CODE"
+              CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' \) 2>/dev/null | head -n1)"
+              EXE=""
+              for cand in ./BqLogUnitTest ./BqLogUnitTest.exe $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
+                if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
+              done
+              echo "exe: ${EXE:-<not found>}"
+              echo "core: ${CORE_FILE:-<not found>}"
+              if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
+                echo "=== GDB core backtrace (FreeBSD aarch64) ==="
+                gdb --batch -q \
+                  -ex "set pagination off" \
+                  -ex "info threads" \
+                  -ex "thread apply all bt full" \
+                  -ex "quit" \
+                  "$EXE" "$CORE_FILE" || echo "gdb analysis failed"
+              else
+                echo "Core file or executable not found, listing candidates:"
+                find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' -o -name 'BqLogUnitTest' \) 2>/dev/null || true
+              fi
+              exit $EXIT_CODE
+            fi
+            touch ../../../UNIT_TEST_SUCCESS          
 
   #Unix-Solaris
   solaris_x86_64_GCC:
@@ -358,7 +564,6 @@ jobs:
             echo "::error::Test script execution failed! (Not retrying)"
             exit 1
           fi
-
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
@@ -384,7 +589,7 @@ jobs:
             sleep 5
             echo "Cleanup complete."
 
-      - name: Run in Solaris（Attempt 2）
+      - name: Run in Solaris (Attempt 2)
         if: steps.CheckRetry.outputs.retry == 'true'
         uses: vmactions/solaris-vm@v1
         with:
@@ -493,7 +698,7 @@ jobs:
           sleep 5
           echo "Cleanup complete."
 
-      - name: Run in Solaris（Attempt 2）
+      - name: Run in OmnisOS (Attempt 2)
         if: steps.CheckRetry.outputs.retry == 'true'
         uses: vmactions/omnios-vm@v1
         with:
@@ -542,8 +747,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in DragonFlyBSD
-        id: DragonFlyBSD
+      - name: Run in DragonFlyBSD  (Attempt 1)
+        continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -556,13 +761,71 @@ jobs:
             done
             exit 1
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
             ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}  
+            touch ../../../UNIT_TEST_SUCCESS
 
-            
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in DragonFlyBSD  (Attempt 2)
+        if: steps.CheckRetry.outputs.retry == 'true'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            for i in 1 2 3 4 5; do
+              pkg install -y cmake bash gmake gdb openjdk11 gcc llvm && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}  
+            touch ../../../UNIT_TEST_SUCCESS
+
   #Unix-OpenBSD
   openBSD_X86_64_Clang:
     runs-on: ubuntu-latest
@@ -574,8 +837,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in OpenBSD
-        id: OpenBSD
+      - name: Run in OpenBSD (Attempt 1)
+        continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
@@ -598,6 +861,7 @@ jobs:
             exit 1
 
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
@@ -665,6 +929,136 @@ jobs:
               fi
               exit $EXIT_CODE
             fi
+            touch ../../../UNIT_TEST_SUCCESS
+
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in OpenBSD (Attempt 2)
+        if: steps.CheckRetry.outputs.retry == 'true'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            set -x
+            for i in 1 2 3 4 5; do
+              (
+                export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/" && \
+                pkg_add -v -I cmake bash gdb
+              ) && {
+                echo "PATH=$PATH"
+                pkg_info | grep gdb
+                ls -l /usr/local/bin/gdb* /usr/bin/gdb*
+                exit 0
+              }
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            ulimit -c unlimited || true
+            sysctl kern.coredump=1 || true
+            sysctl kern.corefile=core.%p 2>/dev/null || sysctl kern.corefile=core || true
+
+            cd build/test/unix_like
+            chmod +x *.sh
+
+            GDB_CMD=""
+            if [ -x "/usr/local/bin/gdb" ]; then
+              GDB_CMD="/usr/local/bin/gdb"
+            elif [ -x "/usr/local/bin/egdb" ]; then
+              GDB_CMD="/usr/local/bin/egdb"
+            elif [ -x "/usr/bin/gdb" ]; then
+              GDB_CMD="/usr/bin/gdb"
+            fi
+
+            if [ -n "$GDB_CMD" ]; then
+              echo "Found GDB at: $GDB_CMD"
+              if ! $GDB_CMD --version | grep "GNU gdb"; then
+                echo "!!! Command '$GDB_CMD' is not a valid GNU gdb. Aborting."
+                exit 1
+              fi
+            else
+              echo "!!! GNU gdb not found. Aborting."
+              exit 1
+            fi
+
+            set +e
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            EXIT_CODE=$?
+            set -e
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Test failed with exit $EXIT_CODE. Searching for core..."
+              CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' \) 2>/dev/null | head -n1)"
+
+              EXE=""
+              for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
+                if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
+              done
+
+              echo "exe: ${EXE:-<not found>}"
+              echo "core: ${CORE_FILE:-<not found>}"
+
+              if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
+                echo "=== GDB core backtrace ==="
+                $GDB_CMD --batch -q \
+                  -ex "set pagination off" \
+                  -ex "info threads" \
+                  -ex "thread apply all bt full" \
+                  -ex "quit" \
+                  "$EXE" "$CORE_FILE" || echo "gdb core analysis failed"
+              elif [ -n "$EXE" ]; then
+                echo "Core not found; run once under gdb for live backtrace"
+                $GDB_CMD --batch -q \
+                  -ex "run" \
+                  -ex "info threads" \
+                  -ex "thread apply all bt full" \
+                  -ex "quit" \
+                  "$EXE" || true
+              fi
+              exit $EXIT_CODE
+            fi
+            touch ../../../UNIT_TEST_SUCCESS
 
   openBSD_arm64_Clang:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
@@ -677,7 +1071,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in OpenBSD
+      - name: Run in OpenBSD (Attempt 1)
+        continue-on-error: true
         id: OpenBSD
         uses: vmactions/openbsd-vm@v1
         with:
@@ -692,6 +1087,7 @@ jobs:
             done
             exit 1
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
@@ -701,6 +1097,70 @@ jobs:
             ulimit -n 4096
             export BQ_LOW_PERFORMANCE_TESTS=true
             ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            touch ../../../UNIT_TEST_SUCCESS
+
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in OpenBSD (Attempt 2)
+        if: steps.CheckRetry.outputs.retry == 'true'
+        id: OpenBSD
+        uses: vmactions/openbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            for i in 1 2 3 4 5; do
+              pkg_add cmake bash && exit 0
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            export BQ_LOW_PERFORMANCE_TESTS=true
+            ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            touch ../../../UNIT_TEST_SUCCESS
 
   #NetBSD
   netBSD_x86_64:
@@ -717,8 +1177,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in NetBSD
-        id: RunInNetBSD
+      - name: Run in NetBSD (Attempt 1)
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -741,6 +1201,7 @@ jobs:
             done
             exit 1
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
@@ -749,6 +1210,77 @@ jobs:
             ulimit -Hn
             ulimit -n 4096
             ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            touch ../../../UNIT_TEST_SUCCESS
+
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in NetBSD (Attempt 2)
+        if: steps.CheckRetry.outputs.retry == 'true'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+            for i in 1 2 3 4 5; do
+              (
+                set -e
+                /usr/sbin/pkg_add -v pkgin || true
+                pkgin -y update
+                pkgin -y install cmake gmake bash gdb
+                pkgin -y install clang
+                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10
+              ) && exit 0
+            
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            touch ../../../UNIT_TEST_SUCCESS
 
   netBSD_arm64_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -761,8 +1293,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in NetBSD
-        id: RunInNetBSDArm64
+      - name: Run in NetBSD (Attempt 1)
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -786,6 +1318,7 @@ jobs:
             done
             exit 1
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
@@ -795,6 +1328,80 @@ jobs:
             ulimit -n 4096
             export BQ_LOW_PERFORMANCE_TESTS=true
             ./run_test_${{ matrix.cc }}.sh 17
+            touch ../../../UNIT_TEST_SUCCESS
+
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in NetBSD (Attempt 2)
+        if: steps.CheckRetry.outputs.retry == 'true'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+            for i in 1 2 3 4 5; do
+              (
+                set -e
+                /usr/sbin/pkg_add -v pkgin || true
+                pkgin -y update
+                pkgin -y install cmake gmake bash gdb
+                pkgin -y install clang
+                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10
+              ) && exit 0
+
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ulimit -n
+            ulimit -Hn
+            ulimit -n 4096
+            export BQ_LOW_PERFORMANCE_TESTS=true
+            ./run_test_${{ matrix.cc }}.sh 17
+            touch ../../../UNIT_TEST_SUCCESS
+
 
   #Android Test
   android:
