@@ -38,20 +38,20 @@ jobs:
           java-version: '21'
 
       - name: Install Clang(Attempt 1)
-        if: ${{ matrix.runner == 'windows-11-arm' }}
+        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
         continue-on-error: true
         shell: bash
         run: |
           choco uninstall -y llvm --all-versions || true
           choco install -y llvm
       - name: Install Clang(Attempt 2)
-        if: ${{ matrix.runner == 'windows-11-arm' }}
+        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
         continue-on-error: true
         shell: bash
         run: |
           choco install -y llvm
       - name: Install Clang(Attempt 3)
-        if: ${{ matrix.runner == 'windows-11-arm' }}
+        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
         continue-on-error: true
         shell: bash
         run: |
