@@ -423,8 +423,78 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run in OmnisOS
-        id: RunInOmnisOS
+      - name: Run in OmnisOS（Attempt 1）
+        uses: vmactions/omnios-vm@v1
+        continue-on-error: true
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            for i in 1 2 3 4 5; do
+              (
+                set -e
+                pkg refresh --full
+                if ! pkg publisher | grep -q '^extra\.omnios'; then
+                  REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
+                  [ -n "$REL" ] || REL="r151054"
+                  pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
+                  pkg refresh --full
+                fi
+                pkg install -v --accept shell/bash developer/build/gnu-make || true
+                pkg install -v --accept ooce/developer/cmake
+                pkg install -v --accept developer/gcc13
+              ) && exit 0
+              echo "Prepare failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+          run: |
+            touch UNIT_TEST_STARTED
+            set -e -x
+            cd build/test/unix_like  
+            chmod +x *.sh
+            ls -l
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            touch ../../../UNIT_TEST_SUCCESS
+
+      - name: Check Retry
+        id: CheckRetry
+        run: |
+          if [ ! -f "UNIT_TEST_STARTED" ]; then
+            echo "::error::Test prepare failed! (Retrying)"
+            echo "retry=true" >> $GITHUB_OUTPUT
+          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
+            echo "::error::Test script execution failed! (Not retrying)"
+            exit 1
+          fi
+
+      - name: Cleanup Before Retry
+        if: steps.CheckRetry.outputs.retry == 'true'
+        run: |
+          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
+          
+          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
+          
+          if [ -z "$DOMAINS" ]; then
+            echo "No lingering domains found."
+          else
+            echo "Found domains: $DOMAINS"
+            for DOMAIN in $DOMAINS; do
+              echo "Processing domain: $DOMAIN"
+              sudo virsh destroy "$DOMAIN" || true
+              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+            done
+          fi
+          
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete || true
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          sleep 5
+          echo "Cleanup complete."
+
+      - name: Run in Solaris（Attempt 2）
+        if: steps.CheckRetry.outputs.retry == 'true'
         uses: vmactions/omnios-vm@v1
         with:
           usesh: true
@@ -449,11 +519,13 @@ jobs:
             done
             exit 1
           run: |
+            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            touch ../../../UNIT_TEST_SUCCESS
 
   #Unix-DragonFlyBSD
   dragonflyBSD_x86_64:
