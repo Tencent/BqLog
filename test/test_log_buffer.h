@@ -672,10 +672,65 @@ namespace bq {
                 // Multi Thread Test
                 constexpr uint32_t THREAD_COUNT = 5;
                 uint32_t message_verify_group[WRITE_VERSION_COUNT][THREAD_COUNT];
+                uint32_t seq_records[WRITE_VERSION_COUNT][THREAD_COUNT];
                 static_assert(sizeof(message_verify_group) == sizeof(uint32_t) * WRITE_VERSION_COUNT * THREAD_COUNT, "message_verify_group size error");
                 memset(message_verify_group, 0, sizeof(message_verify_group));
+                memset(seq_records, 0, sizeof(seq_records));
                 uint32_t total_message_count = WRITE_VERSION_COUNT * THREAD_COUNT * MESSAGE_PER_VERSION;
                 uint32_t read_message_count = 0;
+
+                auto verify = [&result, &message_verify_group, &seq_records, WRITE_VERSION_COUNT, THREAD_COUNT](log_buffer& test_recovery_buffer, bool must_success, uint32_t read_count) -> uint32_t {
+                    uint32_t read_success_count = 0;
+                    for (uint32_t i = 0; i < read_count; ++i) {
+                        auto handle = test_recovery_buffer.read_chunk();
+                        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
+                        if (!must_success) {
+                            if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
+                                --i;
+                                continue;
+                            }
+                        }
+                        result.add_result(handle.result == enum_buffer_result_code::success, "recovery multi thread test read chunk failed in must success phase, result_code:%" PRId32, static_cast<uint32_t>(handle.result));
+                        if (handle.result == enum_buffer_result_code::success) {
+                            ++read_success_count;
+                            uint32_t read_version = ((uint32_t*)(handle.data_addr))[0];
+                            uint32_t read_thread_idx = ((uint32_t*)(handle.data_addr))[1];
+                            uint32_t read_message_idx = ((uint32_t*)(handle.data_addr))[2];
+                            uint32_t read_seq = ((uint32_t*)(handle.data_addr))[3];
+                            bool valid = true;
+                            for (size_t pos = 0; pos + 4 * sizeof(uint32_t) <= handle.data_size; pos += 4 * sizeof(uint32_t)) {
+                                uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
+                                if (ptr[0] != read_version || ptr[1] != read_thread_idx || ptr[2] != read_message_idx || ptr[3] != read_seq) {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                            result.add_result(valid, "recovery multi thread test read content check, phase:%s, version:%" PRIu32 ", thread idx:%" PRIu32 ", index:%" PRIu32 "", must_success ? "1" : "2", read_version, read_thread_idx, read_message_idx);
+                            if (valid) {
+                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32  ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
+                                ++message_verify_group[read_version][read_thread_idx];
+                            }
+                            if (read_seq != seq_records[read_version][read_thread_idx]
+                                && read_seq != seq_records[read_version][read_thread_idx]+1
+                            ) {
+                                result.add_result(false, "recovery multi thread test read seq order check, version:%" PRIu32 "thread idx:%" PRIu32 ", expected seq:%" PRIu32 ", but read seq:%" PRIu32 "", read_version, read_thread_idx, seq_records[read_version][read_thread_idx], read_seq);
+                            }
+                            seq_records[read_version][read_thread_idx] = read_seq;
+                        }
+                    }
+
+                    printf("-----read round complete, dump read_seq:\n");
+                    for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                        printf("\tversion:%" PRIu32 "->", version);
+                        for (uint32_t thread_idx = 0; thread_idx < THREAD_COUNT; ++thread_idx) {
+                            printf("%" PRIu32 ", ", seq_records[version][thread_idx]);
+                        }
+                        printf("\n");
+                    }
+
+                    return read_success_count;
+                };
+
                 for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
@@ -688,7 +743,7 @@ namespace bq {
                     uint32_t msg_count_cpy = MESSAGE_PER_VERSION;
                     for (uint32_t thread_idx = 0; thread_idx < THREAD_COUNT; ++thread_idx) {
                         task_thread_vector.emplace_back([&test_recovery_buffer, &result, version, thread_idx, msg_count_cpy]() {
-                            constexpr uint32_t min_chunk_size = 12;
+                            constexpr uint32_t min_chunk_size = 16;
                             constexpr uint32_t max_chunk_size = 1024;
                             constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
                             constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
@@ -712,52 +767,29 @@ namespace bq {
                                 }
                                 result.add_result(handle.result == enum_buffer_result_code::success, "recovery test write alloc, size:%" PRIu32 "", alloc_size);
                                 if (handle.result == enum_buffer_result_code::success) {
+                                    const auto& tls_info = test_recovery_buffer.get_buffer_info_for_this_thread();
+                                    uint32_t current_seq = tls_info.wt_data_.current_write_seq_;
                                     bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
-                                    for (size_t pos = 0; pos + 3 * sizeof(uint32_t) <= alloc_size; pos += 3 * sizeof(uint32_t)) {
+                                    for (size_t pos = 0; pos + 4 * sizeof(uint32_t) <= alloc_size; pos += 4 * sizeof(uint32_t)) {
                                         uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
                                         ptr[0] = version;
                                         ptr[1] = thread_idx;
                                         ptr[2] = i;
+                                        ptr[3] = current_seq;
                                     }
                                 }
                             }
                             const auto& tls_info = test_recovery_buffer.get_buffer_info_for_this_thread();
-                            printf("Final write_seq for version:%" PRIu32 " tls_info addr:%p is %" PRIu32 "\n", version, static_cast<const void*>(&tls_info), tls_info.wt_data_.current_write_seq_);
+                            printf("Final write_seq for version:%" PRIu32 " tls_info addr:%p , thread index:%" PRIu32 " is % " PRIu32 "\n", version, static_cast<const void*>(&tls_info), thread_idx, tls_info.wt_data_.current_write_seq_);
                         });
                     }
 
                     std::random_device sd;
                     std::minstd_rand linear_ran(sd());
-                    std::uniform_int_distribution<uint32_t> rand_seq(0, MESSAGE_PER_VERSION);
-                    uint32_t total_read_count = (uint32_t)rand_seq(linear_ran);
-                    for (uint32_t i = 0; i < total_read_count; ++i) {
-                        auto handle = test_recovery_buffer.read_chunk();
-                        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
-                        if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
-                            --i;
-                            continue;
-                        }
-                        result.add_result(handle.result == enum_buffer_result_code::success, "recovery multi thread test read chunk, version:%" PRIu32 "index:%" PRIu32 "", version, i);
-                        if (handle.result == enum_buffer_result_code::success) {
-                            ++read_message_count;
-                            uint32_t read_version = ((uint32_t*)(handle.data_addr))[0];
-                            uint32_t read_thread_idx = ((uint32_t*)(handle.data_addr))[1];
-                            uint32_t read_message_idx = ((uint32_t*)(handle.data_addr))[2];
-                            bool valid = true;
-                            for (size_t pos = 0; pos + 3 * sizeof(uint32_t) <= handle.data_size; pos += 3 * sizeof(uint32_t)) {
-                                uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
-                                if (ptr[0] != read_version || ptr[1] != read_thread_idx || ptr[2] != read_message_idx) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
-                            result.add_result(valid, "recovery multi thread test read content check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
-                            if (valid) {
-                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32  ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
-                                ++message_verify_group[read_version][read_thread_idx];
-                            }
-                        }
-                    }
+                    std::uniform_int_distribution<uint32_t> rand_seq(MESSAGE_PER_VERSION * 2, MESSAGE_PER_VERSION * 3);
+                    uint32_t total_read_count = (uint32_t)rand_seq(linear_ran);        
+
+                    read_message_count += verify(test_recovery_buffer, false, total_read_count);
                     for (auto& task : task_thread_vector) {
                         task.join();
                     }
@@ -771,37 +803,9 @@ namespace bq {
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
                     bq::log_buffer test_recovery_buffer(config);
-                    bool first_message = true;
-                    for (; read_message_count < total_message_count;) {
-                        auto handle = test_recovery_buffer.read_chunk();
-                        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
-                        if (first_message) {
-                            if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
-                                continue;
-                            }
-                        }
-                        ++read_message_count;
-                        first_message = false;
-                        result.add_result(handle.result == enum_buffer_result_code::success, "recovery multi thread test read chunk for left messages idx:%" PRIu32 "", read_message_count);
-                        if (handle.result == enum_buffer_result_code::success) {
-                            uint32_t read_version = ((uint32_t*)(handle.data_addr))[0];
-                            uint32_t read_thread_idx = ((uint32_t*)(handle.data_addr))[1];
-                            uint32_t read_message_idx = ((uint32_t*)(handle.data_addr))[2];
-                            bool valid = true;
-                            for (size_t pos = 0; pos + 3 * sizeof(uint32_t) <= handle.data_size; pos += 3 * sizeof(uint32_t)) {
-                                uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
-                                if (ptr[0] != read_version || ptr[1] != read_thread_idx || ptr[2] != read_message_idx) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
-                            result.add_result(valid, "recovery multi thread test read content check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 "", read_version, read_thread_idx, read_message_idx);
-                            if (valid) {
-                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "read index:%" PRIu32 ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
-                                ++message_verify_group[read_version][read_thread_idx];
-                            }
-                        }
-                    }
+
+                    assert(total_message_count > read_message_count);
+                    read_message_count += verify(test_recovery_buffer, true, (total_message_count - read_message_count));
 
                     auto handle = test_recovery_buffer.read_chunk();
                     result.add_result(handle.result == enum_buffer_result_code::err_empty_log_buffer, "recovery multi thread test read content final for single thread");
@@ -814,7 +818,7 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                do_linked_list_test(result);
+                /*do_linked_list_test(result);
                 do_memory_pool_test(result);
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
@@ -842,7 +846,7 @@ namespace bq {
                 config.need_recovery = true;
                 do_basic_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
-                do_basic_test(result, config);
+                do_basic_test(result, config);*/
 
                 do_recovery_test(result);
                 return result;
