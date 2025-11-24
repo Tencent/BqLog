@@ -679,7 +679,7 @@ namespace bq {
                 uint32_t total_message_count = WRITE_VERSION_COUNT * THREAD_COUNT * MESSAGE_PER_VERSION;
                 uint32_t read_message_count = 0;
 
-                auto verify = [&result, &message_verify_group, &seq_records, WRITE_VERSION_COUNT, THREAD_COUNT](log_buffer& test_recovery_buffer, bool must_success, uint32_t read_count) -> uint32_t {
+                auto verify = [&result, &message_verify_group, &seq_records, &WRITE_VERSION_COUNT, &THREAD_COUNT](log_buffer& test_recovery_buffer, bool must_success, uint32_t read_count) -> uint32_t {
                     uint32_t read_success_count = 0;
                     for (uint32_t i = 0; i < read_count; ++i) {
                         auto handle = test_recovery_buffer.read_chunk();
@@ -780,7 +780,7 @@ namespace bq {
                                 }
                             }
                             const auto& tls_info = test_recovery_buffer.get_buffer_info_for_this_thread();
-                            printf("Final write_seq for version:%" PRIu32 " tls_info addr:%p , thread index:%" PRIu32 " is % " PRIu32 "\n", version, static_cast<const void*>(&tls_info), thread_idx, tls_info.wt_data_.current_write_seq_);
+                            printf("Final write_seq for version:%" PRIu32 " tls_info addr:%p , thread index:%" PRIu32 " is %" PRIu32 "\n", version, static_cast<const void*>(&tls_info), thread_idx, tls_info.wt_data_.current_write_seq_);
                         });
                     }
 
