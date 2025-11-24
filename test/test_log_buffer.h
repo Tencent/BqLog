@@ -679,7 +679,7 @@ namespace bq {
                 uint32_t total_message_count = WRITE_VERSION_COUNT * THREAD_COUNT * MESSAGE_PER_VERSION;
                 uint32_t read_message_count = 0;
 
-                auto verify = [&result, &message_verify_group, &seq_records, &WRITE_VERSION_COUNT, &THREAD_COUNT](log_buffer& test_recovery_buffer, bool must_success, uint32_t read_count) -> uint32_t {
+                auto verify = [&result, &message_verify_group, &seq_records](log_buffer& test_recovery_buffer, bool must_success, uint32_t read_count) -> uint32_t {
                     uint32_t read_success_count = 0;
                     for (uint32_t i = 0; i < read_count; ++i) {
                         auto handle = test_recovery_buffer.read_chunk();
@@ -720,9 +720,9 @@ namespace bq {
                     }
 
                     printf("-----read round complete, dump read_seq:\n");
-                    for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                    for (uint32_t version = 0; version < 5; ++version) {
                         printf("\tversion:%" PRIu32 "->", version);
-                        for (uint32_t thread_idx = 0; thread_idx < THREAD_COUNT; ++thread_idx) {
+                        for (uint32_t thread_idx = 0; thread_idx < 5; ++thread_idx) {
                             printf("%" PRIu32 ", ", seq_records[version][thread_idx]);
                         }
                         printf("\n");
