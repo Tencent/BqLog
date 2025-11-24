@@ -921,6 +921,7 @@ namespace bq {
             }
         }
         assert(parent_context.version_ != version_); // data missing only occurs when recovering data.
+        bq::util::log_device_console(bq::log_level::warning, "over size data losing detected in recovering log data, version:%" PRIu32, ", seq:%" PRIu32);
         return false;
     }
 
@@ -1181,7 +1182,7 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::info, " version :%" PRIu64, static_cast<uint64_t>(version_ - 1U - i));
             for (const auto& record : rt_cache_.current_reading_.recovery_records_[i]) {
                 const auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[i][record.key()];
-                bq::util::log_device_console(bq::log_level::info, "\t\t tls_info addr: %p, min valid seq: %" PRIu32 ", seq num:%" PRIu64, record.key(), record.value(), static_cast<uint64_t>(seq_map.size()));
+                bq::util::log_device_console(bq::log_level::info, "\t\t tls_info addr: %p, min valid seq: %" PRIu32 ", max valid seq:%" PRIu64, record.key(), record.value(), static_cast<uint64_t>(record.value() + seq_map.size() - 1));
                 auto cur_min_seq = record.value();
                 auto left_count = static_cast<uint32_t>(seq_map.size());
                 while (left_count > 0) {

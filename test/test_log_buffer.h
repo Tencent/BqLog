@@ -708,12 +708,17 @@ namespace bq {
                             result.add_result(valid, "recovery multi thread test read content check, phase:%s, version:%" PRIu32 ", thread idx:%" PRIu32 ", index:%" PRIu32 "", must_success ? "1" : "2", read_version, read_thread_idx, read_message_idx);
                             if (valid) {
                                 result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32  ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
-                                ++message_verify_group[read_version][read_thread_idx];
+                                if (message_verify_group[read_version][read_thread_idx] != read_message_idx) {
+                                    message_verify_group[read_version][read_thread_idx] = read_message_idx + 1; // resync
+                                }
+                                else {
+                                    ++message_verify_group[read_version][read_thread_idx];
+                                }
                             }
                             if (read_seq != seq_records[read_version][read_thread_idx]
                                 && read_seq != seq_records[read_version][read_thread_idx]+1
                             ) {
-                                result.add_result(false, "recovery multi thread test read seq order check, version:%" PRIu32 "thread idx:%" PRIu32 ", expected seq:%" PRIu32 ", but read seq:%" PRIu32 "", read_version, read_thread_idx, seq_records[read_version][read_thread_idx], read_seq);
+                                result.add_result(false, "recovery multi thread test read seq order check, version:%" PRIu32 ", thread idx:%" PRIu32 ", expected seq:%" PRIu32 ", but read seq:%" PRIu32 "", read_version, read_thread_idx, seq_records[read_version][read_thread_idx], read_seq);
                             }
                             seq_records[read_version][read_thread_idx] = read_seq;
                         }
