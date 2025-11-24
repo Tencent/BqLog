@@ -921,7 +921,7 @@ namespace bq {
             }
         }
         assert(parent_context.version_ != version_); // data missing only occurs when recovering data.
-        bq::util::log_device_console(bq::log_level::warning, "over size data losing detected in recovering log data, version:%" PRIu32, ", seq:%" PRIu32, parent_context.version_, parent_context.seq_);
+        bq::util::log_device_console(bq::log_level::warning, "over size data losing detected in recovering log data, version:%" PRIu16, ", seq:%" PRIu32, parent_context.version_, parent_context.seq_);
         return false;
     }
 
