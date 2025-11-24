@@ -287,25 +287,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
@@ -411,25 +411,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
@@ -542,27 +542,27 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-            echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-            
-            DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-            
-            if [ -z "$DOMAINS" ]; then
-              echo "No lingering domains found."
-            else
-              echo "Found domains: $DOMAINS"
-              for DOMAIN in $DOMAINS; do
-                echo "Processing domain: $DOMAIN"
-                sudo virsh destroy "$DOMAIN" || true
-                sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
-              done
-            fi
-          
-            echo "--- Removing potentially corrupted VM images ---"
-            find . -name "*.qcow2" -delete || true
-            sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-            sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
-            sleep 5
-            echo "Cleanup complete."
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
+          if [ -z "$DOMAINS" ]; then
+          echo "No lingering domains found (virsh may be unavailable or no domains exist)."
+          else
+          echo "Found domains: $DOMAINS"
+          for DOMAIN in $DOMAINS; do
+            echo "Processing domain: $DOMAIN"
+            sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+            sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+              || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+              || echo "virsh undefine failed for $DOMAIN (ignored)"
+          done
+          fi
+
+          echo "--- Removing potentially corrupted VM images ---"
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
+          sleep 5
+          echo "Cleanup complete."
 
       - name: Run in Solaris (Attempt 2)
         if: steps.CheckRetry.outputs.retry == 'true'
@@ -650,25 +650,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
@@ -755,25 +755,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
@@ -916,25 +916,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
@@ -1082,25 +1082,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
@@ -1193,25 +1193,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
@@ -1310,25 +1310,25 @@ jobs:
       - name: Cleanup Before Retry
         if: steps.CheckRetry.outputs.retry == 'true'
         run: |
-          echo "--- Cleaning up ALL libvirt domains to avoid conflicts ---"
-          
-          DOMAINS=$(sudo virsh list --all --name | grep -v "^$")
-          
+          set +e 
+          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
           if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found."
+            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
           else
             echo "Found domains: $DOMAINS"
             for DOMAIN in $DOMAINS; do
               echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" || true
-              sudo virsh undefine "$DOMAIN" --nvram || sudo virsh undefine "$DOMAIN" || true
+              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
+              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
+                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
+                || echo "virsh undefine failed for $DOMAIN (ignored)"
             done
           fi
-          
+
           echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete || true
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete || true
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases || true
+          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
+          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
+          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
           sleep 5
           echo "Cleanup complete."
 
