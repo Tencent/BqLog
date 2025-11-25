@@ -333,7 +333,7 @@ namespace bq {
                     if (rt_reading.version_ == version_) {
                         rt_reading.state_ = read_state::traversal_completed;
                     } else {
-                        ++rt_reading.version_;
+                        rt_try_traverse_to_next_version();
                     }
                 } else if (!rt_reading.traverse_end_block_is_working_ && !rt_cache_.mem_optimize_.is_block_marked_removed) {
                     rt_reading.traverse_end_block_is_working_ = true;
@@ -354,7 +354,7 @@ namespace bq {
                             if (rt_reading.version_ == version_) {
                                 rt_reading.state_ = read_state::traversal_completed;
                             } else {
-                                ++rt_reading.version_;
+                                rt_try_traverse_to_next_version();
                             }
                         }
                     } else {
@@ -781,6 +781,27 @@ namespace bq {
         }
         rt_reading.cur_group_ = next_group;
         return next_group;
+    }
+
+    void log_buffer::rt_try_traverse_to_next_version()
+    {
+        auto& rt_reading = rt_cache_.current_reading_;
+        auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)];
+#if BQ_UNIT_TEST
+        printf("from version %" PRIu16 " to %" PRIu16 "\n", rt_reading.version_, rt_reading.version_ + static_cast<uint16_t>(1));
+        for (auto& pair : recover_map) {
+            auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)][pair.key()];
+            uint32_t max_seq = 0;
+            for (auto& seq_pair : seq_map) {
+                if (seq_pair.key() > max_seq) {
+                    max_seq = seq_pair.key();
+                }
+            }
+            printf("\tthread tls:%p next expected seq:%" PRIu32 ", recover max seq:%" PRIu32 "\n", pair.key(), pair.value(), max_seq);
+        }
+        recover_map.clear();
+#endif
+        ++rt_reading.version_;
     }
 
     log_buffer_write_handle log_buffer::wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms)

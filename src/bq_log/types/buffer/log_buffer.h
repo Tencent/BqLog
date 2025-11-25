@@ -214,9 +214,8 @@ namespace bq {
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
-
-    private:
         bool rt_try_traverse_to_next_group();
+        void rt_try_traverse_to_next_version();
 
         // For oversize data.
         log_buffer_write_handle wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms);
