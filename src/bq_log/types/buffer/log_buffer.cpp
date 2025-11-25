@@ -780,20 +780,10 @@ namespace bq {
     {
         auto& rt_reading = rt_cache_.current_reading_;
         auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)];
-#if BQ_UNIT_TEST
-        printf("from version %" PRIu16 " to %" PRIu16 "\n", rt_reading.version_, rt_reading.version_ + static_cast<uint16_t>(1));
-        for (auto& pair : recover_map) {
-            auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)][pair.key()];
-            uint32_t max_seq = 0;
-            for (auto& seq_pair : seq_map) {
-                if (seq_pair.key() > max_seq) {
-                    max_seq = seq_pair.key();
-                }
-            }
-            printf("\tthread tls:%p next expected seq:%" PRIu32 ", recover max seq:%" PRIu32 "\n", pair.key(), pair.value(), max_seq);
-        }
-#endif
         recover_map.clear();
+#ifdef BQ_UNIT_TEST
+        rt_cache_.current_reading_.recovery_seq_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)].clear();
+#endif
         ++rt_reading.version_;
     }
 
@@ -1205,10 +1195,10 @@ namespace bq {
         }
 #ifdef BQ_UNIT_TEST
         //Debug output
-        bq::util::set_log_device_console_min_level(bq::log_level::info);
-        bq::util::log_device_console(bq::log_level::info, "log_buffer recovery records:");
+        //bq::util::set_log_device_console_min_level(bq::log_level::info);
+        //bq::util::log_device_console(bq::log_level::info, "log_buffer recovery records:");
         for (size_t i = 0; i < rt_cache_.current_reading_.recovery_records_.size(); ++i) {
-            bq::util::log_device_console(bq::log_level::info, " version :%" PRIu64, static_cast<uint64_t>(version_ - 1U - i));
+            //bq::util::log_device_console(bq::log_level::info, " version :%" PRIu64, static_cast<uint64_t>(version_ - 1U - i));
             for (const auto& record : rt_cache_.current_reading_.recovery_records_[i]) {
                 const auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[i][record.key()];
                 bq::util::log_device_console(bq::log_level::info, "\t\t tls_info addr: %p, min valid seq: %" PRIu32 ", max valid seq:%" PRIu64, record.key(), record.value(), static_cast<uint64_t>(record.value() + seq_map.size() - 1));
@@ -1226,7 +1216,7 @@ namespace bq {
                 }
             }
         }
-        bq::util::set_log_device_console_min_level(bq::log_level::warning);
+        //bq::util::set_log_device_console_min_level(bq::log_level::warning);
 #endif
     }
 

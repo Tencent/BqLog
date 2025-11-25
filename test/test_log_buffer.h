@@ -723,16 +723,6 @@ namespace bq {
                             seq_records[read_version][read_thread_idx] = read_seq;
                         }
                     }
-
-                    printf("-----read round complete, dump read_seq:\n");
-                    for (uint32_t version = 0; version < 5; ++version) {
-                        printf("\tversion:%" PRIu32 "->", version);
-                        for (uint32_t thread_idx = 0; thread_idx < 5; ++thread_idx) {
-                            printf("%" PRIu32 ", ", seq_records[version][thread_idx]);
-                        }
-                        printf("\n");
-                    }
-
                     return read_success_count;
                 };
 
@@ -784,8 +774,6 @@ namespace bq {
                                     }
                                 }
                             }
-                            const auto& tls_info = test_recovery_buffer.get_buffer_info_for_this_thread();
-                            printf("Final write_seq for version:%" PRIu32 " tls_info addr:%p , thread index:%" PRIu32 " is %" PRIu32 "\n", version, static_cast<const void*>(&tls_info), thread_idx, tls_info.wt_data_.current_write_seq_);
                         });
                     }
 
@@ -823,8 +811,8 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                /*do_linked_list_test(result);
-                do_memory_pool_test(result);*/
+                do_linked_list_test(result);
+                do_memory_pool_test(result);
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
                 config.log_categories_name = { "_default" };
