@@ -282,7 +282,6 @@ namespace bq {
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
-        refresh_traverse_end_mark();
         // Principle 1 : If the currently processed block or buffer equals traverse_end_block_, and traverse_end_block_is_working_ is true, it means one full traversal loop has been completed.
         // Principle 2 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
         while (!loop_finished) {
@@ -792,8 +791,8 @@ namespace bq {
             }
             printf("\tthread tls:%p next expected seq:%" PRIu32 ", recover max seq:%" PRIu32 "\n", pair.key(), pair.value(), max_seq);
         }
-        recover_map.clear();
 #endif
+        recover_map.clear();
         ++rt_reading.version_;
     }
 
