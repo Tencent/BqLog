@@ -22,7 +22,8 @@
 #include "bq_common/platform/atomic/atomic.h"
 namespace bq {
 
-    static constexpr size_t BQ_CACHE_LINE_SIZE = 64;
+    static constexpr size_t BQ_CACHE_LINE_SIZE = 128;
+    static constexpr size_t BQ_CACHE_LINE_SIZE_LOG2 = 7;
 
     // This is a wrapper struct which can define your data alignment.
     //"alignas" keyword can only ensure alignment on heap allocation when c++ standard is up to c++17
