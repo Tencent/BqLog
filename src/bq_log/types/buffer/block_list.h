@@ -54,7 +54,7 @@ namespace bq {
         block_list_type type_;
         char padding_[8 - sizeof(next_) - sizeof(type_)];
         // reserved data. can be cast to any struct, all the bytes will be set to 0 when new created.
-        alignas(8) char misc_data_[56];
+        alignas(8) char misc_data_[BQ_CACHE_LINE_SIZE - 8];
         // only POD field can be used in packed struct, so we can't use siso_ring_buffer directly.
         char buffer_[sizeof(siso_ring_buffer)];
 
