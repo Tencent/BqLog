@@ -281,6 +281,7 @@ namespace bq {
         }
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
+        refresh_traverse_end_mark();
         bool loop_finished = false;
         // Principle 1 : If the currently processed block or buffer equals traverse_end_block_, and traverse_end_block_is_working_ is true, it means one full traversal loop has been completed.
         // Principle 2 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
