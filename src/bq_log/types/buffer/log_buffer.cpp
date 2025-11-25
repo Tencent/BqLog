@@ -282,15 +282,7 @@ namespace bq {
         log_buffer_read_handle read_handle;
         context_verify_result verify_result = context_verify_result::version_invalid;
         bool loop_finished = false;
-        if (rt_cache_.mem_optimize_.is_block_marked_removed && rt_reading.cur_block_) {
-            rt_reading.traverse_end_block_is_working_ = false;
-        } else {
-            rt_reading.traverse_end_block_is_working_ = true;
-            rt_reading.traverse_end_block_ = rt_reading.cur_block_;
-        }
-        if (rt_reading.last_block_ == rt_reading.cur_block_) {
-            assert(!rt_reading.last_block_);
-        }
+        refresh_traverse_end_mark();
         // Principle 1 : If the currently processed block or buffer equals traverse_end_block_, and traverse_end_block_is_working_ is true, it means one full traversal loop has been completed.
         // Principle 2 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
         while (!loop_finished) {
@@ -593,6 +585,7 @@ namespace bq {
 #endif
             ++recover_map[context.get_tls_info()];
         }
+        refresh_traverse_end_mark();
     }
 
     bool log_buffer::rt_read_from_lp_buffer(log_buffer_read_handle& out_handle)
@@ -802,6 +795,21 @@ namespace bq {
         recover_map.clear();
 #endif
         ++rt_reading.version_;
+    }
+
+    void log_buffer::refresh_traverse_end_mark() 
+    {
+        auto& rt_reading = rt_cache_.current_reading_;
+        if (rt_cache_.mem_optimize_.is_block_marked_removed && rt_reading.cur_block_) {
+            rt_reading.traverse_end_block_is_working_ = false;
+        }
+        else {
+            rt_reading.traverse_end_block_is_working_ = true;
+            rt_reading.traverse_end_block_ = rt_reading.cur_block_;
+        }
+        if (rt_reading.last_block_ == rt_reading.cur_block_) {
+            assert(!rt_reading.last_block_);
+        }
     }
 
     log_buffer_write_handle log_buffer::wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms)

@@ -216,6 +216,7 @@ namespace bq {
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);
         bool rt_try_traverse_to_next_group();
         void rt_try_traverse_to_next_version();
+        void refresh_traverse_end_mark();
 
         // For oversize data.
         log_buffer_write_handle wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms);

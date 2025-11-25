@@ -574,7 +574,7 @@ namespace bq {
                     result.add_result(final_handle.result == bq::enum_buffer_result_code::err_empty_log_buffer, "final read test");
                 }
 #if !defined(BQ_WIN) || !defined(BQ_GCC) // MinGW with GCC has bug on thread_local, so the log buffer recycle may not work properly.
-                result.add_result(test_buffer.get_groups_count() == 0, "group recycle test， expected left group:0, but: %" PRIu32 "", test_buffer.get_groups_count());
+                result.add_result(test_buffer.get_groups_count() == 0, "group recycle test, expected left group:0, but: %" PRIu32 "", test_buffer.get_groups_count());
 #endif
                 bq::platform::thread::sleep(group_list::GROUP_NODE_GC_LIFE_TIME_MS * 2);
                 test_buffer.garbage_collect();
