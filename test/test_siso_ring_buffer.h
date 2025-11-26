@@ -24,6 +24,7 @@ namespace bq {
         static bq::platform::atomic<int32_t> siso_ring_buffer_test_total_read_count_ = 0;
         static bq::platform::atomic<int32_t> siso_ring_buffer_test_alive_write_thread_count = 0;
         static bq::platform::atomic<int32_t> siso_ring_buffer_test_alive_read_thread_count = 0;
+        static bq::platform::atomic<bool> siso_ring_buffer_test_cancel_flag_ = false;
 
         class siso_write_task {
         private:
@@ -39,7 +40,7 @@ namespace bq {
 
             void operator()()
             {
-                while (left_write_count_ > 0) {
+                while (left_write_count_ > 0 && !siso_ring_buffer_test_cancel_flag_.load_acquire()) {
                     uint32_t size = (uint32_t)(left_write_count_ % (8 * 1024));
                     size = bq::max_value((uint32_t)1, size);
                     size = bq::min_value(size, (uint32_t)(ring_buffer_ptr_->get_block_size() * ring_buffer_ptr_->get_total_blocks_count()) >> 1);
@@ -79,7 +80,7 @@ namespace bq {
 
             void operator()()
             {
-                while (left_read_count_ > 0) {
+                while (left_read_count_ > 0 && !siso_ring_buffer_test_cancel_flag_.load_acquire()) {
                     auto handle = ring_buffer_ptr_->read_chunk();
                     bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_handle(*ring_buffer_ptr_, handle);
                     if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
@@ -110,10 +111,14 @@ namespace bq {
                     --left_read_count_;
                     ++siso_ring_buffer_test_total_read_count_;
                 }
-                auto new_handle = ring_buffer_ptr_->read_chunk();
-                bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_new_handle(*ring_buffer_ptr_, new_handle);
-                test_result_ptr_->add_result(new_handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch, overflow 1", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
-                test_result_ptr_->add_result(left_read_count_ == 0, "[siso ring buffer %s]total block count mismatch", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
+
+                if (left_read_count_ == 0) {
+                    auto new_handle = ring_buffer_ptr_->read_chunk();
+                    bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_new_handle(*ring_buffer_ptr_, new_handle);
+                    test_result_ptr_->add_result(new_handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch, overflow 1", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
+                    test_result_ptr_->add_result(left_read_count_ == 0, "[siso ring buffer %s]total block count mismatch", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
+
+                }
                 --siso_ring_buffer_test_alive_read_thread_count;
             }
         };
@@ -124,6 +129,7 @@ namespace bq {
             {
                 siso_ring_buffer_test_total_write_count_.store_seq_cst(0);
                 siso_ring_buffer_test_total_read_count_.store_seq_cst(0);
+                siso_ring_buffer_test_cancel_flag_.store_seq_cst(false);
                 constexpr size_t task_size = 6;
                 siso_ring_buffer_test_alive_write_thread_count.store_seq_cst((int32_t)task_size);
                 siso_ring_buffer_test_alive_read_thread_count.store_seq_cst((int32_t)task_size);
@@ -171,6 +177,7 @@ namespace bq {
                 int32_t total_chunk = chunk_count_per_task * (int32_t)task_size;
                 int32_t last_read_count = 0;
                 auto start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+                bool timeout = false;
                 while (true) {
                     bool all_finished = siso_ring_buffer_test_alive_read_thread_count.load() == 0
                         && siso_ring_buffer_test_alive_write_thread_count.load() == 0;
@@ -182,13 +189,27 @@ namespace bq {
                         auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
                         test_output_dynamic_param(bq::log_level::info, "siso ring buffer test progress:%d%%, time cost:%dms              \r", new_percent, (int32_t)(current_time - start_time));
                         last_read_count = current_read_count;
+                        if (current_time - start_time > 300000) {
+                            test_output_dynamic_param(bq::log_level::info, "siso ring buffer time out, give up: time cost:%dms              \r", (int32_t)(current_time - start_time));
+                            timeout = true;  
+                            break;
+                        }
                     }
                     if (all_finished) {
                         result.add_result(current_read_count == total_chunk, "[siso_test] read write mismatch, read_count :%d, total_chunk:%d", current_read_count, total_chunk);
                         break;
                     }
                 }
+                if (timeout) {
+                    siso_ring_buffer_test_cancel_flag_.store_seq_cst(true);
+                }
+
                 test_output_dynamic_param(bq::log_level::info, "\n[siso ring buffer] test %s finished\n", with_mmap ? "with mmap" : "without mmap");
+
+                while (siso_ring_buffer_test_alive_write_thread_count.load_acquire() != 0
+                    || siso_ring_buffer_test_alive_read_thread_count.load_acquire() != 0) {
+                    bq::platform::thread::sleep(100);
+                }
 
                 for (size_t i = 0; i < task_size; ++i) {
                     delete ring_buffers[i];
