@@ -81,7 +81,7 @@ namespace bq {
         /// <summary>The initial size of the buffer in bytes. Depending on the type, this can signify the total buffer
         /// size(normal) or the size per thread(high_performance). In some cases, the actual size might be adjusted to be larger than
         /// this initial value.</summary>
-#if defined(BQ_ANDROID) || defined(BQ_IOS) || defined(BQ_OHOS)
+#if defined(BQ_MOBILE_PLATFORM)
         uint32_t default_buffer_size = 1024 * 32;
 #else
         uint32_t default_buffer_size = 1024 * 64;

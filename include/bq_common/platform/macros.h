@@ -259,3 +259,8 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #else
 #define BQ_IN_UNREAL 0
 #endif
+
+
+#if defined(BQ_ANDROID) || defined(BQ_IOS) || defined(BQ_OHOS)
+#define BQ_MOBILE_PLATFORM
+#endif
