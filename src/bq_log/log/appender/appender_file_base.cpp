@@ -273,7 +273,7 @@ namespace bq {
         do {
             if (need_recovery_) {
                 bool need_recalc_head_size = (!head_) || head_->file_path_size_ != file_.abs_file_path().size();
-                assert(!need_recalc_head_size || !head_ || head_->cache_write_finished_cursor_ == 0 && "need_recalc_head_size but need flush data exist");
+                assert((!need_recalc_head_size || !head_ || head_->cache_write_finished_cursor_ == 0) && "need_recalc_head_size but need flush data exist");
                 bq::memory_map::release_memory_map(memory_map_handle_);
                 if (!memory_map_file_) {
                     bq::string mmap_file_path = get_mmap_file_path();
@@ -289,7 +289,7 @@ namespace bq {
                 auto new_file_size = bq::memory_map::get_min_size_of_memory_map_file(0, mmap_size);
                 if (!bq::file_manager::instance().truncate_file(memory_map_file_, new_file_size)) {
                     bq::util::log_device_console(bq::log_level::error, "%s failed to truncate for resize write cache!, new size:%" PRIu64 ", error code:%" PRId32
-                        , memory_map_file_.abs_file_path().c_str(), new_file_size, bq::file_manager::get_and_clear_last_file_error());
+                        , memory_map_file_.abs_file_path().c_str(), static_cast<uint64_t>(new_file_size), bq::file_manager::get_and_clear_last_file_error());
                     need_recovery_ = false;
                     break;
                 }

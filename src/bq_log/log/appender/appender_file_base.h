@@ -167,11 +167,11 @@ namespace bq {
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
 
         bq_forceinline size_t get_pendding_flush_size() const {
-            return head_ ? head_->cache_write_finished_cursor_ : 0;
+            return head_ ? static_cast<size_t>(head_->cache_write_finished_cursor_) : static_cast<size_t>(0);
         }
 
         bq_forceinline size_t get_cache_total_size() const {
-            return head_ ? head_->write_cache_size_ : 0;
+            return head_ ? static_cast<size_t>(head_->write_cache_size_) : static_cast<size_t>(0);
         }
 
         uint8_t* get_cache_write_ptr_base() {
