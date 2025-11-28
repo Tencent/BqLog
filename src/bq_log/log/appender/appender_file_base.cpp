@@ -24,13 +24,9 @@ namespace bq {
     appender_file_base::~appender_file_base()
     {
         file_manager::instance().close_file(file_);
-        if (need_recovery_) {
-            if (memory_map_handle_.has_been_mapped()) {
-                bq::memory_map::release_memory_map(memory_map_handle_);
-            }
-            file_manager::instance().close_file(memory_map_file_);
-        }
-        else {
+        clean_recovery_context();
+        if (!need_recovery_) {
+
             if (head_) {
                 bq::platform::aligned_free(head_);
             }
@@ -434,6 +430,7 @@ namespace bq {
     {
         bool is_prev_file_exist = file_;
         file_manager::instance().close_file(file_);
+        clean_recovery_context();
         clear_all_expired_files();
         clear_all_limit_files();
 
