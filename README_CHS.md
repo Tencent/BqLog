@@ -246,7 +246,7 @@ int main() {
 
 更多示例可参考仓库下的 `/demo/cpp` 目录。
 
-### Node.js
+### Typescript (Node.js, 鸿蒙ArkTS)
 
 ```javascript
 import { bq } from "bqlog"; // ESM 写法
