@@ -66,7 +66,7 @@
 - Low memory usage: in the [Benchmark](#benchmark) case (10 threads, 20,000,000 log entries), BqLog itself uses about 1 MB of memory.
 - Provides a high-performance, high-compression real-time compressed log format.
 - With less than 10% performance overhead, supports strong hybrid asymmetric encryption of logs to protect log content (optional).
-- Works well inside game engines (`Unity`, `Unreal`, etc.), with [Using Bq Log In Blueprint](#3-using-bqlog-in-blueprint).
+- Works well inside game engines (`Unity`, `Unreal`, etc.), with [Supporting of UE builtin data types and Blueprint](#5-using-bqlog-in-unreal).
 - Supports `utf8`, `utf16`, `utf32` characters and strings, as well as bool, float, double, and integer types of various sizes.
 - Supports `C++20` `std::format` style format strings (without positional index and time formatting).
 - Asynchronous logging supports crash recovery and tries to avoid data loss.
@@ -1520,21 +1520,21 @@ After importing plugin according to [Unreal Engine Integration Instructions](#un
 1. **Create Log Data Asset**
 
   - Create Data Asset in Unreal project, type select BqLog:
-    - Default Log Type (without Category):
+    - Default Log Type (without Category):  
       <img src="docs/img/ue_pick_data_asset_1.png" alt="Default Log Creation" style="width: 455px">
-    - If Log Class with Category is generated according to [Category Log Class Generation](#category-log-class-generation), and `{category}.h` and `{category}_for_UE.h` are added to project:
+    - If Log Class with Category is generated according to [Category Log Class Generation](#category-log-class-generation), and `{category}.h` and `{category}_for_UE.h` are added to project:  
       <img src="docs/img/ue_pick_data_asset_2.png" alt="Category Log Creation" style="width: 455px">
 
 2. **Configure Log Parameters**
 
-  - Double click to open Data Asset, configure log object name and creation method:
-    - `Create New Log`: Create a new Log object at runtime:
+  - Double click to open Data Asset, configure log object name and creation method:  
+    - `Create New Log`: Create a new Log object at runtime:  
       <img src="docs/img/ue_create_log_config_1.png" alt="Config Log Params Create New Log" style="width: 455px">
-    - `Get Log By Name`: Only get Log with same name created elsewhere:
+    - `Get Log By Name`: Only get Log with same name created elsewhere:  
       <img src="docs/img/ue_create_log_config_2.png" alt="Config Log Params Get Log By Name" style="width: 455px">
 
-3. **Call Log Node in Blueprint**
-
+3. **Call Log Node in Blueprint**  
+  
    <img src="docs/img/ue_print_log.png" alt="Blueprint Call Log" style="width: 655px">
 
   - Area 1: Add log parameters;
