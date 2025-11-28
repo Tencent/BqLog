@@ -24,11 +24,12 @@ namespace bq {
         }
         const char* write_data = layout_ptr_->get_formated_str();
         size_t data_len = (size_t)layout_ptr_->get_formated_str_len();
-        auto write_handle = write_with_cache_alloc(data_len + sizeof('\n'));
+        auto write_handle = alloc_write_cache(data_len + sizeof('\n'));
         memcpy(write_handle.data(), write_data, data_len);
         write_handle.data()[data_len] = (uint8_t)'\n';
         layout_ptr_->tidy_memory();
-        write_with_cache_commit(write_handle);
+        return_write_cache(write_handle);
+        mark_write_finished();
     }
 
     bool appender_file_text::parse_exist_log_file(parse_file_context& context)

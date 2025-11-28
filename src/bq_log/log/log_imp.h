@@ -51,6 +51,15 @@ namespace bq {
             return *reinterpret_cast<log_buffer*>(this);
         }
 
+        bq_forceinline const log_buffer& get_buffer() const
+        {
+            if (buffer_) {
+                return *buffer_;
+            }
+            assert(false && "null log buffer");
+            return *reinterpret_cast<const log_buffer*>(this);
+        }
+
         bq_forceinline uint64_t id() const
         {
             return id_;

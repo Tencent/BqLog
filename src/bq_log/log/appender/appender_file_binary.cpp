@@ -148,15 +148,15 @@ namespace bq {
         appender_file_header file_head;
         file_head.format = get_appender_format();
         file_head.version = get_binary_format_version();
-        auto handle = write_with_cache_alloc(sizeof(file_head));
+        auto handle = alloc_write_cache(sizeof(file_head));
         memcpy(handle.data(), &file_head, handle.allcoated_len());
-        write_with_cache_commit(handle);
+        return_write_cache(handle);
 
         appender_encryption_header enc_head;
         enc_head.encryption_type = encryption_type_;
-        handle = write_with_cache_alloc(sizeof(enc_head));
+        handle = alloc_write_cache(sizeof(enc_head));
         memcpy(handle.data(), &enc_head, handle.allcoated_len());
-        write_with_cache_commit(handle);
+        return_write_cache(handle);
 
         if (encryption_type_ == appender_encryption_type::rsa_aes_xor) {
             aes aes_obj(bq::aes::enum_cipher_mode::AES_CBC, bq::aes::enum_key_bits::AES_256);
@@ -194,17 +194,17 @@ namespace bq {
                 assert(false);
             }
 
-            handle = write_with_cache_alloc(ciphertext_aes_key.size());
+            handle = alloc_write_cache(ciphertext_aes_key.size());
             memcpy(handle.data(), ciphertext_aes_key.begin(), ciphertext_aes_key.size());
-            write_with_cache_commit(handle);
+            return_write_cache(handle);
 
-            handle = write_with_cache_alloc(aes_iv.size());
+            handle = alloc_write_cache(aes_iv.size());
             memcpy(handle.data(), aes_iv.begin(), aes_iv.size());
-            write_with_cache_commit(handle);
+            return_write_cache(handle);
 
-            handle = write_with_cache_alloc(xor_key_blob_ciphertext.size());
+            handle = alloc_write_cache(xor_key_blob_ciphertext.size());
             memcpy(handle.data(), xor_key_blob_ciphertext.begin(), xor_key_blob_ciphertext.size());
-            write_with_cache_commit(handle);
+            return_write_cache(handle);
 
             xor_key_blob_ = bq::move(xor_key_blob_plaintext);
         }
@@ -219,22 +219,23 @@ namespace bq {
         payload_matadata.time_zone_diff_to_gmt_ms = time_zone_.get_time_zone_diff_to_gmt_ms();
         snprintf(payload_matadata.time_zone_str, sizeof(payload_matadata.time_zone_str), "%s", time_zone_.get_time_zone_str().c_str());
         payload_matadata.category_count = parent_log_->get_categories_count();
-        handle = write_with_cache_alloc(sizeof(payload_matadata));
+        handle = alloc_write_cache(sizeof(payload_matadata));
         memcpy(handle.data(), &payload_matadata, handle.allcoated_len());
-        write_with_cache_commit(handle);
+        return_write_cache(handle);
         for (uint32_t i = 0; i < payload_matadata.category_count; ++i) {
             const bq::string& category_name = parent_log_->get_categories_name()[i];
             uint32_t name_len = (uint32_t)category_name.size();
-            handle = write_with_cache_alloc(sizeof(name_len) + name_len);
+            handle = alloc_write_cache(sizeof(name_len) + name_len);
             memcpy(handle.data(), &name_len, sizeof(name_len));
             memcpy(handle.data() + sizeof(name_len), category_name.c_str(), name_len);
-            write_with_cache_commit(handle);
+            return_write_cache(handle);
         }
+        mark_write_finished();
     }
 
     void appender_file_binary::flush_cache()
     {
-        if (xor_key_blob_.is_empty() || cache_write_.is_empty()) {
+        if (xor_key_blob_.is_empty() || get_pendding_flush_size() == 0) {
             appender_file_base::flush_cache();
             return;
         }
@@ -244,10 +245,10 @@ namespace bq {
         assert((get_xor_key_blob_size() & (get_xor_key_blob_size() - 1)) == 0 && "get_xor_key_blob_size() must be power of two");
 #endif
         encryption_start_pos_ = bq::max_value(encryption_start_pos_, get_encryption_base_pos());
-        size_t need_encrypt_size = get_current_file_size() + cache_write_.size() - encryption_start_pos_;
+        size_t need_encrypt_size = get_current_file_size() + get_pendding_flush_size() - encryption_start_pos_;
         size_t xor_key_blob_start_pos = encryption_start_pos_ - get_encryption_base_pos();
         xor_stream_inplace_u64_aligned(
-            cache_write_.end() - static_cast<ptrdiff_t>(need_encrypt_size),
+            get_cache_write_ptr_base() + get_pendding_flush_size() - static_cast<ptrdiff_t>(need_encrypt_size),
             need_encrypt_size,
             xor_key_blob_.begin(),
             get_xor_key_blob_size(),

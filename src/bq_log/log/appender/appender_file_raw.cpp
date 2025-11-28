@@ -16,10 +16,11 @@ namespace bq {
     {
         appender_file_base::log_impl(handle);
         uint32_t item_size = handle.data_size();
-        auto write_handle = write_with_cache_alloc(sizeof(item_size) + item_size);
+        auto write_handle = alloc_write_cache(sizeof(item_size) + item_size);
         *(decltype(item_size)*)write_handle.data() = item_size;
         memcpy(write_handle.data() + sizeof(item_size), handle.data(), item_size);
-        write_with_cache_commit(write_handle);
+        return_write_cache(write_handle);
+        mark_write_finished();
     }
 
     bq::string appender_file_raw::get_file_ext_name()

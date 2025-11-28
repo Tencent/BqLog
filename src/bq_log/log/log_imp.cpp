@@ -118,6 +118,35 @@ namespace bq {
             bq::log_utils::get_log_level_bitmap_by_config(log_config["print_stack_levels"], print_stack_level_bitmap_);
         }
 
+        {
+            log_buffer_config buffer_config;
+            buffer_config.log_name = name_;
+            buffer_config.log_categories_name = categories_name_array_;
+            if (log_config.is_object()) {
+                if (log_config["buffer_size"].is_integral()) {
+                    buffer_config.default_buffer_size = (uint32_t)log_config["buffer_size"];
+                }
+                if (log_config["recovery"].is_bool()) {
+                    buffer_config.need_recovery = (bool)log_config["recovery"] && bq::memory_map::is_platform_support();
+                }
+                if (log_config["buffer_policy_when_full"].is_string()) {
+                    if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("discard")) {
+                        buffer_config.policy = log_memory_policy::discard_when_full;
+                    } else if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("block")) {
+                        buffer_config.policy = log_memory_policy::block_when_full;
+                    } else if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("expand")) {
+                        buffer_config.policy = log_memory_policy::auto_expand_when_full;
+                    }
+                }
+                if (log_config["high_perform_mode_freq_threshold_per_second"].is_integral()) {
+                    buffer_config.high_frequency_threshold_per_second = (uint64_t)(int64_t)log_config["high_perform_mode_freq_threshold_per_second"];
+                    if (0 == buffer_config.high_frequency_threshold_per_second) {
+                        buffer_config.high_frequency_threshold_per_second = UINT64_MAX;
+                    }
+                }
+            }
+            buffer_ = bq::util::aligned_new<bq::log_buffer>(BQ_CACHE_LINE_SIZE, buffer_config);
+        }
         // init appenders
         {
             const auto& all_apenders_config = config["appenders_config"];
@@ -137,36 +166,6 @@ namespace bq {
         {
             const auto& snapshot_config = config["snapshot"];
             snapshot_ = new log_snapshot(this, snapshot_config);
-        }
-
-        {
-            log_buffer_config buffer_config;
-            buffer_config.log_name = name_;
-            buffer_config.log_categories_name = categories_name_array_;
-            if (log_config.is_object()) {
-                if (log_config["buffer_size"].is_integral()) {
-                    buffer_config.default_buffer_size = (uint32_t)log_config["buffer_size"];
-                }
-                if (log_config["recovery"].is_bool()) {
-                    buffer_config.need_recovery = (bool)log_config["recovery"];
-                }
-                if (log_config["buffer_policy_when_full"].is_string()) {
-                    if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("discard")) {
-                        buffer_config.policy = log_memory_policy::discard_when_full;
-                    } else if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("block")) {
-                        buffer_config.policy = log_memory_policy::block_when_full;
-                    } else if (((bq::string)log_config["buffer_policy"]).equals_ignore_case("expand")) {
-                        buffer_config.policy = log_memory_policy::auto_expand_when_full;
-                    }
-                }
-                if (log_config["high_perform_mode_freq_threshold_per_second"].is_integral()) {
-                    buffer_config.high_frequency_threshold_per_second = (uint64_t)(int64_t)log_config["high_perform_mode_freq_threshold_per_second"];
-                    if (0 == buffer_config.high_frequency_threshold_per_second) {
-                        buffer_config.high_frequency_threshold_per_second = UINT64_MAX;
-                    }
-                }
-            }
-            buffer_ = bq::util::aligned_new<bq::log_buffer>(BQ_CACHE_LINE_SIZE, buffer_config);
         }
         worker_.init(thread_mode_, this);
         if (thread_mode_ == log_thread_mode::independent) {

@@ -98,23 +98,35 @@ namespace bq {
 
         void clear_read_cache();
 
-        write_with_cache_handle write_with_cache_alloc(size_t size);
+        write_with_cache_handle alloc_write_cache(size_t size);
 
-        void write_with_cache_commit(const write_with_cache_handle& handle);
+        void return_write_cache(const write_with_cache_handle& handle);
 
+        void mark_write_finished();
     private:
         void set_basic_configs(const bq::property_value& config_obj);
+
+        bool try_recover();
 
         void open_new_indexed_file_by_name();
 
         bool is_file_oversize();
 
         void clear_all_expired_files(); // retention limit
+
         void clear_all_limit_files(); // capacity limit
 
         void refresh_file_handle(const log_entry_handle& handle);
 
         bool open_file_with_write_exclusive(const bq::string& file_path);
+
+        void resize_write_cache(size_t new_size);
+
+        bq::string get_mmap_file_path() const;
+
+        uint64_t calculate_real_mmap_head_size(size_t file_path_size) const;
+
+        void clean_recovery_context();
 
     private:
         bq::string config_file_name_;
@@ -126,7 +138,23 @@ namespace bq {
         uint64_t expire_time_ms_;
         uint64_t capacity_limit_ = 0;
         uint64_t current_file_expire_time_epoch_ms_;
-
+        
+    private:
+        BQ_PACK_BEGIN
+        struct mmap_head {
+            uint64_t write_cache_size_;
+            uint64_t cache_write_finished_cursor_;
+            uint64_t file_path_size_;
+            char file_path_[1];
+            char padding_[BQ_CACHE_LINE_SIZE - sizeof(uint64_t) * 3 - sizeof(file_path_)];
+        }BQ_PACK_END
+        static_assert(sizeof(mmap_head) == BQ_CACHE_LINE_SIZE, "Invalid appender_file_base::mmap_head size");
+        bool need_recovery_ = false;
+        bq::file_handle memory_map_file_;
+        bq::memory_map_handle memory_map_handle_;
+        mmap_head* head_ = nullptr;
+        uint8_t* cache_write_ = nullptr;
+        size_t cache_write_cursor_ = 0;
     protected:
         // Cache part
         // Caching can reduce calls to fwrite, enhancing file write performance.
@@ -137,6 +165,17 @@ namespace bq {
 #endif
         bq::array<uint8_t> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
-        bq::array<uint8_t, bq::aligned_allocator<uint8_t, sizeof(uint64_t)>> cache_write_;
+
+        bq_forceinline size_t get_pendding_flush_size() const {
+            return head_ ? head_->cache_write_finished_cursor_ : 0;
+        }
+
+        bq_forceinline size_t get_cache_total_size() const {
+            return head_ ? head_->write_cache_size_ : 0;
+        }
+
+        uint8_t* get_cache_write_ptr_base() {
+            return cache_write_;
+        }
     };
 }

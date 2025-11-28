@@ -141,6 +141,7 @@
 7. Added high-performance hybrid asymmetric encryption; see [6. Log encryption and decryption](#6-log-encryption-and-decryption).
 8. Provides Unity, Tuanjie Engine, and Unreal Engine plugins, making it easy to use in game engines; provides ConsoleAppender redirection to game-engine editors and Blueprint support for Unreal. See [5. Using BqLog in Unreal](#5-using-bqlog-in-unreal).
 9. The repository no longer ships binaries. From 2.x on, please download platform- and language-specific packages from the [Releases page](https://github.com/Tencent/BqLog/releases).
+10. The size of a single log entry is not limited by `log.buffer_size` anymore;
 
 ---
 

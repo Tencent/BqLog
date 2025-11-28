@@ -347,7 +347,7 @@ namespace bq {
 
                 auto data_len_min_size = get_vlq_min_bytes_length_of_item_header(max_format_template_data_size);
                 auto prealloc_head_size = 1 + data_len_min_size;
-                auto write_handle = write_with_cache_alloc(max_format_template_data_size + prealloc_head_size);
+                auto write_handle = alloc_write_cache(max_format_template_data_size + prealloc_head_size);
 
                 // write format template body first to get the real length, then write header back.
                 uint32_t format_template_data_cursor = prealloc_head_size;
@@ -373,7 +373,7 @@ namespace bq {
                         assert(success == true && "utf16 compress error");
                         success = false;
                         write_handle.reset_used_len(0);
-                        write_with_cache_commit(write_handle);
+                        return_write_cache(write_handle);
                         continue;
                     }
                     bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data(), data_len_real_size);
@@ -382,7 +382,7 @@ namespace bq {
                     bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, data_len_real_size);
                     *write_handle.data() = (uint8_t)item_type::log_template;
                 }
-                write_with_cache_commit(write_handle);
+                return_write_cache(write_handle);
                 success = true;
             } while (!success);
 
@@ -406,7 +406,7 @@ namespace bq {
 #endif // !NDEBUG
             auto data_len_min_size = bq::log_utils::vlq::get_vlq_encode_length((uint64_t)max_thread_info_data_size);
             auto prealloc_head_size = 1 + data_len_min_size;
-            auto write_handle = write_with_cache_alloc(max_thread_info_data_size + prealloc_head_size);
+            auto write_handle = alloc_write_cache(max_thread_info_data_size + prealloc_head_size);
             assert(data_len_min_size == 1 && "thread info template size error");
 
             uint32_t thread_info_data_cursor = prealloc_head_size;
@@ -420,7 +420,7 @@ namespace bq {
             uint32_t real_body_len = thread_info_data_cursor - prealloc_head_size;
             auto real_body_len_size = bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, 1);
             assert(real_body_len_size == 1 && "thread info template size encoding error");
-            write_with_cache_commit(write_handle);
+            return_write_cache(write_handle);
             thread_info_hash_cache_[BQ_PACK_ACCESS(ext_info.thread_id_)] = current_thread_info_max_index_;
             thread_info_idx = current_thread_info_max_index_;
             ++current_thread_info_max_index_;
@@ -438,7 +438,7 @@ namespace bq {
 
             auto data_len_min_size = get_vlq_min_bytes_length_of_item_header(max_log_data_size);
             auto prealloc_head_size = 1 + data_len_min_size;
-            auto write_handle = write_with_cache_alloc(max_log_data_size + prealloc_head_size);
+            auto write_handle = alloc_write_cache(max_log_data_size + prealloc_head_size);
 
             // write log entry body first to get the real length, then write header back.
             uint32_t log_data_cursor = prealloc_head_size;
@@ -571,7 +571,8 @@ namespace bq {
                 bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, data_len_real_size);
                 *write_handle.data() = (uint8_t)item_type::log_entry;
             }
-            write_with_cache_commit(write_handle);
+            return_write_cache(write_handle);
         }
+        mark_write_finished();
     }
 }

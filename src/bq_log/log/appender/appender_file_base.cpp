@@ -24,6 +24,19 @@ namespace bq {
     appender_file_base::~appender_file_base()
     {
         file_manager::instance().close_file(file_);
+        if (need_recovery_) {
+            if (memory_map_handle_.has_been_mapped()) {
+                bq::memory_map::release_memory_map(memory_map_handle_);
+            }
+            file_manager::instance().close_file(memory_map_file_);
+        }
+        else {
+            if (head_) {
+                bq::platform::aligned_free(head_);
+            }
+        }
+        head_ = nullptr;
+        cache_write_ = nullptr;
     }
 
     void appender_file_base::flush_cache()
@@ -32,16 +45,17 @@ namespace bq {
             return;
         }
         size_t real_write_size = 0;
-        size_t need_write_size = cache_write_.size();
-        int32_t error_code = bq::platform::write_file(file_.platform_handle(), (const void*)cache_write_.begin(), need_write_size, real_write_size);
-        if (real_write_size == cache_write_.size()) {
-            cache_write_.clear();
-            if (cache_write_.capacity() > (CACHE_WRITE_DEFAULT_SIZE << 1)) {
-                cache_write_.shrink();
+        size_t need_write_size = head_->cache_write_finished_cursor_;
+        int32_t error_code = bq::platform::write_file(file_.platform_handle(), (const void*)cache_write_, need_write_size, real_write_size);
+        if (real_write_size == need_write_size) {
+            if(head_->write_cache_size_ > (CACHE_WRITE_DEFAULT_SIZE << 1)) {
+                resize_write_cache(CACHE_WRITE_DEFAULT_SIZE >> 1);
             }
         } else {
-            cache_write_.erase(cache_write_.begin(), real_write_size);
+            memcpy(cache_write_, cache_write_ + static_cast<ptrdiff_t>(real_write_size), need_write_size - real_write_size);
         }
+        head_->cache_write_finished_cursor_ -= real_write_size;
+        cache_write_cursor_ -= real_write_size;
         current_file_size_ += real_write_size;
         if (error_code != 0 && error_code !=
 #if defined(BQ_WIN)
@@ -84,6 +98,14 @@ namespace bq {
     bool appender_file_base::init_impl(const bq::property_value& config_obj)
     {
         set_basic_configs(config_obj);
+        need_recovery_ = parent_log_->get_buffer().get_config().need_recovery;
+        if (need_recovery_) {
+            bool recover_result = try_recover();
+            bq::file_manager::instance().close_file(file_);
+            if (!recover_result) {
+                clean_recovery_context();
+            }
+        }
         return !config_file_name_.is_empty();
     }
 
@@ -159,31 +181,42 @@ namespace bq {
         }
     }
 
-    appender_file_base::write_with_cache_handle appender_file_base::write_with_cache_alloc(size_t size)
+    appender_file_base::write_with_cache_handle appender_file_base::alloc_write_cache(size_t size)
     {
 #ifndef NDEBUG
-        assert(!cache_write_already_allocated_ && "duplicate call write_with_cache_alloc in log file appender");
+        assert(!cache_write_already_allocated_ && "duplicate call alloc_write_cache in log file appender");
         cache_write_already_allocated_ = true;
 #endif
-        cache_write_.fill_uninitialized(size);
+        uint64_t need_cache_size = cache_write_cursor_ + static_cast<uint64_t>(size);
+        if (need_cache_size > get_cache_total_size()) {
+            uint64_t new_cache_size = bq::roundup_pow_of_two(need_cache_size);
+            resize_write_cache(static_cast<size_t>(new_cache_size));
+        }
+
         write_with_cache_handle result_handle;
-        result_handle.data_ = (uint8_t*)cache_write_.end() - size;
+        result_handle.data_ = cache_write_ + static_cast<ptrdiff_t>(cache_write_cursor_);
         result_handle.alloc_len_ = size;
         result_handle.used_len_ = size;
         return result_handle;
     }
 
-    void appender_file_base::write_with_cache_commit(const appender_file_base::write_with_cache_handle& handle)
+    void appender_file_base::return_write_cache(const appender_file_base::write_with_cache_handle& handle)
     {
 #ifndef NDEBUG
-        assert(cache_write_already_allocated_ && "call write_with_cache_commit without calling write_with_cache_alloc in log file appender");
+        assert(cache_write_already_allocated_ && "call return_write_cache without calling alloc_write_cache in log file appender");
         assert(handle.used_len_ <= handle.alloc_len_ && "used data length greater than allocated length in log file appender");
         cache_write_already_allocated_ = false;
 #endif
-        if (handle.used_len_ < handle.alloc_len_) {
-            cache_write_.pop_back(handle.alloc_len_ - handle.used_len_);
-        }
-        if (cache_write_.size() >= CACHE_WRITE_DEFAULT_SIZE) {
+        cache_write_cursor_ += static_cast<uint64_t>(handle.used_len_);
+    }
+
+
+    void appender_file_base::mark_write_finished() {
+#ifndef NDEBUG
+        assert(!cache_write_already_allocated_ && "mark_write_finished must be called after return_write_cache()");
+#endif
+        head_->cache_write_finished_cursor_ = cache_write_cursor_;
+        if (cache_write_cursor_ >= CACHE_WRITE_DEFAULT_SIZE) {
             flush_cache();
         }
     }
@@ -234,6 +267,89 @@ namespace bq {
         return true;
     }
 
+    void appender_file_base::resize_write_cache(size_t new_size)
+    {
+        uint64_t cache_write_finished_cursor_backup = head_ ? head_->cache_write_finished_cursor_ : 0;
+        do {
+            if (need_recovery_) {
+                bool need_recalc_head_size = (!head_) || head_->file_path_size_ != file_.abs_file_path().size();
+                assert(!need_recalc_head_size || !head_ || head_->cache_write_finished_cursor_ == 0 && "need_recalc_head_size but need flush data exist");
+                bq::memory_map::release_memory_map(memory_map_handle_);
+                if (!memory_map_file_) {
+                    bq::string mmap_file_path = get_mmap_file_path();
+                    memory_map_file_ = file_manager::instance().open_file(mmap_file_path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    if (!memory_map_file_) {
+                        bq::util::log_device_console(bq::log_level::error, "%s failed to open for resize write cache!", mmap_file_path.c_str());
+                        need_recovery_ = false; 
+                        break;
+                    }
+                }
+                size_t head_size = static_cast<size_t>(calculate_real_mmap_head_size(file_.abs_file_path().size()));
+                size_t mmap_size = new_size + head_size;
+                auto new_file_size = bq::memory_map::get_min_size_of_memory_map_file(0, mmap_size);
+                if (!bq::file_manager::instance().truncate_file(memory_map_file_, new_file_size)) {
+                    bq::util::log_device_console(bq::log_level::error, "%s failed to truncate for resize write cache!, new size:%" PRIu64 ", error code:%" PRId32
+                        , memory_map_file_.abs_file_path().c_str(), new_file_size, bq::file_manager::get_and_clear_last_file_error());
+                    need_recovery_ = false;
+                    break;
+                }
+                memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, new_file_size);
+                if (!memory_map_handle_.has_been_mapped()) {
+                    bq::util::log_device_console(bq::log_level::error, "%s failed to map for resize write cache!", memory_map_file_.abs_file_path().c_str());
+                    need_recovery_ = false;
+                    break;
+                }
+                head_ = static_cast<mmap_head*>(memory_map_handle_.get_mapped_data());
+                head_->file_path_size_ = static_cast<uint64_t>(file_.abs_file_path().size());
+                new_size = memory_map_handle_.get_mapped_size() - head_size;
+                memcpy(head_->file_path_, file_.abs_file_path().c_str(), file_.abs_file_path().size());
+            }
+        }while(false);
+
+        if (!need_recovery_) {
+            bq::file_manager::instance().close_file(memory_map_file_);
+            void* new_buffer = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, new_size + static_cast<size_t>(calculate_real_mmap_head_size(0)));
+            if (head_) {
+                memcpy(new_buffer, head_, static_cast<size_t>(calculate_real_mmap_head_size(0) + head_->write_cache_size_));
+                bq::platform::aligned_free(head_);
+            }
+            head_ = static_cast<mmap_head*>(new_buffer);
+            head_->file_path_size_ = 0;
+        }
+
+        head_->cache_write_finished_cursor_ = cache_write_finished_cursor_backup;
+        head_->write_cache_size_ = static_cast<uint64_t>(new_size);
+        cache_write_ = reinterpret_cast<uint8_t*>(head_) + calculate_real_mmap_head_size(file_.abs_file_path().size());
+    }
+
+
+    bq::string appender_file_base::get_mmap_file_path() const
+    {
+        return TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + parent_log_->get_name() + "/appenders/" + get_name() + ".mmap", 0);
+    }
+
+    uint64_t appender_file_base::calculate_real_mmap_head_size(size_t file_path_size) const
+    {
+        if (!need_recovery_) {
+            return static_cast<uint64_t>(sizeof(mmap_head));
+        }
+        mmap_head tmp_head;
+        return static_cast<uint64_t>(reinterpret_cast<const char*>(&tmp_head.file_path_) - reinterpret_cast<const char*>(&tmp_head))
+                + static_cast<uint64_t>(bq::align_8(file_path_size));
+    }
+
+    void appender_file_base::clean_recovery_context() {
+        if (memory_map_file_) {
+            bq::string abs_mmap_file_path = memory_map_file_.abs_file_path();
+            bq::file_manager::instance().close_file(memory_map_file_);
+            bq::memory_map::release_memory_map(memory_map_handle_);
+            bq::file_manager::remove_file_or_dir(abs_mmap_file_path);
+        }
+        head_ = nullptr;
+        cache_write_ = nullptr;
+        cache_write_cursor_ = 0;
+    }
+
     void appender_file_base::set_basic_configs(const bq::property_value& config_obj)
     {
         config_file_name_.clear();
@@ -275,6 +391,43 @@ namespace bq {
         } else {
             capacity_limit_ = 0;
         }
+    }
+
+    bool appender_file_base::try_recover() {
+        bq::string mmap_file_path = get_mmap_file_path();
+        memory_map_file_ = file_manager::instance().open_file(mmap_file_path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+        if (!memory_map_file_) {
+            bq::util::log_device_console(bq::log_level::warning, "%s failed to open, give up recovery!", mmap_file_path.c_str());
+            return false;
+        }
+        memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, bq::file_manager::instance().get_file_size(memory_map_file_));
+        if (!memory_map_handle_.has_been_mapped()) {
+            bq::util::log_device_console(bq::log_level::warning, "%s failed to map, give up recovery!", mmap_file_path.c_str());
+            return false;
+        }
+        head_ = static_cast<mmap_head*>(memory_map_handle_.get_mapped_data());
+        if (memory_map_handle_.get_mapped_size() <= (static_cast<size_t>(reinterpret_cast<const char*>(head_->file_path_) - reinterpret_cast<const char*>(head_)))) {
+            bq::util::log_device_console(bq::log_level::warning, "%s too small, give up recovery!", mmap_file_path.c_str());
+            return false;
+        }
+        cache_write_ = reinterpret_cast<uint8_t*>(head_) + calculate_real_mmap_head_size(head_->file_path_size_);
+        uint64_t max_cache_write_size = static_cast<uint64_t>(memory_map_handle_.get_mapped_size()) - calculate_real_mmap_head_size(head_->file_path_size_);
+        if (head_->write_cache_size_ > max_cache_write_size 
+            || head_->cache_write_finished_cursor_ > max_cache_write_size
+            || head_->cache_write_finished_cursor_ > head_->write_cache_size_) {
+            bq::util::log_device_console(bq::log_level::warning, "%s invalid mmap head data, give up recovery! max size:%" PRIu64 ", recovered size:%" PRIu64 ", recovered cursor:%" PRIu64, mmap_file_path.c_str(), max_cache_write_size, head_->write_cache_size_, head_->cache_write_finished_cursor_);
+            return false;
+        }
+        bq::string current_file_path;
+        current_file_path.insert_batch(current_file_path.end(), head_->file_path_, static_cast<size_t>(head_->file_path_size_));
+        file_ = file_manager::instance().open_file(current_file_path, file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+        if (!file_) {
+            bq::util::log_device_console(bq::log_level::warning, "%s failed to open log file %s, give up recovery!", mmap_file_path.c_str(), current_file_path.c_str());
+            return false;
+        }
+        cache_write_cursor_ = head_->cache_write_finished_cursor_;
+        flush_cache(); 
+        return true;
     }
 
     void appender_file_base::open_new_indexed_file_by_name()
