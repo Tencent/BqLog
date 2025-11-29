@@ -48,4 +48,18 @@ namespace bq {
         return ".log";
     }
 
+    void appender_file_text::before_recover()
+    {
+        const char* text = "=========Recovered Logs Start=========\n";
+        const size_t text_len = strlen(text);
+        bq::file_manager::instance().write_file(get_file_handle(), text, text_len, bq::file_manager::seek_option::end, 0);
+    }
+
+    void appender_file_text::after_recover()
+    {
+        const char* text = "=========Recovered Logs End=========\n";
+        const size_t text_len = strlen(text);
+        bq::file_manager::instance().write_file(get_file_handle(), text, text_len, bq::file_manager::seek_option::end, 0);
+    }
+
 }

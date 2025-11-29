@@ -87,11 +87,17 @@ namespace bq {
 
         virtual void on_file_open(bool is_new_created);
 
+        virtual void before_recover(){}
+
+        virtual void after_recover(){}
+
         void seek_read_file_absolute(size_t pos);
 
         void seek_read_file_offset(int32_t offset);
 
-        size_t get_current_file_size();
+        size_t get_current_file_size() const {return current_file_size_;}
+
+        file_handle& get_file_handle() {return file_;}
 
         // data() returned by read_with_cache_handle will be invalid after next calling of "read_with_cache"
         read_with_cache_handle read_with_cache(size_t size);
@@ -105,6 +111,8 @@ namespace bq {
         void mark_write_finished();
     private:
         void set_basic_configs(const bq::property_value& config_obj);
+
+        void refresh_head_size();
 
         bool try_recover();
 
@@ -120,11 +128,9 @@ namespace bq {
 
         bool open_file_with_write_exclusive(const bq::string& file_path);
 
-        void resize_write_cache(size_t new_size);
+        void resize_head_and_write_cache(size_t new_size);
 
         bq::string get_mmap_file_path() const;
-
-        uint64_t calculate_real_mmap_head_size(size_t file_path_size) const;
 
         void clean_recovery_context();
 
@@ -153,6 +159,7 @@ namespace bq {
         bq::file_handle memory_map_file_;
         bq::memory_map_handle memory_map_handle_;
         mmap_head* head_ = nullptr;
+        size_t head_size_ = sizeof(mmap_head);
         uint8_t* cache_write_ = nullptr;
         size_t cache_write_cursor_ = 0;
     protected:
@@ -170,7 +177,7 @@ namespace bq {
             return head_ ? static_cast<size_t>(head_->cache_write_finished_cursor_) : static_cast<size_t>(0);
         }
 
-        bq_forceinline size_t get_cache_total_size() const {
+        bq_forceinline size_t get_cache_write_size() const {
             return head_ ? static_cast<size_t>(head_->write_cache_size_) : static_cast<size_t>(0);
         }
 

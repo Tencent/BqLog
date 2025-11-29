@@ -19,5 +19,7 @@ namespace bq {
         virtual bool parse_exist_log_file(parse_file_context& context) override;
         virtual void on_file_open(bool is_new_created) override;
         virtual bq::string get_file_ext_name() override;
+        virtual void before_recover() override;
+        virtual void after_recover() override;
     };
 }
