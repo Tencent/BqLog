@@ -123,19 +123,6 @@ namespace bq {
         return format_version;
     }
 
-    template <typename T>
-    struct _st_appender_file_exist_callback {
-    private:
-        T callback_;
-
-    public:
-        _st_appender_file_exist_callback(const T& callback)
-            : callback_(callback)
-        {
-        }
-        ~_st_appender_file_exist_callback() { callback_(); }
-    };
-
     bool appender_file_compressed::parse_exist_log_file(parse_file_context& context)
     {
         if (!appender_file_binary::parse_exist_log_file(context)) {
@@ -145,7 +132,7 @@ namespace bq {
         auto release_cache_lamda = [this]() {
             utf16_trans_cache_.reset();
         };
-        _st_appender_file_exist_callback<decltype(release_cache_lamda)> cache_reset_obj(release_cache_lamda);
+        scoped_exist_callback_helper<decltype(release_cache_lamda)> cache_reset_obj(release_cache_lamda);
         while (true) {
             if (context.parsed_size == get_current_file_size()) {
                 // parse finished

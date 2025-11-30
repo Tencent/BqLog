@@ -96,17 +96,21 @@ namespace bq {
         {
             return 32 * 1024; // 32 KiB
         }
-        bq_forceinline static size_t get_encryption_info_size()
+        bq_forceinline static size_t get_encryption_keys_size()
         {
             return 256 // size of RSA-2048 ciphertext of AES key
                 + 16 // size of AES IV in plaintext
                 + get_xor_key_blob_size(); // size of AES-encrypted XOR key blob
         }
+        bq_forceinline static size_t get_encryption_head_size()
+        {
+            return sizeof(appender_encryption_header);
+        }
         bq_forceinline static size_t get_encryption_base_pos()
         {
             return sizeof(appender_file_header)
-                + sizeof(appender_encryption_header)
-                + get_encryption_info_size();
+                + get_encryption_head_size()
+                + get_encryption_keys_size();
         }
 
     public:
@@ -120,6 +124,8 @@ namespace bq {
         virtual void flush_cache() override;
         virtual appender_format_type get_appender_format() const = 0;
         virtual uint32_t get_binary_format_version() const = 0;
+        virtual void before_recover() override;
+        virtual void after_recover() override;
 
     private:
         appender_encryption_type encryption_type_ = appender_encryption_type::plaintext;

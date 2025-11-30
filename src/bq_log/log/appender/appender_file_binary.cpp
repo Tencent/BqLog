@@ -15,15 +15,15 @@
 namespace bq {
     bool appender_file_binary::init_impl(const bq::property_value& config_obj)
     {
-        if (!appender_file_base::init_impl(config_obj)) {
-            return false;
-        }
         if (config_obj["pub_key"].is_string()) {
             encryption_type_ = appender_encryption_type::rsa_aes_xor;
             bq::string pub_key_str = config_obj["pub_key"];
             if (!rsa::parse_public_key_ssh(pub_key_str, rsa_pub_key_)) {
                 return false;
             }
+        }
+        if (!appender_file_base::init_impl(config_obj)) {
+            return false;
         }
         return true;
     }
@@ -255,6 +255,64 @@ namespace bq {
             xor_key_blob_start_pos);
         encryption_start_pos_ += need_encrypt_size;
         appender_file_base::flush_cache();
+    }
+
+    void appender_file_binary::before_recover()
+    {
+        uint8_t magic_number[256] = {0};
+        bq::file_manager::instance().write_file(get_file_handle(), magic_number, sizeof(magic_number), bq::file_manager::seek_option::end, 0);
+
+        appender_encryption_header enc_head;
+        enc_head.encryption_type = encryption_type_;
+        bq::file_manager::instance().write_file(get_file_handle(), &enc_head, sizeof(enc_head));
+
+        if (enc_head.encryption_type == appender_encryption_type::rsa_aes_xor) {
+            aes aes_obj(bq::aes::enum_cipher_mode::AES_CBC, bq::aes::enum_key_bits::AES_256);
+            auto aes_key = aes_obj.generate_key();
+            if (aes_key.size() != aes_obj.get_key_size()) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl generate AES key failed");
+                assert(false);
+            }
+            if (aes_key[0] == 0) {
+                bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
+                // make sure the first byte is not zero, because padding is not implemented in BqLog RSA encryption.
+                aes_key[0] = static_cast<uint8_t>((bq::util::rand() % UINT8_MAX) + 1);
+            }
+            auto aes_iv = aes_obj.generate_iv();
+            if (aes_iv.size() != aes_obj.get_iv_size()) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl generate AES iv failed");
+                assert(false);
+            }
+            bq::aes::key_type ciphertext_aes_key;
+            if (!bq::rsa::encrypt(rsa_pub_key_, aes_key, ciphertext_aes_key) || ciphertext_aes_key.size() != rsa_pub_key_.n_.size()) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl RSA encrypt AES key failed");
+                assert(false);
+            }
+            decltype(xor_key_blob_) xor_key_blob_plaintext;
+            xor_key_blob_plaintext.fill_uninitialized(get_xor_key_blob_size());
+            bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
+            uint32_t* xor_key_blob_32 = reinterpret_cast<uint32_t*>(&xor_key_blob_plaintext[0]);
+            for (size_t i = 0; i < xor_key_blob_plaintext.size() / sizeof(uint32_t); ++i) {
+                xor_key_blob_32[i] = bq::util::rand();
+            }
+
+            bq::array<uint8_t> xor_key_blob_ciphertext;
+            if (!aes_obj.encrypt(aes_key, aes_iv, xor_key_blob_plaintext, xor_key_blob_ciphertext)) {
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl AES encrypt XOR key blob failed");
+                assert(false);
+            }
+            bq::file_manager::instance().write_file(get_file_handle(), ciphertext_aes_key.begin(), ciphertext_aes_key.size());
+            bq::file_manager::instance().write_file(get_file_handle(), aes_iv.begin(), aes_iv.size());
+            bq::file_manager::instance().write_file(get_file_handle(), xor_key_blob_ciphertext.begin(), xor_key_blob_ciphertext.size());
+            xor_key_blob_ = bq::move(xor_key_blob_plaintext);
+        }
+        uint64_t recover_block_data_size = static_cast<uint64_t>(get_pendding_flush_size());
+        bq::file_manager::instance().write_file(get_file_handle(), &recover_block_data_size, sizeof(recover_block_data_size));
+    }
+
+    void appender_file_binary::after_recover()
+    {
+        xor_key_blob_.clear();
     }
 
     void appender_file_binary::xor_stream_inplace_u64_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset)

@@ -43,8 +43,8 @@ bq::appender_decode_result bq::appender_decoder_base::init(const bq::file_handle
             bq::util::log_device_console(log_level::error, "decode log file failed, invalid private key size, only rsa 2048 supported");
             return appender_decode_result::failed_decode_error;
         }
-        read_handle = read_with_cache(appender_file_binary::get_encryption_info_size());
-        if (read_handle.len() < appender_file_binary::get_encryption_info_size()) {
+        read_handle = read_with_cache(appender_file_binary::get_encryption_keys_size());
+        if (read_handle.len() < appender_file_binary::get_encryption_keys_size()) {
             bq::util::log_device_console(log_level::error, "decode log file failed, read encryption info failed");
             return appender_decode_result::failed_decode_error;
         }
@@ -135,9 +135,12 @@ size_t bq::appender_decoder_base::get_current_file_size()
 bq::appender_decoder_base::read_with_cache_handle bq::appender_decoder_base::read_with_cache(size_t size)
 {
     auto left_size = cache_read_.size() - cache_read_cursor_;
-    if (left_size < size) {
+    size_t recover_block_mark_size = 256 + sizeof(uint64_t) + appender_file_binary::get_encryption_head_size();
+    size_t recover_block_enc_key_size = appender_file_binary::get_encryption_keys_size();
+    size_t preload_size = size + recover_block_mark_size + recover_block_enc_key_size;
+    if (left_size < preload_size) {
         cache_read_.erase(cache_read_.begin(), cache_read_cursor_);
-        auto total_size = bq::max_value(size, DECODER_CACHE_READ_DEFAULT_SIZE);
+        auto total_size = bq::max_value(preload_size, DECODER_CACHE_READ_DEFAULT_SIZE);
         auto fill_size = total_size - left_size;
         cache_read_.fill_uninitialized(fill_size);
         auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + static_cast<ptrdiff_t>(left_size), fill_size);
@@ -145,6 +148,9 @@ bq::appender_decoder_base::read_with_cache_handle bq::appender_decoder_base::rea
         if (read_size < fill_size) {
             cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(left_size + read_size), fill_size - read_size);
         }
+
+
+
         if (!xor_key_blob_.is_empty() && read_size > 0) {
             bq::appender_file_binary::xor_stream_inplace_u64_aligned(cache_read_.begin() + static_cast<ptrdiff_t>(left_size), read_size, xor_key_blob_.begin(), xor_key_blob_.size(), current_file_cursor_ - bq::appender_file_binary::get_encryption_base_pos());
         }

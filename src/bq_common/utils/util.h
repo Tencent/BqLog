@@ -116,4 +116,16 @@ namespace bq {
         }
     };
 
+    template <typename T>
+    struct scoped_exist_callback_helper {
+    private:
+        T callback_;
+
+    public:
+        explicit scoped_exist_callback_helper(const T& callback)
+            : callback_(callback)
+        {
+        }
+        ~scoped_exist_callback_helper() { callback_(); }
+    };
 }
