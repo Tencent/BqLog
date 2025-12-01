@@ -861,7 +861,7 @@ namespace bq {
                 abs_recovery_file_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + tmp + ".mmap", 0);
             }
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
-            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, config_.need_recovery, abs_recovery_file_path));
+            temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, abs_recovery_file_path, true));
             auto& new_buffer = *(temprorary_oversize_buffer_.buffers_array_.end() - 1);
             new_buffer->buffer_lock_.read_lock();
             auto& oversize_buffer_context = new_buffer->buffer_.get_misc_data<context_head>();
@@ -1166,7 +1166,7 @@ namespace bq {
                 size_t file_size = bq::file_manager::get_file_size(full_path);
                 uint32_t default_buffer_size = static_cast<uint32_t>(BQ_CACHE_LINE_SIZE);
                 while (default_buffer_size < UINT32_MAX) {
-                    uint32_t map_size = normal_buffer::calculate_size_of_memory(default_buffer_size);
+                    uint32_t map_size = oversize_buffer::calculate_size_of_memory(default_buffer_size);
                     size_t desired_file_size = bq::memory_map::get_min_size_of_memory_map_file(0, map_size);
                     if (desired_file_size == file_size) {
                         break;
@@ -1181,7 +1181,7 @@ namespace bq {
                 if (u64_value > current_oversize_buffer_index_.load(bq::platform::memory_order::relaxed)) {
                     current_oversize_buffer_index_.store(u64_value, bq::platform::memory_order::seq_cst);
                 }
-                auto recovery_buffer = bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, true, full_path);
+                auto recovery_buffer = bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, full_path, false);
                 const auto& oversize_buffer_context = recovery_buffer->buffer_.get_misc_data<context_head>();
                 if (oversize_buffer_context.seq_ != UINT32_MAX
                     || oversize_buffer_context.is_external_ref_ != true

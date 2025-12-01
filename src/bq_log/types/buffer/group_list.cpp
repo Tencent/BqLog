@@ -90,56 +90,14 @@ namespace bq {
 
     create_memory_map_result group_node::create_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group, uint64_t index)
     {
-        if (!bq::memory_map::is_platform_support() || !config.need_recovery) {
-            return create_memory_map_result::failed;
-        }
         char tmp[32];
         snprintf(tmp, sizeof(tmp), "_%" PRIu64 "", index);
         bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/hp/" + config.log_name + tmp + ".mmap", 0);
-        memory_map_file_ = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
-        if (!memory_map_file_.is_valid()) {
-            bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
-            return create_memory_map_result::failed;
-        }
-
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
         size_t desired_size = meta_size + data_size;
-        size_t min_file_size = bq::memory_map::get_min_size_of_memory_map_file(0, desired_size);
-
-        create_memory_map_result result = create_memory_map_result::failed;
-        bq::file_manager::get_and_clear_last_file_error(); //clear error no first
-        size_t current_file_size = bq::file_manager::instance().get_file_size(memory_map_file_);
-        auto get_size_error = bq::file_manager::get_and_clear_last_file_error();
-        if (get_size_error != 0) {
-            bq::util::log_device_console(log_level::warning, "group node get file size of \"%s\" failed, error code:%" PRId32 ", use memory instead.", memory_map_file_.abs_file_path().c_str(), get_size_error);
-            bq::file_manager::instance().close_file(memory_map_file_);
-            return create_memory_map_result::failed;
-        }
-        if (current_file_size != min_file_size) {
-            if (!bq::file_manager::instance().truncate_file(memory_map_file_, min_file_size)) {
-                bq::util::log_device_console(log_level::warning, "group node truncate memory map file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
-                bq::file_manager::instance().close_file(memory_map_file_);
-                bq::file_manager::remove_file_or_dir(path);
-                return create_memory_map_result::failed;
-            }
-            result = create_memory_map_result::new_created;
-        } else {
-            result = create_memory_map_result::use_existed;
-        }
-
-        memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, desired_size);
-        if (!memory_map_handle_.has_been_mapped()) {
-            bq::util::log_device_console(log_level::warning, "group node create memory map failed from file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
-            return create_memory_map_result::failed;
-        }
-
-        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (BQ_CACHE_LINE_SIZE - 1)) != 0) {
-            bq::util::log_device_console(log_level::warning, "group node memory map file \"%s\" memory address is not aligned, use memory instead.", memory_map_file_.abs_file_path().c_str());
-            bq::memory_map::release_memory_map(memory_map_handle_);
-            return create_memory_map_result::failed;
-        }
-        return result;
+        buffer_entity_ = bq::make_unique<normal_buffer>(desired_size, config.need_recovery ? path : "", true);
+        return buffer_entity_->get_mmap_result();
     }
 
     bool group_node::try_recover_from_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group)
@@ -147,7 +105,7 @@ namespace bq {
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
 
-        uint8_t* mapped_data_addr = reinterpret_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
+        auto mapped_data_addr = static_cast<uint8_t*>(buffer_entity_->data());
         if (*(uint64_t*)mapped_data_addr != config.calculate_check_sum()) {
             bq::util::log_device_console(bq::log_level::warning, "recover from memory map verify failed, create new memory map, log_name:%s", config.log_name.c_str());
             return false;
@@ -163,8 +121,8 @@ namespace bq {
     {
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
-        memset(memory_map_handle_.get_mapped_data(), 0, memory_map_handle_.get_mapped_size());
-        auto mapped_data_addr = static_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
+        memset(buffer_entity_->data(), 0, buffer_entity_->size());
+        auto mapped_data_addr = static_cast<uint8_t*>(buffer_entity_->data());
         *(uint64_t*)mapped_data_addr = config.calculate_check_sum();
         new ((void*)(mapped_data_addr + meta_size), bq::enum_new_dummy::dummy) group_data_head(
             max_block_count_per_group, mapped_data_addr + meta_size + sizeof(group_data_head), data_size - sizeof(group_data_head), config.need_recovery);
@@ -174,18 +132,8 @@ namespace bq {
     void group_node::init_memory(const log_buffer_config& config, uint16_t max_block_count_per_group)
     {
         size_t desired_size = get_group_data_size(config, max_block_count_per_group);
-        if (memory_map_handle_.has_been_mapped()) {
-            memset(memory_map_handle_.get_mapped_data(), 0, memory_map_handle_.get_mapped_size());
-            node_data_ = static_cast<uint8_t*>(memory_map_handle_.get_mapped_data());
-        } else {
-            node_data_ = (uint8_t*)malloc(desired_size + BQ_CACHE_LINE_SIZE);
-            assert(node_data_ && "not enough memory, alloc memory failed");
-        }
-        uintptr_t node_head_addr_value = (uintptr_t)node_data_ + (uintptr_t)(BQ_CACHE_LINE_SIZE - 1);
-        node_head_addr_value -= (node_head_addr_value % BQ_CACHE_LINE_SIZE);
-        auto node_head_addr = (uint8_t*)node_head_addr_value;
-        new (node_head_addr, bq::enum_new_dummy::dummy) group_data_head(max_block_count_per_group, node_head_addr + sizeof(group_data_head), desired_size - sizeof(group_data_head), false);
-        head_ptr_ = (group_data_head*)node_head_addr;
+        new (buffer_entity_->data(), bq::enum_new_dummy::dummy) group_data_head(max_block_count_per_group, static_cast<uint8_t*>(buffer_entity_->data()) + sizeof(group_data_head), desired_size - sizeof(group_data_head), false);
+        head_ptr_ = static_cast<group_data_head*>(buffer_entity_->data());
     }
 
     group_node::group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index)
@@ -195,9 +143,6 @@ namespace bq {
         // so having a memory map as a backing mechanism is a relatively cost-effective solution.
         const auto& config = parent_list->get_config();
         auto mmap_create_result = create_memory_map(config, max_block_count_per_group, index);
-#if defined(BQ_UNIT_TEST)
-        memory_map_result_ = mmap_create_result;
-#endif
         if (create_memory_map_result::failed == mmap_create_result) {
             init_memory(config, max_block_count_per_group);
         } else if (mmap_create_result == create_memory_map_result::new_created) {
@@ -211,23 +156,8 @@ namespace bq {
 
     group_node::~group_node()
     {
-        if (memory_map_handle_.has_been_mapped()) {
-            bool need_remove_mmap_file = false;
-            if (!parent_list_->get_config().need_recovery) {
-                need_remove_mmap_file = true;
-            } else if (memory_map_file_ && !get_data_head().used_.first() && !get_data_head().stage_.first()) {
-                need_remove_mmap_file = true;
-            }
-            node_data_ = nullptr;
-            bq::memory_map::release_memory_map(memory_map_handle_);
-            if (need_remove_mmap_file) {
-                bq::string file_abs_path = memory_map_file_.abs_file_path();
-                bq::file_manager::instance().close_file(memory_map_file_);
-                bq::file_manager::instance().remove_file_or_dir(file_abs_path);
-            }
-        } else {
-            free(node_data_);
-            node_data_ = nullptr;
+        if (get_data_head().used_.first() || get_data_head().stage_.first()) {
+            buffer_entity_->set_delete_mmap_when_destruct(false);
         }
         head_ptr_ = nullptr;
     }

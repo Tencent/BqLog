@@ -52,6 +52,7 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_api.h"
 #include "bq_log/types/buffer/log_buffer_defs.h"
+#include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
 
@@ -120,8 +121,7 @@ namespace bq {
         head* head_;
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
-        bq::file_handle memory_map_file_;
-        bq::memory_map_handle memory_map_handle_;
+        bq::unique_ptr<bq::normal_buffer> buffer_entity_;
 #if defined(BQ_LOG_BUFFER_DEBUG)
         alignas(BQ_CACHE_LINE_SIZE) bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
@@ -255,8 +255,6 @@ namespace bq {
         void init_with_memory_map();
 
         void init_with_memory();
-
-        bool uninit_memory_map();
     };
 
 }

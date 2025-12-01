@@ -23,15 +23,19 @@ namespace bq {
         : mutex(true)
     {
         seq_generator = 0;
+#if !defined(BQ_UNIT_TEST) && !defined(BQ_TOOLS)
         bq::util::log_device_console(log_level::info, "file_manager is constructed");
         bq::util::log_device_console(log_level::info, "base dir type 0: %s", get_base_dir(0).c_str());
         bq::util::log_device_console(log_level::info, "base dir type 1: %s", get_base_dir(1).c_str());
+#endif
     }
 
     file_manager::~file_manager()
     {
         flush_all_opened_files();
+#if !defined(BQ_UNIT_TEST) && !defined(BQ_TOOLS)
         bq::util::log_device_console(log_level::info, "file_manager is destructed");
+#endif
     }
 
     file_manager& file_manager::instance()
@@ -216,6 +220,9 @@ namespace bq {
 
     size_t file_manager::get_file_size(const bq::string& path)
     {
+        if (is_file(path) == false) {
+            return 0;
+        }
         auto file_handle = file_manager::instance().open_file(path, file_open_mode_enum::read);
         if (!file_handle) {
             return 0;

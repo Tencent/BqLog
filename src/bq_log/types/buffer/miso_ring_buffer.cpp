@@ -78,6 +78,10 @@ namespace bq {
         assert((uintptr_t)&cursors_.read_cursor_ % (uintptr_t)BQ_CACHE_LINE_SIZE == 0);
 
         auto mmap_result = create_memory_map();
+        aligned_blocks_count_ = config_.default_buffer_size >> BQ_CACHE_LINE_SIZE_LOG2;
+        head_ = static_cast<head*>(buffer_entity_->data());
+        aligned_blocks_ = (miso_ring_buffer::block*)(head_ + 1);
+
         switch (mmap_result) {
         case bq::create_memory_map_result::failed:
             init_with_memory();
@@ -104,10 +108,7 @@ namespace bq {
 
     miso_ring_buffer::~miso_ring_buffer()
     {
-        if (!uninit_memory_map()) {
-            bq::platform::aligned_free(head_);
-            head_ = nullptr;
-        }
+        head_ = nullptr;
     }
 
     log_buffer_write_handle miso_ring_buffer::alloc_write_chunk(uint32_t size)
@@ -399,49 +400,11 @@ namespace bq {
 
     create_memory_map_result miso_ring_buffer::create_memory_map()
     {
-        if (!bq::memory_map::is_platform_support() || !config_.need_recovery) {
-            return create_memory_map_result::failed;
-        }
-        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/" + config_.log_name + ".mmap", 0);
-        memory_map_file_ = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
-        if (!memory_map_file_.is_valid()) {
-            bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
-            return create_memory_map_result::failed;
-        }
-        aligned_blocks_count_ = config_.default_buffer_size >> BQ_CACHE_LINE_SIZE_LOG2;
+        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/" + config_.log_name + ".mmap", 0); 
         size_t head_size = sizeof(head);
         size_t map_size = (uint32_t)(config_.default_buffer_size + head_size);
-        size_t file_size = bq::memory_map::get_min_size_of_memory_map_file(0, map_size);
-        create_memory_map_result result = create_memory_map_result::failed;
-        size_t current_file_size = bq::file_manager::instance().get_file_size(memory_map_file_);
-        if (current_file_size != file_size) {
-            if (!bq::file_manager::instance().truncate_file(memory_map_file_, file_size)) {
-                bq::util::log_device_console(log_level::warning, "ring buffer truncate memory map file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
-                bq::file_manager::instance().close_file(memory_map_file_);
-                bq::file_manager::remove_file_or_dir(path);
-                return create_memory_map_result::failed;
-            }
-            result = create_memory_map_result::new_created;
-        } else {
-            result = create_memory_map_result::use_existed;
-        }
-
-        memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, map_size);
-        if (!memory_map_handle_.has_been_mapped()) {
-            bq::util::log_device_console(log_level::warning, "ring buffer create memory map failed from file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
-            bq::file_manager::instance().close_file(memory_map_file_);
-            return create_memory_map_result::failed;
-        }
-
-        if (((uintptr_t)memory_map_handle_.get_mapped_data() & (BQ_CACHE_LINE_SIZE - 1)) != 0) {
-            bq::util::log_device_console(log_level::warning, "ring buffer memory map file \"%s\" memory address is not aligned, use memory instead.", memory_map_file_.abs_file_path().c_str());
-            bq::memory_map::release_memory_map(memory_map_handle_);
-            bq::file_manager::instance().close_file(memory_map_file_);
-            return create_memory_map_result::failed;
-        }
-        head_ = (head*)memory_map_handle_.get_mapped_data();
-        aligned_blocks_ = (miso_ring_buffer::block*)(head_ + 1);
-        return result;
+        buffer_entity_ = bq::make_unique<normal_buffer>(map_size, config_.need_recovery ? path : "", true);
+        return buffer_entity_->get_mmap_result();
     }
 
     void miso_ring_buffer::init_with_memory_map()
@@ -521,14 +484,6 @@ namespace bq {
 
     void miso_ring_buffer::init_with_memory()
     {
-        aligned_blocks_count_ = config_.default_buffer_size >> BQ_CACHE_LINE_SIZE_LOG2;
-
-        size_t head_size = sizeof(head);
-
-        size_t alloc_size = (uint32_t)(config_.default_buffer_size + head_size);
-        head_ = (head*)bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, sizeof(uint8_t) * alloc_size);
-
-        aligned_blocks_ = (miso_ring_buffer::block*)(head_ + 1);
         for (uint32_t i = 0; i < aligned_blocks_count_; ++i) {
             BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(aligned_blocks_[i].chunk_head.status, block_status).store(bq::miso_ring_buffer::block_status::unused, platform::memory_order::release);
         }
@@ -536,19 +491,8 @@ namespace bq {
         head_->read_cursor_start_cache_ = 0;
         head_->log_checksum_ = 0;
         memset(head_->mmap_misc_data_, 0, sizeof(head_->mmap_misc_data_));
-
         cursors_.write_cursor_.store_release(0);
         cursors_.read_cursor_.store_release(0);
         mmap_buffer_state_ = memory_map_buffer_state::init_with_memory;
     }
-
-    bool miso_ring_buffer::uninit_memory_map()
-    {
-        if (memory_map_handle_.has_been_mapped()) {
-            bq::memory_map::release_memory_map(memory_map_handle_);
-            return true;
-        }
-        return false;
-    }
-
 }

@@ -29,6 +29,7 @@
 #include "bq_log/types/buffer/log_buffer_defs.h"
 #include "bq_log/types/buffer/block_list.h"
 #include "bq_log/types/buffer/memory_pool.h"
+#include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
     BQ_PACK_BEGIN
@@ -55,18 +56,12 @@ namespace bq {
         bool try_recover_from_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group);
         void init_memory_map(const log_buffer_config& config, uint16_t max_block_count_per_group);
         void init_memory(const log_buffer_config& config, uint16_t max_block_count_per_group);
-
     private:
         pointer_type next_;
-        bq::file_handle memory_map_file_;
-        bq::memory_map_handle memory_map_handle_;
-        uint8_t* node_data_ = nullptr;
+        bq::unique_ptr<bq::normal_buffer> buffer_entity_;
         group_data_head* head_ptr_ = nullptr;
         uint64_t in_pool_epoch_ms_ = 0;
         class group_list* parent_list_ = nullptr;
-#if defined(BQ_UNIT_TEST)
-        create_memory_map_result memory_map_result_ = create_memory_map_result::failed;
-#endif
 
     public:
         group_node(class group_list* parent_list, uint16_t max_block_count_per_group, uint64_t index);
@@ -91,7 +86,7 @@ namespace bq {
 #if defined(BQ_UNIT_TEST)
         bq_forceinline create_memory_map_result get_memory_map_status() const
         {
-            return memory_map_result_;
+            return buffer_entity_->get_mmap_result();
         }
 #endif
     };

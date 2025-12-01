@@ -14,6 +14,7 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_base.h"
 #include "bq_log/log/log_types.h"
+#include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
     class appender_file_base : public appender_base {
@@ -112,7 +113,7 @@ namespace bq {
     private:
         void set_basic_configs(const bq::property_value& config_obj);
 
-        void refresh_head_size();
+        void refresh_head_size(bool need_recovery, const bq::string& mmap_file_abs_path);
 
         bool try_recover();
 
@@ -132,7 +133,9 @@ namespace bq {
 
         bq::string get_mmap_file_path() const;
 
-        void clean_recovery_context();
+        void clean_cache_write();
+
+        bool is_recovery_enabled() const;
 
     private:
         bq::string config_file_name_;
@@ -155,9 +158,7 @@ namespace bq {
             char padding_[BQ_CACHE_LINE_SIZE - sizeof(uint64_t) * 3 - sizeof(file_path_)];
         }BQ_PACK_END
         static_assert(sizeof(mmap_head) == BQ_CACHE_LINE_SIZE, "Invalid appender_file_base::mmap_head size");
-        bool need_recovery_ = false;
-        bq::file_handle memory_map_file_;
-        bq::memory_map_handle memory_map_handle_;
+        bq::unique_ptr<bq::normal_buffer> cache_write_entity_;
         mmap_head* head_ = nullptr;
         size_t head_size_ = sizeof(mmap_head);
         uint8_t* cache_write_ = nullptr;

@@ -286,6 +286,10 @@ namespace bq {
             return static_cast<void*>(ptr);
         }
 
+        operator bool() const {
+            return ptr;
+        }
+
         template <typename D>
         bool operator==(const unique_ptr<D>& rhs) const
         {

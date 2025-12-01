@@ -27,7 +27,7 @@
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 #include "bq_log/types/buffer/group_list.h"
-#include "bq_log/types/buffer/normal_buffer.h"
+#include "bq_log/types/buffer/oversize_buffer.h"
 
 namespace bq {
     class alignas(BQ_CACHE_LINE_SIZE) log_buffer {
@@ -57,11 +57,11 @@ namespace bq {
         };
 
         struct oversize_buffer_obj_def {
-            bq::normal_buffer buffer_;
+            bq::oversize_buffer buffer_;
             bq::platform::spin_lock_rw_crazy buffer_lock_;
             uint64_t last_used_epoch_ms_;
-            oversize_buffer_obj_def(uint32_t size, bool need_recovery, const bq::string& mmap_file_abs_path)
-                : buffer_(size, need_recovery, mmap_file_abs_path)
+            oversize_buffer_obj_def(uint32_t size, const bq::string& mmap_file_abs_path, bool auto_create)
+                : buffer_(size, mmap_file_abs_path, auto_create)
                 , last_used_epoch_ms_(0)
             {
             }
@@ -74,7 +74,7 @@ namespace bq {
                 jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
                 jobjectArray buffer_obj_for_oversize_buffer_ = NULL; // oversize buffer;
                 block_node_head* buffer_ref_block_ = nullptr;
-                normal_buffer* buffer_ref_oversize = nullptr;
+                oversize_buffer* buffer_ref_oversize = nullptr;
                 uint32_t size_ref_oversize = 0;
                 int32_t buffer_offset_ = 0;
             };
