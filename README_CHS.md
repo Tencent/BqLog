@@ -140,6 +140,7 @@
 8. 提供 Unity、团结引擎、Unreal 引擎插件，方便在游戏引擎中使用；提供 ConsoleAppender 对游戏引擎编辑器日志输出重定向，提供 Unreal 蓝图支持。详见 [5. 在 Unreal 中使用 BqLog](#5-在-unreal-中使用-bqlog)。
 9. 仓库不再包含二进制产物，从 2.x 版本起请从 [Releases 页面](https://github.com/Tencent/BqLog/releases)下载对应平台和语言的二进制包。
 10. 单条日志长度不再受log.buffer_size限制
+11. 可以精确手动设置时区
 
 ---
 
