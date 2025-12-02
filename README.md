@@ -142,8 +142,9 @@
 8. Provides Unity, Tuanjie Engine, and Unreal Engine plugins, making it easy to use in game engines; provides ConsoleAppender redirection to game-engine editors and Blueprint support for Unreal. See [5. Using BqLog in Unreal](#5-using-bqlog-in-unreal).
 9. The repository no longer ships binaries. From 2.x on, please download platform- and language-specific packages from the [Releases page](https://github.com/Tencent/BqLog/releases).
 10. The size of a single log entry is not limited by `log.buffer_size` anymore;
-11. Timezone can be manually specified;
-12. Appender type `raw_file` will no logger be maintained in 2.x, and marked as `deprecated`, please use `compressed_file` instead.
+11. The timezone can be specified manually.
+12. The `raw_file` appender is deprecated and no longer maintained in 2.x; please use the `compressed_file` appender instead.
+13. The Recovery feature's reliability has been improved and it has been promoted from experimental (beta) to stable (release). see [3. Data protection on abnormal exit](#3-data-protection-on-abnormal-exit).
 
 ---
 
