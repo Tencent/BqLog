@@ -143,6 +143,7 @@
 9. The repository no longer ships binaries. From 2.x on, please download platform- and language-specific packages from the [Releases page](https://github.com/Tencent/BqLog/releases).
 10. The size of a single log entry is not limited by `log.buffer_size` anymore;
 11. Timezone can be manually specified;
+12. Appender type `raw_file` will no logger be maintained in 2.x, and marked as `deprecated`, please use `compressed_file` instead.
 
 ---
 

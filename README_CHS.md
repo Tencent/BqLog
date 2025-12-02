@@ -141,6 +141,7 @@
 9. 仓库不再包含二进制产物，从 2.x 版本起请从 [Releases 页面](https://github.com/Tencent/BqLog/releases)下载对应平台和语言的二进制包。
 10. 单条日志长度不再受log.buffer_size限制
 11. 可以精确手动设置时区
+12. `raw_file`类型的appender不再维护，标记为`废弃`，请用`compressed_file`类型替代。
 
 ---
 
