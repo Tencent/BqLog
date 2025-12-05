@@ -29,7 +29,7 @@ namespace bq {
     class time_zone {
     public:
         time_zone(const bq::string& time_zone_str = "localtime");
-        time_zone(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int64_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str);
+        time_zone(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int32_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str);
         ~time_zone();
 
         void reset();
@@ -40,7 +40,7 @@ namespace bq {
         /// <param name="time_zone_str">such as : "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"</param>
         void parse_by_string(const bq::string& time_zone_str);
 
-        void restore_by_config(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int64_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str);
+        void restore_by_config(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int32_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str);
 
         bool get_tm_by_epoch(uint64_t epoch_ms, struct tm& result) const;
 
@@ -56,7 +56,7 @@ namespace bq {
             return (gmt_offset_hours_ * 3600 + gmt_offset_minutes_ * 60) * 1000;
         }
         bq_forceinline const bq::string& get_time_zone_str() const { return time_zone_str_; }
-        bq_forceinline int64_t get_time_zone_diff_to_gmt_ms() const { return time_zone_diff_to_gmt_ms_; }
+        bq_forceinline int32_t get_time_zone_diff_to_gmt_ms() const { return time_zone_diff_to_gmt_ms_; }
         bq_forceinline void refresh_time_string_cache(uint64_t epoch_ms)
         {
             if (epoch_ms == last_time_epoch_cache_) {
@@ -77,7 +77,7 @@ namespace bq {
         bool use_local_time_;
         int32_t gmt_offset_hours_;
         int32_t gmt_offset_minutes_;
-        int64_t time_zone_diff_to_gmt_ms_;
+        int32_t time_zone_diff_to_gmt_ms_;
         bq::string time_zone_str_;
 
         // Cache for time string

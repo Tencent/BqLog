@@ -70,6 +70,10 @@ namespace bq {
         enum class appender_encryption_type : uint8_t {
             plaintext = 1,
             rsa_aes_xor
+        };        
+        enum class appender_segment_type : uint8_t {
+            normal = 1,
+            recovery = 2
         };
 
         BQ_PACK_BEGIN
@@ -78,43 +82,51 @@ namespace bq {
             appender_format_type format;
             char padding[3];
         } BQ_PACK_END
+        static_assert(sizeof(appender_file_header) == 8, "appender_file_header size error");
 
-            BQ_PACK_BEGIN struct appender_encryption_header {
-            appender_encryption_type encryption_type;
-            char padding[7];
-        } BQ_PACK_END
+        BQ_PACK_BEGIN
+        struct appender_file_segment_head {
+            uint64_t next_seg_pos;
+            appender_segment_type seg_type;
+            appender_encryption_type enc_type;
+            char padding[2];
+        }
+        BQ_PACK_END
+        static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_header size error");
 
-            BQ_PACK_BEGIN struct appender_payload_metadata {
+        //Only exist in first segment
+        BQ_PACK_BEGIN 
+        struct appender_payload_metadata {
             char magic_number[3];
             bool use_local_time;
             int32_t gmt_offset_hours;
             int32_t gmt_offset_minutes;
-            int64_t time_zone_diff_to_gmt_ms;
+            int32_t time_zone_diff_to_gmt_ms;
             char time_zone_str[32];
             uint32_t category_count;
-    } BQ_PACK_END public : bq_forceinline static size_t get_xor_key_blob_size()
+        } 
+        BQ_PACK_END
+
+        struct seg_info {
+            uint64_t start_pos;
+            uint64_t end_pos;
+            appender_encryption_type enc_type_;
+        };
+
+    public: 
+        bq_forceinline static constexpr size_t get_xor_key_blob_size()
         {
             return 32 * 1024; // 32 KiB
         }
-        bq_forceinline static size_t get_encryption_keys_size()
+
+        bq_forceinline static constexpr size_t get_encryption_keys_size()
         {
             return 256 // size of RSA-2048 ciphertext of AES key
                 + 16 // size of AES IV in plaintext
                 + get_xor_key_blob_size(); // size of AES-encrypted XOR key blob
         }
-        bq_forceinline static size_t get_encryption_head_size()
-        {
-            return sizeof(appender_encryption_header);
-        }
-        bq_forceinline static size_t get_encryption_base_pos()
-        {
-            return sizeof(appender_file_header)
-                + get_encryption_head_size()
-                + get_encryption_keys_size();
-        }
 
-    public:
-        static void xor_stream_inplace_u64_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset);
+        static void xor_stream_inplace_32bytes_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset);
 
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
@@ -124,13 +136,20 @@ namespace bq {
         virtual void flush_cache() override;
         virtual appender_format_type get_appender_format() const = 0;
         virtual uint32_t get_binary_format_version() const = 0;
-        virtual void before_recover() override;
-        virtual void after_recover() override;
+        virtual void on_appender_file_recovery_begin() override;
+        virtual void on_appender_file_recovery_end() override;
+        virtual void on_log_item_recovery_begin() override;
+        virtual void on_log_item_recovery_end() override;
+        virtual read_with_cache_handle read_with_cache(size_t size) override;
 
     private:
-        appender_encryption_type encryption_type_ = appender_encryption_type::plaintext;
+        bool read_to_next_segment();
+        void append_new_segment(appender_segment_type type);
+        void update_write_cache_alignment();
+    private:
         bq::rsa::public_key rsa_pub_key_;
-        bq::array<uint8_t, bq::aligned_allocator<uint8_t, sizeof(uint64_t)>> xor_key_blob_;
-        size_t encryption_start_pos_ = 0;
+        seg_info cur_read_seg_;
+        appender_encryption_type enc_type_;
+        bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> xor_key_blob_;
     };
 }

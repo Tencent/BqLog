@@ -33,7 +33,7 @@ namespace bq {
         parse_by_string(time_zone_str);
     }
 
-    time_zone::time_zone(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int64_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str)
+    time_zone::time_zone(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int32_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str)
     {
         restore_by_config(use_local_time, gmt_offset_hours, gmt_offset_minutes, time_zone_diff_to_gmt_ms, time_zone_str);
     }
@@ -127,7 +127,7 @@ namespace bq {
                 time_t local_epoch_sec = mktime(const_cast<struct tm*>(&lt));
                 time_t utc_epoch_sec = mktime(const_cast<struct tm*>(&gt));
                 double timezone_offset = difftime(local_epoch_sec, utc_epoch_sec);
-                time_zone_diff_to_gmt_ms_ = (int64_t)(timezone_offset) * 1000;
+                time_zone_diff_to_gmt_ms_ = static_cast<int32_t>((timezone_offset) * 1000);
             }
         } else {
             if (gmt_offset_hours_ == 0 && gmt_offset_minutes_ == 0) {
@@ -141,11 +141,11 @@ namespace bq {
                 snprintf(buffer, sizeof(buffer), "UTC%+d:%02" PRId32, gmt_offset_hours_, abs(gmt_offset_minutes_));
                 time_zone_str_ = buffer;
             }
-            time_zone_diff_to_gmt_ms_ = ((int64_t)gmt_offset_hours_ * 3600 + (int64_t)gmt_offset_minutes_ * 60) * 1000;
+            time_zone_diff_to_gmt_ms_ = static_cast<int32_t>((gmt_offset_hours_ * 3600 + gmt_offset_minutes_ * 60) * 1000);
         }
     }
 
-    void time_zone::restore_by_config(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int64_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str)
+    void time_zone::restore_by_config(bool use_local_time, int32_t gmt_offset_hours, int32_t gmt_offset_minutes, int32_t time_zone_diff_to_gmt_ms, const bq::string& time_zone_str)
     {
         use_local_time_ = use_local_time;
         gmt_offset_hours_ = gmt_offset_hours;

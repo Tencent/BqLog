@@ -37,6 +37,13 @@ namespace bq {
             }
         };
 
+        struct seg_info {
+            uint64_t start_pos;
+            uint64_t end_pos;
+            appender_file_binary::appender_encryption_type enc_type;
+            bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> xor_key_blob;
+        };
+
     public:
         virtual ~appender_decoder_base() { }
 
@@ -56,9 +63,9 @@ namespace bq {
 
         virtual uint32_t get_binary_format_version() const = 0;
 
-        void seek_read_file_absolute(size_t pos);
+        bool seek_read_file_absolute(size_t pos);
 
-        void seek_read_file_offset(int32_t offset);
+        bool seek_read_file_offset(int32_t offset);
 
         size_t get_current_file_size();
 
@@ -69,13 +76,15 @@ namespace bq {
 
         appender_decode_result do_decode_by_log_entry_handle(const bq::log_entry_handle& item);
 
-        size_t get_next_read_file_pos() const;
+    private:
+        appender_decode_result read_to_next_segment();
 
+        size_t read_from_file_directly(void* dst, size_t size);
     protected:
         bq::string decoded_text_;
         bq::layout layout_;
         bq::appender_file_binary::appender_file_header file_head_;
-        bq::appender_file_binary::appender_encryption_header enc_head_;
+        seg_info cur_read_seg_;
         bq::appender_file_binary::appender_payload_metadata payload_metadata_;
         bq::array<bq::string> category_names_;
 
@@ -83,8 +92,9 @@ namespace bq {
         bq::file_handle file_;
         size_t current_file_size_ = 0;
         size_t current_file_cursor_ = 0;
-        bq::array<uint8_t, bq::aligned_allocator<uint8_t, sizeof(uint64_t)>> xor_key_blob_;
-        bq::array<uint8_t, bq::aligned_allocator<uint8_t, sizeof(uint64_t)>> cache_read_;
+        bq::rsa::private_key private_key_;
+
+        bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
     };
 }

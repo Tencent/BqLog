@@ -21,13 +21,13 @@ namespace bq {
         friend class appender_decoder_base;
 
     protected:
+        static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = 32;   //256 bites alignment to improve SIMD performance
+
         struct parse_file_context {
         private:
             bq::string file_name_;
 
         public:
-            size_t parsed_size = 0;
-
             parse_file_context(const bq::string& file_name)
                 : file_name_(file_name)
             {
@@ -88,20 +88,18 @@ namespace bq {
 
         virtual void on_file_open(bool is_new_created);
 
-        virtual void before_recover(){}
-
-        virtual void after_recover(){}
-
-        void seek_read_file_absolute(size_t pos);
+        bool seek_read_file_absolute(size_t pos);
 
         void seek_read_file_offset(int32_t offset);
+
+        void set_cache_write_data_alignment_offset(uint8_t offset);
 
         size_t get_current_file_size() const {return current_file_size_;}
 
         file_handle& get_file_handle() {return file_;}
 
         // data() returned by read_with_cache_handle will be invalid after next calling of "read_with_cache"
-        read_with_cache_handle read_with_cache(size_t size);
+        virtual read_with_cache_handle read_with_cache(size_t size);
 
         void clear_read_cache();
 
@@ -109,7 +107,13 @@ namespace bq {
 
         void return_write_cache(const write_with_cache_handle& handle);
 
+        //Low performance function, try to use write cache first
+        size_t direct_write(const void* data, size_t size, bq::file_manager::seek_option seek_opt, int64_t seek_offset);
+
         void mark_write_finished();
+
+        virtual void on_appender_file_recovery_begin(){};
+        virtual void on_appender_file_recovery_end(){};
     private:
         void set_basic_configs(const bq::property_value& config_obj);
 
@@ -129,7 +133,7 @@ namespace bq {
 
         bool open_file_with_write_exclusive(const bq::string& file_path);
 
-        void resize_head_and_write_cache(size_t new_size);
+        void resize_cache_write_entity(size_t new_size);
 
         bq::string get_mmap_file_path() const;
 
@@ -137,6 +141,9 @@ namespace bq {
 
         bool is_recovery_enabled() const;
 
+        size_t get_total_used_write_cache_size() const {
+            return head_size_ + get_cache_write_alignment_offset() + cache_write_cursor_;
+        }
     private:
         bq::string config_file_name_;
         bool always_create_new_file_ = false;
@@ -153,11 +160,13 @@ namespace bq {
         struct mmap_head {
             uint64_t write_cache_size_;
             uint64_t cache_write_finished_cursor_;
-            uint64_t file_path_size_;
+            uint8_t cache_write_alignment_offset_;   
+            char padding0_[sizeof(uint32_t) - sizeof(uint8_t)];
+            uint32_t file_path_size_;
             char file_path_[1];
-            char padding_[BQ_CACHE_LINE_SIZE - sizeof(uint64_t) * 3 - sizeof(file_path_)];
+            char padding1_[DEFAULT_BUFFER_ALIGNMENT - sizeof(uint64_t) * 3 - sizeof(file_path_)];
         }BQ_PACK_END
-        static_assert(sizeof(mmap_head) == BQ_CACHE_LINE_SIZE, "Invalid appender_file_base::mmap_head size");
+        static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
         bq::unique_ptr<bq::normal_buffer> cache_write_entity_;
         mmap_head* head_ = nullptr;
         size_t head_size_ = sizeof(mmap_head);
@@ -173,17 +182,38 @@ namespace bq {
 #endif
         bq::array<uint8_t> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
+        bool cache_read_eof_ = false;
 
-        bq_forceinline size_t get_pendding_flush_size() const {
+        bq_forceinline size_t get_pendding_flush_written_size() const {
             return head_ ? static_cast<size_t>(head_->cache_write_finished_cursor_) : static_cast<size_t>(0);
+        }
+
+        bq_forceinline size_t get_written_size() const {
+            return cache_write_cursor_;
         }
 
         bq_forceinline size_t get_cache_write_size() const {
             return head_ ? static_cast<size_t>(head_->write_cache_size_) : static_cast<size_t>(0);
         }
 
+        bq_forceinline size_t get_cache_write_finished_cursor() const {
+            return head_ ? static_cast<size_t>(head_->cache_write_finished_cursor_) : static_cast<size_t>(0);
+        }
+
+        bq_forceinline size_t get_cache_write_alignment_offset() const {
+            return head_ ? static_cast<size_t>(head_->cache_write_alignment_offset_) : static_cast<size_t>(0);
+        }
+
+        bq_forceinline bool is_read_of_cache_eof() const {
+            return cache_read_eof_;
+        }
+
         uint8_t* get_cache_write_ptr_base() {
             return cache_write_;
+        }
+
+        decltype(cache_read_)::size_type get_cache_read_cursor() const {
+            return cache_read_cursor_;
         }
     };
 }

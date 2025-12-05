@@ -63,12 +63,26 @@ namespace bq {
             return;
         }
         bool is_from_mmap = is_memory_mapped();
+        void* back_updata = nullptr;
+        auto prev_size = size();
+        // Why do we have to back up first?
+        // Reason 1: If it was from mmap before, and this time the new mmap application failed, reverting to ordinary heap memory, it is too late to back up the previous data.
+        // Reason 2: We do not want the reliability of mmap backup data to depend on operating system behavior.
+        if (is_from_mmap) {
+            if (size() > 0) {
+                back_updata = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, prev_size);
+                memcpy(back_updata, data(), size());
+            }
+        }
+        else {
+            back_updata = data();
+        }
         if(is_from_mmap){
             do {
                 bq::memory_map::release_memory_map(memory_map_handle_);
                 new_size = bq::memory_map::get_min_size_of_memory_map_file(0, new_size);
                 if (!bq::file_manager::instance().truncate_file(memory_map_file_, new_size)) {
-                    bq::util::log_device_console(log_level::fatal, "normal buffer truncate memory map file \"%s\" failed, use memory instead.DATA LOSS POSSIBLE.", memory_map_file_.abs_file_path().c_str());
+                    bq::util::log_device_console(log_level::warning, "normal buffer truncate memory map file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
                     bq::string mmap_file_path = memory_map_file_.abs_file_path();
                     bq::file_manager::instance().close_file(memory_map_file_);
                     bq::file_manager::remove_file_or_dir(mmap_file_path);
@@ -77,7 +91,7 @@ namespace bq {
                 }
                 memory_map_handle_ = bq::memory_map::create_memory_map(memory_map_file_, 0, new_size);
                 if (!memory_map_handle_.has_been_mapped()) {
-                    bq::util::log_device_console(log_level::fatal, "ring buffer create memory map failed from file \"%s\" failed, use memory instead.DATA LOSS POSSIBLE.", memory_map_file_.abs_file_path().c_str());
+                    bq::util::log_device_console(log_level::warning, "ring buffer create memory map failed from file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());
                     bq::string mmap_file_path = memory_map_file_.abs_file_path();
                     bq::file_manager::instance().close_file(memory_map_file_);
                     bq::file_manager::remove_file_or_dir(mmap_file_path);
@@ -88,16 +102,12 @@ namespace bq {
             }while(false);
         }
         if (!is_memory_mapped()) {
-            if (is_from_mmap) {
-                buffer_data_ = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, new_size);
-            }
-            else {
-                void* new_buffer_data = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, new_size);
-                memcpy(new_buffer_data, buffer_data_, bq::min_value(buffer_size_, new_size));
-                bq::platform::aligned_free(buffer_data_);
-                buffer_data_ = new_buffer_data;
-            }
+            buffer_data_ = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, new_size);
             buffer_size_ = new_size;
+        }
+        if (back_updata != nullptr) {
+            memcpy(buffer_data_, back_updata, bq::min_value(prev_size, buffer_size_));
+            bq::platform::aligned_free(back_updata);
         }
     }
 

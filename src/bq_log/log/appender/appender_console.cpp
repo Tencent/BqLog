@@ -220,6 +220,16 @@ namespace bq {
         }
     }
 
+    void appender_console::on_log_item_recovery_begin()
+    {
+        util::log_device_console_plain_text(bq::log_level::info, log_global_vars::get().log_recover_start_str_);
+    }
+
+    void appender_console::on_log_item_recovery_end()
+    {
+        util::log_device_console_plain_text(bq::log_level::info, log_global_vars::get().log_recover_end_str_);
+    }
+
     appender_console::console_static_misc& appender_console::get_console_misc()
     {
         return *log_global_vars::get().console_static_misc_;

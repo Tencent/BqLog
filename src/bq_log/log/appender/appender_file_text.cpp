@@ -11,6 +11,7 @@
  */
 #include "bq_log/log/appender/appender_file_text.h"
 #include "bq_log/log/log_imp.h"
+#include "bq_log/global/log_vars.h"
 
 namespace bq {
 
@@ -48,18 +49,32 @@ namespace bq {
         return ".log";
     }
 
-    void appender_file_text::before_recover()
-    {
-        const char* text = "=========Recovered Logs Start=========\n";
-        const size_t text_len = strlen(text);
-        bq::file_manager::instance().write_file(get_file_handle(), text, text_len, bq::file_manager::seek_option::end, 0);
+    void appender_file_text::on_appender_file_recovery_begin() {
+        auto write_handle = alloc_write_cache(strlen(log_global_vars::get().log_recover_start_str_) + sizeof('\n'));
+        memcpy(write_handle.data(), log_global_vars::get().log_recover_start_str_, strlen(log_global_vars::get().log_recover_start_str_));
+        write_handle.data()[strlen(log_global_vars::get().log_recover_start_str_)] = (uint8_t)'\n';
+        return_write_cache(write_handle);
     }
 
-    void appender_file_text::after_recover()
-    {
-        const char* text = "=========Recovered Logs End=========\n";
-        const size_t text_len = strlen(text);
-        bq::file_manager::instance().write_file(get_file_handle(), text, text_len, bq::file_manager::seek_option::end, 0);
+    void appender_file_text::on_appender_file_recovery_end() {
+        auto write_handle = alloc_write_cache(strlen(log_global_vars::get().log_recover_end_str_) + sizeof('\n'));
+        memcpy(write_handle.data(), log_global_vars::get().log_recover_end_str_, strlen(log_global_vars::get().log_recover_end_str_));
+        write_handle.data()[strlen(log_global_vars::get().log_recover_end_str_)] = (uint8_t)'\n';
+        return_write_cache(write_handle);
+    }
+
+    void appender_file_text::on_log_item_recovery_begin() {
+        auto write_handle = alloc_write_cache(strlen(log_global_vars::get().log_recover_start_str_) + sizeof('\n'));
+        memcpy(write_handle.data(), log_global_vars::get().log_recover_start_str_, strlen(log_global_vars::get().log_recover_start_str_));
+        write_handle.data()[strlen(log_global_vars::get().log_recover_start_str_)] = (uint8_t)'\n';
+        return_write_cache(write_handle);
+    }
+
+    void appender_file_text::on_log_item_recovery_end() {
+        auto write_handle = alloc_write_cache(strlen(log_global_vars::get().log_recover_end_str_) + sizeof('\n'));
+        memcpy(write_handle.data(), log_global_vars::get().log_recover_end_str_, strlen(log_global_vars::get().log_recover_end_str_));
+        write_handle.data()[strlen(log_global_vars::get().log_recover_end_str_)] = (uint8_t)'\n';
+        return_write_cache(write_handle);
     }
 
 }

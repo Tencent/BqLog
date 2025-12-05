@@ -39,8 +39,8 @@ namespace bq {
         head_->cache_write_finished_cursor_ -= real_write_size;
         cache_write_cursor_ -= real_write_size;
         current_file_size_ += real_write_size;
-        if(head_->write_cache_size_ + head_size_ > (CACHE_WRITE_DEFAULT_SIZE << 1)) {
-            resize_head_and_write_cache(CACHE_WRITE_DEFAULT_SIZE);
+        if(cache_write_entity_->size() > CACHE_WRITE_DEFAULT_SIZE && get_total_used_write_cache_size() <= (CACHE_READ_DEFAULT_SIZE >> 1)) {
+            resize_cache_write_entity(CACHE_WRITE_DEFAULT_SIZE);
         }
         if (error_code != 0 && error_code !=
 #if defined(BQ_WIN)
@@ -87,7 +87,8 @@ namespace bq {
             try_recover();
             clean_cache_write();
         }
-        resize_head_and_write_cache(CACHE_WRITE_DEFAULT_SIZE);
+        assert(get_total_used_write_cache_size() <= CACHE_WRITE_DEFAULT_SIZE);
+        resize_cache_write_entity(CACHE_WRITE_DEFAULT_SIZE);
         return !config_file_name_.is_empty();
     }
 
@@ -109,10 +110,14 @@ namespace bq {
         (void)is_new_created;
     }
 
-    void appender_file_base::seek_read_file_absolute(size_t pos)
+    bool appender_file_base::seek_read_file_absolute(size_t pos)
     {
-        clear_read_cache();
-        file_manager::instance().seek(file_, file_manager::seek_option::begin, (int32_t)pos);
+        bool result = file_manager::instance().seek(file_, file_manager::seek_option::begin, (int32_t)pos);
+        if (result) {
+            clear_read_cache();
+            cache_read_eof_ = false;
+        }
+        return result;
     }
 
     void appender_file_base::seek_read_file_offset(int32_t offset)
@@ -122,14 +127,27 @@ namespace bq {
             cache_read_cursor_ = static_cast<size_t>(static_cast<size_t_to_int_t>(cache_read_cursor_) + offset);
         } else {
             assert(false && "not implemented");
-            // TODO: The following implementation is incorrect.
-            // Given that this scenario is unlikely to occur at the moment, we can wait until it arises to implement a solution.
-            // This situation could be somewhat complex, as it might need additional variables to keep track of the current actual cursor position within the entire file.
-            // Subsequently, we would need to add an offset to this variable to get the final absolute file position,
-            // and then call `clear_read_cache()` and `file_manager::instance().seek`.
+        }
+    }
 
-            /*clear_read_cache();
-            file_manager::instance().seek(file_, file_manager::seek_option::current, offset);*/
+
+    void appender_file_base::set_cache_write_data_alignment_offset(uint8_t offset)
+    {
+        auto current_total_size = cache_write_entity_->size();
+        auto current_using_size = get_total_used_write_cache_size();
+        uint8_t prev_offset = head_->cache_write_alignment_offset_;
+
+        auto new_total_size = current_total_size;
+        if (offset > prev_offset) {
+            if (current_using_size + offset - prev_offset > current_total_size) {
+                new_total_size = current_using_size + offset - prev_offset;
+            }
+        }
+        head_->cache_write_alignment_offset_ = offset;
+        resize_cache_write_entity(new_total_size);
+        ptrdiff_t offset_diff = static_cast<ptrdiff_t>(offset) - static_cast<ptrdiff_t>(prev_offset);
+        if (offset_diff != 0 && cache_write_cursor_ > 0) {
+            memmove(cache_write_, cache_write_ - offset_diff, cache_write_cursor_);
         }
     }
 
@@ -145,6 +163,7 @@ namespace bq {
             cache_read_cursor_ = 0;
             if (read_size < fill_size) {
                 cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(left_size + read_size), fill_size - read_size);
+                cache_read_eof_ = true;
             }
         }
         bq::appender_file_base::read_with_cache_handle result;
@@ -171,16 +190,13 @@ namespace bq {
 #endif
         uint64_t need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
         if (need_cache_write_size > get_cache_write_size()) {
-            if (need_cache_write_size + head_size_ > CACHE_WRITE_DEFAULT_SIZE) {
-                flush_cache();
-                need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
-            }
+            flush_cache();
+            need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
             if (need_cache_write_size > get_cache_write_size()) {
-                uint64_t new_cache_size = bq::roundup_pow_of_two(need_cache_write_size + head_size_);
-                resize_head_and_write_cache(static_cast<size_t>(new_cache_size));
+                uint64_t new_cache_size = bq::roundup_pow_of_two(need_cache_write_size + head_size_ + head_->cache_write_alignment_offset_);
+                resize_cache_write_entity(static_cast<size_t>(new_cache_size));
             }
         }
-
         write_with_cache_handle result_handle;
         result_handle.data_ = cache_write_ + static_cast<ptrdiff_t>(cache_write_cursor_);
         result_handle.alloc_len_ = size;
@@ -198,6 +214,13 @@ namespace bq {
         cache_write_cursor_ += static_cast<uint64_t>(handle.used_len_);
     }
 
+    size_t appender_file_base::direct_write(const void* data, size_t size, bq::file_manager::seek_option seek_opt, int64_t seek_offset)
+    {
+        size_t real_write_size = bq::file_manager::instance().write_file(file_, data, size, seek_opt, seek_offset);
+        bq::file_manager::instance().seek(file_, bq::file_manager::seek_option::end, static_cast<int64_t>(0));
+        current_file_size_ = bq::file_manager::instance().get_file_size(file_);
+        return real_write_size;
+    }
 
     void appender_file_base::mark_write_finished() {
 #ifndef NDEBUG
@@ -247,26 +270,24 @@ namespace bq {
         return true;
     }
 
-    void appender_file_base::resize_head_and_write_cache(size_t new_size)
+    void appender_file_base::resize_cache_write_entity(size_t new_size)
     {
-        uint64_t cache_write_finished_cursor_backup = head_ ? head_->cache_write_finished_cursor_ : 0;
-        assert(head_size_ + cache_write_cursor_ <= new_size);
-        if (!cache_write_entity_) {
+        assert(get_total_used_write_cache_size() <= new_size);
+        bool new_created = !cache_write_entity_;
+        if (new_created) {
             cache_write_entity_ = bq::make_unique<bq::normal_buffer>(new_size, is_recovery_enabled() ? get_mmap_file_path() : "", true);
         }
         else {
             cache_write_entity_->resize(new_size);
         }
         head_ = static_cast<mmap_head*>(cache_write_entity_->data());
-        head_->file_path_size_ = static_cast<uint64_t>(file_.abs_file_path().size());
-        if (file_.abs_file_path().size() > 0) {
-            memcpy(head_->file_path_, file_.abs_file_path().c_str(), file_.abs_file_path().size());
+        if (new_created) {
+            head_->cache_write_finished_cursor_ = 0;
+            head_->cache_write_alignment_offset_ = 0;
         }
-        head_->cache_write_finished_cursor_ = cache_write_finished_cursor_backup;
-        head_->write_cache_size_ = static_cast<uint64_t>(cache_write_entity_->size() - head_size_);
-        cache_write_ = reinterpret_cast<uint8_t*>(head_) + static_cast<ptrdiff_t>(head_size_);
+        head_->write_cache_size_ = static_cast<uint64_t>(cache_write_entity_->size() - head_size_ - head_->cache_write_alignment_offset_);
+        cache_write_ = reinterpret_cast<uint8_t*>(head_) + static_cast<ptrdiff_t>(head_size_) + static_cast<ptrdiff_t>(head_->cache_write_alignment_offset_);
     }
-
 
     bq::string appender_file_base::get_mmap_file_path() const
     {
@@ -278,6 +299,7 @@ namespace bq {
         if (head_) {
             head_->cache_write_finished_cursor_ = 0;
         }
+        cache_write_cursor_ = 0;
     }
 
 
@@ -331,13 +353,28 @@ namespace bq {
 
     void appender_file_base::refresh_head_size(bool need_recovery, const bq::string& mmap_file_abs_path)
     {
+        size_t new_head_size = 0;
         if (need_recovery) {
             mmap_head head_tmp{};
-            head_size_ = static_cast<uint64_t>(reinterpret_cast<const char*>(head_tmp.file_path_) - reinterpret_cast<const char*>(&head_tmp))
+            new_head_size = static_cast<uint64_t>(BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_))
                             + static_cast<uint64_t>(bq::align_8(static_cast<uint64_t>(mmap_file_abs_path.size())));
         }else {
-            head_size_ = sizeof(mmap_head);
+            new_head_size = sizeof(mmap_head);
         }
+        if (new_head_size != head_size_) {
+            assert(cache_write_cursor_ == 0 && "calling to appender_file_base::refresh_head_size is not allowed when cache write is not empty!");
+        }
+        auto current_total_size = cache_write_entity_->size();
+        auto current_using_size = get_total_used_write_cache_size();
+
+        auto new_total_size = current_total_size;
+        if (new_head_size > head_size_) {
+            if (current_using_size + new_head_size - head_size_ > current_total_size) {
+                new_total_size = current_using_size + new_head_size - head_size_;
+            }
+        }
+        head_size_ = new_head_size;
+        resize_cache_write_entity(new_total_size);
     }
 
     bool appender_file_base::try_recover() {
@@ -349,19 +386,19 @@ namespace bq {
             return false;
         }
 
-        head_ = static_cast<mmap_head*>(static_cast<void*>(cache_write_entity_->data()));
-        if (cache_write_entity_->size() <= (static_cast<size_t>(reinterpret_cast<const char*>(head_->file_path_) - reinterpret_cast<const char*>(head_)))) {
+        head_ = static_cast<mmap_head*>(cache_write_entity_->data());
+        if (cache_write_entity_->size() <= BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_)) {
             bq::util::log_device_console(bq::log_level::warning, "%s too small, give up recovery!", mmap_file_path.c_str());
             return false;
         }
-        uint64_t head_size = static_cast<uint64_t>(reinterpret_cast<const char*>(head_->file_path_) - reinterpret_cast<const char*>(head_))
+        uint64_t head_size = static_cast<uint64_t>(BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_))
                 + static_cast<uint64_t>(bq::align_8(static_cast<uint64_t>(head_->file_path_size_)));
-        if (cache_write_entity_->size() <= static_cast<size_t>(head_size)) {
+        cache_write_ = reinterpret_cast<uint8_t*>(head_) + static_cast<ptrdiff_t>(head_size) + static_cast<ptrdiff_t>(head_->cache_write_alignment_offset_);
+        if (cache_write_entity_->size() < static_cast<size_t>(cache_write_ - static_cast<uint8_t*>(cache_write_entity_->data()))) {
             bq::util::log_device_console(bq::log_level::warning, "%s too small, give up recovery!", mmap_file_path.c_str());
             return false;
         }
-        cache_write_ = reinterpret_cast<uint8_t*>(head_) + static_cast<ptrdiff_t>(head_size);
-        uint64_t max_cache_write_size = static_cast<uint64_t>(cache_write_entity_->size()) - static_cast<uint64_t>(head_size);
+        uint64_t max_cache_write_size = static_cast<uint64_t>(cache_write_entity_->size()) - static_cast<uint64_t>(head_size) - static_cast<uint64_t>(head_->cache_write_alignment_offset_);
         if (head_->write_cache_size_ != max_cache_write_size 
             || head_->cache_write_finished_cursor_ > max_cache_write_size){
             bq::util::log_device_console(bq::log_level::warning, "%s invalid mmap head data, give up recovery! max size:%" PRIu64 ", recovered size:%" PRIu64 ", recovered cursor:%" PRIu64, mmap_file_path.c_str(), max_cache_write_size, head_->write_cache_size_, head_->cache_write_finished_cursor_);
@@ -377,9 +414,9 @@ namespace bq {
         file_manager::instance().seek(file_, file_manager::seek_option::end, 0);
         cache_write_cursor_ = head_->cache_write_finished_cursor_;
         if (head_->cache_write_finished_cursor_ > 0) {
-            before_recover();
+            on_appender_file_recovery_begin();
             flush_cache();
-            after_recover();
+            on_appender_file_recovery_end();
         }
         bq::file_manager::instance().close_file(file_);
         return true;
@@ -449,6 +486,12 @@ namespace bq {
         printf("open log appender file : %s\n", file_.abs_file_path().c_str());
 #endif
         refresh_head_size(is_recovery_enabled(), file_.abs_file_path());
+        if (is_recovery_enabled()) {
+            head_->file_path_size_ = static_cast<uint32_t>(file_.abs_file_path().size());
+            if (file_.abs_file_path().size() > 0) {
+                memcpy(head_->file_path_, file_.abs_file_path().c_str(), file_.abs_file_path().size());
+            }
+        }
         file_manager::instance().seek(file_, file_manager::seek_option::end, 0);
         on_file_open(current_file_size_ == 0);
     }
@@ -546,7 +589,7 @@ namespace bq {
 
     void appender_file_base::parse_file_context::log_parse_fail_reason(const char* msg) const
     {
-        bq::util::log_device_console(log_level::error, "failed to parse log file :\"%s\" at offset %" PRIu64 ", msg: %s", file_name_.c_str(), static_cast<uint64_t>(parsed_size), msg);
+        bq::util::log_device_console(log_level::error, "failed to parse log file :\"%s\" , msg: %s", file_name_.c_str(), msg);
     }
 
 }

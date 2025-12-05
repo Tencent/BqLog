@@ -134,7 +134,7 @@ namespace bq {
         };
         scoped_exist_callback_helper<decltype(release_cache_lamda)> cache_reset_obj(release_cache_lamda);
         while (true) {
-            if (context.parsed_size == get_current_file_size()) {
+            if (is_read_of_cache_eof()) {
                 // parse finished
                 return true;
             }
@@ -179,7 +179,6 @@ namespace bq {
         constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
         auto read_handle = read_with_cache(VLQ_MAX_SIZE + 1);
         if (read_handle.len() < 2) {
-            context.parsed_size += read_handle.len();
             context.log_parse_fail_reason("decode compressed log file failed, read item head failed");
             return bq::make_tuple(false, appender_file_compressed::item_type::log_template, read_handle);
         }
@@ -197,10 +196,8 @@ namespace bq {
         if (offset == 0) {
             first_byte |= (uint8_t)type;
         }
-        context.parsed_size = static_cast<size_t>(static_cast<int64_t>(context.parsed_size) + static_cast<int64_t>(size_len) + offset);
         seek_read_file_offset(static_cast<int32_t>(size_len) + offset - static_cast<int32_t>(read_handle.len()));
         read_handle = read_with_cache(data_size);
-        context.parsed_size += read_handle.len();
         if (read_handle.len() != (size_t)data_size || data_size < 2) {
             context.log_parse_fail_reason("decode compressed log file failed, read item head failed");
             return bq::make_tuple(false, appender_file_compressed::item_type::log_template, read_handle);
