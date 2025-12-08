@@ -24,7 +24,7 @@ namespace bq {
     normal_buffer::normal_buffer(size_t size, const bq::string& mmap_file_abs_path/* = ""*/, bool auto_create/* = true */ )
         : buffer_data_(nullptr)
         , buffer_size_(0)
-        , delete_mmap_when_destruct_(true)
+        , delete_mmap_when_destruct_(false)
     {
         if (mmap_file_abs_path.is_empty()) {
             mmap_result_ = create_memory_map_result::failed;

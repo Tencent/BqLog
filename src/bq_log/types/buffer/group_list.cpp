@@ -156,9 +156,6 @@ namespace bq {
 
     group_node::~group_node()
     {
-        if (get_data_head().used_.first() || get_data_head().stage_.first()) {
-            buffer_entity_->set_delete_mmap_when_destruct(false);
-        }
         head_ptr_ = nullptr;
     }
 
@@ -207,6 +204,9 @@ namespace bq {
                 assert(false && "group_list alloc group_node failed");
             }
             head_.node_ = new_node;
+#if defined(BQ_UNIT_TEST)
+            groups_count_.fetch_add_seq_cst(1);
+#endif
         }
     }
 

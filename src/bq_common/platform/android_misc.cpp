@@ -452,11 +452,11 @@ namespace bq {
                 env->ExceptionClear();
                 __android_log_print(ANDROID_LOG_ERROR, "Bq", "get content resolver exception!");
             }
-            // get common_global_vars::get().android_id_ from android Settings$Secure
+            // get android_id from android Settings$Secure
             jmethodID method_id = env->GetStaticMethodID(cls_android_setting_secure_, "getString",
                 "(Landroid/content/ContentResolver;Ljava/lang/"
                 "String;)Ljava/lang/String;");
-            jstring android_id = env->NewStringUTF("common_global_vars::get().android_id_");
+            jstring android_id = env->NewStringUTF("android_id");
             jstring android_id_string = (jstring)env->CallStaticObjectMethod(
                 cls_android_setting_secure_, method_id, resolver_instance, android_id);
             if (env->ExceptionCheck()) {
@@ -465,7 +465,7 @@ namespace bq {
                 __android_log_print(ANDROID_LOG_ERROR, "Bq", "get android id exception!");
             }
             const char* android_id_c_str = env->GetStringUTFChars(android_id_string, JNI_FALSE);
-            __android_log_print(ANDROID_LOG_INFO, "Bq", "common_global_vars::get().android_id_: %s\n", android_id_c_str);
+            __android_log_print(ANDROID_LOG_INFO, "Bq", "android_id: %s\n", android_id_c_str);
             common_global_vars::get().android_id_ = android_id_c_str;
             env->ReleaseStringUTFChars(android_id_string, android_id_c_str);
             return common_global_vars::get().android_id_;

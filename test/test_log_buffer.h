@@ -18,6 +18,7 @@
 #include "test_base.h"
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/memory_pool.h"
+#include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
     namespace test {
@@ -273,6 +274,32 @@ namespace bq {
 
         class test_log_buffer : public test_base {
         private:
+            void do_normal_buffer_test(test_result& result) {
+                size_t prev_size = 0;
+                for (int32_t i = 0; i < 1024; ++i) {
+                    std::random_device sd;
+                    std::minstd_rand linear_ran(sd());
+                    std::uniform_int_distribution<size_t> rand_seq(1024, 5 * 1024 * 1024);
+                    size_t new_size = rand_seq(linear_ran);
+                    bq::normal_buffer n_buffer(new_size * sizeof(uint32_t), TO_ABSOLUTE_PATH("bqlog_mmap/normal_buffer_test.mmap", 0), true);
+                    new_size = n_buffer.size() / sizeof(uint32_t);
+                    uint32_t* data = static_cast<uint32_t*>(n_buffer.data());
+                    size_t check_size = bq::min_value(prev_size, new_size);
+                    bool check_result = true;
+                    for (size_t j = 0; j < check_size; ++j) {
+                        if (data[j] != static_cast<uint32_t>(j)) {
+                            check_result = false;
+                            break;
+                        }
+                    }
+                    for (size_t j = check_size; j < new_size; ++j) {
+                        data[j] = static_cast<uint32_t>(j);
+                    }
+                    result.add_result(check_result, "normal buffer test for prev_size:%" PRIu32 ", new size:%" PRIu32, static_cast<uint32_t>(prev_size), static_cast<uint32_t>(new_size));
+                    prev_size = new_size;
+                }
+            }
+
             void do_linked_list_test(test_result& result)
             {
                 test_output_dynamic(bq::log_level::info, "[memory pool] miso linked list test begin\n");
@@ -449,7 +476,7 @@ namespace bq {
                 list_to.~block_list();
             }
 
-            static void do_basic_test(test_result& result, log_buffer_config config)
+            void do_log_buffer_test(test_result& result, log_buffer_config config)
             {
                 log_buffer_test_total_write_count_.store_seq_cst(0);
                 bq::log_buffer test_buffer(config);
@@ -811,6 +838,7 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
+                do_normal_buffer_test(result);
                 do_linked_list_test(result);
                 do_memory_pool_test(result);
                 log_buffer_config config;
@@ -824,22 +852,22 @@ namespace bq {
                 config.need_recovery = true;
                 do_block_list_test(result, config);
 
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
                 config.need_recovery = false;
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
 
                 config.high_frequency_threshold_per_second = UINT64_MAX;
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
                 config.need_recovery = true;
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::auto_expand_when_full;
-                do_basic_test(result, config);
+                do_log_buffer_test(result, config);
 
                 do_recovery_test(result);
                 return result;
