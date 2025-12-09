@@ -291,18 +291,7 @@ namespace bq {
                 if (h_file == INVALID_HANDLE_VALUE) {
                     // it's empty
                 } else {
-                    if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
-                        // ignore
-                    } else {
-                        path.push_back(u'\\');
-                        path += (const char16_t*)find_data.cFileName;
-                        int32_t result = remove_dir_or_file_inner(path);
-                        path.erase(path.begin() + static_cast<ptrdiff_t>(path_init_size), path.size() - path_init_size);
-                        if (result != 0) {
-                            return result;
-                        }
-                    }
-                    while (FindNextFileW(h_file, &find_data)) {
+                    do {
                         if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
                             // ignore
                             continue;
@@ -312,9 +301,11 @@ namespace bq {
                         int32_t result = remove_dir_or_file_inner(path);
                         path.erase(path.begin() + static_cast<ptrdiff_t>(path_init_size), path.size() - path_init_size);
                         if (result != 0) {
+                            FindClose(h_file);
                             return result;
                         }
-                    }
+                    } while (FindNextFileW(h_file, &find_data));
+                    FindClose(h_file);
                 }
                 DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
                 attr &= static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY);
@@ -533,11 +524,7 @@ namespace bq {
             if (h_file == INVALID_HANDLE_VALUE) {
                 // it's empty
             } else {
-                if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
-                    // ignore
-                } else {
-                }
-                while (FindNextFileW(h_file, &find_data)) {
+                do {
                     if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
                         // ignore
                         continue;
@@ -547,7 +534,8 @@ namespace bq {
                     assert(trans_len < (uint32_t)sizeof(name_utf8_tmp) && "get_all_sub_names bq::util::utf16_to_utf8 size error");
                     name_utf8_tmp[(size_t)trans_len] = u'\0';
                     list.push_back(name_utf8_tmp);
-                }
+                } while (FindNextFileW(h_file, &find_data));
+                FindClose(h_file);
             }
             return list;
         }

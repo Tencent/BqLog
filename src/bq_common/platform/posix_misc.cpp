@@ -58,6 +58,24 @@ namespace bq {
                     closedir(dp);
                 }
             }
+            posix_dir_stack_holder(const posix_dir_stack_holder&) = delete;
+            posix_dir_stack_holder& operator=(const posix_dir_stack_holder&) = delete;
+            posix_dir_stack_holder(posix_dir_stack_holder&& rhs) noexcept
+                : dp(rhs.dp)
+            {
+                rhs.dp = nullptr;
+            }
+            posix_dir_stack_holder& operator=(posix_dir_stack_holder&& rhs) noexcept
+            {
+                if (this != &rhs) {
+                    if (dp) {
+                        closedir(dp);
+                    }
+                    dp = rhs.dp;
+                    rhs.dp = nullptr;
+                }
+                return *this;
+            }
             operator bool() const
             {
                 return dp != nullptr;
