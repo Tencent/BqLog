@@ -221,29 +221,28 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
         return appender_decode_result::failed_decode_error;
     }
     last_log_entry_epoch_ = static_cast<uint64_t>((static_cast<int64_t>(last_log_entry_epoch_) + epoch_offset));
-    auto& formate_template = log_templates_array_[formate_template_idx];
+    auto& format_template = log_templates_array_[formate_template_idx];
 
     raw_data_.clear();
     raw_data_.fill_uninitialized(sizeof(bq::_log_entry_head_def));
 
     ptrdiff_t raw_cursor = 0;
     bq::_log_entry_head_def& head = *((bq::_log_entry_head_def*)&raw_data_[raw_cursor]);
-    head.level = (decltype(head.level))formate_template.level;
-    head.category_idx = formate_template.category_idx;
+    head.level = (decltype(head.level))format_template.level;
+    head.category_idx = format_template.category_idx;
     head.timestamp_epoch = last_log_entry_epoch_;
     head.log_format_str_type = (decltype(head.log_format_str_type))log_arg_type_enum::string_utf8_type;
     raw_cursor += static_cast<ptrdiff_t>(sizeof(bq::_log_entry_head_def));
 
-    auto fmt_str_size = sizeof(uint32_t) + formate_template.fmt_string.size();
+    auto fmt_str_size = sizeof(uint32_t) + format_template.fmt_string.size();
     auto fmt_str_section_size = bq::align_4(fmt_str_size);
     size_t args_offset = sizeof(bq::_log_entry_head_def) + fmt_str_section_size;
-    assert(args_offset <= UINT16_MAX && "log format string too long");
     head.log_args_offset = (uint16_t)args_offset;
     raw_data_.fill_uninitialized(fmt_str_section_size);
 
-    *((uint32_t*)&raw_data_[raw_cursor]) = (uint32_t)formate_template.fmt_string.size();
+    *((uint32_t*)&raw_data_[raw_cursor]) = (uint32_t)format_template.fmt_string.size();
     if (fmt_str_size > 0) {
-        memcpy((uint8_t*)(raw_data_.begin() + raw_cursor + sizeof(uint32_t)), formate_template.fmt_string.c_str(), formate_template.fmt_string.size());
+        memcpy((uint8_t*)(raw_data_.begin() + raw_cursor + sizeof(uint32_t)), format_template.fmt_string.c_str(), format_template.fmt_string.size());
     }
     raw_cursor += static_cast<ptrdiff_t>(fmt_str_section_size);
 
