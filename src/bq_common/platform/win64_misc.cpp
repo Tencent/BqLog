@@ -571,11 +571,12 @@ namespace bq {
             HANDLE thread = GetCurrentThread();
             CONTEXT context;
 
-            if (!common_global_vars::get().stack_trace_sym_initialized_.exchange(true, bq::platform::memory_order::relaxed)) {
-                SymInitialize(common_global_vars::get().stack_trace_process_, NULL, TRUE);
-            }
             stack_trace_str_ref.clear();
             bq::platform::scoped_mutex lock(common_global_vars::get().stack_trace_mutex_);
+            if (!common_global_vars::get().stack_trace_sym_initialized_.load(bq::platform::memory_order::relaxed)) {
+                SymInitialize(common_global_vars::get().stack_trace_process_, NULL, TRUE);
+                common_global_vars::get().stack_trace_sym_initialized_.store(true, bq::platform::memory_order::relaxed);
+            }
             RtlCaptureContext(&context);
 
             STACKFRAME64 stack;
