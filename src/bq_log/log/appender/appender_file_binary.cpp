@@ -194,14 +194,14 @@ namespace bq {
     }
 
     void appender_file_binary::on_appender_file_recovery_begin() {
-        append_new_segment(appender_segment_type::recovery);
+        append_new_segment(appender_segment_type::recovery_by_appender);
     };
 
     void appender_file_binary::on_appender_file_recovery_end() {
     };
 
     void appender_file_binary::on_log_item_recovery_begin() {
-        append_new_segment(appender_segment_type::recovery);
+        append_new_segment(appender_segment_type::recovery_by_log_buffer);
     }
     void appender_file_binary::on_log_item_recovery_end() {
         append_new_segment(appender_segment_type::normal);
@@ -209,16 +209,17 @@ namespace bq {
 
     appender_file_base::read_with_cache_handle appender_file_binary::read_with_cache(size_t size)
     {
-        uint64_t current_read_cursor = static_cast<uint64_t>(get_cache_read_cursor());
-        assert(((current_read_cursor >= cur_read_seg_.start_pos) && (current_read_cursor <= cur_read_seg_.end_pos)) && "read beyond file size");
-        while (current_read_cursor == cur_read_seg_.end_pos)
+        uint64_t current_read_pos = static_cast<uint64_t>(get_read_file_pos());
+        assert(((current_read_pos >= cur_read_seg_.start_pos) && (current_read_pos <= cur_read_seg_.end_pos)) && "read beyond file size");
+        while (current_read_pos == cur_read_seg_.end_pos)
         {
             if (!read_to_next_segment()) {
                 return appender_file_base::read_with_cache(0);
             }
+            current_read_pos = static_cast<uint64_t>(get_read_file_pos());
         }
-        if (current_read_cursor + static_cast<uint64_t>(size) > cur_read_seg_.end_pos) {
-            size = static_cast<size_t>(cur_read_seg_.end_pos - current_read_cursor);
+        if (current_read_pos + static_cast<uint64_t>(size) > cur_read_seg_.end_pos) {
+            size = static_cast<size_t>(cur_read_seg_.end_pos - current_read_pos);
         }
         return appender_file_base::read_with_cache(size);
     }
@@ -301,6 +302,9 @@ namespace bq {
     bool appender_file_binary::read_to_next_segment()
     {
         auto new_seg_start_pos = cur_read_seg_.end_pos;
+        if (new_seg_start_pos == UINT64_MAX) {
+            return false;
+        }
         if (!seek_read_file_absolute(static_cast<size_t>(new_seg_start_pos))) {
             return false;
         }
@@ -315,7 +319,7 @@ namespace bq {
             // can not parse encryption type, it's not an error.
             return false;
         }
-        if (seg_head.next_seg_pos < get_cache_read_cursor()) {
+        if (seg_head.next_seg_pos < new_seg_start_pos + sizeof(appender_file_segment_head)) {
             bq::util::log_device_console(bq::log_level::error, "file format of segment start pos: %" PRIu64 ", invalid segment end pos:%" PRIu64 ", file path:%s"
                 , new_seg_start_pos
                 , seg_head.next_seg_pos
@@ -330,7 +334,7 @@ namespace bq {
 
     void appender_file_binary::append_new_segment(appender_file_binary::appender_segment_type type)
     {
-        assert(get_written_size() == 0 && "Can't append new segment when written cache is not empty!");
+        assert((get_written_size() == 0 || type == appender_segment_type::recovery_by_appender) && "Can't append new segment when written cache is not empty!");
         clear_read_cache();
         cur_read_seg_.end_pos = static_cast<uint64_t>(sizeof(appender_file_header));
         bool has_segment = false;

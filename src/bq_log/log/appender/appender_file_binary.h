@@ -73,7 +73,8 @@ namespace bq {
         };        
         enum class appender_segment_type : uint8_t {
             normal = 1,
-            recovery = 2
+            recovery_by_appender,
+            recovery_by_log_buffer
         };
 
         BQ_PACK_BEGIN

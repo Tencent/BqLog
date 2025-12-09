@@ -400,7 +400,7 @@ namespace bq {
 
     create_memory_map_result miso_ring_buffer::create_memory_map()
     {
-        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/" + config_.log_name + ".mmap", 0); 
+        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/lp/" + config_.log_name + ".mmap", 0); 
         size_t head_size = sizeof(head);
         size_t map_size = (uint32_t)(config_.default_buffer_size + head_size);
         buffer_entity_ = bq::make_unique<normal_buffer>(map_size, config_.need_recovery ? path : "", true);

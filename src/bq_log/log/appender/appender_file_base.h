@@ -74,7 +74,6 @@ namespace bq {
         virtual void flush_cache();
         // flush appender file to physical disk.
         void flush_io();
-
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
 
@@ -114,7 +113,11 @@ namespace bq {
 
         virtual void on_appender_file_recovery_begin(){};
         virtual void on_appender_file_recovery_end(){};
+#ifdef BQ_UNIT_TEST
+    protected:
+#else
     private:
+#endif
         void set_basic_configs(const bq::property_value& config_obj);
 
         void refresh_head_size(bool need_recovery, const bq::string& mmap_file_abs_path);
@@ -146,13 +149,14 @@ namespace bq {
         }
     private:
         bq::string config_file_name_;
-        bool always_create_new_file_ = false;
+        bool always_create_new_file_;
         size_t max_file_size_;
         size_t current_file_size_;
         bq::file_handle file_;
-        int32_t base_dir_type_ = false;
+        int32_t base_dir_type_;
+        bool enable_rolling_log_file_;
         uint64_t expire_time_ms_;
-        uint64_t capacity_limit_ = 0;
+        uint64_t capacity_limit_;
         uint64_t current_file_expire_time_epoch_ms_;
         
     private:
@@ -181,7 +185,8 @@ namespace bq {
         bool cache_write_already_allocated_ = false;
 #endif
         bq::array<uint8_t> cache_read_;
-        decltype(cache_read_)::size_type cache_read_cursor_ = 0;
+        size_t cache_read_cursor_ = 0;
+        size_t read_file_pos_ = 0;
         bool cache_read_eof_ = false;
 
         bq_forceinline size_t get_pendding_flush_written_size() const {
@@ -208,12 +213,16 @@ namespace bq {
             return cache_read_eof_;
         }
 
-        uint8_t* get_cache_write_ptr_base() {
+        bq_forceinline uint8_t* get_cache_write_ptr_base() {
             return cache_write_;
         }
 
-        decltype(cache_read_)::size_type get_cache_read_cursor() const {
+        bq_forceinline size_t get_cache_read_cursor() const {
             return cache_read_cursor_;
+        }
+
+        bq_forceinline size_t get_read_file_pos() const {
+            return read_file_pos_;
         }
     };
 }
