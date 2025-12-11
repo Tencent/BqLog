@@ -24,6 +24,7 @@
 
 namespace bq {
     static uint32_t rand_seed = 0;
+    static uint64_t rand_seed_64 = 0;
     static util::type_func_ptr_bq_util_consle_callback consle_callback_ = nullptr;
 
     void util::bq_assert(bool cond, bq::string msg)
@@ -300,17 +301,35 @@ namespace bq {
         return *(char*)(&test) == 1;
     }
 
-    void util::srand(uint32_t seek)
+    void util::srand(uint32_t seed)
     {
-        rand_seed = seek;
+        rand_seed = seed;
     }
     uint32_t util::rand()
     {
         if (rand_seed == 0)
             rand_seed = (uint32_t)time(0);
-        rand_seed = rand_seed * 1103515245 + 12345;
-        uint32_t ret = (uint32_t)(rand_seed / 65536) % 32768;
-        return ret;
+        uint32_t x = rand_seed;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        rand_seed = x;
+        return x;
+    }
+
+    void util::srand64(uint64_t seed) {
+        rand_seed_64 = seed;
+    }
+
+    uint64_t util::rand64() {
+        if (rand_seed_64 == 0)
+            rand_seed_64 = util::rand();
+        uint64_t x = rand_seed_64;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        rand_seed_64 = x;
+        return x;
     }
 
     uint32_t util::utf16_to_utf8(const char16_t* src_utf16_str, uint32_t src_character_num, char* target_utf8_str, uint32_t target_utf8_character_num)

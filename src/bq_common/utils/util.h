@@ -45,9 +45,13 @@ namespace bq {
 
         static bool is_little_endian();
 
-        static void srand(uint32_t seek);
+        static void srand(uint32_t seed);
 
         static uint32_t rand();
+
+        static void srand64(uint64_t seed);
+
+        static uint64_t rand64();
 
         /// <summary>
         /// convert utf16 to utf8

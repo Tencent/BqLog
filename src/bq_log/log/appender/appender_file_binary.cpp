@@ -341,9 +341,9 @@ namespace bq {
             decltype(xor_key_blob_) xor_key_blob_plaintext;
             xor_key_blob_plaintext.fill_uninitialized(get_xor_key_blob_size());
             bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
-            uint32_t* xor_key_blob_32 = reinterpret_cast<uint32_t*>(&xor_key_blob_plaintext[0]);
-            for (size_t i = 0; i < xor_key_blob_plaintext.size() / sizeof(uint32_t); ++i) {
-                xor_key_blob_32[i] = bq::util::rand();
+            uint64_t* xor_key_blob_64 = reinterpret_cast<uint64_t*>(&xor_key_blob_plaintext[0]);
+            for (size_t i = 0; i < xor_key_blob_plaintext.size() / sizeof(uint64_t); ++i) {
+                xor_key_blob_64[i] = bq::util::rand64();
             }
 
             bq::array<uint8_t> xor_key_blob_ciphertext;
