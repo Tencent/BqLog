@@ -91,7 +91,7 @@ namespace bq {
     private:
         bq::file_handle file_;
         size_t current_file_size_ = 0;
-        size_t current_file_cursor_ = 0;
+        size_t current_file_cursor_ = SIZE_MAX;
         bq::rsa::private_key private_key_;
 
         bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> cache_read_;

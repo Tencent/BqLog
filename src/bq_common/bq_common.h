@@ -41,4 +41,5 @@
 #include "bq_common/platform/io/memory_map.h"
 #include "bq_common/encryption/rsa.h"
 #include "bq_common/encryption/aes.h"
+#include "bq_common/encryption/xor.h"
 #include "bq_common/global/common_vars.h"

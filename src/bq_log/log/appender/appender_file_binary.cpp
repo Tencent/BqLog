@@ -76,6 +76,9 @@ namespace bq {
             context.log_parse_fail_reason("parse first appender_file_segment_head failed");
             return false;
         }
+        if (cur_read_seg_.enc_type_ != appender_encryption_type::plaintext) {
+            return false;
+        }
         // parse payload
         read_handle = read_with_cache(sizeof(appender_payload_metadata));
         if (read_handle.len() < sizeof(appender_payload_metadata)) {
@@ -174,17 +177,17 @@ namespace bq {
 #ifndef NDEBUG
         assert((get_xor_key_blob_size() & (get_xor_key_blob_size() - 1)) == 0 && "get_xor_key_blob_size() must be power of two");
 #endif
-        xor_stream_inplace_32bytes_aligned(
+        xor::xor_encrypt_32bytes_aligned(
             get_cache_write_ptr_base(),
             get_pendding_flush_written_size(),
             xor_key_blob_.begin(),
             get_xor_key_blob_size(),
             get_current_file_size());
         appender_file_base::flush_cache();
-        update_write_cache_alignment();
+        update_write_cache_padding();
         if (enc_type_ == appender_encryption_type::rsa_aes_xor && get_pendding_flush_written_size() > 0) {
             //revert
-            xor_stream_inplace_32bytes_aligned(
+            xor::xor_encrypt_32bytes_aligned(
                 get_cache_write_ptr_base(),
                 get_pendding_flush_written_size(),
                 xor_key_blob_.begin(),
@@ -193,8 +196,29 @@ namespace bq {
         }
     }
 
-    void appender_file_binary::on_appender_file_recovery_begin() {
+    bool appender_file_binary::seek_read_file_absolute(size_t pos)
+    {
+        if (appender_file_base::seek_read_file_absolute(pos)) {
+            
+            return true;
+        }
+        return false;
+    }
+
+    void appender_file_binary::seek_read_file_offset(int32_t offset)
+    {
+        appender_file_base::seek_read_file_offset(offset);
+        if (cur_read_seg_.start_pos > get_read_file_pos() || cur_read_seg_.end_pos < get_read_file_pos()) {
+            read_to_correct_segment();
+        }
+    }
+
+    bool appender_file_binary::on_appender_file_recovery_begin() {
+        if (!appender_file_base::on_appender_file_recovery_begin()) {
+            return false;
+        }
         append_new_segment(appender_segment_type::recovery_by_appender);
+        return true;
     };
 
     void appender_file_binary::on_appender_file_recovery_end() {
@@ -224,79 +248,18 @@ namespace bq {
         return appender_file_base::read_with_cache(size);
     }
 
-
-    void appender_file_binary::xor_stream_inplace_32bytes_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset)
-    {
-        if (len == 0) {
-            return;
-        }
-
-#ifndef NDEBUG
-        assert((key_size_pow2 & (key_size_pow2 - 1)) == 0 && "key_size_pow2 must be power of two");
-        assert((key_size_pow2 & 7u) == 0 && "key_size_pow2 should be multiple of 8 for u64 path");
-        assert(((static_cast<size_t>(reinterpret_cast<uintptr_t>(buf)) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == (key_stream_offset & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1)))) && "xor_stream_inplace_32bytes_aligned: relative alignment mismatch");
-#endif
-        const size_t key_mask = key_size_pow2 - 1;
-
-        uint8_t* p = buf;
-        size_t remaining = len;
-        size_t current_key_pos = key_stream_offset & key_mask;
-
-        // 1. Align 'p' (buffer) to 32-byte boundary (AVX2 preferred alignment)
-        // Since BqLog guarantees relative alignment 64-byte, aligning 'p' also aligns 'key' to 32-byte
-        size_t align_diff = (32 - (reinterpret_cast<uintptr_t>(p) & 31)) & 31;
-        size_t head_len = (align_diff < remaining) ? align_diff : remaining;
-
-        for (size_t j = 0; j < head_len; ++j) {
-            p[j] ^= key[current_key_pos];
-            // Optimization: key_size > 64 (power of 2) guaranteed by user.
-            // head_len < 32 (max align_diff).
-            // So current_key_pos will NOT wrap around here.
-            current_key_pos++;
-        }
-        p += head_len;
-        remaining -= head_len;
-
-        if (remaining == 0) return;
-
-        uint64_t* p64 = reinterpret_cast<uint64_t*>(p);
-
-        // High-performance loop
-        while (remaining >= 32) {
-            size_t contiguous_key_len = key_size_pow2 - current_key_pos;
-            size_t chunk_len = (contiguous_key_len < remaining) ? contiguous_key_len : remaining;
-
-            size_t loop_len = chunk_len & ~(appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
-            size_t u64_count = loop_len >> 3;
-
-            const uint64_t* k64 = reinterpret_cast<const uint64_t*>(key + current_key_pos);
-
-            constexpr size_t unroll_num_per_loop = (appender_file_base::DEFAULT_BUFFER_ALIGNMENT >> 3);
-            // Manually unroll 4x uint64_t to encourage generation of 256-bit SIMD instructions (AVX2)
-            size_t j = 0;
-            for (; j + (unroll_num_per_loop - static_cast<size_t>(1)) < u64_count; j += unroll_num_per_loop) {
-                p64[j] ^= k64[j];
-                p64[j + 1] ^= k64[j + 1];
-                p64[j + 2] ^= k64[j + 2];
-                p64[j + 3] ^= k64[j + 3];
-            }
-
-            // Advance pointers
-            p += loop_len;
-            p64 += u64_count;
-            remaining -= loop_len;
-            current_key_pos += loop_len;
-
-            if (current_key_pos == key_size_pow2) {
-                current_key_pos = 0; // Wrap around
+    bool appender_file_binary::read_to_correct_segment() {
+        auto current_file_read_pos_backup = get_read_file_pos();
+        cur_read_seg_.end_pos = static_cast<uint64_t>(sizeof(appender_file_header));
+        bool found_segment = false;
+        while (read_to_next_segment()) {
+            if (current_file_read_pos_backup >= cur_read_seg_.start_pos && current_file_read_pos_backup <= cur_read_seg_.end_pos) {
+                seek_read_file_absolute(current_file_read_pos_backup);
+                found_segment = true;
+                break;
             }
         }
-
-        // 3. Tail
-        for (size_t j = 0; j < remaining; ++j) {
-            p[j] ^= key[current_key_pos];
-            current_key_pos = (current_key_pos + 1) & key_mask;
-        }
+        return found_segment;
     }
 
     bool appender_file_binary::read_to_next_segment()
@@ -314,9 +277,7 @@ namespace bq {
         }
         appender_file_segment_head seg_head;
         memcpy(&seg_head, read_handle.data(), sizeof(seg_head));
-        if (enc_type_ != appender_encryption_type::plaintext
-            || enc_type_ != seg_head.enc_type) {
-            // can not parse encryption type, it's not an error.
+        if (enc_type_ != seg_head.enc_type) {
             return false;
         }
         if (seg_head.next_seg_pos < new_seg_start_pos + sizeof(appender_file_segment_head)) {
@@ -348,6 +309,7 @@ namespace bq {
             direct_write(&new_seg_start_pos, sizeof(new_seg_start_pos), bq::file_manager::seek_option::begin,
                 cur_read_seg_.start_pos + static_cast<ptrdiff_t>(BQ_POD_RUNTIME_OFFSET_OF(appender_file_segment_head, next_seg_pos)));
         }
+        size_t prev_file_size = get_current_file_size();
         appender_file_segment_head new_segment;
         new_segment.enc_type = enc_type_;
         new_segment.next_seg_pos = UINT64_MAX;
@@ -393,21 +355,32 @@ namespace bq {
             direct_write(static_cast<const uint8_t*>(aes_iv.begin()), aes_iv.size(), bq::file_manager::seek_option::current, 0);
             direct_write(static_cast<const uint8_t*>(xor_key_blob_ciphertext.begin()), xor_key_blob_ciphertext.size(), bq::file_manager::seek_option::current, 0);
             xor_key_blob_ = bq::move(xor_key_blob_plaintext);
-        }
 
-        if (enc_type_ == appender_encryption_type::rsa_aes_xor) {
-            update_write_cache_alignment();
+            //make sure segment head size is aligned by DEFAULT_ALIGNMENT when xor is enabled
+            size_t current_file_size = get_current_file_size();
+            size_t aligned_offset = (current_file_size - prev_file_size) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - 1);
+            if (aligned_offset != 0) {
+                char padding_buff[appender_file_base::DEFAULT_BUFFER_ALIGNMENT] = { 0 };
+                direct_write(padding_buff, appender_file_base::DEFAULT_BUFFER_ALIGNMENT - aligned_offset, bq::file_manager::seek_option::current, 0);
+            }
+            assert(((get_current_file_size() - prev_file_size) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - 1)) == 0);
         }
-        else {
-            set_cache_write_data_alignment_offset(0);
-        }
+        update_write_cache_padding();
     }
 
-    void appender_file_binary::update_write_cache_alignment()
+
+    void appender_file_binary::update_write_cache_padding()
     {
-        auto start_pos = get_current_file_size();
-        auto enc_start_pos = static_cast<size_t>(start_pos % xor_key_blob_.size());
-        uint8_t align_offset = static_cast<uint8_t>(enc_start_pos % appender_file_base::DEFAULT_BUFFER_ALIGNMENT);
-        set_cache_write_data_alignment_offset(align_offset);
+        if (enc_type_ != appender_encryption_type::rsa_aes_xor || xor_key_blob_.is_empty()) {
+            set_cache_write_padding(0);
+        }
+        else {
+            auto file_pos = get_current_file_size();
+            auto enc_start_pos = static_cast<size_t>(file_pos & (xor_key_blob_.size() - 1));
+            size_t target_align = enc_start_pos & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
+            size_t current_align = get_cache_write_head_size() & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
+            uint8_t target_padding = (target_align + appender_file_base::DEFAULT_BUFFER_ALIGNMENT - current_align) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
+            set_cache_write_padding(target_padding);
+        }
     }
 }

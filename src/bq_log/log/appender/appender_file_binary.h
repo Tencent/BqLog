@@ -13,46 +13,70 @@
  * appender_file_binary.h
  * -----------------------------------------------------------------------------
  * Overview
- * - Compact binary container used by the appender subsystem.
- * - The file begins with a fixed file header, followed by an encryption header.
- *   If encryption is enabled, keying material immediately follows; otherwise the
- *   payload starts right after the encryption header. The payload itself starts
- *   with a small metadata header.
+ * - Binary container used by the appender subsystem.
+ * - The file consists of a global File Header followed by a linked list of Segments.
+ * - Each Segment contains a Segment Header, optional Encryption Info, and Data.
+ *
+ * Top-level binary layout
+ * -----------------------------------------------------------------------------
+ *  [File Header]
+ *       |
+ *  [Segment 1] -> [Segment 2] -> ... -> [Segment N]
+ *
+ * 1. File Header (Fixed 8 bytes at file offset 0)
+ *    Offset  Size  Field
+ *    ------  ----  -----------------------------------------------------------
+ *    0x0000     4  uint32_t version                      (appender_file_header)
+ *    0x0004     1  appender_format_type format           (1=raw, 2=compressed)
+ *    0x0005     3  char padding[3]
+ *
+ * 2. Segment Structure
+ *    Each segment begins with a Segment Header, followed by Encryption Info (if enabled),
+ *    and then the Segment Payload.
+ *
+ *    A. Segment Header (12 bytes)
+ *       Offset  Size  Field
+ *       ------  ----  -------------------------------------------------------
+ *       +0x00      8  uint64_t next_seg_pos  (Abs offset of next segment, or UINT64_MAX)
+ *       +0x08      1  appender_segment_type seg_type
+ *       +0x09      1  appender_encryption_type enc_type
+ *       +0x0A      2  char padding[2]
+ *
+ *    B. Encryption Info (Present only if enc_type == rsa_aes_xor)
+ *       Offset  Size       Field
+ *       ------  ---------  ---------------------------------------------------
+ *       +0x00   256        RSA-2048 ciphertext of AES_256 key
+ *       +0x100  16         AES IV in plaintext
+ *       +0x110  32768      AES-encrypted XOR key blob (32 KiB)
+ *
+ *    C. Segment Payload
+ *       The content depends on whether it is the First Segment or a subsequent one.
+ *
+ *       [First Segment Payload]
+ *       Starts with Metadata, followed by Log Entries.
+ *
+ *       Metadata Header (appender_payload_metadata):
+ *       Offset  Size  Field
+ *       ------  ----  -------------------------------------------------------
+ *       +0x00      3  char magic_number[3] ("2, 2, 7")
+ *       +0x03      1  bool use_local_time
+ *       +0x04      4  int32_t gmt_offset_hours
+ *       +0x08      4  int32_t gmt_offset_minutes
+ *       +0x0C      4  int32_t time_zone_diff_to_gmt_ms
+ *       +0x10     32  char time_zone_str[32]
+ *       +0x30      4  uint32_t category_count
+ *
+ *       Category Definitions (Repeated category_count times):
+ *       +0x00      4  uint32_t name_len
+ *       +0x04   name_len  char name_str[]
+ *
+ *       [Subsequent Segments Payload]
+ *       Contains only Log Entries (no Metadata).
  *
  * Conventions
  * - All multi-byte integers are little-endian unless stated otherwise.
  * - All structures are packed (BQ_PACK_BEGIN/END). The explicit padding fields
  *   must be written/read as-is; do not rely on compiler-inserted padding.
- * - Versioning is governed by appender_file_header.version. New fields must be
- *   appended; readers should use the version and known struct sizes to validate.
- *
- *
- * Top-level binary layout
- * -----------------------------------------------------------------------------
- *  Offset  Size   Field/Block
- *  ------  -----  -------------------------------------------------------------
- *  0x0000     4   uint32_t version                      (appender_file_header)
- *  0x0004     1   appender_format_type format           (1=raw, 2=compressed)
- *  0x0005     3   char padding[3]
- *
- *  0x0008     1   appender_encryption_type encryption_type  (appender_encryption_header)
- *  0x0009     3   char padding[3]
- *
- *  -- If encryption_type == rsa_aes_xor, the following keying material appears: --
- *  0x000C   256   RSA-2048 ciphertext of AES_256 key (exactly 256 bytes)
- *  0x010C    16   AES IV in plaintext (16 bytes)
- *  0x011C  32768  AES-encrypted XOR key blob (32 KiB)
- *
- *  -- Otherwise (encryption_type == plaintext), the payload starts at 0x000C. --
- *
- *  Payload (always begins with appender_payload_metadata)
- *  Offset  Size   Field/Block
- *  ------  -----  -------------------------------------------------------------
- *    +0x00    1   bool is_gmt                (0 = local time, 1 = GMT/UTC)
- *    +0x01    3   uint8_t magic_number[3]       (should be "2, 2, 7" which is used to check whether decryption is success)
- *    +0x04    4   uint32_t category_count
- *    +0x08   ...  Category data and the rest of the payload (see appender_file_binary::parse_exist_log_file)
- *
  *
  */
 #include "bq_common/bq_common.h"
@@ -127,26 +151,27 @@ namespace bq {
                 + get_xor_key_blob_size(); // size of AES-encrypted XOR key blob
         }
 
-        static void xor_stream_inplace_32bytes_aligned(uint8_t* buf, size_t len, const uint8_t* key, size_t key_size_pow2, size_t key_stream_offset);
-
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
         virtual bool reset_impl(const bq::property_value& config_obj) override;
         virtual bool parse_exist_log_file(parse_file_context& context) override;
         virtual void on_file_open(bool is_new_created) override;
         virtual void flush_cache() override;
+        virtual bool seek_read_file_absolute(size_t pos) override;
+        virtual void seek_read_file_offset(int32_t offset) override;
         virtual appender_format_type get_appender_format() const = 0;
         virtual uint32_t get_binary_format_version() const = 0;
-        virtual void on_appender_file_recovery_begin() override;
+        virtual bool on_appender_file_recovery_begin() override;
         virtual void on_appender_file_recovery_end() override;
         virtual void on_log_item_recovery_begin() override;
         virtual void on_log_item_recovery_end() override;
         virtual read_with_cache_handle read_with_cache(size_t size) override;
 
     private:
+        bool read_to_correct_segment();
         bool read_to_next_segment();
         void append_new_segment(appender_segment_type type);
-        void update_write_cache_alignment();
+        void update_write_cache_padding();
     private:
         bq::rsa::public_key rsa_pub_key_;
         seg_info cur_read_seg_;

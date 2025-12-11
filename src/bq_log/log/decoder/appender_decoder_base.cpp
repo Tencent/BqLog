@@ -26,9 +26,7 @@ namespace bq {
             util::log_device_console(log_level::error, "decode log file failed, too small size");
             return appender_decode_result::failed_decode_error;
         }
-        auto read_handle = read_with_cache(sizeof(file_head_));
-        memcpy(&file_head_, read_handle.data(), sizeof(file_head_));
-
+        read_from_file_directly(&file_head_, sizeof(file_head_));
         if (file_head_.version != format_version) {
             util::log_device_console(log_level::error, "decode log file failed, unsupported binary log format version, tools version:%d, log file version:%d", format_version, file_head_.version);
             return appender_decode_result::failed_decode_error;
@@ -43,12 +41,13 @@ namespace bq {
                 return appender_decode_result::failed_decode_error;
             }
         }
+        cur_read_seg_.end_pos = sizeof(file_head_);
         appender_decode_result resut = read_to_next_segment();
         if (resut != appender_decode_result::success) {
             util::log_device_console(log_level::error, "decode log file failed, segment parse failed");
             return resut;
         }
-        read_handle = read_with_cache(sizeof(payload_metadata_));
+        auto read_handle = read_with_cache(sizeof(payload_metadata_));
         memcpy(&payload_metadata_, read_handle.data(), sizeof(payload_metadata_));
         if (payload_metadata_.magic_number[0] != 2 || payload_metadata_.magic_number[1] != 2 || payload_metadata_.magic_number[2] != 7) {
             if (cur_read_seg_.xor_key_blob.is_empty()) {
@@ -94,6 +93,9 @@ namespace bq {
 
     bool appender_decoder_base::seek_read_file_absolute(size_t pos)
     {
+        if (current_file_cursor_ == pos) {
+            return true;
+        }
         bool result = file_manager::instance().seek(file_, file_manager::seek_option::begin, (int32_t)pos);
         if (result) {
             clear_read_cache();
@@ -104,8 +106,8 @@ namespace bq {
 
     bool appender_decoder_base::seek_read_file_offset(int32_t offset)
     {
-        int64_t final_cache_cursor = (int64_t)cache_read_cursor_ + offset;
-        if (final_cache_cursor >= 0 && final_cache_cursor <= (int64_t)cache_read_.size()) {
+        int64_t final_cache_cursor = static_cast<int64_t>(cache_read_cursor_) + offset;
+        if (final_cache_cursor >= 0 && final_cache_cursor <= static_cast<int64_t>(cache_read_.size())) {
             cache_read_cursor_ = static_cast<size_t>(final_cache_cursor);
             return true;
         }
@@ -122,41 +124,38 @@ namespace bq {
     // data() returned by read_with_cache_handle will be invalid after next calling of "read_with_cache"
     appender_decoder_base::read_with_cache_handle appender_decoder_base::read_with_cache(size_t size)
     {
-        uint64_t current_read_cursor = static_cast<uint64_t>(current_file_cursor_);
-        while (current_read_cursor == cur_read_seg_.end_pos) {
-            auto result = read_to_next_segment();
-            if (result != appender_decode_result::success) {
-                read_with_cache_handle empty_handle;
-                empty_handle.data_ = nullptr;
-                empty_handle.len_ = 0;
-                return empty_handle;
-            }
-            current_read_cursor = static_cast<uint64_t>(current_file_cursor_);
-        }
-        
-        if (current_read_cursor + static_cast<uint64_t>(size) > cur_read_seg_.end_pos) {
-            size = static_cast<size_t>(cur_read_seg_.end_pos - current_read_cursor);
-        }
-        
         auto left_size = cache_read_.size() - cache_read_cursor_;
         if (left_size < size) {
+            if (left_size == 0) {
+                while (static_cast<uint64_t>(current_file_cursor_) == cur_read_seg_.end_pos) {
+                    auto result = read_to_next_segment();
+                    if (result != appender_decode_result::success) {
+                        read_with_cache_handle empty_handle;
+                        empty_handle.data_ = nullptr;
+                        empty_handle.len_ = 0;
+                        return empty_handle;
+                    }
+                }
+            }
             clear_read_cache();
-            auto total_size = bq::max_value(size, DECODER_CACHE_READ_DEFAULT_SIZE);
-            
-            uint64_t seg_left_size = cur_read_seg_.end_pos - current_read_cursor;
-            if (static_cast<uint64_t>(total_size) > seg_left_size) {
-                total_size = static_cast<size_t>(seg_left_size);
+            if (left_size != 0) {
+                size_t adjusted_file_cursor = static_cast<size_t>(static_cast<int64_t>(current_file_cursor_) - static_cast<int64_t>(left_size));
+                seek_read_file_absolute(adjusted_file_cursor);
             }
-            
             size_t read_offset = 0;
-            if (!cur_read_seg_.xor_key_blob.is_empty() && total_size > 0) {
-                size_t file_pos_alignment = static_cast<size_t>(current_read_cursor % appender_file_base::DEFAULT_BUFFER_ALIGNMENT);
+            if (!cur_read_seg_.xor_key_blob.is_empty()) {
+                size_t file_pos_alignment = current_file_cursor_ % appender_file_base::DEFAULT_BUFFER_ALIGNMENT;
                 read_offset = file_pos_alignment;
-                total_size += read_offset;
             }
+            auto total_size = bq::max_value(size + read_offset, DECODER_CACHE_READ_DEFAULT_SIZE);
+            cache_read_.clear();
             cache_read_.fill_uninitialized(total_size);
-            
-            auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + static_cast<ptrdiff_t>(read_offset), total_size - read_offset);
+            auto expected_read_size = total_size - read_offset;
+            uint64_t seg_left_size = cur_read_seg_.end_pos - static_cast<uint64_t>(current_file_cursor_);
+            if (static_cast<uint64_t>(expected_read_size) > seg_left_size) {
+                expected_read_size = static_cast<size_t>(seg_left_size);
+            }
+            auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + static_cast<ptrdiff_t>(read_offset), expected_read_size);
             current_file_cursor_ += read_size;
             cache_read_cursor_ = read_offset;  
             
@@ -165,9 +164,8 @@ namespace bq {
             }
             
             if (!cur_read_seg_.xor_key_blob.is_empty() && read_size > 0) {
-                size_t file_offset_start = static_cast<size_t>(current_read_cursor);
-                
-                appender_file_binary::xor_stream_inplace_32bytes_aligned(
+                size_t file_offset_start = current_file_cursor_ - read_size;
+                xor::xor_encrypt_32bytes_aligned(
                     cache_read_.begin() + static_cast<ptrdiff_t>(read_offset),
                     read_size,
                     cur_read_seg_.xor_key_blob.begin(),
@@ -224,12 +222,13 @@ namespace bq {
         if (!seek_read_file_absolute(static_cast<size_t>(new_seg_start_pos))) {
             return appender_decode_result::eof;
         }
+        auto prev_file_pos = current_file_cursor_;
         bq::appender_file_binary::appender_file_segment_head seg_head;
         auto read_size = read_from_file_directly(&seg_head, sizeof(seg_head));
         if (read_size < sizeof(seg_head)) {
             return appender_decode_result::eof;
         }
-        if (seg_head.next_seg_pos < cache_read_cursor_) {
+        if (seg_head.next_seg_pos < current_file_cursor_) {
             bq::util::log_device_console(bq::log_level::error, "file format of segment start pos: %" PRIu64 ", invalid segment end pos:%" PRIu64
                 , new_seg_start_pos
                 , seg_head.next_seg_pos);
@@ -264,6 +263,16 @@ namespace bq {
             if (!aes_obj.decrypt(aes_key, aes_iv, static_cast<uint8_t*>(enc_data.begin()) + aes_key_ciphertext_size + aes_iv_size, appender_file_binary::get_xor_key_blob_size(), cur_read_seg_.xor_key_blob.begin(), appender_file_binary::get_xor_key_blob_size())) {
                 util::log_device_console(log_level::error, "decode log file failed, decrypt XOR key failed");
                 return appender_decode_result::failed_decode_error;
+            }
+            auto current_file_pos = current_file_cursor_;
+            size_t aligned_offset = (current_file_pos - prev_file_pos) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - 1);
+            if (aligned_offset != 0) {
+                char padding_buff[appender_file_base::DEFAULT_BUFFER_ALIGNMENT];
+                read_size = read_from_file_directly(padding_buff, appender_file_base::DEFAULT_BUFFER_ALIGNMENT - aligned_offset);
+                if (read_size < appender_file_base::DEFAULT_BUFFER_ALIGNMENT - aligned_offset) {
+                    util::log_device_console(log_level::error, "decode log file failed, read segment head padding failed");
+                    return appender_decode_result::failed_decode_error;
+                }
             }
         }
         cur_read_seg_.enc_type = seg_head.enc_type;

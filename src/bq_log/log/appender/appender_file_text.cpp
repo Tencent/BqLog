@@ -49,11 +49,12 @@ namespace bq {
         return ".log";
     }
 
-    void appender_file_text::on_appender_file_recovery_begin() {
+    bool appender_file_text::on_appender_file_recovery_begin() {
         auto write_handle = alloc_write_cache(strlen(log_global_vars::get().log_recover_start_str_) + sizeof('\n'));
         memcpy(write_handle.data(), log_global_vars::get().log_recover_start_str_, strlen(log_global_vars::get().log_recover_start_str_));
         write_handle.data()[strlen(log_global_vars::get().log_recover_start_str_)] = (uint8_t)'\n';
         return_write_cache(write_handle);
+        return true;
     }
 
     void appender_file_text::on_appender_file_recovery_end() {
