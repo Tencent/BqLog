@@ -27,7 +27,7 @@ namespace bq {
     class xor {
     public:
         static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = 32; //256 bites alignment to improve SIMD performance
-
+        static_assert((DEFAULT_BUFFER_ALIGNMENT& (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == 0, "DEFAULT_BUFFER_ALIGNMENT must be power of two");
         /// <summary>
         /// Encrypt/Decrypt buffer in-place with XOR cipher.
         /// Attention: buf must be aligned to DEFAULT_BUFFER_ALIGNMENT relative to key_stream_offset.

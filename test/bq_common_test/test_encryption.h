@@ -14,6 +14,7 @@
 #include <thread>
 #include <utility>
 #include "test_base.h"
+#include "bq_common/encryption/xor.h"
 #include "bq_common/encryption/rsa.h"
 #include "bq_common/encryption/aes.h"
 
@@ -23,6 +24,45 @@ namespace bq {
         class test_encryption : public test_base {
 
         private:
+            void test_xor(test_result& result)
+            {
+                constexpr size_t loop_count = 16;
+                for (size_t i = 0; i < loop_count; ++i) {
+                    size_t offset = i % xor ::DEFAULT_BUFFER_ALIGNMENT;
+                    bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
+                    size_t buff_size = bq::util::rand() % (static_cast<size_t>(1024 * 1024 * 16)) + static_cast<size_t>(offset);
+                    size_t key_size = static_cast<size_t>(1) << (bq::util::rand() % static_cast<size_t>(12) + 5);
+                    uint8_t* key = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, key_size));
+                    uint8_t* src = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, buff_size));
+                    uint8_t* tar = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, buff_size));
+                    size_t idx = 0;
+                    for (; idx + sizeof(uint32_t) - 1 < key_size; idx += sizeof(uint32_t)) {
+                        *reinterpret_cast<uint32_t*>(key + idx) = bq::util::rand();
+                    }
+                    for (; idx < key_size; ++idx) {
+                        *(key + idx) = static_cast<uint8_t>(bq::util::rand() & static_cast<uint32_t>(UINT8_MAX));
+                    }
+                    if (key[loop_count] == 0) {
+                        key[loop_count] = 1; // make sure key is not all zero
+                    }
+                    idx = 0;
+                    for (; idx + sizeof(uint32_t) - 1 < buff_size; idx += sizeof(uint32_t)) {
+                        *reinterpret_cast<uint32_t*>(src + idx) = bq::util::rand();
+                    }
+                    for (; idx < buff_size; ++idx) {
+                        *(src + idx) = static_cast<uint8_t>(bq::util::rand() & static_cast<uint32_t>(UINT8_MAX));
+                    }
+                    memcpy(tar, src, buff_size);
+                    bq::xor::xor_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key + offset, key_size, offset);
+                    int32_t compare_result1 = memcmp(src, tar, buff_size);
+                    result.add_result(compare_result1 != 0, "xor enc test 1 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+
+                    bq:: xor ::xor_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key + offset, key_size, offset); 
+                    int32_t compare_result2 = memcmp(src, tar, buff_size);
+                    result.add_result(compare_result2 == 0, "xor enc test 2 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+                }
+            }
+
             void test_rsa(test_result& result, int32_t key_bits, int32_t test_count)
             {
                 bq::hash_map<int32_t, bq::tuple<bq::string, bq::string>> prepared_keys;
@@ -375,6 +415,8 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
             virtual test_result test() override
             {
                 test_result result;
+                test_xor(result);
+
                 constexpr uint32_t thread_count = 2;
                 test_output(bq::log_level::info, "RSA test begin...");
                 bq::array<std::thread*> rsa_threads;
