@@ -238,6 +238,7 @@ namespace bq {
                 }
                 result.add_result(check_result, "%s read content test", test_name.c_str());
             }
+            test_output_dynamic(bq::log_level::info, "                                                                              \r");
         }
 
 

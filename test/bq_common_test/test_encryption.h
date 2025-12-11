@@ -31,7 +31,7 @@ namespace bq {
                     size_t offset = i % xor ::DEFAULT_BUFFER_ALIGNMENT;
                     bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
                     size_t buff_size = bq::util::rand() % (static_cast<size_t>(1024 * 1024 * 16)) + static_cast<size_t>(offset);
-                    size_t key_size = static_cast<size_t>(1) << (bq::util::rand() % static_cast<size_t>(12) + 5);
+                    size_t key_size = static_cast<size_t>(1) << (bq::util::rand() % static_cast<size_t>(12) + 6);
                     uint8_t* key = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, key_size));
                     uint8_t* src = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, buff_size));
                     uint8_t* tar = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, buff_size));

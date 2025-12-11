@@ -567,7 +567,9 @@ namespace bq {
         static void clear_test_output_folder()
         {
             bq::string path = bq::file_manager::trans_process_relative_path_to_absolute_path("bqLog/UnitTestLog", 1);
-            bq::file_manager::instance().remove_file_or_dir(path);
+            if (bq::file_manager::is_dir(path) || bq::file_manager::is_file(path)) {
+                bq::file_manager::instance().remove_file_or_dir(path);
+            }
         }
 
         template <size_t PARAM_COUNT>

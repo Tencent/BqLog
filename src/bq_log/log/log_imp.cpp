@@ -196,6 +196,7 @@ namespace bq {
             auto appender_names = all_apenders_config.get_object_key_set();
             decltype(appenders_list_) tmp_list = bq::move(appenders_list_);
             assert(appenders_list_.size() == 0);
+            bq::array<bq::string> new_create_appender_names;
             for (const auto& name_key : appender_names) {
                 auto old_iter = tmp_list.find_if([&name_key](const appender_base* appender) {
                     return appender->get_name() == name_key;
@@ -207,10 +208,13 @@ namespace bq {
                         continue;
                     }
                 }
-                add_appender(name_key, all_apenders_config[name_key]);
+                new_create_appender_names.push_back(name_key);
             }
             for (auto appender_delete : tmp_list) {
                 delete appender_delete;
+            }
+            for (const auto& name : new_create_appender_names) {
+                add_appender(name, all_apenders_config[name]);
             }
             refresh_merged_log_level_bitmap();
         }

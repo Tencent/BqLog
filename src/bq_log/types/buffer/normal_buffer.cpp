@@ -122,9 +122,14 @@ namespace bq {
             }
         }
         auto create_opt = auto_create ? (file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive) : (file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
-        memory_map_file_ = bq::file_manager::instance().open_file(mmap_file_abs_path, create_opt);
+        
+        if (auto_create || bq::file_manager::is_file(mmap_file_abs_path)) {
+            memory_map_file_ = bq::file_manager::instance().open_file(mmap_file_abs_path, create_opt);
+        }
         if (!memory_map_file_.is_valid()) {
-            bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", mmap_file_abs_path.c_str(), bq::file_manager::get_and_clear_last_file_error());
+            if (auto_create) {
+                bq::util::log_device_console(bq::log_level::warning, "failed to open mmap file %s, use memory instead of mmap file, error code:%d", mmap_file_abs_path.c_str(), bq::file_manager::get_and_clear_last_file_error());
+            }
             return create_memory_map_result::failed;
         }
         size_t file_size = bq::memory_map::get_min_size_of_memory_map_file(0, size);

@@ -64,6 +64,10 @@ namespace bq {
 
     bool appender_base::reset(const bq::property_value& config_obj)
     {
+        bq::string type_str = config_obj["type"].is_string() ? (bq::string)(config_obj["type"]) : "";
+        if (!get_config_name_by_type(type_).equals_ignore_case(type_str)) {
+            return false;
+        }
         auto parent_log_backup = parent_log_;
         auto name_backup = name_;
         clear();

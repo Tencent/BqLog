@@ -29,21 +29,21 @@ namespace bq {
         if (len == 0) {
             return;
         }
+        const size_t key_mask = key_size_pow2 - 1;
+        constexpr size_t align_mask = DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1);
 
 #ifndef NDEBUG
         assert((key_size_pow2 & (key_size_pow2 - 1)) == 0 && "key_size_pow2 must be power of two");
         assert((key_size_pow2 & 7u) == 0 && "key_size_pow2 should be multiple of 8 for u64 path");
-        assert(((static_cast<size_t>(reinterpret_cast<uintptr_t>(buf)) & (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == (key_stream_offset & (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1)))) && "xor_encrypt_32bytes_aligned: relative alignment mismatch");
+        assert(((static_cast<size_t>(reinterpret_cast<uintptr_t>(buf)) & align_mask) == (key_stream_offset & align_mask)) && "xor_encrypt_32bytes_aligned: relative alignment mismatch");
 #endif
-        const size_t key_mask = key_size_pow2 - 1;
-
         uint8_t* p = buf;
         size_t remaining = len;
         size_t current_key_pos = key_stream_offset & key_mask;
 
         // 1. Align 'p' (buffer) to 32-byte boundary (AVX2 preferred alignment)
-        // Since BqLog guarantees relative alignment 64-byte, aligning 'p' also aligns 'key' to 32-byte
-        size_t align_diff = (32 - (reinterpret_cast<uintptr_t>(p) & 31)) & 31;
+        // Aligning 'p' also aligns 'key' to 32-byte
+        size_t align_diff = (DEFAULT_BUFFER_ALIGNMENT - (reinterpret_cast<uintptr_t>(p) & align_mask)) & align_mask;
         size_t head_len = (align_diff < remaining) ? align_diff : remaining;
 
         for (size_t j = 0; j < head_len; ++j) {
@@ -65,7 +65,7 @@ namespace bq {
             size_t contiguous_key_len = key_size_pow2 - current_key_pos;
             size_t chunk_len = (contiguous_key_len < remaining) ? contiguous_key_len : remaining;
 
-            size_t loop_len = chunk_len & ~(DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
+            size_t loop_len = chunk_len & ~align_mask;
             size_t u64_count = loop_len >> 3;
 
             const uint64_t* k64 = reinterpret_cast<const uint64_t*>(key + current_key_pos);
@@ -91,6 +91,7 @@ namespace bq {
             }
         }
 
+        current_key_pos &= key_mask; //may be wrap in phase 1, and skip phase 2, which will lead to overflow.
         // 3. Tail
         for (size_t j = 0; j < remaining; ++j) {
             p[j] ^= key[current_key_pos];

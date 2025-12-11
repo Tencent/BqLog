@@ -142,12 +142,31 @@ namespace bq {
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
 
         // Color code（ANSI VT）
-        const char* color = (level == bq::log_level::verbose) ? "\x1b[3m" : (level == bq::log_level::debug) ? "\x1b[92m"
-            : (level == bq::log_level::info)                                                                ? "\x1b[94m"
-            : (level == bq::log_level::warning)                                                             ? "\x1b[1;40;93m"
-            : (level == bq::log_level::error)                                                               ? "\x1b[1;40;91m"
-            : (level == bq::log_level::fatal)                                                               ? "\x1b[1;30;101m"
-                                                                                                            : "\x1b[37m";
+        const char* color = "";
+        switch (level)
+        {
+        case bq::log_level::verbose:   
+            color = "\x1b[3m";
+            break;
+        case bq::log_level::debug:
+            color = "\x1b[92m";
+            break;
+        case bq::log_level::info:
+            color = "\x1b[94m";
+            break;
+        case bq::log_level::warning:
+            color = "\x1b[1;40;93m";
+            break;
+        case bq::log_level::error:
+            color = "\x1b[1;40;91m";
+            break;
+        case bq::log_level::fatal:
+            color = "\x1b[1;30;101m";
+            break;
+        default:
+            color = "\x1b[37m";
+            break;
+        }                                                              
         const char* reset = "\x1b[0m";
         const char* prefix = "[Bq]";
         const char* newline = "\n";
