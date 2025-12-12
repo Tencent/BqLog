@@ -780,7 +780,7 @@ appenders_config.appender_1.time_zone=gmt
 # 只输出 info 及以上四个等级日志，其余等级会被忽略
 appenders_config.appender_1.levels=[info,warning,error,fatal]
 # base_dir_type 决定相对路径的基准目录，这里为 1：
-# iOS：/var/mobile/Containers/Data/Application/[APP]/Library/Caches
+# iOS：/var/mobile/Containers/Data/Application/[APP]/Documents
 # Android：[android.content.Context.getExternalFilesDir()]
 # HarmonyOS：/data/storage/el2/base/cache
 # 其他平台：当前工作目录
@@ -801,7 +801,7 @@ appenders_config.appender_2.type=text_file
 # 输出所有等级日志
 appenders_config.appender_2.levels=[all]
 # base_dir_type 为 0：
-# iOS：/var/mobile/Containers/Data/Application/[APP]/Documents
+# iOS：/var/mobile/Containers/Data/Application/[APP]/Library/Application Support
 # Android：[android.content.Context.getFilesDir()]
 # HarmonyOS：/data/storage/el2/base/files
 # 其他平台：当前工作目录
@@ -913,7 +913,7 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
     - `android.content.Context.getFilesDir()`
     - `android.content.Context.getExternalFilesDir()`
     - `android.content.Context.getCacheDir()`
-  - iOS：`/var/mobile/Containers/Data/Application/[APP]/Documents`
+  - iOS：`/var/mobile/Containers/Data/Application/[APP]/Library/Application Support`
   - HarmonyOS：`/data/storage/el2/base/files`
   - 其他平台：进程当前工作目录
 - `1`
@@ -921,7 +921,7 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
     - `android.content.Context.getExternalFilesDir()`
     - `android.content.Context.getFilesDir()`
     - `android.content.Context.getCacheDir()`
-  - iOS：`/var/mobile/Containers/Data/Application/[APP]/Library/Caches`
+  - iOS：`/var/mobile/Containers/Data/Application/[APP]/Documents`
   - HarmonyOS：`/data/storage/el2/base/cache`
   - 其他平台：进程当前工作目录
 

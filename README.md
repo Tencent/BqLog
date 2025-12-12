@@ -782,7 +782,7 @@ appenders_config.appender_1.time_zone=gmt
 # Only output logs of info and above four levels, other levels will be ignored
 appenders_config.appender_1.levels=[info,warning,error,fatal]
 # base_dir_type determines the base directory of relative path, here is 1:
-# iOS: /var/mobile/Containers/Data/Application/[APP]/Library/Caches
+# iOS: /var/mobile/Containers/Data/Application/[APP]/Documents
 # Android: [android.content.Context.getExternalFilesDir()]
 # HarmonyOS: /data/storage/el2/base/cache
 # Other platforms: current working directory
@@ -803,7 +803,7 @@ appenders_config.appender_2.type=text_file
 # Output all levels logs
 appenders_config.appender_2.levels=[all]
 # base_dir_type is 0:
-# iOS: /var/mobile/Containers/Data/Application/[APP]/Documents
+# iOS: /var/mobile/Containers/Data/Application/[APP]/Library/Application Support
 # Android: [android.content.Context.getFilesDir()]
 # HarmonyOS: /data/storage/el2/base/files
 # Other platforms: current working directory
@@ -914,7 +914,7 @@ Specify base directory when `file_name` is relative path:
     - `android.content.Context.getFilesDir()`
     - `android.content.Context.getExternalFilesDir()`
     - `android.content.Context.getCacheDir()`
-  - iOS: `/var/mobile/Containers/Data/Application/[APP]/Documents`
+  - iOS: `/var/mobile/Containers/Data/Application/[APP]/Library/Application Support`
   - HarmonyOS: `/data/storage/el2/base/files`
   - Other platforms: Process current working directory
 - `1`
@@ -922,7 +922,7 @@ Specify base directory when `file_name` is relative path:
     - `android.content.Context.getExternalFilesDir()`
     - `android.content.Context.getFilesDir()`
     - `android.content.Context.getCacheDir()`
-  - iOS: `/var/mobile/Containers/Data/Application/[APP]/Library/Caches`
+  - iOS: `/var/mobile/Containers/Data/Application/[APP]/Documents`
   - HarmonyOS: `/data/storage/el2/base/cache`
   - Other platforms: Process current working directory
 
