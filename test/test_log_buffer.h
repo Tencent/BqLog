@@ -321,9 +321,9 @@ namespace bq {
             void do_memory_pool_test(test_result& result)
             {
                 {
-#ifdef defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE) || defined(BQ_MOBILE_PLATFORM)
+#if defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE) || defined(BQ_MOBILE_PLATFORM)
                     constexpr int32_t LOOP_COUNT = 100000;
-#else
+#elsed
                     constexpr int32_t LOOP_COUNT = 1000000;
 #endif
                     constexpr int32_t OBJ_COUNT = 1024;
