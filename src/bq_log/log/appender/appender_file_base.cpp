@@ -24,7 +24,9 @@ namespace bq {
     appender_file_base::~appender_file_base()
     {
         if (get_pendding_flush_written_size() == 0) {
-            cache_write_entity_->set_delete_mmap_when_destruct(true);
+            if (cache_write_entity_) {
+                cache_write_entity_->set_delete_mmap_when_destruct(true);
+            }
         }
     }
 
