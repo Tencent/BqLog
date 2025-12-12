@@ -138,7 +138,7 @@
 4. Average performance improved by about 40%.
 5. Android no longer must be used together with Java.
 6. Removed the `is_in_sandbox` config and replaced it with `base_dir_type`; added filters for snapshots and support for opening a new log file on each startup. See [Configuration](#configuration).
-7. Added high-performance hybrid asymmetric encryption; see [6. Log encryption and decryption](#6-log-encryption-and-decryption).
+7. Added high-performance hybrid asymmetric encryption, ***almost zero overhead***; see [6. Log encryption and decryption](#6-log-encryption-and-decryption).
 8. Provides Unity, Tuanjie Engine, and Unreal Engine plugins, making it easy to use in game engines; provides ConsoleAppender redirection to game-engine editors and Blueprint support for Unreal. See [5. Using BqLog in Unreal](#5-using-bqlog-in-unreal).
 9. The repository no longer ships binaries. From 2.x on, please download platform- and language-specific packages from the [Releases page](https://github.com/Tencent/BqLog/releases).
 10. The size of a single log entry is not limited by `log.buffer_size` anymore;
@@ -1559,7 +1559,8 @@ After importing plugin according to [Unreal Engine Integration Instructions](#un
 ### 6. Log encryption and decryption
 
 For external distribution clients (especially internet games and Apps), log encryption is an important requirement.
-In version 1.x, there are still a lot of plaintext in BqLog's binary logs. Since 2.x, a complete log encryption scheme has been introduced.
+In version 1.x, there are still a lot of plaintext in BqLog's binary logs. Since 2.x, a complete log encryption scheme has been introduced.  
+This solution offers high performance with negligible overhead and robust security.
 
 #### 1) Encryption Algorithm Description
 

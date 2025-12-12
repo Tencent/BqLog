@@ -37,6 +37,34 @@ void test_compress_multi_param(int32_t thread_count)
               << std::endl;
 }
 
+void test_compress_enc_multi_param(int32_t thread_count)
+{
+    std::cout << "============================================================" << std::endl;
+    std::cout << "=========Begin Encrypted Compressed File Log Test 1, 4 params=========" << std::endl;
+    bq::log log_obj = bq::log::get_log_by_name("compress_enc");
+    std::vector<std::thread*> threads;
+    threads.resize(thread_count);
+    uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
+    std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+    for (int32_t idx = 0; idx < thread_count; ++idx) {
+        std::thread* st = new std::thread([idx, &log_obj]() {
+            for (int i = 0; i < 2000000; ++i) {
+                log_obj.info("idx:{}, num:{}, This test, {}, {}", idx, i, 2.4232f, true);
+            }
+            });
+        threads[idx] = st;
+    }
+    for (int32_t idx = 0; idx < thread_count; ++idx) {
+        threads[idx]->join();
+        delete threads[idx];
+    }
+    bq::log::force_flush_all_logs();
+    uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
+    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+    std::cout << "============================================================" << std::endl
+        << std::endl;
+}
+
 void test_text_multi_param(int32_t thread_count)
 {
     std::cout << "============================================================" << std::endl;
@@ -93,6 +121,34 @@ void test_compress_no_param(int32_t thread_count)
               << std::endl;
 }
 
+void test_compress_enc_no_param(int32_t thread_count)
+{
+    std::cout << "============================================================" << std::endl;
+    std::cout << "=========Begin Encrypted Compressed File Log Test 3, no param=========" << std::endl;
+    bq::log log_obj = bq::log::get_log_by_name("compress_enc");
+    std::vector<std::thread*> threads;
+    threads.resize(thread_count);
+    uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
+    std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+    for (int32_t idx = 0; idx < thread_count; ++idx) {
+        std::thread* st = new std::thread([idx, &log_obj]() {
+            for (int i = 0; i < 2000000; ++i) {
+                log_obj.info("Empty Log, No Param");
+            }
+            });
+        threads[idx] = st;
+    }
+    for (int32_t idx = 0; idx < thread_count; ++idx) {
+        threads[idx]->join();
+        delete threads[idx];
+    }
+    bq::log::force_flush_all_logs();
+    uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
+    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+    std::cout << "============================================================" << std::endl
+        << std::endl;
+}
+
 void test_text_no_param(int32_t thread_count)
 {
     std::cout << "============================================================" << std::endl;
@@ -130,13 +186,20 @@ int main()
     bq::log compressed_log = bq::log::create_log("compress", R"(
 		appenders_config.appender_3.type=compressed_file
 		appenders_config.appender_3.levels=[all]
-		appenders_config.appender_3.file_name= benchmark_output/compress_
+		appenders_config.appender_3.file_name= benchmark_output/compress
 		appenders_config.appender_3.capacity_limit=1
+    )");
+    bq::log compressed_enc_log = bq::log::create_log("compress_enc", R"(
+		appenders_config.appender_3.type=compressed_file
+		appenders_config.appender_3.levels=[all]
+		appenders_config.appender_3.file_name= benchmark_output/compress_enc
+		appenders_config.appender_3.capacity_limit=1
+        appenders_config.appender_3.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1PIVJKA4PGkq/8TspHmKtVyzUNSJJ/gHxwfy7Aq9fbp6X5PTcDQ5WkWPkShTC9/Hd3WiBP15qQSrj5XT07c85Iz88IqUiPcVisugGyt9Z8JwbmJ4cHHoT3VDeW4Gow4Z4Jy0PbVDMpHM5JF2TZ5NW5LfSEDRaNG0DyWoe39IzI6IBgNL3LlgSiCCqRzFnM5JLvRFfPwuKUUliXrYgOsoNh0rlKqxzwIT16zbUxLlT6nIIOSeLpnxwiJBfyPo8R/AKNAKl4iUhlKZX2/8T/890E43sUf5p4g7vt7PFrrDe5rYUDpzrcv1yf/DD4dN5WBpO6uRImf0tpr6n1sqxh83j tencent\kleinmo@kleinmo-PC0
 	)");
     bq::log text_log = bq::log::create_log("text", R"(
 		appenders_config.appender_3.type=text_file
 		appenders_config.appender_3.levels=[all]
-		appenders_config.appender_3.file_name= benchmark_output/text_
+		appenders_config.appender_3.file_name= benchmark_output/text
 		appenders_config.appender_3.capacity_limit=1
 	)");
     std::cout << "Please input the number of threads which will write log simultaneously:" << std::endl;
@@ -144,12 +207,15 @@ int main()
     std::cin >> thread_count;
 
     compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
+    compressed_enc_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
     text_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
     bq::log::force_flush_all_logs();
 
     test_compress_multi_param(thread_count);
+    test_compress_enc_multi_param(thread_count);
     test_text_multi_param(thread_count);
     test_compress_no_param(thread_count);
+    test_compress_enc_no_param(thread_count);
     test_text_no_param(thread_count);
     return 0;
 }
