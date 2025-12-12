@@ -268,13 +268,15 @@ namespace bq {
             vernam_encrypt_avx2(buf, len, key, key_size_pow2, key_stream_offset);
             return;
         }
+        // Fallback for non-AVX2 x86 or other architectures
+        vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
 #elif defined(BQ_ARM)
         // For Android/iOS ARM64/ARMv7, NEON is effectively standard. 
         // We can use it directly without complex runtime checks for most modern contexts.
         vernam_encrypt_neon(buf, len, key, key_size_pow2, key_stream_offset);
-        return;
-#endif
+#else
         // Fallback for non-AVX2 x86 or other architectures
         vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
+#endif
     }
 }

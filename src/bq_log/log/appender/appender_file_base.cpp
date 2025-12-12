@@ -224,8 +224,8 @@ namespace bq {
             if (new_padding > cache_write_padding_) {
                 auto current_using_size = get_total_used_write_cache_size();
                 auto current_total_size = cache_write_entity_->size();
-                if (current_using_size + static_cast<size_t>(new_padding - cache_write_padding_) > current_total_size) {
-                    resize_cache_write_entity(current_using_size + static_cast<size_t>(new_padding - cache_write_padding_));
+                if (current_using_size + static_cast<size_t>(new_padding) - static_cast<size_t>(cache_write_padding_) > current_total_size) {
+                    resize_cache_write_entity(current_using_size + static_cast<size_t>(new_padding) - static_cast<size_t>(cache_write_padding_));
                 }
             }
             refresh_cache_write_ptr();
