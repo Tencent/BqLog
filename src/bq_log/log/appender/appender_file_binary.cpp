@@ -219,10 +219,10 @@ namespace bq {
         }
         append_new_segment(appender_segment_type::recovery_by_appender);
         return true;
-    };
+    }
 
     void appender_file_binary::on_appender_file_recovery_end() {
-    };
+    }
 
     void appender_file_binary::on_log_item_recovery_begin() {
         append_new_segment(appender_segment_type::recovery_by_log_buffer);
