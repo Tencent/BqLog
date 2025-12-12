@@ -14,7 +14,7 @@
 #include <thread>
 #include <utility>
 #include "test_base.h"
-#include "bq_common/encryption/xor.h"
+#include "bq_common/encryption/vernam.h"
 #include "bq_common/encryption/rsa.h"
 #include "bq_common/encryption/aes.h"
 
@@ -24,17 +24,17 @@ namespace bq {
         class test_encryption : public test_base {
 
         private:
-            void test_xor(test_result& result)
+            void test_vernam(test_result& result)
             {
                 constexpr size_t loop_count = 16;
                 for (size_t i = 0; i < loop_count; ++i) {
-                    size_t offset = i % xor ::DEFAULT_BUFFER_ALIGNMENT;
+                    size_t offset = i % vernam::DEFAULT_BUFFER_ALIGNMENT;
                     bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
                     size_t buff_size = bq::util::rand() % (static_cast<size_t>(1024 * 1024 * 16)) + static_cast<size_t>(offset);
                     size_t key_size = static_cast<size_t>(1) << (bq::util::rand() % static_cast<size_t>(12) + 6);
-                    uint8_t* key = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, key_size));
-                    uint8_t* src = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, buff_size));
-                    uint8_t* tar = static_cast<uint8_t*>(bq::platform::aligned_alloc(xor ::DEFAULT_BUFFER_ALIGNMENT, buff_size));
+                    uint8_t* key = static_cast<uint8_t*>(bq::platform::aligned_alloc(vernam::DEFAULT_BUFFER_ALIGNMENT, key_size));
+                    uint8_t* src = static_cast<uint8_t*>(bq::platform::aligned_alloc(vernam::DEFAULT_BUFFER_ALIGNMENT, buff_size));
+                    uint8_t* tar = static_cast<uint8_t*>(bq::platform::aligned_alloc(vernam::DEFAULT_BUFFER_ALIGNMENT, buff_size));
                     size_t idx = 0;
                     for (; idx + sizeof(uint32_t) - 1 < key_size; idx += sizeof(uint32_t)) {
                         *reinterpret_cast<uint32_t*>(key + idx) = bq::util::rand();
@@ -53,13 +53,13 @@ namespace bq {
                         *(src + idx) = static_cast<uint8_t>(bq::util::rand() & static_cast<uint32_t>(UINT8_MAX));
                     }
                     memcpy(tar, src, buff_size);
-                    bq::xor::xor_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key + offset, key_size, offset);
+                    bq::vernam::vernam_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key + offset, key_size, offset);
                     int32_t compare_result1 = memcmp(src, tar, buff_size);
-                    result.add_result(compare_result1 != 0, "xor enc test 1 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+                    result.add_result(compare_result1 != 0, "vernam enc test 1 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
 
-                    bq:: xor ::xor_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key + offset, key_size, offset); 
+                    bq::vernam::vernam_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key + offset, key_size, offset);
                     int32_t compare_result2 = memcmp(src, tar, buff_size);
-                    result.add_result(compare_result2 == 0, "xor enc test 2 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+                    result.add_result(compare_result2 == 0, "vernam enc test 2 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
                 }
             }
 
@@ -415,7 +415,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
             virtual test_result test() override
             {
                 test_result result;
-                test_xor(result);
+                test_vernam(result);
 
                 constexpr uint32_t thread_count = 2;
                 test_output(bq::log_level::info, "RSA test begin...");

@@ -21,7 +21,7 @@ namespace bq {
         friend class appender_decoder_base;
 
     protected:
-        static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = xor::DEFAULT_BUFFER_ALIGNMENT;
+        static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = vernam::DEFAULT_BUFFER_ALIGNMENT;
 
         struct parse_file_context {
         private:

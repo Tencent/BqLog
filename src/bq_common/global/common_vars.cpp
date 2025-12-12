@@ -13,9 +13,15 @@
 //  common_vars.cpp
 //  Created by Yu Cao on 2025/4/11.
 //
+
 #include "bq_common/global/common_vars.h"
 #ifdef BQ_WIN
 #include "bq_common/platform/win64_includes_begin.h"
+#endif
+#if defined(BQ_X86)
+#ifndef BQ_MSVC
+#include <cpuid.h>
+#endif
 #endif
 
 namespace bq {
@@ -24,6 +30,30 @@ namespace bq {
     static bq::array<global_var_destructiable*>* destructible_vars_;   //(nullptr)zero initialization
     static global_vars_destructor global_var_destructor_;
 
+
+    static bool check_avx2_support() {
+        bool result = false;
+#if defined(BQ_X86)
+        int32_t regs[4];
+        int32_t id;
+#if defined(BQ_MSVC)
+        __cpuid(regs, 0);
+        id = regs[0];
+#else
+        id = __get_cpuid_max(0, (uint32_t*)regs);
+#endif
+        if (id >= 7) {
+#if defined(BQ_MSVC)
+            __cpuidex(regs, 7, 0);
+#else
+            __cpuid_count(7, 0, regs[0], regs[1], regs[2], regs[3]);
+#endif
+            // EBX bit 5 is AVX2
+            result = (regs[1] & (1 << 5)) != 0;
+        }
+#endif
+        return result;
+    }
 
     global_vars_destructor& get_global_var_destructor() {
         return global_var_destructor_;
@@ -53,6 +83,7 @@ namespace bq {
 
     common_global_vars::common_global_vars()
     {
+        avx2_support_ = check_avx2_support();
 #if defined(BQ_ANDROID)
         platform::jni_onload_register register_(&bq::platform::android_jni_onload);
 #elif defined(BQ_WIN)

@@ -177,7 +177,7 @@ namespace bq {
 #ifndef NDEBUG
         assert((get_xor_key_blob_size() & (get_xor_key_blob_size() - 1)) == 0 && "get_xor_key_blob_size() must be power of two");
 #endif
-        xor::xor_encrypt_32bytes_aligned(
+        vernam::vernam_encrypt_32bytes_aligned(
             get_cache_write_ptr_base(),
             get_pendding_flush_written_size(),
             xor_key_blob_.begin(),
@@ -187,7 +187,7 @@ namespace bq {
         update_write_cache_padding();
         if (enc_type_ == appender_encryption_type::rsa_aes_xor && get_pendding_flush_written_size() > 0) {
             //revert
-            xor::xor_encrypt_32bytes_aligned(
+            vernam::vernam_encrypt_32bytes_aligned(
                 get_cache_write_ptr_base(),
                 get_pendding_flush_written_size(),
                 xor_key_blob_.begin(),
@@ -307,7 +307,7 @@ namespace bq {
             uint64_t new_seg_start_pos = static_cast<uint64_t>(get_current_file_size());
             //record the start of current segment on prev segment's head
             direct_write(&new_seg_start_pos, sizeof(new_seg_start_pos), bq::file_manager::seek_option::begin,
-                cur_read_seg_.start_pos + static_cast<ptrdiff_t>(BQ_POD_RUNTIME_OFFSET_OF(appender_file_segment_head, next_seg_pos)));
+                static_cast<int64_t>(cur_read_seg_.start_pos) + static_cast<int64_t>(BQ_POD_RUNTIME_OFFSET_OF(appender_file_segment_head, next_seg_pos)));
         }
         size_t prev_file_size = get_current_file_size();
         appender_file_segment_head new_segment;
@@ -348,7 +348,7 @@ namespace bq {
 
             bq::array<uint8_t> xor_key_blob_ciphertext;
             if (!aes_obj.encrypt(aes_key, aes_iv, xor_key_blob_plaintext, xor_key_blob_ciphertext)) {
-                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl AES encrypt XOR key blob failed");
+                bq::util::log_device_console(bq::log_level::error, "appender_file_binary::init_impl AES encrypt VERNAM key blob failed");
                 assert(false);
             }
             direct_write(static_cast<const uint8_t*>(ciphertext_aes_key.begin()), ciphertext_aes_key.size(), bq::file_manager::seek_option::current, 0);
@@ -356,7 +356,7 @@ namespace bq {
             direct_write(static_cast<const uint8_t*>(xor_key_blob_ciphertext.begin()), xor_key_blob_ciphertext.size(), bq::file_manager::seek_option::current, 0);
             xor_key_blob_ = bq::move(xor_key_blob_plaintext);
 
-            //make sure segment head size is aligned by DEFAULT_ALIGNMENT when xor is enabled
+            //make sure segment head size is aligned by DEFAULT_ALIGNMENT when vernam is enabled
             size_t current_file_size = get_current_file_size();
             size_t aligned_offset = (current_file_size - prev_file_size) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - 1);
             if (aligned_offset != 0) {

@@ -176,7 +176,9 @@ namespace bq {
     bool file_manager::remove_file_or_dir(const bq::string& path)
     {
         bq::string real_path = get_lexically_path(path);
-
+        if (!(is_file(real_path) || is_dir(real_path))) {
+            return false;
+        }
         int32_t error_code = bq::platform::remove_dir_or_file(real_path.c_str());
         if (error_code != 0) {
             switch (error_code) {

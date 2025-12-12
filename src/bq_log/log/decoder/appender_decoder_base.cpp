@@ -165,7 +165,7 @@ namespace bq {
             
             if (!cur_read_seg_.xor_key_blob.is_empty() && read_size > 0) {
                 size_t file_offset_start = current_file_cursor_ - read_size;
-                xor::xor_encrypt_32bytes_aligned(
+                vernam::vernam_encrypt_32bytes_aligned(
                     cache_read_.begin() + static_cast<ptrdiff_t>(read_offset),
                     read_size,
                     cur_read_seg_.xor_key_blob.begin(),
@@ -261,7 +261,7 @@ namespace bq {
             cur_read_seg_.xor_key_blob.clear();
             cur_read_seg_.xor_key_blob.fill_uninitialized(appender_file_binary::get_xor_key_blob_size());
             if (!aes_obj.decrypt(aes_key, aes_iv, static_cast<uint8_t*>(enc_data.begin()) + aes_key_ciphertext_size + aes_iv_size, appender_file_binary::get_xor_key_blob_size(), cur_read_seg_.xor_key_blob.begin(), appender_file_binary::get_xor_key_blob_size())) {
-                util::log_device_console(log_level::error, "decode log file failed, decrypt XOR key failed");
+                util::log_device_console(log_level::error, "decode log file failed, decrypt VERNAM key failed");
                 return appender_decode_result::failed_decode_error;
             }
             auto current_file_pos = current_file_cursor_;

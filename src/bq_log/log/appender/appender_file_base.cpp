@@ -627,7 +627,7 @@ namespace bq {
 
     void appender_file_base::parse_file_context::log_parse_fail_reason(const char* msg) const
     {
-        bq::util::log_device_console(log_level::error, "failed to parse log file :\"%s\" , msg: %s", file_name_.c_str(), msg);
+        bq::util::log_device_console(log_level::info, "failed to parse log file :\"%s\" , msg: %s", file_name_.c_str(), msg);
     }
 
 }

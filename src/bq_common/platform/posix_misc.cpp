@@ -80,7 +80,7 @@ namespace bq {
             {
                 return dp != nullptr;
             }
-            DIR* operator&()
+            DIR* get_dp()
             {
                 return dp;
             }
@@ -324,7 +324,7 @@ namespace bq {
                     return errno;
                 }
                 dirent* dirp;
-                while ((dirp = readdir(&dp)) != NULL) {
+                while ((dirp = readdir(dp.get_dp())) != NULL) {
                     if (strcmp(dirp->d_name, ".") == 0 || strcmp(dirp->d_name, "..") == 0) {
                         continue;
                     }
@@ -554,7 +554,7 @@ namespace bq {
                 return result;
             }
             dirent* dirp;
-            while ((dirp = readdir(&dp)) != NULL) {
+            while ((dirp = readdir(dp.get_dp())) != NULL) {
                 if (strcmp(dirp->d_name, ".") == 0 || strcmp(dirp->d_name, "..") == 0) {
                     continue;
                 }

@@ -36,7 +36,7 @@ namespace bq {
             virtual bq::string get_file_ext_name() override {
                 return ".ft";
             }
-            virtual bool init_impl(const bq::property_value& config_obj) {
+            virtual bool init_impl(const bq::property_value& config_obj) override{
                 appender_file_base::init_impl(config_obj);
                 open_new_indexed_file_by_name();
                 return true;
@@ -62,7 +62,7 @@ namespace bq {
             virtual uint32_t get_binary_format_version() const override{
                 return 1;
             }
-            virtual bool init_impl(const bq::property_value& config_obj) {
+            virtual bool init_impl(const bq::property_value& config_obj) override{
                 appender_file_binary::init_impl(config_obj);
                 open_new_indexed_file_by_name();
                 return true;

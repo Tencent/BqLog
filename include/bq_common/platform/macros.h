@@ -264,3 +264,11 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #if defined(BQ_ANDROID) || defined(BQ_IOS) || defined(BQ_OHOS)
 #define BQ_MOBILE_PLATFORM
 #endif
+
+#if defined(BQ_GCC) || defined(BQ_CLANG)
+#define BQ_RESTRICT __restrict__
+#elif defined(BQ_MSVC)
+#define BQ_RESTRICT __restrict
+#else
+#define BQ_RESTRICT
+#endif

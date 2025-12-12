@@ -135,6 +135,7 @@ namespace bq {
 #endif
         bq::array<char> device_console_buffer_ = { '\0' };
         bq::platform::mutex console_mutex_;
+        bool avx2_support_;
         bq::platform::base_dir_initializer base_dir_init_inst_;
         bq::hash_map<bq::platform::file_node_info, bq::platform::file_open_mode_enum> file_exclusive_cache_;
         bq::platform::mutex file_exclusive_mutex_;
