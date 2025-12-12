@@ -43,6 +43,7 @@ namespace bq {
     #define BQ_TARGET_AVX2
 #endif
 
+#ifndef BQ_ARM
     // 1. Universal Scalar Implementation (Fallback)
     // -------------------------------------------------------------------------------------------------
     static void vernam_encrypt_scalar(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
@@ -109,6 +110,7 @@ namespace bq {
             current_key_pos = (current_key_pos + 1) & key_mask;
         }
     }
+#endif
 
 #if defined(BQ_X86)
     // 2. AVX2 Implementation (x86/x64 Only)
