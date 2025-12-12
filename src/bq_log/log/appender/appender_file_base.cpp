@@ -28,6 +28,9 @@ namespace bq {
                 cache_write_entity_->set_delete_mmap_when_destruct(true);
             }
         }
+        if (flush_when_destruct_) {
+            flush_cache();
+        }
     }
 
     void appender_file_base::flush_cache()
@@ -256,6 +259,11 @@ namespace bq {
     void appender_file_base::on_appender_file_recovery_end()
     {
 
+    }
+
+    void appender_file_base::set_flush_when_destruct(bool flush)
+    {
+        flush_when_destruct_ = flush;
     }
 
     void appender_file_base::refresh_file_handle(const log_entry_handle& handle)

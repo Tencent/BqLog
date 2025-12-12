@@ -114,6 +114,8 @@ namespace bq {
         virtual bool on_appender_file_recovery_begin();
 
         virtual void on_appender_file_recovery_end();
+
+        void set_flush_when_destruct(bool flush);
 #ifdef BQ_UNIT_TEST
     protected:
 #else
@@ -161,7 +163,7 @@ namespace bq {
         uint64_t expire_time_ms_;
         uint64_t capacity_limit_;
         uint64_t current_file_expire_time_epoch_ms_;
-        
+        bool flush_when_destruct_ = true;
     private:
         BQ_PACK_BEGIN
         struct mmap_head {

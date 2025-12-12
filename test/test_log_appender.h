@@ -38,6 +38,7 @@ namespace bq {
             }
             virtual bool init_impl(const bq::property_value& config_obj) override{
                 appender_file_base::init_impl(config_obj);
+                set_flush_when_destruct(false);
                 open_new_indexed_file_by_name();
                 return true;
             }
@@ -64,6 +65,7 @@ namespace bq {
             }
             virtual bool init_impl(const bq::property_value& config_obj) override{
                 appender_file_binary::init_impl(config_obj);
+                set_flush_when_destruct(false);
                 open_new_indexed_file_by_name();
                 return true;
             }

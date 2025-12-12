@@ -32,7 +32,7 @@
 namespace bq {
     class alignas(BQ_CACHE_LINE_SIZE) log_buffer {
     public:
-#if defined(BQ_MOBILE_PLATFORM) && !defined(BQ_UNIT_TEST)
+#if defined(BQ_MOBILE_PLATFORM)
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 2;
 #else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;

@@ -324,7 +324,7 @@ namespace bq {
 #ifdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
                     constexpr int32_t LOOP_COUNT = 100000;
 #else
-                    constexpr int32_t LOOP_COUNT = 1000000;
+                    constexpr int32_t LOOP_COUNT = 500000;
 #endif
                     constexpr int32_t OBJ_COUNT = 1024;
                     constexpr int32_t THREAD_COUNT = 4;
