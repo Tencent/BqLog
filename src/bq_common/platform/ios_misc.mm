@@ -38,10 +38,10 @@ namespace bq {
 
         base_dir_initializer::base_dir_initializer()
         {
+            NSString *app_support_path = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
             NSString *documents_path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
-            NSString* cache_path = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
-            set_base_dir_0([documents_path UTF8String]);
-            set_base_dir_1([cache_path UTF8String]);
+            set_base_dir_0([app_support_path UTF8String]);
+            set_base_dir_1([documents_path UTF8String]);
         }
     
         bq::string get_programe_home_path()
