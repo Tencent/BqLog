@@ -36,7 +36,7 @@ namespace bq {
             return;
         }
         size_t real_write_size = 0;
-        size_t need_write_size = cache_write_head_->cache_write_finished_cursor_;
+        size_t need_write_size = static_cast<size_t>(cache_write_head_->cache_write_finished_cursor_);
         int32_t error_code = bq::platform::write_file(file_.platform_handle(), (const void*)cache_write_, need_write_size, real_write_size);
         if (real_write_size < need_write_size) {
             memcpy(cache_write_, cache_write_ + static_cast<ptrdiff_t>(real_write_size), need_write_size - real_write_size);
@@ -401,8 +401,8 @@ namespace bq {
     {
         size_t new_head_size = 0;
         if (need_recovery) {
-            new_head_size = static_cast<uint64_t>(BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_))
-                            + static_cast<uint64_t>(bq::align_8(static_cast<uint64_t>(mmap_file_abs_path.size())));
+            new_head_size = static_cast<size_t>(BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_))
+                            + bq::align_8(mmap_file_abs_path.size());
         }else {
             new_head_size = sizeof(mmap_head);
         }
@@ -437,8 +437,8 @@ namespace bq {
         }
         bq::string current_file_path;
         current_file_path.insert_batch(current_file_path.end(), cache_write_head_->file_path_, static_cast<size_t>(cache_write_head_->file_path_size_));
-        cache_write_head_size_ = static_cast<uint64_t>(BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_))
-            + static_cast<uint64_t>(bq::align_8(static_cast<uint64_t>(current_file_path.size())));
+        cache_write_head_size_ = BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_)
+            + bq::align_8(current_file_path.size());
         
         file_ = file_manager::instance().open_file(current_file_path, file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         if (!file_) {
@@ -446,7 +446,7 @@ namespace bq {
             return false;
         }
         current_file_size_ = file_manager::instance().get_file_size(file_);
-        cache_write_cursor_ = cache_write_head_->cache_write_finished_cursor_;
+        cache_write_cursor_ = static_cast<size_t>(cache_write_head_->cache_write_finished_cursor_);
         int64_t caculated_padding = static_cast<int64_t>(cache_write_entity_->size()) - static_cast<int64_t>(cache_write_head_size_) - static_cast<int64_t>(cache_write_head_->write_cache_size_);
         if (caculated_padding < static_cast<int64_t>(0) || caculated_padding >= static_cast<int64_t>(UINT8_MAX)) {
             bq::util::log_device_console(bq::log_level::warning, "%s invalid mmap head data, give up recovery! calculated padding:%" PRId64 "", mmap_file_path.c_str(), caculated_padding);

@@ -40,7 +40,7 @@ namespace bq {
         __cpuid(regs, 0);
         id = regs[0];
 #else
-        id = __get_cpuid_max(0, (uint32_t*)regs);
+        id = static_cast<int32_t>(__get_cpuid_max(0, (uint32_t*)regs));
 #endif
         if (id >= 7) {
 #if defined(BQ_MSVC)
