@@ -1380,7 +1380,7 @@ jobs:
           - abi: x86
             api-level: 21
           - abi: x86_64
-            api-level: 30
+            api-level: 33
 
     steps:
       - uses: actions/checkout@v4
