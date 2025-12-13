@@ -615,7 +615,7 @@ namespace bq {
                 }
                 constexpr uint32_t WRITE_VERSION_COUNT = 5;
 #ifdef BQ_MOBILE_PLATFORM
-                constexpr uint32_t MESSAGE_PER_VERSION = 5000;
+                constexpr uint32_t MESSAGE_PER_VERSION = 1000;
 #elefdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
                 constexpr uint32_t MESSAGE_PER_VERSION = 10000;
 #else
