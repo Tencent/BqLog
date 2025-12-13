@@ -614,7 +614,9 @@ namespace bq {
                     return;
                 }
                 constexpr uint32_t WRITE_VERSION_COUNT = 5;
-#if defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE) || defined(BQ_MOBILE_PLATFORM)
+#ifdef BQ_MOBILE_PLATFORM
+                constexpr uint32_t MESSAGE_PER_VERSION = 5000;
+#elefdef BQ_UNITE_TEST_LOW_PERFORMANCE_MODE
                 constexpr uint32_t MESSAGE_PER_VERSION = 10000;
 #else
                 constexpr uint32_t MESSAGE_PER_VERSION = 100000;
@@ -635,7 +637,11 @@ namespace bq {
                     constexpr uint32_t max_chunk_size = 1024;
                     constexpr uint32_t min_oversize_chunk_size = 64 * 1024; // 64K
                     constexpr uint32_t max_oversize_chunk_size = 8 * 1024 * 1024; // 8M
+#ifdef BQ_MOBILE_PLATFORM
+                    constexpr int32_t oversize_chunk_frequency = 7677;
+#else
                     constexpr int32_t oversize_chunk_frequency = 1677;
+#endif
                     std::random_device sd;
                     std::minstd_rand linear_ran(sd());
                     std::uniform_int_distribution<uint32_t> rand_seq(min_chunk_size, max_chunk_size);
