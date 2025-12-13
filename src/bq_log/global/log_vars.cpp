@@ -48,7 +48,17 @@ namespace bq {
         appender_decoder_manager_inst_ = nullptr;
         delete console_static_misc_;
         console_static_misc_ = nullptr;*/
-        log_manager_inst_->force_flush_all();
+        bool force_flush_success = false;
+        for (uint32_t i = 0; i < 128; ++i) {
+            if (log_manager_inst_->try_flush_all()) {
+                force_flush_success = true;
+                break;
+            }
+            bq::platform::thread::sleep(1);
+        }
+        if (!force_flush_success) {
+            bq::util::log_device_console(bq::log_level::warning, "Force flush timed out on shutdown, some buffered logs may be lost");
+        }
     }
 
     log_global_vars::log_global_vars()

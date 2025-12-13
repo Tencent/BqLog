@@ -190,6 +190,23 @@ namespace bq {
         }
     }
 
+    bool log_manager::try_flush_all()
+    {
+        bq::platform::scoped_try_spin_lock_write_crazy scoped_lock(logs_lock_);
+        if (!scoped_lock.owns_lock()) {
+            return false;
+        }
+        scoped_thread_check_disable disable_helper;
+        (void)disable_helper;
+        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
+            auto& log_impl = log_imp_list_[i];
+            if (log_impl->get_thread_mode() != log_thread_mode::sync) {
+                log_impl->process(true);
+            }
+        }
+        return true;
+    }
+
     void log_manager::force_flush(uint64_t log_id)
     {
         log_imp* log = get_log_by_id(log_id);

@@ -54,6 +54,8 @@ namespace bq {
 
         void force_flush_all();
 
+        bool try_flush_all();
+
         void force_flush(uint64_t log_id);
 
         bq_forceinline log_worker& get_public_worker()
