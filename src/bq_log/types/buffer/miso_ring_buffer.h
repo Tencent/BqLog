@@ -209,6 +209,7 @@ namespace bq {
             (void)in_enable;
 #endif
         }
+        bool is_thread_check_enable() const;
 
         bq_forceinline const log_buffer_config& get_config() const
         {

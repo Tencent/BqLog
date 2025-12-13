@@ -11,6 +11,7 @@
  */
 
 #include "bq_log/types/buffer/siso_ring_buffer.h"
+#include "bq_log/global/log_vars.h"
 
 namespace bq {
 
@@ -50,7 +51,7 @@ namespace bq {
     log_buffer_write_handle siso_ring_buffer::alloc_write_chunk(uint32_t size)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (write_thread_id_ == empty_thread_id_) {
                 write_thread_id_ = current_thread_id;
@@ -121,7 +122,7 @@ namespace bq {
             return;
         }
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (write_thread_id_ == empty_thread_id_) {
                 write_thread_id_ = current_thread_id;
@@ -145,7 +146,7 @@ namespace bq {
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (read_thread_id_ == empty_thread_id_) {
                 read_thread_id_ = current_thread_id;
@@ -190,7 +191,7 @@ namespace bq {
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             if (0 == read_thread_id_) {
                 read_thread_id_ = bq::platform::thread::get_current_thread_id();
             }
@@ -209,7 +210,7 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(is_read_chunk_waiting_for_return_ && "You cant discard a chunk has not been read yet");
         is_read_chunk_waiting_for_return_ = false;
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
         }
@@ -223,7 +224,7 @@ namespace bq {
         assert(is_read_chunk_waiting_for_return_ && "You cant return a chunk has not been read yet");
         is_read_chunk_waiting_for_return_ = false;
 
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
         }
@@ -249,7 +250,7 @@ namespace bq {
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(!is_read_chunk_waiting_for_return_ && "You cant read chunks before you returning last chunk back");
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (read_thread_id_ == empty_thread_id_) {
                 read_thread_id_ = current_thread_id;
@@ -293,7 +294,7 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(is_read_chunk_waiting_for_return_ && "You cant return a chunk has not been read yet");
         is_read_chunk_waiting_for_return_ = false;
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
         }
@@ -313,7 +314,7 @@ namespace bq {
     void siso_ring_buffer::data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        if (check_thread_) {
+        if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             if (read_thread_id_ == empty_thread_id_) {
                 read_thread_id_ = current_thread_id;
@@ -352,6 +353,16 @@ namespace bq {
         expected_buffer_size = bq::roundup_pow_of_two(expected_buffer_size);
         return expected_buffer_size + (uint32_t)(sizeof(head) + BQ_CACHE_LINE_SIZE);
     }
+
+    bool siso_ring_buffer::is_thread_check_enable() const
+    {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+        return check_thread_ && log_global_vars::get().is_thread_check_enabled();
+#else
+        return false;
+#endif
+    }
+
 
     void siso_ring_buffer::init_with_memory_map(void* buffer, size_t buffer_size)
     {

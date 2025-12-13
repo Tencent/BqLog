@@ -50,9 +50,7 @@ namespace bq {
         {
             if (buffer_.capacity() > default_buffer_size_) {
                 buffer_.clear();
-                buffer_.fill_uninitialized(default_buffer_size_);
-                buffer_.shrink();
-                buffer_.clear();
+                buffer_.set_capacity(default_buffer_size_, true);
             } else {
                 buffer_.clear();
             }

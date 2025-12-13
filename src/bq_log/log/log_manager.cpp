@@ -179,47 +179,34 @@ namespace bq {
 
     void log_manager::force_flush_all()
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
-        public_worker_.awake_and_wait_begin();
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        scoped_thread_check_disable disable_helper;
+        (void)disable_helper;
         for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
             auto& log_impl = log_imp_list_[i];
-            if (log_impl->get_thread_mode() == log_thread_mode::independent) {
-                log_imp_list_[i]->worker_.awake_and_wait_begin();
-            }
-        }
-        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
-            auto& log_impl = log_imp_list_[i];
-            if (log_impl->get_thread_mode() == log_thread_mode::sync) {
-                log_imp_list_[i]->sync_process(true);
-            }
-        }
-        public_worker_.awake_and_wait_join();
-        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
-            auto& log_impl = log_imp_list_[i];
-            if (log_impl->get_thread_mode() == log_thread_mode::independent) {
-                log_imp_list_[i]->worker_.awake_and_wait_join();
+            if (log_impl->get_thread_mode() != log_thread_mode::sync) {
+                log_impl->process(true);
             }
         }
     }
 
     void log_manager::force_flush(uint64_t log_id)
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
         log_imp* log = get_log_by_id(log_id);
         if (!log) {
             return;
         }
         switch (log->get_thread_mode()) {
         case log_thread_mode::sync:
-            log->sync_process(true);
+            //do nothing
             break;
         case log_thread_mode::async:
-            public_worker_.awake_and_wait_begin(log);
-            public_worker_.awake_and_wait_join();
-            break;
-        case log_thread_mode::independent:
-            log->get_worker().awake_and_wait_begin();
-            log->get_worker().awake_and_wait_join();
+        case log_thread_mode::independent: {
+            bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+            scoped_thread_check_disable disable_helper;
+            (void)disable_helper;
+            log->process(true);
+        }
             break;
         default:
             break;

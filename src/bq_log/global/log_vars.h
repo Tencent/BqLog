@@ -26,6 +26,7 @@ namespace bq {
 
     // To ensure these variables can be used at any time without being destroyed, we accept a small amount of memory leakage.
     struct log_global_vars : public global_vars_base<log_global_vars, common_global_vars> {
+        friend struct scoped_thread_check_disable;
         const char* log_appender_type_names_[static_cast<int32_t>(appender_base::appender_type::type_count)] = {
             "console",
             "text_file",
@@ -51,6 +52,10 @@ namespace bq {
         appender_console::console_static_misc* console_static_misc_ = new appender_console::console_static_misc();
         appender_decoder_manager* appender_decoder_manager_inst_ = new appender_decoder_manager();
         log_manager* log_manager_inst_ = new log_manager();
+    private:
+#if defined(BQ_LOG_BUFFER_DEBUG)
+        bq::platform::atomic<int32_t> thread_check_enable_counter_ = 0;
+#endif
 
     private:
 #if defined(BQ_JAVA)
@@ -65,5 +70,29 @@ namespace bq {
         log_global_vars();
 
         virtual ~log_global_vars() override { }
+
+        bq_forceinline bool is_thread_check_enabled() const
+        {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            return thread_check_enable_counter_.load_relaxed() == 0;
+#else
+            return false;
+#endif
+        }
+    };
+
+    struct scoped_thread_check_disable {
+        scoped_thread_check_disable()
+        {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            bq::log_global_vars::get().thread_check_enable_counter_.fetch_add_relaxed(1);
+#endif
+        }
+        ~scoped_thread_check_disable()
+        {
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            bq::log_global_vars::get().thread_check_enable_counter_.fetch_sub_relaxed(1);
+#endif
+        }
     };
 }

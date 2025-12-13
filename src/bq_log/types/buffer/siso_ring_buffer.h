@@ -261,6 +261,7 @@ namespace bq {
             (void)in_enable;
 #endif
         }
+        bool is_thread_check_enable() const;
 
         bq_forceinline memory_map_buffer_state get_memory_map_buffer_state() const
         {
