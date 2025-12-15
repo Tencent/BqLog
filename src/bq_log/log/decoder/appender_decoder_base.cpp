@@ -11,6 +11,7 @@
  */
 #include "bq_log/log/decoder/appender_decoder_base.h"
 #include "bq_log/utils/time_zone.h"
+#include "bq_log/global/log_vars.h"
 
 static constexpr size_t DECODER_CACHE_READ_DEFAULT_SIZE = 32 * 1024;
 
@@ -205,13 +206,8 @@ namespace bq {
             return appender_decode_result::failed_decode_error;
         }
         if (layout_.get_formated_str_len() > 0) {
-            decoded_text_.fill_uninitialized((size_t)layout_.get_formated_str_len());
-            // todo, use string_view to enhance performance
-            memcpy(decoded_text_.begin(), layout_.get_formated_str(), layout_.get_formated_str_len());
+            decoded_text_.insert_batch(decoded_text_.end(), layout_.get_formated_str(), layout_.get_formated_str_len());
             layout_.tidy_memory();
-        }
-        else {
-            decoded_text_.clear();
         }
         return appender_decode_result::success;
     }
@@ -275,9 +271,21 @@ namespace bq {
                 }
             }
         }
+        auto last_seg_type = (new_seg_start_pos == sizeof(file_head_) ? appender_file_binary::appender_segment_type::normal : cur_read_seg_.seg_type);
         cur_read_seg_.enc_type = seg_head.enc_type;
         cur_read_seg_.start_pos = new_seg_start_pos;
         cur_read_seg_.end_pos = seg_head.next_seg_pos;
+        cur_read_seg_.seg_type = seg_head.seg_type;
+
+        if (last_seg_type != cur_read_seg_.seg_type) {
+            if (cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::recovery_by_appender
+                || cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::recovery_by_log_buffer) {
+                decoded_text_.insert_batch(decoded_text_.end(), log_global_vars::get().log_recover_start_str_, strlen(log_global_vars::get().log_recover_start_str_));
+            }
+            else if (cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::normal) {
+                decoded_text_.insert_batch(decoded_text_.end(), log_global_vars::get().log_recover_end_str_, strlen(log_global_vars::get().log_recover_end_str_));
+            }
+        }
         return appender_decode_result::success;
     }
 

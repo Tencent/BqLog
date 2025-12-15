@@ -73,6 +73,7 @@ namespace bq {
         , snapshot_(nullptr)
         , last_log_entry_epoch_ms_(0)
         , last_flush_io_epoch_ms_(0)
+        , recover_status_(recover_status_enum::not_started)
     {
     }
 
@@ -294,6 +295,30 @@ namespace bq {
 
     void log_imp::process_log_chunk(bq::log_entry_handle& read_handle)
     {
+        if (recover_status_ == recover_status_enum::not_started) {
+            auto current_version = buffer_->get_current_reading_version();
+            auto version = buffer_->get_version();
+            if (current_version == version) {
+                recover_status_ = recover_status_enum::recovered;
+            }
+            else {
+                recover_status_ = recover_status_enum::in_recovering;
+                for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
+                    appenders_list_[i]->on_log_item_recovery_begin();
+                }
+            }
+        }
+        else if (recover_status_ == recover_status_enum::in_recovering) {
+            auto current_version = buffer_->get_current_reading_version();
+            auto version = buffer_->get_version();
+            if (current_version == version) {
+                recover_status_ = recover_status_enum::recovered;
+                for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
+                    appenders_list_[i]->on_log_item_recovery_end();
+                }
+            }
+        }
+
         auto& head = read_handle.get_log_head();
 
         // Due to the high concurrency of our ring_buffer,

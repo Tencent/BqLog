@@ -18,6 +18,7 @@
 namespace bq {
     class log_imp;
     class appender_base {
+        friend class log_imp;
     public:
         enum appender_type {
             console,

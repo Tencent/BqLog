@@ -169,6 +169,15 @@ namespace bq {
         };
         java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
+
+        bq_forceinline uint16_t get_version() const {
+            return version_;
+        }
+
+        bq_forceinline uint16_t get_current_reading_version() const {
+            return rt_cache_.current_reading_.version_;
+        }
+
         bq_forceinline const log_buffer_config& get_config() const
         {
             return config_;

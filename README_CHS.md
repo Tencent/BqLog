@@ -854,21 +854,22 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 `appenders_config` 是一组关于 Appender 的配置。  
 `appenders_config.<name>.xxx` 中 `<name>` 即 Appender 名称，相同 `<name>` 的配置共同作用于同一个 Appender 实例。
 
-| 名称                         | 是否必须 | 可配置值                                | 默认值             | ConsoleAppender | TextFileAppender | CompressedFileAppender |
-|------------------------------|---------|-----------------------------------------|--------------------|-----------------|------------------|------------------------|
-| `type`                       | ✔       | `console` / `text_file` / `compressed_file` / `raw_file` | -                  | ✔               | ✔                | ✔（加密需此类型）      |
-| `enable`                     | ✘       | `true` / `false`                        | `true`             | ✔               | ✔                | ✔                      |
-| `levels`                     | ✘       | 日志等级数组（`[verbose,...]` 或 `[all]`） | `[all]`            | ✔               | ✔                | ✔                      |
+| 名称                         | 是否必须 | 可配置值                                | 默认值               | ConsoleAppender | TextFileAppender | CompressedFileAppender |
+|------------------------------|---------|-----------------------------------------|-------------------|-----------------|------------------|------------------------|
+| `type`                       | ✔       | `console` / `text_file` / `compressed_file` / `raw_file` | -                 | ✔               | ✔                | ✔（加密需此类型）      |
+| `enable`                     | ✘       | `true` / `false`                        | `true`            | ✔               | ✔                | ✔                      |
+| `levels`                     | ✘       | 日志等级数组（`[verbose,...]` 或 `[all]`） | `[all]`           | ✔               | ✔                | ✔                      |
 | `time_zone`                  | ✘       | `gmt` / `localtime` / `Z` / `UTC` / `utc+8` / `utc-2` / `utc+11:30` 等 | `localtime`（当地时间） | ✔               | ✔                | ✔（影响滚动日期）      |
-| `file_name`                  | ✔（文件类） | 相对或绝对路径（不含扩展名）                | -                  | ✘               | ✔                | ✔                      |
-| `base_dir_type`             | ✘       | `0` / `1`                               | `0`                | ✘               | ✔                | ✔                      |
-| `max_file_size`             | ✘       | 正整数或 `0`                            | `0`（不限制）       | ✘               | ✔                | ✔                      |
-| `expire_time_seconds`       | ✘       | 正整数或 `0`                            | `0`（不清理）       | ✘               | ✔                | ✔                      |
-| `expire_time_days`          | ✘       | 正整数或 `0`                            | `0`（不清理）       | ✘               | ✔                | ✔                      |
-| `capacity_limit`            | ✘       | 正整数或 `0`                            | `0`（不限制）       | ✘               | ✔                | ✔                      |
-| `categories_mask`           | ✘       | 字符串数组（`[]`）                       | 空（不过滤）        | ✔               | ✔                | ✔                      |
-| `always_create_new_file`    | ✘       | `true` / `false`                        | `false`            | ✘               | ✔                | ✔                      |
-| `pub_key`                   | ✘       | RSA2048 公钥（OpenSSH `ssh-rsa` 文本）  | 空（不加密）        | ✘               | ✘                | ✔（启用混合加密）      |
+| `file_name`                  | ✔（文件类） | 相对或绝对路径（不含扩展名）                | -                 | ✘               | ✔                | ✔                      |
+| `base_dir_type`             | ✘       | `0` / `1`                               | `0`               | ✘               | ✔                | ✔                      |
+| `max_file_size`             | ✘       | 正整数或 `0`                            | `0`（不限制）          | ✘               | ✔                | ✔                      |
+| `expire_time_seconds`       | ✘       | 正整数或 `0`                            | `0`（不清理）          | ✘               | ✔                | ✔                      |
+| `expire_time_days`          | ✘       | 正整数或 `0`                            | `0`（不清理）          | ✘               | ✔                | ✔                      |
+| `capacity_limit`            | ✘       | 正整数或 `0`                            | `0`（不限制）          | ✘               | ✔                | ✔                      |
+| `categories_mask`           | ✘       | 字符串数组（`[]`）                       | 空（不过滤）            | ✔               | ✔                | ✔                      |
+| `always_create_new_file`    | ✘       | `true` / `false`                        | `false`           | ✘               | ✔                | ✔                      |
+| `enable_rolling_log_file`    | ✘       | `true` / `false`                        | `true`            | ✘               | ✔                | ✔                      |
+| `pub_key`                   | ✘       | RSA2048 公钥（OpenSSH `ssh-rsa` 文本）  | 空（不加密）            | ✘               | ✘                | ✔（启用混合加密）      |
 
 ##### (1) `appenders_config.xxx.type`
 
@@ -948,6 +949,7 @@ appenders_config.appender_3.file_name=~/bqLog/compress_log
 - `capacity_limit`：限制该 Appender 输出的文件的总大小，超过时按时间从旧文件开始删除。
 - `categories_mask`：仅当日志 Category 匹配该数组中的前缀时，才会输出日志（参见 [支持分类（Category）的 Log 对象](#2-支持分类category的-log-对象)）。
 - `always_create_new_file`：`true` 时，即使同一天内，每次进程重启也新开一个文件；默认 `false` 为追加写。
+- `enable_rolling_log_file`：是否启用按日期滚动文件，默认 `true`。
 - `pub_key`：为 CompressedFileAppender 提供加密公钥，字符串内容应完整拷贝自 `ssh-keygen` 生成的 `.pub` 文件，且以 `ssh-rsa ` 开头。 详情见 [日志加密和解密](#6-日志加密和解密)。
 
 ---

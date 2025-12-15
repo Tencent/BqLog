@@ -18,6 +18,7 @@
 
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
+#include "bq_log/global/log_vars.h"
 
 namespace bq {
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
@@ -265,11 +266,13 @@ namespace bq {
     log_buffer_read_handle log_buffer::read_chunk()
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        if (empty_thread_id_ == read_thread_id_) {
-            read_thread_id_ = bq::platform::thread::get_current_thread_id();
+        if (log_global_vars::get().is_thread_check_enabled()) {
+            if (empty_thread_id_ == read_thread_id_) {
+                read_thread_id_ = bq::platform::thread::get_current_thread_id();
+            }
+            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
         }
-        bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-        assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
         if (rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success) {
@@ -378,8 +381,10 @@ namespace bq {
     void log_buffer::return_read_chunk(const log_buffer_read_handle& handle)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-        assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
+        if (log_global_vars::get().is_thread_check_enabled()) {
+            bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
+            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
+        }
 #endif
         if (rt_cache_.current_reading_.hp_handle_cache_.result == enum_buffer_result_code::success) {
 #if defined(BQ_LOG_BUFFER_DEBUG)

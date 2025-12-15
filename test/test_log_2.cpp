@@ -10,10 +10,42 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "test_log.h"
+#include <thread>
 #include "bq_common/bq_common.h"
 
 namespace bq {
     namespace test {
+        class test_force_flush_callback {
+        public:
+            static test_result* test_result_ptr;
+            static uint64_t sync_log_id;
+            static uint64_t async_log_id;
+            static uint64_t idx;
+            static uint64_t current_idx_sync;
+            static uint64_t current_idx_async;
+            static void console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length) {
+                (void)category_idx;
+                (void)log_level;
+                (void)length;
+                if (log_id != sync_log_id && log_id != async_log_id) {
+                    return;
+                }
+                uint64_t& ref_idx = (log_id == sync_log_id) ? current_idx_sync : current_idx_async;
+                ++ref_idx;
+                char idx_tmp[32];
+                snprintf(idx_tmp, sizeof(idx_tmp), "%" PRIu64, ref_idx);
+                bq::string standard_end_str = (log_id == sync_log_id) ? (bq::string("force flush test sync log ") + idx_tmp) : (bq::string("force flush test async log ") + idx_tmp);
+                bq::string log_content(content, static_cast<size_t>(length));
+                test_result_ptr->add_result(log_content.end_with(standard_end_str), (log_id == sync_log_id) ? "force flush test sync" : "force flush test async");
+
+            }
+        };
+        test_result* test_force_flush_callback::test_result_ptr = nullptr;
+        uint64_t test_force_flush_callback::sync_log_id = 0;
+        uint64_t test_force_flush_callback::async_log_id = 0;
+        uint64_t test_force_flush_callback::idx = 0;
+        uint64_t test_force_flush_callback::current_idx_sync = 0;
+        uint64_t test_force_flush_callback::current_idx_async = 0;
 
         void test_log::test_2(test_result& result, const test_category_log& log_inst)
         {
@@ -52,121 +84,197 @@ namespace bq {
                 log_inst.error(log_inst.cat.ModuleB, "NULL Pointer Str Test {}, {}", pointer, pointer);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\tNULL Pointer Str Test null, null"), "log update 4");
             }
+            {
+                int64_t i{ 12 };
+                log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       +12|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:10b}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|      1100|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#10b}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    0b1100|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#10B}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    0B1100|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:10X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         C|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#10X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       0XC|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<10d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|12        |"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:>010d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0000000012|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<010d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|12        |"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000c|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<#010x}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0xc       |"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:>#010x}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000c|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|000012|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:^06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|  12  |"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+00012|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+12   |"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", -i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-00012|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", -i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-12   |"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:06X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|00000C|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X000C|"), "layout format");
+                double dd{ 3.14159265758 / 2.3 };
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", dd);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.3659098511|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", 10000000000000);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12E}|", (uint64_t)10000000000000);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+11|"), "layout format");
+
+                i = 15841548461;
+                log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:10b}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1110110000001110101101100010101101|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#10b}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0b1110110000001110101101100010101101|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:10X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t| 3B03AD8AD|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#10X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X3B03AD8AD|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<10d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:>010d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<010d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<#010x}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:>#010x}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:^06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", -i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", -i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-15841548461|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:06X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|3B03AD8AD|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X3B03AD8AD|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", 100);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         100|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 10000000000000.0);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000E+13|"), "layout format");
+            }
+
+            {
+                const uint64_t seconds = 10;
+                test_output_dynamic_param(bq::log_level::info, "testing force flush. wait for %" PRIu64 " seconds please...\n if error exist, an assert will be triggered\n", seconds);
+                bq::log::register_console_callback(&test_force_flush_callback::console_callback); 
+                test_force_flush_callback::test_result_ptr = &result;
+                uint64_t start_time = bq::platform::high_performance_epoch_ms();
+                auto sync_log = bq::log::create_log("sync_log", R"(
+		            appenders_config.appender_1.type=console
+                    log.thread_mode=sync
+	            )");
+                auto async_log = bq::log::create_log("async_log", R"(
+		            appenders_config.appender_1.type=console
+                    log.thread_mode=async
+	            )");
+                test_force_flush_callback::sync_log_id = sync_log.get_id();
+                test_force_flush_callback::async_log_id = async_log.get_id();
+                bool multi_thread_test_end = false;
+                std::thread tr1([&]() {
+                    while (!multi_thread_test_end) {
+                        async_log.force_flush();
+                        bq::platform::thread::sleep(3);
+                    }
+                    });
+                tr1.detach();
+                std::thread tr2([&]() {
+                    while (!multi_thread_test_end) {
+                        bq::log::force_flush_all_logs();
+                        bq::platform::thread::sleep(3);
+                    }
+                    });
+                tr2.detach();
+
+                while (true) {
+                    sync_log.info("force flush test sync log {}", ++test_force_flush_callback::idx);
+                    async_log.info("force flush test async log {}", test_force_flush_callback::idx);
+                    if (bq::platform::high_performance_epoch_ms() - start_time >= seconds * 1000) {
+                        multi_thread_test_end = true;
+                        break;
+                    }
+                }
+                bq::log::force_flush_all_logs();
+                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_sync, "force flush test sync total count");
+                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_async, "force flush test async total count");
+
+                bq::log::register_console_callback(&test_log::console_callback);
+                test_output_dynamic(bq::log_level::info, "force flush testing is finished!\n");
+            }
 
             {
                 const uint64_t seconds = 10;
                 test_output_dynamic_param(bq::log_level::info, "testing multithread string log. wait for %" PRIu64 " seconds please...\n if error exist, an assert will be triggered\n", seconds);
 
                 uint64_t start_time = bq::platform::high_performance_epoch_ms();
+                std::string str_std = "This is std string";
+                bq::string str_bq = "This is bq string";
+                bool multi_thread_test_end = false;
+                std::thread tr1([&]() {
+                    while (!multi_thread_test_end) {
+                        if (str_std.size() < 20) {
+                            str_std = str_std + str_std;
+                        }
+                        else {
+                            str_std = str_std.substr(str_std.size() >> 1);
+                        }
+                    }
+                    });
+                tr1.detach();
+                std::thread tr2([&]() {
+                    while (!multi_thread_test_end) {
+                        if (str_bq.size() < 20) {
+                            str_bq = str_bq + str_bq;
+                        }
+                        else {
+                            str_bq = str_bq.substr(0, str_bq.size() >> 1);
+                        }
+                    }
+                    });
+                tr2.detach();
                 while (true) {
-                    int64_t i { 12 };
-                    log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       +12|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:10b}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|      1100|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#10b}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    0b1100|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#10B}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    0B1100|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:10X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         C|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#10X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       0XC|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<10d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|12        |"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:>010d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0000000012|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<010d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|12        |"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000c|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0xc       |"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:>#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x0000000c|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|000012|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:^06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|  12  |"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+00012|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+12   |"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", -i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-00012|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", -i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-12   |"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:06X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|00000C|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X000C|"), "layout format");
-                    double dd { 3.14159265758 / 2.3 };
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", dd);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.3659098511|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", 10000000000000);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12E}|", (uint64_t)10000000000000);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+11|"), "layout format");
-
-                    i = 15841548461;
-                    log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:10b}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1110110000001110101101100010101101|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#10b}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0b1110110000001110101101100010101101|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:10X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t| 3B03AD8AD|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#10X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X3B03AD8AD|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<10d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:>010d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<010d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:>#010x}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0x3b03ad8ad|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:^06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:+06d}|", -i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:<+06d}|", -i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-15841548461|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:06X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|3B03AD8AD|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X3B03AD8AD|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", 100);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         100|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 10000000000000.0);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
-                    log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);
-                    result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000E+13|"), "layout format");
-
+                    log_inst.error("test multi thread {}/{}", str_std, str_bq);
                     if (bq::platform::high_performance_epoch_ms() - start_time >= seconds * 1000) {
+                        multi_thread_test_end = true;
                         break;
                     }
                 }
