@@ -23,6 +23,7 @@ namespace bq {
             static uint64_t idx;
             static uint64_t current_idx_sync;
             static uint64_t current_idx_async;
+            static bool multi_thread_test_end;
             static void console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length) {
                 (void)category_idx;
                 (void)log_level;
@@ -45,7 +46,8 @@ namespace bq {
         uint64_t test_force_flush_callback::async_log_id = 0;
         uint64_t test_force_flush_callback::idx = 0;
         uint64_t test_force_flush_callback::current_idx_sync = 0;
-        uint64_t test_force_flush_callback::current_idx_async = 0;
+        uint64_t test_force_flush_callback::current_idx_async = 0; 
+        bool test_force_flush_callback::multi_thread_test_end = false;
 
         void test_log::test_2(test_result& result, const test_category_log& log_inst)
         {
@@ -209,16 +211,16 @@ namespace bq {
 	            )");
                 test_force_flush_callback::sync_log_id = sync_log.get_id();
                 test_force_flush_callback::async_log_id = async_log.get_id();
-                bool multi_thread_test_end = false;
-                std::thread tr1([&]() {
-                    while (!multi_thread_test_end) {
-                        async_log.force_flush();
+                std::thread tr1([]() {
+                    auto log_obj = bq::log::get_log_by_name("async_log");
+                    while (!test_force_flush_callback::multi_thread_test_end) {
+                        log_obj.force_flush();
                         bq::platform::thread::sleep(3);
                     }
                     });
                 tr1.detach();
-                std::thread tr2([&]() {
-                    while (!multi_thread_test_end) {
+                std::thread tr2([]() {
+                    while (!test_force_flush_callback::multi_thread_test_end) {
                         bq::log::force_flush_all_logs();
                         bq::platform::thread::sleep(3);
                     }
@@ -229,7 +231,7 @@ namespace bq {
                     sync_log.info("force flush test sync log {}", ++test_force_flush_callback::idx);
                     async_log.info("force flush test async log {}", test_force_flush_callback::idx);
                     if (bq::platform::high_performance_epoch_ms() - start_time >= seconds * 1000) {
-                        multi_thread_test_end = true;
+                        test_force_flush_callback::multi_thread_test_end = true;
                         break;
                     }
                 }
