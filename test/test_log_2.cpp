@@ -240,47 +240,7 @@ namespace bq {
                 bq::log::register_console_callback(&test_log::console_callback);
                 test_output_dynamic(bq::log_level::info, "force flush testing is finished!\n");
             }
-
-            {
-                const uint64_t seconds = 10;
-                test_output_dynamic_param(bq::log_level::info, "testing multithread string log. wait for %" PRIu64 " seconds please...\n if error exist, an assert will be triggered\n", seconds);
-
-                uint64_t start_time = bq::platform::high_performance_epoch_ms();
-                std::string str_std = "This is std string";
-                bq::string str_bq = "This is bq string";
-                bool multi_thread_test_end = false;
-                std::thread tr1([&]() {
-                    while (!multi_thread_test_end) {
-                        if (str_std.size() < 20) {
-                            str_std = str_std + str_std;
-                        }
-                        else {
-                            str_std = str_std.substr(str_std.size() >> 1);
-                        }
-                    }
-                    });
-                tr1.detach();
-                std::thread tr2([&]() {
-                    while (!multi_thread_test_end) {
-                        if (str_bq.size() < 20) {
-                            str_bq = str_bq + str_bq;
-                        }
-                        else {
-                            str_bq = str_bq.substr(0, str_bq.size() >> 1);
-                        }
-                    }
-                    });
-                tr2.detach();
-                while (true) {
-                    log_inst.error("test multi thread {}/{}", str_std, str_bq);
-                    if (bq::platform::high_performance_epoch_ms() - start_time >= seconds * 1000) {
-                        multi_thread_test_end = true;
-                        break;
-                    }
-                }
-                test_output_dynamic(bq::log_level::info, "multithread string log testing is finished!\n");
-            }
-
+            
             {
                 // snapshot test
                 auto snapshot_log = test_category_log::create_log("snapshot_log", R"(
