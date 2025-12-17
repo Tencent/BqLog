@@ -140,6 +140,18 @@ namespace bq {
         }
     }
 
+
+    void appender_file_base::on_log_item_recovery_begin(bq::log_entry_handle& read_handle)
+    {
+        refresh_file_handle(read_handle);
+    }
+
+
+    void appender_file_base::on_log_item_recovery_end()
+    {
+        flush_cache();
+    }
+
     appender_file_base::read_with_cache_handle appender_file_base::read_with_cache(size_t size)
     {
         auto left_size = cache_read_.size() - cache_read_cursor_;
@@ -448,7 +460,9 @@ namespace bq {
         cache_write_head_size_ = BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_)
             + bq::align_8(current_file_path.size());
         
-        file_ = file_manager::instance().open_file(current_file_path, file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+        if (file_manager::is_file(current_file_path)) {
+            file_ = file_manager::instance().open_file(current_file_path, file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+        }
         if (!file_) {
             bq::util::log_device_console(bq::log_level::warning, "%s failed to open log file %s, give up recovery!", mmap_file_path.c_str(), current_file_path.c_str());
             return false;

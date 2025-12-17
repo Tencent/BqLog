@@ -163,7 +163,7 @@ namespace bq {
         virtual uint32_t get_binary_format_version() const = 0;
         virtual bool on_appender_file_recovery_begin() override;
         virtual void on_appender_file_recovery_end() override;
-        virtual void on_log_item_recovery_begin() override;
+        virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) override;
         virtual void on_log_item_recovery_end() override;
         virtual read_with_cache_handle read_with_cache(size_t size) override;
 

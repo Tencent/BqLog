@@ -65,7 +65,7 @@ namespace bq {
 
         virtual void log_impl(const log_entry_handle& handle) = 0;
 
-        virtual void on_log_item_recovery_begin() {}
+        virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) {(void)read_handle; }
 
         virtual void on_log_item_recovery_end() {}
     protected:

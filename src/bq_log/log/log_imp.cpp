@@ -304,7 +304,7 @@ namespace bq {
             else {
                 recover_status_ = recover_status_enum::in_recovering;
                 for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
-                    appenders_list_[i]->on_log_item_recovery_begin();
+                    appenders_list_[i]->on_log_item_recovery_begin(read_handle);
                 }
             }
         }

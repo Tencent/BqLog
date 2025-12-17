@@ -42,8 +42,8 @@ namespace bq {
             { '[', 'F', ']' } // FATAL
         };
         const char digit3_array[3000 + 16] = {};
-        const char* log_recover_start_str_ = "----- BQLOG RECOVER START -----";
-        const char* log_recover_end_str_ = "----- BQLOG RECOVER END -----";
+        const char* log_recover_start_str_ = "/************************************* BQLOG RECOVER START *************************************/";
+        const char* log_recover_end_str_ = "/************************************* BQLOG RECOVER END *************************************/";
 #if defined(BQ_JAVA)
         jclass cls_bq_log_ = nullptr;
         jmethodID mid_native_console_callback_ = nullptr;

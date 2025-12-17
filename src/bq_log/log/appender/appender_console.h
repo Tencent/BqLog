@@ -67,7 +67,7 @@ namespace bq {
         virtual bool init_impl(const bq::property_value& config_obj) override;
         virtual bool reset_impl(const bq::property_value& config_obj) override;
         virtual void log_impl(const log_entry_handle& handle) override;
-        virtual void on_log_item_recovery_begin() override;
+        virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) override;
         virtual void on_log_item_recovery_end() override;
 
     private:

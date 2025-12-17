@@ -220,13 +220,15 @@ namespace bq {
         }
     }
 
-    void appender_console::on_log_item_recovery_begin()
+    void appender_console::on_log_item_recovery_begin(bq::log_entry_handle& read_handle)
     {
+        appender_base::on_log_item_recovery_begin(read_handle);
         util::log_device_console_plain_text(bq::log_level::info, log_global_vars::get().log_recover_start_str_);
     }
 
     void appender_console::on_log_item_recovery_end()
-    {
+    {   
+        appender_base::on_log_item_recovery_end();
         util::log_device_console_plain_text(bq::log_level::info, log_global_vars::get().log_recover_end_str_);
     }
 

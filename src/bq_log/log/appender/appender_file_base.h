@@ -91,6 +91,10 @@ namespace bq {
 
         virtual void seek_read_file_offset(int32_t offset);
 
+        virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) override;
+
+        virtual void on_log_item_recovery_end() override;
+
         size_t get_current_file_size() const {return current_file_size_;}
 
         file_handle& get_file_handle() {return file_;}

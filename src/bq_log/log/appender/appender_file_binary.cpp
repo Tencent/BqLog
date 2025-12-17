@@ -222,12 +222,15 @@ namespace bq {
     }
 
     void appender_file_binary::on_appender_file_recovery_end() {
+        appender_file_base::on_appender_file_recovery_end();
     }
 
-    void appender_file_binary::on_log_item_recovery_begin() {
+    void appender_file_binary::on_log_item_recovery_begin(bq::log_entry_handle& read_handle) {
+        appender_file_base::on_log_item_recovery_begin(read_handle);
         append_new_segment(appender_segment_type::recovery_by_log_buffer);
     }
     void appender_file_binary::on_log_item_recovery_end() {
+        appender_file_base::on_log_item_recovery_end();
         append_new_segment(appender_segment_type::normal);
     }
 
