@@ -29,11 +29,11 @@ namespace bq {
             }
         }
         if (flush_when_destruct_) {
-            flush_cache();
+            flush_write_cache();
         }
     }
 
-    void appender_file_base::flush_cache()
+    void appender_file_base::flush_write_cache()
     {
         if (!file_) {
             return;
@@ -72,7 +72,7 @@ namespace bq {
         }
     }
 
-    void appender_file_base::flush_io()
+    void appender_file_base::flush_write_io()
     {
         if (file_) {
             if (!file_manager::instance().flush_file(file_)) {
@@ -82,7 +82,7 @@ namespace bq {
                     snprintf(ids, 32, "%d", err_code);
                     string path = TO_ABSOLUTE_PATH("bqLog/flush_file_error.log", 0);
                     bq::file_manager::write_all_text(path, ids);
-                    bq::util::log_device_console(log_level::warning, "appender_file_base::flush_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
+                    bq::util::log_device_console(log_level::warning, "appender_file_base::flush_write_io error, file_path:%s, error code:%d", file_.abs_file_path().c_str(), err_code);
                 }
             }
         }
@@ -143,13 +143,19 @@ namespace bq {
 
     void appender_file_base::on_log_item_recovery_begin(bq::log_entry_handle& read_handle)
     {
+        flush_write_cache();
         refresh_file_handle(read_handle);
     }
 
 
     void appender_file_base::on_log_item_recovery_end()
     {
-        flush_cache();
+    }
+
+    void appender_file_base::on_log_item_new_begin(bq::log_entry_handle& read_handle)
+    {
+        flush_write_cache();
+        refresh_file_handle(read_handle);
     }
 
     appender_file_base::read_with_cache_handle appender_file_base::read_with_cache(size_t size)
@@ -164,12 +170,14 @@ namespace bq {
             cache_read_cursor_ = 0;
             if (read_size < fill_size) {
                 cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(left_size + read_size), fill_size - read_size);
-                cache_read_eof_ = true;
             }
         }
         bq::appender_file_base::read_with_cache_handle result;
         result.data_ = cache_read_.begin() + static_cast<ptrdiff_t>(cache_read_cursor_);
         result.len_ = bq::min_value(size, cache_read_.size() - cache_read_cursor_);
+        if (result.len_ < size) {
+            cache_read_eof_ = true;
+        }
         cache_read_cursor_ += result.len_;
         read_file_pos_ += result.len_;
         return result;
@@ -192,7 +200,7 @@ namespace bq {
 #endif
         uint64_t need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
         if (need_cache_write_size > get_cache_write_size()) {
-            flush_cache();
+            flush_write_cache();
             need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
             if (need_cache_write_size > get_cache_write_size()) {
                 uint64_t new_cache_size = bq::roundup_pow_of_two(need_cache_write_size + cache_write_head_size_ + cache_write_padding_);
@@ -300,8 +308,8 @@ namespace bq {
             }
             current_file_expire_time_epoch_ms_ = static_cast<uint64_t>(static_cast<int64_t>(current_file_expire_time_epoch_ms_) - time_zone_.get_time_zone_diff_to_gmt_ms());
             if (file_) {
-                flush_cache();
-                flush_io();
+                flush_write_cache();
+                flush_write_io();
             }
             clear_read_cache();
             open_new_indexed_file_by_name();
@@ -480,8 +488,7 @@ namespace bq {
             if (!on_appender_file_recovery_begin()) {
                 return false;
             }
-            file_manager::instance().seek(file_, file_manager::seek_option::end, 0);
-            flush_cache();
+            flush_write_cache();
             on_appender_file_recovery_end();
         }
         bq::file_manager::instance().close_file(file_);

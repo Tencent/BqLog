@@ -218,7 +218,6 @@ namespace bq {
         if (!seek_read_file_absolute(static_cast<size_t>(new_seg_start_pos))) {
             return appender_decode_result::eof;
         }
-        auto prev_file_pos = current_file_cursor_;
         bq::appender_file_binary::appender_file_segment_head seg_head;
         auto read_size = read_from_file_directly(&seg_head, sizeof(seg_head));
         if (read_size < sizeof(seg_head)) {
@@ -230,7 +229,7 @@ namespace bq {
                 , seg_head.next_seg_pos);
             return appender_decode_result::eof;
         }
-        if (seg_head.enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor) {
+        if (seg_head.enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor && seg_head.has_key) {
             if (private_key_.n_.size() != 256) {
                 bq::util::log_device_console(bq::log_level::error, "It's an encrypted log file, private key is not specified");
                 return appender_decode_result::failed_decode_error;
@@ -260,16 +259,6 @@ namespace bq {
                 util::log_device_console(log_level::error, "decode log file failed, decrypt VERNAM key failed");
                 return appender_decode_result::failed_decode_error;
             }
-            auto current_file_pos = current_file_cursor_;
-            size_t aligned_offset = (current_file_pos - prev_file_pos) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - 1);
-            if (aligned_offset != 0) {
-                char padding_buff[appender_file_base::DEFAULT_BUFFER_ALIGNMENT];
-                read_size = read_from_file_directly(padding_buff, appender_file_base::DEFAULT_BUFFER_ALIGNMENT - aligned_offset);
-                if (read_size < appender_file_base::DEFAULT_BUFFER_ALIGNMENT - aligned_offset) {
-                    util::log_device_console(log_level::error, "decode log file failed, read segment head padding failed");
-                    return appender_decode_result::failed_decode_error;
-                }
-            }
         }
         auto last_seg_type = (new_seg_start_pos == sizeof(file_head_) ? appender_file_binary::appender_segment_type::normal : cur_read_seg_.seg_type);
         cur_read_seg_.enc_type = seg_head.enc_type;
@@ -277,13 +266,18 @@ namespace bq {
         cur_read_seg_.end_pos = seg_head.next_seg_pos;
         cur_read_seg_.seg_type = seg_head.seg_type;
 
-        if (last_seg_type != cur_read_seg_.seg_type) {
-            if (cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::recovery_by_appender
-                || cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::recovery_by_log_buffer) {
+        bool is_last_seg_recover = (last_seg_type == appender_file_binary::appender_segment_type::recovery_by_appender
+            || last_seg_type == appender_file_binary::appender_segment_type::recovery_by_log_buffer);
+        bool is_cur_seg_recover = (cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::recovery_by_appender
+            || cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::recovery_by_log_buffer);
+        if (is_last_seg_recover != is_cur_seg_recover) {
+            if (is_cur_seg_recover) {
                 decoded_text_.insert_batch(decoded_text_.end(), log_global_vars::get().log_recover_start_str_, strlen(log_global_vars::get().log_recover_start_str_));
+                decoded_text_.push_back('\n');
             }
-            else if (cur_read_seg_.seg_type == appender_file_binary::appender_segment_type::normal) {
+            else if (is_last_seg_recover) {
                 decoded_text_.insert_batch(decoded_text_.end(), log_global_vars::get().log_recover_end_str_, strlen(log_global_vars::get().log_recover_end_str_));
+                decoded_text_.push_back('\n');
             }
         }
         return appender_decode_result::success;

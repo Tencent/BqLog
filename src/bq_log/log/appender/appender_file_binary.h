@@ -42,7 +42,7 @@
  *       +0x09      1  appender_encryption_type enc_type
  *       +0x0A      2  char padding[2]
  *
- *    B. Encryption Info (Present only if enc_type == rsa_aes_xor)
+ *    B. Encryption Info (Present only if enc_type == rsa_aes_xor and only in first segment of file)
  *       Offset  Size       Field
  *       ------  ---------  ---------------------------------------------------
  *       +0x00   256        RSA-2048 ciphertext of AES_256 key
@@ -114,7 +114,8 @@ namespace bq {
             uint64_t next_seg_pos;
             appender_segment_type seg_type;
             appender_encryption_type enc_type;
-            char padding[2];
+            bool has_key;
+            char padding[1];
         }
         BQ_PACK_END
         static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_header size error");
@@ -156,7 +157,7 @@ namespace bq {
         virtual bool reset_impl(const bq::property_value& config_obj) override;
         virtual bool parse_exist_log_file(parse_file_context& context) override;
         virtual void on_file_open(bool is_new_created) override;
-        virtual void flush_cache() override;
+        virtual void flush_write_cache() override;
         virtual bool seek_read_file_absolute(size_t pos) override;
         virtual void seek_read_file_offset(int32_t offset) override;
         virtual appender_format_type get_appender_format() const = 0;
@@ -165,6 +166,7 @@ namespace bq {
         virtual void on_appender_file_recovery_end() override;
         virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) override;
         virtual void on_log_item_recovery_end() override;
+        virtual void on_log_item_new_begin(bq::log_entry_handle& read_handle) override;
         virtual read_with_cache_handle read_with_cache(size_t size) override;
 
     private:

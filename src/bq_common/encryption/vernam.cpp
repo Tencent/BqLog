@@ -55,7 +55,7 @@ namespace bq {
 
 #ifndef NDEBUG
         assert((key_size_pow2 & (key_size_pow2 - 1)) == 0 && "key_size_pow2 must be power of two");
-        assert((key_size_pow2 & 7u) == 0 && "key_size_pow2 should be multiple of 8 for u64 path");
+        assert((key_size_pow2 & align_mask) == 0 && "vernam_encrypt_scalar key_size_pow2 should be multiple of 8 for u64 path");
         assert(((static_cast<size_t>(reinterpret_cast<uintptr_t>(buf)) & align_mask) == (key_stream_offset & align_mask)) && "vernam_encrypt_32bytes_aligned: relative alignment mismatch");
 #endif
         
@@ -79,7 +79,7 @@ namespace bq {
 
         // 64-bit Scalar Loop
         uint64_t* p64 = reinterpret_cast<uint64_t*>(p);
-        while (remaining >= 8) {
+        while (remaining >= sizeof(uint64_t)) {
             size_t contiguous_key_len = key_size_pow2 - current_key_pos;
             size_t chunk_len = (contiguous_key_len < remaining) ? contiguous_key_len : remaining;
             
@@ -125,6 +125,12 @@ namespace bq {
         
         const size_t key_mask = key_size_pow2 - 1;
         constexpr size_t align_mask = 31; // 32-byte alignment for AVX2
+
+#ifndef NDEBUG
+        assert((key_size_pow2 & (key_size_pow2 - 1)) == 0 && "key_size_pow2 must be power of two");
+        assert((key_size_pow2 & align_mask) == 0 && "vernam_encrypt_avx2 key_size_pow2 should be multiple of 32");
+        assert(((static_cast<size_t>(reinterpret_cast<uintptr_t>(buf)) & align_mask) == (key_stream_offset & align_mask)) && "vernam_encrypt_avx2: relative alignment mismatch");
+#endif
 
         uint8_t* p = buf;
         size_t remaining = len;
@@ -203,6 +209,12 @@ namespace bq {
     {
         const size_t key_mask = key_size_pow2 - 1;
         constexpr size_t align_mask = 15; // 16-byte alignment for NEON
+
+#ifndef NDEBUG
+        assert((key_size_pow2 & (key_size_pow2 - 1)) == 0 && "key_size_pow2 must be power of two");
+        assert((key_size_pow2 & align_mask) == 0 && "vernam_encrypt_neon key_size_pow2 should be multiple of 16");
+        assert(((static_cast<size_t>(reinterpret_cast<uintptr_t>(buf)) & align_mask) == (key_stream_offset & align_mask)) && "vernam_encrypt_neon: relative alignment mismatch");
+#endif
 
         uint8_t* p = buf;
         size_t remaining = len;

@@ -68,6 +68,8 @@ namespace bq {
         virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) {(void)read_handle; }
 
         virtual void on_log_item_recovery_end() {}
+
+        virtual void on_log_item_new_begin(bq::log_entry_handle& read_handle) {(void)read_handle; }
     protected:
         time_zone time_zone_;
         const log_imp* parent_log_;

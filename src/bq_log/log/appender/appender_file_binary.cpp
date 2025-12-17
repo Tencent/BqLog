@@ -130,6 +130,7 @@ namespace bq {
         appender_file_base::on_file_open(is_new_created);
         if (enc_type_ == appender_encryption_type::rsa_aes_xor) {
             assert(is_new_created && "encrypted file must be created new");
+            xor_key_blob_.clear();
         }
         cur_read_seg_.start_pos = static_cast<uint64_t>(sizeof(appender_file_header));
         cur_read_seg_.end_pos = get_current_file_size();
@@ -139,9 +140,9 @@ namespace bq {
             file_head.format = get_appender_format();
             file_head.version = get_binary_format_version();
             direct_write(&file_head, sizeof(file_head), bq::file_manager::seek_option::end, 0);
-        }
-        append_new_segment(appender_segment_type::normal);
-        if (is_new_created) {
+
+            // add first appender segment
+            append_new_segment(appender_segment_type::normal);
             appender_payload_metadata payload_matadata;
             payload_matadata.magic_number[0] = 2;
             payload_matadata.magic_number[1] = 2;
@@ -164,13 +165,14 @@ namespace bq {
                 return_write_cache(handle);
             }
             mark_write_finished();
+            flush_write_cache();
         }
     }
 
-    void appender_file_binary::flush_cache()
+    void appender_file_binary::flush_write_cache()
     {
         if (xor_key_blob_.is_empty() || get_pendding_flush_written_size() == 0) {
-            appender_file_base::flush_cache();
+            appender_file_base::flush_write_cache();
             return;
         }
 
@@ -183,7 +185,7 @@ namespace bq {
             xor_key_blob_.begin(),
             get_xor_key_blob_size(),
             get_current_file_size());
-        appender_file_base::flush_cache();
+        appender_file_base::flush_write_cache();
         update_write_cache_padding();
         if (enc_type_ == appender_encryption_type::rsa_aes_xor && get_pendding_flush_written_size() > 0) {
             //revert
@@ -231,6 +233,12 @@ namespace bq {
     }
     void appender_file_binary::on_log_item_recovery_end() {
         appender_file_base::on_log_item_recovery_end();
+    }
+
+
+    void appender_file_binary::on_log_item_new_begin(bq::log_entry_handle& read_handle)
+    {
+        appender_file_base::on_log_item_new_begin(read_handle);
         append_new_segment(appender_segment_type::normal);
     }
 
@@ -298,7 +306,6 @@ namespace bq {
 
     void appender_file_binary::append_new_segment(appender_file_binary::appender_segment_type type)
     {
-        assert((get_written_size() == 0 || type == appender_segment_type::recovery_by_appender) && "Can't append new segment when written cache is not empty!");
         clear_read_cache();
         cur_read_seg_.end_pos = static_cast<uint64_t>(sizeof(appender_file_header));
         bool has_segment = false;
@@ -312,14 +319,13 @@ namespace bq {
             direct_write(&new_seg_start_pos, sizeof(new_seg_start_pos), bq::file_manager::seek_option::begin,
                 static_cast<int64_t>(cur_read_seg_.start_pos) + static_cast<int64_t>(BQ_POD_RUNTIME_OFFSET_OF(appender_file_segment_head, next_seg_pos)));
         }
-        size_t prev_file_size = get_current_file_size();
         appender_file_segment_head new_segment;
         new_segment.enc_type = enc_type_;
         new_segment.next_seg_pos = UINT64_MAX;
         new_segment.seg_type = type;
+        new_segment.has_key = (enc_type_ == appender_encryption_type::rsa_aes_xor) && xor_key_blob_.is_empty();
         direct_write(&new_segment, sizeof(new_segment), bq::file_manager::seek_option::end, 0);
-
-        if (enc_type_ == appender_encryption_type::rsa_aes_xor) {
+        if (new_segment.has_key) {
             aes aes_obj(bq::aes::enum_cipher_mode::AES_CBC, bq::aes::enum_key_bits::AES_256);
             auto aes_key = aes_obj.generate_key();
             if (aes_key.size() != aes_obj.get_key_size()) {
@@ -358,19 +364,10 @@ namespace bq {
             direct_write(static_cast<const uint8_t*>(aes_iv.begin()), aes_iv.size(), bq::file_manager::seek_option::current, 0);
             direct_write(static_cast<const uint8_t*>(xor_key_blob_ciphertext.begin()), xor_key_blob_ciphertext.size(), bq::file_manager::seek_option::current, 0);
             xor_key_blob_ = bq::move(xor_key_blob_plaintext);
-
-            //make sure segment head size is aligned by DEFAULT_ALIGNMENT when vernam is enabled
-            size_t current_file_size = get_current_file_size();
-            size_t aligned_offset = (current_file_size - prev_file_size) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - 1);
-            if (aligned_offset != 0) {
-                char padding_buff[appender_file_base::DEFAULT_BUFFER_ALIGNMENT] = { 0 };
-                direct_write(padding_buff, appender_file_base::DEFAULT_BUFFER_ALIGNMENT - aligned_offset, bq::file_manager::seek_option::current, 0);
-            }
-            assert(((get_current_file_size() - prev_file_size) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - 1)) == 0);
         }
+        flush_write_io();
         update_write_cache_padding();
     }
-
 
     void appender_file_binary::update_write_cache_padding()
     {

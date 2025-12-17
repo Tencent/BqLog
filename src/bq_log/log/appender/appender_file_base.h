@@ -71,9 +71,9 @@ namespace bq {
         virtual ~appender_file_base();
 
         // flush appender output data from memory to Operation System IO.
-        virtual void flush_cache();
+        virtual void flush_write_cache();
         // flush appender file to physical disk.
-        void flush_io();
+        void flush_write_io();
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
 
@@ -94,6 +94,8 @@ namespace bq {
         virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) override;
 
         virtual void on_log_item_recovery_end() override;
+
+        virtual void on_log_item_new_begin(bq::log_entry_handle& read_handle) override;
 
         size_t get_current_file_size() const {return current_file_size_;}
 

@@ -154,8 +154,8 @@ namespace bq {
                 }
                 size_t total_size = private_key.is_empty() ? (128 * 1024 * 1024) : (4 * 1024 * 1024);
                 if (total_write_size > total_size) {
-                    appender_write.flush_cache();
-                    appender_write.flush_io();
+                    appender_write.flush_write_cache();
+                    appender_write.flush_write_io();
                     break;
                 }
             }
@@ -304,6 +304,7 @@ namespace bq {
 #else
                 constexpr int32_t loop_count = 4;
 #endif
+                do_binary_appender_test_with_enc(result);
                 for (int32_t i = 0; i < loop_count; ++i) {
                     do_console_appender_test(result);
                 }

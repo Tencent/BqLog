@@ -134,11 +134,11 @@ namespace bq {
         };
         scoped_exist_callback_helper<decltype(release_cache_lamda)> cache_reset_obj(release_cache_lamda);
         while (true) {
+            auto read_result = read_item_data(context);
             if (is_read_of_cache_eof()) {
                 // parse finished
                 return true;
             }
-            auto read_result = read_item_data(context);
             if (!bq::get<0>(read_result)) {
                 return false;
             }

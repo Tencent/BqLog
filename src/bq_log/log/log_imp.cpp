@@ -300,6 +300,9 @@ namespace bq {
             auto version = buffer_->get_version();
             if (current_version == version) {
                 recover_status_ = recover_status_enum::recovered;
+                for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
+                    appenders_list_[i]->on_log_item_new_begin(read_handle);
+                }
             }
             else {
                 recover_status_ = recover_status_enum::in_recovering;
@@ -315,6 +318,7 @@ namespace bq {
                 recover_status_ = recover_status_enum::recovered;
                 for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
                     appenders_list_[i]->on_log_item_recovery_end();
+                    appenders_list_[i]->on_log_item_new_begin(read_handle);
                 }
             }
         }
@@ -444,7 +448,7 @@ namespace bq {
             case appender_base::appender_type::raw_file:
             case appender_base::appender_type::text_file:
             case appender_base::appender_type::compressed_file:
-                static_cast<bq::appender_file_base*>(appenders_list_[i])->flush_cache();
+                static_cast<bq::appender_file_base*>(appenders_list_[i])->flush_write_cache();
                 break;
             default:
                 break;
@@ -459,7 +463,7 @@ namespace bq {
             case appender_base::appender_type::raw_file:
             case appender_base::appender_type::text_file:
             case appender_base::appender_type::compressed_file:
-                static_cast<bq::appender_file_base*>(appenders_list_[i])->flush_io();
+                static_cast<bq::appender_file_base*>(appenders_list_[i])->flush_write_io();
                 break;
             default:
                 break;
