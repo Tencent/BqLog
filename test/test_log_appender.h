@@ -149,9 +149,12 @@ namespace bq {
                         handle.reset_used_len(new_size);
                     }
                     appender_write.return_write_cache(handle);
-                    appender_write.mark_write_finished();
+                    if ((i % bq::max_value(i % 4, 1)) == 0) {
+                        appender_write.mark_write_finished();
+                    }
                     total_write_size += new_size;
                 }
+                appender_write.mark_write_finished();
                 size_t total_size = private_key.is_empty() ? (128 * 1024 * 1024) : (4 * 1024 * 1024);
                 if (total_write_size > total_size) {
                     appender_write.flush_write_cache();
