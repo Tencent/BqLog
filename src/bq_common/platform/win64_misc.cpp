@@ -69,22 +69,7 @@ namespace bq {
         // TODO optimize use TSC
         uint64_t high_performance_epoch_ms()
         {
-            FILETIME ft;
-            LARGE_INTEGER li;
-
-            /* Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (ANSI UTC) and copy it
-             * to a LARGE_INTEGER structure. */
-            GetSystemTimeAsFileTime(&ft);
-            li.LowPart = static_cast<decltype(li.LowPart)>(ft.dwLowDateTime);
-            li.HighPart = static_cast<decltype(li.HighPart)>(ft.dwHighDateTime);
-
-            uint64_t ret = static_cast<uint64_t>(li.QuadPart);
-            const uint64_t UNIX_TIME_START = 0x019DB1DED53E8000; // January 1, 1970 (start of Unix epoch) in "ticks", difference from ANSI UTC to Unix Epoch.
-            const uint64_t TICKS_PER_SECOND = 10000; // a tick is 100ns
-
-            ret -= UNIX_TIME_START; /* Convert from file time to UNIX epoch time. */
-            ret /= TICKS_PER_SECOND; /* From 100 nano seconds (10^-7) to 1 millisecond (10^-3) intervals */
-            return ret;
+            return 1000000;
         }
 
         base_dir_initializer::base_dir_initializer()

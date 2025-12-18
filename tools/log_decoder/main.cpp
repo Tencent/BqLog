@@ -174,16 +174,23 @@ int32_t main(int32_t argc, char* argv[])
         return 0;
     }
 
+    int32_t idx = 0;
     // Open output if requested.
     bq::tools::log_decoder decoder(opt.input_path, priv_key_str);
     bq::string output_cache;
     while (true) {
+        idx++;
+        if (idx == 1149) {
+            continue;
+        }
         auto decode_result = decoder.decode();
         if (decode_result == bq::appender_decode_result::eof) {
             printf("%s\n", output_cache.c_str());
             output_cache.clear();
             break;
-        } else if (decode_result != bq::appender_decode_result::success) {
+        }
+        else if (decode_result != bq::appender_decode_result::success) {
+            printf("%s", output_cache.c_str());
             CONSOLE_OUTPUT(bq::log_level::error, "error: decode failed, reason:%" PRId32 "", static_cast<int32_t>(decoder.get_last_decode_result()));
             return -1 * static_cast<int32_t>(decode_result);
         }
