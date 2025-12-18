@@ -89,7 +89,28 @@ namespace bq {
 
     appender_decode_result appender_decoder_base::decode()
     {
-        return decode_private();
+        bool lose_data = false;
+        appender_decode_result result;
+        do {
+            result = decode_private();
+            if (appender_decode_result::success == result
+                || appender_decode_result::eof == result
+            ) {
+                break;
+            }
+            lose_data = true;
+            if (appender_decode_result::success != read_to_next_segment()) {
+                break;
+            }
+        }while(true);
+        if (lose_data) {
+            bq::string error_tips;
+            error_tips += "/*********************************************************************/\n";  
+            error_tips += "/*       WARNING: Some log data may be lost or corrupted here        */\n";
+            error_tips += "/*********************************************************************/\n";
+            decoded_text_.insert_batch(decoded_text_.begin(), error_tips.begin(), error_tips.size());
+        }
+        return result;
     }
 
     bool appender_decoder_base::seek_read_file_absolute(size_t pos)

@@ -112,10 +112,9 @@ namespace bq {
         }
     }
 
-    static const bq::string log_file_ext_name_compressed = ".logcompr";
     bq::string appender_file_compressed::get_file_ext_name()
     {
-        return log_file_ext_name_compressed;
+        return ".logcompr";
     }
 
     uint32_t appender_file_compressed::get_binary_format_version() const
