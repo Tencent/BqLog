@@ -236,6 +236,9 @@ namespace bq {
     appender_decode_result appender_decoder_base::read_to_next_segment()
     {
         auto new_seg_start_pos = cur_read_seg_.end_pos;
+        if (new_seg_start_pos == UINT64_MAX) {
+            return appender_decode_result::eof;
+        }
         if (!seek_read_file_absolute(static_cast<size_t>(new_seg_start_pos))) {
             return appender_decode_result::eof;
         }

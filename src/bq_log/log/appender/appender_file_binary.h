@@ -40,17 +40,17 @@
  *       +0x00      8  uint64_t next_seg_pos  (Abs offset of next segment, or UINT64_MAX)
  *       +0x08      1  appender_segment_type seg_type
  *       +0x09      1  appender_encryption_type enc_type
- *       +0x0A      2  char padding[2]
+ *       +0x0A      1  bool has_key (Whether encryption keys are present)
+ *       +0x0B      1  char padding[2]
  *
- *    B. Encryption Info (Present only if enc_type == rsa_aes_xor and only in first segment of file)
+ *    B. Encryption Keys (Optional, Present only if enc_type == rsa_aes_xor and only has_key is true in Segment Header)
  *       Offset  Size       Field
  *       ------  ---------  ---------------------------------------------------
  *       +0x00   256        RSA-2048 ciphertext of AES_256 key
  *       +0x100  16         AES IV in plaintext
  *       +0x110  32768      AES-encrypted XOR key blob (32 KiB)
  *
- *    C. Segment Payload
- *       The content depends on whether it is the First Segment or a subsequent one.
+ *    C. Segment Payload (Optional, The content depends on whether it is the First Segment or a subsequent one.)
  *
  *       [First Segment Payload]
  *       Starts with Metadata, followed by Log Entries.
