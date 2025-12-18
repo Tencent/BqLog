@@ -44,6 +44,9 @@ namespace bq {
         if (real_write_size < need_write_size) {
             memcpy(cache_write_, cache_write_ + static_cast<ptrdiff_t>(real_write_size), need_write_size - real_write_size);
         }
+        if (cache_write_cursor_ > cache_write_head_->cache_write_finished_cursor_) {
+            memmove(cache_write_, cache_write_ + need_write_size, cache_write_cursor_ - need_write_size);
+        }
         cache_write_head_->cache_write_finished_cursor_ -= real_write_size;
         cache_write_cursor_ -= real_write_size;
         current_file_size_ += real_write_size;
@@ -513,7 +516,7 @@ namespace bq {
         strftime(time_str_buf, sizeof(time_str_buf), "_%Y%m%d_", &time_st);
 
         int32_t max_index = 0;
-        bq::string file_prefix = file_name + (enable_rolling_log_file_ ? static_cast<const char*>(time_str_buf) : "");
+        bq::string file_prefix = file_name + (enable_rolling_log_file_ ? static_cast<const char*>(time_str_buf) : "_");
         const bq::string ext_name_with_dot = get_file_ext_name();
 
         string path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
@@ -545,7 +548,7 @@ namespace bq {
         while (need_open_new_file) {
             char idx_buff[32];
             snprintf(idx_buff, sizeof(idx_buff), "%d", max_index++);
-            bq::string file_relative_path = config_file_name_ + (enable_rolling_log_file_ ? static_cast<const char*>(time_str_buf) : "") + idx_buff + ext_name_with_dot;
+            bq::string file_relative_path = config_file_name_ + (enable_rolling_log_file_ ? static_cast<const char*>(time_str_buf) : "_") + idx_buff + ext_name_with_dot;
             bq::string absolute_file_path = TO_ABSOLUTE_PATH(file_relative_path, base_dir_type_);
             parse_file_context parse_context(absolute_file_path);
 
