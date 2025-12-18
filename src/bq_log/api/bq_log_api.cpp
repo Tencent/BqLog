@@ -205,8 +205,8 @@ namespace bq {
                 return handle;
             }
             if (thread_info_tls_.thread_id_ == 0) {
-                thread_info_tls_.thread_id_ = 5; //bq::platform::thread::get_current_thread_id();
-                bq::string thread_name_tmp = "test_tid"; //bq::platform::thread::get_current_thread_name();
+                thread_info_tls_.thread_id_ = bq::platform::thread::get_current_thread_id();
+                bq::string thread_name_tmp = bq::platform::thread::get_current_thread_name();
                 thread_info_tls_.thread_name_len_ = (uint8_t)bq::min_value((size_t)MAX_THREAD_NAME_LEN, thread_name_tmp.size());
                 if (thread_info_tls_.thread_name_len_ > 0) {
                     memcpy(thread_info_tls_.thread_name_, thread_name_tmp.c_str(), thread_info_tls_.thread_name_len_);

@@ -303,16 +303,8 @@ namespace bq {
         return bytes_len > 1 ? (bytes_len - 1) : bytes_len;
     }
 
-
-
-    static int32_t iii = 0;
-
     void appender_file_compressed::log_impl(const log_entry_handle& handle)
     {
-        ++iii;
-        if (iii == 1149) {
-            ++iii;
-        }
         appender_file_binary::log_impl(handle);
 
         const char* format_data_ptr = handle.get_format_string_data();
