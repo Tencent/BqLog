@@ -36,6 +36,9 @@ namespace bq {
     // =================================================================================================
     // Implementations
     // =================================================================================================
+#ifdef BQ_UNIT_TEST
+    bool vernam::hardware_acceleration_enabled_ = true;
+#endif
 
 #if defined(BQ_GCC) || defined(BQ_CLANG)
     #define BQ_TARGET_AVX2 __attribute__((target("avx2")))
@@ -278,19 +281,40 @@ namespace bq {
     void vernam::vernam_encrypt_32bytes_aligned(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
     {
 #if defined(BQ_X86)
-        BQ_LIKELY_IF(common_global_vars::get().avx2_support_) {
+        BQ_LIKELY_IF(common_global_vars::get().avx2_support_
+#ifdef BQ_UNIT_TEST
+            && hardware_acceleration_enabled_
+#endif
+        ) {
             vernam_encrypt_avx2(buf, len, key, key_size_pow2, key_stream_offset);
             return;
         }
         // Fallback for non-AVX2 x86 or other architectures
         vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
 #elif defined(BQ_ARM)
-        // For Android/iOS ARM64/ARMv7, NEON is effectively standard. 
-        // We can use it directly without complex runtime checks for most modern contexts.
-        vernam_encrypt_neon(buf, len, key, key_size_pow2, key_stream_offset);
+#ifdef BQ_UNIT_TEST
+        if (hardware_acceleration_enabled_) {
+#endif
+            // For Android/iOS ARM64/ARMv7, NEON is effectively standard. 
+            // We can use it directly without complex runtime checks for most modern contexts.
+            vernam_encrypt_neon(buf, len, key, key_size_pow2, key_stream_offset);
+#ifdef BQ_UNIT_TEST
+        }
+        else {
+            vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
+        }
+#endif
 #else
         // Fallback for non-AVX2 x86 or other architectures
         vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
 #endif
     }
+
+#ifdef BQ_UNIT_TEST
+    void vernam::set_hardware_acceleration_enabled(bool enabled)
+    {
+        hardware_acceleration_enabled_ = enabled;
+    }
+#endif
+
 }

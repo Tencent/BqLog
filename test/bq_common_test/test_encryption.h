@@ -52,14 +52,26 @@ namespace bq {
                     for (; idx < buff_size; ++idx) {
                         *(src + idx) = static_cast<uint8_t>(bq::util::rand() & static_cast<uint32_t>(UINT8_MAX));
                     }
+
+                    bq::vernam::set_hardware_acceleration_enabled(false);
                     memcpy(tar, src, buff_size);
                     bq::vernam::vernam_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key, key_size, offset);
                     int32_t compare_result1 = memcmp(src, tar, buff_size);
-                    result.add_result(compare_result1 != 0, "vernam enc test 1 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+                    result.add_result(compare_result1 != 0, "[without hardware acceleration] vernam enc test 1 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
 
                     bq::vernam::vernam_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key, key_size, offset);
                     int32_t compare_result2 = memcmp(src, tar, buff_size);
-                    result.add_result(compare_result2 == 0, "vernam enc test 2 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+                    result.add_result(compare_result2 == 0, "[without hardware acceleration]vernam enc test 2 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+
+                    bq::vernam::set_hardware_acceleration_enabled(true);
+                    bq::vernam::vernam_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key, key_size, offset);
+                    compare_result1 = memcmp(src, tar, buff_size);
+                    result.add_result(compare_result1 != 0, "[with hardware acceleration]vernam enc test 1 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+
+                    bq::vernam::vernam_encrypt_32bytes_aligned(tar + offset, buff_size - offset, key, key_size, offset);
+                    compare_result2 = memcmp(src, tar, buff_size);
+                    result.add_result(compare_result2 == 0, "[with hardware acceleration]vernam enc test 2 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
+
                     bq::platform::aligned_free(key);    
                     bq::platform::aligned_free(src);
                 }

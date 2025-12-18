@@ -38,5 +38,10 @@ namespace bq {
         /// <param name="key_size_pow2"></param>
         /// <param name="key_stream_offset"></param>
         static void vernam_encrypt_32bytes_aligned(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset);
+    
+#ifdef BQ_UNIT_TEST
+        static bool hardware_acceleration_enabled_;
+        static void set_hardware_acceleration_enabled(bool enabled);
+#endif
     };
 }
