@@ -23,8 +23,8 @@
 #endif
 
 namespace bq {
-    static uint32_t rand_seed = 0;
-    static uint64_t rand_seed_64 = 0;
+    static BQ_TLS uint32_t rand_seed = 0;
+    static BQ_TLS uint64_t rand_seed_64 = 0;
     static util::type_func_ptr_bq_util_consle_callback consle_callback_ = nullptr;
 
     void util::bq_assert(bool cond, bq::string msg)

@@ -400,7 +400,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                     plaintext.clear();
                     plaintext.fill_uninitialized(size);
                     for (uint32_t j = 0; j < size / sizeof(uint32_t); ++j) {
-                        *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(plaintext.begin())) = bq::util::rand();
+                        *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(plaintext.begin()) + j * sizeof(uint32_t)) = bq::util::rand();
                     }
                     bq::aes aes(bq::aes::enum_cipher_mode::AES_CBC, key_bits);
                     auto key = aes.generate_key();
