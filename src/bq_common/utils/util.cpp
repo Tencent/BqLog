@@ -294,24 +294,346 @@ namespace bq {
 
     }
 
+    inline bool is_addr_8_aligned(const void* data)
+    {
+        return ((size_t)data & 0x07) == 0;  // 8字节对齐
+    }
+
+    inline bool is_addr_4_aligned(const void* data)
+    {
+        return ((size_t)data & 0x03) == 0;  // 4字节对齐
+    }
+
+    inline uint64_t calculate_hash_64_xxhash_aligned8(const void* data, size_t size)
+    {
+        static constexpr uint64_t PRIME64_1 = 11400714785074694791ULL;
+        static constexpr uint64_t PRIME64_2 = 14029467366897019727ULL;
+        static constexpr uint64_t PRIME64_3 = 1609587929392839161ULL;
+        static constexpr uint64_t PRIME64_4 = 9650029242287828579ULL;
+        static constexpr uint64_t PRIME64_5 = 2870177450012600261ULL;
+
+        const uint8_t* p = (const uint8_t*)data;
+        const uint8_t* end = p + size;
+        uint64_t h64;
+
+        if (size >= 32) {
+            const uint8_t* limit = end - 32;
+            uint64_t v1 = PRIME64_1 + PRIME64_2;
+            uint64_t v2 = PRIME64_2;
+            uint64_t v3 = 0;
+            uint64_t v4 = (uint64_t)(-(int64_t)PRIME64_1);
+
+            do {
+                v1 += (*(const uint64_t*)p) * PRIME64_2;
+                v1 = (v1 << 31) | (v1 >> 33);
+                v1 *= PRIME64_1;
+                p += 8;
+
+                v2 += (*(const uint64_t*)p) * PRIME64_2;
+                v2 = (v2 << 31) | (v2 >> 33);
+                v2 *= PRIME64_1;
+                p += 8;
+
+                v3 += (*(const uint64_t*)p) * PRIME64_2;
+                v3 = (v3 << 31) | (v3 >> 33);
+                v3 *= PRIME64_1;
+                p += 8;
+
+                v4 += (*(const uint64_t*)p) * PRIME64_2;
+                v4 = (v4 << 31) | (v4 >> 33);
+                v4 *= PRIME64_1;
+                p += 8;
+            } while (p <= limit);
+
+            h64 = ((v1 << 1) | (v1 >> 63)) +
+                ((v2 << 7) | (v2 >> 57)) +
+                ((v3 << 12) | (v3 >> 52)) +
+                ((v4 << 18) | (v4 >> 46));
+
+            v1 *= PRIME64_2; v1 = (v1 << 31) | (v1 >> 33); v1 *= PRIME64_1;
+            h64 ^= v1; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v2 *= PRIME64_2; v2 = (v2 << 31) | (v2 >> 33); v2 *= PRIME64_1;
+            h64 ^= v2; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v3 *= PRIME64_2; v3 = (v3 << 31) | (v3 >> 33); v3 *= PRIME64_1;
+            h64 ^= v3; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v4 *= PRIME64_2; v4 = (v4 << 31) | (v4 >> 33); v4 *= PRIME64_1;
+            h64 ^= v4; h64 = h64 * PRIME64_1 + PRIME64_4;
+        }
+        else {
+            h64 = PRIME64_5;
+        }
+
+        h64 += (uint64_t)size;
+
+        while (p + 8 <= end) {
+            uint64_t k1 = *(const uint64_t*)p;
+            k1 *= PRIME64_2;
+            k1 = (k1 << 31) | (k1 >> 33);
+            k1 *= PRIME64_1;
+            h64 ^= k1;
+            h64 = ((h64 << 27) | (h64 >> 37)) * PRIME64_1 + PRIME64_4;
+            p += 8;
+        }
+
+        if (p + 4 <= end) {
+            h64 ^= (uint64_t)(*(const uint32_t*)p) * PRIME64_1;
+            h64 = ((h64 << 23) | (h64 >> 41)) * PRIME64_2 + PRIME64_3;
+            p += 4;
+        }
+
+        while (p < end) {
+            h64 ^= (*p) * PRIME64_5;
+            h64 = ((h64 << 11) | (h64 >> 53)) * PRIME64_1;
+            p++;
+        }
+
+        h64 ^= h64 >> 33;
+        h64 *= PRIME64_2;
+        h64 ^= h64 >> 29;
+        h64 *= PRIME64_3;
+        h64 ^= h64 >> 32;
+
+        return h64;
+    }
+
+    inline uint64_t calculate_hash_64_xxhash_aligned4(const void* data, size_t size)
+    {
+        static constexpr uint64_t PRIME64_1 = 11400714785074694791ULL;
+        static constexpr uint64_t PRIME64_2 = 14029467366897019727ULL;
+        static constexpr uint64_t PRIME64_3 = 1609587929392839161ULL;
+        static constexpr uint64_t PRIME64_4 = 9650029242287828579ULL;
+        static constexpr uint64_t PRIME64_5 = 2870177450012600261ULL;
+
+        const uint8_t* p = (const uint8_t*)data;
+        const uint8_t* end = p + size;
+        uint64_t h64;
+
+        if (size >= 32) {
+            const uint8_t* limit = end - 32;
+            uint64_t v1 = PRIME64_1 + PRIME64_2;
+            uint64_t v2 = PRIME64_2;
+            uint64_t v3 = 0;
+            uint64_t v4 = (uint64_t)(-(int64_t)PRIME64_1);
+
+            do {
+                uint32_t lo, hi;
+                lo = *(const uint32_t*)p;
+                hi = *(const uint32_t*)(p + 4);
+                v1 += (((uint64_t)hi << 32) | lo) * PRIME64_2;
+                v1 = (v1 << 31) | (v1 >> 33);
+                v1 *= PRIME64_1;
+                p += 8;
+
+                lo = *(const uint32_t*)p;
+                hi = *(const uint32_t*)(p + 4);
+                v2 += (((uint64_t)hi << 32) | lo) * PRIME64_2;
+                v2 = (v2 << 31) | (v2 >> 33);
+                v2 *= PRIME64_1;
+                p += 8;
+
+                lo = *(const uint32_t*)p;
+                hi = *(const uint32_t*)(p + 4);
+                v3 += (((uint64_t)hi << 32) | lo) * PRIME64_2;
+                v3 = (v3 << 31) | (v3 >> 33);
+                v3 *= PRIME64_1;
+                p += 8;
+
+                lo = *(const uint32_t*)p;
+                hi = *(const uint32_t*)(p + 4);
+                v4 += (((uint64_t)hi << 32) | lo) * PRIME64_2;
+                v4 = (v4 << 31) | (v4 >> 33);
+                v4 *= PRIME64_1;
+                p += 8;
+            } while (p <= limit);
+
+            h64 = ((v1 << 1) | (v1 >> 63)) +
+                ((v2 << 7) | (v2 >> 57)) +
+                ((v3 << 12) | (v3 >> 52)) +
+                ((v4 << 18) | (v4 >> 46));
+
+            v1 *= PRIME64_2; v1 = (v1 << 31) | (v1 >> 33); v1 *= PRIME64_1;
+            h64 ^= v1; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v2 *= PRIME64_2; v2 = (v2 << 31) | (v2 >> 33); v2 *= PRIME64_1;
+            h64 ^= v2; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v3 *= PRIME64_2; v3 = (v3 << 31) | (v3 >> 33); v3 *= PRIME64_1;
+            h64 ^= v3; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v4 *= PRIME64_2; v4 = (v4 << 31) | (v4 >> 33); v4 *= PRIME64_1;
+            h64 ^= v4; h64 = h64 * PRIME64_1 + PRIME64_4;
+        }
+        else {
+            h64 = PRIME64_5;
+        }
+
+        h64 += (uint64_t)size;
+
+        while (p + 8 <= end) {
+            uint32_t lo = *(const uint32_t*)p;
+            uint32_t hi = *(const uint32_t*)(p + 4);
+            uint64_t k1 = ((uint64_t)hi << 32) | lo;
+            k1 *= PRIME64_2;
+            k1 = (k1 << 31) | (k1 >> 33);
+            k1 *= PRIME64_1;
+            h64 ^= k1;
+            h64 = ((h64 << 27) | (h64 >> 37)) * PRIME64_1 + PRIME64_4;
+            p += 8;
+        }
+
+        if (p + 4 <= end) {
+            h64 ^= (uint64_t)(*(const uint32_t*)p) * PRIME64_1;
+            h64 = ((h64 << 23) | (h64 >> 41)) * PRIME64_2 + PRIME64_3;
+            p += 4;
+        }
+
+        while (p < end) {
+            h64 ^= (*p) * PRIME64_5;
+            h64 = ((h64 << 11) | (h64 >> 53)) * PRIME64_1;
+            p++;
+        }
+
+        h64 ^= h64 >> 33;
+        h64 *= PRIME64_2;
+        h64 ^= h64 >> 29;
+        h64 *= PRIME64_3;
+        h64 ^= h64 >> 32;
+
+        return h64;
+    }
+
+    inline uint64_t calculate_hash_64_xxhash_unaligned(const void* data, size_t size)
+    {
+        static constexpr uint64_t PRIME64_1 = 11400714785074694791ULL;
+        static constexpr uint64_t PRIME64_2 = 14029467366897019727ULL;
+        static constexpr uint64_t PRIME64_3 = 1609587929392839161ULL;
+        static constexpr uint64_t PRIME64_4 = 9650029242287828579ULL;
+        static constexpr uint64_t PRIME64_5 = 2870177450012600261ULL;
+
+        const uint8_t* p = (const uint8_t*)data;
+        const uint8_t* end = p + size;
+        uint64_t h64;
+
+        if (size >= 32) {
+            const uint8_t* limit = end - 32;
+            uint64_t v1 = PRIME64_1 + PRIME64_2;
+            uint64_t v2 = PRIME64_2;
+            uint64_t v3 = 0;
+            uint64_t v4 = (uint64_t)(-(int64_t)PRIME64_1);
+
+            do {
+                uint64_t val;
+                memcpy(&val, p, sizeof(uint64_t));
+                v1 += val * PRIME64_2;
+                v1 = (v1 << 31) | (v1 >> 33);
+                v1 *= PRIME64_1;
+                p += 8;
+
+                memcpy(&val, p, sizeof(uint64_t));
+                v2 += val * PRIME64_2;
+                v2 = (v2 << 31) | (v2 >> 33);
+                v2 *= PRIME64_1;
+                p += 8;
+
+                memcpy(&val, p, sizeof(uint64_t));
+                v3 += val * PRIME64_2;
+                v3 = (v3 << 31) | (v3 >> 33);
+                v3 *= PRIME64_1;
+                p += 8;
+
+                memcpy(&val, p, sizeof(uint64_t));
+                v4 += val * PRIME64_2;
+                v4 = (v4 << 31) | (v4 >> 33);
+                v4 *= PRIME64_1;
+                p += 8;
+            } while (p <= limit);
+
+            h64 = ((v1 << 1) | (v1 >> 63)) +
+                ((v2 << 7) | (v2 >> 57)) +
+                ((v3 << 12) | (v3 >> 52)) +
+                ((v4 << 18) | (v4 >> 46));
+
+            v1 *= PRIME64_2; v1 = (v1 << 31) | (v1 >> 33); v1 *= PRIME64_1;
+            h64 ^= v1; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v2 *= PRIME64_2; v2 = (v2 << 31) | (v2 >> 33); v2 *= PRIME64_1;
+            h64 ^= v2; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v3 *= PRIME64_2; v3 = (v3 << 31) | (v3 >> 33); v3 *= PRIME64_1;
+            h64 ^= v3; h64 = h64 * PRIME64_1 + PRIME64_4;
+
+            v4 *= PRIME64_2; v4 = (v4 << 31) | (v4 >> 33); v4 *= PRIME64_1;
+            h64 ^= v4; h64 = h64 * PRIME64_1 + PRIME64_4;
+        }
+        else {
+            h64 = PRIME64_5;
+        }
+
+        h64 += (uint64_t)size;
+
+        while (p + 8 <= end) {
+            uint64_t k1;
+            memcpy(&k1, p, sizeof(uint64_t));
+            k1 *= PRIME64_2;
+            k1 = (k1 << 31) | (k1 >> 33);
+            k1 *= PRIME64_1;
+            h64 ^= k1;
+            h64 = ((h64 << 27) | (h64 >> 37)) * PRIME64_1 + PRIME64_4;
+            p += 8;
+        }
+
+        if (p + 4 <= end) {
+            uint32_t val;
+            memcpy(&val, p, sizeof(uint32_t));
+            h64 ^= (uint64_t)val * PRIME64_1;
+            h64 = ((h64 << 23) | (h64 >> 41)) * PRIME64_2 + PRIME64_3;
+            p += 4;
+        }
+
+        while (p < end) {
+            h64 ^= (*p) * PRIME64_5;
+            h64 = ((h64 << 11) | (h64 >> 53)) * PRIME64_1;
+            p++;
+        }
+
+        h64 ^= h64 >> 33;
+        h64 *= PRIME64_2;
+        h64 ^= h64 >> 29;
+        h64 *= PRIME64_3;
+        h64 ^= h64 >> 32;
+
+        return h64;
+    }
+
     uint32_t util::get_hash(const void* data, size_t size)
     {
-        uint32_t hash = 0;
-        for (size_t i = 0; i < size; i++) {
-            hash *= 16777619;
-            hash ^= static_cast<uint32_t>(*((const uint8_t*)data + i));
+        uint64_t h64;
+        if (is_addr_8_aligned(data)) {
+            h64 = calculate_hash_64_xxhash_aligned8(data, size);
         }
-        return hash;
+        else if (is_addr_4_aligned(data)) {
+            h64 = calculate_hash_64_xxhash_aligned4(data, size);
+        }
+        else {
+            h64 = calculate_hash_64_xxhash_unaligned(data, size);
+        }
+        return static_cast<uint32_t>(h64 ^ (h64 >> 32));
     }
 
     uint64_t util::get_hash_64(const void* data, size_t size)
     {
-        uint64_t hash = 0;
-        for (size_t i = 0; i < size; i++) {
-            hash *= 1099511628211ull;
-            hash ^= static_cast<uint64_t>(*((const uint8_t*)data + i));
+        if (is_addr_8_aligned(data)) {
+            return calculate_hash_64_xxhash_aligned8(data, size);
         }
-        return hash;
+        else if (is_addr_4_aligned(data)) {
+            return calculate_hash_64_xxhash_aligned4(data, size);
+        }
+        else {
+            return calculate_hash_64_xxhash_unaligned(data, size);
+        }
     }
 
     bool util::is_little_endian()

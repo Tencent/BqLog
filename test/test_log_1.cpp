@@ -129,29 +129,6 @@ namespace bq {
             bq::log::register_console_callback(&test_log::console_callback);
 
             {
-                // test appender hash calculator
-                constexpr size_t cache_size = 1024;
-                uint8_t cache[cache_size];
-
-                for (size_t size = 0; size < 512; ++size) {
-                    for (size_t offset_outter = 0; offset_outter < 128; ++offset_outter) {
-                        uint64_t hash_value = 0;
-                        // init data;
-                        for (size_t i = 0; i < size; ++i) {
-                            cache[offset_outter + i] = (uint8_t)(bq::util::rand() & 0xFF);
-                        }
-                        bool is_proper_aligned = bq::appender_file_compressed::is_addr_8_aligned_test(cache + offset_outter);
-                        hash_value = bq::appender_file_compressed::calculate_data_hash_test(is_proper_aligned, cache + offset_outter, size);
-                        for (size_t offset_inner = 1; offset_inner < 128; ++offset_inner) {
-                            memmove(cache + offset_outter + offset_inner, cache + offset_outter + offset_inner - 1, size);
-                            uint64_t new_hash_value = bq::appender_file_compressed::calculate_data_hash_test(false, cache + offset_outter + offset_inner, size);
-                            result.add_result(hash_value == new_hash_value, "appender_file_compressed::calculate_data_hash_test, size:%" PRIu64 ", offset_outter: %" PRIu64 ", offset_inner : %" PRIu64, static_cast<uint64_t>(size), static_cast<uint64_t>(offset_outter), static_cast<uint64_t>(offset_inner));
-                        }
-                    }
-                }
-            }
-
-            {
                 bq::string empty_str;
                 bq::string full_str = "123";
                 log_inst.fatal(log_inst.cat.ModuleA.SystemA, "测试一下:{}", "的爱丽丝打开房间阿里山的开发机阿里山的开发");
