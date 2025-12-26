@@ -271,11 +271,14 @@ namespace bq
 #endif
         private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, int log_level, sbyte* content, int length)
         {
-            if (console_callback_ != null)
-            {
-                string value = new string(content, 0, length, System.Text.Encoding.UTF8);
-                console_callback_(log_id, category_idx, (bq.def.log_level)log_level, value);
-            }
+			try
+			{
+				string value = new string(content, 0, length, System.Text.Encoding.UTF8);
+				console_callback_(log_id, category_idx, (bq.def.log_level)log_level, value);
+			}
+			catch (Exception ex){
+				Console.WriteLine(ex.ToString());
+			}
         }
 
         /// <summary>
