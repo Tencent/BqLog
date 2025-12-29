@@ -328,7 +328,7 @@ namespace bq {
 
             static bq_forceinline size_t get_c_style_string_storage_size(const CHAR_TYPE* str)
             {
-                return bq::___string_len(str) * sizeof(CHAR_TYPE);
+                return bq::string_tools::string_len(str) * sizeof(CHAR_TYPE);
             }
 
             static bq_forceinline size_t get_c_style_string_storage_size(const CHAR_TYPE* str, size_t char_count)

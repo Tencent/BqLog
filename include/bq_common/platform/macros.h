@@ -206,6 +206,9 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 
 #if defined(__cplusplus) && (__cplusplus >= 201703L)
 #define BQ_CPP_17 1
+#define BQ_CONSTEXPR_IF if constexpr 
+#else
+#define BQ_CONSTEXPR_IF if
 #endif
 
 #if defined(__cplusplus) && (__cplusplus >= 202002L)

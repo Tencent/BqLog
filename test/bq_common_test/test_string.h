@@ -111,12 +111,12 @@ namespace bq {
 #undef TEST_STR1
 #undef TEST_STR1_LEN
 #define TEST_STR1 u"THIS_IS_TEST_STR_1"
-#define TEST_STR1_LEN bq::___string_len(TEST_STR1)
+#define TEST_STR1_LEN bq::string_tools::string_len(TEST_STR1)
 
 #undef TEST_STR2
 #undef TEST_STR2_LEN
 #define TEST_STR2 u"THIS_IS_TEST_STR_2"
-#define TEST_STR2_LEN bq::___string_len(TEST_STR2)
+#define TEST_STR2_LEN bq::string_tools::string_len(TEST_STR2)
 
 #undef TEST_STR1STR2
 #define TEST_STR1STR2 u"THIS_IS_TEST_STR_1THIS_IS_TEST_STR_2"
@@ -124,7 +124,7 @@ namespace bq {
 #undef TEST_STR3
 #undef TEST_STR3_LEN
 #define TEST_STR3 u"THIS"
-#define TEST_STR3_LEN bq::___string_len(TEST_STR3)
+#define TEST_STR3_LEN bq::string_tools::string_len(TEST_STR3)
                 {
                     bq::u16string test_str1 = TEST_STR1;
                     result.add_result(test_str1.size() == TEST_STR1_LEN, "string length test0");
@@ -187,7 +187,7 @@ namespace bq {
                     bq::u16string test_insert2 = u"insert2";
                     test_insert1.insert_batch(test_insert1.end(), test_insert2.begin(), test_insert2.size());
                     result.add_result(test_insert1 == test_insert2, "string insert batch test 0");
-                    result.add_result(bq::___string_len(test_insert1.c_str()) == test_insert1.size(), "string insert batch test1");
+                    result.add_result(bq::string_tools::string_len(test_insert1.c_str()) == test_insert1.size(), "string insert batch test1");
                     test_insert1.insert(test_insert1.begin(), u'a');
                     result.add_result(test_insert1 == u"ainsert2", "string insert test 0");
                     test_insert1.erase(test_insert1.begin());

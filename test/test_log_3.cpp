@@ -99,7 +99,7 @@ namespace bq {
 
             size_t bq_log_format_str_size() const
             {
-                return (uint32_t)bq::___string_len(data_);
+                return (uint32_t)bq::string_tools::string_len(data_);
             }
         };
 
@@ -110,7 +110,7 @@ namespace bq {
         public:
             size_t bq_log_format_str_size() const
             {
-                return (uint32_t)bq::___string_len(data_);
+                return (uint32_t)bq::string_tools::string_len(data_);
             }
 
             void bq_log_custom_format(char* dest, size_t data_size) const
@@ -125,7 +125,7 @@ namespace bq {
 
             size_t bq_log_format_str_size() const
             {
-                return (uint32_t)bq::___string_len(data_);
+                return (uint32_t)bq::string_tools::string_len(data_);
             }
         };
 
