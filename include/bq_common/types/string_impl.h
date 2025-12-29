@@ -107,7 +107,7 @@ namespace bq {
         template <bool WCHAR_SIZE_IS_16>
         struct string_len_dispatch<char, WCHAR_SIZE_IS_16> {
             static bq_forceinline size_t exec(const char* s) {
-#if defined(BQ_GCC) || defined(BQ_CLANG)
+#if (defined(BQ_GCC) || defined(BQ_CLANG)) && defined(__has_builtin) && __has_builtin(__builtin_wcslen)
                 return __builtin_strlen(s);
 #else
                 return strlen(s);
@@ -118,7 +118,7 @@ namespace bq {
         template <bool WCHAR_SIZE_IS_16>
         struct string_len_dispatch<wchar_t, WCHAR_SIZE_IS_16> {
             static bq_forceinline size_t exec(const wchar_t* s) {
-#if defined(BQ_GCC) || defined(BQ_CLANG)
+#if (defined(BQ_GCC) || defined(BQ_CLANG)) && defined(__has_builtin) && __has_builtin(__builtin_wcslen)
                 return __builtin_wcslen(s);
 #else
                 return wcslen(s);
@@ -164,7 +164,7 @@ namespace bq {
             if (!str){
                 return 0;
             }
-#if defined(BQ_GCC) || defined(BQ_CLANG)
+#if (defined(BQ_GCC) || defined(BQ_CLANG)) && defined(__has_builtin) && __has_builtin(__builtin_constant_p)
             BQ_CONSTEXPR_IF(__builtin_constant_p(*str))
             {
                 return constexpr_len(str);
