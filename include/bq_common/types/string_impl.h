@@ -247,14 +247,14 @@ namespace bq {
     struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type { };
 
     template <typename T>
-    bq_forceinline typename bq::enable_if_t<(bq::string::is_std_string_compatible<T>::value || bq::u16string::is_std_string_compatible<T>::value || bq::u32string::is_std_string_compatible<T>::value), const typename T::value_type*>
+    bq_forceinline bq::enable_if_t<(bq::string::is_std_string_compatible<T>::value || bq::u16string::is_std_string_compatible<T>::value || bq::u32string::is_std_string_compatible<T>::value), const typename T::value_type*>
     __bq_string_compatible_class_get_data(const T& str)
     {
         return str.c_str();
     }
 
     template <typename T>
-    bq_forceinline typename bq::enable_if_t<(bq::string::is_std_string_view_compatible<T>::value || bq::u16string::is_std_string_view_compatible<T>::value || bq::u32string::is_std_string_view_compatible<T>::value), const typename T::value_type*>
+    bq_forceinline bq::enable_if_t<(bq::string::is_std_string_view_compatible<T>::value || bq::u16string::is_std_string_view_compatible<T>::value || bq::u32string::is_std_string_view_compatible<T>::value), const typename T::value_type*>
     __bq_string_compatible_class_get_data(const T& str)
     {
         return str.data();
