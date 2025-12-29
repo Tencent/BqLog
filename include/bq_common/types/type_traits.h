@@ -381,12 +381,9 @@ namespace bq {
 #else
         return p;
 #endif
-#elif defined(BQ_CLANG)
+#elif BQ_GCC_CLANG_BUILTIN(__builtin_launder)
         return __builtin_launder(p);
 #elif defined(BQ_GCC)
-        if (__has_builtin(__builtin_launder)) {
-            return __builtin_launder(p);
-        }
         T* result = p;
         __asm__ __volatile__("" : "+r"(result) : : "memory");
         return result;
