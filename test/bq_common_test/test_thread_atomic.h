@@ -584,6 +584,8 @@ namespace bq {
                     }
                 }
 
+                //Condition variable timeouts are significantly prolonged and inaccurate due to severe time dilation 
+                //in the non-hardware-accelerated virtual machine environment
                 {
                     test_thread_condition_variable_waitfor thread_true(result, true);
                     test_thread_condition_variable_waitfor thread_false(result, false);
