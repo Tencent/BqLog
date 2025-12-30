@@ -446,26 +446,7 @@ namespace bq {
     template <typename CHAR_TYPE, typename Allocator>
     BQ_STRING_INLINE const typename BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::char_type* BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::empty_str() const
     {
-        assert(false && "unimplemented CHAR_TYPE!");
-        return nullptr;
-    }
-
-    template <>
-    BQ_STRING_INLINE const typename BQ_STRING_CLS_NAME<char>::char_type* BQ_STRING_CLS_NAME<char>::empty_str() const
-    {
-        return "";
-    }
-
-    template <>
-    BQ_STRING_INLINE const typename BQ_STRING_CLS_NAME<char16_t>::char_type* BQ_STRING_CLS_NAME<char16_t>::empty_str() const
-    {
-        return u"";
-    }
-
-    template <>
-    BQ_STRING_INLINE const typename BQ_STRING_CLS_NAME<char32_t>::char_type* BQ_STRING_CLS_NAME<char32_t>::empty_str() const
-    {
-        return U"";
+        return string_tools::inner_empty_str_def<CHAR_TYPE>::value();
     }
 
     template <typename CHAR_TYPE, typename Allocator>

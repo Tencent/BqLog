@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-  <Type Name="bq::string_base&lt;char,*&gt;">
+  <Type Name="bq::_string_base&lt;char,*&gt;">
     <DisplayString Condition="size_==0">Empty</DisplayString>
     <DisplayString Condition="size_>0">{{ size={size_} : {data_}}}</DisplayString>
     <Expand>
@@ -10,7 +10,7 @@
       </ArrayItems>
     </Expand>
   </Type>
-  <Type Name="bq::string_base&lt;char16_t,*&gt;">
+  <Type Name="bq::_string_base&lt;char16_t,*&gt;">
     <DisplayString Condition="size_==0">Empty</DisplayString>
     <DisplayString Condition="size_>0">{{ size={size_} : {(wchar_t*)data_,su}}}</DisplayString>
     <Expand>
@@ -20,7 +20,7 @@
       </ArrayItems>
     </Expand>
   </Type>
-  <Type Name="bq::string_base&lt;char32_t,*&gt;">
+  <Type Name="bq::_string_base&lt;char32_t,*&gt;">
     <DisplayString Condition="size_==0">Empty</DisplayString>
     <DisplayString Condition="size_>0">{{ size={size_} : {(wchar_t*)data_,su}}}</DisplayString>
     <Expand>

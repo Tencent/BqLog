@@ -12,7 +12,7 @@
  */
 /*!
  * \file string.h
- * substitute of STL string_base, we exclude STL and libc++ to reduce the final executable and library file size
+ * substitute of STL _string_base, we exclude STL and libc++ to reduce the final executable and library file size
  * IMPORTANT: It is not thread-safe!!!
  *
  * \author pippocao
@@ -24,7 +24,7 @@
 #define BQ_STRING_INLINE inline
 #define BQ_STRING_INLINE_MACRO(X) X
 
-#define BQ_STRING_CLS_NAME BQ_STRING_INLINE_MACRO(string_base)
+#define BQ_STRING_CLS_NAME BQ_STRING_INLINE_MACRO(_string_base)
 
 #include "bq_common/types/string_impl.h"
 

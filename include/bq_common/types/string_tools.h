@@ -268,5 +268,17 @@ namespace bq {
             }
             return strstr(str1, str2);
         }
+
+
+        template <typename CHAR_TYPE>
+        struct inner_empty_str_def {};
+        template <>
+        struct inner_empty_str_def<char> { static const char* value() { return ""; } };
+        template <>
+        struct inner_empty_str_def<wchar_t> { static const wchar_t* value() { return L""; } };
+        template <>
+        struct inner_empty_str_def<char16_t> { static const char16_t* value() { return u""; } };
+        template <>
+        struct inner_empty_str_def<char32_t> { static const char32_t* value() { return U""; } };
     }
  }
