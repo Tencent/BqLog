@@ -24,30 +24,6 @@
 #include <wchar.h>
 namespace bq {
     namespace string_tools {
-        template <typename T, typename = void>
-        struct __has_value_type : bq::false_type {};
-
-        template <typename T>
-        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type {};
-
-        template <typename T>
-        struct is_c_str_compatible : bq::bool_type<bq::string::is_std_string_compatible<T>::value || bq::u16string::is_std_string_compatible<T>::value || bq::u32string::is_std_string_compatible<T>::value> {};
-
-        template <typename T>
-        struct is_data_compatible : bq::bool_type<bq::string::is_std_string_view_compatible<T>::value || bq::u16string::is_std_string_view_compatible<T>::value || bq::u32string::is_std_string_view_compatible<T>::value> {};
-
-        template <typename T>
-        inline auto __bq_string_compatible_class_get_data(const T& str) -> typename bq::enable_if_t<is_c_str_compatible<T>::value, const typename T::value_type*>
-        {
-            return str.c_str();
-        }
-
-        template <typename T>
-        inline auto __bq_string_compatible_class_get_data(const T& str) -> typename bq::enable_if_t<is_data_compatible<T>::value, const typename T::value_type*>
-        {
-            return str.data();
-        }
-
         /**
          * @brief Fallback loop for compile-time constant evaluation.
          * Compilers like GCC and Clang can unroll and constant-fold this
@@ -264,6 +240,30 @@ namespace bq {
         }
     }
 
+    template <typename T, typename = void>
+    struct __has_value_type : bq::false_type {};
+
+    template <typename T>
+    struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type {};
+
+    template <typename T>
+    struct is_c_str_compatible : bq::bool_type<bq::string::is_std_string_compatible<T>::value || bq::u16string::is_std_string_compatible<T>::value || bq::u32string::is_std_string_compatible<T>::value> {};
+
+    template <typename T>
+    struct is_data_compatible : bq::bool_type<bq::string::is_std_string_view_compatible<T>::value || bq::u16string::is_std_string_view_compatible<T>::value || bq::u32string::is_std_string_view_compatible<T>::value> {};
+
+    template <typename T>
+    inline auto __bq_string_compatible_class_get_data(const T& str) -> typename bq::enable_if_t<is_c_str_compatible<T>::value, const typename T::value_type*>
+    {
+        return str.c_str();
+    }
+
+    template <typename T>
+    inline auto __bq_string_compatible_class_get_data(const T& str) -> typename bq::enable_if_t<is_data_compatible<T>::value, const typename T::value_type*>
+    {
+        return str.data();
+    }
+
     template <typename CHAR_TYPE, typename Allocator>
     inline string_base<CHAR_TYPE, Allocator>::string_base()
         : array<typename string_base<CHAR_TYPE, Allocator>::char_type, Allocator, 1>()
@@ -313,7 +313,7 @@ namespace bq {
     template <typename CHAR_TYPE, typename Allocator>
     template <typename S, typename>
     inline bq::string_base<CHAR_TYPE, Allocator>::string_base(const S& rhs)
-        : string_base(rhs.size() > 0 ? string_tools::__bq_string_compatible_class_get_data(rhs) : nullptr, rhs.size())
+        : string_base(rhs.size() > 0 ? __bq_string_compatible_class_get_data(rhs) : nullptr, rhs.size())
     {
     }
 
@@ -355,7 +355,7 @@ namespace bq {
     template <typename S, typename>
     inline string_base<CHAR_TYPE, Allocator>& string_base<CHAR_TYPE, Allocator>::operator=(const S& rhs)
     {
-        this->operator=(string_tools::__bq_string_compatible_class_get_data(rhs));
+        this->operator=(__bq_string_compatible_class_get_data(rhs));
         return *this;
     }
 
