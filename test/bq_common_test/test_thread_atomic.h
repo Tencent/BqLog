@@ -555,12 +555,12 @@ namespace bq {
                     }
                     thread1.join();
                 }
+
+#ifndef BQ_IN_GITHUB_ACTIONS
+                //Condition variable timeouts are significantly prolonged and inaccurate due to severe time dilation 
+                //in the non-hardware-accelerated virtual machine environment
                 {
-#ifdef BQ_IN_GITHUB_ACTIONS
-                    constexpr uint64_t precision_ms = 2000;   //Github runners have very bad timer precision
-#else
                     constexpr uint64_t precision_ms = 500;
-#endif
                     constexpr uint64_t sleep_time_ms = 5000;
                     constexpr uint64_t min_sleep_time_ms = sleep_time_ms - precision_ms;
                     constexpr uint64_t max_sleep_time_ms = sleep_time_ms + precision_ms;
@@ -573,19 +573,17 @@ namespace bq {
                         condition_timeout_mutex_.unlock();
                         auto end_time = bq::platform::high_performance_epoch_ms();
                         auto diff = end_time - start_time;
-                        result.add_result(diff > min_sleep_time_ms&& diff < max_sleep_time_ms, "condition variable timeout test, real time elapsed:%" PRIu64 "ms, expect (%" PRIu64 ", %" PRIu64 ")ms", diff, max_sleep_time_ms, min_sleep_time_ms);
+                        result.add_result(diff > min_sleep_time_ms && diff < max_sleep_time_ms, "condition variable timeout test, real time elapsed:%" PRIu64 "ms, expect (%" PRIu64 ", %" PRIu64 ")ms", diff, max_sleep_time_ms, min_sleep_time_ms);
                     }
                     for (int32_t i = 0; i < 5; ++i) {
                         auto start_time = bq::platform::high_performance_epoch_ms();
                         bq::platform::thread::sleep(sleep_time_ms);
                         auto end_time = bq::platform::high_performance_epoch_ms();
                         auto diff = end_time - start_time;
-                        result.add_result(diff > min_sleep_time_ms&& diff < max_sleep_time_ms, "sleep test, real time elapsed:%" PRIu64 "ms, expect (%" PRIu64 ", %" PRIu64 ")ms", diff, max_sleep_time_ms, min_sleep_time_ms);
+                        result.add_result(diff > min_sleep_time_ms && diff < max_sleep_time_ms, "sleep test, real time elapsed:%" PRIu64 "ms, expect (%" PRIu64 ", %" PRIu64 ")ms", diff, max_sleep_time_ms, min_sleep_time_ms);
                     }
                 }
 
-                //Condition variable timeouts are significantly prolonged and inaccurate due to severe time dilation 
-                //in the non-hardware-accelerated virtual machine environment
                 {
                     test_thread_condition_variable_waitfor thread_true(result, true);
                     test_thread_condition_variable_waitfor thread_false(result, false);
@@ -603,6 +601,7 @@ namespace bq {
                         thread_false.join();
                     }
                 }
+#endif
 
                 test_output_dynamic(bq::log_level::info, "                                                                                                          \r");
 

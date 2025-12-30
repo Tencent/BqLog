@@ -21,7 +21,7 @@
  *
  */
 
-#include "bq_common/bq_common_public_include.h"
+#include "bq_common/types/type_tools.h"
 #include <stdlib.h>
 
 namespace bq {

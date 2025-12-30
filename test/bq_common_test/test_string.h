@@ -31,6 +31,11 @@ namespace bq {
                     result.add_result(test_str1 == TEST_STR1, "string equal test0");
                     result.add_result(test_str1 != TEST_STR2, "string not equal test0");
 
+                    bq::string_inline test_str1_inline = TEST_STR1;
+                    result.add_result(test_str1_inline.size() == TEST_STR1_LEN, "inline string length test0");
+                    result.add_result(test_str1_inline == TEST_STR1, "inline string equal test0");
+                    result.add_result(test_str1_inline != TEST_STR2, "inline string not equal test0");
+
                     bq::string test_str2 = TEST_STR2;
                     test_str1 += test_str2;
                     result.add_result(test_str1.size() == TEST_STR1_LEN + TEST_STR2_LEN, "string length test1");
