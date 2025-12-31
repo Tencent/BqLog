@@ -645,7 +645,12 @@ namespace bq {
                     auto tid2 = t_restart.last_tid_;
                     result.add_result(tid2 == t_restart.last_obj_tid_, "thread id member check 2");
                     
-                    result.add_result(tid1 != tid2, "thread id change test");
+                    // On POSIX, thread ID (pthread_t) can be reused immediately after join.
+                    // So we cannot strictly assert tid1 != tid2.
+                    // We only care that thread_id_ member is updated to the current running thread's ID (verified above).
+                    if (tid1 == tid2) {
+                        bq::util::log_device_console(bq::log_level::info, "Thread ID was reused by OS: %" PRIu64, (uint64_t)tid1);
+                    }
                 }
 
                 {
