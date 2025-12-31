@@ -36,6 +36,7 @@ namespace bq {
             pendding_cancel, // has received cancel command, and waiting thread exit by self.
             finished,
             released,
+            detached,
             error
         };
 
@@ -71,6 +72,8 @@ namespace bq {
             void start();
 
             void join();
+
+            void detach();
 
             bool cancel();
 

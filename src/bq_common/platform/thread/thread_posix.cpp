@@ -339,6 +339,11 @@ namespace bq {
                 bq::util::log_device_console(log_level::warning, "trying to start a thread \"%s\" which is still running, thread id :%" PRIu64 ", thread status:%d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), (int32_t)current_status);
                 return;
             }
+            if (current_status == enum_thread_status::detached) {
+                bq::util::log_device_console(log_level::fatal, "trying to start a thread \"%s\" which is detached, thread id :%" PRIu64 ", thread status:%d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), (int32_t)current_status);
+                assert(false && "trying to start a detached thread");
+                return;
+            }
             pthread_attr_t attr;
             pthread_attr_init(&attr);
             pthread_attr_setstacksize(&attr, attr_.max_stack_size);
@@ -358,8 +363,14 @@ namespace bq {
                 return;
             }
             thread_id_ = (thread_id)(platform_data_->thread_handle);
+            
+            // If the previous status is init or released, we can set it to running.
+            // internal_run() is spinning and waiting for this status change.
             auto expected_status = enum_thread_status::init;
-            status_.compare_exchange_strong(expected_status, enum_thread_status::running);
+            if (!status_.compare_exchange_strong(expected_status, enum_thread_status::running)) {
+                expected_status = enum_thread_status::released;
+                status_.compare_exchange_strong(expected_status, enum_thread_status::running);
+            }
         }
 
         void thread::join()
@@ -368,9 +379,26 @@ namespace bq {
             if (ESRCH == join_result) {
                 // maybe thread is not created yet.
                 return;
+            } else if (EINVAL == join_result) {
+                // maybe thread is detached or already joined.
+                return;
             } else if (0 != join_result) {
                 bq::util::log_device_console(log_level::error, "join thread \"%s\" failed, thread_id:%" PRIu64 ", error code:%d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), join_result);
             }
+        }
+
+        void thread::detach()
+        {
+            auto current_status = status_.load();
+            if (current_status != enum_thread_status::running) {
+                bq::util::log_device_console(log_level::warning, "trying to detach a thread \"%s\" which is not running, thread id :%" PRIu64 ", thread status:%d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), (int32_t)current_status);
+                return;
+            }
+            auto detach_result = pthread_detach(platform_data_->thread_handle);
+            if (detach_result != 0) {
+                bq::util::log_device_console(log_level::error, "detach thread \"%s\" failed, thread_id:%" PRIu64 ", error code:%d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), detach_result);
+            }
+            status_.store(enum_thread_status::detached);
         }
 
         void thread::yield()
@@ -505,7 +533,8 @@ namespace bq {
             }
 #endif
             while (status_.load() != enum_thread_status::running
-                && status_.load() != enum_thread_status::pendding_cancel) {
+                && status_.load() != enum_thread_status::pendding_cancel
+                && status_.load() != enum_thread_status::detached) {
                 cpu_relax();
             }
             apply_thread_name();

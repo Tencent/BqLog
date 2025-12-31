@@ -248,6 +248,29 @@ namespace bq {
             }
         };
 
+        class test_thread_restart : public bq::platform::thread {
+        public:
+            bq::platform::atomic<int32_t> run_count_ = 0;
+            bq::platform::thread::thread_id last_tid_ = 0;
+            bq::platform::thread::thread_id last_obj_tid_ = 0;
+            bq::string last_name_;
+            virtual void run() override {
+                run_count_.fetch_add_release(1);
+                last_tid_ = bq::platform::thread::get_current_thread_id();
+                last_obj_tid_ = get_thread_id();
+                last_name_ = bq::platform::thread::get_current_thread_name();
+            }
+        };
+
+        class test_thread_detach : public bq::platform::thread {
+        public:
+            bq::platform::atomic<bool>* flag_ptr = nullptr;
+            virtual void run() override {
+                bq::platform::thread::sleep(100);
+                if (flag_ptr) flag_ptr->store_seq_cst(true);
+            }
+        };
+
         class test_thread_condition_variable : public bq::platform::thread {
         private:
             test_result* result_ptr_;
@@ -602,6 +625,46 @@ namespace bq {
                     }
                 }
 #endif
+
+                {
+                    // Restart Test
+                    test_thread_restart t_restart;
+                    t_restart.set_thread_name("Run1");
+                    t_restart.start();
+                    t_restart.join();
+                    result.add_result(t_restart.run_count_.load() == 1, "thread restart test 1");
+                    result.add_result(t_restart.last_name_ == "Run1", "thread name test Run1");
+                    auto tid1 = t_restart.last_tid_;
+                    result.add_result(tid1 == t_restart.last_obj_tid_, "thread id member check 1");
+
+                    t_restart.set_thread_name("Run2");
+                    t_restart.start(); // Restart!
+                    t_restart.join();
+                    result.add_result(t_restart.run_count_.load() == 2, "thread restart test 2");
+                    result.add_result(t_restart.last_name_ == "Run2", "thread name test Run2");
+                    auto tid2 = t_restart.last_tid_;
+                    result.add_result(tid2 == t_restart.last_obj_tid_, "thread id member check 2");
+                    
+                    result.add_result(tid1 != tid2, "thread id change test");
+                }
+
+                {
+                    // Detach Test
+                    // We only verify that detach() sets the status to detached.
+                    // We do NOT call start() again because it is designed to crash (assert).
+                    bq::platform::atomic<bool> flag = false;
+                    test_thread_detach t_detach;
+                    t_detach.flag_ptr = &flag;
+                    t_detach.start();
+                    t_detach.detach();
+                    
+                    result.add_result(t_detach.get_status() == bq::platform::enum_thread_status::detached, "thread status detached test");
+
+                    while (!flag.load()) {
+                        bq::platform::thread::sleep(50);
+                    }
+                    bq::platform::thread::sleep(100);
+                }
 
                 test_output_dynamic(bq::log_level::info, "                                                                                                          \r");
 
