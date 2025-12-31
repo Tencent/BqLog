@@ -26,6 +26,35 @@
 
 namespace bq {
     namespace string_tools {
+        template <typename T, typename = void>
+        struct __has_value_type : bq::false_type {};
+
+        template <typename T>
+        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type {};
+
+        template <typename T>
+        struct is_c_str_compatible : bq::bool_type<bq::string::template is_std_string_compatible<T>::value ||
+            bq::u16string::template is_std_string_compatible<T>::value ||
+            bq::u32string::template is_std_string_compatible<T>::value> {
+        };
+
+        template <typename T>
+        struct is_data_compatible : bq::bool_type<bq::string::template is_std_string_view_compatible<T>::value ||
+            bq::u16string::template is_std_string_view_compatible<T>::value ||
+            bq::u32string::template is_std_string_view_compatible<T>::value> {
+        };
+
+        template <typename T>
+        inline auto __bq_string_compatible_class_get_data(const T& str) -> bq::enable_if_t<is_c_str_compatible<T>::value, const typename T::value_type*>
+        {
+            return str.c_str();
+        }
+
+        template <typename T>
+        inline auto __bq_string_compatible_class_get_data(const T& str) -> bq::enable_if_t<is_data_compatible<T>::value, const typename T::value_type*>
+        {
+            return str.data();
+        }
 
         /**
          * @brief Fallback loop for compile-time constant evaluation.

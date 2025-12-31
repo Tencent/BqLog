@@ -72,7 +72,7 @@ namespace bq {
     template <typename CHAR_TYPE, typename Allocator>
     template <typename S, typename>
     inline bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::BQ_STRING_CLS_NAME(const S& rhs)
-        : BQ_STRING_CLS_NAME(rhs.size() > 0 ? nullptr : nullptr, rhs.size())
+        : BQ_STRING_CLS_NAME(rhs.size() > 0 ? string_tools::__bq_string_compatible_class_get_data(rhs) : nullptr, rhs.size())
     {
     }
 
@@ -114,7 +114,7 @@ namespace bq {
     template <typename S, typename>
     BQ_STRING_INLINE BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::operator=(const S& rhs)
     {
-        this->operator=(nullptr);
+        this->operator=(string_tools::__bq_string_compatible_class_get_data(rhs));
         return *this;
     }
 
