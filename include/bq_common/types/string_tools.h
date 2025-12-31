@@ -175,7 +175,7 @@ namespace bq {
             else {
 #endif
                 return string_len_dispatch<CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t)>::exec(str);
-#if defined(BQ_GCC) || defined(BQ_CLANG)
+#if BQ_GCC_CLANG_BUILTIN(__builtin_constant_p)
             }
 #endif
         }
