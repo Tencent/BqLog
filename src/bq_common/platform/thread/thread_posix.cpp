@@ -398,7 +398,7 @@ namespace bq {
             if (detach_result != 0) {
                 bq::util::log_device_console(log_level::error, "detach thread \"%s\" failed, thread_id:%" PRIu64 ", error code:%d", thread_name_.c_str(), static_cast<uint64_t>(thread_id_), detach_result);
             }
-            status_.store(enum_thread_status::detached);
+            status_.store_seq_cst(enum_thread_status::detached);
         }
 
         void thread::yield()
