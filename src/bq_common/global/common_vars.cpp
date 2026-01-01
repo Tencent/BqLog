@@ -22,7 +22,7 @@
 #ifndef BQ_MSVC
 #include <cpuid.h>
 #endif
-#elif BQ_LINUX && defined(BQ_ARM)
+#elif defined(BQ_LINUX) && defined(BQ_ARM)
 #include <sys/auxv.h>
 #endif
 #if defined(BQ_APPLE)
