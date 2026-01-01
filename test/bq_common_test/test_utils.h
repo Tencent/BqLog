@@ -173,7 +173,7 @@ namespace bq {
                     }
                     end = std::chrono::high_resolution_clock::now();
                     diff = end - start;
-                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Hash Only: %.3f GB/s (Sum: " PRIu64 ")", get_throughput_gbps(diff.count()), dummy_hash);
+                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Hash Only: %.3f GB/s (Sum: %" PRIu64 ")", get_throughput_gbps(diff.count()), dummy_hash);
 
                     // 3. Benchmark: Copy + Hash
                     dummy_hash = 0;
@@ -183,7 +183,7 @@ namespace bq {
                     }
                     end = std::chrono::high_resolution_clock::now();
                     diff = end - start;
-                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Copy+Hash: %.3f GB/s (Sum: " PRIu64 ")", get_throughput_gbps(diff.count()), dummy_hash);
+                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Copy+Hash: %.3f GB/s (Sum: %" PRIu64 ")", get_throughput_gbps(diff.count()), dummy_hash);
 
                     bq::platform::aligned_free(src);
                     bq::platform::aligned_free(dst);
@@ -274,7 +274,7 @@ namespace bq {
                     }
                     end = std::chrono::high_resolution_clock::now();
                     diff = end - start;
-                    bq::util::log_device_console(bq::log_level::debug, "Small Bench - Copy+Hash: %.3f GB/s (Sum: " PRIu64 ")", get_throughput_gbps(diff.count(), total_processed), dummy_hash);
+                    bq::util::log_device_console(bq::log_level::debug, "Small Bench - Copy+Hash: %.3f GB/s (Sum: %" PRIu64 ")", get_throughput_gbps(diff.count(), total_processed), dummy_hash);
 
                     bq::platform::aligned_free(src);
                     bq::platform::aligned_free(dst);

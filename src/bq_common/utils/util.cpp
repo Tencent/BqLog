@@ -16,11 +16,7 @@
 #if defined(BQ_ANDROID)
 #include <android/log.h>
 #include <unistd.h>
-#include <sys/auxv.h>
-#include <asm/hwcap.h>
 #elif defined(BQ_LINUX)
-#include <sys/auxv.h>
-#include <asm/hwcap.h>
 #elif defined(BQ_OHOS)
 #include <hilog/log.h>
 #elif defined(BQ_WIN)
