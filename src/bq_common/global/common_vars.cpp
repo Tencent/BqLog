@@ -25,6 +25,9 @@
 #endif
 #if defined(BQ_APPLE)
 #include <sys/sysctl.h>
+#elif defined(BQ_LINUX)
+#include <sys/auxv.h>                                                                                                                                                                 │
+#include <asm/hwcap.h>
 #endif
 
 namespace bq {
