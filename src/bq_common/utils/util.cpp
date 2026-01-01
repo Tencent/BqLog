@@ -16,10 +16,21 @@
 #if defined(BQ_ANDROID)
 #include <android/log.h>
 #include <unistd.h>
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#elif defined(BQ_LINUX)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
 #elif defined(BQ_OHOS)
 #include <hilog/log.h>
 #elif defined(BQ_WIN)
 #include "bq_common/platform/win64_includes_begin.h"
+#elif defined(BQ_APPLE)
+#include <sys/sysctl.h>
+#endif
+
+#if defined(BQ_X86) && !defined(BQ_MSVC)
+#include <cpuid.h>
 #endif
 
 namespace bq {
@@ -58,6 +69,7 @@ namespace bq {
         0xF36E6F75, 0x0105EC76, 0x12551F82, 0xE03E9C81, 0x34F4F86A, 0xC69F7B69, 0xD5CF889D, 0x27A40B9E,
         0x79B737BA, 0x8BDCB4B9, 0x988C474D, 0x6AE7C44E, 0xBE2DA0A5, 0x4C4623A6, 0x5F16D052, 0xAD7D5351
     };
+    bool _bq_crc32_supported_ = common_global_vars::get().crc32_supported_;
 
     static BQ_TLS uint32_t rand_seed = 0;
     static BQ_TLS uint64_t rand_seed_64 = 0;

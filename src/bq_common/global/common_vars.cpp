@@ -55,6 +55,35 @@ namespace bq {
         return result;
     }
 
+    static bool check_crc32_support() {
+        bool result = false;
+#if defined(BQ_X86)
+        int32_t regs[4];
+#if defined(BQ_MSVC)
+        __cpuid(regs, 1);
+#else
+        __cpuid(1, regs[0], regs[1], regs[2], regs[3]);
+#endif
+        // ECX (regs[2]) bit 20 is SSE4.2
+        result = (regs[2] & (1 << 20)) != 0;
+
+#elif defined(BQ_ARM)
+#if defined(BQ_WIN)
+        result = IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE) != 0;
+#elif defined(BQ_APPLE)
+        int32_t val = 0;
+        size_t len = sizeof(val);
+        if (sysctlbyname("hw.optional.armv8_crc32", &val, &len, nullptr, 0) == 0) {
+            result = (val != 0);
+        }
+#elif defined(BQ_LINUX) || defined(BQ_ANDROID)
+        unsigned long aux = getauxval(AT_HWCAP);
+        result = (aux & HWCAP_CRC32) != 0;
+#endif
+#endif
+        return result;
+    }
+
     global_vars_destructor& get_global_var_destructor() {
         return global_var_destructor_;
     }
@@ -84,6 +113,7 @@ namespace bq {
     common_global_vars::common_global_vars()
     {
         avx2_support_ = check_avx2_support();
+        crc32_supported_ = check_crc32_support();
 #if defined(BQ_ANDROID)
         platform::jni_onload_register register_(&bq::platform::android_jni_onload);
 #elif defined(BQ_WIN)

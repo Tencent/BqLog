@@ -72,7 +72,7 @@ namespace bq {
 
                             uint64_t hash_copy = bq::util::bq_memcpy_with_hash(d, s, size);
 
-                            int cmp_res = memcmp(ref_data, d, size);
+                            int32_t cmp_res = memcmp(ref_data, d, size);
                             result.add_result(cmp_res == 0, "bq_memcpy_with_hash copy correctness size=%zu src_off=%zu dst_off=%zu", size, src_off, dst_off);
 
                             uint64_t hash_only = bq::util::bq_hash_only(s, size);
@@ -119,7 +119,7 @@ namespace bq {
                         // 4. Verify Content Correctness (using memcmp)
                         // Use standard memcpy for reference
                         memcpy(ref_dst, src, len);
-                        int content_match = memcmp(dst, ref_dst, len);
+                        int32_t content_match = memcmp(dst, ref_dst, len);
                         result.add_result(content_match == 0, "Content match len=%zu", len);
 
                         // 5. Verify Guard Bytes (No Overflow)
@@ -138,8 +138,8 @@ namespace bq {
                 // =================================================================================
                 {
                     // Benchmark settings
-                    const size_t bench_buf_size = 64 * 1024 * 1024; // 64 MB
-                    const size_t total_data_to_process = 4ULL * 1024 * 1024 * 1024; // 4 GB
+                    const size_t bench_buf_size = static_cast<size_t>(64 * 1024 * 1024); // 64 MB
+                    const size_t total_data_to_process = static_cast<size_t>(0xffffffff); // 4 GB
                     const size_t iterations = total_data_to_process / bench_buf_size;
 
                     uint8_t* src = static_cast<uint8_t*>(bq::platform::aligned_alloc(64, bench_buf_size));
@@ -173,7 +173,7 @@ namespace bq {
                     }
                     end = std::chrono::high_resolution_clock::now();
                     diff = end - start;
-                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Hash Only: %.3f GB/s (Sum: %llu)", get_throughput_gbps(diff.count()), (unsigned long long)dummy_hash);
+                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Hash Only: %.3f GB/s (Sum: " PRIu64 ")", get_throughput_gbps(diff.count()), dummy_hash);
 
                     // 3. Benchmark: Copy + Hash
                     dummy_hash = 0;
@@ -183,7 +183,7 @@ namespace bq {
                     }
                     end = std::chrono::high_resolution_clock::now();
                     diff = end - start;
-                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Copy+Hash: %.3f GB/s (Sum: %llu)", get_throughput_gbps(diff.count()), (unsigned long long)dummy_hash);
+                    bq::util::log_device_console(bq::log_level::debug, "Benchmark - Copy+Hash: %.3f GB/s (Sum: " PRIu64 ")", get_throughput_gbps(diff.count()), dummy_hash);
 
                     bq::platform::aligned_free(src);
                     bq::platform::aligned_free(dst);
@@ -193,8 +193,8 @@ namespace bq {
                 // Performance Benchmark - Small Data (Random 20-128 Bytes)
                 // =================================================================================
                 {
-                    const size_t bench_buf_size = 64 * 1024 * 1024; // 64 MB Buffer to simulate RingBuffer
-                    const size_t total_data_approx = 1024ULL * 1024 * 1024; // 1 GB approx
+                    const size_t bench_buf_size = static_cast<size_t>(64 * 1024 * 1024); // 64 MB Buffer to simulate RingBuffer
+                    const size_t total_data_approx = static_cast<size_t>(1024 * 1024 * 1024); // 1 GB approx
                     
                     const size_t size_table_len = 4096;
                     const size_t size_table_mask = size_table_len - 1;
@@ -256,7 +256,7 @@ namespace bq {
                     }
                     end = std::chrono::high_resolution_clock::now();
                     diff = end - start;
-                    bq::util::log_device_console(bq::log_level::debug, "Small Bench - Hash Only: %.3f GB/s (Sum: %llu)", get_throughput_gbps(diff.count(), total_processed), (unsigned long long)dummy_hash);
+                    bq::util::log_device_console(bq::log_level::debug, "Small Bench - Hash Only: %.3f GB/s (Sum: %" PRIu64 ")", get_throughput_gbps(diff.count(), total_processed), dummy_hash);
 
                     // 3. Copy + Hash
                     dummy_hash = 0;
@@ -274,7 +274,7 @@ namespace bq {
                     }
                     end = std::chrono::high_resolution_clock::now();
                     diff = end - start;
-                    bq::util::log_device_console(bq::log_level::debug, "Small Bench - Copy+Hash: %.3f GB/s (Sum: %llu)", get_throughput_gbps(diff.count(), total_processed), (unsigned long long)dummy_hash);
+                    bq::util::log_device_console(bq::log_level::debug, "Small Bench - Copy+Hash: %.3f GB/s (Sum: " PRIu64 ")", get_throughput_gbps(diff.count(), total_processed), dummy_hash);
 
                     bq::platform::aligned_free(src);
                     bq::platform::aligned_free(dst);
