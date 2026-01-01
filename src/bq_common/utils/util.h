@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 /*
  * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -15,9 +15,341 @@
 #include "bq_common/types/basic_types.h"
 #include "bq_common/platform/platform_misc.h"
 
+#if defined(BQ_X86)
+    #ifdef BQ_MSVC
+        #include <intrin.h>
+    #else
+        #include <immintrin.h>
+    #endif
+#elif defined(BQ_ARM)
+    #if defined(BQ_MSVC)
+        #include <arm64_neon.h>
+    #else
+        #include <arm_acle.h>
+    #endif
+#endif
+
 namespace bq {
+    
+    extern const uint32_t _bq_crc32c_table[256];
+
     class util {
+    private:
+        // Fallbacks
+        static bq_forceinline uint32_t _crc32_sw_u8(uint32_t crc, uint8_t v)
+        {
+            return (crc >> 8) ^ _bq_crc32c_table[(crc ^ v) & 0xFF];
+        }
+                // Software fallback for CRC32C (2 Bytes)
+                static bq_forceinline uint32_t _crc32_sw_u16(uint32_t crc, uint16_t v)
+                {
+                    crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
+                    crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
+                    return crc;
+                }
+        
+                // Software fallback for CRC32C (4 Bytes)
+                static bq_forceinline uint32_t _crc32_sw_u32(uint32_t crc, uint32_t v)
+                {
+                    crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
+                    crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
+                    crc = _crc32_sw_u8(crc, (uint8_t)((v >> 16) & 0xFF));
+                    crc = _crc32_sw_u8(crc, (uint8_t)((v >> 24) & 0xFF));
+                    return crc;
+                }
+        
+                // Software fallback for CRC32C (8 Bytes)
+                static bq_forceinline uint32_t _crc32_sw_u64(uint32_t crc, uint64_t v)
+                {
+                    crc = _crc32_sw_u32(crc, (uint32_t)(v & 0xFFFFFFFF));
+                    crc = _crc32_sw_u32(crc, (uint32_t)((v >> 32) & 0xFFFFFFFF));
+                    return crc;
+                }
+        
+                static bq_forceinline uint32_t _bq_crc32_u8(uint32_t crc, uint8_t v)
+                {
+                #if defined(BQ_X86)
+                    #if defined(__SSE4_2__) || defined(BQ_MSVC) 
+                        return _mm_crc32_u8(crc, v);
+                    #else
+                        return _crc32_sw_u8(crc, v);
+                    #endif
+                #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+                    return __crc32b(crc, v);
+                #else
+                    return _crc32_sw_u8(crc, v);
+                #endif
+                }
+        
+                static bq_forceinline uint32_t _bq_crc32_u16(uint32_t crc, uint16_t v)
+                {
+                #if defined(BQ_X86)
+                    #if defined(__SSE4_2__) || defined(BQ_MSVC)
+                        return _mm_crc32_u16(crc, v);
+                    #else
+                        return _crc32_sw_u16(crc, v);
+                    #endif
+                #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+                    return __crc32h(crc, v);
+                #else
+                    return _crc32_sw_u16(crc, v);
+                #endif
+                }
+        
+                static bq_forceinline uint32_t _bq_crc32_u32(uint32_t crc, uint32_t v)
+                {
+                #if defined(BQ_X86)
+                    #if defined(__SSE4_2__) || defined(BQ_MSVC)
+                        return _mm_crc32_u32(crc, v);
+                    #else
+                        return _crc32_sw_u32(crc, v);
+                    #endif
+                #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+                    return __crc32w(crc, v);
+                #else
+                    return _crc32_sw_u32(crc, v);
+                #endif
+                }
+        
+                static bq_forceinline uint32_t _bq_crc32_u64(uint32_t crc, uint64_t v)
+                {
+                #if defined(BQ_X86_64)
+                    #if defined(__SSE4_2__) || defined(BQ_MSVC)
+                        return (uint32_t)_mm_crc32_u64(crc, v);
+                    #else
+                        return _crc32_sw_u64(crc, v);
+                    #endif
+                #elif defined(BQ_ARM_64) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+                    return __crc32d(crc, v);
+                #else
+                    return _crc32_sw_u64(crc, v);
+                #endif
+                }
+        
     public:
+        /**
+         * Ultra-fast copy-and-hash utility optimized for modern CPU pipelines.
+         * Approaches hardware limits and can outperform standalone memcpy for small data chunks.
+         * Uses 4-way interleaved CRC32C and overlapping block strategy.
+         * returns: ((h1 ^ h3) << 32) | (h2 ^ h4)
+         */
+        static bq_forceinline uint64_t bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len)
+        {
+            uint8_t* d = (uint8_t*)dst;
+            const uint8_t* s = (const uint8_t*)src;
+            
+            uint32_t h1 = 0;
+            uint32_t h2 = 0;
+            uint32_t h3 = 0;
+            uint32_t h4 = 0;
+
+            BQ_LIKELY_IF(len >= 32) {
+                const uint8_t* const src_end = s + len;
+                uint8_t* const dst_end = d + len;
+
+                while (s <= src_end - 32) {
+                    uint64_t v1, v2, v3, v4;
+                    memcpy(&v1, s, 8);
+                    memcpy(&v2, s + 8, 8);
+                    memcpy(&v3, s + 16, 8);
+                    memcpy(&v4, s + 24, 8);
+
+                    memcpy(d, &v1, 8);
+                    memcpy(d + 8, &v2, 8);
+                    memcpy(d + 16, &v3, 8);
+                    memcpy(d + 24, &v4, 8);
+
+                    h1 = _bq_crc32_u64(h1, v1);
+                    h2 = _bq_crc32_u64(h2, v2);
+                    h3 = _bq_crc32_u64(h3, v3);
+                    h4 = _bq_crc32_u64(h4, v4);
+
+                    s += 32;
+                    d += 32;
+                }
+
+                // If there is tail data, process the LAST 32 bytes (overlapping)
+                if (s < src_end) {
+                    s = src_end - 32;
+                    d = dst_end - 32;
+                    
+                    uint64_t v1, v2, v3, v4;
+                    memcpy(&v1, s, 8);
+                    memcpy(&v2, s + 8, 8);
+                    memcpy(&v3, s + 16, 8);
+                    memcpy(&v4, s + 24, 8);
+
+                    memcpy(d, &v1, 8);
+                    memcpy(d + 8, &v2, 8);
+                    memcpy(d + 16, &v3, 8);
+                    memcpy(d + 24, &v4, 8);
+
+                    // We mix these into the same accumulators. 
+                    // It changes the hash value but remains consistent.
+                    h1 = _bq_crc32_u64(h1, v1);
+                    h2 = _bq_crc32_u64(h2, v2);
+                    h3 = _bq_crc32_u64(h3, v3);
+                    h4 = _bq_crc32_u64(h4, v4);
+                }
+            } else {
+                // Small data handling (< 32 bytes)
+                if (len >= 16) {
+                    uint64_t v1, v2;
+                    // First 16 bytes
+                    memcpy(&v1, s, 8);
+                    memcpy(&v2, s + 8, 8);
+                    memcpy(d, &v1, 8);
+                    memcpy(d + 8, &v2, 8);
+                    h1 = _bq_crc32_u64(h1, v1);
+                    h2 = _bq_crc32_u64(h2, v2);
+
+                    // Last 16 bytes (overlapping)
+                    const uint8_t* s_last = s + len - 16;
+                    uint8_t* d_last = d + len - 16;
+                    memcpy(&v1, s_last, 8);
+                    memcpy(&v2, s_last + 8, 8);
+                    memcpy(d_last, &v1, 8);
+                    memcpy(d_last + 8, &v2, 8);
+                    h3 = _bq_crc32_u64(h3, v1);
+                    h4 = _bq_crc32_u64(h4, v2);
+                } else if (len >= 8) {
+                    uint64_t v;
+                    // First 8 bytes
+                    memcpy(&v, s, 8);
+                    memcpy(d, &v, 8);
+                    h1 = _bq_crc32_u64(h1, v);
+
+                    // Last 8 bytes
+                    const uint8_t* s_last = s + len - 8;
+                    uint8_t* d_last = d + len - 8;
+                    memcpy(&v, s_last, 8);
+                    memcpy(d_last, &v, 8);
+                    h2 = _bq_crc32_u64(h2, v);
+                } else if (len >= 4) {
+                    uint32_t v;
+                    memcpy(&v, s, 4);
+                    memcpy(d, &v, 4);
+                    h1 = _bq_crc32_u32(h1, v);
+
+                    const uint8_t* s_last = s + len - 4;
+                    uint8_t* d_last = d + len - 4;
+                    memcpy(&v, s_last, 4);
+                    memcpy(d_last, &v, 4);
+                    h2 = _bq_crc32_u32(h2, v);
+                } else if (len > 0) {
+                    // 1, 2, 3 bytes. Just loop or unroll. 
+                    // Given it's so small, a simple loop is fine, or simple checks.
+                    if (len & 2) {
+                        uint16_t v;
+                        memcpy(&v, s, 2);
+                        memcpy(d, &v, 2);
+                        h1 = _bq_crc32_u16(h1, v);
+                        s += 2; d += 2;
+                    }
+                    if (len & 1) {
+                        uint8_t v = *s;
+                        *d = v;
+                        h2 = _bq_crc32_u8(h2, v);
+                    }
+                }
+            }
+
+            uint64_t low = (uint64_t)(h1 ^ h3);
+            uint64_t high = (uint64_t)(h2 ^ h4);
+            return (high << 32) | low;
+        }
+
+        /**
+         * Ultra-fast hash utility optimized for modern CPU pipelines.
+         * Approaches hardware limits.
+         */
+        static bq_forceinline uint64_t bq_hash_only(const void* src, size_t len)
+        {
+            const uint8_t* s = (const uint8_t*)src;
+
+            uint32_t h1 = 0;
+            uint32_t h2 = 0;
+            uint32_t h3 = 0;
+            uint32_t h4 = 0;
+
+            BQ_LIKELY_IF(len >= 32) {
+                const uint8_t* const src_end = s + len;
+
+                while (s <= src_end - 32) {
+                    uint64_t v1, v2, v3, v4;
+                    memcpy(&v1, s, 8);
+                    memcpy(&v2, s + 8, 8);
+                    memcpy(&v3, s + 16, 8);
+                    memcpy(&v4, s + 24, 8);
+
+                    h1 = _bq_crc32_u64(h1, v1);
+                    h2 = _bq_crc32_u64(h2, v2);
+                    h3 = _bq_crc32_u64(h3, v3);
+                    h4 = _bq_crc32_u64(h4, v4);
+
+                    s += 32;
+                }
+
+                if (s < src_end) {
+                    s = src_end - 32;
+                    
+                    uint64_t v1, v2, v3, v4;
+                    memcpy(&v1, s, 8);
+                    memcpy(&v2, s + 8, 8);
+                    memcpy(&v3, s + 16, 8);
+                    memcpy(&v4, s + 24, 8);
+
+                    h1 = _bq_crc32_u64(h1, v1);
+                    h2 = _bq_crc32_u64(h2, v2);
+                    h3 = _bq_crc32_u64(h3, v3);
+                    h4 = _bq_crc32_u64(h4, v4);
+                }
+            } else {
+                if (len >= 16) {
+                    uint64_t v1, v2;
+                    memcpy(&v1, s, 8);
+                    memcpy(&v2, s + 8, 8);
+                    h1 = _bq_crc32_u64(h1, v1);
+                    h2 = _bq_crc32_u64(h2, v2);
+
+                    const uint8_t* s_last = s + len - 16;
+                    memcpy(&v1, s_last, 8);
+                    memcpy(&v2, s_last + 8, 8);
+                    h3 = _bq_crc32_u64(h3, v1);
+                    h4 = _bq_crc32_u64(h4, v2);
+                } else if (len >= 8) {
+                    uint64_t v;
+                    memcpy(&v, s, 8);
+                    h1 = _bq_crc32_u64(h1, v);
+
+                    const uint8_t* s_last = s + len - 8;
+                    memcpy(&v, s_last, 8);
+                    h2 = _bq_crc32_u64(h2, v);
+                } else if (len >= 4) {
+                    uint32_t v;
+                    memcpy(&v, s, 4);
+                    h1 = _bq_crc32_u32(h1, v);
+
+                    const uint8_t* s_last = s + len - 4;
+                    memcpy(&v, s_last, 4);
+                    h2 = _bq_crc32_u32(h2, v);
+                } else if (len > 0) {
+                    if (len & 2) {
+                        uint16_t v;
+                        memcpy(&v, s, 2);
+                        h1 = _bq_crc32_u16(h1, v);
+                        s += 2;
+                    }
+                    if (len & 1) {
+                        h2 = _bq_crc32_u8(h2, *s);
+                    }
+                }
+            }
+
+            uint64_t low = (uint64_t)(h1 ^ h3);
+            uint64_t high = (uint64_t)(h2 ^ h4);
+            return (high << 32) | low;
+        }
         static void bq_assert(bool cond, bq::string msg);
         static void bq_record(bq::string msg, string file_name = "__bq_assert.log");
 
@@ -39,8 +371,11 @@ namespace bq {
         // Output to console directly, no console callback will be called
         static void _default_console_output(bq::log_level level, const char* text);
 
+        // Non-inline wrapper for bq_hash_only to reduce binary size in non-critical paths.
+        // Returns a 32-bit folded hash.
         static uint32_t get_hash(const void* data, size_t size);
 
+        // Non-inline wrapper for bq_hash_only to reduce binary size in non-critical paths.
         static uint64_t get_hash_64(const void* data, size_t size);
 
         static bool is_little_endian();
