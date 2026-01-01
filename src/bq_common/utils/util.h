@@ -29,10 +29,19 @@
     #endif
 #endif
 
-#if (defined(BQ_CLANG) || defined(BQ_GCC)) && defined(BQ_ARM)
-    #define BQ_ARM_CRC_TARGET __attribute__((target("crc")))
+// Target attribute for GCC/Clang to enable specific instruction sets for specific functions.
+#if (defined(BQ_CLANG) || defined(BQ_GCC))
+    #if defined(BQ_ARM)
+        #define BQ_HW_CRC_TARGET __attribute__((target("crc")))
+    #elif defined(BQ_X86)
+        #define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
+    #else
+        #define BQ_HW_CRC_TARGET
+    #endif
+    #define BQ_CRC_HW_INLINE inline
 #else
-    #define BQ_ARM_CRC_TARGET
+    #define BQ_HW_CRC_TARGET
+    #define BQ_CRC_HW_INLINE bq_forceinline
 #endif
 
 namespace bq {
@@ -73,17 +82,10 @@ namespace bq {
         }
 
         // ---------------- HW Intrinsics ----------------
-        // On ARM, we mark these with target("crc") so Clang/GCC allows the intrinsic.
-        // On x86, standard SSE4.2 flags usually suffice, or MSVC handles it.
-        
-        static bq_forceinline BQ_ARM_CRC_TARGET uint32_t _bq_crc32_u8_hw(uint32_t crc, uint8_t v)
+        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u8_hw(uint32_t crc, uint8_t v)
         {
         #if defined(BQ_X86)
-            #if defined(__SSE4_2__) || defined(BQ_MSVC) 
-                return _mm_crc32_u8(crc, v);
-            #else
-                return _crc32_sw_u8(crc, v);
-            #endif
+            return _mm_crc32_u8(crc, v);
         #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
             return __crc32b(crc, v);
         #else
@@ -91,14 +93,10 @@ namespace bq {
         #endif
         }
 
-        static bq_forceinline BQ_ARM_CRC_TARGET uint32_t _bq_crc32_u16_hw(uint32_t crc, uint16_t v)
+        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u16_hw(uint32_t crc, uint16_t v)
         {
         #if defined(BQ_X86)
-            #if defined(__SSE4_2__) || defined(BQ_MSVC)
-                return _mm_crc32_u16(crc, v);
-            #else
-                return _crc32_sw_u16(crc, v);
-            #endif
+            return _mm_crc32_u16(crc, v);
         #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
             return __crc32h(crc, v);
         #else
@@ -106,14 +104,10 @@ namespace bq {
         #endif
         }
 
-        static bq_forceinline BQ_ARM_CRC_TARGET uint32_t _bq_crc32_u32_hw(uint32_t crc, uint32_t v)
+        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u32_hw(uint32_t crc, uint32_t v)
         {
         #if defined(BQ_X86)
-            #if defined(__SSE4_2__) || defined(BQ_MSVC)
-                return _mm_crc32_u32(crc, v);
-            #else
-                return _crc32_sw_u32(crc, v);
-            #endif
+            return _mm_crc32_u32(crc, v);
         #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
             return __crc32w(crc, v);
         #else
@@ -121,14 +115,10 @@ namespace bq {
         #endif
         }
 
-        static bq_forceinline BQ_ARM_CRC_TARGET uint32_t _bq_crc32_u64_hw(uint32_t crc, uint64_t v)
+        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u64_hw(uint32_t crc, uint64_t v)
         {
         #if defined(BQ_X86_64)
-            #if defined(__SSE4_2__) || defined(BQ_MSVC)
-                return (uint32_t)_mm_crc32_u64(crc, v);
-            #else
-                return _crc32_sw_u64(crc, v);
-            #endif
+            return (uint32_t)_mm_crc32_u64(crc, v);
         #elif defined(BQ_ARM_64) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
             return __crc32d(crc, v);
         #else
@@ -213,18 +203,19 @@ namespace bq {
             uint64_t high = (uint64_t)(h2 ^ h4); \
             return (high << 32) | low;
 
+
         // Implementations
-        static bq_forceinline BQ_ARM_CRC_TARGET uint64_t _bq_memcpy_with_hash_hw(void* dst, const void* src, size_t len) {
+        static BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_memcpy_with_hash_hw(void* dst, const void* src, size_t len) {
             BQ_GEN_HASH_CORE(true, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
         }
-        static bq_forceinline uint64_t _bq_memcpy_with_hash_sw(void* dst, const void* src, size_t len) {
+        static BQ_CRC_HW_INLINE uint64_t _bq_memcpy_with_hash_sw(void* dst, const void* src, size_t len) {
             BQ_GEN_HASH_CORE(true, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
         }
-        static bq_forceinline BQ_ARM_CRC_TARGET uint64_t _bq_hash_only_hw(const void* src, size_t len) {
+        static BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_hash_only_hw(const void* src, size_t len) {
             void* dst = nullptr; // Dummy
             BQ_GEN_HASH_CORE(false, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
         }
-        static bq_forceinline uint64_t _bq_hash_only_sw(const void* src, size_t len) {
+        static BQ_CRC_HW_INLINE uint64_t _bq_hash_only_sw(const void* src, size_t len) {
             void* dst = nullptr; // Dummy
             BQ_GEN_HASH_CORE(false, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
         }

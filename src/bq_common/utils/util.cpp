@@ -25,10 +25,6 @@
 #include <sys/sysctl.h>
 #endif
 
-#if defined(BQ_X86) && !defined(BQ_MSVC)
-#include <cpuid.h>
-#endif
-
 namespace bq {
     // Castagnoli CRC32C Polynomial: 0x1EDC6F41 (Reversed: 0x82F63B78)
     const uint32_t _bq_crc32c_table[256] = {
@@ -65,7 +61,11 @@ namespace bq {
         0xF36E6F75, 0x0105EC76, 0x12551F82, 0xE03E9C81, 0x34F4F86A, 0xC69F7B69, 0xD5CF889D, 0x27A40B9E,
         0x79B737BA, 0x8BDCB4B9, 0x988C474D, 0x6AE7C44E, 0xBE2DA0A5, 0x4C4623A6, 0x5F16D052, 0xAD7D5351
     };
-    bool _bq_crc32_supported_ = common_global_vars::get().crc32_supported_;
+    bool _bq_crc32_supported_ = false;
+    bool _crc32_static_initializer_ = []() {
+        _bq_crc32_supported_ = common_global_vars::get().crc32_supported_;
+        return _bq_crc32_supported_;
+        }();
 
     static BQ_TLS uint32_t rand_seed = 0;
     static BQ_TLS uint64_t rand_seed_64 = 0;
