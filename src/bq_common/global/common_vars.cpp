@@ -22,12 +22,11 @@
 #ifndef BQ_MSVC
 #include <cpuid.h>
 #endif
+#elif BQ_LINUX && defined(BQ_ARM)
+#include <sys/auxv.h>
 #endif
 #if defined(BQ_APPLE)
 #include <sys/sysctl.h>
-#elif defined(BQ_LINUX)
-#include <sys/auxv.h>                                                                                                                                                                 │
-#include <asm/hwcap.h>
 #endif
 
 namespace bq {
@@ -83,8 +82,23 @@ namespace bq {
             result = (val != 0);
         }
 #elif defined(BQ_LINUX) || defined(BQ_ANDROID)
-        unsigned long aux = getauxval(AT_HWCAP);
-        result = (aux & HWCAP_CRC32) != 0;
+        // Manual definitions to avoid dependency on <asm/hwcap.h>
+        #ifndef AT_HWCAP
+        #define AT_HWCAP 16
+        #endif
+        #ifndef AT_HWCAP2
+        #define AT_HWCAP2 26
+        #endif
+
+        #if defined(__aarch64__) || defined(BQ_ARM_64)
+            auto aux = getauxval(AT_HWCAP);
+            // ARM64: HWCAP_CRC32 is bit 7
+            result = (aux & (1 << 7)) != 0;
+        #else
+        auto aux = getauxval(AT_HWCAP2);
+            // ARM32: HWCAP2_CRC32 is bit 4
+            result = (aux & (1 << 4)) != 0;
+        #endif
 #endif
 #endif
         return result;
