@@ -134,7 +134,7 @@ namespace bq {
 
                 bq::util::set_log_device_console_min_level(bq::log_level::debug);
                 // =================================================================================
-                // Performance Benchmark
+                // Performance Benchmark (64 MB)
                 // =================================================================================
                 {
                     // Benchmark settings
@@ -155,6 +155,8 @@ namespace bq {
                     auto get_throughput_gbps = [&](double seconds) {
                         return (double)total_data_to_process / (1024.0 * 1024.0 * 1024.0) / seconds;
                         };
+
+                    bq::util::log_device_console(bq::log_level::debug, "--- Big Data Chunk Benchmark (64 MB) ---");
 
                     // 1. Benchmark: System memcpy
                     auto start = std::chrono::high_resolution_clock::now();
