@@ -23,6 +23,9 @@
 #include <cpuid.h>
 #endif
 #endif
+#if defined(BQ_APPLE)
+#include <sys/sysctl.h>
+#endif
 
 namespace bq {
     static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();
