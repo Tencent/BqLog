@@ -1683,28 +1683,18 @@ jobs:
             set -e
             adb devices
             
-            TASKS="dbg:${{ steps.locate.outputs.dbg }} rel:${{ steps.locate.outputs.rel }}"
-            
-            for TASK in $TASKS; do
-            NAME=$(echo $TASK | cut -d: -f1)
-            FPATH=$(echo $TASK | cut -d: -f2)
-            REMOTE_BIN="/data/local/tmp/BqLogUnitTest_$NAME"
-            
-            echo "------------------------------------------------------"
-            echo "Processing $NAME: $FPATH"
-            
-            adb push "$FPATH" "$REMOTE_BIN"
-            
-            RAW_OUT=$(adb shell "chmod 755 $REMOTE_BIN && TMPDIR=/data/local/tmp $REMOTE_BIN; echo \$?")
-            
-            EXIT_CODE=$(echo "$RAW_OUT" | tail -n 1 | tr -d '\r' | xargs)
-            
-            echo "$RAW_OUT" | sed '$d'
-            
-            if [ "$EXIT_CODE" -ne 0 ]; then
-              echo "FAILED: $NAME failed with exit code $EXIT_CODE"
-              exit "$EXIT_CODE"
-            fi
-            
-            echo "PASSED: $NAME successfully finished."
-            done
+            echo "Running Debug Test..."
+            adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
+            RAW_OUT_DBG=$(adb shell "chmod 755 /data/local/tmp/BqLogUnitTest_dbg && TMPDIR=/data/local/tmp /data/local/tmp/BqLogUnitTest_dbg; echo \$?")
+            EXIT_CODE_DBG=$(echo "$RAW_OUT_DBG" | tail -n 1 | tr -d '\r' | xargs)
+            echo "$RAW_OUT_DBG" | sed '$d'
+            [ "$EXIT_CODE_DBG" -eq 0 ] || (echo "FAILED: Debug Test returned $EXIT_CODE_DBG" && exit "$EXIT_CODE_DBG")
+            echo "PASSED: Debug Test"
+      
+            echo "Running Release Test..."
+            adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
+            RAW_OUT_REL=$(adb shell "chmod 755 /data/local/tmp/BqLogUnitTest_rel && TMPDIR=/data/local/tmp /data/local/tmp/BqLogUnitTest_rel; echo \$?")
+            EXIT_CODE_REL=$(echo "$RAW_OUT_REL" | tail -n 1 | tr -d '\r' | xargs)
+            echo "$RAW_OUT_REL" | sed '$d'
+            [ "$EXIT_CODE_REL" -eq 0 ] || (echo "FAILED: Release Test returned $EXIT_CODE_REL" && exit "$EXIT_CODE_REL")
+            echo "PASSED: Release Test"
