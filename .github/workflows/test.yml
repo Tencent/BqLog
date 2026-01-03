@@ -1683,18 +1683,54 @@ jobs:
             set -e
             adb devices
             
-            echo "--- Running Debug Test ---"
+            # --- Debug Test ---
+            echo "--- Preparing Debug Test ---"
             adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
-            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_dbg && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg; echo \$? > exit_code_dbg.txt"
+            
+            # Create wrapper script locally
+            echo '#!/system/bin/sh' > run_dbg.sh
+            echo 'cd /data/local/tmp' >> run_dbg.sh
+            echo 'chmod 755 ./BqLogUnitTest_dbg' >> run_dbg.sh
+            echo 'export TMPDIR=/data/local/tmp' >> run_dbg.sh
+            echo './BqLogUnitTest_dbg' >> run_dbg.sh
+            echo 'echo $? > /data/local/tmp/exit_code_dbg.txt' >> run_dbg.sh
+            
+            # Push and run wrapper
+            adb push run_dbg.sh /data/local/tmp/run_dbg.sh
+            adb shell "chmod 755 /data/local/tmp/run_dbg.sh && /data/local/tmp/run_dbg.sh"
+            
+            # Check result
             adb pull /data/local/tmp/exit_code_dbg.txt .
-            EXIT_CODE_DBG=$(cat exit_code_dbg.txt)
-            echo "Debug Test Exit Code: $EXIT_CODE_DBG"
+            EXIT_CODE_DBG=$(cat exit_code_dbg.txt | tr -d '\r\n')
+            echo "Debug Test Exit Code: '${EXIT_CODE_DBG}'"
+            if [ -z "$EXIT_CODE_DBG" ]; then
+              echo "Error: Empty exit code file."
+              exit 1
+            fi
             if [ "$EXIT_CODE_DBG" != "0" ]; then exit "$EXIT_CODE_DBG"; fi
             
-            echo "--- Running Release Test ---"
+            # --- Release Test ---
+            echo "--- Preparing Release Test ---"
             adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
-            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_rel && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel; echo \$? > exit_code_rel.txt"
+            
+            # Create wrapper script locally
+            echo '#!/system/bin/sh' > run_rel.sh
+            echo 'cd /data/local/tmp' >> run_rel.sh
+            echo 'chmod 755 ./BqLogUnitTest_rel' >> run_rel.sh
+            echo 'export TMPDIR=/data/local/tmp' >> run_rel.sh
+            echo './BqLogUnitTest_rel' >> run_rel.sh
+            echo 'echo $? > /data/local/tmp/exit_code_rel.txt' >> run_rel.sh
+            
+            # Push and run wrapper
+            adb push run_rel.sh /data/local/tmp/run_rel.sh
+            adb shell "chmod 755 /data/local/tmp/run_rel.sh && /data/local/tmp/run_rel.sh"
+            
+            # Check result
             adb pull /data/local/tmp/exit_code_rel.txt .
-            EXIT_CODE_REL=$(cat exit_code_rel.txt)
-            echo "Release Test Exit Code: $EXIT_CODE_REL"
+            EXIT_CODE_REL=$(cat exit_code_rel.txt | tr -d '\r\n')
+            echo "Release Test Exit Code: '${EXIT_CODE_REL}'"
+            if [ -z "$EXIT_CODE_REL" ]; then
+              echo "Error: Empty exit code file."
+              exit 1
+            fi
             if [ "$EXIT_CODE_REL" != "0" ]; then exit "$EXIT_CODE_REL"; fi
