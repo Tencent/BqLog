@@ -40,12 +40,6 @@ namespace bq {
     bool vernam::hardware_acceleration_enabled_ = true;
 #endif
 
-#if defined(BQ_GCC) || defined(BQ_CLANG)
-    #define BQ_TARGET_AVX2 __attribute__((target("avx2")))
-#else
-    #define BQ_TARGET_AVX2
-#endif
-
     // 1. Universal Scalar Implementation (Fallback)
     // -------------------------------------------------------------------------------------------------
     static void vernam_encrypt_scalar(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
@@ -118,8 +112,7 @@ namespace bq {
     // -------------------------------------------------------------------------------------------------
     // We use intrinsics to FORCE AVX2 instructions regardless of compiler flags.
     // This function is only called if g_has_avx2 is true.
-    BQ_TARGET_AVX2
-    static void vernam_encrypt_avx2(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
+    static BQ_HW_SIMD_TARGET void vernam_encrypt_avx2(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
     {
         // ... (Header alignment same as scalar, omitted for brevity, usually caller handles large chunks) ...
         // Re-implementing logic with AVX2 intrinsics

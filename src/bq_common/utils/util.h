@@ -29,26 +29,12 @@
     #endif
 #endif
 
-// Target attribute for GCC/Clang to enable specific instruction sets for specific functions.
-#if (defined(BQ_CLANG) || defined(BQ_GCC))
-    #if defined(BQ_ARM)
-        #define BQ_HW_CRC_TARGET __attribute__((target("crc")))
-    #elif defined(BQ_X86)
-        #define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
-    #else
-        #define BQ_HW_CRC_TARGET
-    #endif
-    #define BQ_CRC_HW_INLINE inline
-#else
-    #define BQ_HW_CRC_TARGET
-    #define BQ_CRC_HW_INLINE bq_forceinline
-#endif
-
 namespace bq {
     
     // Defined in util.cpp
     extern const uint32_t _bq_crc32c_table[256];
     extern bool _bq_crc32_supported_;
+    extern bool _bq_avx2_supported_;
 
     class util {
     private:
@@ -201,7 +187,7 @@ namespace bq {
             } \
             uint64_t low = (uint64_t)(h1 ^ h3); \
             uint64_t high = (uint64_t)(h2 ^ h4); \
-            return (high << 32) | low;
+            return (high << 32) | low; \
 
 
         // Implementations
@@ -306,6 +292,32 @@ namespace bq {
         /// <param name="target_utf16_character_num"></param>
         /// <returns>length of final utf16 str, it's len of char16_t*, not char*</returns>
         static uint32_t utf8_to_utf16(const char* src_utf8_str, uint32_t src_character_num, char16_t* target_utf16_str, uint32_t target_utf16_character_num);
+
+        /// <summary>
+        /// High performance convert utf16 to utf8 (SIMD accelerated)
+        /// </summary>
+        static uint32_t utf16_to_utf8_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        
+        // Internal helpers exposed for benchmark purposes (or keep private if friend class works)
+        static uint32_t _utf16_to_utf8_scalar_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+
+        /// <summary>
+        /// High performance convert utf8 to utf16 (SIMD accelerated)
+        /// </summary>
+        static uint32_t utf8_to_utf16_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+
+        // Internal helpers exposed for benchmark purposes
+        static uint32_t _utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+
+        // Optimistic ASCII conversion helpers.
+        // Tries to convert as many ASCII characters as possible using aggressive SIMD.
+        // Returns the number of characters successfully converted.
+        // If the return value < src_len, it means a non-ASCII char was encountered (or end of buffer).
+        // The return index is guaranteed to be <= the first non-ASCII character index.
+        static uint32_t _utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static uint32_t _utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
 
         /// <summary>
         /// Allocates and constructs an object of type `T` with the specified alignment.
