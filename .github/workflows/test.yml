@@ -1699,17 +1699,13 @@ jobs:
             echo "Host: Pulled file content:"
             cat exit_code_dbg.txt
             
-            # Read into variable and trim whitespace
-            EXIT_CODE_DBG=$(cat exit_code_dbg.txt | tr -d '[:space:]')
-            echo "Host: Parsed variable: '$EXIT_CODE_DBG'"
+            # Read into variable (command substitution strips trailing newline automatically)
+            EXIT_CODE_DBG=$(cat exit_code_dbg.txt)
+            echo "Host: Parsed variable: '${EXIT_CODE_DBG}'"
             
-            if [ -z "$EXIT_CODE_DBG" ]; then
-              echo "::error::Exit code is empty!"
-              exit 1
-            fi
             if [ "$EXIT_CODE_DBG" != "0" ]; then
               echo "::error::Debug Test failed with code $EXIT_CODE_DBG"
-              exit "$EXIT_CODE_DBG"
+              exit 1
             fi
             
             # === Release Test ===
@@ -1725,14 +1721,10 @@ jobs:
             echo "Host: Pulled file content:"
             cat exit_code_rel.txt
             
-            EXIT_CODE_REL=$(cat exit_code_rel.txt | tr -d '[:space:]')
-            echo "Host: Parsed variable: '$EXIT_CODE_REL'"
+            EXIT_CODE_REL=$(cat exit_code_rel.txt)
+            echo "Host: Parsed variable: '${EXIT_CODE_REL}'"
             
-            if [ -z "$EXIT_CODE_REL" ]; then
-              echo "::error::Exit code is empty!"
-              exit 1
-            fi
             if [ "$EXIT_CODE_REL" != "0" ]; then
               echo "::error::Release Test failed with code $EXIT_CODE_REL"
-              exit "$EXIT_CODE_REL"
+              exit 1
             fi
