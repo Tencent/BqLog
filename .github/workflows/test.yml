@@ -1681,8 +1681,30 @@ jobs:
           cores: 4
           script: |
             set -e
+            
+            run_test_binary() {
+              local local_file=$1
+              local remote_name=$2
+              echo "------------------------------------------------------"
+              echo "Pushing and running: $remote_name"
+              adb push "$local_file" /data/local/tmp/"$remote_name"
+              
+              local raw_output
+              raw_output=$(adb shell "chmod 755 /data/local/tmp/$remote_name && TMPDIR=/data/local/tmp /data/local/tmp/$remote_name; echo \$?")
+              
+              local exit_code
+              exit_code=$(echo "$raw_output" | tail -n 1 | tr -d '\r' | xargs)
+              
+              echo "$raw_output" | sed '$d'
+              
+              if [ "$exit_code" -ne 0 ]; then
+                echo "FAILED: $remote_name returned exit code $exit_code"
+                exit "$exit_code"
+              fi
+              
+              echo "PASSED: $remote_name finished successfully."
+            }
+
             adb devices
-            adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
-            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_dbg && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg; exit \$?"
-            adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
-            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_rel && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel; exit \$?"
+            run_test_binary "${{ steps.locate.outputs.dbg }}" "BqLogUnitTest_dbg"
+            run_test_binary "${{ steps.locate.outputs.rel }}" "BqLogUnitTest_rel"
