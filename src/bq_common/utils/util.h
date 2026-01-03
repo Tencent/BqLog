@@ -48,10 +48,10 @@ namespace bq {
     private:
         // Internal helpers exposed for benchmark purposes (or keep private if friend class works)
         static uint32_t _utf16_to_utf8_scalar_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
-        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static BQ_SIMD_HW_INLINE uint32_t _utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
         // Internal helpers exposed for benchmark purposes
         static uint32_t _utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
-        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        static BQ_SIMD_HW_INLINE uint32_t _utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
 
         // Optimistic ASCII conversion helpers.
         // Tries to convert as many ASCII characters as possible using aggressive SIMD.

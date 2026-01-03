@@ -80,7 +80,8 @@ namespace bq {
     // Internal flag to check if SIMD UTF is supported on current platform
     static bool _bq_utf_simd_supported_ = []() {
 #if defined(BQ_X86)
-        return common_global_vars::get().avx2_support_;
+        // Assume basic SSE is available on modern x86 (including Android x86/Atom)
+        return true; 
 #elif defined(BQ_ARM)
         return true; // Assume NEON on ARMv8/M1
 #else
