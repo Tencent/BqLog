@@ -291,15 +291,18 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
     #elif defined(BQ_X86)
         #define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
         #define BQ_HW_SIMD_TARGET __attribute__((target("avx2")))
+        #define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))
     #else
         #define BQ_HW_CRC_TARGET
         #define BQ_HW_SIMD_TARGET
+        #define BQ_HW_SIMD_SSE_TARGET
     #endif
     #define BQ_CRC_HW_INLINE inline
     #define BQ_SIMD_HW_INLINE inline
 #else
     #define BQ_HW_CRC_TARGET
     #define BQ_HW_SIMD_TARGET
+    #define BQ_HW_SIMD_SSE_TARGET
     #define BQ_CRC_HW_INLINE bq_forceinline
     #define BQ_SIMD_HW_INLINE bq_forceinline
 #endif

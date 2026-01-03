@@ -37,10 +37,13 @@ namespace bq {
     // Implementations
     // =================================================================================================
 #ifdef BQ_UNIT_TEST
-    bool vernam::hardware_acceleration_enabled_ = true;
-#endif
+    vernam::mode vernam::hardware_acceleration_mode_ = vernam::mode::auto_detect;
 
-    // 1. Universal Scalar Implementation (Fallback)
+    void vernam::set_hardware_acceleration_mode(mode m)
+    {
+        hardware_acceleration_mode_ = m;
+    }
+#endif
     // -------------------------------------------------------------------------------------------------
     static void vernam_encrypt_scalar(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
     {
@@ -108,6 +111,79 @@ namespace bq {
     }
 
 #if defined(BQ_X86)
+
+    // 2. SSE Implementation (x86/x64)
+    // -------------------------------------------------------------------------------------------------
+    static BQ_HW_SIMD_SSE_TARGET void vernam_encrypt_sse(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
+    {
+        const size_t key_mask = key_size_pow2 - 1;
+        constexpr size_t align_mask = 15; // 16-byte alignment
+
+#ifndef NDEBUG
+        assert((key_size_pow2 & (key_size_pow2 - 1)) == 0 && "key_size_pow2 must be power of two");
+        assert((key_size_pow2 & align_mask) == 0 && "vernam_encrypt_sse key_size_pow2 should be multiple of 16");
+#endif
+
+        uint8_t* p = buf;
+        size_t remaining = len;
+        size_t current_key_pos = key_stream_offset & key_mask;
+
+        // Alignment to 16 bytes
+        size_t align_diff = (16 - (reinterpret_cast<uintptr_t>(p) & align_mask)) & align_mask;
+        size_t head_len = (align_diff < remaining) ? align_diff : remaining;
+
+        for (size_t j = 0; j < head_len; ++j) {
+            p[j] ^= key[current_key_pos];
+            current_key_pos = (current_key_pos + 1) & key_mask;
+        }
+        p += head_len;
+        remaining -= head_len;
+
+        if (remaining < 16) {
+            current_key_pos &= key_mask;
+             for (size_t j = 0; j < remaining; ++j) {
+                p[j] ^= key[current_key_pos];
+                current_key_pos = (current_key_pos + 1) & key_mask;
+            }
+            return;
+        }
+
+        // SSE Loop
+        while (remaining >= 16) {
+            size_t contiguous_key_len = key_size_pow2 - current_key_pos;
+            size_t chunk_len = (contiguous_key_len < remaining) ? contiguous_key_len : remaining;
+            size_t loop_len = chunk_len & ~align_mask;
+            
+            const uint8_t* k_ptr = key + current_key_pos;
+            size_t num_blocks = loop_len >> 4; 
+
+            for (size_t i = 0; i < num_blocks; ++i) {
+                __m128i v_buf = _mm_load_si128(reinterpret_cast<__m128i*>(p));
+                __m128i v_key = _mm_loadu_si128(reinterpret_cast<const __m128i*>(k_ptr));
+                
+                __m128i v_res = _mm_xor_si128(v_buf, v_key);
+                
+                _mm_store_si128(reinterpret_cast<__m128i*>(p), v_res);
+                
+                p += 16;
+                k_ptr += 16;
+            }
+            
+            remaining -= loop_len;
+            current_key_pos += loop_len;
+
+            if (current_key_pos == key_size_pow2) {
+                current_key_pos = 0;
+            }
+        }
+        
+        current_key_pos &= key_mask;
+        for (size_t j = 0; j < remaining; ++j) {
+            p[j] ^= key[current_key_pos];
+            current_key_pos = (current_key_pos + 1) & key_mask;
+        }
+    }
+
     // 2. AVX2 Implementation (x86/x64 Only)
     // -------------------------------------------------------------------------------------------------
     // We use intrinsics to FORCE AVX2 instructions regardless of compiler flags.
@@ -272,40 +348,36 @@ namespace bq {
     void vernam::vernam_encrypt_32bytes_aligned(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
     {
 #if defined(BQ_X86)
-        if(common_global_vars::get().avx2_support_
 #ifdef BQ_UNIT_TEST
-            && hardware_acceleration_enabled_
+        if (hardware_acceleration_mode_ == mode::scalar) {
+            vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
+            return;
+        }
+        if (hardware_acceleration_mode_ == mode::sse) {
+            vernam_encrypt_sse(buf, len, key, key_size_pow2, key_stream_offset);
+            return;
+        }
 #endif
-        ) {
+        if(common_global_vars::get().avx2_support_) {
             vernam_encrypt_avx2(buf, len, key, key_size_pow2, key_stream_offset);
             return;
         }
-        // Fallback for non-AVX2 x86 or other architectures
-        vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
+        // Fallback for non-AVX2 x86 (Use SSE)
+        vernam_encrypt_sse(buf, len, key, key_size_pow2, key_stream_offset);
 #elif defined(BQ_ARM)
 #ifdef BQ_UNIT_TEST
-        if (hardware_acceleration_enabled_) {
-#endif
-            // For Android/iOS ARM64/ARMv7, NEON is effectively standard. 
-            // We can use it directly without complex runtime checks for most modern contexts.
-            vernam_encrypt_neon(buf, len, key, key_size_pow2, key_stream_offset);
-#ifdef BQ_UNIT_TEST
-        }
-        else {
+        if (hardware_acceleration_mode_ == mode::scalar) {
             vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
+            return;
         }
 #endif
+        // For Android/iOS ARM64/ARMv7, NEON is effectively standard. 
+        // We can use it directly without complex runtime checks for most modern contexts.
+        vernam_encrypt_neon(buf, len, key, key_size_pow2, key_stream_offset);
 #else
         // Fallback for non-AVX2 x86 or other architectures
         vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
 #endif
     }
-
-#ifdef BQ_UNIT_TEST
-    void vernam::set_hardware_acceleration_enabled(bool enabled)
-    {
-        hardware_acceleration_enabled_ = enabled;
-    }
-#endif
 
 }

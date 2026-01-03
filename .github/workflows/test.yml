@@ -1683,6 +1683,6 @@ jobs:
             set -e
             adb devices
             adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
-            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_dbg && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg"
+            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_dbg && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg; exit \$?"
             adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
-            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_rel && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel"
+            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_rel && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel; exit \$?"
