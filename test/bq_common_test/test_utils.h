@@ -430,12 +430,12 @@ namespace bq {
                     }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
                     
                     auto sum2 = benchmark( "UTF8->UTF16 [Fast SW]", 64, [&]() {
-                        bq::util::_utf8_to_utf16_scalar_fast(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
+                        bq::util::utf8_to_utf16_fast_sw(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
                     }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
 
                     result.add_result(sum1 == sum2, "utf8->utf16, [Legacy] & [Fast SW]");
 #if defined(BQ_X86)
-                    if (bq::_bq_avx2_supported_) {
+                    if (common_global_vars::get().avx2_support_) {
 #elif defined(BQ_ARM)
                     if (true) {
 #else
@@ -459,12 +459,12 @@ namespace bq {
                     }, buf_u8_out.begin(), buf_u8_out.size());
 
                     sum2 = benchmark("UTF16->UTF8 [Fast SW]", 64, [&]() {
-                        bq::util::_utf16_to_utf8_scalar_fast(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
+                        bq::util::utf16_to_utf8_fast_sw(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
                         }, buf_u8_out.begin(), buf_u8_out.size());
                     result.add_result(sum1 == sum2, "utf16->utf8, [Legacy] & [Fast SW]");
 
 #if defined(BQ_X86)
-                    if (bq::_bq_avx2_supported_) {
+                    if (common_global_vars::get().avx2_support_) {
 #elif defined(BQ_ARM)
                     if (true) {
 #else

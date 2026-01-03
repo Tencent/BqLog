@@ -145,13 +145,16 @@ namespace bq {
         static void log_crash_handler(int32_t signal, siginfo_ptr_type info, void*)
         {
             (void)info;
+            bq::util::log_device_console(log_level::error, "crash occurred, signal:%d, now try to force flush logs", signal);
+            log_manager::instance().force_flush_all();
 #ifdef BQ_UNIT_TEST
             bq::_api_string_def stack_trace_str;
             bq::api::__api_get_stack_trace(&stack_trace_str, 0);
             bq::util::log_device_console(log_level::fatal, "crash occurred, signal:%d, Stack, Trace:%s", signal, stack_trace_str.str);
+            // On Android, adb shell often swallows the exit code if the process dies by signal.
+            // We forcefully exit with 1 to ensure the CI pipeline detects the failure.
+            _exit(1);
 #endif
-            bq::util::log_device_console(log_level::error, "crash occurred, signal:%d, now try to force flush logs", signal);
-            log_manager::instance().force_flush_all();
         }
 #endif
 

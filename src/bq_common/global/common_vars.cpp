@@ -35,10 +35,9 @@ namespace bq {
     static bq::array<global_var_destructiable*>* destructible_vars_;   //(nullptr)zero initialization
     static global_vars_destructor global_var_destructor_;
 
-
+#if defined(BQ_X86)
     static bool check_avx2_support() {
         bool result = false;
-#if defined(BQ_X86)
         int32_t regs[4];
         int32_t id;
 #if defined(BQ_MSVC)
@@ -59,9 +58,9 @@ namespace bq {
         bq::util::set_log_device_console_min_level(bq::log_level::info);
         bq::util::log_device_console(bq::log_level::info, "Hardware AVX2 support:%s", result ? "true" : "false");
         bq::util::set_log_device_console_min_level(bq::log_level::warning);
-#endif
         return result;
     }
+#endif
 
     static bool check_crc32_support() {
         bool result = false;
@@ -138,7 +137,9 @@ namespace bq {
 
     common_global_vars::common_global_vars()
     {
+#if defined(BQ_X86)
         avx2_support_ = check_avx2_support();
+#endif
         crc32_supported_ = check_crc32_support();
 #if defined(BQ_ANDROID)
         platform::jni_onload_register register_(&bq::platform::android_jni_onload);

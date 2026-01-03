@@ -31,7 +31,7 @@
 
 namespace bq {
     // Castagnoli CRC32C Polynomial: 0x1EDC6F41 (Reversed: 0x82F63B78)
-    const uint32_t _bq_crc32c_table[256] = {
+    const static uint32_t _bq_crc32c_table[256] = {
         0x00000000, 0xF26B8303, 0xE13B70F7, 0x1350F3F4, 0xC79A971F, 0x35F1141C, 0x26A1E7E8, 0xD4CA64EB,
         0x8AD958CF, 0x78B2DBCC, 0x6BE22838, 0x9989AB3B, 0x4D43CFD0, 0xBF284CD3, 0xAC78BF27, 0x5E133C24,
         0x105EC76F, 0xE235446C, 0xF165B798, 0x030E349B, 0xD7C45070, 0x25AFD373, 0x36FF2087, 0xC494A384,
@@ -65,17 +65,11 @@ namespace bq {
         0xF36E6F75, 0x0105EC76, 0x12551F82, 0xE03E9C81, 0x34F4F86A, 0xC69F7B69, 0xD5CF889D, 0x27A40B9E,
         0x79B737BA, 0x8BDCB4B9, 0x988C474D, 0x6AE7C44E, 0xBE2DA0A5, 0x4C4623A6, 0x5F16D052, 0xAD7D5351
     };
-    bool _bq_crc32_supported_ = false;
-    bool _crc32_static_initializer_ = []() {
-        _bq_crc32_supported_ = common_global_vars::get().crc32_supported_;
-        return _bq_crc32_supported_;
-        }();
-    
-    bool _bq_avx2_supported_ = false;
-    bool _avx2_static_initializer_ = []() {
-        _bq_avx2_supported_ = common_global_vars::get().avx2_support_;
-        return _bq_avx2_supported_;
-    }();
+    static bool _bq_crc32_supported_ = common_global_vars::get().crc32_supported_;
+
+#if defined(BQ_X86)
+    static bool _bq_avx2_supported_ = common_global_vars::get().avx2_support_;
+#endif
 
     // Internal flag to check if SIMD UTF is supported on current platform
     static bool _bq_utf_simd_supported_ = []() {
@@ -732,8 +726,15 @@ namespace bq {
     // Fast Implementation (SIMD + Optimized Scalar)
     // =================================================================================================
 
-    // Rename your 'scalar' to 'scalar_fast' logic to distinguish from legacy
-    uint32_t util::_utf16_to_utf8_scalar_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+#if defined(BQ_X86)
+    #if defined(BQ_CLANG) || defined(BQ_GCC)
+        #define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))
+    #else
+        #define BQ_HW_SIMD_SSE_TARGET
+    #endif
+
+    //Fallback
+    bq_forceinline uint32_t _impl_utf16_to_utf8_scalar_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
     {
         (void)dst_len;
         const char16_t* src_end = src + src_len;
@@ -747,10 +748,12 @@ namespace bq {
                 while (src < src_end && *src < 0x80) {
                     *dst_ptr++ = (char)*src++;
                 }
-            } else if (c < 0x800) {
+            }
+            else if (c < 0x800) {
                 *dst_ptr++ = static_cast<char>(0xC0 | (c >> 6));
                 *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
-            } else if (c >= 0xD800 && c <= 0xDFFF) {
+            }
+            else if (c >= 0xD800 && c <= 0xDFFF) {
                 if (c >= 0xDC00) { continue; } // Orphan trailing surrogate
                 if (src < src_end) {
                     uint32_t c2 = *src;
@@ -763,7 +766,8 @@ namespace bq {
                         *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
                     }
                 }
-            } else {
+            }
+            else {
                 *dst_ptr++ = static_cast<char>(0xE0 | (c >> 12));
                 *dst_ptr++ = static_cast<char>(0x80 | ((c >> 6) & 0x3F));
                 *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
@@ -772,44 +776,29 @@ namespace bq {
         return (uint32_t)(dst_ptr - dst);
     }
 
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t util::_utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    // AVX2 Safe Implementation
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_simd_avx2(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
     {
-        (void)dst_len;
-        const char16_t* src_ptr = src;
-        const char16_t* src_end = src + src_len;
-        char* dst_ptr = dst;
-
-#if defined(BQ_X86) && defined(BQ_HW_SIMD_TARGET)
-        // AVX2 / SSE optimized path for ASCII
+        char* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
             __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
-            // Check if all are ASCII (highest bit is 0)
             __m256i mask = _mm256_set1_epi16((int16_t)0xFF80u);
             if (_mm256_testz_si256(chunk, mask)) {
-                // All ASCII. Pack and store.
                 __m256i compressed = _mm256_packus_epi16(chunk, chunk); 
-                // compressed: [0-7, 0-7, 8-15, 8-15]
-                __m256i permuted = _mm256_permute4x64_epi64(compressed, 0xD8); // Reorder lanes: 0, 2, 1, 3
-                // Now we have the bytes we want in the first 128 bits (16 bytes).
+                __m256i permuted = _mm256_permute4x64_epi64(compressed, 0xD8);
                 _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), _mm256_castsi256_si128(permuted));
-                
                 src_ptr += 16;
                 dst_ptr += 16;
             } else {
-                 // Fallback to scalar for this chunk
                  for (int32_t i = 0; i < 16; ++i) {
                      char16_t c = src_ptr[i];
                      if (c < 0x80) {
                          *dst_ptr++ = (char)c;
                      } else {
-                         // Fallback logic inline or break
-                         // Just do scalar for this char
                          if (c < 0x800) {
                              *dst_ptr++ = static_cast<char>(0xC0 | (c >> 6));
                              *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
                          } else if (c >= 0xD800 && c <= 0xDFFF) {
-                             // Handle surrogate... defer to full scalar loop for simplicity if complicated
-                             // For now, simple fallback
                              if (c >= 0xD800 && c <= 0xDBFF && i + 1 < 16) {
                                   char16_t c2 = src_ptr[i+1];
                                   if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
@@ -818,7 +807,7 @@ namespace bq {
                                       *dst_ptr++ = static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
                                       *dst_ptr++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
                                       *dst_ptr++ = static_cast<char>(0x80 | (cp & 0x3F));
-                                      i++; // Skip next
+                                      i++; 
                                   } 
                              }
                          } else {
@@ -830,6 +819,69 @@ namespace bq {
                  }
                  src_ptr += 16;
             }
+        }
+        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+    }
+
+    // SSE Safe Implementation
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf16_to_utf8_simd_sse(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
+    {
+        char* dst_start = dst_ptr;
+        while (src_ptr + 8 <= src_end) {
+            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            __m128i mask = _mm_set1_epi16((int16_t)0xFF80u);
+            if (_mm_testz_si128(chunk, mask)) {
+                __m128i compressed = _mm_packus_epi16(chunk, chunk); 
+                _mm_storel_epi64(reinterpret_cast<__m128i*>(dst_ptr), compressed);
+                src_ptr += 8;
+                dst_ptr += 8;
+            } else {
+                 for (int32_t i = 0; i < 8; ++i) {
+                     char16_t c = src_ptr[i];
+                     if (c < 0x80) {
+                         *dst_ptr++ = (char)c;
+                     } else {
+                         if (c < 0x800) {
+                             *dst_ptr++ = static_cast<char>(0xC0 | (c >> 6));
+                             *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
+                         } else if (c >= 0xD800 && c <= 0xDFFF) {
+                             if (c >= 0xD800 && c <= 0xDBFF && i + 1 < 8) {
+                                  char16_t c2 = src_ptr[i+1];
+                                  if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
+                                      uint32_t cp = static_cast<uint32_t>((((c & 0x3FF) << 10) | (c2 & 0x3FF)) + 0x10000);
+                                      *dst_ptr++ = static_cast<char>(0xF0 | (cp >> 18));
+                                      *dst_ptr++ = static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+                                      *dst_ptr++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                                      *dst_ptr++ = static_cast<char>(0x80 | (cp & 0x3F));
+                                      i++; 
+                                  } 
+                             }
+                         } else {
+                             *dst_ptr++ = static_cast<char>(0xE0 | (c >> 12));
+                             *dst_ptr++ = static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+                             *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
+                         }
+                     }
+                 }
+                 src_ptr += 8;
+            }
+        }
+        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+    }
+#endif
+
+    BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    {
+        (void)dst_len;
+        const char16_t* src_ptr = src;
+        const char16_t* src_end = src + src_len;
+        char* dst_ptr = dst;
+
+#if defined(BQ_X86)
+        if (_bq_avx2_supported_) {
+            return _impl_utf16_to_utf8_simd_avx2(src_ptr, src_end, dst_ptr);
+        } else {
+            return _impl_utf16_to_utf8_simd_sse(src_ptr, src_end, dst_ptr);
         }
 #elif defined(BQ_ARM) && defined(BQ_HW_SIMD_TARGET)
         // NEON path
@@ -866,18 +918,20 @@ namespace bq {
             }
         }
     scalar_utf16:
+        return (uint32_t)((uint32_t)(dst_ptr - dst) + _impl_utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+#else
+        return _impl_utf16_to_utf8_scalar_fast(src, src_len, dst, dst_len);
 #endif
-        return (uint32_t)((uint32_t)(dst_ptr - dst) + _utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
     }
 
-    // Rename your 'scalar' to 'scalar_fast' logic
-    uint32_t util::_utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    //Fallback
+    bq_forceinline uint32_t _impl_utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
         (void)dst_len;
         const uint8_t* s = (const uint8_t*)src;
         const uint8_t* end = s + src_len;
         char16_t* d = dst;
-        
+
         while (s < end) {
             uint8_t c = *s++;
             if (c < 0x80) {
@@ -886,12 +940,15 @@ namespace bq {
                 while (s < end && *s < 0x80) {
                     *d++ = (char16_t)*s++;
                 }
-            } else if ((c & 0xE0) == 0xC0) {
+            }
+            else if ((c & 0xE0) == 0xC0) {
                 *d++ = static_cast<char16_t>(((c & 0x1F) << 6) | (*s++ & 0x3F));
-            } else if ((c & 0xF0) == 0xE0) {
+            }
+            else if ((c & 0xF0) == 0xE0) {
                 *d++ = static_cast<char16_t>(((c & 0x0F) << 12) | ((s[0] & 0x3F) << 6) | (s[1] & 0x3F));
                 s += 2;
-            } else {
+            }
+            else {
                 // 4 bytes or invalid
                 uint32_t cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((s[0] & 0x3F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F));
                 cp -= 0x10000;
@@ -903,29 +960,23 @@ namespace bq {
         return (uint32_t)(d - dst);
     }
 
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t util::_utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+#if defined(BQ_X86)
+    // AVX2 Safe Implementation
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_simd_avx2(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
     {
-        (void)dst_len;
-        const uint8_t* src_ptr = (const uint8_t*)src;
-        const uint8_t* src_end = src_ptr + src_len;
-        char16_t* dst_ptr = dst;
-
-#if defined(BQ_X86) && defined(BQ_HW_SIMD_TARGET)
+        char16_t* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
             __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-            if (!_mm_movemask_epi8(chunk)) { // All ASCII (bit 7 is 0)
-                 // Expand 8-bit to 16-bit
+            if (!_mm_movemask_epi8(chunk)) { 
                  __m256i wide = _mm256_cvtepu8_epi16(chunk);
                  _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr), wide);
                  src_ptr += 16;
                  dst_ptr += 16;
             } else {
-                 // Fallback for this chunk
                  for(int32_t i=0; i<16; ++i) {
                      if (*src_ptr < 0x80) {
                          *dst_ptr++ = static_cast<char16_t>(*src_ptr++);
                      } else {
-                         // Simple: handle one multibyte then continue loop
                          uint8_t c = *src_ptr;
                          if ((c & 0xE0) == 0xC0) {
                              *dst_ptr++ = static_cast<char16_t>(((c & 0x1F) << 6) | (src_ptr[1] & 0x3F)); src_ptr += 2;
@@ -942,6 +993,67 @@ namespace bq {
                      }
                  }
             }
+        }
+        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+    }
+
+    // SSE Safe Implementation
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_simd_sse(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
+    {
+        char16_t* dst_start = dst_ptr;
+        while (src_ptr + 16 <= src_end) {
+            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            if (!_mm_movemask_epi8(chunk)) { 
+                 __m128i lo = _mm_cvtepu8_epi16(chunk);
+                 __m128i hi = _mm_cvtepu8_epi16(_mm_shuffle_epi32(chunk, 0xEE)); // High 64 bits to low
+                 // Wait, _mm_cvtepu8_epi16 converts lower 8 bytes.
+                 // We need to convert upper 8 bytes too.
+                 // Correct logic for SSE:
+                 // lo = cvt(chunk[0-7])
+                 // hi = cvt(chunk[8-15])
+                 // To get chunk[8-15] into low 64 bits: _mm_srli_si128(chunk, 8) or shuffle.
+                 _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), lo);
+                 _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr + 8), _mm_cvtepu8_epi16(_mm_srli_si128(chunk, 8)));
+                 src_ptr += 16;
+                 dst_ptr += 16;
+            } else {
+                 for(int32_t i=0; i<16; ++i) {
+                     if (*src_ptr < 0x80) {
+                         *dst_ptr++ = static_cast<char16_t>(*src_ptr++);
+                     } else {
+                         uint8_t c = *src_ptr;
+                         if ((c & 0xE0) == 0xC0) {
+                             *dst_ptr++ = static_cast<char16_t>(((c & 0x1F) << 6) | (src_ptr[1] & 0x3F)); src_ptr += 2;
+                         } else if ((c & 0xF0) == 0xE0) {
+                             *dst_ptr++ = static_cast<char16_t>(((c & 0x0F) << 12) | ((src_ptr[1] & 0x3F) << 6) | (src_ptr[2] & 0x3F)); src_ptr += 3;
+                         } else {
+                             uint32_t cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((src_ptr[1] & 0x3F) << 12) | ((src_ptr[2] & 0x3F) << 6) | (src_ptr[3] & 0x3F));
+                             cp -= 0x10000;
+                             *dst_ptr++ = static_cast<char16_t>((cp >> 10) + 0xD800);
+                             *dst_ptr++ = static_cast<char16_t>((cp & 0x3FF) + 0xDC00);
+                             src_ptr += 4;
+                         }
+                         break; 
+                     }
+                 }
+            }
+        }
+        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+    }
+#endif
+
+    BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    {
+        (void)dst_len;
+        const uint8_t* src_ptr = (const uint8_t*)src;
+        const uint8_t* src_end = src_ptr + src_len;
+        char16_t* dst_ptr = dst;
+
+#if defined(BQ_X86)
+        if (_bq_avx2_supported_) {
+            return _impl_utf8_to_utf16_simd_avx2(src_ptr, src_end, dst_ptr);
+        } else {
+            return _impl_utf8_to_utf16_simd_sse(src_ptr, src_end, dst_ptr);
         }
 #elif defined(BQ_ARM) && defined(BQ_HW_SIMD_TARGET)
         while (src_ptr + 16 <= src_end) {
@@ -976,15 +1088,17 @@ namespace bq {
                  }
              }
         }
+        return (uint32_t)((uint32_t)(dst_ptr - dst) + _impl_utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+#else
+        return _impl_utf8_to_utf16_scalar_fast((const char*)src, src_len, dst, dst_len);
 #endif
-        return (uint32_t)((uint32_t)(dst_ptr - dst) + _utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
     }
 
     // =================================================================================================
     // Optimistic Implementation (Aggressive SIMD)
     // =================================================================================================
 
-    BQ_HW_SIMD_TARGET uint32_t util::_utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
     {
         (void)dst_len;
         const char16_t* src_ptr = src;
@@ -1101,7 +1215,7 @@ namespace bq {
         return (uint32_t)(src_ptr - src);
     }
 
-    BQ_HW_SIMD_TARGET uint32_t util::_utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
         (void)dst_len;
         const uint8_t* src_ptr = (const uint8_t*)src;
@@ -1218,27 +1332,27 @@ namespace bq {
         // Threshold lowered to 8 to catch small strings on NEON/SSE
         if (src_len >= 8 && _bq_utf_simd_supported_) {
             // Try optimistic ASCII first
-            uint32_t converted = _utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
+            uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
             if (converted == src_len) {
                 return converted;
             }
             // Continue from where we failed with safe SIMD
-            return converted + _utf16_to_utf8_simd(src + converted, src_len - converted, dst + converted, dst_len - converted);
+            return converted + _impl_utf16_to_utf8_simd(src + converted, src_len - converted, dst + converted, dst_len - converted);
         }
-        return _utf16_to_utf8_scalar_fast(src, src_len, dst, dst_len);
+        return _impl_utf16_to_utf8_scalar_fast(src, src_len, dst, dst_len);
     }
 
     uint32_t util::utf8_to_utf16_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
         // Threshold lowered to 16 to catch small strings
         if (src_len >= 16 && _bq_utf_simd_supported_) {
-             uint32_t converted = _utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
+             uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
              if (converted == src_len) {
                  return converted;
              }
-             return converted + _utf8_to_utf16_simd(src + converted, src_len - converted, dst + converted, dst_len - converted);
+             return converted + _impl_utf8_to_utf16_simd(src + converted, src_len - converted, dst + converted, dst_len - converted);
         }
-        return _utf8_to_utf16_scalar_fast(src, src_len, dst, dst_len);
+        return _impl_utf8_to_utf16_scalar_fast(src, src_len, dst, dst_len);
     }
 
 
@@ -1247,7 +1361,7 @@ namespace bq {
         // Threshold lowered to 8 to catch small strings on NEON/SSE
         if (src_len >= 8 && _bq_utf_simd_supported_) {
             // Try optimistic ASCII first
-            uint32_t converted = _utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
+            uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
             return converted;
         }
         return 0;
@@ -1257,9 +1371,21 @@ namespace bq {
     {
         // Threshold lowered to 16 to catch small strings
         if (src_len >= 16 && _bq_utf_simd_supported_) {
-            uint32_t converted = _utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
+            uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
             return converted;
         }
         return 0;
     }
+
+
+#ifdef BQ_UNIT_TEST
+    uint32_t util::utf16_to_utf8_fast_sw(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    {
+        return _impl_utf16_to_utf8_scalar_fast(src, src_len, dst, dst_len);
+    }
+    uint32_t util::utf8_to_utf16_fast_sw(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    {
+        return _impl_utf8_to_utf16_scalar_fast(src, src_len, dst, dst_len);
+    }
+#endif
 }
