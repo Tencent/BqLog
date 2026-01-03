@@ -127,6 +127,10 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
         static uint32_t utf16_to_utf8_fast_sw(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
         static uint32_t utf8_to_utf16_fast_sw(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+#if defined(BQ_X86)
+        static uint32_t utf16_to_utf8_fast_sse(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static uint32_t utf8_to_utf16_fast_sse(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+#endif
 #endif
 
         /// <summary>

@@ -435,6 +435,12 @@ namespace bq {
 
                     result.add_result(sum1 == sum2, "utf8->utf16, [Legacy] & [Fast SW]");
 #if defined(BQ_X86)
+                    auto sum_sse = benchmark("UTF8->UTF16 [Fast SSE]", 64, [&]() {
+                        bq::util::utf8_to_utf16_fast_sse(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
+                    }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
+                    result.add_result(sum1 == sum_sse, "utf8->utf16, [Legacy] & [Fast SSE]");
+#endif
+#if defined(BQ_X86)
                     if (common_global_vars::get().avx2_support_) {
 #elif defined(BQ_ARM)
                     if (true) {
@@ -462,6 +468,13 @@ namespace bq {
                         bq::util::utf16_to_utf8_fast_sw(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
                         }, buf_u8_out.begin(), buf_u8_out.size());
                     result.add_result(sum1 == sum2, "utf16->utf8, [Legacy] & [Fast SW]");
+
+#if defined(BQ_X86)
+                    auto sum_sse_2 = benchmark("UTF16->UTF8 [Fast SSE]", 64, [&]() {
+                        bq::util::utf16_to_utf8_fast_sse(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
+                    }, buf_u8_out.begin(), buf_u8_out.size());
+                    result.add_result(sum1 == sum_sse_2, "utf16->utf8, [Legacy] & [Fast SSE]");
+#endif
 
 #if defined(BQ_X86)
                     if (common_global_vars::get().avx2_support_) {
