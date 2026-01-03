@@ -142,6 +142,7 @@ namespace bq {
 #endif
         crc32_supported_ = check_crc32_support();
 #if defined(BQ_ANDROID)
+        avx2_support_ = true; //tmp test
         platform::jni_onload_register register_(&bq::platform::android_jni_onload);
 #elif defined(BQ_WIN)
         stack_trace_process_ = GetCurrentProcess();
