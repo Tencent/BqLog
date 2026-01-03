@@ -849,8 +849,8 @@ jobs:
         cc: [ clang, gcc ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
         exclude:
-            - cc: gcc
-              cpp_ver: 23
+          - cc: gcc
+            cpp_ver: 23
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1307,8 +1307,8 @@ jobs:
         cc: [ clang, gcc ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
         exclude:
-            - cc: gcc
-              cpp_ver: 23
+          - cc: gcc
+            cpp_ver: 23
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1607,63 +1607,94 @@ jobs:
           ndk-version: r28c
           local-cache: false
 
-      - name: Build Android Binaries
+      - name: Build Debug
         env:
           ANDROID_ABI: ${{ matrix.abi }}
           ANDROID_PLATFORM: ${{ matrix.api-level }}
           ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           set -e
-          build_target() {
-            local TYPE=$1
-            local DIR="build/test/android/${ANDROID_ABI}/${TYPE,,}"
-            mkdir -p "$DIR"
-            cd "$DIR"
-            cmake ../../../../../test \
-              -G "Unix Makefiles" \
-              -DANDROID_ABI=${ANDROID_ABI} \
-              -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-              -DANDROID_NDK=${ANDROID_NDK} \
-              -DCMAKE_BUILD_TYPE=$TYPE \
-              -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-              -DTARGET_PLATFORM:STRING=android
-            cmake --build . -- -j10
-            cd -
-          }
+          mkdir -p build/test/android/${ANDROID_ABI}/debug
+          cd build/test/android/${ANDROID_ABI}/debug
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${ANDROID_NDK} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
 
-          build_target "Debug"
-          build_target "RelWithDebInfo"
+      - name: Build RelWithDebInfo
+        env:
+          ANDROID_ABI: ${{ matrix.abi }}
+          ANDROID_PLATFORM: ${{ matrix.api-level }}
+          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          set -e
+          mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cd build/test/android/${ANDROID_ABI}/relwithdebinfo
+          cmake ../../../../../test \
+            -G "Unix Makefiles" \
+            -DANDROID_ABI=${ANDROID_ABI} \
+            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+            -DANDROID_NDK=${ANDROID_NDK} \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+            -DTARGET_PLATFORM:STRING=android
+          cmake --build . -- -j10
 
-      - name: Run Tests in Emulator
+      - name: Locate artifacts
+        id: locate
+        env:
+          ABI: ${{ matrix.abi }}
+        run: |
+          set -e
+          DBG="build/test/android/${ABI}/debug/BqLogUnitTest"
+          REL="build/test/android/${ABI}/relwithdebinfo/BqLogUnitTest"
+          [ -f "$DBG" ] || DBG="$(find build/test/android/${ABI}/debug -type f -name BqLogUnitTest | head -n1)"
+          [ -f "$REL" ] || REL="$(find build/test/android/${ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
+          echo "dbg=$DBG" >> $GITHUB_OUTPUT
+          echo "rel=$REL" >> $GITHUB_OUTPUT
+
+      - name: Create AVD snapshot (if missing)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
           arch: ${{ matrix.abi }}
+          disk-size: 6G
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          cores: 4
+          script: echo "AVD snapshot created."
+
+      - name: Run tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: ${{ matrix.abi }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           cores: 4
           script: |
             set -e
-
-            find_bin() {
-              local path="build/test/android/${{ matrix.abi }}/$1/BqLogUnitTest"
-              [ -f "$path" ] && echo "$path" || find build/test/android/${{ matrix.abi }}/$1 -type f -name BqLogUnitTest | head -n1
-            }
-
-            DBG_BIN=$(find_bin "debug")
-            REL_BIN=$(find_bin "relwithdebinfo")
-
-            run_test() {
-              local bin_path=$1
-              local tag=$2
-              local remote_path="/data/local/tmp/BqLogUnitTest_$tag"
-
-              echo ">>> Running $tag Test..."
-              adb push "$bin_path" "$remote_path"
-              adb shell "chmod 755 $remote_path && TMPDIR=/data/local/tmp $remote_path"
-              echo ">>> $tag Test Passed."
-            }
-
-            run_test "$DBG_BIN" "debug"
-            run_test "$REL_BIN" "rel"
+            adb devices
+            
+            echo "--- Running Debug Test ---"
+            adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
+            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_dbg && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg; echo \$? > exit_code_dbg.txt"
+            adb pull /data/local/tmp/exit_code_dbg.txt .
+            EXIT_CODE_DBG=$(cat exit_code_dbg.txt)
+            echo "Debug Test Exit Code: $EXIT_CODE_DBG"
+            if [ "$EXIT_CODE_DBG" != "0" ]; then exit "$EXIT_CODE_DBG"; fi
+            
+            echo "--- Running Release Test ---"
+            adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
+            adb shell "cd /data/local/tmp && chmod 755 ./BqLogUnitTest_rel && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel; echo \$? > exit_code_rel.txt"
+            adb pull /data/local/tmp/exit_code_rel.txt .
+            EXIT_CODE_REL=$(cat exit_code_rel.txt)
+            echo "Release Test Exit Code: $EXIT_CODE_REL"
+            if [ "$EXIT_CODE_REL" != "0" ]; then exit "$EXIT_CODE_REL"; fi
