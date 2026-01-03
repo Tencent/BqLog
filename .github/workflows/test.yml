@@ -1607,94 +1607,63 @@ jobs:
           ndk-version: r28c
           local-cache: false
 
-      - name: Build Debug
+      - name: Build Android Binaries
         env:
           ANDROID_ABI: ${{ matrix.abi }}
           ANDROID_PLATFORM: ${{ matrix.api-level }}
           ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           set -e
-          mkdir -p build/test/android/${ANDROID_ABI}/debug
-          cd build/test/android/${ANDROID_ABI}/debug
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
-            -DANDROID_ABI=${ANDROID_ABI} \
-            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-            -DANDROID_NDK=${ANDROID_NDK} \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DTARGET_PLATFORM:STRING=android
-          cmake --build . -- -j10
+          build_target() {
+            local TYPE=$1
+            local DIR="build/test/android/${ANDROID_ABI}/${TYPE,,}"
+            mkdir -p "$DIR"
+            cd "$DIR"
+            cmake ../../../../../test \
+              -G "Unix Makefiles" \
+              -DANDROID_ABI=${ANDROID_ABI} \
+              -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+              -DANDROID_NDK=${ANDROID_NDK} \
+              -DCMAKE_BUILD_TYPE=$TYPE \
+              -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+              -DTARGET_PLATFORM:STRING=android
+            cmake --build . -- -j10
+            cd -
+          }
 
-      - name: Build RelWithDebInfo
-        env:
-          ANDROID_ABI: ${{ matrix.abi }}
-          ANDROID_PLATFORM: ${{ matrix.api-level }}
-          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          set -e
-          mkdir -p build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cd build/test/android/${ANDROID_ABI}/relwithdebinfo
-          cmake ../../../../../test \
-            -G "Unix Makefiles" \
-            -DANDROID_ABI=${ANDROID_ABI} \
-            -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-            -DANDROID_NDK=${ANDROID_NDK} \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DTARGET_PLATFORM:STRING=android
-          cmake --build . -- -j10
+          build_target "Debug"
+          build_target "RelWithDebInfo"
 
-      - name: Locate artifacts
-        id: locate
-        env:
-          ABI: ${{ matrix.abi }}
-        run: |
-          set -e
-          DBG="build/test/android/${ABI}/debug/BqLogUnitTest"
-          REL="build/test/android/${ABI}/relwithdebinfo/BqLogUnitTest"
-          [ -f "$DBG" ] || DBG="$(find build/test/android/${ABI}/debug -type f -name BqLogUnitTest | head -n1)"
-          [ -f "$REL" ] || REL="$(find build/test/android/${ABI}/relwithdebinfo -type f -name BqLogUnitTest | head -n1)"
-          echo "dbg=$DBG" >> $GITHUB_OUTPUT
-          echo "rel=$REL" >> $GITHUB_OUTPUT
-
-      - name: Create AVD snapshot (if missing)
+      - name: Run Tests in Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
           arch: ${{ matrix.abi }}
-          disk-size: 6G
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: false
-          cores: 4
-          script: echo "AVD snapshot created."
-
-      - name: Run tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          arch: ${{ matrix.abi }}
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           cores: 4
           script: |
             set -e
-            adb devices
-            
-            echo "Running Debug Test..."
-            adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
-            RAW_OUT_DBG=$(adb shell "chmod 755 /data/local/tmp/BqLogUnitTest_dbg && TMPDIR=/data/local/tmp /data/local/tmp/BqLogUnitTest_dbg; echo \$?")
-            EXIT_CODE_DBG=$(echo "$RAW_OUT_DBG" | tail -n 1 | tr -d '\r' | xargs)
-            echo "$RAW_OUT_DBG" | sed '$d'
-            [ "$EXIT_CODE_DBG" -eq 0 ] || (echo "FAILED: Debug Test returned $EXIT_CODE_DBG" && exit "$EXIT_CODE_DBG")
-            echo "PASSED: Debug Test"
-      
-            echo "Running Release Test..."
-            adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
-            RAW_OUT_REL=$(adb shell "chmod 755 /data/local/tmp/BqLogUnitTest_rel && TMPDIR=/data/local/tmp /data/local/tmp/BqLogUnitTest_rel; echo \$?")
-            EXIT_CODE_REL=$(echo "$RAW_OUT_REL" | tail -n 1 | tr -d '\r' | xargs)
-            echo "$RAW_OUT_REL" | sed '$d'
-            [ "$EXIT_CODE_REL" -eq 0 ] || (echo "FAILED: Release Test returned $EXIT_CODE_REL" && exit "$EXIT_CODE_REL")
-            echo "PASSED: Release Test"
+
+            find_bin() {
+              local path="build/test/android/${{ matrix.abi }}/$1/BqLogUnitTest"
+              [ -f "$path" ] && echo "$path" || find build/test/android/${{ matrix.abi }}/$1 -type f -name BqLogUnitTest | head -n1
+            }
+
+            DBG_BIN=$(find_bin "debug")
+            REL_BIN=$(find_bin "relwithdebinfo")
+
+            run_test() {
+              local bin_path=$1
+              local tag=$2
+              local remote_path="/data/local/tmp/BqLogUnitTest_$tag"
+
+              echo ">>> Running $tag Test..."
+              adb push "$bin_path" "$remote_path"
+              adb shell "chmod 755 $remote_path && TMPDIR=/data/local/tmp $remote_path"
+              echo ">>> $tag Test Passed."
+            }
+
+            run_test "$DBG_BIN" "debug"
+            run_test "$REL_BIN" "rel"
