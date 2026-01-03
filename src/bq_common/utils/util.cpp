@@ -88,9 +88,200 @@ namespace bq {
 #endif
     }();
 
+    // ---------------- SW Fallbacks ----------------
+    bq_forceinline uint32_t _crc32_sw_u8(uint32_t crc, uint8_t v)
+    {
+        return (crc >> 8) ^ _bq_crc32c_table[(crc ^ v) & 0xFF];
+    }
+
+    bq_forceinline uint32_t _crc32_sw_u16(uint32_t crc, uint16_t v)
+    {
+        crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
+        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
+        return crc;
+    }
+
+    bq_forceinline uint32_t _crc32_sw_u32(uint32_t crc, uint32_t v)
+    {
+        crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
+        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
+        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 16) & 0xFF));
+        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 24) & 0xFF));
+        return crc;
+    }
+
+    bq_forceinline uint32_t _crc32_sw_u64(uint32_t crc, uint64_t v)
+    {
+        crc = _crc32_sw_u32(crc, (uint32_t)(v & 0xFFFFFFFF));
+        crc = _crc32_sw_u32(crc, (uint32_t)((v >> 32) & 0xFFFFFFFF));
+        return crc;
+    }
+
+    // ---------------- HW Intrinsics ----------------
+    bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u8_hw(uint32_t crc, uint8_t v)
+    {
+#if defined(BQ_X86)
+        return _mm_crc32_u8(crc, v);
+#elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+        return __crc32b(crc, v);
+#else
+        return _crc32_sw_u8(crc, v);
+#endif
+    }
+
+    bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u16_hw(uint32_t crc, uint16_t v)
+    {
+#if defined(BQ_X86)
+        return _mm_crc32_u16(crc, v);
+#elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+        return __crc32h(crc, v);
+#else
+        return _crc32_sw_u16(crc, v);
+#endif
+    }
+
+    bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u32_hw(uint32_t crc, uint32_t v)
+    {
+#if defined(BQ_X86)
+        return _mm_crc32_u32(crc, v);
+#elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+        return __crc32w(crc, v);
+#else
+        return _crc32_sw_u32(crc, v);
+#endif
+    }
+
+    bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u64_hw(uint32_t crc, uint64_t v)
+    {
+#if defined(BQ_X86_64)
+        return (uint32_t)_mm_crc32_u64(crc, v);
+#elif defined(BQ_ARM_64) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+        return __crc32d(crc, v);
+#else
+        return _crc32_sw_u64(crc, v);
+#endif
+    }
+
+#define BQ_GEN_HASH_CORE(DO_COPY, CRC_U8, CRC_U16, CRC_U32, CRC_U64) \
+            const uint8_t* s = (const uint8_t*)src; \
+            uint8_t* d = (uint8_t*)dst; \
+            uint32_t h1 = 0, h2 = 0, h3 = 0, h4 = 0; \
+            BQ_LIKELY_IF(len >= 32) { \
+                const uint8_t* const src_end = s + len; \
+                uint8_t* const dst_end = d + len; \
+                while (s <= src_end - 32) { \
+                    uint64_t v1, v2, v3, v4; \
+                    memcpy(&v1, s, 8); memcpy(&v2, s + 8, 8); memcpy(&v3, s + 16, 8); memcpy(&v4, s + 24, 8); \
+                    BQ_CONSTEXPR_IF (DO_COPY) { \
+                        memcpy(d, &v1, 8); memcpy(d + 8, &v2, 8); memcpy(d + 16, &v3, 8); memcpy(d + 24, &v4, 8); \
+                        d += 32; \
+                    } \
+                    h1 = CRC_U64(h1, v1); h2 = CRC_U64(h2, v2); h3 = CRC_U64(h3, v3); h4 = CRC_U64(h4, v4); \
+                    s += 32; \
+                } \
+                if (s < src_end) { \
+                    s = src_end - 32; \
+                    uint64_t v1, v2, v3, v4; \
+                    memcpy(&v1, s, 8); memcpy(&v2, s + 8, 8); memcpy(&v3, s + 16, 8); memcpy(&v4, s + 24, 8); \
+                    BQ_CONSTEXPR_IF (DO_COPY) { \
+                        d = dst_end - 32; \
+                        memcpy(d, &v1, 8); memcpy(d + 8, &v2, 8); memcpy(d + 16, &v3, 8); memcpy(d + 24, &v4, 8); \
+                    } \
+                    h1 = CRC_U64(h1, v1); h2 = CRC_U64(h2, v2); h3 = CRC_U64(h3, v3); h4 = CRC_U64(h4, v4); \
+                } \
+            } else { \
+                if (len >= 16) { \
+                    uint64_t v1, v2; \
+                    memcpy(&v1, s, 8); memcpy(&v2, s + 8, 8); \
+                    BQ_CONSTEXPR_IF (DO_COPY) { memcpy(d, &v1, 8); memcpy(d + 8, &v2, 8); } \
+                    h1 = CRC_U64(h1, v1); h2 = CRC_U64(h2, v2); \
+                    const uint8_t* s_last = s + len - 16; \
+                    memcpy(&v1, s_last, 8); memcpy(&v2, s_last + 8, 8); \
+                    BQ_CONSTEXPR_IF (DO_COPY) { \
+                        uint8_t* d_last = d + len - 16; \
+                        memcpy(d_last, &v1, 8); memcpy(d_last + 8, &v2, 8); \
+                    } \
+                    h3 = CRC_U64(h3, v1); h4 = CRC_U64(h4, v2); \
+                } else if (len >= 8) { \
+                    uint64_t v; \
+                    memcpy(&v, s, 8); \
+                    BQ_CONSTEXPR_IF (DO_COPY) memcpy(d, &v, 8); \
+                    h1 = CRC_U64(h1, v); \
+                    const uint8_t* s_last = s + len - 8; \
+                    memcpy(&v, s_last, 8); \
+                    BQ_CONSTEXPR_IF (DO_COPY) { uint8_t* d_last = d + len - 8; memcpy(d_last, &v, 8); } \
+                    h2 = CRC_U64(h2, v); \
+                } else if (len >= 4) { \
+                    uint32_t v; \
+                    memcpy(&v, s, 4); \
+                    BQ_CONSTEXPR_IF (DO_COPY) memcpy(d, &v, 4); \
+                    h1 = CRC_U32(h1, v); \
+                    const uint8_t* s_last = s + len - 4; \
+                    memcpy(&v, s_last, 4); \
+                    BQ_CONSTEXPR_IF (DO_COPY) { uint8_t* d_last = d + len - 4; memcpy(d_last, &v, 4); } \
+                    h2 = CRC_U32(h2, v); \
+                } else if (len > 0) { \
+                    if (len & 2) { \
+                        uint16_t v; \
+                        memcpy(&v, s, 2); \
+                        BQ_CONSTEXPR_IF (DO_COPY) { memcpy(d, &v, 2); d += 2; } \
+                        h1 = CRC_U16(h1, v); \
+                        s += 2; \
+                    } \
+                    if (len & 1) { \
+                        uint8_t v = *s; \
+                        BQ_CONSTEXPR_IF (DO_COPY) *d = v; \
+                        h2 = CRC_U8(h2, v); \
+                    } \
+                } \
+            } \
+            uint64_t low = (uint64_t)(h1 ^ h3); \
+            uint64_t high = (uint64_t)(h2 ^ h4); \
+            return (high << 32) | low; \
+
+
+    // Implementations
+    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_memcpy_with_hash_hw(void* dst, const void* src, size_t len) {
+        BQ_GEN_HASH_CORE(true, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
+    }
+    BQ_CRC_HW_INLINE uint64_t _bq_memcpy_with_hash_sw(void* dst, const void* src, size_t len) {
+        BQ_GEN_HASH_CORE(true, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
+    }
+    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_hash_only_hw(const void* src, size_t len) {
+        void* dst = nullptr; // Dummy
+        BQ_GEN_HASH_CORE(false, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
+    }
+    BQ_CRC_HW_INLINE uint64_t _bq_hash_only_sw(const void* src, size_t len) {
+        void* dst = nullptr; // Dummy
+        BQ_GEN_HASH_CORE(false, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
+    }
+
+
     static BQ_TLS uint32_t rand_seed = 0;
     static BQ_TLS uint64_t rand_seed_64 = 0;
     static util::type_func_ptr_bq_util_consle_callback consle_callback_ = nullptr;
+
+
+    uint64_t util::bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len)
+    {
+        BQ_LIKELY_IF(_bq_crc32_supported_) {
+            return _bq_memcpy_with_hash_hw(dst, src, len);
+        }
+        else {
+            return _bq_memcpy_with_hash_sw(dst, src, len);
+        }
+    }
+
+
+    uint64_t util::bq_hash_only(const void* src, size_t len)
+    {
+        BQ_LIKELY_IF(_bq_crc32_supported_) {
+            return _bq_hash_only_hw(src, len);
+        }
+        else {
+            return _bq_hash_only_sw(src, len);
+        }
+    }
 
     void util::bq_assert(bool cond, bq::string msg)
     {
@@ -675,7 +866,7 @@ namespace bq {
         }
     scalar_utf16:
 #endif
-        return (uint32_t)((dst_ptr - dst) + _utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return (uint32_t)((uint32_t)(dst_ptr - dst) + _utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
     }
 
     // Rename your 'scalar' to 'scalar_fast' logic
@@ -785,7 +976,7 @@ namespace bq {
              }
         }
 #endif
-        return (uint32_t)((dst_ptr - dst) + _utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return (uint32_t)((uint32_t)(dst_ptr - dst) + _utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
     }
 
     // =================================================================================================
@@ -1047,5 +1238,27 @@ namespace bq {
              return converted + _utf8_to_utf16_simd(src + converted, src_len - converted, dst + converted, dst_len - converted);
         }
         return _utf8_to_utf16_scalar_fast(src, src_len, dst, dst_len);
+    }
+
+
+    uint32_t util::utf16_to_utf8_ascii_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    {
+        // Threshold lowered to 8 to catch small strings on NEON/SSE
+        if (src_len >= 8 && _bq_utf_simd_supported_) {
+            // Try optimistic ASCII first
+            uint32_t converted = _utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
+            return converted;
+        }
+        return 0;
+    }
+
+    uint32_t util::utf8_to_utf16_ascii_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    {
+        // Threshold lowered to 16 to catch small strings
+        if (src_len >= 16 && _bq_utf_simd_supported_) {
+            uint32_t converted = _utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
+            return converted;
+        }
+        return 0;
     }
 }

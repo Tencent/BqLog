@@ -30,182 +30,36 @@
 #endif
 
 namespace bq {
-    
+
+#if BQ_UNIT_TEST
+    namespace test {
+        class test_utils;
+    }
+#endif
     // Defined in util.cpp
     extern const uint32_t _bq_crc32c_table[256];
     extern bool _bq_crc32_supported_;
     extern bool _bq_avx2_supported_;
 
     class util {
+#if BQ_UNIT_TEST
+    friend class bq::test::test_utils;
+#endif
     private:
-        // ---------------- SW Fallbacks ----------------
-        static bq_forceinline uint32_t _crc32_sw_u8(uint32_t crc, uint8_t v)
-        {
-            return (crc >> 8) ^ _bq_crc32c_table[(crc ^ v) & 0xFF];
-        }
+        // Internal helpers exposed for benchmark purposes (or keep private if friend class works)
+        static uint32_t _utf16_to_utf8_scalar_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        // Internal helpers exposed for benchmark purposes
+        static uint32_t _utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
 
-        static bq_forceinline uint32_t _crc32_sw_u16(uint32_t crc, uint16_t v)
-        {
-            crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
-            crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
-            return crc;
-        }
-
-        static bq_forceinline uint32_t _crc32_sw_u32(uint32_t crc, uint32_t v)
-        {
-            crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
-            crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
-            crc = _crc32_sw_u8(crc, (uint8_t)((v >> 16) & 0xFF));
-            crc = _crc32_sw_u8(crc, (uint8_t)((v >> 24) & 0xFF));
-            return crc;
-        }
-
-        static bq_forceinline uint32_t _crc32_sw_u64(uint32_t crc, uint64_t v)
-        {
-            crc = _crc32_sw_u32(crc, (uint32_t)(v & 0xFFFFFFFF));
-            crc = _crc32_sw_u32(crc, (uint32_t)((v >> 32) & 0xFFFFFFFF));
-            return crc;
-        }
-
-        // ---------------- HW Intrinsics ----------------
-        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u8_hw(uint32_t crc, uint8_t v)
-        {
-        #if defined(BQ_X86)
-            return _mm_crc32_u8(crc, v);
-        #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
-            return __crc32b(crc, v);
-        #else
-            return _crc32_sw_u8(crc, v);
-        #endif
-        }
-
-        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u16_hw(uint32_t crc, uint16_t v)
-        {
-        #if defined(BQ_X86)
-            return _mm_crc32_u16(crc, v);
-        #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
-            return __crc32h(crc, v);
-        #else
-            return _crc32_sw_u16(crc, v);
-        #endif
-        }
-
-        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u32_hw(uint32_t crc, uint32_t v)
-        {
-        #if defined(BQ_X86)
-            return _mm_crc32_u32(crc, v);
-        #elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
-            return __crc32w(crc, v);
-        #else
-            return _crc32_sw_u32(crc, v);
-        #endif
-        }
-
-        static bq_forceinline BQ_HW_CRC_TARGET uint32_t _bq_crc32_u64_hw(uint32_t crc, uint64_t v)
-        {
-        #if defined(BQ_X86_64)
-            return (uint32_t)_mm_crc32_u64(crc, v);
-        #elif defined(BQ_ARM_64) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
-            return __crc32d(crc, v);
-        #else
-            return _crc32_sw_u64(crc, v);
-        #endif
-        }
-
-        #define BQ_GEN_HASH_CORE(DO_COPY, CRC_U8, CRC_U16, CRC_U32, CRC_U64) \
-            const uint8_t* s = (const uint8_t*)src; \
-            uint8_t* d = (uint8_t*)dst; \
-            uint32_t h1 = 0, h2 = 0, h3 = 0, h4 = 0; \
-            BQ_LIKELY_IF(len >= 32) { \
-                const uint8_t* const src_end = s + len; \
-                uint8_t* const dst_end = d + len; \
-                while (s <= src_end - 32) { \
-                    uint64_t v1, v2, v3, v4; \
-                    memcpy(&v1, s, 8); memcpy(&v2, s + 8, 8); memcpy(&v3, s + 16, 8); memcpy(&v4, s + 24, 8); \
-                    BQ_CONSTEXPR_IF (DO_COPY) { \
-                        memcpy(d, &v1, 8); memcpy(d + 8, &v2, 8); memcpy(d + 16, &v3, 8); memcpy(d + 24, &v4, 8); \
-                        d += 32; \
-                    } \
-                    h1 = CRC_U64(h1, v1); h2 = CRC_U64(h2, v2); h3 = CRC_U64(h3, v3); h4 = CRC_U64(h4, v4); \
-                    s += 32; \
-                } \
-                if (s < src_end) { \
-                    s = src_end - 32; \
-                    uint64_t v1, v2, v3, v4; \
-                    memcpy(&v1, s, 8); memcpy(&v2, s + 8, 8); memcpy(&v3, s + 16, 8); memcpy(&v4, s + 24, 8); \
-                    BQ_CONSTEXPR_IF (DO_COPY) { \
-                        d = dst_end - 32; \
-                        memcpy(d, &v1, 8); memcpy(d + 8, &v2, 8); memcpy(d + 16, &v3, 8); memcpy(d + 24, &v4, 8); \
-                    } \
-                    h1 = CRC_U64(h1, v1); h2 = CRC_U64(h2, v2); h3 = CRC_U64(h3, v3); h4 = CRC_U64(h4, v4); \
-                } \
-            } else { \
-                if (len >= 16) { \
-                    uint64_t v1, v2; \
-                    memcpy(&v1, s, 8); memcpy(&v2, s + 8, 8); \
-                    BQ_CONSTEXPR_IF (DO_COPY) { memcpy(d, &v1, 8); memcpy(d + 8, &v2, 8); } \
-                    h1 = CRC_U64(h1, v1); h2 = CRC_U64(h2, v2); \
-                    const uint8_t* s_last = s + len - 16; \
-                    memcpy(&v1, s_last, 8); memcpy(&v2, s_last + 8, 8); \
-                    BQ_CONSTEXPR_IF (DO_COPY) { \
-                        uint8_t* d_last = d + len - 16; \
-                        memcpy(d_last, &v1, 8); memcpy(d_last + 8, &v2, 8); \
-                    } \
-                    h3 = CRC_U64(h3, v1); h4 = CRC_U64(h4, v2); \
-                } else if (len >= 8) { \
-                    uint64_t v; \
-                    memcpy(&v, s, 8); \
-                    BQ_CONSTEXPR_IF (DO_COPY) memcpy(d, &v, 8); \
-                    h1 = CRC_U64(h1, v); \
-                    const uint8_t* s_last = s + len - 8; \
-                    memcpy(&v, s_last, 8); \
-                    BQ_CONSTEXPR_IF (DO_COPY) { uint8_t* d_last = d + len - 8; memcpy(d_last, &v, 8); } \
-                    h2 = CRC_U64(h2, v); \
-                } else if (len >= 4) { \
-                    uint32_t v; \
-                    memcpy(&v, s, 4); \
-                    BQ_CONSTEXPR_IF (DO_COPY) memcpy(d, &v, 4); \
-                    h1 = CRC_U32(h1, v); \
-                    const uint8_t* s_last = s + len - 4; \
-                    memcpy(&v, s_last, 4); \
-                    BQ_CONSTEXPR_IF (DO_COPY) { uint8_t* d_last = d + len - 4; memcpy(d_last, &v, 4); } \
-                    h2 = CRC_U32(h2, v); \
-                } else if (len > 0) { \
-                    if (len & 2) { \
-                        uint16_t v; \
-                        memcpy(&v, s, 2); \
-                        BQ_CONSTEXPR_IF (DO_COPY) { memcpy(d, &v, 2); d += 2; } \
-                        h1 = CRC_U16(h1, v); \
-                        s += 2; \
-                    } \
-                    if (len & 1) { \
-                        uint8_t v = *s; \
-                        BQ_CONSTEXPR_IF (DO_COPY) *d = v; \
-                        h2 = CRC_U8(h2, v); \
-                    } \
-                } \
-            } \
-            uint64_t low = (uint64_t)(h1 ^ h3); \
-            uint64_t high = (uint64_t)(h2 ^ h4); \
-            return (high << 32) | low; \
-
-
-        // Implementations
-        static BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_memcpy_with_hash_hw(void* dst, const void* src, size_t len) {
-            BQ_GEN_HASH_CORE(true, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
-        }
-        static BQ_CRC_HW_INLINE uint64_t _bq_memcpy_with_hash_sw(void* dst, const void* src, size_t len) {
-            BQ_GEN_HASH_CORE(true, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
-        }
-        static BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_hash_only_hw(const void* src, size_t len) {
-            void* dst = nullptr; // Dummy
-            BQ_GEN_HASH_CORE(false, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
-        }
-        static BQ_CRC_HW_INLINE uint64_t _bq_hash_only_sw(const void* src, size_t len) {
-            void* dst = nullptr; // Dummy
-            BQ_GEN_HASH_CORE(false, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
-        }
-
+        // Optimistic ASCII conversion helpers.
+        // Tries to convert as many ASCII characters as possible using aggressive SIMD.
+        // Returns the number of characters successfully converted.
+        // If the return value < src_len, it means a non-ASCII char was encountered (or end of buffer).
+        // The return index is guaranteed to be <= the first non-ASCII character index.
+        static uint32_t _utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static uint32_t _utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len); 
     public:
         /**
          * Ultra-fast copy-and-hash utility optimized for modern CPU pipelines.
@@ -213,27 +67,13 @@ namespace bq {
          * Uses 4-way interleaved CRC32C and overlapping block strategy.
          * returns: ((h1 ^ h3) << 32) | (h2 ^ h4)
          */
-        static bq_forceinline uint64_t bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len)
-        {
-            BQ_LIKELY_IF(_bq_crc32_supported_) {
-                return _bq_memcpy_with_hash_hw(dst, src, len);
-            } else {
-                return _bq_memcpy_with_hash_sw(dst, src, len);
-            }
-        }
+        static uint64_t bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len);
 
         /**
          * Ultra-fast hash utility optimized for modern CPU pipelines.
          * Approaches hardware limits.
          */
-        static bq_forceinline uint64_t bq_hash_only(const void* src, size_t len)
-        {
-            BQ_LIKELY_IF(_bq_crc32_supported_) {
-                return _bq_hash_only_hw(src, len);
-            } else {
-                return _bq_hash_only_sw(src, len);
-            }
-        }
+        static uint64_t bq_hash_only(const void* src, size_t len);
 
         static void bq_assert(bool cond, bq::string msg);
         static void bq_record(bq::string msg, string file_name = "__bq_assert.log");
@@ -298,26 +138,20 @@ namespace bq {
         /// </summary>
         static uint32_t utf16_to_utf8_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
         
-        // Internal helpers exposed for benchmark purposes (or keep private if friend class works)
-        static uint32_t _utf16_to_utf8_scalar_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
-        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
-
         /// <summary>
         /// High performance convert utf8 to utf16 (SIMD accelerated)
         /// </summary>
         static uint32_t utf8_to_utf16_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
 
-        // Internal helpers exposed for benchmark purposes
-        static uint32_t _utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
-        static BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        /// <summary>
+        /// High performance convert utf16 to utf8 (SIMD accelerated)
+        /// </summary>
+        static uint32_t utf16_to_utf8_ascii_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
 
-        // Optimistic ASCII conversion helpers.
-        // Tries to convert as many ASCII characters as possible using aggressive SIMD.
-        // Returns the number of characters successfully converted.
-        // If the return value < src_len, it means a non-ASCII char was encountered (or end of buffer).
-        // The return index is guaranteed to be <= the first non-ASCII character index.
-        static uint32_t _utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
-        static uint32_t _utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        /// <summary>
+        /// High performance convert utf8 to utf16 (SIMD accelerated)
+        /// </summary>
+        static uint32_t utf8_to_utf16_ascii_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
 
         /// <summary>
         /// Allocates and constructs an object of type `T` with the specified alignment.
