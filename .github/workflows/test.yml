@@ -1690,23 +1690,14 @@ jobs:
             adb push "${{ steps.locate.outputs.dbg }}" /data/local/tmp/BqLogUnitTest_dbg
             adb shell "chmod 755 /data/local/tmp/BqLogUnitTest_dbg"
             
-            # We use single quotes for the command to prevent Runner expansion of $?.
-            # We must break single quotes to insert the command.
-            # Logic: Run test; Capture $? to VAR; Echo VAR to stdout; Echo VAR to file; Cat file to stdout.
-            adb shell 'cd /data/local/tmp && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg; EXIT_CODE=$?; echo "Device: Test finished with code $EXIT_CODE"; echo $EXIT_CODE > exit_code_dbg.txt; echo "Device: File content:"; cat exit_code_dbg.txt'
+            # Run and write exit code to file on device
+            adb shell 'cd /data/local/tmp && TMPDIR=/data/local/tmp ./BqLogUnitTest_dbg; echo $? > exit_code_dbg.txt'
             
+            # Pull and check. The check MUST be on one line if variables are used, or use files.
+            # We use xargs to trim and [ ... ] to test.
             adb pull /data/local/tmp/exit_code_dbg.txt .
-            echo "Host: Pulled file content:"
-            cat exit_code_dbg.txt
-            
-            # Read into variable (command substitution strips trailing newline automatically)
-            EXIT_CODE_DBG=$(cat exit_code_dbg.txt)
-            echo "Host: Parsed variable: '${EXIT_CODE_DBG}'"
-            
-            if [ "$EXIT_CODE_DBG" != "0" ]; then
-              echo "::error::Debug Test failed with code $EXIT_CODE_DBG"
-              exit 1
-            fi
+            echo "Debug Test Exit Code: $(cat exit_code_dbg.txt | xargs)"
+            [ "$(cat exit_code_dbg.txt | xargs)" = "0" ]
             
             # === Release Test ===
             echo "----------------------------------------"
@@ -1715,16 +1706,8 @@ jobs:
             adb push "${{ steps.locate.outputs.rel }}" /data/local/tmp/BqLogUnitTest_rel
             adb shell "chmod 755 /data/local/tmp/BqLogUnitTest_rel"
             
-            adb shell 'cd /data/local/tmp && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel; EXIT_CODE=$?; echo "Device: Test finished with code $EXIT_CODE"; echo $EXIT_CODE > exit_code_rel.txt; echo "Device: File content:"; cat exit_code_rel.txt'
+            adb shell 'cd /data/local/tmp && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel; echo $? > exit_code_rel.txt'
             
             adb pull /data/local/tmp/exit_code_rel.txt .
-            echo "Host: Pulled file content:"
-            cat exit_code_rel.txt
-            
-            EXIT_CODE_REL=$(cat exit_code_rel.txt)
-            echo "Host: Parsed variable: '${EXIT_CODE_REL}'"
-            
-            if [ "$EXIT_CODE_REL" != "0" ]; then
-              echo "::error::Release Test failed with code $EXIT_CODE_REL"
-              exit 1
-            fi
+            echo "Release Test Exit Code: $(cat exit_code_rel.txt | xargs)"
+            [ "$(cat exit_code_rel.txt | xargs)" = "0" ]
