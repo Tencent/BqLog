@@ -1161,6 +1161,54 @@ namespace bq {
 
         return static_cast<uint32_t>(src_ptr - start_src);
     }
+#elif defined(BQ_ARM_NEON)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET  uint32_t _impl_utf16_to_utf8_ascii_optimistic_neon(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr) {
+        const auto* start_src = src_ptr;
+
+        // 1. Try 32 chars (64 bytes source)
+        while (src_ptr + 32 <= src_end) {
+            uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
+            uint16x8_t v1 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 8));
+            uint16x8_t v2 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 16));
+            uint16x8_t v3 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 24));
+
+            uint16x8_t acc = vorrq_u16(vorrq_u16(v0, v1), vorrq_u16(v2, v3));
+            BQ_UNLIKELY_IF(bq_vmaxvq_u16(acc) >= 0x0080) {
+                return static_cast<uint32_t>(src_ptr - start_src);
+            }
+
+            vst1q_u8(reinterpret_cast<uint8_t*>(dst_ptr), vcombine_u8(vmovn_u16(v0), vmovn_u16(v1)));
+            vst1q_u8(reinterpret_cast<uint8_t*>(dst_ptr + 16), vcombine_u8(vmovn_u16(v2), vmovn_u16(v3)));
+            src_ptr += 32;
+            dst_ptr += 32;
+        }
+
+        // 2. Try 16 chars (32 bytes)
+        if (src_ptr + 16 <= src_end) {
+            uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
+            uint16x8_t v1 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 8));
+
+            uint16x8_t acc = vorrq_u16(v0, v1);
+            if (bq_vmaxvq_u16(acc) >= 0x0080) {
+                return static_cast<uint32_t>(src_ptr - start_src);
+            }
+            vst1q_u8(reinterpret_cast<uint8_t*>(dst_ptr), vcombine_u8(vmovn_u16(v0), vmovn_u16(v1)));
+            src_ptr += 16;
+            dst_ptr += 16;
+        }
+
+        // 3. Try 8 chars (16 bytes)
+        if (src_ptr + 8 <= src_end) {
+            uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
+            if (bq_vmaxvq_u16(v0) >= 0x0080) {
+                return static_cast<uint32_t>(src_ptr - start_src);
+            }
+            vst1_u8(reinterpret_cast<uint8_t*>(dst_ptr), vmovn_u16(v0));
+            src_ptr += 8;
+            dst_ptr += 8;
+        }
+        return static_cast<uint32_t>(src_ptr - start_src);
+    }
 #endif
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
@@ -1179,49 +1227,7 @@ namespace bq {
         return _impl_utf16_to_utf8_ascii_optimistic_sse(src_ptr, src_end, dst_ptr);
 #else
     #if defined(BQ_ARM_NEON)
-        // NEON Optimistic
-        // 1. Try 32 chars (64 bytes source)
-        while (src_ptr + 32 <= src_end) {
-            uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
-            uint16x8_t v1 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 8));
-            uint16x8_t v2 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 16));
-            uint16x8_t v3 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 24));
-            
-            uint16x8_t acc = vorrq_u16(vorrq_u16(v0, v1), vorrq_u16(v2, v3));
-            BQ_UNLIKELY_IF (bq_vmaxvq_u16(acc) >= 0x0080) {
-                 return (uint32_t)(src_ptr - src);
-            }
-            
-            vst1q_u8(reinterpret_cast<uint8_t*>(dst_ptr), vcombine_u8(vmovn_u16(v0), vmovn_u16(v1)));
-            vst1q_u8(reinterpret_cast<uint8_t*>(dst_ptr + 16), vcombine_u8(vmovn_u16(v2), vmovn_u16(v3)));
-            src_ptr += 32;
-            dst_ptr += 32;
-        }
-
-        // 2. Try 16 chars (32 bytes)
-        if (src_ptr + 16 <= src_end) {
-            uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
-            uint16x8_t v1 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 8));
-            
-            uint16x8_t acc = vorrq_u16(v0, v1);
-            if (bq_vmaxvq_u16(acc) >= 0x0080) {
-                return (uint32_t)(src_ptr - src);
-            }
-            vst1q_u8(reinterpret_cast<uint8_t*>(dst_ptr), vcombine_u8(vmovn_u16(v0), vmovn_u16(v1)));
-            src_ptr += 16;
-            dst_ptr += 16;
-        }
-
-        // 3. Try 8 chars (16 bytes)
-        if (src_ptr + 8 <= src_end) {
-            uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
-            if (bq_vmaxvq_u16(v0) >= 0x0080) {
-                return (uint32_t)(src_ptr - src);
-            }
-            vst1_u8(reinterpret_cast<uint8_t*>(dst_ptr), vmovn_u16(v0));
-            src_ptr += 8;
-            dst_ptr += 8;
-        }
+        _impl_utf16_to_utf8_ascii_optimistic_neon(src_ptr, src_end, dst_ptr);
     #endif
         return static_cast<uint32_t>(src_ptr - src);
 #endif
@@ -1317,6 +1323,67 @@ namespace bq {
 
         return static_cast<uint32_t>(src_ptr - start_src);
     }
+#elif defined(BQ_ARM_NEON)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_neon(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr) {
+        const auto* start_src = src_ptr;
+        
+        // 1. Try 64 chars
+        while (src_ptr + 64 <= src_end) {
+            uint8x16_t v0 = vld1q_u8(src_ptr);
+            uint8x16_t v1 = vld1q_u8(src_ptr + 16);
+            uint8x16_t v2 = vld1q_u8(src_ptr + 32);
+            uint8x16_t v3 = vld1q_u8(src_ptr + 48);
+
+            uint8x16_t acc = vorrq_u8(vorrq_u8(v0, v1), vorrq_u8(v2, v3));
+            if (bq_vmaxvq_u8(acc) >= 0x80) {
+                return static_cast<uint32_t>(src_ptr - start_src);
+            }
+
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), vmovl_u8(vget_low_u8(v0)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), vmovl_u8(vget_high_u8(v0)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 16), vmovl_u8(vget_low_u8(v1)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 24), vmovl_u8(vget_high_u8(v1)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 32), vmovl_u8(vget_low_u8(v2)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 40), vmovl_u8(vget_high_u8(v2)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 48), vmovl_u8(vget_low_u8(v3)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 56), vmovl_u8(vget_high_u8(v3)));
+
+            src_ptr += 64;
+            dst_ptr += 64;
+        }
+
+        // 2. Try 32 chars
+        if (src_ptr + 32 <= src_end) {
+            uint8x16_t v0 = vld1q_u8(src_ptr);
+            uint8x16_t v1 = vld1q_u8(src_ptr + 16);
+
+            uint8x16_t acc = vorrq_u8(v0, v1);
+            if (bq_vmaxvq_u8(acc) >= 0x80) {
+                return static_cast<uint32_t>(src_ptr - start_src);
+            }
+
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), vmovl_u8(vget_low_u8(v0)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), vmovl_u8(vget_high_u8(v0)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 16), vmovl_u8(vget_low_u8(v1)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 24), vmovl_u8(vget_high_u8(v1)));
+
+            src_ptr += 32;
+            dst_ptr += 32;
+        }
+
+        // 3. Try 16 chars
+        if (src_ptr + 16 <= src_end) {
+            uint8x16_t v0 = vld1q_u8(src_ptr);
+            if (bq_vmaxvq_u8(v0) >= 0x80) {
+                return static_cast<uint32_t>(src_ptr - start_src);
+            }
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), vmovl_u8(vget_low_u8(v0)));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), vmovl_u8(vget_high_u8(v0)));
+            src_ptr += 16;
+            dst_ptr += 16;
+        }
+        return static_cast<uint32_t>(src_ptr - start_src);
+    }
 #endif
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
@@ -1335,62 +1402,7 @@ namespace bq {
         return _impl_utf8_to_utf16_ascii_optimistic_sse(src_ptr, src_end, dst_ptr);
 #else
     #if defined(BQ_ARM_NEON)
-        // NEON Optimistic
-        // 1. Try 64 chars
-        while (src_ptr + 64 <= src_end) {
-            uint8x16_t v0 = vld1q_u8(src_ptr);
-            uint8x16_t v1 = vld1q_u8(src_ptr + 16);
-            uint8x16_t v2 = vld1q_u8(src_ptr + 32);
-            uint8x16_t v3 = vld1q_u8(src_ptr + 48);
-            
-            uint8x16_t acc = vorrq_u8(vorrq_u8(v0, v1), vorrq_u8(v2, v3));
-            if (bq_vmaxvq_u8(acc) >= 0x80) {
-                return (uint32_t)(src_ptr - (const uint8_t*)src);
-            }
-            
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), vmovl_u8(vget_low_u8(v0)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), vmovl_u8(vget_high_u8(v0)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 16), vmovl_u8(vget_low_u8(v1)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 24), vmovl_u8(vget_high_u8(v1)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 32), vmovl_u8(vget_low_u8(v2)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 40), vmovl_u8(vget_high_u8(v2)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 48), vmovl_u8(vget_low_u8(v3)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 56), vmovl_u8(vget_high_u8(v3)));
-            
-            src_ptr += 64;
-            dst_ptr += 64;
-        }
-
-        // 2. Try 32 chars
-        if (src_ptr + 32 <= src_end) {
-            uint8x16_t v0 = vld1q_u8(src_ptr);
-            uint8x16_t v1 = vld1q_u8(src_ptr + 16);
-            
-            uint8x16_t acc = vorrq_u8(v0, v1);
-            if (bq_vmaxvq_u8(acc) >= 0x80) {
-                return (uint32_t)(src_ptr - (const uint8_t*)src);
-            }
-            
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), vmovl_u8(vget_low_u8(v0)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), vmovl_u8(vget_high_u8(v0)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 16), vmovl_u8(vget_low_u8(v1)));
-            vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 24), vmovl_u8(vget_high_u8(v1)));
-            
-            src_ptr += 32;
-            dst_ptr += 32;
-        }
-
-        // 3. Try 16 chars
-        if (src_ptr + 16 <= src_end) {
-             uint8x16_t v0 = vld1q_u8(src_ptr);
-             if (bq_vmaxvq_u8(v0) >= 0x80) {
-                 return (uint32_t)(src_ptr - (const uint8_t*)src);
-             }
-             vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), vmovl_u8(vget_low_u8(v0)));
-             vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), vmovl_u8(vget_high_u8(v0)));
-             src_ptr += 16;
-             dst_ptr += 16;
-        }
+        return _impl_utf8_to_utf16_ascii_optimistic_neon(src_ptr, src_end, dst_ptr);
     #endif
         return static_cast<uint32_t>(src_ptr - reinterpret_cast<const uint8_t*>(src));
 #endif
