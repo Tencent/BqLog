@@ -834,7 +834,27 @@ namespace bq {
                  src_ptr += 8;
                  dst_ptr += 8;
             } else {
-                 break;
+                // Scalar fallback for this chunk
+                 for (int32_t i = 0; i < 8; ++i) {
+                     char16_t c = src_ptr[i];
+                     if (c < 0x80) {
+                         *dst_ptr++ = (char)c;
+                     } else {
+                         // Simple fallback logic
+                         if (c < 0x800) {
+                             *dst_ptr++ = static_cast<char>(0xC0 | (c >> 6));
+                             *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
+                         } else if (c >= 0xD800 && c <= 0xDFFF) {
+                             src_ptr += i; 
+                             goto scalar_utf16; // break out to scalar
+                         } else {
+                             *dst_ptr++ = static_cast<char>(0xE0 | (c >> 12));
+                             *dst_ptr++ = static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+                             *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
+                         }
+                     }
+                 }
+                 src_ptr += 8;
             }
         }
     scalar_utf16:
@@ -968,7 +988,26 @@ namespace bq {
                  src_ptr += 16;
                  dst_ptr += 16;
              } else {
-                 break;
+                 // Fallback (same as x86)
+                 for(int32_t i=0; i<16; ++i) {
+                     if (*src_ptr < 0x80) {
+                         *dst_ptr++ = static_cast<char16_t>(*src_ptr++);
+                     } else {
+                         uint8_t c = *src_ptr;
+                         if ((c & 0xE0) == 0xC0) {
+                             *dst_ptr++ = static_cast<char16_t>(((c & 0x1F) << 6) | (src_ptr[1] & 0x3F)); src_ptr += 2;
+                         } else if ((c & 0xF0) == 0xE0) {
+                             *dst_ptr++ = static_cast<char16_t>(((c & 0x0F) << 12) | ((src_ptr[1] & 0x3F) << 6) | (src_ptr[2] & 0x3F)); src_ptr += 3;
+                         } else {
+                             uint32_t cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((src_ptr[1] & 0x3F) << 12) | ((src_ptr[2] & 0x3F) << 6) | (src_ptr[3] & 0x3F));
+                             cp -= 0x10000;
+                             *dst_ptr++ = static_cast<char16_t>((cp >> 10) + 0xD800);
+                             *dst_ptr++ = static_cast<char16_t>((cp & 0x3FF) + 0xDC00);
+                             src_ptr += 4;
+                         }
+                         break;
+                     }
+                 }
              }
         }
         return (uint32_t)((uint32_t)(dst_ptr - dst) + _impl_utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
