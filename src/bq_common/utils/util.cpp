@@ -15,8 +15,6 @@
 #include "bq_common/bq_common.h"
 #if defined(BQ_ANDROID)
 #include <android/log.h>
-#include <unistd.h>
-#elif defined(BQ_LINUX)
 #elif defined(BQ_OHOS)
 #include <hilog/log.h>
 #elif defined(BQ_WIN)
@@ -24,9 +22,39 @@
 #elif defined(BQ_APPLE)
 #include <sys/sysctl.h>
 #endif
+#if defined(BQ_POSIX)
+#include <unistd.h>
+#endif
 
 #if defined(BQ_ARM)
 #include <arm_neon.h>
+
+bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v) {
+#if defined(BQ_ARM_64)
+    return vmaxvq_u16(v);
+#else
+    uint16x4_t hi = vget_high_u16(v);
+    uint16x4_t lo = vget_low_u16(v);
+    uint16x4_t m = vmax_u16(hi, lo);
+    m = vpmax_u16(m, m);
+    m = vpmax_u16(m, m);
+    return vget_lane_u16(m, 0);
+#endif
+}
+
+bq_forceinline uint8_t bq_vmaxvq_u8(uint8x16_t v) {
+#if defined(BQ_ARM_64)
+    return vmaxvq_u8(v);
+#else
+    uint8x8_t hi = vget_high_u8(v);
+    uint8x8_t lo = vget_low_u8(v);
+    uint8x8_t m = vmax_u8(hi, lo);
+    m = vpmax_u8(m, m);
+    m = vpmax_u8(m, m);
+    m = vpmax_u8(m, m);
+    return vget_lane_u8(m, 0);
+#endif
+}
 #endif
 
 namespace bq {
@@ -828,7 +856,7 @@ namespace bq {
         while (src_ptr + 8 <= src_end) {
             uint16x8_t chunk = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
             // Check if all < 0x80
-            if (vmaxvq_u16(chunk) < 0x80) {
+            if (bq_vmaxvq_u16(chunk) < 0x80) {
                  uint8x8_t ascii = vmovn_u16(chunk);
                  vst1_u8(reinterpret_cast<uint8_t*>(dst_ptr), ascii);
                  src_ptr += 8;
@@ -980,7 +1008,7 @@ namespace bq {
 #elif defined(BQ_ARM) && defined(BQ_HW_SIMD_TARGET)
         while (src_ptr + 16 <= src_end) {
              uint8x16_t chunk = vld1q_u8(src_ptr);
-             if (vmaxvq_u8(chunk) < 0x80) {
+             if (bq_vmaxvq_u8(chunk) < 0x80) {
                  uint16x8_t low = vmovl_u8(vget_low_u8(chunk));
                  uint16x8_t high = vmovl_u8(vget_high_u8(chunk));
                  vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), low);
@@ -1153,7 +1181,7 @@ namespace bq {
             uint16x8_t v3 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 24));
             
             uint16x8_t acc = vorrq_u16(vorrq_u16(v0, v1), vorrq_u16(v2, v3));
-            if (vmaxvq_u16(acc) >= 0x0080) {
+            if (bq_vmaxvq_u16(acc) >= 0x0080) {
                  return (uint32_t)(src_ptr - src);
             }
             
@@ -1169,7 +1197,7 @@ namespace bq {
             uint16x8_t v1 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 8));
             
             uint16x8_t acc = vorrq_u16(v0, v1);
-            if (vmaxvq_u16(acc) >= 0x0080) {
+            if (bq_vmaxvq_u16(acc) >= 0x0080) {
                 return (uint32_t)(src_ptr - src);
             }
             vst1q_u8(reinterpret_cast<uint8_t*>(dst_ptr), vcombine_u8(vmovn_u16(v0), vmovn_u16(v1)));
@@ -1180,7 +1208,7 @@ namespace bq {
         // 3. Try 8 chars (16 bytes)
         if (src_ptr + 8 <= src_end) {
             uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
-            if (vmaxvq_u16(v0) >= 0x0080) {
+            if (bq_vmaxvq_u16(v0) >= 0x0080) {
                 return (uint32_t)(src_ptr - src);
             }
             vst1_u8(reinterpret_cast<uint8_t*>(dst_ptr), vmovn_u16(v0));
@@ -1307,7 +1335,7 @@ namespace bq {
             uint8x16_t v3 = vld1q_u8(src_ptr + 48);
             
             uint8x16_t acc = vorrq_u8(vorrq_u8(v0, v1), vorrq_u8(v2, v3));
-            if (vmaxvq_u8(acc) >= 0x80) {
+            if (bq_vmaxvq_u8(acc) >= 0x80) {
                 return (uint32_t)(src_ptr - (const uint8_t*)src);
             }
             
@@ -1330,7 +1358,7 @@ namespace bq {
             uint8x16_t v1 = vld1q_u8(src_ptr + 16);
             
             uint8x16_t acc = vorrq_u8(v0, v1);
-            if (vmaxvq_u8(acc) >= 0x80) {
+            if (bq_vmaxvq_u8(acc) >= 0x80) {
                 return (uint32_t)(src_ptr - (const uint8_t*)src);
             }
             
@@ -1346,7 +1374,7 @@ namespace bq {
         // 3. Try 16 chars
         if (src_ptr + 16 <= src_end) {
              uint8x16_t v0 = vld1q_u8(src_ptr);
-             if (vmaxvq_u8(v0) >= 0x80) {
+             if (bq_vmaxvq_u8(v0) >= 0x80) {
                  return (uint32_t)(src_ptr - (const uint8_t*)src);
              }
              vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), vmovl_u8(vget_low_u8(v0)));

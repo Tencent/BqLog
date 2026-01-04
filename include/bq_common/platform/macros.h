@@ -283,10 +283,16 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #define BQ_RESTRICT
 #endif
 
+
+
 // Target attribute for GCC/Clang to enable specific instruction sets for specific functions.
 #if (defined(BQ_CLANG) || defined(BQ_GCC))
     #if defined(BQ_ARM)
-        #define BQ_HW_CRC_TARGET __attribute__((target("+crc")))
+        #if defined(BQ_ARM_64)
+            #define BQ_HW_CRC_TARGET __attribute__((target("+crc")))
+        #else
+            #define BQ_HW_CRC_TARGET
+        #endif
         #define BQ_HW_SIMD_TARGET
         #define BQ_HW_SIMD_SSE_TARGET
     #elif defined(BQ_X86)
