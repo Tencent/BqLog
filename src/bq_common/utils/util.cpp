@@ -118,24 +118,24 @@ namespace bq {
 
     bq_forceinline uint32_t _crc32_sw_u16(uint32_t crc, uint16_t v)
     {
-        crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
-        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
+        crc = _crc32_sw_u8(crc, static_cast<uint8_t>(v & 0xFF));
+        crc = _crc32_sw_u8(crc, static_cast<uint8_t>((v >> 8) & 0xFF));
         return crc;
     }
 
     bq_forceinline uint32_t _crc32_sw_u32(uint32_t crc, uint32_t v)
     {
-        crc = _crc32_sw_u8(crc, (uint8_t)(v & 0xFF));
-        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 8) & 0xFF));
-        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 16) & 0xFF));
-        crc = _crc32_sw_u8(crc, (uint8_t)((v >> 24) & 0xFF));
+        crc = _crc32_sw_u8(crc, static_cast<uint8_t>(v & 0xFF));
+        crc = _crc32_sw_u8(crc, static_cast<uint8_t>((v >> 8) & 0xFF));
+        crc = _crc32_sw_u8(crc, static_cast<uint8_t>((v >> 16) & 0xFF));
+        crc = _crc32_sw_u8(crc, static_cast<uint8_t>((v >> 24) & 0xFF));
         return crc;
     }
 
     bq_forceinline uint32_t _crc32_sw_u64(uint32_t crc, uint64_t v)
     {
-        crc = _crc32_sw_u32(crc, (uint32_t)(v & 0xFFFFFFFF));
-        crc = _crc32_sw_u32(crc, (uint32_t)((v >> 32) & 0xFFFFFFFF));
+        crc = _crc32_sw_u32(crc, static_cast<uint32_t>(v & 0xFFFFFFFF));
+        crc = _crc32_sw_u32(crc, static_cast<uint32_t>((v >> 32) & 0xFFFFFFFF));
         return crc;
     }
 
@@ -185,8 +185,8 @@ namespace bq {
     }
 
 #define BQ_GEN_HASH_CORE(DO_COPY, CRC_U8, CRC_U16, CRC_U32, CRC_U64) \
-            const uint8_t* s = (const uint8_t*)src; \
-            uint8_t* d = (uint8_t*)dst; \
+            auto* s = reinterpret_cast<const uint8_t*>(src); \
+            auto* d = reinterpret_cast<uint8_t*>(dst); \
             uint32_t h1 = 0, h2 = 0, h3 = 0, h4 = 0; \
             BQ_LIKELY_IF(len >= 32) { \
                 const uint8_t* const src_end = s + len; \
@@ -316,7 +316,7 @@ namespace bq {
     {
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
         string path = TO_ABSOLUTE_PATH(file_name, true);
-        bq::file_manager::instance().append_all_text(path, msg);
+        bq::file_manager::append_all_text(path, msg);
     }
 
 #if defined(BQ_TOOLS) || defined(BQ_UNIT_TEST)
@@ -341,7 +341,7 @@ namespace bq {
         if (format) {
             while (true) {
                 va_start(args, format);
-                bool failed = ((bq::array<char>::size_type)vsnprintf(&device_console_buffer[0], device_console_buffer.size(), format, args) + 1) >= device_console_buffer.size();
+                bool failed = (static_cast<bq::array<char>::size_type>(vsnprintf(&device_console_buffer[0], device_console_buffer.size(), format, args)) + 1) >= device_console_buffer.size();
                 va_end(args);
                 if (failed) {
                     device_console_buffer.fill_uninitialized(device_console_buffer.size());
@@ -420,10 +420,9 @@ namespace bq {
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
 
         // Color code（ANSI VT）
-        const char* color = "";
-        switch (level)
-        {
-        case bq::log_level::verbose:   
+        auto color = "";
+        switch (level) {
+        case bq::log_level::verbose:
             color = "\x1b[3m";
             break;
         case bq::log_level::debug:
@@ -445,27 +444,27 @@ namespace bq {
             color = "\x1b[37m";
             break;
         }
-        const char* reset = "\x1b[0m";
-        const char* prefix = "[Bq]";
-        const char* newline = "\n";
+        auto reset = "\x1b[0m";
+        auto prefix = "[Bq]";
+        auto newline = "\n";
         const char* msg = text ? text : "";
 
         const size_t color_len = strlen(color);
         const size_t reset_len = strlen(reset);
         const size_t prefix_len = strlen(prefix);
         const size_t msg_len = strlen(msg);
-        const size_t nl_len = 1; // "\n"
+        constexpr size_t nl_len = 1; // "\n"
 
         bool to_stderr = (level == bq::log_level::error || level == bq::log_level::fatal);
 
-        const size_t STACK_CAP = 1024;
+        constexpr size_t STACK_CAP = 1024;
 #if defined(BQ_WIN)
         HANDLE h = ::GetStdHandle(to_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
 
         static bool s_vt_inited = false;
         static bool s_vt_enabled = false;
         DWORD mode = 0;
-        bool has_console = (h && h != INVALID_HANDLE_VALUE && ::GetConsoleMode(h, &mode));
+        const bool has_console = (h && h != INVALID_HANDLE_VALUE && ::GetConsoleMode(h, &mode));
 
         if (has_console && !s_vt_inited) {
             s_vt_enabled = (::SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0);
@@ -574,7 +573,7 @@ namespace bq {
 
     uint32_t util::get_hash(const void* data, size_t size)
     {
-        uint64_t h64 = util::bq_hash_only(data, size);
+        const uint64_t h64 = util::bq_hash_only(data, size);
         return static_cast<uint32_t>(h64 ^ (h64 >> 32));
     }
 
@@ -586,7 +585,7 @@ namespace bq {
     bool util::is_little_endian()
     {
         int32_t test = 1;
-        return *(char*)(&test) == 1;
+        return *reinterpret_cast<char*>(&test) == 1;
     }
 
     void util::srand(uint32_t seed)
@@ -596,7 +595,7 @@ namespace bq {
     uint32_t util::rand()
     {
         if (rand_seed == 0)
-            rand_seed = (uint32_t)time(0);
+            rand_seed = static_cast<uint32_t>(time(nullptr));
         uint32_t x = rand_seed;
         x ^= x << 13;
         x ^= x >> 17;
@@ -635,7 +634,7 @@ namespace bq {
         const char16_t* s = src_utf16_str;
         const char16_t* p = s;
 
-        while ((uint32_t)(p - s) < wchar_len) {
+        while (static_cast<uint32_t>(p - s) < wchar_len) {
             char16_t c = *p++;
             if (c == 0) break;
             if (surrogate) {
@@ -648,10 +647,10 @@ namespace bq {
                 }
             } else {
                 if (c < 0x80) {
-                    target_utf8_str[result_len++] = (char)c;
+                    target_utf8_str[result_len++] = static_cast<char>(c);
 
-                    while ((uint32_t)(p - s) < wchar_len && *p && *p < 0x80) {
-                        target_utf8_str[result_len++] = (char)*p++;
+                    while (static_cast<uint32_t>(p - s) < wchar_len && *p && *p < 0x80) {
+                        target_utf8_str[result_len++] = static_cast<char>(*p++);
                     }
 
                     continue;
@@ -668,19 +667,19 @@ namespace bq {
                 continue;
 
             if (codepoint < 0x80) {
-                target_utf8_str[result_len++] = (char)codepoint;
+                target_utf8_str[result_len++] = static_cast<char>(codepoint);
             } else if (codepoint < 0x0800) {
-                target_utf8_str[result_len++] = (char)(0xC0 | (codepoint >> 6));
-                target_utf8_str[result_len++] = (char)(0x80 | (codepoint & 0x3F));
+                target_utf8_str[result_len++] = static_cast<char>(0xC0 | (codepoint >> 6));
+                target_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
             } else if (codepoint < 0x10000) {
-                target_utf8_str[result_len++] = (char)(0xE0 | (codepoint >> 12));
-                target_utf8_str[result_len++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-                target_utf8_str[result_len++] = (char)(0x80 | (codepoint & 0x3F));
+                target_utf8_str[result_len++] = static_cast<char>(0xE0 | (codepoint >> 12));
+                target_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                target_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
             } else {
-                target_utf8_str[result_len++] = (char)(0xF0 | (codepoint >> 18));
-                target_utf8_str[result_len++] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
-                target_utf8_str[result_len++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-                target_utf8_str[result_len++] = (char)(0x80 | (codepoint & 0x3F));
+                target_utf8_str[result_len++] = static_cast<char>(0xF0 | (codepoint >> 18));
+                target_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+                target_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                target_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
             }
         }
         assert(result_len <= target_utf8_character_num && "target buffer of utf16_to_utf8 is not enough!");
@@ -696,8 +695,8 @@ namespace bq {
         uint32_t codepoint = 0;
 
         const char* p = (const char*)src_utf8_str;
-        while ((uint32_t)(p - src_utf8_str) < src_character_num) {
-            char16_t c = static_cast<char16_t>(static_cast<uint8_t>(*p++));
+        while (static_cast<uint32_t>(p - src_utf8_str) < src_character_num) {
+            const auto c = static_cast<char16_t>(static_cast<uint8_t>(*p++));
             if (c == 0) break;
             if (mb_size == 0) {
                 if (c < 0x80) {
@@ -730,11 +729,11 @@ namespace bq {
 
                     if (--mb_remain == 0) {
                         if (codepoint < 0x10000) {
-                            target_utf16_str[result_len++] = (char16_t)(codepoint % 0x10000);
+                            target_utf16_str[result_len++] = static_cast<char16_t>(codepoint % 0x10000);
                         } else if (codepoint < 0x110000) {
                             codepoint -= 0x10000;
-                            target_utf16_str[result_len++] = (char16_t)((codepoint >> 10) + 0xD800);
-                            target_utf16_str[result_len++] = (char16_t)((codepoint & 0x3FF) + 0xDC00);
+                            target_utf16_str[result_len++] = static_cast<char16_t>((codepoint >> 10) + 0xD800);
+                            target_utf16_str[result_len++] = static_cast<char16_t>((codepoint & 0x3FF) + 0xDC00);
                         } else {
                             codepoint = mb_remain = 0;
                         }
@@ -763,10 +762,10 @@ namespace bq {
         while (src < src_end) {
             uint32_t c = *src++;
             if (c < 0x80) {
-                *dst_ptr++ = (char)c;
+                *dst_ptr++ = static_cast<char>(c);
                 // Tight loop for ASCII runs
                 while (src < src_end && *src < 0x80) {
-                    *dst_ptr++ = (char)*src++;
+                    *dst_ptr++ = static_cast<char>(*src++);
                 }
             }
             else if (c < 0x800) {
@@ -800,10 +799,10 @@ namespace bq {
     // AVX2 Safe Implementation
     BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_simd_avx2(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
     {
-        char* dst_start = dst_ptr;
+        const char* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
-            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
-            __m256i mask = _mm256_set1_epi16((int16_t)0xFF80u);
+            const __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
+            __m256i mask = _mm256_set1_epi16(static_cast<int16_t>(0xFF80u));
             if (_mm256_testz_si256(chunk, mask)) {
                 __m256i compressed = _mm256_packus_epi16(chunk, chunk); 
                 __m256i permuted = _mm256_permute4x64_epi64(compressed, 0xD8);
@@ -814,18 +813,18 @@ namespace bq {
                  break;
             }
         }
-        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
     }
 
     // SSE Safe Implementation
     BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf16_to_utf8_simd_sse(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
     {
-        char* dst_start = dst_ptr;
+        const char* dst_start = dst_ptr;
         while (src_ptr + 8 <= src_end) {
-            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-            __m128i mask = _mm_set1_epi16((int16_t)0xFF80u);
+            const __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            __m128i mask = _mm_set1_epi16(static_cast<int16_t>(0xFF80u));
             if (_mm_testz_si128(chunk, mask)) {
-                __m128i compressed = _mm_packus_epi16(chunk, chunk); 
+                const __m128i compressed = _mm_packus_epi16(chunk, chunk);
                 _mm_storel_epi64(reinterpret_cast<__m128i*>(dst_ptr), compressed);
                 src_ptr += 8;
                 dst_ptr += 8;
@@ -833,7 +832,7 @@ namespace bq {
                  break;
             }
         }
-        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
     }
 #endif
 
@@ -897,17 +896,17 @@ namespace bq {
     bq_forceinline uint32_t _impl_utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
         (void)dst_len;
-        const uint8_t* s = (const uint8_t*)src;
-        const uint8_t* end = s + src_len;
+        const auto* s = reinterpret_cast<const uint8_t*>(src);
+        const auto* end = s + src_len;
         char16_t* d = dst;
 
         while (s < end) {
             uint8_t c = *s++;
             if (c < 0x80) {
-                *d++ = (char16_t)c;
+                *d++ = static_cast<char16_t>(c);
                 // Tight loop for ASCII runs
                 while (s < end && *s < 0x80) {
-                    *d++ = (char16_t)*s++;
+                    *d++ = static_cast<char16_t>(*s++);
                 }
             }
             else if ((c & 0xE0) == 0xC0) {
@@ -919,25 +918,25 @@ namespace bq {
             }
             else {
                 // 4 bytes or invalid
-                uint32_t cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((s[0] & 0x3F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F));
+                auto cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((s[0] & 0x3F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F));
                 cp -= 0x10000;
                 *d++ = static_cast<char16_t>((cp >> 10) + 0xD800);
                 *d++ = static_cast<char16_t>((cp & 0x3FF) + 0xDC00);
                 s += 3;
             }
         }
-        return (uint32_t)(d - dst);
+        return static_cast<uint32_t>(d - dst);
     }
 
 #if defined(BQ_X86)
     // AVX2 Safe Implementation
     BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_simd_avx2(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
     {
-        char16_t* dst_start = dst_ptr;
+        const char16_t* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
             __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-            if (!_mm_movemask_epi8(chunk)) { 
-                 __m256i wide = _mm256_cvtepu8_epi16(chunk);
+            if (!_mm_movemask_epi8(chunk)) {
+                const __m256i wide = _mm256_cvtepu8_epi16(chunk);
                  _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr), wide);
                  src_ptr += 16;
                  dst_ptr += 16;
@@ -945,13 +944,13 @@ namespace bq {
                  break;
             }
         }
-        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
     }
 
     // SSE Safe Implementation
     BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_simd_sse(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
     {
-        char16_t* dst_start = dst_ptr;
+        const char16_t* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
             __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
             if (!_mm_movemask_epi8(chunk)) { 
@@ -978,7 +977,7 @@ namespace bq {
                          } else if ((c & 0xF0) == 0xE0) {
                              *dst_ptr++ = static_cast<char16_t>(((c & 0x0F) << 12) | ((src_ptr[1] & 0x3F) << 6) | (src_ptr[2] & 0x3F)); src_ptr += 3;
                          } else {
-                             uint32_t cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((src_ptr[1] & 0x3F) << 12) | ((src_ptr[2] & 0x3F) << 6) | (src_ptr[3] & 0x3F));
+                             auto cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((src_ptr[1] & 0x3F) << 12) | ((src_ptr[2] & 0x3F) << 6) | (src_ptr[3] & 0x3F));
                              cp -= 0x10000;
                              *dst_ptr++ = static_cast<char16_t>((cp >> 10) + 0xD800);
                              *dst_ptr++ = static_cast<char16_t>((cp & 0x3FF) + 0xDC00);
@@ -989,14 +988,14 @@ namespace bq {
                  }
             }
         }
-        return (uint32_t)((uint32_t)(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
     }
 #endif
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
-        const uint8_t* src_ptr = (const uint8_t*)src;
-        const uint8_t* src_end = src_ptr + src_len;
+        const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
+        const auto* src_end = src_ptr + src_len;
         char16_t* dst_ptr = dst;
         (void)dst_len;
         (void)src_ptr;
@@ -1041,9 +1040,9 @@ namespace bq {
                  }
              }
         }
-        return (uint32_t)((uint32_t)(dst_ptr - dst) + _impl_utf8_to_utf16_scalar_fast((const char*)src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return static_cast<uint32_t>(static_cast<uint32_t>(dst_ptr - dst) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
 #else
-        return _impl_utf8_to_utf16_scalar_fast((const char*)src, src_len, dst, dst_len);
+        return _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src), src_len, dst, dst_len);
 #endif
     }
 
@@ -1058,14 +1057,15 @@ namespace bq {
         const char16_t* start_src = src_ptr;
         // 1. Try 64 chars (128 bytes)
         while (src_ptr + 64 <= src_end) {
-            __m256i v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
-            __m256i v1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 16));
-            __m256i v2 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 32));
-            __m256i v3 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 48));
-            
-            __m256i acc = _mm256_or_si256(_mm256_or_si256(v0, v1), _mm256_or_si256(v2, v3));
-            if (!_mm256_testz_si256(acc, _mm256_set1_epi16((int16_t)0xFF80u))) {
-                return (uint32_t)(src_ptr - start_src);
+            const auto v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
+            const auto v1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 16));
+            const auto v2 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 32));
+            const auto v3 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 48));
+
+            const auto acc = _mm256_or_si256(_mm256_or_si256(v0, v1), _mm256_or_si256(v2, v3));
+            BQ_UNLIKELY_IF (!_mm256_testz_si256(acc, _mm256_set1_epi16(static_cast<int16_t>(0xFF80u))))
+            {
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
 
             _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr),      _mm256_permute4x64_epi64(_mm256_packus_epi16(v0, v1), 0xD8));
@@ -1077,12 +1077,13 @@ namespace bq {
 
         // 2. Try 32 chars (64 bytes)
         if (src_ptr + 32 <= src_end) {
-            __m256i v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
-            __m256i v1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 16));
+            const auto v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
+            const auto v1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 16));
             
-            __m256i acc = _mm256_or_si256(v0, v1);
-            if (!_mm256_testz_si256(acc, _mm256_set1_epi16((int16_t)0xFF80u))) {
-                 return (uint32_t)(src_ptr - start_src);
+            const auto acc = _mm256_or_si256(v0, v1);
+            BQ_UNLIKELY_IF (!_mm256_testz_si256(acc, _mm256_set1_epi16(static_cast<int16_t>(0xFF80u))))
+            {
+                 return static_cast<uint32_t>(src_ptr - start_src);
             }
 
             _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr), _mm256_permute4x64_epi64(_mm256_packus_epi16(v0, v1), 0xD8));
@@ -1092,18 +1093,19 @@ namespace bq {
 
         // 3. Try 16 chars (32 bytes) - Single YMM load
         if (src_ptr + 16 <= src_end) {
-            __m256i v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
-            if (!_mm256_testz_si256(v0, _mm256_set1_epi16((int16_t)0xFF80u))) {
-                 return (uint32_t)(src_ptr - start_src);
+            const auto v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
+            BQ_UNLIKELY_IF (!_mm256_testz_si256(v0, _mm256_set1_epi16(static_cast<int16_t>(0xFF80u))))
+            {
+                 return static_cast<uint32_t>(src_ptr - start_src);
             }
-            __m256i compressed = _mm256_packus_epi16(v0, v0); 
-            __m256i permuted = _mm256_permute4x64_epi64(compressed, 0xD8); 
+            const auto compressed = _mm256_packus_epi16(v0, v0);
+            const auto permuted = _mm256_permute4x64_epi64(compressed, 0xD8);
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), _mm256_castsi256_si128(permuted));
             src_ptr += 16;
             dst_ptr += 16;
         }
 
-        return (uint32_t)(src_ptr - start_src);
+        return static_cast<uint32_t>(src_ptr - start_src);
     }
 
     // SSE Optimistic
@@ -1113,15 +1115,15 @@ namespace bq {
 
         // 1. Try 32 chars (64 bytes)
         while (src_ptr + 32 <= src_end) {
-            __m128i v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-            __m128i v1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 8));
-            __m128i v2 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 16));
-            __m128i v3 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 24));
+            const auto v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            const auto v1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 8));
+            const auto v2 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 16));
+            const auto v3 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 24));
             
-            __m128i acc = _mm_or_si128(_mm_or_si128(v0, v1), _mm_or_si128(v2, v3));
-            __m128i mask = _mm_set1_epi16((int16_t)0xFF80u);
-            if (!_mm_testz_si128(acc, mask)) {
-                return (uint32_t)(src_ptr - start_src);
+            const auto acc = _mm_or_si128(_mm_or_si128(v0, v1), _mm_or_si128(v2, v3));
+            const auto mask = _mm_set1_epi16(static_cast<int16_t>(0xFF80u));
+            BQ_UNLIKELY_IF (!_mm_testz_si128(acc, mask)) {
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr),      _mm_packus_epi16(v0, v1));
@@ -1133,12 +1135,12 @@ namespace bq {
 
         // 2. Try 16 chars (32 bytes)
         if (src_ptr + 16 <= src_end) {
-            __m128i v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-            __m128i v1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 8));
+            const auto v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            const auto v1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 8));
             
-            __m128i mask = _mm_set1_epi16((int16_t)0xFF80u);
-            if (!_mm_testz_si128(_mm_or_si128(v0, v1), mask)) {
-                return (uint32_t)(src_ptr - start_src);
+            const auto mask = _mm_set1_epi16(static_cast<int16_t>(0xFF80u));
+            BQ_UNLIKELY_IF (!_mm_testz_si128(_mm_or_si128(v0, v1), mask)) {
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), _mm_packus_epi16(v0, v1));
             src_ptr += 16;
@@ -1147,24 +1149,24 @@ namespace bq {
         
         // 3. Try 8 chars (16 bytes)
         if (src_ptr + 8 <= src_end) {
-            __m128i v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-             __m128i mask = _mm_set1_epi16((int16_t)0xFF80u);
-            if (!_mm_testz_si128(v0, mask)) {
-                return (uint32_t)(src_ptr - start_src);
+            const auto v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+             const auto mask = _mm_set1_epi16(static_cast<int16_t>(0xFF80u));
+            BQ_UNLIKELY_IF (!_mm_testz_si128(v0, mask)) {
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             _mm_storel_epi64(reinterpret_cast<__m128i*>(dst_ptr), _mm_packus_epi16(v0, v0));
             src_ptr += 8;
             dst_ptr += 8;
         }
 
-        return (uint32_t)(src_ptr - start_src);
+        return static_cast<uint32_t>(src_ptr - start_src);
     }
 #endif
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
     {
-        const char16_t* src_ptr = src;
-        const char16_t* src_end = src + src_len;
+        const auto* src_ptr = src;
+        const auto* src_end = src + src_len;
         char* dst_ptr = dst;
         (void)dst_len;
         (void)src_ptr;
@@ -1186,7 +1188,7 @@ namespace bq {
             uint16x8_t v3 = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr + 24));
             
             uint16x8_t acc = vorrq_u16(vorrq_u16(v0, v1), vorrq_u16(v2, v3));
-            if (bq_vmaxvq_u16(acc) >= 0x0080) {
+            BQ_UNLIKELY_IF (bq_vmaxvq_u16(acc) >= 0x0080) {
                  return (uint32_t)(src_ptr - src);
             }
             
@@ -1221,7 +1223,7 @@ namespace bq {
             dst_ptr += 8;
         }
     #endif
-        return (uint32_t)(src_ptr - src);
+        return static_cast<uint32_t>(src_ptr - src);
 #endif
     }
 
@@ -1229,15 +1231,15 @@ namespace bq {
     // AVX2 Optimistic
     BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_avx2(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
     {
-        const uint8_t* start_src = src_ptr;
+        const auto* start_src = src_ptr;
         // 1. Try 64 chars
         while (src_ptr + 64 <= src_end) {
-            __m256i v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
-            __m256i v1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 32));
+            const auto v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
+            const auto v1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr + 32));
             
-            __m256i acc = _mm256_or_si256(v0, v1);
+            const auto acc = _mm256_or_si256(v0, v1);
             if (_mm256_movemask_epi8(acc)) {
-                return (uint32_t)(src_ptr - start_src);
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             
             _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr),      _mm256_cvtepu8_epi16(_mm256_castsi256_si128(v0)));
@@ -1251,9 +1253,9 @@ namespace bq {
 
         // 2. Try 32 chars
         if (src_ptr + 32 <= src_end) {
-            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
+            const auto chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src_ptr));
             if (_mm256_movemask_epi8(chunk)) {
-                return (uint32_t)(src_ptr - start_src);
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr), _mm256_cvtepu8_epi16(_mm256_castsi256_si128(chunk)));
             _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr + 16), _mm256_cvtepu8_epi16(_mm256_extracti128_si256(chunk, 1)));
@@ -1263,15 +1265,15 @@ namespace bq {
 
         // 3. Try 16 chars (SSE/XMM)
         if (src_ptr + 16 <= src_end) {
-            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            const auto chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
             if (_mm_movemask_epi8(chunk)) {
-                return (uint32_t)(src_ptr - start_src);
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst_ptr), _mm256_cvtepu8_epi16(chunk));
             src_ptr += 16;
             dst_ptr += 16;
         }
-        return (uint32_t)(src_ptr - start_src);
+        return static_cast<uint32_t>(src_ptr - start_src);
     }
 
     // SSE Optimistic
@@ -1281,12 +1283,12 @@ namespace bq {
 
         // 1. Try 32 chars
         while (src_ptr + 32 <= src_end) {
-            __m128i v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-            __m128i v1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 16));
+            const auto v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            const auto v1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr + 16));
             
-            __m128i acc = _mm_or_si128(v0, v1);
+            const auto acc = _mm_or_si128(v0, v1);
             if (_mm_movemask_epi8(acc)) {
-                return (uint32_t)(src_ptr - start_src);
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             
             // v0: 16 bytes -> 32 bytes (16 char16)
@@ -1303,9 +1305,9 @@ namespace bq {
 
         // 2. Try 16 chars
         if (src_ptr + 16 <= src_end) {
-            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
+            const auto chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
             if (_mm_movemask_epi8(chunk)) {
-                return (uint32_t)(src_ptr - start_src);
+                return static_cast<uint32_t>(src_ptr - start_src);
             }
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr),      _mm_cvtepu8_epi16(chunk));
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr + 8),  _mm_cvtepu8_epi16(_mm_srli_si128(chunk, 8)));
@@ -1313,14 +1315,14 @@ namespace bq {
             dst_ptr += 16;
         }
 
-        return (uint32_t)(src_ptr - start_src);
+        return static_cast<uint32_t>(src_ptr - start_src);
     }
 #endif
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
-        const uint8_t* src_ptr = (const uint8_t*)src;
-        const uint8_t* src_end = src_ptr + src_len;
+        const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
+        const auto* src_end = src_ptr + src_len;
         char16_t* dst_ptr = dst;
         (void)dst_len;
         (void)src_ptr;
@@ -1390,7 +1392,7 @@ namespace bq {
              dst_ptr += 16;
         }
     #endif
-        return (uint32_t)(src_ptr - (const uint8_t*)src);
+        return static_cast<uint32_t>(src_ptr - reinterpret_cast<const uint8_t*>(src));
 #endif
     }
 
@@ -1399,7 +1401,7 @@ namespace bq {
         // Threshold lowered to 8 to catch small strings on NEON/SSE
         if (src_len >= 8 && _bq_utf_simd_supported_) {
             // Try optimistic ASCII first
-            uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
+            const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
             if (converted == src_len) {
                 return converted;
             }
@@ -1413,7 +1415,7 @@ namespace bq {
     {
         // Threshold lowered to 16 to catch small strings
         if (src_len >= 16 && _bq_utf_simd_supported_) {
-             uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
+            const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
              if (converted == src_len) {
                  return converted;
              }
@@ -1428,7 +1430,7 @@ namespace bq {
         // Threshold lowered to 8 to catch small strings on NEON/SSE
         if (src_len >= 8 && _bq_utf_simd_supported_) {
             // Try optimistic ASCII first
-            uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
+            const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
             return converted;
         }
         return 0;
@@ -1438,7 +1440,7 @@ namespace bq {
     {
         // Threshold lowered to 16 to catch small strings
         if (src_len >= 16 && _bq_utf_simd_supported_) {
-            uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
+            const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
             return converted;
         }
         return 0;
@@ -1458,9 +1460,9 @@ namespace bq {
     uint32_t util::utf16_to_utf8_fast_sse(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
     {
         (void)dst_len;
-        const char16_t* src_ptr = src;
-        const char16_t* src_end = src + src_len;
-        uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic_sse(src_ptr, src_end, dst);
+        const auto* src_ptr = src;
+        const auto* src_end = src + src_len;
+        const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic_sse(src_ptr, src_end, dst);
         if (converted == src_len) {
             return converted;
         }
@@ -1471,13 +1473,13 @@ namespace bq {
     {
         (void)dst_len;
         // Threshold lowered to 16 to catch small strings
-        const uint8_t* src_ptr = (const uint8_t*)src;
-        const uint8_t* src_end = src_ptr + src_len;
-        uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic_sse(src_ptr, src_end, dst);
+        const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
+        const auto* src_end = src_ptr + src_len;
+        const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic_sse(src_ptr, src_end, dst);
         if (converted == src_len) {
             return converted;
         }
-        src_ptr = (const uint8_t*)src + converted;
+        src_ptr = reinterpret_cast<const uint8_t*>(src) + converted;
         return converted + _impl_utf8_to_utf16_simd_sse(src_ptr, src_end, dst + converted);
     }
 #endif
