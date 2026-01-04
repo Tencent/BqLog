@@ -104,6 +104,10 @@
 #define BQ_UNKNOWN_ARCH 1
 #endif
 
+#if defined(BQ_ARM) && defined(__ARM_NEON)
+#define BQ_ARM_NEON 1
+#endif
+
 #ifdef BQ_MSVC
 #define bq_forceinline __forceinline
 #elif defined(BQ_GCC) || defined(BQ_CLANG)
@@ -287,15 +291,7 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 
 // Target attribute for GCC/Clang to enable specific instruction sets for specific functions.
 #if (defined(BQ_CLANG) || defined(BQ_GCC))
-    #if defined(BQ_ARM)
-        #if defined(BQ_ARM_64)
-            #define BQ_HW_CRC_TARGET __attribute__((target("+crc")))
-        #else
-            #define BQ_HW_CRC_TARGET
-        #endif
-        #define BQ_HW_SIMD_TARGET
-        #define BQ_HW_SIMD_SSE_TARGET
-    #elif defined(BQ_X86)
+    #if defined(BQ_X86)
         #define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
         #define BQ_HW_SIMD_TARGET __attribute__((target("avx2")))
         #define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))

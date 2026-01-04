@@ -27,6 +27,10 @@
 #endif
 
 #if defined(BQ_ARM)
+#include <arm_acle.h>
+#endif
+
+#if defined(BQ_ARM_NEON)
 #include <arm_neon.h>
 
 bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v) {
@@ -104,7 +108,7 @@ namespace bq {
 #if defined(BQ_X86)
         // Assume basic SSE is available on modern x86 (including Android x86/Atom)
         return true; 
-#elif defined(BQ_ARM)
+#elif defined(BQ_ARM_NEON)
         return true; // Assume NEON on ARMv8/M1
 #else
         return false;
@@ -145,7 +149,7 @@ namespace bq {
     {
 #if defined(BQ_X86)
         return _mm_crc32_u8(crc, v);
-#elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+#elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32b(crc, v);
 #else
         return _crc32_sw_u8(crc, v);
@@ -156,7 +160,7 @@ namespace bq {
     {
 #if defined(BQ_X86)
         return _mm_crc32_u16(crc, v);
-#elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+#elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32h(crc, v);
 #else
         return _crc32_sw_u16(crc, v);
@@ -167,7 +171,7 @@ namespace bq {
     {
 #if defined(BQ_X86)
         return _mm_crc32_u32(crc, v);
-#elif defined(BQ_ARM) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+#elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32w(crc, v);
 #else
         return _crc32_sw_u32(crc, v);
@@ -178,7 +182,7 @@ namespace bq {
     {
 #if defined(BQ_X86_64)
         return (uint32_t)_mm_crc32_u64(crc, v);
-#elif defined(BQ_ARM_64) && (defined(__ARM_FEATURE_CRC32) || defined(BQ_ARM_64))
+#elif defined(BQ_ARM_64) && defined(__ARM_FEATURE_CRC32)
         return __crc32d(crc, v);
 #else
         return _crc32_sw_u64(crc, v);
@@ -840,18 +844,20 @@ namespace bq {
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
     {
-        (void)dst_len;
         const char16_t* src_ptr = src;
         const char16_t* src_end = src + src_len;
         char* dst_ptr = dst;
-
+        (void)dst_len;
+        (void)src_ptr;
+        (void)src_end;
+        (void)dst_ptr;
 #if defined(BQ_X86)
         if (_bq_avx2_supported_) {
             return _impl_utf16_to_utf8_simd_avx2(src_ptr, src_end, dst_ptr);
         } else {
             return _impl_utf16_to_utf8_simd_sse(src_ptr, src_end, dst_ptr);
         }
-#elif defined(BQ_ARM) && defined(BQ_HW_SIMD_TARGET)
+#elif defined(BQ_ARM_NEON)
         // NEON path
         while (src_ptr + 8 <= src_end) {
             uint16x8_t chunk = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
@@ -994,18 +1000,20 @@ namespace bq {
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
-        (void)dst_len;
         const uint8_t* src_ptr = (const uint8_t*)src;
         const uint8_t* src_end = src_ptr + src_len;
         char16_t* dst_ptr = dst;
-
+        (void)dst_len;
+        (void)src_ptr;
+        (void)src_end;
+        (void)dst_ptr;
 #if defined(BQ_X86)
         if (_bq_avx2_supported_) {
             return _impl_utf8_to_utf16_simd_avx2(src_ptr, src_end, dst_ptr);
         } else {
             return _impl_utf8_to_utf16_simd_sse(src_ptr, src_end, dst_ptr);
         }
-#elif defined(BQ_ARM) && defined(BQ_HW_SIMD_TARGET)
+#elif defined(BQ_ARM_NEON)
         while (src_ptr + 16 <= src_end) {
              uint8x16_t chunk = vld1q_u8(src_ptr);
              if (bq_vmaxvq_u8(chunk) < 0x80) {
@@ -1160,18 +1168,20 @@ namespace bq {
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
     {
-        (void)dst_len;
         const char16_t* src_ptr = src;
         const char16_t* src_end = src + src_len;
         char* dst_ptr = dst;
-
+        (void)dst_len;
+        (void)src_ptr;
+        (void)src_end;
+        (void)dst_ptr;
 #if defined(BQ_X86)
         if (_bq_avx2_supported_) {
             return _impl_utf16_to_utf8_ascii_optimistic_avx2(src_ptr, src_end, dst_ptr);
         } 
         return _impl_utf16_to_utf8_ascii_optimistic_sse(src_ptr, src_end, dst_ptr);
 #else
-    #if defined(BQ_ARM) && defined(BQ_HW_SIMD_TARGET)
+    #if defined(BQ_ARM_NEON)
         // NEON Optimistic
         // 1. Try 32 chars (64 bytes source)
         while (src_ptr + 32 <= src_end) {
@@ -1314,18 +1324,20 @@ namespace bq {
 
     BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
     {
-        (void)dst_len;
         const uint8_t* src_ptr = (const uint8_t*)src;
         const uint8_t* src_end = src_ptr + src_len;
         char16_t* dst_ptr = dst;
-
+        (void)dst_len;
+        (void)src_ptr;
+        (void)src_end;
+        (void)dst_ptr;
 #if defined(BQ_X86)
         if (_bq_avx2_supported_) {
             return _impl_utf8_to_utf16_ascii_optimistic_avx2(src_ptr, src_end, dst_ptr);
         } 
         return _impl_utf8_to_utf16_ascii_optimistic_sse(src_ptr, src_end, dst_ptr);
 #else
-    #if defined(BQ_ARM) && defined(BQ_HW_SIMD_TARGET)
+    #if defined(BQ_ARM_NEON)
         // NEON Optimistic
         // 1. Try 64 chars
         while (src_ptr + 64 <= src_end) {

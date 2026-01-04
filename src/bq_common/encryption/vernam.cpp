@@ -29,7 +29,9 @@
 #include <immintrin.h>
 #endif
 #elif defined(BQ_ARM)
+#if defined(BQ_ARM_NEON)
 #include <arm_neon.h>
+#endif
 #endif
 namespace bq {
 
@@ -45,7 +47,8 @@ namespace bq {
     }
 #endif
 
-#if defined(BQ_UNIT_TEST) || !(defined(BQ_X86) || defined(BQ_ARM))
+// Define scalar if we are in unit test (to allow fallback) OR if we don't have any HW acceleration available
+#if defined(BQ_UNIT_TEST) || (!defined(BQ_X86) && !defined(BQ_ARM_NEON))
     // -------------------------------------------------------------------------------------------------
     static void vernam_encrypt_scalar(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset)
     {
@@ -273,7 +276,7 @@ namespace bq {
     }
 #endif
 
-#if defined(BQ_ARM)
+#if defined(BQ_ARM) && defined(BQ_ARM_NEON)
     // 3. NEON Implementation (ARMv7 / ARMv8)
     // -------------------------------------------------------------------------------------------------
     // ARMv8 (AArch64) guarantees NEON support. 
@@ -374,9 +377,13 @@ namespace bq {
             return;
         }
 #endif
+#if defined(BQ_ARM_NEON)
         // For Android/iOS ARM64/ARMv7, NEON is effectively standard. 
         // We can use it directly without complex runtime checks for most modern contexts.
         vernam_encrypt_neon(buf, len, key, key_size_pow2, key_stream_offset);
+#else
+        vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
+#endif
 #else
         // Fallback for non-AVX2 x86 or other architectures
         vernam_encrypt_scalar(buf, len, key, key_size_pow2, key_stream_offset);
