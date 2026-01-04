@@ -664,7 +664,7 @@ namespace bq {
                 *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
             }
         }
-        return (uint32_t)(dst_ptr - dst);
+        return static_cast<uint32_t>(dst_ptr - dst);
     }
 
 #if defined(BQ_X86)
@@ -685,7 +685,7 @@ namespace bq {
                  break;
             }
         }
-        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
     }
 
     // SSE Safe Implementation
@@ -704,7 +704,7 @@ namespace bq {
                  break;
             }
         }
-        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
     }
 #endif
 
@@ -758,7 +758,7 @@ namespace bq {
             }
         }
     scalar_utf16:
-        return (uint32_t)((uint32_t)(dst_ptr - dst) + _impl_utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
+        return static_cast<uint32_t>(dst_ptr - dst) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
 #else
         return _impl_utf16_to_utf8_scalar_fast(src, src_character_num, dst, dst_character_num);
 #endif
@@ -816,7 +816,7 @@ namespace bq {
                  break;
             }
         }
-        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
     }
 
     // SSE Safe Implementation
@@ -860,7 +860,7 @@ namespace bq {
                  }
             }
         }
-        return (uint32_t)(static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
     }
 #endif
 
@@ -977,6 +977,21 @@ namespace bq {
             dst_ptr += 16;
         }
 
+        if (src_ptr < src_end) {
+            if (src_end - start_src >= 16) {
+                const auto* tail_src = src_end - 16;
+                auto* tail_dst = dst_ptr - (16 - (src_end - src_ptr));
+                const auto v0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(tail_src));
+                if (!_mm256_testz_si256(v0, _mm256_set1_epi16(static_cast<int16_t>(0xFF80u)))) {
+                     return static_cast<uint32_t>(src_ptr - start_src);
+                }
+                const auto compressed = _mm256_packus_epi16(v0, v0);
+                const auto permuted = _mm256_permute4x64_epi64(compressed, 0xD8);
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(tail_dst), _mm256_castsi256_si128(permuted));
+                return static_cast<uint32_t>(src_end - start_src);
+            }
+        }
+
         return static_cast<uint32_t>(src_ptr - start_src);
     }
 
@@ -1031,6 +1046,20 @@ namespace bq {
             dst_ptr += 8;
         }
 
+        if (src_ptr < src_end) {
+            if (src_end - start_src >= 8) {
+                const auto* tail_src = src_end - 8;
+                auto* tail_dst = dst_ptr - (8 - (src_end - src_ptr));
+                const auto v0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(tail_src));
+                const auto mask = _mm_set1_epi16(static_cast<int16_t>(0xFF80u));
+                BQ_UNLIKELY_IF (!_mm_testz_si128(v0, mask)) {
+                    return static_cast<uint32_t>(src_ptr - start_src);
+                }
+                _mm_storel_epi64(reinterpret_cast<__m128i*>(tail_dst), _mm_packus_epi16(v0, v0));
+                return static_cast<uint32_t>(src_end - start_src);
+            }
+        }
+
         return static_cast<uint32_t>(src_ptr - start_src);
     }
 #elif defined(BQ_ARM_NEON)
@@ -1078,6 +1107,19 @@ namespace bq {
             vst1_u8(reinterpret_cast<uint8_t*>(dst_ptr), vmovn_u16(v0));
             src_ptr += 8;
             dst_ptr += 8;
+        }
+
+        if (src_ptr < src_end) {
+            if (src_end - start_src >= 8) {
+                const auto* tail_src = src_end - 8;
+                auto* tail_dst = dst_ptr - (8 - (src_end - src_ptr));
+                uint16x8_t v0 = vld1q_u16(reinterpret_cast<const uint16_t*>(tail_src));
+                BQ_UNLIKELY_IF(bq_vmaxvq_u16(v0) >= 0x0080) {
+                    return static_cast<uint32_t>(src_ptr - start_src);
+                }
+                vst1_u8(reinterpret_cast<uint8_t*>(tail_dst), vmovn_u16(v0));
+                return static_cast<uint32_t>(src_end - start_src);
+            }
         }
         return static_cast<uint32_t>(src_ptr - start_src);
     }
@@ -1151,11 +1193,24 @@ namespace bq {
             src_ptr += 16;
             dst_ptr += 16;
         }
+
+        if (src_ptr < src_end) {
+            if (src_end - start_src >= 16) {
+                const auto* tail_src = src_end - 16;
+                auto* tail_dst = dst_ptr - (16 - (src_end - src_ptr));
+                const auto chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(tail_src));
+                if (_mm_movemask_epi8(chunk)) {
+                    return static_cast<uint32_t>(src_ptr - start_src);
+                }
+                _mm256_storeu_si256(reinterpret_cast<__m256i*>(tail_dst), _mm256_cvtepu8_epi16(chunk));
+                return static_cast<uint32_t>(src_end - start_src);
+            }
+        }
         return static_cast<uint32_t>(src_ptr - start_src);
     }
 
     // SSE Optimistic
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_sse(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* BQ_RESTRICT src_end, char16_t* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_sse(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* BQ_RESTRICT src_end, char16_t* BQ_RESTRICT dst_ptr)
     {
         const uint8_t* start_src = src_ptr;
 
@@ -1193,10 +1248,24 @@ namespace bq {
             dst_ptr += 16;
         }
 
+        if (src_ptr < src_end) {
+            if (src_end - start_src >= 16) {
+                const auto* tail_src = src_end - 16;
+                auto* tail_dst = dst_ptr - (16 - (src_end - src_ptr));
+                const auto chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(tail_src));
+                if (_mm_movemask_epi8(chunk)) {
+                    return static_cast<uint32_t>(src_ptr - start_src);
+                }
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(tail_dst),      _mm_cvtepu8_epi16(chunk));
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(tail_dst + 8),  _mm_cvtepu8_epi16(_mm_srli_si128(chunk, 8)));
+                return static_cast<uint32_t>(src_end - start_src);
+            }
+        }
+
         return static_cast<uint32_t>(src_ptr - start_src);
     }
 #elif defined(BQ_ARM_NEON)
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_neon(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* BQ_RESTRICT src_end, char16_t* dst_ptr) {
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_neon(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* BQ_RESTRICT src_end, char16_t* BQ_RESTRICT dst_ptr) {
         const auto* start_src = src_ptr;
         
         // 1. Try 64 chars
@@ -1253,6 +1322,20 @@ namespace bq {
             vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), vmovl_u8(vget_high_u8(v0)));
             src_ptr += 16;
             dst_ptr += 16;
+        }
+
+        if (src_ptr < src_end) {
+            if (src_end - start_src >= 16) {
+                const auto* tail_src = src_end - 16;
+                auto* tail_dst = dst_ptr - (16 - (src_end - src_ptr));
+                uint8x16_t v0 = vld1q_u8(tail_src);
+                if (bq_vmaxvq_u8(v0) >= 0x80) {
+                    return static_cast<uint32_t>(src_ptr - start_src);
+                }
+                vst1q_u16(reinterpret_cast<uint16_t*>(tail_dst), vmovl_u8(vget_low_u8(v0)));
+                vst1q_u16(reinterpret_cast<uint16_t*>(tail_dst + 8), vmovl_u8(vget_high_u8(v0)));
+                return static_cast<uint32_t>(src_end - start_src);
+            }
         }
         return static_cast<uint32_t>(src_ptr - start_src);
     }
