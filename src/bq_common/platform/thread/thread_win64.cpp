@@ -15,9 +15,6 @@
 #include "bq_common/bq_common.h"
 #include <processthreadsapi.h>
 #include <stringapiset.h>
-#ifdef BQ_ARM
-#include <intrin.h>
-#endif
 #include <type_traits>
 
 namespace bq {

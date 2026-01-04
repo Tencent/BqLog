@@ -15,20 +15,6 @@
 #include "bq_common/types/basic_types.h"
 #include "bq_common/platform/platform_misc.h"
 
-#if defined(BQ_X86)
-    #ifdef BQ_MSVC
-        #include <intrin.h>
-    #else
-        #include <immintrin.h>
-    #endif
-#elif defined(BQ_ARM)
-    #if defined(BQ_MSVC)
-        #include <arm64_neon.h>
-    #else
-        #include <arm_acle.h>
-    #endif
-#endif
-
 namespace bq {
     class util {
     public:

@@ -26,12 +26,7 @@
 #include <unistd.h>
 #endif
 
-#if defined(BQ_ARM)
-#include <arm_acle.h>
-#endif
-
 #if defined(BQ_ARM_NEON)
-#include <arm_neon.h>
 
 bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v) {
 #if defined(BQ_ARM_64)

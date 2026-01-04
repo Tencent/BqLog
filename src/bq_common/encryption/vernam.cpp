@@ -22,17 +22,6 @@
 
 #include "bq_common/encryption/vernam.h"
 #include "bq_common/platform/macros.h"
-#if defined(BQ_X86)
-#if defined(BQ_MSVC)
-#include <intrin.h>
-#else
-#include <immintrin.h>
-#endif
-#elif defined(BQ_ARM)
-#if defined(BQ_ARM_NEON)
-#include <arm_neon.h>
-#endif
-#endif
 namespace bq {
 
     // =================================================================================================
