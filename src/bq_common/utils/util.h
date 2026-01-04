@@ -75,47 +75,69 @@ namespace bq {
         /// </summary>
         /// <param name="src_utf16_str"></param>
         /// <param name="src_character_num"></param>
-        /// <param name="target_utf8_str"></param>
-        /// <param name="target_utf8_character_num"></param>
+        /// <param name="dst_utf8_str"></param>
+        /// <param name="dst_character_num"></param>
         /// <returns>length of final utf8 str</returns>
-        static uint32_t utf16_to_utf8(const char16_t* src_utf16_str, uint32_t src_character_num, char* target_utf8_str, uint32_t target_utf8_character_num);
+        static uint32_t utf16_to_utf8(const char16_t* BQ_RESTRICT src_utf16_str, uint32_t src_character_num, char* BQ_RESTRICT dst_utf8_str, uint32_t dst_character_num);
 
         /// <summary>
         /// convert utf8 to utf16
         /// </summary>
         /// <param name="src_utf8_str"></param>
         /// <param name="src_character_num"></param>
-        /// <param name="target_utf16_str"></param>
-        /// <param name="target_utf16_character_num"></param>
+        /// <param name="dst_utf16_str"></param>
+        /// <param name="dst_character_num"></param>
         /// <returns>length of final utf16 str, it's len of char16_t*, not char*</returns>
-        static uint32_t utf8_to_utf16(const char* src_utf8_str, uint32_t src_character_num, char16_t* target_utf16_str, uint32_t target_utf16_character_num);
+        static uint32_t utf8_to_utf16(const char* BQ_RESTRICT src_utf8_str, uint32_t src_character_num, char16_t* BQ_RESTRICT dst_utf16_str, uint32_t dst_character_num);
+
+        /// <summary>
+        /// `UTF-Mixed` is a custom format in BqLog designed to maximize UTF-16 to UTF-8 conversion performance. 
+        /// It consists of a UTF-8 prefix followed by a UTF-16 suffix, separated by a 0xFF character
+        /// which is guaranteed to be present.
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="src_character_num"></param>
+        /// <param name="dst"></param>
+        /// <param name="dst_len"></param>
+        /// <returns></returns>
+        static uint32_t utf16_to_utf_mixed(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
+
+        /// <summary>
+        /// Decode from `UTF-Mixed` to `UTF8`
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="src_len"></param>
+        /// <param name="dst"></param>
+        /// <param name="dst_len"></param>
+        /// <returns></returns>
+        static uint32_t utf_mixed_to_utf8(const char* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
 
         /// <summary>
         /// High performance convert utf16 to utf8 (SIMD accelerated)
         /// </summary>
-        static uint32_t utf16_to_utf8_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static uint32_t utf16_to_utf8_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
         
         /// <summary>
         /// High performance convert utf8 to utf16 (SIMD accelerated)
         /// </summary>
-        static uint32_t utf8_to_utf16_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        static uint32_t utf8_to_utf16_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num);
 
         /// <summary>
         /// High performance convert utf16 to utf8 (SIMD accelerated)
         /// </summary>
-        static uint32_t utf16_to_utf8_ascii_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
+        static uint32_t utf16_to_utf8_ascii_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
 
         /// <summary>
         /// High performance convert utf8 to utf16 (SIMD accelerated)
         /// </summary>
-        static uint32_t utf8_to_utf16_ascii_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        static uint32_t utf8_to_utf16_ascii_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num);
 
 #ifdef BQ_UNIT_TEST
-        static uint32_t utf16_to_utf8_fast_sw(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
-        static uint32_t utf8_to_utf16_fast_sw(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        static uint32_t utf16_to_utf8_fast_sw(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
+        static uint32_t utf8_to_utf16_fast_sw(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num);
 #if defined(BQ_X86)
-        static uint32_t utf16_to_utf8_fast_sse(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len);
-        static uint32_t utf8_to_utf16_fast_sse(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len);
+        static uint32_t utf16_to_utf8_fast_sse(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
+        static uint32_t utf8_to_utf16_fast_sse(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num);
 #endif
 #endif
 

@@ -373,12 +373,14 @@ namespace bq {
                 u16_buf.fill_uninitialized((uint32_t)len * 2 + 100);
                 bq::array<char> u8_buf; 
                 u8_buf.fill_uninitialized((uint32_t)len * 3 + 100);
+                bq::array<char> u_mixed_buf;
+                u_mixed_buf.fill_uninitialized((uint32_t)len * 3 + 100);
 
                 // Legacy
                 uint32_t l1 = bq::util::utf8_to_utf16(test_str, (uint32_t)len, u16_buf.begin(), (uint32_t)u16_buf.size());
                 uint32_t l2 = bq::util::utf16_to_utf8(u16_buf.begin(), l1, u8_buf.begin(), (uint32_t)u8_buf.size());
                 u8_buf[l2] = 0;
-                result.add_result(memcmp(test_str, u8_buf.begin(), len) == 0, "Legacy Round Trip Mixed"); 
+                result.add_result(memcmp(test_str, u8_buf.begin(), len) == 0, "Legacy Round Trip"); 
                 l1 = bq::util::utf8_to_utf16(test_str_ascii, (uint32_t)len_asicii, u16_buf.begin(), (uint32_t)u16_buf.size());
                 l2 = bq::util::utf16_to_utf8(u16_buf.begin(), l1, u8_buf.begin(), (uint32_t)u8_buf.size());
                 u8_buf[l2] = 0;
@@ -388,11 +390,23 @@ namespace bq {
                 l1 = bq::util::utf8_to_utf16_fast(test_str, (uint32_t)len, u16_buf.begin(), (uint32_t)u16_buf.size());
                 l2 = bq::util::utf16_to_utf8_fast(u16_buf.begin(), l1, u8_buf.begin(), (uint32_t)u8_buf.size());
                 u8_buf[l2] = 0;
+                result.add_result(memcmp(test_str, u8_buf.begin(), len) == 0, "Fast Round Trip");
+                result.add_result(static_cast<size_t>(l2) == len, "Fast Round Trip Size");
+                uint32_t l3 = bq::util::utf16_to_utf_mixed(u16_buf.begin(), l1, u_mixed_buf.begin(), (uint32_t)u_mixed_buf.size());
+                uint32_t l4 = bq::util::utf_mixed_to_utf8(u_mixed_buf.begin(), l3, u8_buf.begin(), (uint32_t)u8_buf.size());
+                u8_buf[l4] = 0;
                 result.add_result(memcmp(test_str, u8_buf.begin(), len) == 0, "Fast Round Trip Mixed");
+                result.add_result(static_cast<size_t>(l4) == len, "Fast Round Trip Mixed Size");
                 l1 = bq::util::utf8_to_utf16_fast(test_str_ascii, (uint32_t)len_asicii, u16_buf.begin(), (uint32_t)u16_buf.size());
                 l2 = bq::util::utf16_to_utf8_fast(u16_buf.begin(), l1, u8_buf.begin(), (uint32_t)u8_buf.size());
                 u8_buf[l2] = 0;
                 result.add_result(memcmp(test_str_ascii, u8_buf.begin(), len_asicii) == 0, "Fast Round Trip Ascii");
+                result.add_result(static_cast<size_t>(l2) == len_asicii, "Fast Round Trip Ascii Size");
+                l3 = bq::util::utf16_to_utf_mixed(u16_buf.begin(), l1, u_mixed_buf.begin(), (uint32_t)u_mixed_buf.size());
+                l4 = bq::util::utf_mixed_to_utf8(u_mixed_buf.begin(), l3, u8_buf.begin(), (uint32_t)u8_buf.size());
+                u8_buf[l4] = 0;
+                result.add_result(memcmp(test_str_ascii, u8_buf.begin(), len_asicii) == 0, "Fast Round Trip Ascii Mixed");
+                result.add_result(static_cast<size_t>(l4) == len_asicii, "Fast Round Trip Ascii Mixed Size");
 
                 // 2. Performance Benchmark
                 size_t bench_size = 64 * 1024 * 1024; // 64MB

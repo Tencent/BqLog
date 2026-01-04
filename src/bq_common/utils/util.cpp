@@ -263,17 +263,17 @@ namespace bq {
 
 
     // Implementations
-    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_memcpy_with_hash_hw(void* dst, const void* src, size_t len) {
+    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_memcpy_with_hash_hw(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len) {
         BQ_GEN_HASH_CORE(true, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
     }
-    BQ_CRC_HW_INLINE uint64_t _bq_memcpy_with_hash_sw(void* dst, const void* src, size_t len) {
+    BQ_CRC_HW_INLINE uint64_t _bq_memcpy_with_hash_sw(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len) {
         BQ_GEN_HASH_CORE(true, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
     }
-    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_hash_only_hw(const void* src, size_t len) {
+    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_hash_only_hw(const void* BQ_RESTRICT src, size_t len) {
         void* dst = nullptr; // Dummy
         BQ_GEN_HASH_CORE(false, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
     }
-    BQ_CRC_HW_INLINE uint64_t _bq_hash_only_sw(const void* src, size_t len) {
+    BQ_CRC_HW_INLINE uint64_t _bq_hash_only_sw(const void* BQ_RESTRICT src, size_t len) {
         void* dst = nullptr; // Dummy
         BQ_GEN_HASH_CORE(false, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
     }
@@ -619,144 +619,16 @@ namespace bq {
         return x;
     }
 
-    // =================================================================================================
-    // Legacy Implementation (State Machine)
-    // =================================================================================================
-    
-    uint32_t util::utf16_to_utf8(const char16_t* src_utf16_str, uint32_t src_character_num, char* target_utf8_str, uint32_t target_utf8_character_num)
-    {
-        uint32_t result_len = 0;
-        uint32_t codepoint = 0;
-        uint32_t surrogate = 0;
-
-        uint32_t wchar_len = src_character_num;
-
-        const char16_t* s = src_utf16_str;
-        const char16_t* p = s;
-
-        while (static_cast<uint32_t>(p - s) < wchar_len) {
-            char16_t c = *p++;
-            if (c == 0) break;
-            if (surrogate) {
-                if (c >= 0xDC00 && c <= 0xDFFF) {
-                    codepoint = static_cast<uint32_t>(0x10000u) + (static_cast<uint32_t>(c) - static_cast<uint32_t>(0xDC00u)) + static_cast<uint32_t>((surrogate - static_cast<uint32_t>(0xD800)) << 10);
-                    surrogate = 0;
-                } else {
-                    surrogate = 0;
-                    continue;
-                }
-            } else {
-                if (c < 0x80) {
-                    target_utf8_str[result_len++] = static_cast<char>(c);
-
-                    while (static_cast<uint32_t>(p - s) < wchar_len && *p && *p < 0x80) {
-                        target_utf8_str[result_len++] = static_cast<char>(*p++);
-                    }
-
-                    continue;
-                } else if (c >= 0xD800 && c <= 0xDBFF) {
-                    surrogate = c;
-                } else if (c >= 0xDC00 && c <= 0xDFFF) {
-                    continue;
-                } else {
-                    codepoint = c;
-                }
-            }
-
-            if (surrogate != 0)
-                continue;
-
-            if (codepoint < 0x80) {
-                target_utf8_str[result_len++] = static_cast<char>(codepoint);
-            } else if (codepoint < 0x0800) {
-                target_utf8_str[result_len++] = static_cast<char>(0xC0 | (codepoint >> 6));
-                target_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
-            } else if (codepoint < 0x10000) {
-                target_utf8_str[result_len++] = static_cast<char>(0xE0 | (codepoint >> 12));
-                target_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-                target_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
-            } else {
-                target_utf8_str[result_len++] = static_cast<char>(0xF0 | (codepoint >> 18));
-                target_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
-                target_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-                target_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
-            }
-        }
-        assert(result_len <= target_utf8_character_num && "target buffer of utf16_to_utf8 is not enough!");
-        return result_len;
-    }
-
-    uint32_t util::utf8_to_utf16(const char* src_utf8_str, uint32_t src_character_num, char16_t* target_utf16_str, uint32_t target_utf16_character_num)
-    {
-        uint32_t result_len = 0;
-        uint32_t mb_size = 0;
-        uint32_t mb_remain = 0;
-
-        uint32_t codepoint = 0;
-
-        const char* p = (const char*)src_utf8_str;
-        while (static_cast<uint32_t>(p - src_utf8_str) < src_character_num) {
-            const auto c = static_cast<char16_t>(static_cast<uint8_t>(*p++));
-            if (c == 0) break;
-            if (mb_size == 0) {
-                if (c < 0x80) {
-                    target_utf16_str[result_len++] = c;
-                } else if ((c & 0xE0) == 0xC0) {
-                    codepoint = c & 0x1F;
-                    mb_size = 2;
-                } else if ((c & 0xF0) == 0xE0) {
-                    codepoint = c & 0x0F;
-                    mb_size = 3;
-                } else if ((c & 0xF8) == 0xF0) {
-                    codepoint = c & 7;
-                    mb_size = 4;
-                } else if ((c & 0xFC) == 0xF8) {
-                    codepoint = c & 3;
-                    mb_size = 5;
-                } else if ((c & 0xFE) == 0xFC) {
-                    codepoint = c & 3;
-                    mb_size = 6;
-                } else {
-                    codepoint = mb_remain = mb_size = 0;
-                }
-
-                if (mb_size > 1)
-                    mb_remain = mb_size - 1;
-
-            } else {
-                if ((c & 0xC0) == 0x80) {
-                    codepoint = (codepoint << 6) | (c & 0x3F);
-
-                    if (--mb_remain == 0) {
-                        if (codepoint < 0x10000) {
-                            target_utf16_str[result_len++] = static_cast<char16_t>(codepoint % 0x10000);
-                        } else if (codepoint < 0x110000) {
-                            codepoint -= 0x10000;
-                            target_utf16_str[result_len++] = static_cast<char16_t>((codepoint >> 10) + 0xD800);
-                            target_utf16_str[result_len++] = static_cast<char16_t>((codepoint & 0x3FF) + 0xDC00);
-                        } else {
-                            codepoint = mb_remain = 0;
-                        }
-                        mb_size = 0;
-                    }
-                } else {
-                    codepoint = mb_remain = mb_size = 0;
-                }
-            }
-        }
-        assert(result_len <= target_utf16_character_num && "target buffer of utf8_to_utf16 is not enough!");
-        return result_len;
-    }
-
+ 
     // =================================================================================================
     // Fast Implementation (SIMD + Optimized Scalar)
     // =================================================================================================
 
     //Fallback
-    bq_forceinline uint32_t _impl_utf16_to_utf8_scalar_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    bq_forceinline uint32_t _impl_utf16_to_utf8_scalar_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        (void)dst_len;
-        const char16_t* src_end = src + src_len;
+        (void)dst_character_num;
+        const char16_t* src_end = src + src_character_num;
         char* dst_ptr = dst;
 
         while (src < src_end) {
@@ -797,7 +669,7 @@ namespace bq {
 
 #if defined(BQ_X86)
     // AVX2 Safe Implementation
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_simd_avx2(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_simd_avx2(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr)
     {
         const char* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
@@ -817,7 +689,7 @@ namespace bq {
     }
 
     // SSE Safe Implementation
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf16_to_utf8_simd_sse(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf16_to_utf8_simd_sse(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr)
     {
         const char* dst_start = dst_ptr;
         while (src_ptr + 8 <= src_end) {
@@ -836,12 +708,12 @@ namespace bq {
     }
 #endif
 
-    BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_simd(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_simd(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         const char16_t* src_ptr = src;
-        const char16_t* src_end = src + src_len;
+        const char16_t* src_end = src + src_character_num;
         char* dst_ptr = dst;
-        (void)dst_len;
+        (void)dst_character_num;
         (void)src_ptr;
         (void)src_end;
         (void)dst_ptr;
@@ -888,16 +760,16 @@ namespace bq {
     scalar_utf16:
         return (uint32_t)((uint32_t)(dst_ptr - dst) + _impl_utf16_to_utf8_scalar_fast(src_ptr, (uint32_t)(src_end - src_ptr), dst_ptr, 0));
 #else
-        return _impl_utf16_to_utf8_scalar_fast(src, src_len, dst, dst_len);
+        return _impl_utf16_to_utf8_scalar_fast(src, src_character_num, dst, dst_character_num);
 #endif
     }
 
     //Fallback
-    bq_forceinline uint32_t _impl_utf8_to_utf16_scalar_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    bq_forceinline uint32_t _impl_utf8_to_utf16_scalar_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        (void)dst_len;
+        (void)dst_character_num;
         const auto* s = reinterpret_cast<const uint8_t*>(src);
-        const auto* end = s + src_len;
+        const auto* end = s + src_character_num;
         char16_t* d = dst;
 
         while (s < end) {
@@ -930,7 +802,7 @@ namespace bq {
 
 #if defined(BQ_X86)
     // AVX2 Safe Implementation
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_simd_avx2(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_simd_avx2(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* src_end, char16_t* BQ_RESTRICT dst_ptr)
     {
         const char16_t* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
@@ -948,7 +820,7 @@ namespace bq {
     }
 
     // SSE Safe Implementation
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_simd_sse(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_simd_sse(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* src_end, char16_t* BQ_RESTRICT dst_ptr)
     {
         const char16_t* dst_start = dst_ptr;
         while (src_ptr + 16 <= src_end) {
@@ -992,12 +864,12 @@ namespace bq {
     }
 #endif
 
-    BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_simd(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_simd(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
-        const auto* src_end = src_ptr + src_len;
+        const auto* src_end = src_ptr + src_character_num;
         char16_t* dst_ptr = dst;
-        (void)dst_len;
+        (void)dst_character_num;
         (void)src_ptr;
         (void)src_end;
         (void)dst_ptr;
@@ -1042,7 +914,7 @@ namespace bq {
         }
         return static_cast<uint32_t>(static_cast<uint32_t>(dst_ptr - dst) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
 #else
-        return _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src), src_len, dst, dst_len);
+        return _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src), src_character_num, dst, dst_character_num);
 #endif
     }
 
@@ -1052,7 +924,7 @@ namespace bq {
 
 #if defined(BQ_X86)
     // AVX2 Optimistic
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_ascii_optimistic_avx2(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_ascii_optimistic_avx2(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr)
     {
         const char16_t* start_src = src_ptr;
         // 1. Try 64 chars (128 bytes)
@@ -1109,7 +981,7 @@ namespace bq {
     }
 
     // SSE Optimistic
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf16_to_utf8_ascii_optimistic_sse(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf16_to_utf8_ascii_optimistic_sse(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr)
     {
         const char16_t* start_src = src_ptr;
 
@@ -1162,7 +1034,7 @@ namespace bq {
         return static_cast<uint32_t>(src_ptr - start_src);
     }
 #elif defined(BQ_ARM_NEON)
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET  uint32_t _impl_utf16_to_utf8_ascii_optimistic_neon(const char16_t* src_ptr, const char16_t* src_end, char* dst_ptr) {
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET  uint32_t _impl_utf16_to_utf8_ascii_optimistic_neon(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr) {
         const auto* start_src = src_ptr;
 
         // 1. Try 32 chars (64 bytes source)
@@ -1211,12 +1083,12 @@ namespace bq {
     }
 #endif
 
-    BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_ascii_optimistic(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    BQ_SIMD_HW_INLINE uint32_t _impl_utf16_to_utf8_ascii_optimistic(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         const auto* src_ptr = src;
-        const auto* src_end = src + src_len;
+        const auto* src_end = src + src_character_num;
         char* dst_ptr = dst;
-        (void)dst_len;
+        (void)dst_character_num;
         (void)src_ptr;
         (void)src_end;
         (void)dst_ptr;
@@ -1235,7 +1107,7 @@ namespace bq {
 
 #if defined(BQ_X86)
     // AVX2 Optimistic
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_avx2(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_avx2(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* src_end, char16_t* BQ_RESTRICT dst_ptr)
     {
         const auto* start_src = src_ptr;
         // 1. Try 64 chars
@@ -1283,7 +1155,7 @@ namespace bq {
     }
 
     // SSE Optimistic
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_sse(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_sse(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* BQ_RESTRICT src_end, char16_t* dst_ptr)
     {
         const uint8_t* start_src = src_ptr;
 
@@ -1324,7 +1196,7 @@ namespace bq {
         return static_cast<uint32_t>(src_ptr - start_src);
     }
 #elif defined(BQ_ARM_NEON)
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_neon(const uint8_t* src_ptr, const uint8_t* src_end, char16_t* dst_ptr) {
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_ascii_optimistic_neon(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* BQ_RESTRICT src_end, char16_t* dst_ptr) {
         const auto* start_src = src_ptr;
         
         // 1. Try 64 chars
@@ -1386,12 +1258,12 @@ namespace bq {
     }
 #endif
 
-    BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_ascii_optimistic(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    BQ_SIMD_HW_INLINE uint32_t _impl_utf8_to_utf16_ascii_optimistic(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
-        const auto* src_end = src_ptr + src_len;
+        const auto* src_end = src_ptr + src_character_num;
         char16_t* dst_ptr = dst;
-        (void)dst_len;
+        (void)dst_character_num;
         (void)src_ptr;
         (void)src_end;
         (void)dst_ptr;
@@ -1408,87 +1280,283 @@ namespace bq {
 #endif
     }
 
-    uint32_t util::utf16_to_utf8_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    uint32_t util::utf16_to_utf8_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         // Threshold lowered to 8 to catch small strings on NEON/SSE
-        if (src_len >= 8 && _bq_utf_simd_supported_) {
+        if (src_character_num >= 8 && _bq_utf_simd_supported_) {
             // Try optimistic ASCII first
-            const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
-            if (converted == src_len) {
+            const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_character_num, dst, dst_character_num);
+            if (converted == src_character_num) {
                 return converted;
             }
             // Continue from where we failed with safe SIMD
-            return converted + _impl_utf16_to_utf8_simd(src + converted, src_len - converted, dst + converted, dst_len - converted);
+            return converted + _impl_utf16_to_utf8_simd(src + converted, src_character_num - converted, dst + converted, dst_character_num - converted);
         }
-        return _impl_utf16_to_utf8_scalar_fast(src, src_len, dst, dst_len);
+        return _impl_utf16_to_utf8_scalar_fast(src, src_character_num, dst, dst_character_num);
     }
 
-    uint32_t util::utf8_to_utf16_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    uint32_t util::utf8_to_utf16_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         // Threshold lowered to 16 to catch small strings
-        if (src_len >= 16 && _bq_utf_simd_supported_) {
-            const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
-             if (converted == src_len) {
+        if (src_character_num >= 16 && _bq_utf_simd_supported_) {
+            const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_character_num, dst, dst_character_num);
+             if (converted == src_character_num) {
                  return converted;
              }
-             return converted + _impl_utf8_to_utf16_simd(src + converted, src_len - converted, dst + converted, dst_len - converted);
+             return converted + _impl_utf8_to_utf16_simd(src + converted, src_character_num - converted, dst + converted, dst_character_num - converted);
         }
-        return _impl_utf8_to_utf16_scalar_fast(src, src_len, dst, dst_len);
+        return _impl_utf8_to_utf16_scalar_fast(src, src_character_num, dst, dst_character_num);
     }
 
 
-    uint32_t util::utf16_to_utf8_ascii_fast(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    uint32_t util::utf16_to_utf8_ascii_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         // Threshold lowered to 8 to catch small strings on NEON/SSE
-        if (src_len >= 8 && _bq_utf_simd_supported_) {
+        if (src_character_num >= 8 && _bq_utf_simd_supported_) {
             // Try optimistic ASCII first
-            const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_len, dst, dst_len);
+            const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_character_num, dst, dst_character_num);
             return converted;
         }
         return 0;
     }
 
-    uint32_t util::utf8_to_utf16_ascii_fast(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    uint32_t util::utf8_to_utf16_ascii_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         // Threshold lowered to 16 to catch small strings
-        if (src_len >= 16 && _bq_utf_simd_supported_) {
-            const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_len, dst, dst_len);
+        if (src_character_num >= 16 && _bq_utf_simd_supported_) {
+            const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_character_num, dst, dst_character_num);
             return converted;
         }
         return 0;
+    }
+
+    // =================================================================================================
+    // Legacy Implementation (State Machine)
+    // =================================================================================================
+
+    uint32_t util::utf16_to_utf8(const char16_t* BQ_RESTRICT src_utf16_str, uint32_t src_character_num, char* BQ_RESTRICT dst_utf8_str, uint32_t dst_character_num)
+    {
+        uint32_t result_len = 0;
+        uint32_t codepoint = 0;
+        uint32_t surrogate = 0;
+
+        uint32_t wchar_len = src_character_num;
+
+        const char16_t* s = src_utf16_str;
+        const char16_t* p = s;
+
+        while (static_cast<uint32_t>(p - s) < wchar_len) {
+            char16_t c = *p++;
+            if (c == 0) break;
+            if (surrogate) {
+                if (c >= 0xDC00 && c <= 0xDFFF) {
+                    codepoint = static_cast<uint32_t>(0x10000u) + (static_cast<uint32_t>(c) - static_cast<uint32_t>(0xDC00u)) + static_cast<uint32_t>((surrogate - static_cast<uint32_t>(0xD800)) << 10);
+                    surrogate = 0;
+                }
+                else {
+                    surrogate = 0;
+                    continue;
+                }
+            }
+            else {
+                if (c < 0x80) {
+                    dst_utf8_str[result_len++] = static_cast<char>(c);
+
+                    while (static_cast<uint32_t>(p - s) < wchar_len && *p && *p < 0x80) {
+                        dst_utf8_str[result_len++] = static_cast<char>(*p++);
+                    }
+
+                    continue;
+                }
+                else if (c >= 0xD800 && c <= 0xDBFF) {
+                    surrogate = c;
+                }
+                else if (c >= 0xDC00 && c <= 0xDFFF) {
+                    continue;
+                }
+                else {
+                    codepoint = c;
+                }
+            }
+
+            if (surrogate != 0)
+                continue;
+
+            if (codepoint < 0x80) {
+                dst_utf8_str[result_len++] = static_cast<char>(codepoint);
+            }
+            else if (codepoint < 0x0800) {
+                dst_utf8_str[result_len++] = static_cast<char>(0xC0 | (codepoint >> 6));
+                dst_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+            }
+            else if (codepoint < 0x10000) {
+                dst_utf8_str[result_len++] = static_cast<char>(0xE0 | (codepoint >> 12));
+                dst_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                dst_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+            }
+            else {
+                dst_utf8_str[result_len++] = static_cast<char>(0xF0 | (codepoint >> 18));
+                dst_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+                dst_utf8_str[result_len++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                dst_utf8_str[result_len++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+            }
+        }
+        assert(result_len <= dst_character_num && "target buffer of utf16_to_utf8 is not enough!");
+        return result_len;
+    }
+
+    uint32_t util::utf8_to_utf16(const char* BQ_RESTRICT src_utf8_str, uint32_t src_character_num, char16_t* BQ_RESTRICT dst_utf16_str, uint32_t dst_character_num)
+    {
+        uint32_t result_len = 0;
+        uint32_t mb_size = 0;
+        uint32_t mb_remain = 0;
+
+        uint32_t codepoint = 0;
+
+        const char* p = (const char*)src_utf8_str;
+        while (static_cast<uint32_t>(p - src_utf8_str) < src_character_num) {
+            const auto c = static_cast<char16_t>(static_cast<uint8_t>(*p++));
+            if (c == 0) break;
+            if (mb_size == 0) {
+                if (c < 0x80) {
+                    dst_utf16_str[result_len++] = c;
+                }
+                else if ((c & 0xE0) == 0xC0) {
+                    codepoint = c & 0x1F;
+                    mb_size = 2;
+                }
+                else if ((c & 0xF0) == 0xE0) {
+                    codepoint = c & 0x0F;
+                    mb_size = 3;
+                }
+                else if ((c & 0xF8) == 0xF0) {
+                    codepoint = c & 7;
+                    mb_size = 4;
+                }
+                else if ((c & 0xFC) == 0xF8) {
+                    codepoint = c & 3;
+                    mb_size = 5;
+                }
+                else if ((c & 0xFE) == 0xFC) {
+                    codepoint = c & 3;
+                    mb_size = 6;
+                }
+                else {
+                    codepoint = mb_remain = mb_size = 0;
+                }
+
+                if (mb_size > 1)
+                    mb_remain = mb_size - 1;
+
+            }
+            else {
+                if ((c & 0xC0) == 0x80) {
+                    codepoint = (codepoint << 6) | (c & 0x3F);
+
+                    if (--mb_remain == 0) {
+                        if (codepoint < 0x10000) {
+                            dst_utf16_str[result_len++] = static_cast<char16_t>(codepoint % 0x10000);
+                        }
+                        else if (codepoint < 0x110000) {
+                            codepoint -= 0x10000;
+                            dst_utf16_str[result_len++] = static_cast<char16_t>((codepoint >> 10) + 0xD800);
+                            dst_utf16_str[result_len++] = static_cast<char16_t>((codepoint & 0x3FF) + 0xDC00);
+                        }
+                        else {
+                            codepoint = mb_remain = 0;
+                        }
+                        mb_size = 0;
+                    }
+                }
+                else {
+                    codepoint = mb_remain = mb_size = 0;
+                }
+            }
+        }
+        assert(result_len <= dst_character_num && "target buffer of utf8_to_utf16 is not enough!");
+        return result_len;
+    }
+
+    uint32_t util::utf16_to_utf_mixed(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
+    {
+        auto written_character_num = utf16_to_utf8_ascii_fast(src, src_character_num, dst, dst_character_num);
+        BQ_UNLIKELY_IF (written_character_num >= dst_character_num) {
+            assert(false && "utf16_to_utf_mixed dst space utf8 not enough");
+        }
+        dst[written_character_num] = static_cast<char>(0xFF);
+        BQ_UNLIKELY_IF(written_character_num < src_character_num) {
+            auto left_chars = src_character_num - written_character_num;
+            auto left_space = dst_character_num - (written_character_num + 1);
+            BQ_UNLIKELY_IF(left_space < left_chars * sizeof(char16_t)) {
+                assert(false && "utf16_to_utf_mixed dst space utf16 not enough");
+            }
+            memcpy(dst + written_character_num + 1, src + written_character_num, left_chars * sizeof(char16_t));
+            written_character_num += static_cast<uint32_t>(left_chars * sizeof(char16_t));
+        }
+        return written_character_num + 1;
+    }
+
+    using mixed_utf16_buffer_type = bq::array<char, bq::aligned_allocator<char, 8>>;
+    BQ_TLS_NON_POD(mixed_utf16_buffer_type, mixed_utf16_buffer_);
+    uint32_t util::utf_mixed_to_utf8(const char* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
+    {
+        auto mark_ptr = memchr(static_cast<const void*>(src), 0xFF, static_cast<size_t>(src_character_num));
+        BQ_UNLIKELY_IF(!mark_ptr) {
+            assert(false && "utf_mixed_to_utf8 invalid src");
+        }
+        auto utf8_len = static_cast<uint32_t>(static_cast<const char*>(mark_ptr) - src);
+        BQ_UNLIKELY_IF(utf8_len > dst_character_num) {
+            assert(false && "utf_mixed_to_utf8 dst space utf8 not enough");
+        }
+        memcpy(dst, src, utf8_len);
+        auto left_space = static_cast<uint32_t>(dst_character_num - utf8_len);
+        auto left_characters = src_character_num - utf8_len - 1;
+        const char* utf16_start = src + utf8_len + 1;
+        if ((reinterpret_cast<uintptr_t>(utf16_start) & static_cast<uintptr_t>(0x01)) != 0) {
+            mixed_utf16_buffer_.get().clear();
+            mixed_utf16_buffer_.get().fill_uninitialized(left_characters);
+            memcpy(mixed_utf16_buffer_.get().begin(), src + utf8_len + 1, left_characters);
+            utf16_start = static_cast<const char*>(mixed_utf16_buffer_.get().begin());
+        }
+        utf8_len += utf16_to_utf8_fast(reinterpret_cast<const char16_t*>(utf16_start), left_characters / sizeof(char16_t), dst + utf8_len, left_space);
+        if (mixed_utf16_buffer_.get().size() > 256) {
+            mixed_utf16_buffer_.get().clear();
+            mixed_utf16_buffer_.get().set_capacity(256, true);
+        }
+        return utf8_len;
     }
 
 
 #ifdef BQ_UNIT_TEST
-    uint32_t util::utf16_to_utf8_fast_sw(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    uint32_t util::utf16_to_utf8_fast_sw(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        return _impl_utf16_to_utf8_scalar_fast(src, src_len, dst, dst_len);
+        return _impl_utf16_to_utf8_scalar_fast(src, src_character_num, dst, dst_character_num);
     }
-    uint32_t util::utf8_to_utf16_fast_sw(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    uint32_t util::utf8_to_utf16_fast_sw(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        return _impl_utf8_to_utf16_scalar_fast(src, src_len, dst, dst_len);
+        return _impl_utf8_to_utf16_scalar_fast(src, src_character_num, dst, dst_character_num);
     }
 #if defined(BQ_X86)
-    uint32_t util::utf16_to_utf8_fast_sse(const char16_t* src, uint32_t src_len, char* dst, uint32_t dst_len)
+    uint32_t util::utf16_to_utf8_fast_sse(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        (void)dst_len;
+        (void)dst_character_num;
         const auto* src_ptr = src;
-        const auto* src_end = src + src_len;
+        const auto* src_end = src + src_character_num;
         const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic_sse(src_ptr, src_end, dst);
-        if (converted == src_len) {
+        if (converted == src_character_num) {
             return converted;
         }
         src_ptr = src + converted;
         return converted + _impl_utf16_to_utf8_simd_sse(src_ptr, src_end, dst + converted);
     }
-    uint32_t util::utf8_to_utf16_fast_sse(const char* src, uint32_t src_len, char16_t* dst, uint32_t dst_len)
+    uint32_t util::utf8_to_utf16_fast_sse(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        (void)dst_len;
+        (void)dst_character_num;
         // Threshold lowered to 16 to catch small strings
         const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
-        const auto* src_end = src_ptr + src_len;
+        const auto* src_end = src_ptr + src_character_num;
         const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic_sse(src_ptr, src_end, dst);
-        if (converted == src_len) {
+        if (converted == src_character_num) {
             return converted;
         }
         src_ptr = reinterpret_cast<const uint8_t*>(src) + converted;
