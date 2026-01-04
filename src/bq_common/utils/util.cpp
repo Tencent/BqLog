@@ -619,7 +619,7 @@ namespace bq {
         return x;
     }
 
- 
+
     // =================================================================================================
     // Fast Implementation (SIMD + Optimized Scalar)
     // =================================================================================================
@@ -919,8 +919,41 @@ namespace bq {
     }
 
     // =================================================================================================
-    // Optimistic Implementation (Aggressive SIMD)
+    // Optimistic Implementation
     // =================================================================================================
+    // Updates src and dst pointers. Stops at first non-ASCII or end.
+    static bq_forceinline uint32_t _impl_utf16_to_utf8_ascii_optimistic_sw(const char16_t* BQ_RESTRICT& src, const char16_t* src_end, char* BQ_RESTRICT& dst)
+    {
+#ifndef NDEBUG
+        assert(bq::util::is_little_endian() && "Only Little-Endian is Supported");
+#endif
+        const auto* start_src = src;
+        // Only optimize for Little Endian. Big Endian falls back to scalar loop.
+        while (src + 4 <= src_end) {
+            uint64_t v;
+            memcpy(&v, src, 8);
+
+            // Check for non-ASCII: any high byte of u16 non-zero, or low byte > 0x7F
+            // Mask 0xFF80 checks bit 7-15 of each char16.
+            if ((v & 0xFF80FF80FF80FF80ULL) != 0) break;
+
+            // Pack 4 chars: 00AA 00BB 00CC 00DD -> AA BB CC DD
+            uint32_t out = static_cast<uint32_t>(v & 0xFF) |
+                static_cast<uint32_t>((v >> 8) & 0xFF00) |
+                static_cast<uint32_t>((v >> 16) & 0xFF0000) |
+                static_cast<uint32_t>((v >> 24) & 0xFF000000);
+
+            memcpy(dst, &out, 4);
+            src += 4;
+            dst += 4;
+        }
+        // Scalar tail
+        while (src < src_end) {
+            if (*src >= 0x80) break;
+            *dst++ = static_cast<char>(*src++);
+        }
+        return static_cast<uint32_t>(src - start_src);
+    }
 
 #if defined(BQ_X86)
     // AVX2 Optimistic
@@ -990,6 +1023,8 @@ namespace bq {
                 _mm_storeu_si128(reinterpret_cast<__m128i*>(tail_dst), _mm256_castsi256_si128(permuted));
                 return static_cast<uint32_t>(src_end - start_src);
             }
+            auto pre_processed = static_cast<uint32_t>(src_ptr - start_src);  //Maybe redundant
+            return pre_processed + _impl_utf16_to_utf8_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
         }
 
         return static_cast<uint32_t>(src_ptr - start_src);
@@ -1058,6 +1093,8 @@ namespace bq {
                 _mm_storel_epi64(reinterpret_cast<__m128i*>(tail_dst), _mm_packus_epi16(v0, v0));
                 return static_cast<uint32_t>(src_end - start_src);
             }
+            auto pre_processed = static_cast<uint32_t>(src_ptr - start_src);  //Maybe redundant
+            return pre_processed + _impl_utf16_to_utf8_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
         }
 
         return static_cast<uint32_t>(src_ptr - start_src);
@@ -1120,6 +1157,8 @@ namespace bq {
                 vst1_u8(reinterpret_cast<uint8_t*>(tail_dst), vmovn_u16(v0));
                 return static_cast<uint32_t>(src_end - start_src);
             }
+            auto pre_processed = static_cast<uint32_t>(src_ptr - start_src);  //Maybe redundant
+            return pre_processed + _impl_utf16_to_utf8_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
         }
         return static_cast<uint32_t>(src_ptr - start_src);
     }
@@ -1139,12 +1178,61 @@ namespace bq {
             return _impl_utf16_to_utf8_ascii_optimistic_avx2(src_ptr, src_end, dst_ptr);
         } 
         return _impl_utf16_to_utf8_ascii_optimistic_sse(src_ptr, src_end, dst_ptr);
+#elif defined(BQ_ARM_NEON)
+        return _impl_utf16_to_utf8_ascii_optimistic_neon(src_ptr, src_end, dst_ptr);
 #else
-    #if defined(BQ_ARM_NEON)
-        _impl_utf16_to_utf8_ascii_optimistic_neon(src_ptr, src_end, dst_ptr);
-    #endif
-        return static_cast<uint32_t>(src_ptr - src);
+        return _impl_utf16_to_utf8_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
 #endif
+    }
+
+    // Updates src and dst pointers. Stops at first non-ASCII or end.
+    static bq_forceinline uint32_t _impl_utf8_to_utf16_ascii_optimistic_sw(const uint8_t* BQ_RESTRICT& src, const uint8_t* src_end, char16_t* BQ_RESTRICT& dst)
+    {
+#ifndef NDEBUG
+        assert(bq::util::is_little_endian() && "Only Little-Endian is Supported");
+#endif
+        // Process 8 bytes (chars) at a time -> expands to 16 bytes (8 char16_t)
+        const auto* src_start = src;
+
+        while (src + 8 <= src_end) {
+            uint64_t v;
+            memcpy(&v, src, 8);
+
+            // Check high bit of each byte
+            if ((v & 0x8080808080808080ULL) != 0) break;
+
+            // Expand 8 chars to 8 char16_t
+            // Input: AA BB CC DD EE FF GG HH
+            // We need to insert 0x00 bytes.
+            // Split into two 32-bit parts to handle easier
+            uint32_t lo = static_cast<uint32_t>(v);
+            uint32_t hi = static_cast<uint32_t>(v >> 32);
+
+            // 00000000 00000000 00000000 AABBCCDD
+            // Expand u32 to u64 with zeroes
+            auto expand = [](uint32_t x) -> uint64_t {
+                uint64_t t = x;
+                // t = 00000000 00000000 00000000 AABBCCDD
+                t = (t | (t << 16)) & 0x0000FFFF0000FFFFULL; // 00000000 AABB0000 0000CCDD
+                t = (t | (t << 8)) & 0x00FF00FF00FF00FFULL; // 00AA00BB 00CC00DD
+                return t;
+                };
+
+            uint64_t out_lo = expand(lo);
+            uint64_t out_hi = expand(hi);
+
+            memcpy(dst, &out_lo, 8);
+            memcpy(dst + 4, &out_hi, 8);
+
+            src += 8;
+            dst += 8;
+        }
+        // Scalar tail
+        while (src < src_end) {
+            if (*src >= 0x80) break;
+            *dst++ = static_cast<char16_t>(*src++);
+        }
+        return static_cast<uint32_t>(src - src_start);
     }
 
 #if defined(BQ_X86)
@@ -1196,6 +1284,7 @@ namespace bq {
 
         if (src_ptr < src_end) {
             if (src_end - start_src >= 16) {
+                //Overlapping Load
                 const auto* tail_src = src_end - 16;
                 auto* tail_dst = dst_ptr - (16 - (src_end - src_ptr));
                 const auto chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(tail_src));
@@ -1205,6 +1294,8 @@ namespace bq {
                 _mm256_storeu_si256(reinterpret_cast<__m256i*>(tail_dst), _mm256_cvtepu8_epi16(chunk));
                 return static_cast<uint32_t>(src_end - start_src);
             }
+            auto pre_processed = static_cast<uint32_t>(src_ptr - start_src);  //Maybe redundant
+            return pre_processed + _impl_utf8_to_utf16_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
         }
         return static_cast<uint32_t>(src_ptr - start_src);
     }
@@ -1260,6 +1351,8 @@ namespace bq {
                 _mm_storeu_si128(reinterpret_cast<__m128i*>(tail_dst + 8),  _mm_cvtepu8_epi16(_mm_srli_si128(chunk, 8)));
                 return static_cast<uint32_t>(src_end - start_src);
             }
+            auto pre_processed = static_cast<uint32_t>(src_ptr - start_src);  //Maybe redundant
+            return pre_processed + _impl_utf8_to_utf16_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
         }
 
         return static_cast<uint32_t>(src_ptr - start_src);
@@ -1336,6 +1429,8 @@ namespace bq {
                 vst1q_u16(reinterpret_cast<uint16_t*>(tail_dst + 8), vmovl_u8(vget_high_u8(v0)));
                 return static_cast<uint32_t>(src_end - start_src);
             }
+            auto pre_processed = static_cast<uint32_t>(src_ptr - start_src);  //Maybe redundant
+            return pre_processed + _impl_utf8_to_utf16_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
         }
         return static_cast<uint32_t>(src_ptr - start_src);
     }
@@ -1355,11 +1450,10 @@ namespace bq {
             return _impl_utf8_to_utf16_ascii_optimistic_avx2(src_ptr, src_end, dst_ptr);
         } 
         return _impl_utf8_to_utf16_ascii_optimistic_sse(src_ptr, src_end, dst_ptr);
-#else
-    #if defined(BQ_ARM_NEON)
+#elif defined(BQ_ARM_NEON)
         return _impl_utf8_to_utf16_ascii_optimistic_neon(src_ptr, src_end, dst_ptr);
-    #endif
-        return static_cast<uint32_t>(src_ptr - reinterpret_cast<const uint8_t*>(src));
+#else
+        return _impl_utf8_to_utf16_ascii_optimistic_sw(src_ptr, src_end, dst_ptr);
 #endif
     }
 
@@ -1394,23 +1488,18 @@ namespace bq {
 
     uint32_t util::utf16_to_utf8_ascii_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        // Threshold lowered to 8 to catch small strings on NEON/SSE
-        if (src_character_num >= 8 && _bq_utf_simd_supported_) {
-            // Try optimistic ASCII first
-            const uint32_t converted = _impl_utf16_to_utf8_ascii_optimistic(src, src_character_num, dst, dst_character_num);
-            return converted;
-        }
-        return 0;
+#ifndef NDEBUG
+        assert(dst_character_num >= src_character_num);
+#endif
+        return  _impl_utf16_to_utf8_ascii_optimistic(src, src_character_num, dst, dst_character_num);
     }
 
     uint32_t util::utf8_to_utf16_ascii_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        // Threshold lowered to 16 to catch small strings
-        if (src_character_num >= 16 && _bq_utf_simd_supported_) {
-            const uint32_t converted = _impl_utf8_to_utf16_ascii_optimistic(src, src_character_num, dst, dst_character_num);
-            return converted;
-        }
-        return 0;
+#ifndef NDEBUG
+        assert(dst_character_num >= src_character_num);
+#endif
+        return _impl_utf8_to_utf16_ascii_optimistic(src, src_character_num, dst, dst_character_num);
     }
 
     // =================================================================================================

@@ -408,6 +408,106 @@ namespace bq {
                 result.add_result(memcmp(test_str_ascii, u8_buf.begin(), len_asicii) == 0, "Fast Round Trip Ascii Mixed");
                 result.add_result(static_cast<size_t>(l4) == len_asicii, "Fast Round Trip Ascii Mixed Size");
 
+                // =================================================================================
+                // 1.5 Comprehensive Optimistic & Mixed Tests (1-4096 bytes)
+                // =================================================================================
+                {
+                    const size_t max_test_len = 4096;
+                    std::vector<char16_t> src_16(max_test_len * 2 + 128); 
+                    std::vector<char> src_8(max_test_len * 2 + 128);
+                    std::vector<char> dst_mixed(max_test_len * 4 + 128);
+                    std::vector<char> dst_8(max_test_len * 4 + 128);
+                    std::vector<char16_t> dst_16(max_test_len * 2 + 128);
+                    
+                    bool all_pass = true;
+                    for (size_t t_len = 1; t_len <= max_test_len; ++t_len) {
+                        // --- Pure ASCII ---
+                        for(size_t i=0; i<t_len; ++i) {
+                            char c = (char)((rand() % 127) + 1);
+                            src_16[i] = (char16_t)c;
+                            src_8[i] = c;
+                        }
+                        
+                        // Test Alignments (0, 1, ..., 15)
+                        for (size_t align = 0; align < 16; ++align) {
+                            uint32_t r = bq::util::utf16_to_utf8_ascii_fast(src_16.data() + align, (uint32_t)t_len, dst_8.data() + align, (uint32_t)dst_8.size());
+                            if (r != t_len) { 
+                                result.add_result(false, "utf16_to_utf8_ascii_fast len mismatch. len=%zu align=%zu", t_len, align); 
+                                all_pass=false; 
+                                break; 
+                            }
+                            if (memcmp(src_8.data() + align, dst_8.data() + align, t_len) != 0) { 
+                                result.add_result(false, "utf16_to_utf8_ascii_fast content mismatch. len=%zu align=%zu", t_len, align); 
+                                all_pass=false; 
+                                break; 
+                            }
+                            
+                            r = bq::util::utf8_to_utf16_ascii_fast(src_8.data() + align, (uint32_t)t_len, dst_16.data() + align, (uint32_t)dst_16.size());
+                            if (r != t_len) { 
+                                result.add_result(false, "utf8_to_utf16_ascii_fast len mismatch. len=%zu align=%zu", t_len, align); 
+                                all_pass=false; 
+                                break; 
+                            }
+                            if (memcmp(src_16.data() + align, dst_16.data() + align, t_len * 2) != 0) {
+                                result.add_result(false, "utf8_to_utf16_ascii_fast content mismatch. len=%zu align=%zu", t_len, align); 
+                                all_pass=false; 
+                                break; 
+                            }
+                        }
+                        if (!all_pass){
+                            break;
+                        }
+
+                        // --- Mixed Content (Truncation Check) ---
+                        if (t_len > 5) {
+                            size_t stop_pos = t_len / 2;
+                            char16_t backup = src_16[stop_pos];
+                            src_16[stop_pos] = 0x4E00; // Chinese
+                            uint32_t r = bq::util::utf16_to_utf8_ascii_fast(src_16.data(), (uint32_t)t_len, dst_8.data(), (uint32_t)dst_8.size());
+                            if (r > stop_pos) { 
+                                result.add_result(false, "utf16_to_utf8_ascii_fast truncation fail. len=%zu stop=%zu ret=%u", t_len, stop_pos, r); 
+                                all_pass=false; 
+                                break; 
+                            }
+                            src_16[stop_pos] = backup;
+                        }
+
+                        // --- UTF-Mixed Round Trip ---
+                        // Generate random mixed content
+                        for(size_t i=0; i<t_len; ++i) {
+                            if (rand() % 10 == 0) {
+                                src_16[i] = static_cast<char16_t>(0x4E00 + (rand() % 100));
+                            }
+                            else {
+                                src_16[i] = static_cast<char16_t>((rand() % 127) + 1);
+                            }
+                        }
+                        // Reference conversion
+                        std::vector<char> ref_u8(t_len * 3 + 1);
+                        uint32_t ref_len = bq::util::utf16_to_utf8(src_16.data(), (uint32_t)t_len, ref_u8.data(), (uint32_t)ref_u8.size());
+
+                        for (size_t align = 0; align < 16; ++align) {
+                            uint32_t mix_len = bq::util::utf16_to_utf_mixed(src_16.data(), (uint32_t)t_len, dst_mixed.data() + align, (uint32_t)dst_mixed.size());
+                            uint32_t final_len = bq::util::utf_mixed_to_utf8(dst_mixed.data() + align, mix_len, dst_8.data() + align, (uint32_t)dst_8.size());
+                            
+                            if (final_len != ref_len) {
+                                result.add_result(false, "UTF-Mixed size mismatch. len=%zu align=%zu", t_len, align);
+                                all_pass = false;
+                                break;
+                            }
+                            if (memcmp(ref_u8.data(), dst_8.data() + align, ref_len) != 0) {
+                                result.add_result(false, "UTF-Mixed content mismatch. len=%zu align=%zu", t_len, align);
+                                all_pass = false;
+                                break;
+                            }
+                        }
+                        if (!all_pass){
+                            break;
+                        }
+                    }
+                    result.add_result(all_pass, "Comprehensive Optimistic & UTF-Mixed Tests (1-4096 bytes)");
+                }
+
                 // 2. Performance Benchmark
                 size_t bench_size = 64 * 1024 * 1024; // 64MB
                 struct TestCase {
@@ -441,17 +541,17 @@ namespace bq {
                     // --- UTF8 -> UTF16 ---
                     auto sum1 = benchmark("UTF8->UTF16 [Legacy]", 64, [&]() {
                         bq::util::utf8_to_utf16(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
-                    }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
+                    }, buf_u16.begin(), u16_len_real * sizeof(char16_t));
                     
                     auto sum2 = benchmark( "UTF8->UTF16 [Fast SW]", 64, [&]() {
                         bq::util::utf8_to_utf16_fast_sw(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
-                    }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
+                    }, buf_u16.begin(), u16_len_real * sizeof(char16_t));
 
                     result.add_result(sum1 == sum2, "utf8->utf16, [Legacy] & [Fast SW]");
 #if defined(BQ_X86)
                     auto sum_sse = benchmark("UTF8->UTF16 [Fast SSE]", 64, [&]() {
                         bq::util::utf8_to_utf16_fast_sse(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
-                    }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
+                    }, buf_u16.begin(), u16_len_real * sizeof(char16_t));
                     result.add_result(sum1 == sum_sse, "utf8->utf16, [Legacy] & [Fast SSE]");
 #endif
 #if defined(BQ_X86)
@@ -463,12 +563,12 @@ namespace bq {
 #endif
                         auto sum3 = benchmark("UTF8->UTF16 [Fast SIMD (Opt+Fall)]", 64, [&]() {
                             bq::util::utf8_to_utf16_fast(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
-                        }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
+                        }, buf_u16.begin(), u16_len_real * sizeof(char16_t));
                         result.add_result(sum1 == sum3, "utf8->utf16, [Legacy] & [Fast SIMD (Opt+Fall)]");
                         if (c.is_ascii) {
                             auto sum4 = benchmark("UTF8->UTF16 [Optimistic Only]", 64, [&]() {
                                 bq::util::utf8_to_utf16_ascii_fast(src_u8.data(), (uint32_t)src_u8.size(), buf_u16.begin(), (uint32_t)buf_u16.size());
-                                }, buf_u16.begin(), buf_u16.size() * sizeof(char16_t));
+                                }, buf_u16.begin(), u16_len_real * sizeof(char16_t));
                             result.add_result(sum1 == sum4, "utf8->utf16, [Legacy] & UTF8->UTF16 [Optimistic Only]");
                         }
                     }
@@ -476,17 +576,17 @@ namespace bq {
                     // --- UTF16 -> UTF8 ---
                     sum1 = benchmark("UTF16->UTF8 [Legacy]", 64, [&]() {
                         bq::util::utf16_to_utf8(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
-                    }, buf_u8_out.begin(), buf_u8_out.size());
+                    }, buf_u8_out.begin(), src_u8.size());
 
                     sum2 = benchmark("UTF16->UTF8 [Fast SW]", 64, [&]() {
                         bq::util::utf16_to_utf8_fast_sw(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
-                        }, buf_u8_out.begin(), buf_u8_out.size());
+                        }, buf_u8_out.begin(), src_u8.size());
                     result.add_result(sum1 == sum2, "utf16->utf8, [Legacy] & [Fast SW]");
 
 #if defined(BQ_X86)
                     auto sum_sse_2 = benchmark("UTF16->UTF8 [Fast SSE]", 64, [&]() {
                         bq::util::utf16_to_utf8_fast_sse(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
-                    }, buf_u8_out.begin(), buf_u8_out.size());
+                    }, buf_u8_out.begin(), src_u8.size());
                     result.add_result(sum1 == sum_sse_2, "utf16->utf8, [Legacy] & [Fast SSE]");
 #endif
 
@@ -499,16 +599,33 @@ namespace bq {
 #endif
                         auto sum3 = benchmark("UTF16->UTF8 [Fast SIMD (Opt+Fall)]", 64, [&]() {
                             bq::util::utf16_to_utf8_fast(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
-                            }, buf_u8_out.begin(), buf_u8_out.size());
+                            }, buf_u8_out.begin(), src_u8.size());
                         result.add_result(sum1 == sum3, "utf16->utf8, [Legacy] & [Fast SIMD (Opt+Fall)]");
                         
                         if (c.is_ascii) {
                             auto sum4 = benchmark("UTF16->UTF8 [Optimistic Only]", 64, [&]() {
                                 bq::util::utf16_to_utf8_ascii_fast(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
-                                }, buf_u8_out.begin(), buf_u8_out.size());
+                                }, buf_u8_out.begin(), src_u8.size());
                             result.add_result(sum1 == sum4, "utf16->utf8, [Legacy] & UTF8->UTF16 [Optimistic Only]");
                         }
                     }
+
+                    // --- UTF16 -> UTF-Mixed ---
+                    benchmark("UTF16->UTF-Mixed", 64, [&]() {
+                        bq::util::utf16_to_utf_mixed(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
+                    }, buf_u8_out.begin(), buf_u8_out.size());
+
+                    // --- UTF-Mixed -> UTF8 ---
+                    // First encode to mixed to have valid data
+                    uint32_t mix_len = bq::util::utf16_to_utf_mixed(buf_u16.begin(), u16_len_real, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
+                    // Copy to source buffer for benchmark stability
+                    bq::array<char> mixed_src_buf; mixed_src_buf.fill_uninitialized((uint32_t)mix_len);
+                    memcpy(mixed_src_buf.begin(), buf_u8_out.begin(), mix_len);
+                    
+                    auto sum5 = benchmark("UTF-Mixed->UTF8", 64, [&]() {
+                        bq::util::utf_mixed_to_utf8(mixed_src_buf.begin(), mix_len, buf_u8_out.begin(), (uint32_t)buf_u8_out.size());
+                        }, buf_u8_out.begin(), src_u8.size());
+                    result.add_result(sum1 == sum5, "utf16->utfMixed->utf8, [Legacy] & [UTF-Mixed]");
                 }
                 return result;
             }
