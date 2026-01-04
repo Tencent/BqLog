@@ -55,9 +55,13 @@ namespace bq {
             // EBX bit 5 is AVX2
             result = (regs[1] & (1 << 5)) != 0;
         }
+#ifdef BQ_UNIT_TEST
         bq::util::set_log_device_console_min_level(bq::log_level::info);
+#endif
         bq::util::log_device_console(bq::log_level::info, "Hardware AVX2 support:%s", result ? "true" : "false");
+#ifdef BQ_UNIT_TEST
         bq::util::set_log_device_console_min_level(bq::log_level::warning);
+#endif
         return result;
     }
 #endif
@@ -103,9 +107,14 @@ namespace bq {
         #endif
 #endif
 #endif
+#ifdef BQ_UNIT_TEST
         bq::util::set_log_device_console_min_level(bq::log_level::info);
+#endif
         bq::util::log_device_console(bq::log_level::info, "Hardware CRC32 support:%s", result ? "true" : "false");
+
+#ifdef BQ_UNIT_TEST
         bq::util::set_log_device_console_min_level(bq::log_level::warning);
+#endif
         return result;
     }
 
