@@ -186,6 +186,11 @@ namespace bq {
     {
 #if defined(BQ_X86_64)
         return (uint32_t)_mm_crc32_u64(crc, v);
+#elif defined(BQ_X86)
+        // i386 does not have _mm_crc32_u64, split into two u32
+        crc = _bq_crc32_u32_hw(crc, static_cast<uint32_t>(v & 0xFFFFFFFF));
+        crc = _bq_crc32_u32_hw(crc, static_cast<uint32_t>((v >> 32) & 0xFFFFFFFF));
+        return crc;
 #elif defined(BQ_ARM_64) && defined(__ARM_FEATURE_CRC32)
         return __crc32d(crc, v);
 #else
