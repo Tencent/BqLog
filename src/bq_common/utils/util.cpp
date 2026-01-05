@@ -147,6 +147,8 @@ namespace bq {
 #elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32b(crc, v);
 #else
+        (void)crc;
+        (void)v;
         assert(false && "impossible path, only for compile");
         return 0;
 #endif
@@ -159,6 +161,8 @@ namespace bq {
 #elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32h(crc, v);
 #else
+        (void)crc;
+        (void)v;
         assert(false && "impossible path, only for compile");
         return 0;
 #endif
@@ -171,6 +175,8 @@ namespace bq {
 #elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32w(crc, v);
 #else
+        (void)crc;
+        (void)v;
         assert(false && "impossible path, only for compile");
         return 0;
 #endif
@@ -183,6 +189,8 @@ namespace bq {
 #elif defined(BQ_ARM_64) && defined(__ARM_FEATURE_CRC32)
         return __crc32d(crc, v);
 #else
+        (void)crc;
+        (void)v;
         assert(false && "impossible path, only for compile");
         return 0;
 #endif
