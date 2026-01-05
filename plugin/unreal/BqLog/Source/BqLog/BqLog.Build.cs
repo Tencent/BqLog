@@ -128,7 +128,7 @@ public class BqLog : ModuleRules
 
     private void ConfigureIOS(string thirdPartyRoot, string pluginRoot)
     {
-        AddStaticInclude(thirdPartyRoot);
+        AddDynamicInclude(thirdPartyRoot);
         string xcframeworkPath = Path.Combine(thirdPartyRoot, "IOS", "BqLog.xcframework");
         if (Directory.Exists(xcframeworkPath))
         {

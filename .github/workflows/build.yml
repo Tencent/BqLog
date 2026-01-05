@@ -3823,7 +3823,7 @@ jobs:
           LINUX_X64_SO=$(find_linux_so "$LINUX_X64_BASE" "$VERSION")
           LINUX_ARM64_SO=$(find_linux_so "$LINUX_ARM64_BASE" "$VERSION")
           MAC_DYLIB=$(find_mac_dylib "$MAC_BASE" "$VERSION")
-          IOS_XCFRAMEWORK=$(find "$IOS_BASE" -type d -path "*static_lib*/BqLog.xcframework" -print -quit)
+          IOS_XCFRAMEWORK=$(find "$IOS_BASE" -type d -path "*dynamic_lib*/BqLog.xcframework" -print -quit)
 
           declare -A ANDROID_SO
           for abi in armeabi-v7a arm64-v8a x86 x86_64; do
@@ -4065,7 +4065,7 @@ jobs:
           cp -Lf "$REAL_SO" "$LINUX_X64_DIR/libBqLog.so"
 
           # iOS (BqLog.xcframework)
-          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/ios_libs_${VERSION}/*/static_lib/lib/RelWithDebInfo/BqLog.xcframework" | sort)
+          mapfile -t ios_fw < <(find "$BASE" -type d -path "*/ios_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/BqLog.xcframework" | sort)
           if (( ${#ios_fw[@]} )); then
             copy_one "${ios_fw[0]}" "$IOS_DIR"
           else
