@@ -78,7 +78,7 @@ namespace bq {
         // ECX (regs[2]) bit 20 is SSE4.2
         result = (regs[2] & (1 << 20)) != 0;
 
-#elif defined(BQ_ARM)
+#elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
 #if defined(BQ_WIN)
         result = IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE) != 0;
 #elif defined(BQ_APPLE)

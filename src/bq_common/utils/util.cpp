@@ -147,7 +147,8 @@ namespace bq {
 #elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32b(crc, v);
 #else
-        return _crc32_sw_u8(crc, v);
+        assert(false && "impossible path, only for compile");
+        return 0;
 #endif
     }
 
@@ -158,7 +159,8 @@ namespace bq {
 #elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32h(crc, v);
 #else
-        return _crc32_sw_u16(crc, v);
+        assert(false && "impossible path, only for compile");
+        return 0;
 #endif
     }
 
@@ -169,7 +171,8 @@ namespace bq {
 #elif defined(BQ_ARM) && defined(__ARM_FEATURE_CRC32)
         return __crc32w(crc, v);
 #else
-        return _crc32_sw_u32(crc, v);
+        assert(false && "impossible path, only for compile");
+        return 0;
 #endif
     }
 
@@ -180,7 +183,8 @@ namespace bq {
 #elif defined(BQ_ARM_64) && defined(__ARM_FEATURE_CRC32)
         return __crc32d(crc, v);
 #else
-        return _crc32_sw_u64(crc, v);
+        assert(false && "impossible path, only for compile");
+        return 0;
 #endif
     }
 
@@ -1690,7 +1694,7 @@ namespace bq {
             memcpy(mixed_utf16_buffer_.get().begin(), src + utf8_len + 1, left_characters);
             utf16_start = static_cast<const char*>(mixed_utf16_buffer_.get().begin());
         }
-        utf8_len += utf16_to_utf8_fast(reinterpret_cast<const char16_t*>(utf16_start), left_characters / sizeof(char16_t), dst + utf8_len, left_space);
+        utf8_len += utf16_to_utf8_fast(reinterpret_cast<const char16_t*>(utf16_start), static_cast<uint32_t>(left_characters >> 1) /* / sizeof(char16_t) */, dst + utf8_len, left_space);
         if (mixed_utf16_buffer_.get().size() > 256) {
             mixed_utf16_buffer_.get().clear();
             mixed_utf16_buffer_.get().set_capacity(256, true);
