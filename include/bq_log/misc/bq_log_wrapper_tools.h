@@ -385,17 +385,35 @@ namespace bq {
 
             static bq_forceinline void c_style_string_copy(void* tar, const CHAR_TYPE* src, size_t target_buffer_size)
             {
-                size_t target_char_size = target_buffer_size >> 1;
-                size_t cursor = 0;
                 char16_t* target_buffer = (char16_t*)tar;
-                for (size_t i = 0; cursor < target_char_size; ++i) {
-                    CHAR_TYPE c = src[i];
-                    if (c <= 0xFFFF) {
-                        target_buffer[cursor++] = static_cast<char16_t>(c);
+                char16_t* target_end = target_buffer + (target_buffer_size >> 1);
+
+                while (target_buffer + 8 <= target_end) {
+                    CHAR_TYPE c0 = src[0];
+                    CHAR_TYPE c1 = src[1];
+                    CHAR_TYPE c2 = src[2];
+                    CHAR_TYPE c3 = src[3];
+
+                    if ((c0 | c1 | c2 | c3) <= 0xFFFF) {
+                        target_buffer[0] = static_cast<char16_t>(c0);
+                        target_buffer[1] = static_cast<char16_t>(c1);
+                        target_buffer[2] = static_cast<char16_t>(c2);
+                        target_buffer[3] = static_cast<char16_t>(c3);
+                        target_buffer += 4;
+                        src += 4;
+                    } else {
+                        break;
+                    }
+                }
+
+                while (target_buffer < target_end) {
+                    CHAR_TYPE c = *src++;
+                    BQ_LIKELY_IF(c <= 0xFFFF) {
+                        *target_buffer++ = static_cast<char16_t>(c);
                     } else {
                         c -= 0x10000;
-                        target_buffer[cursor++] = static_cast<char16_t>((c >> 10) + 0xD800);
-                        target_buffer[cursor++] = static_cast<char16_t>((c & 0x3FF) + 0xDC00);
+                        *target_buffer++ = static_cast<char16_t>((c >> 10) + 0xD800);
+                        *target_buffer++ = static_cast<char16_t>((c & 0x3FF) + 0xDC00);
                     }
                 }
             }
