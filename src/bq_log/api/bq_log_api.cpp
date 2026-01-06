@@ -211,7 +211,7 @@ namespace bq {
                 if (thread_info_tls_.thread_name_len_ > 0) {
                     memcpy(thread_info_tls_.thread_name_, thread_name_tmp.c_str(), thread_info_tls_.thread_name_len_);
                 }
-            
+            }
             length = static_cast<uint32_t>(bq::align_8(length));
             uint32_t ext_info_length = static_cast<uint32_t>(sizeof(ext_log_entry_info_head) + thread_info_tls_.thread_name_len_);
             auto total_length = length + ext_info_length;
