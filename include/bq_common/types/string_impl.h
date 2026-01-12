@@ -424,6 +424,7 @@ namespace bq {
     template <typename CHAR_TYPE, typename Allocator>
     inline uint64_t BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::get_hash(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& str)
     {
+        //Slower than bq::util::get_hash_64 and produces a different hash value, but suitable for header-only files.
         uint64_t hash = 0;
         for (size_type i = 0; i < str.size(); i++) {
             hash *= 1099511628211ull;

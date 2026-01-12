@@ -104,6 +104,7 @@ namespace bq {
                         size = static_cast<size_t>(bq::util::rand()) % static_cast<size_t>(128 * 1024) + 8 + 1;
                     }
                     uint8_t* data_base = static_cast<uint8_t*>(bq::platform::aligned_alloc(8, size));
+                    uint8_t* target_base = static_cast<uint8_t*>(bq::platform::aligned_alloc(8, size + 4));
                     size_t j = 0;
                     for (j = 0; j + 4 < size; j = j + 4) {
                         *reinterpret_cast<uint32_t*>(data_base + j) = bq::util::rand();
@@ -120,12 +121,15 @@ namespace bq {
                         memmove(data_tmp, data_tmp - 1, real_data_size);
                         uint32_t base_hash_32_tmp = bq::util::get_hash(data_tmp, real_data_size);
                         uint64_t base_hash_64_tmp = bq::util::get_hash_64(data_tmp, real_data_size);
+                        uint64_t base_hash_64_cpy_tmp = bq::util::bq_memcpy_with_hash(target_base + (i % 2 == 0 ? 0 : 4), data_tmp, real_data_size);
                         result.add_result(base_hash_32 != 0, "hash32 none zero test at offset %" PRId32, static_cast<int32_t>(offset));
                         result.add_result(base_hash_64 != 0, "hash64 none zero test at offset %" PRId32, static_cast<int32_t>(offset));
                         result.add_result(base_hash_32 == base_hash_32_tmp, "hash32 test at offset %" PRId32, static_cast<int32_t>(offset));
                         result.add_result(base_hash_64 == base_hash_64_tmp, "hash64 test at offset %" PRId32, static_cast<int32_t>(offset));
+                        result.add_result(base_hash_64 == base_hash_64_cpy_tmp, "bq_memcpy_with_hash test at offset %" PRId32, static_cast<int32_t>(offset));
                     }
                     bq::platform::aligned_free(data_base);
+                    bq::platform::aligned_free(target_base);
                 }
 
                 // =================================================================================
@@ -527,7 +531,9 @@ namespace bq {
                 };
 
                 for (auto& c : cases) {
+                    bq::util::set_log_device_console_min_level(bq::log_level::debug);
                     bq::util::log_device_console(bq::log_level::debug, "--- Benchmark Case: %s ---", c.name);
+                    bq::util::set_log_device_console_min_level(bq::log_level::warning);
                     
                     std::vector<char> src_u8;
                     c.gen_func(src_u8, bench_size);

@@ -275,8 +275,10 @@ namespace bq {
                     } \
                 } \
             } \
-            uint64_t low = (uint64_t)(h1 ^ h3); \
-            uint64_t high = (uint64_t)(h2 ^ h4); \
+            uint32_t h3_rot = (h3 << 17) | (h3 >> 15); \
+            uint32_t h4_rot = (h4 << 19) | (h4 >> 13); \
+            uint64_t low = (uint64_t)(h1 ^ h3_rot); \
+            uint64_t high = (uint64_t)(h2 ^ h4_rot); \
             return (high << 32) | low; \
 
 
@@ -320,6 +322,9 @@ namespace bq {
 
     uint64_t util::bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len)
     {
+ #ifndef NDEBUG
+        assert((reinterpret_cast<uintptr_t>(dst) % 4 == 0) && "dst of bq::util::bq_memcpy_with_hash must be 4 bytes aligned");
+ #endif
         return _impl_bq_memcpy_with_hash(dst, src, len);
     }
 
