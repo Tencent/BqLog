@@ -68,9 +68,19 @@ for /l %%a in (0,1,3) do (
 				 
 				 cmake --build . -- -j10 || exit /b 1
                  cmake --build . --target install || exit /b 1
-                 for %%F in ("..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so") do if not exist "%%~dpF" mkdir "%%~dpF"Z
-                 "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe" -s "..\..\..\..\..\install\dynamic_lib\lib\%%p\%%j\libBqLog.so" -o "..\..\..\..\..\install\dynamic_lib\lib_strip\%%p\%%j\libBqLog.so"
 
+                 set "SOURCE_SO=..\..\..\..\..\install\dynamic_lib\lib\%%p\%%j\libBqLog.so"
+                 set "SYMBOL_SO=..\..\..\..\..\install\dynamic_lib\symbols\%%p\%%j\libBqLog.so"
+
+                 for %%A in ("%SYMBOL_SO%") do set "SYMBOL_DIR=%%~dpA"
+                 if not exist "%SYMBOL_DIR%" mkdir "%SYMBOL_DIR%"
+
+                 echo SOURCE_SO:%SOURCE_SO%
+                 echo SYMBOL_SO:%SYMBOL_SO%
+
+                 move /Y "%SOURCE_SO%" "%SYMBOL_SO%"
+                 for %%A in ("%SOURCE_SO%") do mkdir "%%~dpA" 2>nul
+                 "%ANDROID_NDK_ROOT%\toolchains\llvm\prebuilt\%HOST_TAG%\bin\llvm-strip.exe" -s "%SYMBOL_SO%" -o "%SOURCE_SO%"
 			)
 			popd
 		)
