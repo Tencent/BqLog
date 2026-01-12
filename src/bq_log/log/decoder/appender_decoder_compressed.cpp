@@ -143,7 +143,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_formate_templa
             size_t max_utf8_str_len = (data_len << 1);
             info.fmt_string.fill_uninitialized(max_utf8_str_len);
             size_t utf8_len = bq::util::utf_mixed_to_utf8(data_ptr, static_cast<uint32_t>(data_len), info.fmt_string.begin(), static_cast<uint32_t>(max_utf8_str_len));
-            info.fmt_string.erase(info.fmt_string.begin() + utf8_len, max_utf8_str_len - utf8_len);
+            info.fmt_string.erase(info.fmt_string.begin() + static_cast<ptrdiff_t>(utf8_len), max_utf8_str_len - utf8_len);
         }
     }
     return appender_decode_result::success;
@@ -407,7 +407,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             bool has_place_holder = mixed_len && !read_handle.data()[cursor];
             const uint8_t* str_begin_pos = has_place_holder ? (const uint8_t*)(read_handle.data() + cursor + 1) : (const uint8_t*)(read_handle.data() + cursor);
             uint32_t utf8_len = bq::util::utf_mixed_to_utf8(reinterpret_cast<const char*>(str_begin_pos), static_cast<uint32_t>(utf_mixed_len), reinterpret_cast<char*>(static_cast<uint8_t*>(raw_data_.begin())) + raw_cursor, static_cast<uint32_t>(max_utf8_str_len));
-            raw_data_.erase(raw_data_.begin() + raw_cursor + utf8_len, max_utf8_str_len - utf8_len);
+            raw_data_.erase(raw_data_.begin() + raw_cursor + static_cast<ptrdiff_t>(utf8_len), max_utf8_str_len - utf8_len);
             *((uint32_t*)(uint8_t*)(raw_data_.begin() + size_raw_cursor)) = utf8_len;
             cursor += has_place_holder ? (utf_mixed_len + 1) : (utf_mixed_len);
             raw_cursor += static_cast<ptrdiff_t>(bq::align_4(utf8_len));
