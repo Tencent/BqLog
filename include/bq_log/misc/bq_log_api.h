@@ -59,9 +59,21 @@ namespace bq {
         /// <summary>
         /// alloc log write memory chunk
         /// </summary>
-        /// <param name="lengsh"></param>
+        /// <param name="log_id"></param>
+        /// <param name="length"></param>
         /// <returns>chunk handle, please check result code first</returns>
         BQ_API _api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length);
+
+        /// <summary>
+        /// alloc log write memory chunk with format string
+        /// </summary>
+        /// <param name="log_id"></param>
+        /// <param name="length"></param>
+        /// <param name="format_string_type">log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type or log_arg_type_enum::string_utf32_type</param>
+        /// <param name="format_str_data"></param>
+        /// <param name="target_format_string_storage_size">In bytes</param>
+        /// <returns>chunk handle, please check result code first</returns>
+        BQ_API _api_log_buffer_chunk_write_handle __api_log_buffer_alloc_with_format_string(uint64_t log_id, uint32_t length, uint8_t format_string_type, const void* format_str_data, uint32_t target_format_string_storage_size);
 
         /// <summary>
         /// commit write handle after you finished writing log data

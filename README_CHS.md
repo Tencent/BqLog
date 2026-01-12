@@ -68,7 +68,6 @@
 - 支持 `utf8`、`utf16`、`utf32` 字符及字符串，支持 bool、float、double、各种长度与类型的整数等常用参数类型。
 - 支持 `C++20` 的 `std::format` 规范（不含排序序号与时间格式化）。
 - 异步日志支持 Crash 复盘机制，尽量避免日志数据丢失。
-- 尺寸小巧：Android 动态库进包体积约 300 KB 左右。
 - 在 Java、C#、TypeScript 上可以做到「零额外 Heap Alloc」（或极少），不会随着运行不断 new 对象。
 - 仅依赖标准 C 语言库与平台 API，可在 Android 的 `ANDROID_STL = none` 模式下编译通过。
 - 支持 `C++11` 及之后的标准，可在极其严格的编译选项下工作。

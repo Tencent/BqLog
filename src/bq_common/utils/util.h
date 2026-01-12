@@ -93,24 +93,36 @@ namespace bq {
         /// <summary>
         /// `UTF-Mixed` is a custom format in BqLog designed to maximize UTF-16 to UTF-8 conversion performance. 
         /// It consists of a UTF-8 prefix followed by a UTF-16 suffix, separated by a 0xFF character
-        /// which is guaranteed to be present.
+        /// (0xFF is not guaranteed to be present when the whole string is ASCII characters).
         /// </summary>
         /// <param name="src"></param>
         /// <param name="src_character_num"></param>
         /// <param name="dst"></param>
         /// <param name="dst_len"></param>
-        /// <returns></returns>
+        /// <returns>Length of final UTF-mixed string in bytes</returns>
         static uint32_t utf16_to_utf_mixed(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
 
         /// <summary>
         /// Decode from `UTF-Mixed` to `UTF8`
+        /// Warning: Please ensure that the destination buffer has enough space to hold the converted UTF-8 string.
+        /// It's not checked inside this function for performance consideration.
         /// </summary>
         /// <param name="src"></param>
         /// <param name="src_len"></param>
         /// <param name="dst"></param>
         /// <param name="dst_len"></param>
-        /// <returns></returns>
+        /// <returns>Length of final UTF-8 string</returns>
         static uint32_t utf_mixed_to_utf8(const char* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
+
+        /// <summary>
+        /// Computes the hash of a `utf_mixed` string as if it were converted back to UTF-16.
+        /// This is useful for recovering the original UTF-16 hash from a compressed `utf_mixed` storage 
+        /// without fully decoding it to a new string object.
+        /// </summary>
+        /// <param name="mixed">Pointer to the utf_mixed data</param>
+        /// <param name="len">Length of the utf_mixed data in bytes</param>
+        /// <returns>The 64-bit hash of the equivalent UTF-16 string</returns>
+        static uint64_t hash_utf_mixed_as_utf16(const void* mixed, size_t len);
 
         /// <summary>
         /// High performance convert utf16 to utf8 (SIMD accelerated)
@@ -135,9 +147,14 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
         static uint32_t utf16_to_utf8_fast_sw(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
         static uint32_t utf8_to_utf16_fast_sw(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num);
+        static uint64_t hash_utf_mixed_as_utf16_sw(const void* mixed, size_t len);
 #if defined(BQ_X86)
         static uint32_t utf16_to_utf8_fast_sse(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
         static uint32_t utf8_to_utf16_fast_sse(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num);
+        static uint64_t hash_utf_mixed_as_utf16_sse(const void* mixed, size_t len);
+        static uint64_t hash_utf_mixed_as_utf16_avx2(const void* mixed, size_t len);
+#elif defined(BQ_ARM_NEON)
+        static uint64_t hash_utf_mixed_as_utf16_neon(const void* mixed, size_t len);
 #endif
 #endif
 

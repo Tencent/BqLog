@@ -196,7 +196,7 @@ namespace bq {
         };
         BQ_TLS bq_log_api_thread_info_tls_type thread_info_tls_;
 
-        BQ_API bq::_api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length)
+        bq_forceinline bq::_api_log_buffer_chunk_write_handle log_buffer_alloc_impl(uint64_t log_id, uint32_t length)
         {
             auto log = bq::log_manager::get_log_by_id(log_id);
             if (!log) {
@@ -212,6 +212,7 @@ namespace bq {
                     memcpy(thread_info_tls_.thread_name_, thread_name_tmp.c_str(), thread_info_tls_.thread_name_len_);
                 }
             }
+
             uint32_t ext_info_length = static_cast<uint32_t>(sizeof(ext_log_entry_info_head) + thread_info_tls_.thread_name_len_);
             auto total_length = length + ext_info_length;
             auto epoch_ms = bq::platform::high_performance_epoch_ms();
@@ -249,6 +250,35 @@ namespace bq {
             return handle;
         }
 
+        BQ_API bq::_api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length) {
+            return log_buffer_alloc_impl(log_id, length);
+        }
+
+        BQ_API bq::_api_log_buffer_chunk_write_handle __api_log_buffer_alloc_with_format_string(uint64_t log_id, uint32_t length, uint8_t format_string_type, const void* format_str_data, uint32_t target_format_string_storage_size) {
+            auto handle = log_buffer_alloc_impl(log_id, length);
+            if (handle.result != enum_buffer_result_code::success) {
+                return handle;
+            }
+            log_entry_handle log_handle(handle.data_addr, length);
+            log_handle.get_log_head().log_format_str_type = format_string_type;
+            log_handle.get_log_head().log_format_data_len = target_format_string_storage_size;
+            switch (format_string_type) {
+            case static_cast<uint8_t>(log_arg_type_enum::string_utf8_type):
+            case static_cast<uint8_t>(log_arg_type_enum::string_utf16_type):
+                log_handle.get_log_head().format_hash = bq::util::bq_memcpy_with_hash(const_cast<char*>(log_handle.get_format_string_data()), format_str_data, log_handle.get_log_head().log_format_data_len);
+                break;
+            break;
+            case static_cast<uint8_t>(log_arg_type_enum::string_utf32_type):
+                log_handle.get_log_head().format_hash = 0;
+                bq::tools::_serialize_str_helper_by_encode<char32_t>::c_style_string_copy(const_cast<char*>(log_handle.get_format_string_data()), static_cast<const char32_t*>(format_str_data), target_format_string_storage_size);
+                break;
+            break;
+            default:
+                assert(false && "unsupported format string type");
+            }
+            return handle;
+        }
+
         BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_log_buffer_chunk_write_handle write_handle)
         {
             auto log = bq::log_manager::get_log_by_id(log_id);
@@ -258,8 +288,8 @@ namespace bq {
             }
             bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)write_handle.data_addr;
             bq::ext_log_entry_info_head* ext_info = (bq::ext_log_entry_info_head*)(write_handle.data_addr + head->ext_info_offset);
-            BQ_PACK_ACCESS(ext_info->thread_id_) = thread_info_tls_.thread_id_;
-            ext_info->thread_name_len_ = thread_info_tls_.thread_name_len_;
+            memcpy(&ext_info->thread_id_, &thread_info_tls_.thread_id_, sizeof(thread_info_tls_.thread_id_));
+            memcpy(&ext_info->thread_name_len_, &thread_info_tls_.thread_name_len_, sizeof(thread_info_tls_.thread_name_len_));
             memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
             if (log->get_thread_mode() == log_thread_mode::sync) {
                 log->sync_process(true);

@@ -97,10 +97,10 @@ namespace bq {
     bq::layout::enum_layout_result layout::insert_thread_info(const bq::log_entry_handle& log_entry)
     {
         const auto& ext_info = log_entry.get_ext_head();
-        auto iter = thread_names_cache_.find(BQ_PACK_ACCESS(ext_info.thread_id_));
+        auto iter = thread_names_cache_.find(ext_info.thread_id_);
         if (iter == thread_names_cache_.end()) {
             char tmp[256];
-            uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", BQ_PACK_ACCESS(ext_info.thread_id_)));
+            uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", ext_info.thread_id_));
             memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), ext_info.thread_name_len_);
             cursor += ext_info.thread_name_len_;
             tmp[cursor++] = ']';
@@ -108,7 +108,7 @@ namespace bq {
             assert(cursor < 256);
             tmp[cursor] = '\0';
             bq::string thread_name = tmp;
-            iter = thread_names_cache_.add(BQ_PACK_ACCESS(ext_info.thread_id_), bq::move(thread_name));
+            iter = thread_names_cache_.add(ext_info.thread_id_, bq::move(thread_name));
         }
         if (iter->value().size() > 0) {
             expand_format_content_buff_size(format_content_cursor + (uint32_t)iter->value().size());
@@ -367,8 +367,7 @@ namespace bq {
         const uint8_t* args_data_ptr = log_entry.get_log_args_data();
         uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char* format_data_ptr = log_entry.get_format_string_data();
-        uint32_t format_data_len = *((const uint32_t*)format_data_ptr);
-        format_data_ptr += sizeof(uint32_t);
+        uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
 
         if (args_data_len == 0) {
             expand_format_content_buff_size(format_content_cursor + format_data_len);
@@ -533,8 +532,7 @@ namespace bq {
         const uint8_t* args_data_ptr = log_entry.get_log_args_data();
         uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char16_t* format_data_ptr = (const char16_t*)log_entry.get_format_string_data();
-        uint32_t format_data_len = *((const uint32_t*)format_data_ptr);
-        format_data_ptr += sizeof(uint32_t) / sizeof(char16_t);
+        uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
 
         // (* 3 / 2 + 1) make sure enough space, maybe waste
         uint32_t safe_buff_size = format_content_cursor + (uint32_t)(((size_t)format_data_len * 3) >> 1);

@@ -110,7 +110,7 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
     head->log_format_str_type = static_cast<uint16_t>(bq::log_arg_type_enum::string_utf16_type);
 
     auto seq = bq::tools::make_single_string_size_seq<false, char16_t>((size_t)utf16_str_bytes_len);
-    head->log_args_offset = static_cast<uint32_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
+    //head->log_args_offset = static_cast<uint32_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
     uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
     *(uint32_t*)log_format_content_addr = (uint32_t)utf16_str_bytes_len;
     log_format_content_addr += sizeof(uint32_t);
@@ -124,7 +124,7 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
         auto& log_buffer = log->get_buffer();
         tls_write_handle_.java_info_ = log_buffer.get_java_buffer_info(env, inner_handle);
     }
-    *tls_write_handle_.java_info_.offset_store_ += (int32_t)head->log_args_offset;
+    //*tls_write_handle_.java_info_.offset_store_ += (int32_t)head->log_args_offset;
     return tls_write_handle_.java_info_.buffer_array_obj_;
 }
 

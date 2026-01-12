@@ -229,6 +229,7 @@ namespace bq {
                     h1 = CRC_U64(h1, v1); h2 = CRC_U64(h2, v2); h3 = CRC_U64(h3, v3); h4 = CRC_U64(h4, v4); \
                 } \
             } else { \
+                uint32_t len_mix = (uint32_t)len; \
                 if (len >= 16) { \
                     uint64_t v1, v2; \
                     memcpy(&v1, s, 8); memcpy(&v2, s + 8, 8); \
@@ -240,7 +241,7 @@ namespace bq {
                         uint8_t* d_last = d + len - 16; \
                         memcpy(d_last, &v1, 8); memcpy(d_last + 8, &v2, 8); \
                     } \
-                    h3 = CRC_U64(h3, v1); h4 = CRC_U64(h4, v2); \
+                    h3 = CRC_U64(h3 ^ len_mix, v1); h4 = CRC_U64(h4 ^ len_mix, v2); \
                 } else if (len >= 8) { \
                     uint64_t v; \
                     memcpy(&v, s, 8); \
@@ -249,7 +250,7 @@ namespace bq {
                     const uint8_t* s_last = s + len - 8; \
                     memcpy(&v, s_last, 8); \
                     BQ_CONSTEXPR_IF (DO_COPY) { uint8_t* d_last = d + len - 8; memcpy(d_last, &v, 8); } \
-                    h2 = CRC_U64(h2, v); \
+                    h2 = CRC_U64(h2 ^ len_mix, v); \
                 } else if (len >= 4) { \
                     uint32_t v; \
                     memcpy(&v, s, 4); \
@@ -258,7 +259,7 @@ namespace bq {
                     const uint8_t* s_last = s + len - 4; \
                     memcpy(&v, s_last, 4); \
                     BQ_CONSTEXPR_IF (DO_COPY) { uint8_t* d_last = d + len - 4; memcpy(d_last, &v, 4); } \
-                    h2 = CRC_U32(h2, v); \
+                    h2 = CRC_U32(h2 ^ len_mix, v); \
                 } else if (len > 0) { \
                     if (len & 2) { \
                         uint16_t v; \
@@ -280,46 +281,51 @@ namespace bq {
 
 
     // Implementations
-    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_memcpy_with_hash_hw(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len) {
+    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _impl_bq_memcpy_with_hash_hw(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len) {
         BQ_GEN_HASH_CORE(true, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
     }
-    BQ_CRC_HW_INLINE uint64_t _bq_memcpy_with_hash_sw(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len) {
+    BQ_CRC_HW_INLINE uint64_t _impl_bq_memcpy_with_hash_sw(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len) {
         BQ_GEN_HASH_CORE(true, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
     }
-    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _bq_hash_only_hw(const void* BQ_RESTRICT src, size_t len) {
+    bq_forceinline uint64_t _impl_bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len)
+    {
+        BQ_LIKELY_IF(_bq_crc32_supported_) {
+            return _impl_bq_memcpy_with_hash_hw(dst, src, len);
+        }
+        else {
+            return _impl_bq_memcpy_with_hash_sw(dst, src, len);
+        }
+    }
+    BQ_CRC_HW_INLINE BQ_HW_CRC_TARGET uint64_t _impl_bq_hash_only_hw(const void* BQ_RESTRICT src, size_t len) {
         void* dst = nullptr; // Dummy
         BQ_GEN_HASH_CORE(false, _bq_crc32_u8_hw, _bq_crc32_u16_hw, _bq_crc32_u32_hw, _bq_crc32_u64_hw)
     }
-    BQ_CRC_HW_INLINE uint64_t _bq_hash_only_sw(const void* BQ_RESTRICT src, size_t len) {
+    BQ_CRC_HW_INLINE uint64_t _impl_bq_hash_only_sw(const void* BQ_RESTRICT src, size_t len) {
         void* dst = nullptr; // Dummy
         BQ_GEN_HASH_CORE(false, _crc32_sw_u8, _crc32_sw_u16, _crc32_sw_u32, _crc32_sw_u64)
     }
-
+    bq_forceinline uint64_t _impl_bq_hash_only(const void* src, size_t len)
+    {
+        BQ_LIKELY_IF(_bq_crc32_supported_) {
+            return _impl_bq_hash_only_hw(src, len);
+        }
+        else {
+            return _impl_bq_hash_only_sw(src, len);
+        }
+    }
 
     static BQ_TLS uint32_t rand_seed = 0;
     static BQ_TLS uint64_t rand_seed_64 = 0;
     static util::type_func_ptr_bq_util_consle_callback consle_callback_ = nullptr;
 
-
     uint64_t util::bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len)
     {
-        BQ_LIKELY_IF(_bq_crc32_supported_) {
-            return _bq_memcpy_with_hash_hw(dst, src, len);
-        }
-        else {
-            return _bq_memcpy_with_hash_sw(dst, src, len);
-        }
+        return _impl_bq_memcpy_with_hash(dst, src, len);
     }
-
 
     uint64_t util::bq_hash_only(const void* src, size_t len)
     {
-        BQ_LIKELY_IF(_bq_crc32_supported_) {
-            return _bq_hash_only_hw(src, len);
-        }
-        else {
-            return _bq_hash_only_sw(src, len);
-        }
+        return _impl_bq_hash_only(src, len);
     }
 
     void util::bq_assert(bool cond, bq::string msg)
@@ -642,7 +648,7 @@ namespace bq {
     // =================================================================================================
 
     //Fallback
-    bq_forceinline uint32_t _impl_utf16_to_utf8_scalar_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
+    bq_forceinline uint32_t _impl_utf16_to_utf8_sw(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         (void)dst_character_num;
         const char16_t* src_end = src + src_character_num;
@@ -702,7 +708,7 @@ namespace bq {
                  break;
             }
         }
-        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_sw(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
     }
 
     // SSE Safe Implementation
@@ -721,7 +727,49 @@ namespace bq {
                  break;
             }
         }
-        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf16_to_utf8_sw(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
+    }
+#elif defined(BQ_ARM_NEON)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_simd_neon(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr) {
+        // NEON path
+        while (src_ptr + 8 <= src_end) {
+            uint16x8_t chunk = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
+            // Check if all < 0x80
+            if (bq_vmaxvq_u16(chunk) < 0x80) {
+                uint8x8_t ascii = vmovn_u16(chunk);
+                vst1_u8(reinterpret_cast<uint8_t*>(dst_ptr), ascii);
+                src_ptr += 8;
+                dst_ptr += 8;
+            }
+            else {
+                // Scalar fallback for this chunk
+                for (int32_t i = 0; i < 8; ++i) {
+                    char16_t c = src_ptr[i];
+                    if (c < 0x80) {
+                        *dst_ptr++ = (char)c;
+                    }
+                    else {
+                        // Simple fallback logic
+                        if (c < 0x800) {
+                            *dst_ptr++ = static_cast<char>(0xC0 | (c >> 6));
+                            *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
+                        }
+                        else if (c >= 0xD800 && c <= 0xDFFF) {
+                            src_ptr += i;
+                            goto scalar_utf16; // break out to scalar
+                        }
+                        else {
+                            *dst_ptr++ = static_cast<char>(0xE0 | (c >> 12));
+                            *dst_ptr++ = static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+                            *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
+                        }
+                    }
+                }
+                src_ptr += 8;
+            }
+        }
+    scalar_utf16:
+        return static_cast<uint32_t>(dst_ptr - dst) + _impl_utf16_to_utf8_sw(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
     }
 #endif
 
@@ -741,48 +789,14 @@ namespace bq {
             return _impl_utf16_to_utf8_simd_sse(src_ptr, src_end, dst_ptr);
         }
 #elif defined(BQ_ARM_NEON)
-        // NEON path
-        while (src_ptr + 8 <= src_end) {
-            uint16x8_t chunk = vld1q_u16(reinterpret_cast<const uint16_t*>(src_ptr));
-            // Check if all < 0x80
-            if (bq_vmaxvq_u16(chunk) < 0x80) {
-                 uint8x8_t ascii = vmovn_u16(chunk);
-                 vst1_u8(reinterpret_cast<uint8_t*>(dst_ptr), ascii);
-                 src_ptr += 8;
-                 dst_ptr += 8;
-            } else {
-                // Scalar fallback for this chunk
-                 for (int32_t i = 0; i < 8; ++i) {
-                     char16_t c = src_ptr[i];
-                     if (c < 0x80) {
-                         *dst_ptr++ = (char)c;
-                     } else {
-                         // Simple fallback logic
-                         if (c < 0x800) {
-                             *dst_ptr++ = static_cast<char>(0xC0 | (c >> 6));
-                             *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
-                         } else if (c >= 0xD800 && c <= 0xDFFF) {
-                             src_ptr += i; 
-                             goto scalar_utf16; // break out to scalar
-                         } else {
-                             *dst_ptr++ = static_cast<char>(0xE0 | (c >> 12));
-                             *dst_ptr++ = static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-                             *dst_ptr++ = static_cast<char>(0x80 | (c & 0x3F));
-                         }
-                     }
-                 }
-                 src_ptr += 8;
-            }
-        }
-    scalar_utf16:
-        return static_cast<uint32_t>(dst_ptr - dst) + _impl_utf16_to_utf8_scalar_fast(src_ptr, static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
+        return _impl_utf16_to_utf8_simd_neon(src_ptr, src_end, dst_ptr);
 #else
-        return _impl_utf16_to_utf8_scalar_fast(src, src_character_num, dst, dst_character_num);
+        return _impl_utf16_to_utf8_sw(src, src_character_num, dst, dst_character_num);
 #endif
     }
 
     //Fallback
-    bq_forceinline uint32_t _impl_utf8_to_utf16_scalar_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
+    bq_forceinline uint32_t _impl_utf8_to_utf16_sw(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         (void)dst_character_num;
         const auto* s = reinterpret_cast<const uint8_t*>(src);
@@ -833,7 +847,7 @@ namespace bq {
                  break;
             }
         }
-        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_sw(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
     }
 
     // SSE Safe Implementation
@@ -877,7 +891,47 @@ namespace bq {
                  }
             }
         }
-        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
+        return static_cast<uint32_t>(dst_ptr - dst_start) + _impl_utf8_to_utf16_sw(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0);
+    }
+#elif defined(BQ_ARM_NEON)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf8_to_utf16_simd_neon(const uint8_t* BQ_RESTRICT src_ptr, const uint8_t* src_end, char16_t* BQ_RESTRICT dst_ptr) {
+        while (src_ptr + 16 <= src_end) {
+            uint8x16_t chunk = vld1q_u8(src_ptr);
+            if (bq_vmaxvq_u8(chunk) < 0x80) {
+                uint16x8_t low = vmovl_u8(vget_low_u8(chunk));
+                uint16x8_t high = vmovl_u8(vget_high_u8(chunk));
+                vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), low);
+                vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), high);
+                src_ptr += 16;
+                dst_ptr += 16;
+            }
+            else {
+                // Fallback (same as x86)
+                for (int32_t i = 0; i < 16; ++i) {
+                    if (*src_ptr < 0x80) {
+                        *dst_ptr++ = static_cast<char16_t>(*src_ptr++);
+                    }
+                    else {
+                        uint8_t c = *src_ptr;
+                        if ((c & 0xE0) == 0xC0) {
+                            *dst_ptr++ = static_cast<char16_t>(((c & 0x1F) << 6) | (src_ptr[1] & 0x3F)); src_ptr += 2;
+                        }
+                        else if ((c & 0xF0) == 0xE0) {
+                            *dst_ptr++ = static_cast<char16_t>(((c & 0x0F) << 12) | ((src_ptr[1] & 0x3F) << 6) | (src_ptr[2] & 0x3F)); src_ptr += 3;
+                        }
+                        else {
+                            uint32_t cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((src_ptr[1] & 0x3F) << 12) | ((src_ptr[2] & 0x3F) << 6) | (src_ptr[3] & 0x3F));
+                            cp -= 0x10000;
+                            *dst_ptr++ = static_cast<char16_t>((cp >> 10) + 0xD800);
+                            *dst_ptr++ = static_cast<char16_t>((cp & 0x3FF) + 0xDC00);
+                            src_ptr += 4;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        return static_cast<uint32_t>(static_cast<uint32_t>(dst_ptr - dst) + _impl_utf8_to_utf16_sw(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
     }
 #endif
 
@@ -897,41 +951,9 @@ namespace bq {
             return _impl_utf8_to_utf16_simd_sse(src_ptr, src_end, dst_ptr);
         }
 #elif defined(BQ_ARM_NEON)
-        while (src_ptr + 16 <= src_end) {
-             uint8x16_t chunk = vld1q_u8(src_ptr);
-             if (bq_vmaxvq_u8(chunk) < 0x80) {
-                 uint16x8_t low = vmovl_u8(vget_low_u8(chunk));
-                 uint16x8_t high = vmovl_u8(vget_high_u8(chunk));
-                 vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr), low);
-                 vst1q_u16(reinterpret_cast<uint16_t*>(dst_ptr + 8), high);
-                 src_ptr += 16;
-                 dst_ptr += 16;
-             } else {
-                 // Fallback (same as x86)
-                 for(int32_t i=0; i<16; ++i) {
-                     if (*src_ptr < 0x80) {
-                         *dst_ptr++ = static_cast<char16_t>(*src_ptr++);
-                     } else {
-                         uint8_t c = *src_ptr;
-                         if ((c & 0xE0) == 0xC0) {
-                             *dst_ptr++ = static_cast<char16_t>(((c & 0x1F) << 6) | (src_ptr[1] & 0x3F)); src_ptr += 2;
-                         } else if ((c & 0xF0) == 0xE0) {
-                             *dst_ptr++ = static_cast<char16_t>(((c & 0x0F) << 12) | ((src_ptr[1] & 0x3F) << 6) | (src_ptr[2] & 0x3F)); src_ptr += 3;
-                         } else {
-                             uint32_t cp = static_cast<uint32_t>(((c & 0x07) << 18) | ((src_ptr[1] & 0x3F) << 12) | ((src_ptr[2] & 0x3F) << 6) | (src_ptr[3] & 0x3F));
-                             cp -= 0x10000;
-                             *dst_ptr++ = static_cast<char16_t>((cp >> 10) + 0xD800);
-                             *dst_ptr++ = static_cast<char16_t>((cp & 0x3FF) + 0xDC00);
-                             src_ptr += 4;
-                         }
-                         break;
-                     }
-                 }
-             }
-        }
-        return static_cast<uint32_t>(static_cast<uint32_t>(dst_ptr - dst) + _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src_ptr), static_cast<uint32_t>(src_end - src_ptr), dst_ptr, 0));
+        return _impl_utf8_to_utf16_simd_neon(src_ptr, src_end, dst_ptr);
 #else
-        return _impl_utf8_to_utf16_scalar_fast(reinterpret_cast<const char*>(src), src_character_num, dst, dst_character_num);
+        return _impl_utf8_to_utf16_sw(reinterpret_cast<const char*>(src), src_character_num, dst, dst_character_num);
 #endif
     }
 
@@ -939,7 +961,7 @@ namespace bq {
     // Optimistic Implementation
     // =================================================================================================
     // Updates src and dst pointers. Stops at first non-ASCII or end.
-    static bq_forceinline uint32_t _impl_utf16_to_utf8_ascii_optimistic_sw(const char16_t* BQ_RESTRICT& src, const char16_t* src_end, char* BQ_RESTRICT& dst)
+    bq_forceinline uint32_t _impl_utf16_to_utf8_ascii_optimistic_sw(const char16_t* BQ_RESTRICT& src, const char16_t* src_end, char* BQ_RESTRICT& dst)
     {
 #ifndef NDEBUG
         assert(bq::util::is_little_endian() && "Only Little-Endian is Supported");
@@ -1117,7 +1139,7 @@ namespace bq {
         return static_cast<uint32_t>(src_ptr - start_src);
     }
 #elif defined(BQ_ARM_NEON)
-    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET  uint32_t _impl_utf16_to_utf8_ascii_optimistic_neon(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr) {
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_utf16_to_utf8_ascii_optimistic_neon(const char16_t* BQ_RESTRICT src_ptr, const char16_t* src_end, char* BQ_RESTRICT dst_ptr) {
         const auto* start_src = src_ptr;
 
         // 1. Try 32 chars (64 bytes source)
@@ -1203,7 +1225,7 @@ namespace bq {
     }
 
     // Updates src and dst pointers. Stops at first non-ASCII or end.
-    static bq_forceinline uint32_t _impl_utf8_to_utf16_ascii_optimistic_sw(const uint8_t* BQ_RESTRICT& src, const uint8_t* src_end, char16_t* BQ_RESTRICT& dst)
+    bq_forceinline uint32_t _impl_utf8_to_utf16_ascii_optimistic_sw(const uint8_t* BQ_RESTRICT& src, const uint8_t* src_end, char16_t* BQ_RESTRICT& dst)
     {
 #ifndef NDEBUG
         assert(bq::util::is_little_endian() && "Only Little-Endian is Supported");
@@ -1486,7 +1508,7 @@ namespace bq {
             // Continue from where we failed with safe SIMD
             return converted + _impl_utf16_to_utf8_simd(src + converted, src_character_num - converted, dst + converted, dst_character_num - converted);
         }
-        return _impl_utf16_to_utf8_scalar_fast(src, src_character_num, dst, dst_character_num);
+        return _impl_utf16_to_utf8_sw(src, src_character_num, dst, dst_character_num);
     }
 
     uint32_t util::utf8_to_utf16_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
@@ -1499,7 +1521,7 @@ namespace bq {
              }
              return converted + _impl_utf8_to_utf16_simd(src + converted, src_character_num - converted, dst + converted, dst_character_num - converted);
         }
-        return _impl_utf8_to_utf16_scalar_fast(src, src_character_num, dst, dst_character_num);
+        return _impl_utf8_to_utf16_sw(src, src_character_num, dst, dst_character_num);
     }
 
 
@@ -1672,6 +1694,9 @@ namespace bq {
         BQ_UNLIKELY_IF (written_character_num >= dst_character_num) {
             assert(false && "utf16_to_utf_mixed dst space utf8 not enough");
         }
+        BQ_LIKELY_IF(written_character_num == src_character_num) {
+            return written_character_num;
+        }
         dst[written_character_num] = static_cast<char>(0xFF);
         BQ_UNLIKELY_IF(written_character_num < src_character_num) {
             auto left_chars = src_character_num - written_character_num;
@@ -1690,8 +1715,9 @@ namespace bq {
     uint32_t util::utf_mixed_to_utf8(const char* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         auto mark_ptr = memchr(static_cast<const void*>(src), 0xFF, static_cast<size_t>(src_character_num));
-        BQ_UNLIKELY_IF(!mark_ptr) {
-            assert(false && "utf_mixed_to_utf8 invalid src");
+        BQ_LIKELY_IF(!mark_ptr) {
+            memcpy(dst, src, src_character_num);
+            return src_character_num;
         }
         auto utf8_len = static_cast<uint32_t>(static_cast<const char*>(mark_ptr) - src);
         BQ_UNLIKELY_IF(utf8_len > dst_character_num) {
@@ -1716,14 +1742,129 @@ namespace bq {
     }
 
 
+
+
+#define HASH_UTF_MIXED_IMPL(TYPE, SRC, LEN) \
+    const uint8_t* p = reinterpret_cast<const uint8_t*>(SRC); \
+    const uint8_t* split = static_cast<const uint8_t*>(memchr(p, 0xFF, LEN)); \
+    size_t ascii_len = split ? (static_cast<size_t>(split - p)) : LEN; \
+    size_t suffix_len = split ? (LEN - ascii_len - 1) : 0; \
+    size_t total_utf16_bytes = (ascii_len * 2) + suffix_len; \
+    auto& buf = mixed_utf16_buffer_.get(); \
+    if (buf.size() < total_utf16_bytes) { \
+        buf.clear(); buf.fill_uninitialized(total_utf16_bytes); \
+    } \
+    char16_t* dst = reinterpret_cast<char16_t*>(static_cast<char*>(buf.begin())); \
+    const uint8_t* src = p; \
+    char16_t* d = dst; \
+    _impl_inflate_ascii_to_utf16_##TYPE(src, src + ascii_len, d); \
+    while (src < p + ascii_len) { \
+        *d++ = static_cast<char16_t>(*src++); \
+    } \
+    if (suffix_len > 0) { \
+        memcpy(d, split + 1, suffix_len); \
+    } \
+    uint64_t hash_result = _impl_bq_hash_only(buf.begin(), total_utf16_bytes); \
+    if (buf.size() > 256) { \
+        buf.clear(); buf.set_capacity(256, true); \
+    } \
+    return hash_result; 
+
+    bq_forceinline void _impl_inflate_ascii_to_utf16_sw(const uint8_t* BQ_RESTRICT& src, const uint8_t* src_end, char16_t* BQ_RESTRICT& dst)
+    {
+        while (src < src_end) {
+            *dst = static_cast<char16_t>(*src);
+            ++dst;
+            ++src;
+        }
+    }
+    bq_forceinline uint64_t _impl_hash_utf_mixed_as_utf16_sw(const void* mixed, size_t len)
+    {
+        HASH_UTF_MIXED_IMPL(sw, mixed, len)
+    }
+
+#if defined(BQ_X86)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET void _impl_inflate_ascii_to_utf16_avx2(const uint8_t* BQ_RESTRICT& src, const uint8_t* src_end, char16_t* BQ_RESTRICT& dst)
+    {
+        while (src + 16 <= src_end) {
+            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
+            __m256i wide = _mm256_cvtepu8_epi16(chunk);
+            _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), wide);
+            src += 16;
+            dst += 16;
+        }
+    }
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint64_t _impl_hash_utf_mixed_as_utf16_avx2(const void* mixed, size_t len)
+    {
+        HASH_UTF_MIXED_IMPL(avx2, mixed, len)
+    }
+
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET void _impl_inflate_ascii_to_utf16_sse(const uint8_t* BQ_RESTRICT& src, const uint8_t* src_end, char16_t* BQ_RESTRICT& dst)
+    {
+        while (src + 8 <= src_end) {
+            __m128i chunk = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(src));
+            __m128i wide = _mm_cvtepu8_epi16(chunk);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), wide);
+            src += 8;
+            dst += 8;
+        }
+    }
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint64_t _impl_hash_utf_mixed_as_utf16_sse(const void* mixed, size_t len)
+    {
+        HASH_UTF_MIXED_IMPL(sse, mixed, len)
+    }
+#elif defined(BQ_ARM_NEON)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET void _impl_inflate_ascii_to_utf16_neon(const uint8_t* BQ_RESTRICT& src, const uint8_t* src_end, char16_t* BQ_RESTRICT& dst)
+    {
+        while (src + 16 <= src_end) {
+            uint8x16_t chunk = vld1q_u8(src);
+            uint16x8_t low = vmovl_u8(vget_low_u8(chunk));
+            uint16x8_t high = vmovl_u8(vget_high_u8(chunk));
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst), low);
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst + 8), high);
+            src += 16;
+            dst += 16;
+        }
+        while (src + 8 <= src_end) {
+            uint8x8_t chunk = vld1_u8(src);
+            uint16x8_t wide = vmovl_u8(chunk);
+            vst1q_u16(reinterpret_cast<uint16_t*>(dst), wide);
+            src += 8;
+            dst += 8;
+        }
+    }
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint64_t _impl_hash_utf_mixed_as_utf16_neon(const void* mixed, size_t len)
+    {
+        HASH_UTF_MIXED_IMPL(neon, mixed, len)
+    }
+#endif
+
+
+    uint64_t util::hash_utf_mixed_as_utf16(const void* mixed, size_t len)
+    {
+#if defined(BQ_X86)
+        if (_bq_avx2_supported_) {
+            return _impl_hash_utf_mixed_as_utf16_avx2(mixed, len);
+        }
+        else {
+            return _impl_hash_utf_mixed_as_utf16_sse(mixed, len);
+        }
+#elif defined(BQ_ARM_NEON)
+        return _impl_hash_utf_mixed_as_utf16_neon(mixed, len);
+#else   
+        return _impl_hash_utf_mixed_as_utf16_sw(mixed, len);
+#endif
+    }
+
+
 #ifdef BQ_UNIT_TEST
     uint32_t util::utf16_to_utf8_fast_sw(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        return _impl_utf16_to_utf8_scalar_fast(src, src_character_num, dst, dst_character_num);
+        return _impl_utf16_to_utf8_sw(src, src_character_num, dst, dst_character_num);
     }
     uint32_t util::utf8_to_utf16_fast_sw(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        return _impl_utf8_to_utf16_scalar_fast(src, src_character_num, dst, dst_character_num);
+        return _impl_utf8_to_utf16_sw(src, src_character_num, dst, dst_character_num);
     }
 #if defined(BQ_X86)
     uint32_t util::utf16_to_utf8_fast_sse(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
@@ -1750,6 +1891,29 @@ namespace bq {
         }
         src_ptr = reinterpret_cast<const uint8_t*>(src) + converted;
         return converted + _impl_utf8_to_utf16_simd_sse(src_ptr, src_end, dst + converted);
+    }
+#endif
+
+
+
+    uint64_t util::hash_utf_mixed_as_utf16_sw(const void* mixed, size_t len)
+    {
+        return _impl_hash_utf_mixed_as_utf16_sw(mixed, len);
+    }
+#if defined(BQ_X86)
+    uint64_t util::hash_utf_mixed_as_utf16_sse(const void* mixed, size_t len)
+    {
+        return _impl_hash_utf_mixed_as_utf16_sse(mixed, len);
+    }
+
+    uint64_t util::hash_utf_mixed_as_utf16_avx2(const void* mixed, size_t len)
+    {
+        return _impl_hash_utf_mixed_as_utf16_avx2(mixed, len);
+    }
+#elif defined(BQ_ARM_NEON)
+    uint64_t util::hash_utf_mixed_as_utf16_neon(const void* mixed, size_t len)
+    {
+        return _impl_hash_utf_mixed_as_utf16_neon(mixed, len);
     }
 #endif
 #endif

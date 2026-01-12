@@ -298,16 +298,35 @@ namespace bq {
         {
             static_assert(sizeof(CHAR_TYPE) == 4, "_get_utf32_c_style_string_storage_size_impl only for utf32 characters");
             size_t str_len = 0;
-            for (size_t i = 0; i < max_character_count; ++i) {
-                CHAR_TYPE c = str[i];
+            const CHAR_TYPE* p = str;
+            const CHAR_TYPE* pe = str + max_character_count;
+            const CHAR_TYPE* pe_minus_4 = pe - 4;
+
+            // Fast Path for 4 characters at a time
+            while (p <= pe_minus_4) {
+                uint32_t c0 = static_cast<uint32_t>(p[0]);
+                uint32_t c1 = static_cast<uint32_t>(p[1]);
+                uint32_t c2 = static_cast<uint32_t>(p[2]);
+                uint32_t c3 = static_cast<uint32_t>(p[3]);
+
+                uint32_t check = (c0 - 1) | (c1 - 1) | (c2 - 1) | (c3 - 1);
+
+                if (check <= 0xFFFE) {
+                    str_len += 4;
+                    p += 4;
+                }
+                else {
+                    break;
+                }
+            }
+            // Slow Path for remaining characters
+            while (p < pe) {
+                uint32_t c = static_cast<uint32_t>(*p);
                 if (c == 0) {
                     break;
                 }
-                if (str[i] <= 0xFFFF) {
-                    ++str_len;
-                } else {
-                    str_len += 2;
-                }
+                str_len += (c <= 0xFFFF ? 1 : 2);
+                p++;
             }
             return str_len * sizeof(char16_t);
         }
@@ -388,7 +407,7 @@ namespace bq {
                 char16_t* target_buffer = (char16_t*)tar;
                 char16_t* target_end = target_buffer + (target_buffer_size >> 1);
 
-                while (target_buffer + 8 <= target_end) {
+                while (target_buffer + 4 <= target_end) {
                     CHAR_TYPE c0 = src[0];
                     CHAR_TYPE c1 = src[1];
                     CHAR_TYPE c2 = src[2];
@@ -411,6 +430,10 @@ namespace bq {
                     BQ_LIKELY_IF(c <= 0xFFFF) {
                         *target_buffer++ = static_cast<char16_t>(c);
                     } else {
+                        if (target_buffer + 2 > target_end) {
+                            *target_buffer++ = static_cast<char16_t>(0);
+                            break;
+                        }
                         c -= 0x10000;
                         *target_buffer++ = static_cast<char16_t>((c >> 10) + 0xD800);
                         *target_buffer++ = static_cast<char16_t>((c & 0x3FF) + 0xDC00);
@@ -424,10 +447,10 @@ namespace bq {
         };
 
         template <bool INCLUDE_TYPE_INFO, _string_type STR_TYPE>
-        struct _serialize_str_helper_by_type {
+        struct _serialize_str_helper_by_type_impl {
         };
         template <bool INCLUDE_TYPE_INFO>
-        struct _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, _string_type::array_type> {
+        struct _serialize_str_helper_by_type_impl<INCLUDE_TYPE_INFO, _string_type::array_type> {
             template <typename CHAR_TYPE, size_t N>
             static bq_forceinline size_t get_storage_data_size(const CHAR_TYPE (&str)[N])
             {
@@ -435,6 +458,13 @@ namespace bq {
                 static_assert(N > 0, "char array dimension must not be zero");
                 size_t str_data_len = _serialize_str_helper_by_encode<CHAR_TYPE>::get_array_string_storage_size(str);
                 return str_data_len;
+            }
+            template <typename CHAR_TYPE, size_t N>
+            static bq_forceinline const CHAR_TYPE* get_storage_data_addr(const CHAR_TYPE(&str)[N])
+            {
+                static_assert(sizeof(CHAR_TYPE) == 1 || sizeof(CHAR_TYPE) == 2 || sizeof(CHAR_TYPE) == 4, "invalid char type!");
+                static_assert(N > 0, "char array dimension must not be zero");
+                return str;
             }
             template <typename CHAR_TYPE, size_t N>
             static bq_forceinline void type_copy(const CHAR_TYPE (&value)[N], uint8_t* data_addr, size_t data_size)
@@ -450,24 +480,29 @@ namespace bq {
             }
         };
         template <bool INCLUDE_TYPE_INFO>
-        struct _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, _string_type::c_style_type> {
+        struct _serialize_str_helper_by_type_impl<INCLUDE_TYPE_INFO, _string_type::c_style_type> {
             template <typename CHAR_TYPE>
             static bq_forceinline size_t get_storage_data_size(const CHAR_TYPE* str)
             {
                 static_assert(sizeof(CHAR_TYPE) == 1 || sizeof(CHAR_TYPE) == 2 || sizeof(CHAR_TYPE) == 4, "invalid char type!");
                 if (!str) {
-                    return _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, _string_type::array_type>::get_storage_data_size("null");
+                    return _serialize_str_helper_by_type_impl<INCLUDE_TYPE_INFO, _string_type::array_type>::get_storage_data_size("null");
                 }
                 size_t str_data_len = _serialize_str_helper_by_encode<CHAR_TYPE>::get_c_style_string_storage_size(str);
                 return str_data_len;
             }
-
+            template <typename CHAR_TYPE>
+            static bq_forceinline const CHAR_TYPE* get_storage_data_addr(const CHAR_TYPE* str)
+            {
+                static_assert(sizeof(CHAR_TYPE) == 1 || sizeof(CHAR_TYPE) == 2 || sizeof(CHAR_TYPE) == 4, "invalid char type!");
+                return str;
+            }
             template <typename CHAR_TYPE>
             static bq_forceinline void type_copy(const CHAR_TYPE* value, uint8_t* data_addr, size_t data_size)
             {
                 static_assert(sizeof(CHAR_TYPE) == 1 || sizeof(CHAR_TYPE) == 2 || sizeof(CHAR_TYPE) == 4, "invalid char type!");
                 if (!value) {
-                    _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, _string_type::array_type>::type_copy("null", data_addr, data_size);
+                    _serialize_str_helper_by_type_impl<INCLUDE_TYPE_INFO, _string_type::array_type>::type_copy("null", data_addr, data_size);
                 } else {
                     _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<CHAR_TYPE*>());
                     data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
@@ -480,7 +515,7 @@ namespace bq {
             }
         };
         template <bool INCLUDE_TYPE_INFO>
-        struct _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, _string_type::cls_type> {
+        struct _serialize_str_helper_by_type_impl<INCLUDE_TYPE_INFO, _string_type::cls_type> {
             template <typename STRING_TYPE>
             static bq_forceinline size_t get_storage_data_size(const STRING_TYPE& str)
             {
@@ -488,7 +523,16 @@ namespace bq {
                 size_t str_data_len = _serialize_str_helper_by_encode<typename STRING_TYPE::value_type>::get_class_string_storage_size(str);
                 return str_data_len;
             }
-
+            template <typename STRING_TYPE>
+            static bq_forceinline const bq::enable_if_t<_is_bq_string_like<STRING_TYPE>::value, const bq::remove_cv_t<typename STRING_TYPE::value_type>*> get_storage_data_addr(const STRING_TYPE& str)
+            {
+                return str.c_str();
+            }
+            template <typename STRING_TYPE>
+            static bq_forceinline const bq::enable_if_t<_is_std_string_view_like<STRING_TYPE>::value, const bq::remove_cv_t<typename STRING_TYPE::value_type>*> get_storage_data_addr(const STRING_TYPE& str)
+            {
+                return str.data();
+            }
             template <typename STRING_TYPE>
             static bq_forceinline bq::enable_if_t<_is_bq_string_like<STRING_TYPE>::value, void> type_copy(const STRING_TYPE& str, uint8_t* data_addr, size_t data_size)
             {
@@ -520,6 +564,16 @@ namespace bq {
             }
         };
 
+        template <bool INCLUDE_TYPE_INFO, typename STR_TYPE>
+        struct _serialize_str_helper_by_type : public _serialize_str_helper_by_type_impl<
+            INCLUDE_TYPE_INFO, 
+            bq::condition_value<(_is_bq_string_like<STR_TYPE>::value || _is_std_string_view_like<STR_TYPE>::value),
+            _string_type,
+            _string_type::cls_type,
+            bq::condition_value<bq::is_array<STR_TYPE>::value, _string_type,
+            _string_type::array_type, _string_type::c_style_type>::value>::value>{
+        };
+
         //================================================string helpers end============================================
 
         //================================================get storage size begin========================================
@@ -549,12 +603,7 @@ namespace bq {
         bq_forceinline bq::enable_if_t<_is_bq_log_supported_string_type<T>::value, size_t>
         _get_storage_data_size(const T& str)
         {
-            constexpr _string_type type = bq::condition_value<(_is_bq_string_like<T>::value || _is_std_string_view_like<T>::value),
-                _string_type,
-                _string_type::cls_type,
-                bq::condition_value<bq::is_array<T>::value, _string_type,
-                    _string_type::array_type, _string_type::c_style_type>::value>::value;
-            return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(_serialize_str_helper_by_type<INCLUDE_TYPE_INFO, type>::get_storage_data_size(str));
+            return get_string_field_total_storage_size<INCLUDE_TYPE_INFO>(_serialize_str_helper_by_type<INCLUDE_TYPE_INFO, T>::get_storage_data_size(str));
         }
 
         template <bool INCLUDE_TYPE_INFO, typename T>
@@ -786,12 +835,7 @@ namespace bq {
         bq_forceinline bq::enable_if_t<_is_bq_log_supported_string_type<T>::value>
         _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
         {
-            constexpr _string_type type = bq::condition_value<(_is_bq_string_like<T>::value || _is_std_string_view_like<T>::value),
-                _string_type,
-                _string_type::cls_type,
-                bq::condition_value<bq::is_array<T>::value, _string_type,
-                    _string_type::array_type, _string_type::c_style_type>::value>::value;
-            _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, type>::type_copy(value, data_addr, data_size);
+            _serialize_str_helper_by_type<INCLUDE_TYPE_INFO, T>::type_copy(value, data_addr, data_size);
         }
 
         // nullptr type_copy

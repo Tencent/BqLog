@@ -20,18 +20,6 @@
 
 namespace bq {
     namespace impl {
-        template <typename STR>
-        inline void _do_log_format_fill(uint8_t* data_addr, size_t format_size, const STR& format, const bq::tuple<const char*, uint32_t>& stack_info)
-        {
-            bq::tools::_type_copy<false>(format, data_addr, format_size);
-            if (bq::get<1>(stack_info) != 0) {
-                // Appending call stack information to the back of the format string.
-                // This is an ugly hack
-                memcpy(data_addr + format_size, bq::get<0>(stack_info), bq::get<1>(stack_info));
-                *(uint32_t*)data_addr += bq::get<1>(stack_info);
-            }
-        }
-
         template <bool INCLUDE_TYPE_INFO, typename First>
         inline void _do_log_args_fill(uint8_t* data_addr, const bq::tools::size_seq<INCLUDE_TYPE_INFO, First>& seq, const First& first)
         {
@@ -237,24 +225,20 @@ namespace bq {
         }
         bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
-        auto format_size_seq = bq::tools::make_size_seq<false>(log_format_content);
-        size_t aligned_format_data_size = bq::align_4(format_size_seq.get_element().get_value() + bq::get<1>(stack_info));
-        size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_format_data_size;
-        auto handle = bq::api::__api_log_buffer_alloc(log_id_, (uint32_t)total_data_size);
+        size_t target_format_data_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content) + bq::get<1>(stack_info);
+        size_t aligned_target_format_data_size = bq::align_4(target_format_data_size);
+        size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_target_format_data_size;
+        auto handle = bq::api::__api_log_buffer_alloc_with_format_string(log_id_, 
+                        (uint32_t)total_data_size, 
+                        static_cast<uint8_t>(static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>())), 
+                        bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content), 
+                        static_cast<uint32_t>(target_format_data_size));
         if (handle.result != bq::enum_buffer_result_code::success) {
             return false;
         }
         bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
         head->category_idx = category_index;
         head->level = static_cast<uint8_t>(level);
-        head->log_format_str_type = static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>());
-        size_t log_args_offset = total_data_size;
-        if (log_args_offset > UINT32_MAX) {
-            assert(false && "format string too long");
-        }
-        head->log_args_offset = (uint32_t)log_args_offset;
-        uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
-        bq::impl::_do_log_format_fill(log_format_content_addr, format_size_seq.get_element().get_value(), log_format_content, stack_info);
         bq::api::__api_log_buffer_commit(log_id_, handle);
         return true;
     }
@@ -267,26 +251,22 @@ namespace bq {
         }
         bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
-        auto format_size_seq = bq::tools::make_size_seq<false>(log_format_content);
-        auto args_size_seq = bq::tools::make_size_seq<true>(args...);
-        size_t aligned_format_data_size = bq::align_4(format_size_seq.get_element().get_value() + bq::get<1>(stack_info));
-        size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_format_data_size + args_size_seq.get_total();
-        auto handle = bq::api::__api_log_buffer_alloc(log_id_, (uint32_t)total_data_size);
+        size_t target_format_data_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content) + bq::get<1>(stack_info);
+        size_t aligned_target_format_data_size = bq::align_4(target_format_data_size);
+        auto args_size_seq = bq::tools::make_size_seq<true>(args...); 
+        size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_target_format_data_size + args_size_seq.get_total();
+        auto handle = bq::api::__api_log_buffer_alloc_with_format_string(log_id_, 
+                        (uint32_t)total_data_size, 
+                        static_cast<uint8_t>(static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>())), 
+                        bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content), 
+                        static_cast<uint32_t>(target_format_data_size));
         if (handle.result != bq::enum_buffer_result_code::success) {
             return false;
         }
         bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
         head->category_idx = category_index;
         head->level = static_cast<uint8_t>(level);
-        head->log_format_str_type = static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>());
-        size_t log_args_offset = static_cast<size_t>(sizeof(bq::_log_entry_head_def) + aligned_format_data_size);
-        if (log_args_offset > UINT32_MAX) {
-            assert(false && "format string too long");
-        }
-        head->log_args_offset = (uint32_t)log_args_offset;
-        uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
-        bq::impl::_do_log_format_fill(log_format_content_addr, format_size_seq.get_element().get_value(), log_format_content, stack_info);
-        uint8_t* log_args_addr = handle.data_addr + log_args_offset;
+        uint8_t* log_args_addr = handle.data_addr + sizeof(bq::_log_entry_head_def) + aligned_target_format_data_size;
         bq::impl::_do_log_args_fill(log_args_addr, args_size_seq, args...);
         bq::api::__api_log_buffer_commit(log_id_, handle);
         return true;

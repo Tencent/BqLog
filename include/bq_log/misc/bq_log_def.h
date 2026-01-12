@@ -56,17 +56,27 @@ namespace bq {
     BQ_PACK_BEGIN
     struct alignas(8) _log_entry_head_def {
         uint64_t timestamp_epoch;
-        uint32_t log_args_offset;
         uint32_t ext_info_offset;
-        uint16_t padding;
+        uint32_t category_idx;
+        uint64_t format_hash;
         uint8_t log_format_str_type; // log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type
         uint8_t level;
-        uint32_t category_idx;
-    } BQ_PACK_END static_assert(sizeof(_log_entry_head_def) % 8 == 0
-            && (sizeof(_log_entry_head_def) == sizeof(decltype(_log_entry_head_def::timestamp_epoch)) + sizeof(decltype(_log_entry_head_def::category_idx)) + sizeof(decltype(_log_entry_head_def::level)) + sizeof(decltype(_log_entry_head_def::log_format_str_type)) + sizeof(decltype(_log_entry_head_def::log_args_offset)) + sizeof(decltype(_log_entry_head_def::ext_info_offset)) + sizeof(decltype(_log_entry_head_def::padding))),
+        uint16_t padding;
+        uint32_t log_format_data_len;
+
+        static constexpr uint32_t get_head_size_without_format_str();
+    } BQ_PACK_END 
+
+    constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
+    {
+        return offsetof(_log_entry_head_def, log_format_str_type);
+    }
+
+    static_assert(_log_entry_head_def::get_head_size_without_format_str() == 24,
+        "_log_entry_head_def::get_head_size_without_format_str() must equal 24");
+    static_assert(sizeof(_log_entry_head_def) == 32,
         "_log_entry_head_def's memory layout must be packed!");
-    static_assert(sizeof(_log_entry_head_def) == 24,
-        "_log_entry_head_def's memory layout must be packed!");
+
 
     BQ_PACK_BEGIN
     struct alignas(4) _api_string_def {
@@ -125,7 +135,9 @@ namespace bq {
         float_type,
         double_type,
         string_utf8_type,
-        string_utf16_type
+        string_utf16_type,
+        string_utf32_type,
+        string_utf_mixed_type
     };
 
     enum appender_decode_result {

@@ -129,13 +129,17 @@ namespace bq {
                 {
                     // exclusive test
                     auto group_handle_A_1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/aa/dd/exclusive_A.txt", true), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    bq::util::set_log_device_console_min_level(bq::log_level::fatal);
                     auto group_handle_A_2 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/../cc/bb/aa/dd/exclusive_A.txt", true), file_open_mode_enum::exclusive | file_open_mode_enum::read_write);
+                    bq::util::set_log_device_console_min_level(bq::log_level::warning);
                     result.add_result(group_handle_A_1 && !group_handle_A_2, "exclusive test 1");
                     group_handle_A_1.invalid();
                     group_handle_A_2 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/../cc/bb/aa/dd/exclusive_A.txt", true), file_open_mode_enum::exclusive | file_open_mode_enum::read_write);
                     result.add_result(group_handle_A_2, "exclusive test 2");
                     auto group_handle_A_3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/aa/dd/exclusive_A.txt", true), file_open_mode_enum::read);
+                    bq::util::set_log_device_console_min_level(bq::log_level::fatal);
                     auto group_handle_A_4 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/aa/dd/exclusive_A.txt", true), file_open_mode_enum::write);
+                    bq::util::set_log_device_console_min_level(bq::log_level::warning); 
                     result.add_result(group_handle_A_3 && !group_handle_A_4, "exclusive test 3");
                 }
 

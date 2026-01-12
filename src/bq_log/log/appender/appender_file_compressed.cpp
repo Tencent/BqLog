@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
@@ -32,6 +32,12 @@ namespace bq {
             return value;
         }
     };
+
+    static bq_forceinline uint64_t get_format_template_hash(bq::log_level level, uint32_t category_idx, uint64_t fmt_str_hash)
+    {
+        uint64_t mixer = (static_cast<uint64_t>(category_idx) << 32) | static_cast<uint64_t>(level);
+        return fmt_str_hash ^ mixer;
+    }
 
     inline bool is_addr_8_aligned(const void* data)
     {
@@ -73,10 +79,6 @@ namespace bq {
             return false;
         }
         reset();
-        auto release_cache_lamda = [this]() {
-            utf16_trans_cache_.reset();
-        };
-        scoped_exist_callback_helper<decltype(release_cache_lamda)> cache_reset_obj(release_cache_lamda);
         while (true) {
             auto read_result = read_item_data(context);
             if (is_read_of_cache_eof()) {
@@ -89,8 +91,9 @@ namespace bq {
             switch (bq::get<1>(read_result)) {
             case bq::appender_file_compressed::log_template:
                 switch (*bq::get<2>(read_result).data()) {
-                case template_sub_type::format_template:
-                    if (!parse_formate_template(context, bq::get<2>(read_result).offset(1))) {
+                case template_sub_type::format_template_utf8:
+                case template_sub_type::format_template_utf16:
+                    if (!parse_formate_template(context, bq::get<2>(read_result).offset(1), (template_sub_type)*bq::get<2>(read_result).data())) {
                         return false;
                     }
                     break;
@@ -165,7 +168,7 @@ namespace bq {
         return true;
     }
 
-    bool appender_file_compressed::parse_formate_template(parse_file_context& context, const appender_file_base::read_with_cache_handle& data_handle)
+    bool appender_file_compressed::parse_formate_template(parse_file_context& context, const appender_file_base::read_with_cache_handle& data_handle, template_sub_type sub_type)
     {
         if (data_handle.len() < 2) {
             context.log_parse_fail_reason("format template data size should be equal or larger than 2");
@@ -176,7 +179,7 @@ namespace bq {
             context.log_parse_fail_reason("parse format template failed, invalid log level");
             return false;
         }
-        bq::log_level log_level = (bq::log_level)level_byte;
+       // bq::log_level log_level = (bq::log_level)level_byte;
         uint32_t category_idx = 0;
         size_t category_idx_size = bq::log_utils::vlq::vlq_decode(category_idx, data_handle.data() + 1);
         if (category_idx_size == bq::log_utils::vlq::invalid_decode_length) {
@@ -192,19 +195,22 @@ namespace bq {
             context.log_parse_fail_reason("parse format template failed, invalid category_idx encode size");
             return false;
         }
-        size_t fmt_str_len = data_handle.len() - current_data_cursor;
-        uint64_t utf8_hash = bq::util::get_hash_64(data_handle.data() + current_data_cursor, fmt_str_len);
-        uint64_t format_template_hash_utf8 = get_format_template_hash(log_level, category_idx, utf8_hash);
-        if (utf16_trans_cache_.size() < fmt_str_len) {
-            // that's enough
-            utf16_trans_cache_.fill_uninitialized(fmt_str_len - utf16_trans_cache_.size());
+
+        // Recover Hash from Content
+        uint64_t fmt_str_hash = 0;
+        const uint8_t* fmt_data_ptr = data_handle.data() + current_data_cursor;
+        size_t fmt_data_len = data_handle.len() - current_data_cursor;
+
+        if (sub_type == template_sub_type::format_template_utf8) {
+            // Case A: UTF-8 source. File content IS original content.
+            fmt_str_hash = bq::util::get_hash_64(fmt_data_ptr, fmt_data_len);
+        } else {
+            // Case B: UTF-16 source. File content is UTF-Mixed. Recover original UTF-16 hash.
+            fmt_str_hash = bq::util::hash_utf_mixed_as_utf16(fmt_data_ptr, fmt_data_len);
         }
-        auto utf16_len = (fmt_str_len > 0) ? bq::util::utf8_to_utf16((const char*)(const uint8_t*)(data_handle.data() + current_data_cursor), (uint32_t)fmt_str_len, &utf16_trans_cache_[0], (uint32_t)utf16_trans_cache_.size())
-                                           : 0;
-        uint64_t utf16_hash = bq::util::get_hash_64(utf16_trans_cache_.begin(), (size_t)utf16_len * sizeof(decltype(utf16_trans_cache_)::value_type));
-        uint64_t format_template_hash_utf16 = get_format_template_hash(log_level, category_idx, utf16_hash);
-        format_templates_hash_cache_[format_template_hash_utf8] = current_format_template_max_index_;
-        format_templates_hash_cache_[format_template_hash_utf16] = current_format_template_max_index_;
+
+        uint64_t format_template_hash = get_format_template_hash((bq::log_level)level_byte, category_idx, fmt_str_hash);
+        format_templates_hash_cache_[format_template_hash] = current_format_template_max_index_;
         ++current_format_template_max_index_;
         return true;
     }
@@ -216,18 +222,6 @@ namespace bq {
             return false;
         }
         return true;
-    }
-
-    uint64_t appender_file_compressed::get_format_template_hash(bq::log_level level, uint32_t category_idx, uint64_t fmt_str_hash)
-    {
-        const uint64_t fnv_prime = 1099511628211ull;
-
-        uint64_t hash = fmt_str_hash;
-        hash ^= static_cast<uint64_t>(level);
-        hash *= fnv_prime;
-        hash ^= static_cast<uint64_t>(category_idx);
-        hash *= fnv_prime;
-        return hash;
     }
 
     void appender_file_compressed::reset()
@@ -252,14 +246,16 @@ namespace bq {
     {
         appender_file_binary::log_impl(handle);
 
+        uint32_t format_data_len = handle.get_log_head().log_format_data_len;
         const char* format_data_ptr = handle.get_format_string_data();
-        uint32_t format_data_len = *((const uint32_t*)format_data_ptr);
-        format_data_ptr += sizeof(uint32_t);
         if ((const uint8_t*)format_data_ptr + format_data_len > handle.get_log_args_data()) {
             bq::util::log_device_console(bq::log_level::error, "appender_file_compressed::log_impl invalid format data length:%" PRIu32, format_data_len);
             return;
         }
-        uint64_t fmt_hash = bq::util::get_hash_64(format_data_ptr, (size_t)format_data_len);
+        uint64_t fmt_hash = handle.get_log_head().format_hash;
+        if(!fmt_hash){
+            fmt_hash = bq::util::get_hash_64(format_data_ptr, (size_t)format_data_len);
+        }
         uint64_t format_template_hash = get_format_template_hash(handle.get_level(), handle.get_log_head().category_idx, fmt_hash);
 
         auto format_template_iter = format_templates_hash_cache_.find(format_template_hash);
@@ -270,7 +266,7 @@ namespace bq {
             uint32_t fmt_size_calculated = 0;
             bool success = true;
             do {
-                size_t fmt_max_size = (fmt_size_calculated) ? (size_t)fmt_size_calculated : ((handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type ? format_data_len : ((size_t)(format_data_len * 3) >> 1) + 1));
+                size_t fmt_max_size = (fmt_size_calculated) ? (size_t)fmt_size_calculated : ((handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type ? format_data_len: ((size_t)(format_data_len * 3) >> 1) + 1));  // 1 additional byte for utf-mixed mark;
                 auto max_format_template_data_size = (uint32_t)(sizeof(uint8_t) + sizeof(uint8_t) + VLQ_MAX_SIZE + fmt_max_size); // level(1 byte), category_idx(VLQ), fmt
 
                 auto data_len_min_size = get_vlq_min_bytes_length_of_item_header(max_format_template_data_size);
@@ -279,7 +275,12 @@ namespace bq {
 
                 // write format template body first to get the real length, then write header back.
                 uint32_t format_template_data_cursor = prealloc_head_size;
-                write_handle.data()[format_template_data_cursor++] = (uint8_t)template_sub_type::format_template;
+
+                if (handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type) {
+                    write_handle.data()[format_template_data_cursor++] = (uint8_t)template_sub_type::format_template_utf8;
+                } else {
+                    write_handle.data()[format_template_data_cursor++] = (uint8_t)template_sub_type::format_template_utf16;
+                }
                 write_handle.data()[format_template_data_cursor++] = (uint8_t)handle.get_level();
                 format_template_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(handle.get_log_head().category_idx, write_handle.data() + format_template_data_cursor, VLQ_MAX_SIZE);
                 if (handle.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type) {
@@ -287,9 +288,10 @@ namespace bq {
                     memcpy(write_handle.data() + format_template_data_cursor, format_data_ptr, (size_t)format_data_len);
                     format_template_data_cursor += format_data_len;
                 } else {
-                    fmt_size_calculated = bq::util::utf16_to_utf8((const char16_t*)format_data_ptr, format_data_len >> 1, (char*)(uint8_t*)(write_handle.data() + format_template_data_cursor), ((format_data_len * 3) >> 1) + 1);
+                    fmt_size_calculated = bq::util::utf16_to_utf_mixed((const char16_t*)format_data_ptr, format_data_len >> 1, (char*)(uint8_t*)(write_handle.data() + format_template_data_cursor), ((format_data_len * 3) >> 1) + 1);
                     format_template_data_cursor += fmt_size_calculated;
                 }
+                
                 uint32_t real_total_len = format_template_data_cursor;
                 write_handle.reset_used_len(real_total_len);
 
@@ -322,7 +324,7 @@ namespace bq {
         }
 
         const auto& ext_info = handle.get_ext_head();
-        auto thread_info__iter = thread_info_hash_cache_.find(BQ_PACK_ACCESS(ext_info.thread_id_));
+        auto thread_info__iter = thread_info_hash_cache_.find(ext_info.thread_id_);
         uint32_t thread_info_idx = (uint32_t)-1;
         // write thread_info template
         if (thread_info__iter == thread_info_hash_cache_.end()) {
@@ -340,7 +342,7 @@ namespace bq {
             uint32_t thread_info_data_cursor = prealloc_head_size;
             write_handle.data()[thread_info_data_cursor++] = (uint32_t)template_sub_type::thread_info_template;
             thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(current_thread_info_max_index_, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE);
-            thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(BQ_PACK_ACCESS(ext_info.thread_id_), write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE_64);
+            thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(ext_info.thread_id_, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE_64);
             memcpy(write_handle.data() + thread_info_data_cursor, (const uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), (size_t)ext_info.thread_name_len_);
             thread_info_data_cursor += ext_info.thread_name_len_;
             write_handle.reset_used_len(thread_info_data_cursor);
@@ -349,7 +351,7 @@ namespace bq {
             auto real_body_len_size = bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, 1);
             assert(real_body_len_size == 1 && "thread info template size encoding error");
             return_write_cache(write_handle);
-            thread_info_hash_cache_[BQ_PACK_ACCESS(ext_info.thread_id_)] = current_thread_info_max_index_;
+            thread_info_hash_cache_[ext_info.thread_id_] = current_thread_info_max_index_;
             thread_info_idx = current_thread_info_max_index_;
             ++current_thread_info_max_index_;
         } else {
@@ -362,7 +364,7 @@ namespace bq {
             constexpr size_t VLQ_MAX_SIZE_64 = bq::log_utils::vlq::vlq_max_bytes_count<uint64_t>();
 
             uint32_t raw_log_args_data_len = handle.get_log_args_data_size();
-            auto max_log_data_size = VLQ_MAX_SIZE + VLQ_MAX_SIZE + VLQ_MAX_SIZE + ((size_t)raw_log_args_data_len << 1); // format template idx(VLQ), epoch offset milliseconds(VLQ), args(*2, mabe wast, but can ensure utf16 can properly trans to utf8, consider vlq size my increate 1 bytes to, so use *2 instead of *3/2 + 1)
+            auto max_log_data_size = VLQ_MAX_SIZE + VLQ_MAX_SIZE + VLQ_MAX_SIZE + ((size_t)raw_log_args_data_len << 1); // format template idx(VLQ), epoch offset milliseconds(VLQ), args(*2, mabe wast, but can ensure utf16 can properly trans to utf-mixed, consider vlq size my increate 1 bytes to, so use *2 instead of *3/2 + 1)
 
             auto data_len_min_size = get_vlq_min_bytes_length_of_item_header(max_log_data_size);
             auto prealloc_head_size = 1 + data_len_min_size;
@@ -455,27 +457,23 @@ namespace bq {
                         args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                     } break;
                     case bq::log_arg_type_enum::string_utf16_type: {
-                        // trans to utf-8 to save storage space
-                        write_handle.data()[log_data_cursor - 1] = (uint8_t)bq::log_arg_type_enum::string_utf8_type;
+                        // trans to utf-mixed to get best balance of size and performance
+                        write_handle.data()[log_data_cursor - 1] = (uint8_t)bq::log_arg_type_enum::string_utf_mixed_type;
                         const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
                         uint32_t str_len = *len_ptr;
 
                         uint32_t max_utf8_str_len = ((str_len * 3) >> 1) + 1;
                         auto pre_len_size = bq::log_utils::vlq::get_vlq_encode_length((uint32_t)max_utf8_str_len);
 
-                        uint32_t utf8_len = bq::util::utf16_to_utf8((const char16_t*)(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t)), str_len >> 1, (char*)(write_handle.data() + log_data_cursor + pre_len_size), max_utf8_str_len);
-                        if (utf8_len < (str_len >> 1)) {
-                            // This must be an invalid UTF-16 string, so just directly copy the UTF-16 in. Implement a protection.
-                            utf8_len = str_len;
-                            memcpy(write_handle.data() + log_data_cursor + pre_len_size, args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t), str_len);
-                        }
-                        uint32_t real_len_size = (uint32_t)bq::log_utils::vlq::vlq_encode(utf8_len, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
+                        uint32_t utf_mixed_len = bq::util::utf16_to_utf_mixed((const char16_t*)(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t)), str_len >> 1, (char*)(write_handle.data() + log_data_cursor + pre_len_size), max_utf8_str_len);
+                        
+                        uint32_t real_len_size = (uint32_t)bq::log_utils::vlq::vlq_encode(utf_mixed_len, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
 
                         assert((real_len_size == pre_len_size || (real_len_size + 1 == pre_len_size)) && "compressed log, utf16 arguments write error");
                         if (real_len_size + 1 == pre_len_size) {
                             write_handle.data()[log_data_cursor + real_len_size] = 0; // 0 placeholder, if the pre-estimated size is not accurate
                         }
-                        log_data_cursor += (pre_len_size + utf8_len);
+                        log_data_cursor += (pre_len_size + utf_mixed_len);
                         args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                     } break;
                     default:

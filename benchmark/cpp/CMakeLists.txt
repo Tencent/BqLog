@@ -7,7 +7,7 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
 endif()
 
 project(BqLogBenchmark)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 #VS为了兼容性__cplusplus宏一直是199711，这里我们需要正确的值来判断c++版本

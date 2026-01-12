@@ -70,7 +70,6 @@
 - Supports `utf8`, `utf16`, `utf32` characters and strings, as well as bool, float, double, and integer types of various sizes.
 - Supports `C++20` `std::format` style format strings (without positional index and time formatting).
 - Asynchronous logging supports crash recovery and tries to avoid data loss.
-- Small binary size: Android dynamic library adds about 300 KB to the final package.
 - On Java, C#, TypeScript wrappers, it can achieve "zero extra heap alloc" (or very close), avoiding continuous object allocations.
 - Depends only on the standard C library and platform APIs; can be compiled with Android `ANDROID_STL = none`.
 - Supports `C++11` and later standards and works under very strict compiler options.
