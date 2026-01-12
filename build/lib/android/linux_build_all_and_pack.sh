@@ -71,9 +71,12 @@ for build_target in "${BUILD_TARGET[@]}"; do
 
     # Strip using NDK llvm-strip for the host
     SOURCE_SO=../../../../../install/dynamic_lib/lib/"$build_config"/"$build_target"/libBqLog.so
-    STRIP_SO=../../../../../install/dynamic_lib/lib_strip/"$build_config"/"$build_target"/libBqLog.so
-    mkdir -p "$(dirname "$STRIP_SO")"
-    "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/llvm-strip" -s "$SOURCE_SO" -o "$STRIP_SO"
+    SYMBOL_SO=../../../../../install/dynamic_lib/symbols/"$build_config"/"$build_target"/libBqLog.so
+    mkdir -p "$(dirname "$SYMBOL_SO")"
+    echo "SOURCE_SO:$SOURCE_SO"
+    echo "SYMBOL_SO:$SYMBOL_SO"
+    mv "$SOURCE_SO" "$SYMBOL_SO"
+    "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/llvm-strip" -s "$SYMBOL_SO" -o "$SOURCE_SO"
 
     cd ..
   done
