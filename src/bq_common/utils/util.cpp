@@ -265,13 +265,13 @@ namespace bq {
                         uint16_t v; \
                         memcpy(&v, s, 2); \
                         BQ_CONSTEXPR_IF (DO_COPY) { memcpy(d, &v, 2); d += 2; } \
-                        h1 = CRC_U16(h1, v); \
+                        h1 = CRC_U16(h1 ^ len_mix, v); \
                         s += 2; \
                     } \
                     if (len & 1) { \
                         uint8_t v = *s; \
                         BQ_CONSTEXPR_IF (DO_COPY) *d = v; \
-                        h2 = CRC_U8(h2, v); \
+                        h2 = CRC_U8(h2 ^ len_mix, v); \
                     } \
                 } \
             } \
