@@ -659,7 +659,7 @@ namespace bq {
 
                     for (auto& c : hash_cases) {
                         for (size_t i = 0; i < test_count; ++i) {
-                            size_t len = (rand() % 256) + 1; // Random length 1-256
+                            size_t len = static_cast<size_t>((rand() % 256) + 1); // Random length 1-256
                             std::vector<char> src_u8;
                             c.gen_func(src_u8, len);
 

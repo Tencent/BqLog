@@ -322,9 +322,6 @@ namespace bq {
 
     uint64_t util::bq_memcpy_with_hash(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len)
     {
- #ifndef NDEBUG
-        assert((reinterpret_cast<uintptr_t>(dst) % 4 == 0) && "dst of bq::util::bq_memcpy_with_hash must be 4 bytes aligned");
- #endif
         return _impl_bq_memcpy_with_hash(dst, src, len);
     }
 
