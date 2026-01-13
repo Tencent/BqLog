@@ -161,12 +161,12 @@ namespace bq {
                             uint64_t hash_copy = bq::util::bq_memcpy_with_hash(d, s, size);
 
                             int32_t cmp_res = memcmp(ref_data, d, size);
-                            result.add_result(cmp_res == 0, "bq_memcpy_with_hash copy correctness size=%zu src_off=%zu dst_off=%zu", size, src_off, dst_off);
+                            result.add_result(cmp_res == 0, "bq_memcpy_with_hash copy correctness size=%" PRIu64 " src_off=%" PRIu64 " dst_off=%" PRIu64, static_cast<uint64_t>(size), static_cast<uint64_t>(src_off), static_cast<uint64_t>(dst_off));
 
                             uint64_t hash_only = bq::util::bq_hash_only(s, size);
 
-                            result.add_result(hash_copy == hash_only, "bq_memcpy_with_hash vs bq_hash_only match size=%zu src_off=%zu dst_off=%zu", size, src_off, dst_off);
-                            result.add_result(hash_copy == expected_hash, "Hash alignment stability check size=%zu src_off=%zu dst_off=%zu", size, src_off, dst_off);
+                            result.add_result(hash_copy == hash_only, "bq_memcpy_with_hash vs bq_hash_only match size=%" PRIu64 " src_off=%" PRIu64 " dst_off=%" PRIu64, static_cast<uint64_t>(size), static_cast<uint64_t>(src_off), static_cast<uint64_t>(dst_off));
+                            result.add_result(hash_copy == expected_hash, "Hash alignment stability check size=%" PRIu64 " src_off=%" PRIu64 " dst_off=%" PRIu64, static_cast<uint64_t>(size), static_cast<uint64_t>(src_off), static_cast<uint64_t>(dst_off));
                         }
                     }
 
@@ -202,17 +202,17 @@ namespace bq {
                         uint64_t hash_copy = bq::util::bq_memcpy_with_hash(dst, src, len);
 
                         // 3. Verify Hash Consistency
-                        result.add_result(hash_only == hash_copy, "Hash consistency len=%zu", len);
+                        result.add_result(hash_only == hash_copy, "Hash consistency len=%" PRIu64, static_cast<uint64_t>(len));
 
                         // 4. Verify Content Correctness (using memcmp)
                         // Use standard memcpy for reference
                         memcpy(ref_dst, src, len);
                         int32_t content_match = memcmp(dst, ref_dst, len);
-                        result.add_result(content_match == 0, "Content match len=%zu", len);
+                        result.add_result(content_match == 0, "Content match len=%" PRIu64, static_cast<uint64_t>(len));
 
                         // 5. Verify Guard Bytes (No Overflow)
                         // Check the byte immediately after len
-                        result.add_result(dst[len] == 0xAA, "Guard byte check len=%zu", len);
+                        result.add_result(dst[len] == 0xAA, "Guard byte check len=%" PRIu64, static_cast<uint64_t>(len));
                     }
 
                     bq::platform::aligned_free(src);
@@ -443,24 +443,24 @@ namespace bq {
                         for (size_t align = 0; align < 16; ++align) {
                             uint32_t r = bq::util::utf16_to_utf8_ascii(src_16.data() + align, (uint32_t)t_len, dst_8.data() + align, (uint32_t)dst_8.size());
                             if (r != t_len) { 
-                                result.add_result(false, "utf16_to_utf8_ascii len mismatch. len=%zu align=%zu", t_len, align); 
+                                result.add_result(false, "utf16_to_utf8_ascii len mismatch. len=%" PRIu64 " align=%" PRIu64, static_cast<uint64_t>(t_len), static_cast<uint64_t>(align)); 
                                 all_pass=false; 
                                 break; 
                             }
                             if (memcmp(src_8.data() + align, dst_8.data() + align, t_len) != 0) { 
-                                result.add_result(false, "utf16_to_utf8_ascii content mismatch. len=%zu align=%zu", t_len, align); 
+                                result.add_result(false, "utf16_to_utf8_ascii content mismatch. len=%" PRIu64 " align=%" PRIu64, static_cast<uint64_t>(t_len), static_cast<uint64_t>(align)); 
                                 all_pass=false; 
                                 break; 
                             }
                             
                             r = bq::util::utf8_to_utf16_ascii(src_8.data() + align, (uint32_t)t_len, dst_16.data() + align, (uint32_t)dst_16.size());
                             if (r != t_len) { 
-                                result.add_result(false, "utf8_to_utf16_ascii len mismatch. len=%zu align=%zu", t_len, align); 
+                                result.add_result(false, "utf8_to_utf16_ascii len mismatch. len=%" PRIu64 " align=%" PRIu64, static_cast<uint64_t>(t_len), static_cast<uint64_t>(align)); 
                                 all_pass=false; 
                                 break; 
                             }
                             if (memcmp(src_16.data() + align, dst_16.data() + align, t_len * 2) != 0) {
-                                result.add_result(false, "utf8_to_utf16_ascii content mismatch. len=%zu align=%zu", t_len, align); 
+                                result.add_result(false, "utf8_to_utf16_ascii content mismatch. len=%" PRIu64 " align=%" PRIu64, static_cast<uint64_t>(t_len), static_cast<uint64_t>(align)); 
                                 all_pass=false; 
                                 break; 
                             }
@@ -476,7 +476,7 @@ namespace bq {
                             src_16[stop_pos] = 0x4E00; // Chinese
                             uint32_t r = bq::util::utf16_to_utf8_ascii(src_16.data(), (uint32_t)t_len, dst_8.data(), (uint32_t)dst_8.size());
                             if (r > stop_pos) { 
-                                result.add_result(false, "utf16_to_utf8_ascii truncation fail. len=%zu stop=%zu ret=%u", t_len, stop_pos, r); 
+                                result.add_result(false, "utf16_to_utf8_ascii truncation fail. len=%" PRIu64 " stop=%" PRIu64 " ret=%u", static_cast<uint64_t>(t_len), static_cast<uint64_t>(stop_pos), r); 
                                 all_pass=false; 
                                 break; 
                             }
@@ -502,12 +502,12 @@ namespace bq {
                             uint32_t final_len = bq::util::utf_mixed_to_utf8(dst_mixed.data() + align, mix_len, dst_8.data() + align, (uint32_t)dst_8.size());
                             
                             if (final_len != ref_len) {
-                                result.add_result(false, "UTF-Mixed size mismatch. len=%zu align=%zu", t_len, align);
+                                result.add_result(false, "UTF-Mixed size mismatch. len=%" PRIu64 " align=%" PRIu64, static_cast<uint64_t>(t_len), static_cast<uint64_t>(align));
                                 all_pass = false;
                                 break;
                             }
                             if (memcmp(ref_u8.data(), dst_8.data() + align, ref_len) != 0) {
-                                result.add_result(false, "UTF-Mixed content mismatch. len=%zu align=%zu", t_len, align);
+                                result.add_result(false, "UTF-Mixed content mismatch. len=%" PRIu64 " align=%" PRIu64, static_cast<uint64_t>(t_len), static_cast<uint64_t>(align));
                                 all_pass = false;
                                 break;
                             }
@@ -680,7 +680,7 @@ namespace bq {
                             uint64_t actual_hash = bq::util::hash_utf_mixed_as_utf16(buf_mixed.begin(), mixed_len);
                             if (expected_hash != actual_hash) {
                                 all_hash_pass = false;
-                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16 (Default) mismatch! Case: %s, Len: %zu", c.name, len);
+                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16 (Default) mismatch! Case: %s, Len: %" PRIu64, c.name, static_cast<uint64_t>(len));
                                 break;
                             }
 
@@ -689,7 +689,7 @@ namespace bq {
                             uint64_t sw_hash = bq::util::hash_utf_mixed_as_utf16_sw(buf_mixed.begin(), mixed_len);
                             if (expected_hash != sw_hash) {
                                 all_hash_pass = false;
-                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_sw mismatch! Case: %s, Len: %zu", c.name, len);
+                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_sw mismatch! Case: %s, Len: %" PRIu64, c.name, static_cast<uint64_t>(len));
                                 break;
                             }
 
@@ -698,7 +698,7 @@ namespace bq {
                             uint64_t sse_hash = bq::util::hash_utf_mixed_as_utf16_sse(buf_mixed.begin(), mixed_len);
                             if (expected_hash != sse_hash) {
                                 all_hash_pass = false;
-                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_sse mismatch! Case: %s, Len: %zu", c.name, len);
+                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_sse mismatch! Case: %s, Len: %" PRIu64, c.name, static_cast<uint64_t>(len));
                                 break;
                             }
                             // AVX2
@@ -706,7 +706,7 @@ namespace bq {
                                 uint64_t avx2_hash = bq::util::hash_utf_mixed_as_utf16_avx2(buf_mixed.begin(), mixed_len);
                                 if (expected_hash != avx2_hash) {
                                     all_hash_pass = false;
-                                    bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_avx2 mismatch! Case: %s, Len: %zu", c.name, len);
+                                    bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_avx2 mismatch! Case: %s, Len: %" PRIu64, c.name, static_cast<uint64_t>(len));
                                     break;
                                 }
                             }
@@ -715,7 +715,7 @@ namespace bq {
                             uint64_t neon_hash = bq::util::hash_utf_mixed_as_utf16_neon(buf_mixed.begin(), mixed_len);
                             if (expected_hash != neon_hash) {
                                 all_hash_pass = false;
-                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_neon mismatch! Case: %s, Len: %zu", c.name, len);
+                                bq::util::log_device_console(bq::log_level::error, "hash_utf_mixed_as_utf16_neon mismatch! Case: %s, Len: %" PRIu64, c.name, static_cast<uint64_t>(len));
                                 break;
                             }
 #endif
