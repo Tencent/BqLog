@@ -122,8 +122,20 @@ namespace bq {
                         uint32_t base_hash_32_tmp = bq::util::get_hash(data_tmp, real_data_size);
                         uint64_t base_hash_64_tmp = bq::util::get_hash_64(data_tmp, real_data_size);
                         uint64_t base_hash_64_cpy_tmp = bq::util::bq_memcpy_with_hash(target_base + (i % 2 == 0 ? 0 : 4), data_tmp, real_data_size);
-                        result.add_result(base_hash_32 != 0, "hash32 none zero test at offset %" PRId32, static_cast<int32_t>(offset));
-                        result.add_result(base_hash_64 != 0, "hash64 none zero test at offset %" PRId32, static_cast<int32_t>(offset));
+                        if (base_hash_32 == 0 || base_hash_64 == 0) {
+                            bq::string hex_dump;
+                            for (uint32_t hex_index = 0; hex_index < real_data_size; ++hex_index) {
+                                char buf[4];
+                                snprintf(buf, sizeof(buf), "%02X ", data_tmp[hex_index]);
+                                hex_dump += buf;
+                            }
+                            result.add_result(base_hash_32 != 0, "hash32 none zero test at offset %" PRId32 ", data size %" PRIu64 ", data:%s", static_cast<int32_t>(offset), static_cast<uint64_t>(real_data_size), hex_dump.c_str());
+                            result.add_result(base_hash_64 != 0, "hash64 none zero test at offset %" PRId32 ", data size %" PRIu64 ", data:%s", static_cast<int32_t>(offset), static_cast<uint64_t>(real_data_size), hex_dump.c_str());
+                        }
+                        else {
+                            result.add_result(base_hash_32 != 0, "hash32 none zero test at offset %" PRId32, static_cast<int32_t>(offset));
+                            result.add_result(base_hash_64 != 0, "hash64 none zero test at offset %" PRId32, static_cast<int32_t>(offset));
+                        }
                         result.add_result(base_hash_32 == base_hash_32_tmp, "hash32 test at offset %" PRId32, static_cast<int32_t>(offset));
                         result.add_result(base_hash_64 == base_hash_64_tmp, "hash64 test at offset %" PRId32, static_cast<int32_t>(offset));
                         result.add_result(base_hash_64 == base_hash_64_cpy_tmp, "bq_memcpy_with_hash test at offset %" PRId32, static_cast<int32_t>(offset));
