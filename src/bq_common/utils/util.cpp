@@ -1503,7 +1503,7 @@ namespace bq {
 #endif
     }
 
-    uint32_t util::utf16_to_utf8_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf16_to_utf8(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         // Threshold lowered to 8 to catch small strings on NEON/SSE
         if (src_character_num >= 8 && _bq_utf_simd_supported_) {
@@ -1518,7 +1518,7 @@ namespace bq {
         return _impl_utf16_to_utf8_sw(src, src_character_num, dst, dst_character_num);
     }
 
-    uint32_t util::utf8_to_utf16_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf8_to_utf16(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         // Threshold lowered to 16 to catch small strings
         if (src_character_num >= 16 && _bq_utf_simd_supported_) {
@@ -1532,7 +1532,7 @@ namespace bq {
     }
 
 
-    uint32_t util::utf16_to_utf8_ascii_fast(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf16_to_utf8_ascii(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
 #ifndef NDEBUG
         assert(dst_character_num >= src_character_num);
@@ -1540,7 +1540,7 @@ namespace bq {
         return  _impl_utf16_to_utf8_ascii_optimistic(src, src_character_num, dst, dst_character_num);
     }
 
-    uint32_t util::utf8_to_utf16_ascii_fast(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf8_to_utf16_ascii(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
 #ifndef NDEBUG
         assert(dst_character_num >= src_character_num);
@@ -1548,11 +1548,12 @@ namespace bq {
         return _impl_utf8_to_utf16_ascii_optimistic(src, src_character_num, dst, dst_character_num);
     }
 
+
+#ifdef BQ_UNIT_TEST
     // =================================================================================================
     // Legacy Implementation (State Machine)
     // =================================================================================================
-
-    uint32_t util::utf16_to_utf8(const char16_t* BQ_RESTRICT src_utf16_str, uint32_t src_character_num, char* BQ_RESTRICT dst_utf8_str, uint32_t dst_character_num)
+    uint32_t util::utf16_to_utf8_legacy(const char16_t* BQ_RESTRICT src_utf16_str, uint32_t src_character_num, char* BQ_RESTRICT dst_utf8_str, uint32_t dst_character_num)
     {
         uint32_t result_len = 0;
         uint32_t codepoint = 0;
@@ -1623,7 +1624,7 @@ namespace bq {
         return result_len;
     }
 
-    uint32_t util::utf8_to_utf16(const char* BQ_RESTRICT src_utf8_str, uint32_t src_character_num, char16_t* BQ_RESTRICT dst_utf16_str, uint32_t dst_character_num)
+    uint32_t util::utf8_to_utf16_legacy(const char* BQ_RESTRICT src_utf8_str, uint32_t src_character_num, char16_t* BQ_RESTRICT dst_utf16_str, uint32_t dst_character_num)
     {
         uint32_t result_len = 0;
         uint32_t mb_size = 0;
@@ -1694,10 +1695,11 @@ namespace bq {
         assert(result_len <= dst_character_num && "target buffer of utf8_to_utf16 is not enough!");
         return result_len;
     }
+#endif
 
     uint32_t util::utf16_to_utf_mixed(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
-        auto written_character_num = utf16_to_utf8_ascii_fast(src, src_character_num, dst, dst_character_num);
+        auto written_character_num = utf16_to_utf8_ascii(src, src_character_num, dst, dst_character_num);
         BQ_UNLIKELY_IF (written_character_num >= dst_character_num) {
             assert(false && "utf16_to_utf_mixed dst space utf8 not enough");
         }
@@ -1740,7 +1742,7 @@ namespace bq {
             memcpy(mixed_utf16_buffer_.get().begin(), src + utf8_len + 1, left_characters);
             utf16_start = static_cast<const char*>(mixed_utf16_buffer_.get().begin());
         }
-        utf8_len += utf16_to_utf8_fast(reinterpret_cast<const char16_t*>(utf16_start), static_cast<uint32_t>(left_characters >> 1) /* / sizeof(char16_t) */, dst + utf8_len, left_space);
+        utf8_len += utf16_to_utf8(reinterpret_cast<const char16_t*>(utf16_start), static_cast<uint32_t>(left_characters >> 1) /* / sizeof(char16_t) */, dst + utf8_len, left_space);
         if (mixed_utf16_buffer_.get().size() > 256) {
             mixed_utf16_buffer_.get().clear();
             mixed_utf16_buffer_.get().set_capacity(256, true);
@@ -1865,16 +1867,16 @@ namespace bq {
 
 
 #ifdef BQ_UNIT_TEST
-    uint32_t util::utf16_to_utf8_fast_sw(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf16_to_utf8_sw(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         return _impl_utf16_to_utf8_sw(src, src_character_num, dst, dst_character_num);
     }
-    uint32_t util::utf8_to_utf16_fast_sw(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf8_to_utf16_sw(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         return _impl_utf8_to_utf16_sw(src, src_character_num, dst, dst_character_num);
     }
 #if defined(BQ_X86)
-    uint32_t util::utf16_to_utf8_fast_sse(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf16_to_utf8_sse(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         (void)dst_character_num;
         const auto* src_ptr = src;
@@ -1886,7 +1888,7 @@ namespace bq {
         src_ptr = src + converted;
         return converted + _impl_utf16_to_utf8_simd_sse(src_ptr, src_end, dst + converted);
     }
-    uint32_t util::utf8_to_utf16_fast_sse(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
+    uint32_t util::utf8_to_utf16_sse(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         (void)dst_character_num;
         // Threshold lowered to 16 to catch small strings

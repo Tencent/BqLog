@@ -117,17 +117,16 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_formate_templa
     log_templates_array_.push_back(decoder_log_template());
     decoder_log_template& info = log_templates_array_[log_templates_array_.size() - 1];
     info.level = (bq::log_level)read_handle.data()[cursor++];
-    constexpr auto CATEGORY_IDX_VLQ_MAX_LEN = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
-    if (cursor + CATEGORY_IDX_VLQ_MAX_LEN > read_handle.len()) {
-        bq::util::log_device_console(log_level::error, "decode compressed log file failed, formate template data vlq decode error");
-        return appender_decode_result::failed_decode_error;
-    }
     size_t size_len = bq::log_utils::vlq::vlq_decode(info.category_idx, read_handle.data() + cursor);
     if (bq::log_utils::vlq::invalid_decode_length == size_len) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, formate template category idx vlq decode failed");
         return appender_decode_result::failed_decode_error;
     }
     cursor += size_len;
+    if (cursor > read_handle.len()) {
+        bq::util::log_device_console(log_level::error, "decode compressed log file failed, formate template category idx vlq decode error, index length exceed data length: index length:%" PRIu64 ", data length:%" PRIu64, static_cast<uint64_t>(cursor), static_cast<uint64_t>(read_handle.len()));
+        return appender_decode_result::failed_decode_error;
+    }
     if (info.category_idx >= category_names_.size()) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, formate template data vlq decode error, invalid category index:%d", info.category_idx);
         return appender_decode_result::failed_decode_error;
@@ -250,9 +249,8 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
     raw_cursor += static_cast<ptrdiff_t>(sizeof(bq::_log_entry_head_def));
 
     auto fmt_str_section_size = bq::align_4(format_template.fmt_string.size());
-    if (format_template.fmt_string.size() > 0) {
-        raw_data_.insert_batch(raw_data_.end(), reinterpret_cast<const uint8_t*>(static_cast<const char*>(format_template.fmt_string.c_str())), format_template.fmt_string.size());
-    }
+    raw_data_.fill_uninitialized(fmt_str_section_size);
+    memcpy(raw_data_.begin() + raw_cursor, reinterpret_cast<const uint8_t*>(static_cast<const char*>(format_template.fmt_string.c_str())), format_template.fmt_string.size());
     raw_cursor += static_cast<ptrdiff_t>(fmt_str_section_size);
 
     while (cursor < read_handle.len()) {
@@ -401,16 +399,21 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             auto size_raw_cursor = raw_cursor;
             raw_cursor += 4;
 
-            size_t utf_mixed_len = read_handle.len() - cursor;
-            size_t max_utf8_str_len = (utf_mixed_len << 1);
+            size_t max_utf8_str_len = (mixed_len << 1);
             raw_data_.fill_uninitialized(max_utf8_str_len);
             bool has_place_holder = mixed_len && !read_handle.data()[cursor];
             const uint8_t* str_begin_pos = has_place_holder ? (const uint8_t*)(read_handle.data() + cursor + 1) : (const uint8_t*)(read_handle.data() + cursor);
-            uint32_t utf8_len = bq::util::utf_mixed_to_utf8(reinterpret_cast<const char*>(str_begin_pos), static_cast<uint32_t>(utf_mixed_len), reinterpret_cast<char*>(static_cast<uint8_t*>(raw_data_.begin())) + raw_cursor, static_cast<uint32_t>(max_utf8_str_len));
-            raw_data_.erase(raw_data_.begin() + raw_cursor + static_cast<ptrdiff_t>(utf8_len), max_utf8_str_len - utf8_len);
+            uint32_t utf8_len = bq::util::utf_mixed_to_utf8(reinterpret_cast<const char*>(str_begin_pos), static_cast<uint32_t>(mixed_len), reinterpret_cast<char*>(static_cast<uint8_t*>(raw_data_.begin())) + raw_cursor, static_cast<uint32_t>(max_utf8_str_len));
+            auto aligned_utf8_len = bq::align_4(utf8_len);
+            if (aligned_utf8_len < max_utf8_str_len) {
+                raw_data_.erase(raw_data_.begin() + raw_cursor + static_cast<ptrdiff_t>(aligned_utf8_len), max_utf8_str_len - aligned_utf8_len);
+            }
+            else if (aligned_utf8_len > max_utf8_str_len) {
+                raw_data_.fill_uninitialized(aligned_utf8_len - max_utf8_str_len);
+            }
             *((uint32_t*)(uint8_t*)(raw_data_.begin() + size_raw_cursor)) = utf8_len;
-            cursor += has_place_holder ? (utf_mixed_len + 1) : (utf_mixed_len);
-            raw_cursor += static_cast<ptrdiff_t>(bq::align_4(utf8_len));
+            cursor += has_place_holder ? (mixed_len + 1) : (mixed_len);
+            raw_cursor += static_cast<ptrdiff_t>(bq::align_4(aligned_utf8_len));
         } break;
         default:
             break;

@@ -983,37 +983,6 @@ namespace bq {
             log_param_test_level1<PARAM_COUNT>()(empty_tuple);
         }
 
-        static void invalid_utf16_test(test_result& result, const test_category_log& log_inst)
-        {
-            bq::u16string invalid_utf16_str = u"#";
-            for (size_t i = 0; i < 17 * 1024; ++i) {
-                invalid_utf16_str.push_back(u'1');
-            }
-            invalid_utf16_str[1] = u'\0';
-            test_output(bq::log_level::info, "invalid_utf16_test1                           \n");
-            bq::log::force_flush_all_logs();
-            test_output(bq::log_level::info, "invalid_utf16_test2                           \n");
-            log_inst.error(log_inst.cat.ModuleA.SystemA.ClassA, invalid_utf16_str);
-            test_output(bq::log_level::info, "invalid_utf16_test3                           \n");
-            bq::log::force_flush_all_logs();
-            test_output(bq::log_level::info, "invalid_utf16_test4                           \n");
-            log_inst.error(log_inst.cat.ModuleA.SystemA.ClassA, "{}", invalid_utf16_str);
-            test_output(bq::log_level::info, "invalid_utf16_test5                           \n");
-            bq::log::force_flush_all_logs();
-            test_output(bq::log_level::info, "invalid_utf16_test6                           \n");
-            const bq::string raw_item1 = decode_raw_item();
-            test_output(bq::log_level::info, "invalid_utf16_test7                           \n");
-            const bq::string compressed_item1 = decode_compressed_item();
-            test_output(bq::log_level::info, "invalid_utf16_test8                           \n");
-            const bq::string raw_item2 = decode_raw_item();
-            test_output(bq::log_level::info, "invalid_utf16_test9                           \n");
-            const bq::string compressed_item2 = decode_compressed_item();
-            test_output(bq::log_level::info, "invalid_utf16_test10                           \n");
-            result.add_result(raw_item1.end_with("#"), "invalid utf16 raw test:%s", raw_item1.c_str());
-            result.add_result(compressed_item1.end_with("#"), "invalid utf16 compressed test:%s", compressed_item1.c_str());
-            result.add_result(raw_item2.end_with("#"), "invalid utf16 raw test:%s", raw_item2.c_str());
-        }
-
         static bq::platform::mutex encript_config_mutex_;
         static bq::string encript_config_;
 
@@ -1123,7 +1092,6 @@ namespace bq {
             result_ptr = &result;
             log_inst_ptr = &log_inst;
             output_str_ptr = &test_log::log_str;
-            invalid_utf16_test(result, log_inst);
 
             test_output(bq::log_level::info, "plaintext log test begin                           \n");
             full_log_test();

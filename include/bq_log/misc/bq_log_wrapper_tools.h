@@ -299,11 +299,10 @@ namespace bq {
             static_assert(sizeof(CHAR_TYPE) == 4, "_get_utf32_c_style_string_storage_size_impl only for utf32 characters");
             size_t str_len = 0;
             const CHAR_TYPE* p = str;
-            const CHAR_TYPE* pe = str + max_character_count;
-            const CHAR_TYPE* pe_minus_4 = pe - 4;
+            size_t remaining = max_character_count;
 
             // Fast Path for 4 characters at a time
-            while (p <= pe_minus_4) {
+            while (remaining >= 4) {
                 uint32_t c0 = static_cast<uint32_t>(p[0]);
                 uint32_t c1 = static_cast<uint32_t>(p[1]);
                 uint32_t c2 = static_cast<uint32_t>(p[2]);
@@ -314,19 +313,21 @@ namespace bq {
                 if (check <= 0xFFFE) {
                     str_len += 4;
                     p += 4;
+                    remaining -= 4;
                 }
                 else {
                     break;
                 }
             }
             // Slow Path for remaining characters
-            while (p < pe) {
+            while (remaining > 0) {
                 uint32_t c = static_cast<uint32_t>(*p);
                 if (c == 0) {
                     break;
                 }
                 str_len += (c <= 0xFFFF ? 1 : 2);
                 p++;
+                remaining--;
             }
             return str_len * sizeof(char16_t);
         }
