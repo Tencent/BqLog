@@ -204,7 +204,7 @@ namespace bq {
 #define BQ_GEN_HASH_CORE(DO_COPY, CRC_U8, CRC_U16, CRC_U32, CRC_U64) \
             auto* s = reinterpret_cast<const uint8_t*>(src); \
             auto* d = reinterpret_cast<uint8_t*>(dst); \
-            uint32_t h1 = 0, h2 = 0, h3 = 0, h4 = 0; \
+            uint32_t h1 = 0xFFFFFFFF, h2 = 0xFFFFFFFF, h3 = 0xFFFFFFFF, h4 = 0xFFFFFFFF; \
             BQ_LIKELY_IF(len >= 32) { \
                 const uint8_t* const src_end = s + len; \
                 uint8_t* const dst_end = d + len; \
