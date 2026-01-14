@@ -37,6 +37,9 @@ namespace bq.impl
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern _api_log_buffer_chunk_write_handle __api_log_buffer_alloc(ulong log_id, uint length);
+        
+        [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
+        public static unsafe extern _api_log_buffer_chunk_write_handle __api_log_buffer_alloc_with_format_string(ulong log_id, uint length, byte format_string_type, byte* format_str_data_utf16, uint target_format_string_storage_size);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern void __api_log_buffer_commit(ulong log_id, _api_log_buffer_chunk_write_handle write_handle_ptr);

@@ -80,12 +80,13 @@ namespace bq.def
     internal unsafe struct _log_entry_head_def
     {
         public ulong timestamp_epoch;
-        public uint log_args_offset;
         public uint ext_info_offset;
-        public ushort padding;
+        public uint category_idx;
+        public ulong format_hash;
         public byte log_format_str_type;
         public byte level;
-        public uint category_idx;
+        public ushort padding;
+        public uint log_format_data_len;
     }
 
 
