@@ -30,5 +30,7 @@ public enum log_arg_type_enum {
     float_type,
     double_type,
     string_utf8_type,
-    string_utf16_type
+    string_utf16_type,
+    string_utf32_type,
+    string_utf_mixed_type
 }

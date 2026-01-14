@@ -540,6 +540,14 @@ namespace bq {
             (void)ret;
             (void)written;
         }
+        else {
+            printf("%s%s%s%s%s",
+                use_color ? color : "",
+                prefix,
+                msg_len ? msg : "",
+                use_color ? reset : "",
+                newline);
+        }
 
 #if defined(BQ_MSVC)
         OutputDebugStringA(prefix);

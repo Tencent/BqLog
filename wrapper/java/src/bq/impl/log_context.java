@@ -24,19 +24,14 @@ import java.util.Map;
 
 
 public class log_context {
-     private static final int log_head_def_size_ = 24;
-     private bq.log parent_log_;
-
-
      private static long align4(long n)
      {
          return n == 0 ? n : (((n - 1) & (~((long)4 - 1))) + 4);
      }
  	 
  	 
- 	 public log_context(bq.log parent_log)
+ 	 public log_context()
  	 {
- 		parent_log_ = parent_log;
  	 }
      
      public long get_param_storage_size(Map.Entry<int[], long[]> obj)
@@ -142,7 +137,7 @@ public class log_context {
         	 return get_param_storage_size((Short)obj);
          }else if(cls == StringBuffer.class)
          {
-        	 return get_param_storage_size(((StringBuffer)obj).chars());
+        	 return get_param_storage_size(((StringBuffer)obj).toString());
          }else
          {
         	 return get_param_storage_size(obj.toString());
@@ -159,9 +154,9 @@ public class log_context {
         	 log_format_content = "null";
          }
          long log_format_content_len = (long)log_format_content.length() << 1;
-         long fmt_string_storage_size = align4(4/*sizeof(uint32_t)*/ + log_format_content_len);
+         long fmt_string_storage_size = align4(log_format_content_len);
     	 
-         ByteBuffer[] result = log_invoker.__api_log_buffer_alloc(target_log.get_id(), (long)log_head_def_size_ + fmt_string_storage_size + param_storage_size, (short)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content, log_format_content_len);
+         ByteBuffer[] result = log_invoker.__api_log_buffer_alloc(target_log.get_id(), fmt_string_storage_size + param_storage_size, (short)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content, log_format_content_len);
          
          if (null != result)
          {
@@ -175,15 +170,15 @@ public class log_context {
      public void add_param(ByteBuffer ring_buffer, String value)
      {
          //utf-16 String
-    	 int position = ring_buffer.position();
     	 if (null == value)
          {
-        	 ring_buffer.put((byte)log_arg_type_enum.null_type.ordinal());
-        	 ring_buffer.position(position + 4);
+    		 ring_buffer.putInt(log_arg_type_enum.null_type.ordinal()); //Works in Little-Endian
          }else {
         	 long str_size = ((long)value.length() << 1);
-        	 bq.impl.log_invoker.__api_log_arg_push_utf16_string(parent_log_.get_id(), (long)position, value, str_size);
-             ring_buffer.position(position + (int)align4(4 + 4 + str_size));
+        	 ring_buffer.putInt(log_arg_type_enum.string_utf16_type.ordinal());  //Works in Little-Endian
+        	 ring_buffer.putInt((int)str_size);
+        	 ring_buffer.asCharBuffer().put(value);
+        	 ring_buffer.position(ring_buffer.position() + (int)align4(str_size));
          }
      }
      
@@ -228,76 +223,55 @@ public class log_context {
 
      public void add_param(ByteBuffer ring_buffer, Boolean value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.bool_type.ordinal());
-    	 ring_buffer.position(position + 2);
-    	 ring_buffer.put((byte)(value ? 1 : 0));
-    	 ring_buffer.position(position + 4);
+    	 ring_buffer.putShort((short)log_arg_type_enum.bool_type.ordinal());
+    	 ring_buffer.putShort((short)(value ? 1 : 0));
      }
      public void add_param(ByteBuffer ring_buffer, Character value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.char16_type.ordinal());
-    	 ring_buffer.position(position + 2);
-    	 ring_buffer.putChar(value);
-    	 ring_buffer.position(position + 4);
+    	 ring_buffer.putShort((short)log_arg_type_enum.char16_type.ordinal());
+    	 ring_buffer.putShort((short)(int)value);
      }
 
      public void add_param(ByteBuffer ring_buffer, Byte value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.int8_type.ordinal());
-    	 ring_buffer.position(position + 2);
-    	 ring_buffer.put(value);
-    	 ring_buffer.position(position + 4);
+    	 ring_buffer.putShort((short)log_arg_type_enum.int8_type.ordinal());
+    	 ring_buffer.putShort((short)value);
      }
 
      public void add_param(ByteBuffer ring_buffer, Short value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.int16_type.ordinal());
-    	 ring_buffer.position(position + 2);
+    	 ring_buffer.putShort((short)log_arg_type_enum.int16_type.ordinal());
     	 ring_buffer.putShort(value);
      }
 
      public void add_param(ByteBuffer ring_buffer, Integer value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.int32_type.ordinal());
-    	 ring_buffer.position(position + 4);
+    	 ring_buffer.putInt(log_arg_type_enum.int32_type.ordinal());
     	 ring_buffer.putInt(value);
      }
 
      public void add_param(ByteBuffer ring_buffer, Long value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.int64_type.ordinal());
-    	 ring_buffer.position(position + 4);
+    	 ring_buffer.putInt(log_arg_type_enum.int64_type.ordinal());
     	 ring_buffer.putLong(value);
      }
      
      public void add_param(ByteBuffer ring_buffer, Float value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.float_type.ordinal());
-    	 ring_buffer.position(position + 4);
+    	 ring_buffer.putInt(log_arg_type_enum.float_type.ordinal());
     	 ring_buffer.putFloat(value);
      }
      public void add_param(ByteBuffer ring_buffer, Double value)
      {
-    	 int position = ring_buffer.position();
-    	 ring_buffer.put((byte)log_arg_type_enum.double_type.ordinal());
-    	 ring_buffer.position(position + 4);
+    	 ring_buffer.putInt(log_arg_type_enum.double_type.ordinal());
     	 ring_buffer.putDouble(value);
      }
      
      public <T> void add_param(ByteBuffer ring_buffer, T value)
      {
-    	 int position = ring_buffer.position();
          if (value == null)
          {
-        	 ring_buffer.put((byte)log_arg_type_enum.null_type.ordinal());
-        	 ring_buffer.position(position + 4);
+        	 ring_buffer.putInt(log_arg_type_enum.null_type.ordinal());
          }
          else
          {
@@ -310,9 +284,7 @@ public class log_context {
      {
          if (value == null)
          {
-        	 int position = ring_buffer.position();
-        	 ring_buffer.put((byte)log_arg_type_enum.null_type.ordinal());
-        	 ring_buffer.position(position + 4);
+        	 ring_buffer.putInt(log_arg_type_enum.null_type.ordinal());
              return;
          }
          Class<? extends Object> cls = value.getClass();

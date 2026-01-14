@@ -55,9 +55,14 @@ namespace bq {
             return *(const struct ext_log_entry_info_head*)(data_ptr + get_log_head().ext_info_offset);
         }
 
+        bq_forceinline const size_t get_log_args_offset() const
+        {
+            return sizeof(_log_entry_head_def) + bq::align_4(static_cast<size_t>(get_log_head().log_format_data_len));
+        }
+
         bq_forceinline const uint8_t* get_log_args_data() const
         {
-            return data_ptr + sizeof(_log_entry_head_def) + bq::align_4(static_cast<size_t>(get_log_head().log_format_data_len));
+            return data_ptr + get_log_args_offset();
         }
 
         bq_forceinline uint32_t get_log_args_data_size() const

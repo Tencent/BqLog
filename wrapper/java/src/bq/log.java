@@ -75,7 +75,7 @@ public class log {
             }
         }
         log_inst.log_id_ = log_id;
-        log_inst.context_ = new bq.impl.log_context(log_inst);
+        log_inst.context_ = new bq.impl.log_context();
         return log_inst;
     }
 
@@ -321,7 +321,7 @@ public class log {
                 categories_name_array_.add(category_item_name);
             }
         }
-        context_ = new bq.impl.log_context(this);
+        context_ = new bq.impl.log_context();
     }
     
     /**

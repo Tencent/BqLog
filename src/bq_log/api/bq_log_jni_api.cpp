@@ -98,22 +98,22 @@ static BQ_TLS struct {
  */
 JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JNIEnv* env, jclass, jlong log_id, jlong length, jshort level, jlong category_index, jstring format_content, jlong utf16_str_bytes_len)
 {
-    auto handle = bq::api::__api_log_buffer_alloc(static_cast<uint64_t>(log_id), (uint32_t)length);
+    auto head_size = sizeof(bq::_log_entry_head_def);
+    length += static_cast<jlong>(head_size);
+    auto handle = bq::api::__api_log_buffer_alloc(static_cast<uint64_t>(log_id), static_cast<uint32_t>(length));
     if (handle.result != bq::enum_buffer_result_code::success) {
         bq::api::__api_log_buffer_commit(static_cast<uint64_t>(log_id), handle);
         return nullptr;
     }
     tls_write_handle_.write_handle_ = handle;
     bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
+    bq::log_entry_handle log_entry_handle_obj(handle.data_addr, static_cast<uint32_t>(length));
     head->category_idx = static_cast<uint32_t>(category_index);
     head->level = (uint8_t)level;
+    head->format_hash = 0;
     head->log_format_str_type = static_cast<uint16_t>(bq::log_arg_type_enum::string_utf16_type);
-
-    //auto seq = bq::tools::make_single_string_size_seq<false, char16_t>((size_t)utf16_str_bytes_len);
-    //head->log_args_offset = static_cast<uint32_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
-    uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
-    *(uint32_t*)log_format_content_addr = (uint32_t)utf16_str_bytes_len;
-    log_format_content_addr += sizeof(uint32_t);
+    head->log_format_data_len = static_cast<uint32_t>(utf16_str_bytes_len);
+    uint8_t* log_format_content_addr = handle.data_addr + head_size;
     env->GetStringRegion(format_content, (jsize)0, (jsize)utf16_str_bytes_len >> 1, (jchar*)log_format_content_addr);
 
     bq::log_imp* log = bq::log_manager::get_log_by_id(static_cast<uint64_t>(log_id));
@@ -124,7 +124,7 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1a
         auto& log_buffer = log->get_buffer();
         tls_write_handle_.java_info_ = log_buffer.get_java_buffer_info(env, inner_handle);
     }
-    //*tls_write_handle_.java_info_.offset_store_ += (int32_t)head->log_args_offset;
+    *tls_write_handle_.java_info_.offset_store_ += static_cast<int32_t>(log_entry_handle_obj.get_log_args_offset());
     return tls_write_handle_.java_info_.buffer_array_obj_;
 }
 
