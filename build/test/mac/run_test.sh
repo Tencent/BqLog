@@ -4,7 +4,7 @@ CPP_VER_PARAM=${1:-17}
 mkdir -p XCodeProj
 cd XCodeProj
 
-cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM -G "Xcode" OTHER_LDFLAGS="-ld_classic"
+cmake ../../../../test/cpp -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM -G "Xcode" OTHER_LDFLAGS="-ld_classic"
 xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration Debug
 ./Debug/BqLogUnitTest
 exit_code=$?
@@ -15,7 +15,7 @@ else
     exit 1
 fi
 
-cmake ../../../../test -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM -G "Xcode"
+cmake ../../../../test/cpp -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM -G "Xcode"
 xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration RelWithDebInfo OTHER_LDFLAGS="-ld_classic"
 ./RelWithDebInfo/BqLogUnitTest
 exit_code=$?

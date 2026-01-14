@@ -10,7 +10,7 @@ sudo sysctl -w kernel.core_pattern=core.%p || echo "Failed to set core pattern (
 echo "Running BqLogUnitTest directly..."
 
 # 1) Debug
-CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test
+CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
 make -j"$(nproc)"
 
 set +e
@@ -44,7 +44,7 @@ else
 fi
 
 # 2) RelWithDebInfo
-CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test
+CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
 make -j"$(nproc)"
 
 set +e

@@ -4,7 +4,7 @@ CPP_VER_PARAM=${1:-17}
 mkdir -p CMakeFiles
 cd CMakeFiles
 
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=Debug -DCPP_VER=$CPP_VER_PARAM ../../../../test
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=Debug -DCPP_VER=$CPP_VER_PARAM ../../../../test/cpp
 make
 ./BqLogUnitTest
 exit_code=$?
@@ -13,7 +13,7 @@ if [ $exit_code -ne 0 ]; then
     exit 1
 fi
 
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=$CPP_VER_PARAM ../../../../test
+CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=$CPP_VER_PARAM ../../../../test/cpp
 make
 ./BqLogUnitTest
 exit_code=$?

@@ -5,7 +5,7 @@ if "%CPP_VER_PARAM%"=="" set CPP_VER_PARAM=17
 md MinGWProj_GCC
 cd MinGWProj_GCC
 
-cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug
+cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug
 cmake --build .
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
@@ -18,7 +18,7 @@ IF %exitcode% NEQ 0 (
     exit /b %exitcode%
 )
 
-cmake ..\..\..\..\test -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build .
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
