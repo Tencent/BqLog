@@ -35,7 +35,7 @@ namespace bq {
     static bq::array<global_var_destructiable*>* destructible_vars_;   //(nullptr)zero initialization
     static global_vars_destructor global_var_destructor_;
 #ifdef BQ_JAVA
-    static alignas(8) bool is_jvm_destroyed_;    // false zero initialization
+    alignas(8) static bool is_jvm_destroyed_;    // false zero initialization
 #endif
 
 #if defined(BQ_X86)
