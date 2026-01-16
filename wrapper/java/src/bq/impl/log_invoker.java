@@ -21,9 +21,9 @@ public class log_invoker {
 
 	public static native void __api_log_reset_config(String log_name,String config_content);
 	
-	public static native ByteBuffer[] __api_log_buffer_alloc(long log_id, long length, short level, long category_index, String fmt_string, long string_utf16_byte_len);
+	public static native ByteBuffer[] __api_log_write_begin(long log_id, byte log_level, long category_index, long format_str_bytes_len, String format_str_data, long args_data_bytes_len, boolean finished);
 	
-	public static native void __api_log_buffer_commit(long log_id);
+	public static native void __api_log_write_finish(long log_id);
 	
 	public static native void __api_set_appender_enable(long log_id, String appender_name, boolean enable);
 	

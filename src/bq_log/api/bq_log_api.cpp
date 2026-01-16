@@ -196,11 +196,12 @@ namespace bq {
         };
         BQ_TLS bq_log_api_thread_info_tls_type thread_info_tls_;
 
-        bq_forceinline bq::_api_log_buffer_chunk_write_handle log_buffer_alloc_impl(uint64_t log_id, uint32_t length)
+
+        BQ_API bq::_api_log_write_handle __api_log_write_begin(uint64_t log_id, uint8_t log_level, uint32_t category_index, uint8_t format_string_type, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_data_bytes_len)
         {
             auto log = bq::log_manager::get_log_by_id(log_id);
             if (!log) {
-                bq::_api_log_buffer_chunk_write_handle handle;
+                bq::_api_log_write_handle handle;
                 handle.result = enum_buffer_result_code::err_buffer_not_inited;
                 return handle;
             }
@@ -213,17 +214,19 @@ namespace bq {
                 }
             }
 
-            uint32_t ext_info_length = static_cast<uint32_t>(sizeof(ext_log_entry_info_head) + thread_info_tls_.thread_name_len_);
-            auto total_length = length + ext_info_length;
+            uint32_t length_without_ext_info = static_cast<uint32_t>(sizeof(bq::_log_entry_head_def) + static_cast<uint32_t>(bq::align_4(format_str_bytes_len)) + args_data_bytes_len);
+            uint32_t ext_info_length = static_cast<uint32_t>(sizeof(_log_entry_ext_head_def) + thread_info_tls_.thread_name_len_);
+            auto total_length = length_without_ext_info + ext_info_length;
             auto epoch_ms = bq::platform::high_performance_epoch_ms();
 
-            bq::_api_log_buffer_chunk_write_handle handle;
+            bq::_api_log_write_handle handle;
             if (log->get_thread_mode() == log_thread_mode::sync) {
                 handle.result = enum_buffer_result_code::success;
-                handle.data_addr = log->get_sync_buffer(total_length);
-            } else {
+                handle.format_data_addr = log->get_sync_buffer(total_length) + sizeof(_log_entry_head_def);
+            }
+            else {
                 auto& log_buffer = log->get_buffer();
-                auto write_handle = log_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
+                auto write_handle = log_buffer.alloc_write_chunk(total_length, epoch_ms);
                 bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.result == enum_buffer_result_code::err_wait_and_retry || write_handle.low_space_flag);
                 if (need_awake_worker) {
                     auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
@@ -232,70 +235,60 @@ namespace bq {
                 while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
                     bq::platform::thread::cpu_relax();
                     log_buffer.commit_write_chunk(write_handle);
-                    write_handle = log_buffer.alloc_write_chunk(length + ext_info_length, epoch_ms);
+                    write_handle = log_buffer.alloc_write_chunk(total_length, epoch_ms);
                 }
                 handle.result = write_handle.result;
-                handle.data_addr = write_handle.data_addr;
+                handle.format_data_addr = write_handle.data_addr + sizeof(_log_entry_head_def);
             }
 
-            if (handle.result == enum_buffer_result_code::success) {
-                bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
-#if defined(BQ_LOG_BUFFER_DEBUG)
-                // 8 bytes alignment to ensure best performance and avoid SIG_BUS on some platforms
-                assert((((uintptr_t)(&(head->timestamp_epoch))) & 0x7) == 0 && "log buffer alignment error");
-#endif
-                head->timestamp_epoch = epoch_ms;
-                head->ext_info_offset = length;
-            }
-            return handle;
-        }
-
-        BQ_API bq::_api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length) {
-            return log_buffer_alloc_impl(log_id, length);
-        }
-
-        BQ_API bq::_api_log_buffer_chunk_write_handle __api_log_buffer_alloc_with_format_string(uint64_t log_id, uint32_t length, uint8_t format_string_type, const void* format_str_data, uint32_t target_format_string_storage_size) {
-            auto handle = log_buffer_alloc_impl(log_id, length);
             if (handle.result != enum_buffer_result_code::success) {
                 return handle;
             }
-            log_entry_handle log_handle(handle.data_addr, length);
-            log_handle.get_log_head().log_format_str_type = format_string_type;
-            log_handle.get_log_head().log_format_data_len = target_format_string_storage_size;
-            switch (format_string_type) {
-            case static_cast<uint8_t>(log_arg_type_enum::string_utf8_type):
-            case static_cast<uint8_t>(log_arg_type_enum::string_utf16_type):
-                log_handle.get_log_head().format_hash = bq::util::bq_memcpy_with_hash(const_cast<char*>(log_handle.get_format_string_data()), format_str_data, log_handle.get_log_head().log_format_data_len);
-                break;
-            break;
-            case static_cast<uint8_t>(log_arg_type_enum::string_utf32_type):
-                log_handle.get_log_head().format_hash = 0;
-                bq::tools::_serialize_str_helper_by_encode<char32_t>::c_style_string_copy(const_cast<char*>(log_handle.get_format_string_data()), static_cast<const char32_t*>(format_str_data), target_format_string_storage_size);
-                break;
-            break;
-            default:
-                assert(false && "unsupported format string type");
+            uint8_t* chunk_data_ptr = handle.format_data_addr - sizeof(_log_entry_head_def);
+            bq::_log_entry_head_def* head = reinterpret_cast<bq::_log_entry_head_def*>(chunk_data_ptr);
+#if defined(BQ_LOG_BUFFER_DEBUG)
+            // 8 bytes alignment to ensure best performance and avoid SIG_BUS on some platforms
+            assert((((uintptr_t)(&(head->timestamp_epoch))) & 0x7) == 0 && "log buffer alignment error");
+#endif
+            head->timestamp_epoch = epoch_ms;
+            head->ext_info_offset = length_without_ext_info;
+            head->level = log_level;
+            head->category_idx = category_index;
+            head->log_format_str_type = format_string_type;
+            head->log_thread_id = thread_info_tls_.thread_id_;
+            head->log_format_data_len = format_str_bytes_len;
+            head->format_hash = 0;
+            if (format_str_data) {
+                switch (format_string_type) {
+                case static_cast<uint8_t>(log_arg_type_enum::string_utf8_type):
+                case static_cast<uint8_t>(log_arg_type_enum::string_utf16_type):
+                    head->format_hash = bq::util::bq_memcpy_with_hash(handle.format_data_addr, format_str_data, format_str_bytes_len);
+                    break;
+                case static_cast<uint8_t>(log_arg_type_enum::string_utf32_type):
+                    bq::tools::_serialize_str_helper_by_encode<char32_t>::c_style_string_copy(handle.format_data_addr, static_cast<const char32_t*>(format_str_data), format_str_bytes_len);
+                    break;
+                default:
+                    assert(false && "unsupported format string type");
+                }
             }
+            bq::_log_entry_ext_head_def* ext_info = reinterpret_cast<bq::_log_entry_ext_head_def*>(chunk_data_ptr + length_without_ext_info);
+            memcpy(&ext_info->thread_name_len_, &thread_info_tls_.thread_name_len_, sizeof(thread_info_tls_.thread_name_len_));
+            memcpy((uint8_t*)ext_info + sizeof(_log_entry_ext_head_def), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
             return handle;
         }
 
-        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_log_buffer_chunk_write_handle write_handle)
-        {
+        BQ_API void __api_log_write_finish(uint64_t log_id, bq::_api_log_write_handle write_handle) {
             auto log = bq::log_manager::get_log_by_id(log_id);
             if (!log) {
                 assert(false && "commit invalid log buffer");
                 return;
             }
-            bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)write_handle.data_addr;
-            bq::ext_log_entry_info_head* ext_info = (bq::ext_log_entry_info_head*)(write_handle.data_addr + head->ext_info_offset);
-            memcpy(&ext_info->thread_id_, &thread_info_tls_.thread_id_, sizeof(thread_info_tls_.thread_id_));
-            memcpy(&ext_info->thread_name_len_, &thread_info_tls_.thread_name_len_, sizeof(thread_info_tls_.thread_name_len_));
-            memcpy((uint8_t*)ext_info + sizeof(ext_log_entry_info_head), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
             if (log->get_thread_mode() == log_thread_mode::sync) {
                 log->sync_process(true);
-            } else {
+            }
+            else {
                 bq::log_buffer_write_handle handle;
-                handle.data_addr = write_handle.data_addr;
+                handle.data_addr = write_handle.format_data_addr - sizeof(_log_entry_head_def);
                 handle.result = write_handle.result;
                 auto& log_buffer = log->get_buffer();
                 log_buffer.commit_write_chunk(handle);

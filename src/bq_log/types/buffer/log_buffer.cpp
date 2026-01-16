@@ -52,17 +52,19 @@ namespace bq {
             || java_.buffer_obj_for_hp_buffer_
             || java_.buffer_obj_for_oversize_buffer_) {
             bq::platform::jni_env env;
-            if (java_.buffer_obj_for_lp_buffer_) {
-                env.env->DeleteGlobalRef(java_.buffer_obj_for_lp_buffer_);
-                java_.buffer_obj_for_lp_buffer_ = NULL;
-            }
-            if (java_.buffer_obj_for_hp_buffer_) {
-                env.env->DeleteGlobalRef(java_.buffer_obj_for_hp_buffer_);
-                java_.buffer_obj_for_hp_buffer_ = NULL;
-            }
-            if (java_.buffer_obj_for_oversize_buffer_) {
-                env.env->DeleteGlobalRef(java_.buffer_obj_for_oversize_buffer_);
-                java_.buffer_obj_for_oversize_buffer_ = NULL;
+            if (env.env) {
+                if (java_.buffer_obj_for_lp_buffer_) {
+                    env.env->DeleteGlobalRef(java_.buffer_obj_for_lp_buffer_);
+                    java_.buffer_obj_for_lp_buffer_ = NULL;
+                }
+                if (java_.buffer_obj_for_hp_buffer_) {
+                    env.env->DeleteGlobalRef(java_.buffer_obj_for_hp_buffer_);
+                    java_.buffer_obj_for_hp_buffer_ = NULL;
+                }
+                if (java_.buffer_obj_for_oversize_buffer_) {
+                    env.env->DeleteGlobalRef(java_.buffer_obj_for_oversize_buffer_);
+                    java_.buffer_obj_for_oversize_buffer_ = NULL;
+                }
             }
         }
 #endif

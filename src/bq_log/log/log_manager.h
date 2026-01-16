@@ -43,7 +43,7 @@ namespace bq {
 
         log_imp* get_log_by_index(uint32_t index);
 
-        inline static log_imp* get_log_by_id(uint64_t log_id)
+        bq_forceinline static log_imp* get_log_by_id(uint64_t log_id)
         {
             if (!log_id) {
                 return nullptr;

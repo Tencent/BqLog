@@ -154,9 +154,7 @@ public class log_context {
         	 log_format_content = "null";
          }
          long log_format_content_len = (long)log_format_content.length() << 1;
-         long fmt_string_storage_size = align4(log_format_content_len);
-    	 
-         ByteBuffer[] result = log_invoker.__api_log_buffer_alloc(target_log.get_id(), fmt_string_storage_size + param_storage_size, (short)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content, log_format_content_len);
+         ByteBuffer[] result = log_invoker.__api_log_write_begin(target_log.get_id(), (byte)target_level.ordinal(), log_category_base.get_index(target_category), log_format_content_len , log_format_content, param_storage_size, param_storage_size == 0);
          
          if (null != result)
          {
@@ -332,6 +330,6 @@ public class log_context {
 
      public void end_copy(log target_log)
      {
-         log_invoker.__api_log_buffer_commit(target_log.get_id());
+         log_invoker.__api_log_write_finish(target_log.get_id());
      }
 }

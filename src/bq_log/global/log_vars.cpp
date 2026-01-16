@@ -25,9 +25,10 @@ namespace bq {
         JNIEnv* env = env_holder.env;
         auto bq_log_cls = env->FindClass("bq/log");
         if (bq_log_cls) {
-            log_global_vars::get().cls_bq_log_ = bq_log_cls;
-            log_global_vars::get().mid_native_console_callback_ = env->GetStaticMethodID(bq_log_cls, "native_console_callback", "(JIILjava/lang/String;)V");
-            log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callback_ = env->GetStaticMethodID(bq_log_cls, "native_console_buffer_fetch_and_remove_callback", "(Lbq/log$console_callback_delegate;JIILjava/lang/String;)V");
+            log_global_vars::get().cls_bq_log_ = (jclass)env->NewGlobalRef(bq_log_cls);
+            env->DeleteLocalRef(bq_log_cls);
+            log_global_vars::get().mid_native_console_callback_ = env->GetStaticMethodID(log_global_vars::get().cls_bq_log_, "native_console_callback", "(JIILjava/lang/String;)V");
+            log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callback_ = env->GetStaticMethodID(log_global_vars::get().cls_bq_log_, "native_console_buffer_fetch_and_remove_callback", "(Lbq/log$console_callback_delegate;JIILjava/lang/String;)V");
         }
     }
 #endif

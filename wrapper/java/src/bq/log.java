@@ -13,7 +13,6 @@ package bq;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import bq.def.*;
 import bq.impl.*;
 
@@ -128,11 +127,13 @@ public class log {
         {
             return false;
         }
-        for (Object o : args)
-        {
-        	context_.add_param_no_optimized(ring_buffer, o);
+        if(param_storage_size > 0) {
+            for (Object o : args)
+            {
+            	context_.add_param_no_optimized(ring_buffer, o);
+            }
+            context_.end_copy(this);
         }
-        context_.end_copy(this);
         return true;
     }
     

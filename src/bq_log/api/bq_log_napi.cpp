@@ -293,9 +293,9 @@ public:
         if (dest) {
             size_t copied = 0;
             if (js_string_value1_) {
-                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head.
+                // The tail of the buffer has reserved space for bq::_log_entry_ext_head_def.
                 // We only populate it after committing the buffer, so the temporary trailing u'\0' (two bytes) is harmless
-                // — it will be overwritten by later data or the bq::ext_log_entry_info_head write on this thread.
+                // — it will be overwritten by later data or the bq::_log_entry_ext_head_def write on this thread.
                 napi_get_value_string_utf16(env_, js_string_value1_, dest, data_size + 1, &copied);
             }
 #ifndef NDEBUG
@@ -303,9 +303,9 @@ public:
 #endif
             if (js_string_value2_) {
                 size_t left = data_size - copied;
-                // The tail of the buffer has reserved space for bq::ext_log_entry_info_head.
+                // The tail of the buffer has reserved space for bq::_log_entry_ext_head_def.
                 // We only populate it after committing the buffer, so the temporary trailing u'\0' (two bytes) is harmless
-                // — it will be overwritten by later data or the bq::ext_log_entry_info_head write on this thread.
+                // — it will be overwritten by later data or the bq::_log_entry_ext_head_def write on this thread.
                 napi_get_value_string_utf16(env_, js_string_value2_, dest + copied, left + 1, &copied);
 #ifndef NDEBUG
                 assert(copied <= left);

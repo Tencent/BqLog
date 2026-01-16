@@ -50,12 +50,12 @@ namespace bq {
             return *(const _log_entry_head_def*)data_ptr;
         }
 
-        bq_forceinline const struct ext_log_entry_info_head& get_ext_head() const
+        bq_forceinline const struct _log_entry_ext_head_def& get_ext_head() const
         {
-            return *(const struct ext_log_entry_info_head*)(data_ptr + get_log_head().ext_info_offset);
+            return *(const struct _log_entry_ext_head_def*)(data_ptr + get_log_head().ext_info_offset);
         }
 
-        bq_forceinline const size_t get_log_args_offset() const
+        bq_forceinline size_t get_log_args_offset() const
         {
             return sizeof(_log_entry_head_def) + bq::align_4(static_cast<size_t>(get_log_head().log_format_data_len));
         }
@@ -82,10 +82,8 @@ namespace bq {
     };
 
     BQ_PACK_BEGIN
-    struct ext_log_entry_info_head {
-        uint64_t thread_id_;
+    struct _log_entry_ext_head_def {
         uint8_t thread_name_len_;
-    } BQ_PACK_END static_assert(sizeof(ext_log_entry_info_head) == sizeof(decltype(ext_log_entry_info_head::thread_id_)) + sizeof(decltype(ext_log_entry_info_head::thread_name_len_)), "ext_log_entry_info_head's memory layout must be packed!");
+    } BQ_PACK_END static_assert(sizeof(_log_entry_ext_head_def) == sizeof(decltype(_log_entry_ext_head_def::thread_name_len_)), "_log_entry_ext_head_def's memory layout must be packed!");
 
-    static_assert(sizeof(ext_log_entry_info_head::thread_id_) == sizeof(bq::platform::thread::thread_id), "thread_id size error!");
 }

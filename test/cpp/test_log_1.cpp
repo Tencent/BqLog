@@ -195,9 +195,9 @@ namespace bq {
 
                 result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, param \'a\', string param:字符串"), "%s, Log Test 6", str_type);
 
-                log_inst.verbose(log_inst.cat.ModuleA.SystemA, TEST_STR("测试, param {0}, param {2}, string \"{3}\", string param:{4}"), 3.5f, 4542232, UTF8_STR("utf-8字符串"), UTF16_STR(u"utf-16字符串"));
+                log_inst.verbose(log_inst.cat.ModuleA.SystemA, TEST_STR("测试, param {0}, param {2}, string \"{3}\", string param:{4}, string param:{5}"), 3.5f, 4542232, UTF8_STR("utf-8字符串"), UTF16_STR(u"utf-16字符串"), UTF32_STR(U"utf-32字符串"));
 
-                result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, string \"utf-8字符串\", string param:utf-16字符串"), "%s, Log Test 7", str_type);
+                result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, string \"utf-8字符串\", string param:utf-16字符串, string param:utf-32字符串"), "%s, Log Test 7", str_type);
             }
 
             {
@@ -266,9 +266,52 @@ namespace bq {
 
                 result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, param \'a\', string param:字符串"), "%s, Log Test 6", str_type);
 
-                log_inst.verbose(log_inst.cat.ModuleA.SystemA, TEST_STR(u"测试, param {0}, param {2}, string \"{3}\", string param:{4}"), 3.5f, 4542232, UTF8_STR("utf-8字符串"), UTF16_STR(u"utf-16字符串"));
+                log_inst.verbose(log_inst.cat.ModuleA.SystemA, TEST_STR(u"测试, param {0}, param {2}, string \"{3}\", string param:{4}, string param:{5}"), 3.5f, 4542232, UTF8_STR("utf-8字符串"), UTF16_STR(u"utf-16字符串"), UTF32_STR(U"utf-32字符串"));
 
-                result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, string \"utf-8字符串\", string param:utf-16字符串"), "%s, Log Test 7", str_type);
+                result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, string \"utf-8字符串\", string param:utf-16字符串, string param:utf-32字符串"), "%s, Log Test 7", str_type);
+            }
+
+#undef TEST_STR
+#define TEST_STR(STR) UTF32_STR(STR)
+#undef TEST_CHAR
+#define TEST_CHAR(CHAR) UTF32_CHAR(CHAR)
+            str_type = "utf32_str";
+            {
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, TEST_STR(U"This is a Test Log"));
+
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA]\tThis is a Test Log"), "%s, Log Test 1", str_type);
+
+                int32_t* ptr = NULL;
+
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, TEST_STR(U"This is a Test Log, Ptr:{0}"), nullptr, ptr);
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA]\tThis is a Test Log, Ptr:null"), "%s, Log Ptr Test 1, Ptr:nullptr", str_type);
+
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, TEST_STR(U"This is a Test Log, Ptr:{0},{1}, {3}"), nullptr, ptr);
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA]\tThis is a Test Log, Ptr:null,null, {3}"), "%s, Log Ptr Test 1, Ptr:nullptr", str_type);
+
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, TEST_STR(U"This is a Test Log, param {0}, param {2}"), false, true);
+
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA]\tThis is a Test Log, param FALSE, param TRUE"), "%s, Log Test 2", str_type);
+
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, TEST_STR(U"This is a Test Log, param {0}, param {2}"), false);
+
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA]\tThis is a Test Log, param FALSE, param {2}"), "%s, Log Test 3", str_type);
+
+                log_inst.fatal(log_inst.cat.ModuleA.SystemA, TEST_STR(U"This is a Test Log, param {CCCAA{0}}, param {2}"), false);
+
+                result.add_result(log_str.end_with("[F]\t[ModuleA.SystemA]\tThis is a Test Log, param {CCCAAFALSE}, param {2}"), "%s, Log Test 4", str_type);
+
+                log_inst.verbose(log_inst.cat.ModuleA.SystemA, TEST_STR(U"This is a Test Log, param {0}, param {2}, param \'{3}\', string param:{4}"), 3.5f, 4542232, TEST_CHAR('a'), "real_value");
+
+                result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\tThis is a Test Log, param 3.5000000, param 4542232, param \'a\', string param:real_value"), "%s, Log Test 5", str_type);
+
+                log_inst.verbose(log_inst.cat.ModuleA.SystemA, TEST_STR(U"测试, param {0}, param {2}, param \'{3}\', string param:{4}"), 3.5f, 4542232, 'a', TEST_STR(U"字符串"));
+
+                result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, param \'a\', string param:字符串"), "%s, Log Test 6", str_type);
+
+                log_inst.verbose(log_inst.cat.ModuleA.SystemA, TEST_STR(U"测试, param {0}, param {2}, string \"{3}\", string param:{4}, string param:{5}"), 3.5f, 4542232, UTF8_STR("utf-8字符串"), UTF16_STR(u"utf-16字符串"), UTF32_STR(U"utf-32字符串"));
+
+                result.add_result(log_str.end_with("[V]\t[ModuleA.SystemA]\t测试, param 3.5000000, param 4542232, string \"utf-8字符串\", string param:utf-16字符串, string param:utf-32字符串"), "%s, Log Test 7", str_type);
             }
         }
     }

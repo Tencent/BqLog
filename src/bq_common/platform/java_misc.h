@@ -20,18 +20,12 @@ namespace bq {
         // Whenever you need to use a JNIEnv* object, declare this type of object on the stack,
         // and you will get a JNIEnv* that is already attached to the Java Virtual Machine.
         // Moreover, you don't need to worry about when to detach,
-        // because it will handle this for you when its lifecycle ends.
-        // It is smart enough to deal with nested declarations
-        // and also knows whether it was called from the Java side (in which case no detachment is necessary).
+        // because it will handle this for you when thread ends.
         struct jni_env {
-        private:
-            bool attached_in_init = false;
-
         public:
             JNIEnv* env = NULL;
 
             jni_env();
-            ~jni_env();
         };
 
         struct jni_onload_register {

@@ -34,6 +34,9 @@ namespace bq {
     static bq::platform::spin_lock_zero_init destructor_mutex_;  //zero initialization
     static bq::array<global_var_destructiable*>* destructible_vars_;   //(nullptr)zero initialization
     static global_vars_destructor global_var_destructor_;
+#ifdef BQ_JAVA
+    static alignas(8) bool is_jvm_destroyed_;    // false zero initialization
+#endif
 
 #if defined(BQ_X86)
     static bool check_avx2_support() {
@@ -134,6 +137,9 @@ namespace bq {
 
     global_vars_destructor::~global_vars_destructor()
     {
+#ifdef BQ_JAVA
+        BQ_PACK_ACCESS_BY_TYPE(is_jvm_destroyed_, bq::platform::atomic<bool>) = true;
+#endif
         bq::platform::scoped_spin_lock lock(destructor_mutex_);
         if (destructible_vars_) {
             for (size_t i = destructible_vars_->size(); i > 0; --i) {
@@ -156,6 +162,13 @@ namespace bq {
         stack_trace_process_ = GetCurrentProcess();
 #endif
     }
+
+#ifdef BQ_JAVA
+    bool common_global_vars::is_jvm_destroyed() const
+    {
+        return BQ_PACK_ACCESS_BY_TYPE(is_jvm_destroyed_, bq::platform::atomic<bool>).load_acquire();
+    }
+#endif
 
     void common_global_vars::partial_destruct()
     {

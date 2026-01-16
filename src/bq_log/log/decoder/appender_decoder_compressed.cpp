@@ -424,16 +424,16 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
         }
         continue;
     }
-    size_t ext_info_size = sizeof(ext_log_entry_info_head) + thread_info_iter->value().thread_name.size();
+    size_t ext_info_size = sizeof(_log_entry_ext_head_def) + thread_info_iter->value().thread_name.size();
     size_t ext_info_offset = bq::align_4(raw_data_.size());
     size_t fill_size = ext_info_offset - + ext_info_size + raw_data_.size();
     raw_data_.fill_uninitialized(fill_size);
     bq::log_entry_handle entry(raw_data_.begin(), (uint32_t)raw_data_.size());
     // head is invalid now, because raw_data may have expanded it's capacity.
     entry.get_log_head().ext_info_offset = (uint32_t)ext_info_offset;
-    auto& ext_info = const_cast<ext_log_entry_info_head&>(entry.get_ext_head());
-    memcpy(&ext_info.thread_id_, &thread_info_iter->value().thread_id, sizeof(thread_info_iter->value().thread_id));
+    auto& ext_info = const_cast<_log_entry_ext_head_def&>(entry.get_ext_head());
+    memcpy(&entry.get_log_head().log_thread_id, &thread_info_iter->value().thread_id, sizeof(thread_info_iter->value().thread_id));
     ext_info.thread_name_len_ = (uint8_t)thread_info_iter->value().thread_name.size();
-    memcpy((uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), thread_info_iter->value().thread_name.c_str(), ext_info.thread_name_len_);
+    memcpy((uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), thread_info_iter->value().thread_name.c_str(), ext_info.thread_name_len_);
     return do_decode_by_log_entry_handle(entry);
 }

@@ -40,6 +40,7 @@ namespace bq {
         template <typename STR>
         struct is_bq_log_format {
             static constexpr bool value = bq::tools::_is_bq_log_format_type<STR>::value;
+            static constexpr log_arg_type_enum arg_type = bq::tools::_is_bq_log_format_type<STR>::arg_type;
         };
 
     protected:

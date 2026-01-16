@@ -323,13 +323,13 @@ namespace bq {
             format_template_idx = format_template_iter->value();
         }
 
-        const auto& ext_info = handle.get_ext_head();
-        auto thread_info__iter = thread_info_hash_cache_.find(ext_info.thread_id_);
+        auto thread_info__iter = thread_info_hash_cache_.find(handle.get_log_head().log_thread_id);
         uint32_t thread_info_idx = (uint32_t)-1;
         // write thread_info template
         if (thread_info__iter == thread_info_hash_cache_.end()) {
+            const auto& ext_info = handle.get_ext_head();
             constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<decltype(current_thread_info_max_index_)>();
-            constexpr size_t VLQ_MAX_SIZE_64 = bq::log_utils::vlq::vlq_max_bytes_count<decltype(ext_info.thread_id_)>();
+            constexpr size_t VLQ_MAX_SIZE_64 = bq::log_utils::vlq::vlq_max_bytes_count<decltype(handle.get_log_head().log_thread_id)>();
             auto max_thread_info_data_size = sizeof(uint8_t) + VLQ_MAX_SIZE + VLQ_MAX_SIZE_64 + ext_info.thread_name_len_;
 #ifndef NDEBUG
             assert(max_thread_info_data_size < 64);
@@ -342,8 +342,8 @@ namespace bq {
             uint32_t thread_info_data_cursor = prealloc_head_size;
             write_handle.data()[thread_info_data_cursor++] = (uint32_t)template_sub_type::thread_info_template;
             thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(current_thread_info_max_index_, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE);
-            thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(ext_info.thread_id_, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE_64);
-            memcpy(write_handle.data() + thread_info_data_cursor, (const uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), (size_t)ext_info.thread_name_len_);
+            thread_info_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(handle.get_log_head().log_thread_id, write_handle.data() + thread_info_data_cursor, VLQ_MAX_SIZE_64);
+            memcpy(write_handle.data() + thread_info_data_cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), (size_t)ext_info.thread_name_len_);
             thread_info_data_cursor += ext_info.thread_name_len_;
             write_handle.reset_used_len(thread_info_data_cursor);
             *(uint8_t*)write_handle.data() = (uint8_t)item_type::log_template;
@@ -351,7 +351,7 @@ namespace bq {
             auto real_body_len_size = bq::log_utils::vlq::vlq_encode(real_body_len, write_handle.data() + 1, 1);
             assert(real_body_len_size == 1 && "thread info template size encoding error");
             return_write_cache(write_handle);
-            thread_info_hash_cache_[ext_info.thread_id_] = current_thread_info_max_index_;
+            thread_info_hash_cache_[handle.get_log_head().log_thread_id] = current_thread_info_max_index_;
             thread_info_idx = current_thread_info_max_index_;
             ++current_thread_info_max_index_;
         } else {

@@ -22,9 +22,11 @@
 
 #define UTF8_STR(STR) (STR)
 #define UTF16_STR(STR) (bq::u16string(STR))
+#define UTF32_STR(STR) (bq::u32string(STR))
 
 #define UTF8_CHAR(CHAR) (CHAR)
 #define UTF16_CHAR(CHAR) ((char16_t)(CHAR))
+#define UTF32_CHAR(CHAR) ((char32_t)(CHAR))
 
 namespace bq {
     namespace test {

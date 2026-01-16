@@ -56,31 +56,33 @@ namespace bq {
         /// <param name="config_content_utf8">json config content</param>
         BQ_API bool __api_log_reset_config(const char* log_name_utf8, const char* config_content_utf8);
 
+        
         /// <summary>
-        /// alloc log write memory chunk
+        /// Initiates a log write operation and allocates the necessary buffer space.
         /// </summary>
-        /// <param name="log_id"></param>
-        /// <param name="length"></param>
-        /// <returns>chunk handle, please check result code first</returns>
-        BQ_API _api_log_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length);
+        /// <remarks>
+        /// If manual population is required, the starting address for argument data is calculated as: 
+        /// <code>handle.format_data_addr + align4(format_str_bytes_len)</code>
+        /// </remarks>
+        /// <param name="log_id">The unique identifier for the log entry.</param>
+        /// <param name="log_level">The severity level of the log.</param>
+        /// <param name="category_index">The index of the log category.</param>
+        /// <param name="format_string_type">The character encoding type of the format string (e.g., log_arg_type_enum::string_utf16_type).</param>
+        /// <param name="format_str_bytes_len">The length of the format string in bytes.</param>
+        /// <param name="format_str_data">
+        /// Pointer to the format string data. 
+        /// If NULL, indicates a zero-copy scenario where the caller must manually write data to the allocated buffer.
+        /// </param>
+        /// <param name="args_data_bytes_len">The length of the variable arguments data in bytes.</param>
+        /// <returns>A handle to the allocated log buffer chunk.</returns>
+        BQ_API _api_log_write_handle __api_log_write_begin(uint64_t log_id, uint8_t log_level, uint32_t category_index, uint8_t format_string_type, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_data_bytes_len);
 
         /// <summary>
-        /// alloc log write memory chunk with format string
+        /// Finalizes the log write operation and commits the data to the ring buffer.
         /// </summary>
-        /// <param name="log_id"></param>
-        /// <param name="length"></param>
-        /// <param name="format_string_type">log_arg_type_enum::string_utf8_type or log_arg_type_enum::string_utf16_type or log_arg_type_enum::string_utf32_type</param>
-        /// <param name="format_str_data"></param>
-        /// <param name="target_format_string_storage_size">In bytes</param>
-        /// <returns>chunk handle, please check result code first</returns>
-        BQ_API _api_log_buffer_chunk_write_handle __api_log_buffer_alloc_with_format_string(uint64_t log_id, uint32_t length, uint8_t format_string_type, const void* format_str_data, uint32_t target_format_string_storage_size);
-
-        /// <summary>
-        /// commit write handle after you finished writing log data
-        /// </summary>
-        /// <param name="write_handle"></param>
-        /// <returns></returns>
-        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_log_buffer_chunk_write_handle write_handle);
+        /// <param name="log_id">The unique identifier for the log entry.</param>
+        /// <param name="write_handle">The handle returned by <see cref="__api_log_write_begin"/>.</param>
+        BQ_API void __api_log_write_finish(uint64_t log_id, bq::_api_log_write_handle write_handle);
 
         /// <summary>
         /// toggle of all console appenders,

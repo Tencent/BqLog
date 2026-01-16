@@ -225,21 +225,26 @@ namespace bq {
         }
         bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
-        size_t target_format_data_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content) + bq::get<1>(stack_info);
-        size_t aligned_target_format_data_size = bq::align_4(target_format_data_size);
-        size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_target_format_data_size;
-        auto handle = bq::api::__api_log_buffer_alloc_with_format_string(log_id_, 
-                        (uint32_t)total_data_size, 
-                        static_cast<uint8_t>(static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>())), 
-                        bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content), 
-                        static_cast<uint32_t>(target_format_data_size));
+        size_t format_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content);
+        size_t total_format_data_size = format_size + bq::get<1>(stack_info);
+        bq::_api_log_write_handle handle;
+        handle = bq::api::__api_log_write_begin(log_id_,
+                static_cast<uint8_t>(level),
+                category_index,
+                static_cast<uint8_t>(is_bq_log_format<STR>::arg_type),
+                static_cast<uint32_t>(total_format_data_size),
+                should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content),
+                0);
         if (handle.result != bq::enum_buffer_result_code::success) {
             return false;
         }
-        bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
-        head->category_idx = category_index;
-        head->level = static_cast<uint8_t>(level);
-        bq::api::__api_log_buffer_commit(log_id_, handle);
+        if (should_print_stack) {
+            //Ugly hack
+            bq::tools::_type_copy<false>(log_format_content, handle.format_data_addr - sizeof(uint32_t), total_format_data_size);
+            memcpy(handle.format_data_addr + format_size, bq::get<0>(stack_info), bq::get<1>(stack_info));
+            *reinterpret_cast<uint32_t*>(handle.format_data_addr - sizeof(uint32_t)) = static_cast<uint32_t>(total_format_data_size);
+        }
+        bq::api::__api_log_write_finish(log_id_, handle);
         return true;
     }
 
@@ -251,24 +256,30 @@ namespace bq {
         }
         bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
-        size_t target_format_data_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content) + bq::get<1>(stack_info);
-        size_t aligned_target_format_data_size = bq::align_4(target_format_data_size);
-        auto args_size_seq = bq::tools::make_size_seq<true>(args...); 
-        size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_target_format_data_size + args_size_seq.get_total();
-        auto handle = bq::api::__api_log_buffer_alloc_with_format_string(log_id_, 
-                        (uint32_t)total_data_size, 
-                        static_cast<uint8_t>(static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<STR>())), 
-                        bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content), 
-                        static_cast<uint32_t>(target_format_data_size));
+        size_t format_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content);
+        size_t total_format_data_size = format_size + bq::get<1>(stack_info);
+        auto args_size_seq = bq::tools::make_size_seq<true>(args...);
+        size_t total_args_size = args_size_seq.get_total();
+        bq::_api_log_write_handle handle;
+        handle = bq::api::__api_log_write_begin(log_id_,
+            static_cast<uint8_t>(level),
+            category_index,
+            static_cast<uint8_t>(is_bq_log_format<STR>::arg_type),
+            static_cast<uint32_t>(total_format_data_size),
+            should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content),
+            static_cast<uint32_t>(total_args_size));
         if (handle.result != bq::enum_buffer_result_code::success) {
             return false;
         }
-        bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
-        head->category_idx = category_index;
-        head->level = static_cast<uint8_t>(level);
-        uint8_t* log_args_addr = handle.data_addr + sizeof(bq::_log_entry_head_def) + aligned_target_format_data_size;
+        if (should_print_stack) {
+            //Ugly hack
+            bq::tools::_type_copy<false>(log_format_content, handle.format_data_addr - sizeof(uint32_t), total_format_data_size);
+            memcpy(handle.format_data_addr + format_size, bq::get<0>(stack_info), bq::get<1>(stack_info));
+            *reinterpret_cast<uint32_t*>(handle.format_data_addr - sizeof(uint32_t)) = static_cast<uint32_t>(total_format_data_size);
+        }
+        uint8_t* log_args_addr = handle.format_data_addr + bq::align_4(total_format_data_size);
         bq::impl::_do_log_args_fill(log_args_addr, args_size_seq, args...);
-        bq::api::__api_log_buffer_commit(log_id_, handle);
+        bq::api::__api_log_write_finish(log_id_, handle);
         return true;
     }
 

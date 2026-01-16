@@ -18,7 +18,8 @@
 namespace bq {
     namespace platform {
         static JavaVM* java_vm = NULL;
-        static BQ_TLS int32_t jni_attacher_counter = 0;
+        static BQ_TLS JNIEnv* tls_java_env = NULL;
+        static BQ_TLS bool tls_did_attach = false;
 
         static jclass cls_byte_buffer_ = nullptr;
         static jmethodID method_byte_buffer_byte_order_ = nullptr;
@@ -32,44 +33,47 @@ namespace bq {
 
         jni_env::jni_env()
         {
+            env = nullptr;
+            if (common_global_vars::get().is_jvm_destroyed()) {
+                env = tls_java_env;
+                return;
+            }
             assert(java_vm != NULL && "invoke functions on java_vm before it is initialized");
-            jint get_env_result = java_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
-            if (!(JNI_OK == get_env_result || JNI_EDETACHED == get_env_result)) {
-                bq::util::log_device_console(log_level::fatal, "JVM GetEnv error, error code:%" PRIu32, static_cast<int32_t>(get_env_result));
-                assert(false && "JVM GetEnv error");
-            }
-            if (jni_attacher_counter == 0) {
-                attached_in_init = (JNI_OK == get_env_result);
-            }
-            if (JNI_EDETACHED == get_env_result) {
-                if (0 != jni_attacher_counter) {
-                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, jni_attacher_counter:%" PRIu32, jni_attacher_counter);
-                    assert(false && "jni_env attach error");
+            if (!tls_java_env) {
+                jint get_env_result = java_vm->GetEnv((void**)&tls_java_env, JNI_VERSION_1_6);
+                if (JNI_EDETACHED == get_env_result) {
+                    using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThreadAsDaemon), 0>;
+                    jint attach_result = java_vm->AttachCurrentThreadAsDaemon(reinterpret_cast<attach_param_type>(&tls_java_env), nullptr);
+                    if (JNI_OK != attach_result) {
+                        bq::util::log_device_console(log_level::fatal, "jni_env attach error, AttachCurrentThreadAsDaemon error code:%" PRId32, static_cast<int32_t>(attach_result));
+                        tls_java_env = nullptr;
+                        return;
+                    }
+                    tls_did_attach = true;
+                }else if (JNI_OK != get_env_result) {
+                    bq::util::log_device_console(log_level::fatal, "JVM GetEnv error, error code:%" PRIu32, static_cast<int32_t>(get_env_result));
+                    tls_java_env = nullptr;
+                    return;
                 }
-                using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThread), 0>;
-                jint attach_result = java_vm->AttachCurrentThread(reinterpret_cast<attach_param_type>(&env), nullptr);
-                if (JNI_OK != attach_result) {
-                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, AttachCurrentThread error code:%" PRId32, static_cast<int32_t>(attach_result));
-                    assert(false && "AttachCurrentThread error");
-                }
+                
             }
-            ++jni_attacher_counter;
+            env = tls_java_env;
         }
 
-        jni_env::~jni_env()
+        struct tls_java_env_lifecycle_holder
         {
-            --jni_attacher_counter;
-            assert(jni_attacher_counter >= 0 && "--jni_attacher_counter is less than 0!");
-            if (0 == jni_attacher_counter) {
-                if (!attached_in_init) {
-                    jint detach_result = java_vm->DetachCurrentThread();
-                    if (JNI_OK != detach_result) {
-                        bq::util::log_device_console(log_level::fatal, "jni_env attach error, DetachCurrentThread error code:%" PRId32, static_cast<int32_t>(detach_result));
-                        assert(false && "AttachCurrentThread error");
+            ~tls_java_env_lifecycle_holder() {
+                if (tls_java_env && tls_did_attach) {
+                    if (!common_global_vars::get().is_jvm_destroyed()) {
+                        jint detach_result = java_vm->DetachCurrentThread();
+                        if (JNI_OK != detach_result) {
+                            bq::util::log_device_console(log_level::fatal, "jni_env attach error, DetachCurrentThread error code:%" PRId32, static_cast<int32_t>(detach_result));
+                        }
                     }
                 }
+                tls_java_env = nullptr;
             }
-        }
+        };
 
         jni_onload_register::jni_onload_register(void (*onload_callback)())
         {
@@ -86,11 +90,14 @@ namespace bq {
         {
             jobject result = env->NewDirectByteBuffer(const_cast<void*>(address), static_cast<jlong>(capacity));
             if (!is_big_endian) {
-                env->CallObjectMethod(result, method_byte_buffer_byte_order_, jobj_little_endian_value_);
+                jobject new_order = env->CallObjectMethod(result, method_byte_buffer_byte_order_, jobj_little_endian_value_);
                 if (env->ExceptionCheck()) {
                     env->ExceptionDescribe();
                     env->ExceptionClear();
                     result = NULL;
+                }
+                if (new_order) {
+                    env->DeleteLocalRef(new_order);
                 }
             }
             return result;
@@ -100,13 +107,25 @@ namespace bq {
         {
             jni_env env_holder;
             auto env = env_holder.env;
-            cls_byte_buffer_ = (jclass)env->NewGlobalRef(env->FindClass("java/nio/ByteBuffer"));
+            jclass cls_byte_buffer_local = env->FindClass("java/nio/ByteBuffer");
+            cls_byte_buffer_ = (jclass)env->NewGlobalRef(cls_byte_buffer_local);
+            env->DeleteLocalRef(cls_byte_buffer_local);
+
             method_byte_buffer_byte_order_ = env->GetMethodID(cls_byte_buffer_, "order", "(Ljava/nio/ByteOrder;)Ljava/nio/ByteBuffer;");
+            
             jclass cls_byte_order = env->FindClass("java/nio/ByteOrder");
             jfieldID little_endian_field = env->GetStaticFieldID(cls_byte_order, "LITTLE_ENDIAN", "Ljava/nio/ByteOrder;");
             jfieldID big_endian_field = env->GetStaticFieldID(cls_byte_order, "BIG_ENDIAN", "Ljava/nio/ByteOrder;");
-            jobj_little_endian_value_ = env->NewGlobalRef(env->GetStaticObjectField(cls_byte_order, little_endian_field));
-            jobj_big_endian_value_ = env->NewGlobalRef(env->GetStaticObjectField(cls_byte_order, big_endian_field));
+            
+            jobject jobj_little_endian_local = env->GetStaticObjectField(cls_byte_order, little_endian_field);
+            jobj_little_endian_value_ = env->NewGlobalRef(jobj_little_endian_local);
+            env->DeleteLocalRef(jobj_little_endian_local);
+
+            jobject jobj_big_endian_local = env->GetStaticObjectField(cls_byte_order, big_endian_field);
+            jobj_big_endian_value_ = env->NewGlobalRef(jobj_big_endian_local);
+            env->DeleteLocalRef(jobj_big_endian_local);
+
+            env->DeleteLocalRef(cls_byte_order);
         }
 
         jint jni_init(JavaVM* vm, void* reserved)
@@ -134,5 +153,7 @@ namespace bq {
 #endif
 #endif
     }
+
+    BQ_TLS_NON_POD(platform::tls_java_env_lifecycle_holder, java_env_lifecycle_holder_)
 }
 #endif

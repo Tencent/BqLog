@@ -187,12 +187,6 @@ namespace bq {
                             char>>>>;
         };
 
-        template <typename STR>
-        struct _is_bq_log_format_type {
-            static constexpr bool value = _is_bq_log_supported_string_type<STR>::value
-                || _custom_type_helper<STR>::is_valid;
-        };
-
         enum class _serialize_func_type {
             utf8_string,
             utf16_string,
@@ -226,6 +220,18 @@ namespace bq {
         template <typename T, _serialize_func_type TYPE>
         struct _is_serialize_func_type {
             constexpr static bool value = (_get_serialize_func_type<T>() == TYPE);
+        };
+
+        template <typename STR>
+        struct _is_bq_log_format_type {
+            static constexpr bool value = _is_bq_log_supported_string_type<STR>::value
+                || _custom_type_helper<STR>::is_valid;
+            static constexpr log_arg_type_enum arg_type = bq::condition_value < (_get_serialize_func_type<STR>() == _serialize_func_type::custom_type) && bq::is_same<typename _custom_type_helper<STR>::char_type, char>::value, log_arg_type_enum, log_arg_type_enum::string_utf8_type,
+                bq::condition_value < (_get_serialize_func_type<STR>() == _serialize_func_type::custom_type) && bq::is_same<typename _custom_type_helper<STR>::char_type, char16_t>::value, log_arg_type_enum, log_arg_type_enum::string_utf16_type,
+                bq::condition_value < (_get_serialize_func_type<STR>() == _serialize_func_type::custom_type) && bq::is_same<typename _custom_type_helper<STR>::char_type, char32_t>::value, log_arg_type_enum, log_arg_type_enum::string_utf32_type,
+                bq::condition_value < _get_serialize_func_type<STR>() == _serialize_func_type::utf8_string, log_arg_type_enum, log_arg_type_enum::string_utf8_type,
+                bq::condition_value < _get_serialize_func_type<STR>() == _serialize_func_type::utf16_string, log_arg_type_enum, log_arg_type_enum::string_utf16_type,
+                bq::condition_value < _get_serialize_func_type<STR>() == _serialize_func_type::utf32_string, log_arg_type_enum, log_arg_type_enum::string_utf32_type, log_arg_type_enum::unsupported_type>::value>::value>::value>::value>::value>::value;
         };
 
         template <typename T>

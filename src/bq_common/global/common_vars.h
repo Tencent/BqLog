@@ -146,6 +146,7 @@ namespace bq {
 
 #if defined(BQ_JAVA)
         bq::array<void (*)()> jni_onload_callbacks_inst_;
+        bool is_jvm_destroyed() const;
 #endif
 #if defined(BQ_NAPI)
         bq::platform::mutex napi_init_mutex_;
