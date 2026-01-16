@@ -407,9 +407,8 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
     if (!format_custom_formatter.reset(env, argv_ptr[has_category_arg ? 1 : 0], stack_val)) {
         return bq::make_napi_bool(env, false);
     }
-
-    size_t aligned_format_data_size = format_custom_formatter.get_size_seq().get_total();
-    size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_format_data_size;
+    size_t format_data_size = format_custom_formatter.bq_log_format_str_size();
+    size_t args_size = 0;
     for (size_t i = (has_category_arg ? 2 : 1); i < argc; ++i) {
         napi_valuetype input_param_type = napi_undefined;
         BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_typeof(env, argv_ptr[i], &input_param_type));
@@ -468,22 +467,15 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         default:
             break;
         }
-        total_data_size += arg_info_array[i].storage_size_;
+        args_size += arg_info_array[i].storage_size_;
     }
 
-    auto handle = bq::api::__api_log_buffer_alloc(log_js_inst->log_id_, (uint32_t)total_data_size);
+    auto handle = bq::api::__api_log_write_begin(log_js_inst->log_id_, static_cast<uint8_t>(log_level), category_index, static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type), static_cast<uint32_t>(format_data_size), nullptr, static_cast<uint32_t>(args_size));
     if (handle.result != bq::enum_buffer_result_code::success) {
         return bq::make_napi_bool(env, false);
     }
-    bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
-    head->category_idx = category_index;
-    head->level = static_cast<uint8_t>(log_level);
-    head->log_format_str_type = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
-    size_t log_args_offset = static_cast<size_t>(sizeof(bq::_log_entry_head_def) + aligned_format_data_size);
-    head->log_args_offset = (uint32_t)log_args_offset;
-    uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
-    bq::tools::_type_copy<false>(format_custom_formatter, log_format_content_addr, format_custom_formatter.get_size_seq().get_element().get_value());
-    uint8_t* log_args_addr = handle.data_addr + log_args_offset;
+    format_custom_formatter.bq_log_custom_format(reinterpret_cast<char16_t*>(handle.format_data_addr), format_data_size);
+    uint8_t* log_args_addr = handle.format_data_addr + bq::align_4(format_data_size);
 
     for (size_t i = (has_category_arg ? 2 : 1); i < argc; ++i) {
         switch (arg_info_ptr[i].type_) {
@@ -511,7 +503,6 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
             bool lossless = false;
             uint64_t u64_value = 0;
             BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_value_bigint_uint64(env, argv_ptr[i], &u64_value, &lossless));
-            assert(log_args_offset && "[NAPI do_log bigint]impossible execution path!");
             bq::tools::_type_copy<true>(u64_value, log_args_addr, arg_info_ptr[i].data_size_);
         } break;
         default:
@@ -520,7 +511,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         }
         log_args_addr += arg_info_ptr[i].storage_size_;
     }
-    bq::api::__api_log_buffer_commit(log_js_inst->log_id_, handle);
+    bq::api::__api_log_write_finish(log_js_inst->log_id_, handle);
     return bq::make_napi_bool(env, true);
 }
 
