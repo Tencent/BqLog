@@ -12,7 +12,6 @@
 using System;
 using System.Runtime.InteropServices;
 using bq.def;
-using static bq.tools.log_decoder;
 
 namespace bq.impl
 {
@@ -34,16 +33,13 @@ namespace bq.impl
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern bool __api_log_reset_config(byte* log_name_utf8, byte* config_content_utf8);
-
-        [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern _api_log_buffer_chunk_write_handle __api_log_buffer_alloc(ulong log_id, uint length);
         
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern _api_log_buffer_chunk_write_handle __api_log_buffer_alloc_with_format_string(ulong log_id, uint length, byte format_string_type, byte* format_str_data_utf16, uint target_format_string_storage_size);
+        public static unsafe extern _api_log_buffer_chunk_write_handle __api_log_write_begin(ulong log_id, byte log_level, uint category_index, byte format_string_type, uint format_str_bytes_len, byte* format_str_data_utf16, uint args_data_bytes_len);
 
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
-        public static unsafe extern void __api_log_buffer_commit(ulong log_id, _api_log_buffer_chunk_write_handle write_handle_ptr);
- 
+        public static unsafe extern void __api_log_write_finish(ulong log_id, _api_log_buffer_chunk_write_handle write_handle_ptr);
+
         [DllImport(LIB_NAME, CharSet = CharSet.Unicode)]
         public static unsafe extern void __api_set_appender_enable(ulong log_id, byte* appender_name, bool enable);
 

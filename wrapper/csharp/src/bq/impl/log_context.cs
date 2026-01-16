@@ -20,7 +20,6 @@ namespace bq.impl
     internal unsafe struct log_context
     {
         private uint params_size_;
-        private uint total_size_;
         private log_category_base category_;
         private log_level level_;
         private _api_log_buffer_chunk_write_handle handle_;
@@ -50,7 +49,6 @@ namespace bq.impl
             format_str_storage_size_ = (uint)format_str_.Length << 1;
             format_str_storage_size_aligned_ = utils.align4(format_str_storage_size_);
             params_size_ = params_size;
-            total_size_ = (uint)sizeof(bq.def._log_entry_head_def) + format_str_storage_size_aligned_ + params_size_;
         }
 
         
@@ -60,16 +58,13 @@ namespace bq.impl
             fixed (char* format_c_style = format_str_)
             {
                 byte* format_byte = (byte*)format_c_style;
-                handle_ = log_invoker.__api_log_buffer_alloc_with_format_string(log_.get_id(), total_size_, (byte)log_arg_type_enum.string_utf16_type, format_byte, format_str_storage_size_);
+                handle_ = log_invoker.__api_log_write_begin(log_.get_id(), (byte)level_, log_category_base.get_index(category_), (byte)log_arg_type_enum.string_utf16_type, format_str_storage_size_, format_byte, params_size_);
             }
             if (handle_.result_code != enum_buffer_result_code.success)
             {
                 return false;
             }
-            _log_entry_head_def* head = (_log_entry_head_def*)handle_.data_ptr;
-            head->category_idx = log_category_base.get_index(category_);
-            head->level = (byte)level_;
-            log_params_addr_ = handle_.data_ptr + sizeof(_log_entry_head_def) + format_str_storage_size_aligned_;
+            log_params_addr_ = handle_.format_data_addr + format_str_storage_size_aligned_;
             return true;
         }
 
@@ -80,7 +75,7 @@ namespace bq.impl
 
         public unsafe void end_copy()
         {
-            log_invoker.__api_log_buffer_commit(log_.get_id(), handle_);
+            log_invoker.__api_log_write_finish(log_.get_id(), handle_);
         }
     }
 

@@ -110,7 +110,6 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1be
                 , nullptr
                 , static_cast<uint32_t>(args_data_bytes_len));
     if (handle.result != bq::enum_buffer_result_code::success) {
-        bq::api::__api_log_write_finish(static_cast<uint64_t>(log_id), handle);
         return nullptr;
     }
     env->GetStringRegion(format_str_data, static_cast<jsize>(0), static_cast<jsize>(format_str_bytes_len >> 1), reinterpret_cast<jchar*>(handle.format_data_addr));

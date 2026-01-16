@@ -72,7 +72,7 @@ namespace bq.def
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public unsafe struct _api_log_buffer_chunk_write_handle
     {
-        public byte* data_ptr;
+        public byte* format_data_addr;
         public enum_buffer_result_code result_code;
     }
 

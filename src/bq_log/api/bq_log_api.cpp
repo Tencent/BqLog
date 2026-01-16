@@ -239,11 +239,12 @@ namespace bq {
                 }
                 handle.result = write_handle.result;
                 handle.format_data_addr = write_handle.data_addr + sizeof(_log_entry_head_def);
+                if (write_handle.result != enum_buffer_result_code::success) {
+                    log_buffer.commit_write_chunk(write_handle);
+                    return handle;
+                }
             }
 
-            if (handle.result != enum_buffer_result_code::success) {
-                return handle;
-            }
             uint8_t* chunk_data_ptr = handle.format_data_addr - sizeof(_log_entry_head_def);
             bq::_log_entry_head_def* head = reinterpret_cast<bq::_log_entry_head_def*>(chunk_data_ptr);
 #if defined(BQ_LOG_BUFFER_DEBUG)
