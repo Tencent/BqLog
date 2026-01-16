@@ -48,11 +48,49 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
   for build_config in ${BUILD_CONFIGS[@]}; do
     XCFRAMEWORK_ARGS=()
     for TARGET_PLATFORM in ${TARGET_PLATFORMS[@]}; do
-      XCFRAMEWORK_ARGS+=("-framework" "../../../../install/${BUILD_LIB_TYPE}/stage/${TARGET_PLATFORM}/lib/${build_config}/BqLog.framework")
+      FRAMEWORK_PATH="../../../../install/${BUILD_LIB_TYPE}/stage/${TARGET_PLATFORM}/lib/${build_config}/BqLog.framework"
+      if [ ! -d "${FRAMEWORK_PATH}" ]; then
+        # It may be that some platforms were not built for this config, which is acceptable.
+        continue
+      fi
+      XCFRAMEWORK_ARGS+=("-framework" "${FRAMEWORK_PATH}")
+
+      # Deduce SDK name from platform to find the dSYM path inside the build directory (XCodeProj)
+      SDK_NAME=""
+      case ${TARGET_PLATFORM} in
+        OS64) SDK_NAME="iphoneos" ;;
+        SIMULATOR64COMBINED) SDK_NAME="iphonesimulator" ;;
+        TVOS) SDK_NAME="appletvos" ;;
+        SIMULATORARM64_TVOS) SDK_NAME="appletvsimulator" ;;
+        VISIONOS) SDK_NAME="xros" ;;
+        SIMULATOR_VISIONOS) SDK_NAME="xrsimulator" ;;
+        WATCHOS) SDK_NAME="watchos" ;;
+        SIMULATOR_WATCHOSCOMBINED) SDK_NAME="watchsimulator" ;;
+      esac
+
+      if [[ -n "${SDK_NAME}" ]]; then
+        DSYM_PATH="${build_config}-${SDK_NAME}/BqLog.framework.dSYM"
+        if [[ -d "${DSYM_PATH}" ]]; then
+          echo "Found dSYM at ${DSYM_PATH}"
+          XCFRAMEWORK_ARGS+=("-debug-symbols" "$(pwd)/${DSYM_PATH}")
+        else
+          # Don't warn for Release/MinSizeRel as they don't produce dSYMs
+          if [[ "${build_config}" != "Release" && "${build_config}" != "MinSizeRel" ]]; then
+            echo "Warning: dSYM not found at $(pwd)/${DSYM_PATH}"
+          fi
+        fi
+      fi
     done
+
+    if [ ${#XCFRAMEWORK_ARGS[@]} -eq 0 ]; then
+        echo "No frameworks found for configuration: ${build_config}. Skipping."
+        continue
+    fi
+
+    OUTPUT_PATH="../../../../install/${BUILD_LIB_TYPE}/lib/${build_config}/BqLog.xcframework"
+    rm -rf "${OUTPUT_PATH}"
     echo "Creating XCFramework for configuration: ${build_config}:"
-    echo "Cmd : xcodebuild -create-xcframework ${XCFRAMEWORK_ARGS[@]} -output ../../../../install/${BUILD_LIB_TYPE}/lib/${build_config}/BqLog.xcframework"
-    xcodebuild -create-xcframework "${XCFRAMEWORK_ARGS[@]}" -output "../../../../install/${BUILD_LIB_TYPE}/lib/${build_config}/BqLog.xcframework"
+    xcodebuild -create-xcframework "${XCFRAMEWORK_ARGS[@]}" -output "${OUTPUT_PATH}"
   done
   rm -rf ../../../../install/${BUILD_LIB_TYPE}/stage
 done
