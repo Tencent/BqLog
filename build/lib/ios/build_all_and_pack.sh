@@ -24,7 +24,6 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
             -G Xcode \
             -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
             -DPLATFORM=${TARGET_PLATFORM} \
-            -DDEPLOYMENT_TARGET=13.0 \
             -DBUILD_LIB_TYPE=$BUILD_LIB_TYPE \
             -DAPPLE_LIB_FORMAT=$APPLE_LIB_FORMAT \
             -DTARGET_PLATFORM:STRING=ios
@@ -69,14 +68,15 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
       esac
 
       if [[ -n "${SDK_NAME}" ]]; then
-        DSYM_PATH="${build_config}-${SDK_NAME}/BqLog.framework.dSYM"
+        DSYM_PATH="${FRAMEWORK_PATH}.dSYM"
         if [[ -d "${DSYM_PATH}" ]]; then
-          echo "Found dSYM at ${DSYM_PATH}"
-          XCFRAMEWORK_ARGS+=("-debug-symbols" "$(pwd)/${DSYM_PATH}")
+          DSYM_PATH_ABS=${DSYM_PATH:A}
+          echo "Found dSYM at ${DSYM_PATH} -> ${DSYM_PATH_ABS}"
+          XCFRAMEWORK_ARGS+=("-debug-symbols" "${DSYM_PATH_ABS}")
         else
           # Don't warn for Release/MinSizeRel as they don't produce dSYMs
           if [[ "${build_config}" != "Release" && "${build_config}" != "MinSizeRel" ]]; then
-            echo "Warning: dSYM not found at $(pwd)/${DSYM_PATH}"
+            echo "Warning: dSYM not found at ${DSYM_PATH}"
           fi
         fi
       fi

@@ -270,15 +270,8 @@ elseif(TARGET_PLATFORM STREQUAL "mac")
         target_link_options(BqLog PRIVATE "-undefined" "dynamic_lookup")
     endif()
 elseif(TARGET_PLATFORM STREQUAL "ios")
-    find_library(SECURITY_FRAMEWORK Security)
-    if(SECURITY_FRAMEWORK)
-        target_link_libraries(BqLog PRIVATE ${SECURITY_FRAMEWORK})
-    endif()
-	
-    find_library(UIKIT_FRAMEWORK UIKit)
-    if(UIKIT_FRAMEWORK)
-	target_link_libraries(BqLog PRIVATE ${UIKIT_FRAMEWORK})
-    endif()
+    target_link_libraries(BqLog PRIVATE "-framework Security")
+    target_link_libraries(BqLog PRIVATE "-framework UIKit")
     
     set_xcode_property(BqLog DEBUG_INFORMATION_FORMAT "dwarf-with-dsym" "ALL")
     
@@ -392,12 +385,10 @@ install(TARGETS BqLog
     FRAMEWORK DESTINATION "${INSTALL_SUB_DIR}"
 )
 
-install(CODE "
-    file(GLOB dsym_dirs \"${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/*.dSYM\")
-    if(dsym_dirs)
-        file(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${INSTALL_SUB_DIR}\" TYPE DIRECTORY FILES \${dsym_dirs})
-    endif()
-")
+install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/"
+    DESTINATION "${INSTALL_SUB_DIR}"
+    FILES_MATCHING PATTERN "*.dSYM"
+)
 
 install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/BqLog.pdb"
         DESTINATION "${INSTALL_SUB_DIR}"
