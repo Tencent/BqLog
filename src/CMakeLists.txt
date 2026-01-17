@@ -269,16 +269,6 @@ elseif(TARGET_PLATFORM STREQUAL "mac")
     if(NODE_API_SUPPORT)
         target_link_options(BqLog PRIVATE "-undefined" "dynamic_lookup")
     endif()
-
-    if(APPLE_LIB_FORMAT STREQUAL "framework")
-        install(CODE "
-            set(CONFIG_DIR \"\${CMAKE_INSTALL_CONFIG_NAME}\")
-            if(EXISTS \"\${CMAKE_BINARY_DIR}/\${CONFIG_DIR}/BqLog.framework.dSYM\")
-                message(STATUS \"Installing dSYM for config \${CONFIG_DIR}\")
-                file(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${BUILD_LIB_TYPE}/lib/\${CONFIG_DIR}\" TYPE DIRECTORY FILES \"\${CMAKE_BINARY_DIR}/\${CONFIG_DIR}/BqLog.framework.dSYM\")
-            endif()
-        ")
-    endif()
 elseif(TARGET_PLATFORM STREQUAL "ios")
     find_library(SECURITY_FRAMEWORK Security)
     if(SECURITY_FRAMEWORK)
@@ -293,9 +283,6 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
     set_xcode_property(BqLog DEBUG_INFORMATION_FORMAT "dwarf-with-dsym" "ALL")
     
     if(APPLE_LIB_FORMAT STREQUAL "framework")
-        # Disable parallel builds for this target to work around a race condition
-        # where the Headers directory is created before the parent .framework directory.
-        set_property(TARGET BqLog PROPERTY XCODE_DISABLE_PARALLELIZED_BUILD TRUE)
         set_target_properties(BqLog PROPERTIES
             FRAMEWORK TRUE
             MACOSX_FRAMEWORK_IDENTIFIER com.tencent.BqLog
@@ -405,9 +392,16 @@ install(TARGETS BqLog
     FRAMEWORK DESTINATION "${INSTALL_SUB_DIR}"
 )
 
+install(CODE "
+    file(GLOB dsym_dirs \"${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/*.dSYM\")
+    if(dsym_dirs)
+        file(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${INSTALL_SUB_DIR}\" TYPE DIRECTORY FILES \${dsym_dirs})
+    endif()
+")
+
 install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/BqLog.pdb"
-    DESTINATION "${INSTALL_SUB_DIR}"
-    OPTIONAL
+        DESTINATION "${INSTALL_SUB_DIR}"
+        OPTIONAL
 )
 
 file(GLOB MD_FILES
