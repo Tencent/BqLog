@@ -16,8 +16,11 @@ public class test_manager {
         log.register_console_callback(new bq.log.console_callback_delegate() {		
 			@Override
 			public void callback(long log_id, int category_idx, int log_level, String content) {
-				// TODO Auto-generated method stub
-				log_console_output = content;
+				if(log_id != 0) {
+					log_console_output = content;
+				}else {
+					System.out.println(content);
+				}
 			}
 		});
         

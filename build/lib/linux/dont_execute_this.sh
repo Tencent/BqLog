@@ -141,10 +141,18 @@ ask_build_lib_type() {
 }
 
 ensure_common_params() {
-  [[ -z "$ARCH_PARAM"       ]] && ask_arch
-  [[ -z "$COMPILER_TYPE"    ]] && ask_compiler
-  [[ -z "$JAVA_SUPPORT"     ]] && JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
-  [[ -z "$NODE_API_SUPPORT" ]] && NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
+  if [[ -z "$ARCH_PARAM" ]]; then
+    ask_arch
+  fi
+  if [[ -z "$COMPILER_TYPE" ]]; then
+    ask_compiler
+  fi
+  if [[ -z "$JAVA_SUPPORT" ]]; then
+    JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
+  fi
+  if [[ -z "$NODE_API_SUPPORT" ]]; then
+    NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
+  fi
   ensure_resolved_toolchain
 }
 ensure_arch_only() {

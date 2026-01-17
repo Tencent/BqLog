@@ -433,7 +433,7 @@ namespace bq {
     }
 
 #if defined(BQ_JAVA)
-    log_buffer::java_buffer_info log_buffer::get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
+    bq::java_buffer_info log_buffer::get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert((this->id_ == log_tls_info_.get().cur_log_buffer_id_) && "tls cur_log_buffer_ check failed");

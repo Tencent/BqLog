@@ -24,6 +24,12 @@ namespace bq {
     private:
         bq::array<uint8_t, bq::aligned_allocator<uint8_t, 8>> buffer_;
         size_t default_buffer_size_;
+#ifdef BQ_JAVA
+        uint8_t* java_buffer_ptr_ = nullptr;
+        size_t java_buffer_size_ = 0;
+        jobjectArray java_buffer_obj_ = nullptr;
+        int32_t java_buffer_offset_ = 0;
+#endif
 
     public:
         sync_buffer()
@@ -32,6 +38,15 @@ namespace bq {
         }
         ~sync_buffer()
         {
+#if defined(BQ_JAVA)
+            if (java_buffer_obj_) {
+                bq::platform::jni_env env;
+                if (env.env) {
+                    env.env->DeleteGlobalRef(java_buffer_obj_);
+                    java_buffer_obj_ = nullptr;
+                }
+            }
+#endif
         }
         void set_default_buffer_size(size_t default_buffer_size)
         {
@@ -42,6 +57,37 @@ namespace bq {
             buffer_.fill_uninitialized(static_cast<size_t>(size));
             return buffer_.begin();
         }
+
+#if defined(BQ_JAVA)
+        java_buffer_info get_sync_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
+        {
+            (void)handle;
+            java_buffer_info result{};
+            result.buffer_array_obj_ = nullptr;
+            result.offset_store_ = &java_buffer_offset_;
+            java_buffer_offset_ = 0;
+            result.buffer_base_addr_ = nullptr;
+            if (buffer_.size() == 0) {
+                return result;
+            }
+            if (!java_buffer_obj_) {
+                jobject byte_array_obj = env->NewObjectArray(2, env->FindClass("java/nio/ByteBuffer"), nullptr);
+                java_buffer_obj_ = (jobjectArray)env->NewGlobalRef(byte_array_obj);
+                auto offset_obj = bq::platform::create_new_direct_byte_buffer(env, &java_buffer_offset_, sizeof(java_buffer_offset_), false);
+                env->SetObjectArrayElement(java_buffer_obj_, 1, offset_obj);
+            }
+            if (java_buffer_size_ != buffer_.capacity() || java_buffer_ptr_ != buffer_.begin()) {
+                java_buffer_size_ = buffer_.capacity();
+                java_buffer_ptr_ = buffer_.begin();
+                bq::util::log_device_console(bq::log_level::error, "####:size:%zu", java_buffer_size_);
+                env->SetObjectArrayElement(java_buffer_obj_, 0, bq::platform::create_new_direct_byte_buffer(env, java_buffer_ptr_, java_buffer_size_, false));
+            }
+            result.buffer_array_obj_ = java_buffer_obj_;
+            result.buffer_base_addr_ = java_buffer_ptr_;
+            return result;
+        }
+#endif
+
         const bq_forceinline uint8_t* get_aligned_data() const
         {
             return buffer_.begin();
@@ -435,6 +481,13 @@ namespace bq {
     {
         return sync_buffer_.get().alloc_data(data_size);
     }
+
+#if defined(BQ_JAVA)
+    java_buffer_info log_imp::get_sync_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
+    {
+        return sync_buffer_.get().get_sync_buffer_info(env, handle);
+    }
+#endif
 
     const bq::layout& log_imp::get_layout() const
     {

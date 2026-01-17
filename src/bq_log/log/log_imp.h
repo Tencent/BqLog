@@ -85,6 +85,10 @@ namespace bq {
 
         uint8_t* get_sync_buffer(uint32_t data_size);
 
+#if defined(BQ_JAVA)
+        java_buffer_info get_sync_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
+#endif
+
         const layout& get_layout() const;
 
         bq_forceinline bool is_enable_for(uint32_t category_index, bq::log_level level) const

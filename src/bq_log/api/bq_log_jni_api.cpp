@@ -28,7 +28,7 @@ extern "C" {
  */
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1version(JNIEnv* env, jclass)
 {
-    const char* version_code = bq::log::get_version().c_str();
+    const char* version_code = bq::api::__api_get_log_version();
     return env->NewStringUTF(version_code);
 }
 
@@ -89,7 +89,7 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1reset_1config(JNI
 
 static BQ_TLS struct {
     bq::_api_log_write_handle write_handle_;
-    bq::log_buffer::java_buffer_info java_info_;
+    bq::java_buffer_info java_info_;
 } tls_write_handle_;
 
 
@@ -118,8 +118,11 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1be
     inner_handle.data_addr = handle.format_data_addr - sizeof(bq::_log_entry_head_def);
     inner_handle.result = handle.result;
     if (log) {
-        auto& log_buffer = log->get_buffer();
-        tls_write_handle_.java_info_ = log_buffer.get_java_buffer_info(env, inner_handle);
+        if (log->get_thread_mode() == bq::log_thread_mode::sync) {
+            tls_write_handle_.java_info_ = log->get_sync_java_buffer_info(env, inner_handle);
+        }else {
+            tls_write_handle_.java_info_ = log->get_buffer().get_java_buffer_info(env, inner_handle);
+        }
     }
     bq::log_entry_handle log_entry_handle_obj(inner_handle.data_addr, 0);  //0 for dummy
     *tls_write_handle_.java_info_.offset_store_ += static_cast<int32_t>(log_entry_handle_obj.get_log_args_offset());

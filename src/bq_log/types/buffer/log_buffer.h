@@ -161,13 +161,9 @@ namespace bq {
         log_buffer_read_handle read_chunk();
 
         void return_read_chunk(const log_buffer_read_handle& handle);
+
 #if defined(BQ_JAVA)
-        struct java_buffer_info {
-            jobjectArray buffer_array_obj_;
-            int32_t* offset_store_;
-            const uint8_t* buffer_base_addr_;
-        };
-        java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
+        bq::java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
 
         bq_forceinline uint16_t get_version() const {

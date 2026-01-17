@@ -35,27 +35,23 @@ namespace bq {
         {
             env = nullptr;
             if (common_global_vars::get().is_jvm_destroyed()) {
-                env = tls_java_env;
                 return;
             }
             assert(java_vm != NULL && "invoke functions on java_vm before it is initialized");
-            if (!tls_java_env) {
-                jint get_env_result = java_vm->GetEnv((void**)&tls_java_env, JNI_VERSION_1_6);
-                if (JNI_EDETACHED == get_env_result) {
-                    using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThreadAsDaemon), 0>;
-                    jint attach_result = java_vm->AttachCurrentThreadAsDaemon(reinterpret_cast<attach_param_type>(&tls_java_env), nullptr);
-                    if (JNI_OK != attach_result) {
-                        bq::util::log_device_console(log_level::fatal, "jni_env attach error, AttachCurrentThreadAsDaemon error code:%" PRId32, static_cast<int32_t>(attach_result));
-                        tls_java_env = nullptr;
-                        return;
-                    }
-                    tls_did_attach = true;
-                }else if (JNI_OK != get_env_result) {
-                    bq::util::log_device_console(log_level::fatal, "JVM GetEnv error, error code:%" PRIu32, static_cast<int32_t>(get_env_result));
+            jint get_env_result = java_vm->GetEnv((void**)&tls_java_env, JNI_VERSION_1_6);
+            if (JNI_EDETACHED == get_env_result) {
+                using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThreadAsDaemon), 0>;
+                jint attach_result = java_vm->AttachCurrentThreadAsDaemon(reinterpret_cast<attach_param_type>(&tls_java_env), nullptr);
+                if (JNI_OK != attach_result) {
+                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, AttachCurrentThreadAsDaemon error code:%" PRId32, static_cast<int32_t>(attach_result));
                     tls_java_env = nullptr;
                     return;
                 }
-                
+                tls_did_attach = true;
+            }else if (JNI_OK != get_env_result) {
+                bq::util::log_device_console(log_level::fatal, "JVM GetEnv error, error code:%" PRIu32, static_cast<int32_t>(get_env_result));
+                tls_java_env = nullptr;
+                return;
             }
             env = tls_java_env;
         }
