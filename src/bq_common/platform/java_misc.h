@@ -26,6 +26,7 @@ namespace bq {
             JNIEnv* env = NULL;
 
             jni_env();
+            ~jni_env();
         };
 
         struct jni_onload_register {

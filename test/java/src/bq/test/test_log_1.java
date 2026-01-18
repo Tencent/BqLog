@@ -8,7 +8,7 @@ public class test_log_1 extends test_base{
 	@Override
 	public test_result test() {
 		test_result result = new test_result();
-		bq.log log_inst = bq.log.create_log("basic_log", "appenders_config.ConsoleAppender.type=console\n"
+		bq.log log_inst = bq.log.create_log("sync_log", "appenders_config.ConsoleAppender.type=console\n"
 				+ "						appenders_config.ConsoleAppender.time_zone=localtime\n"
 				+ "						appenders_config.ConsoleAppender.levels=[error,fatal]\n"
 				+ "					\n"
@@ -26,7 +26,38 @@ public class test_log_1 extends test_base{
         log_inst.fatal("测试字符串{},{}", empty_str, full_str);
         result.check_log_output_end_with("测试字符串null,123", "basic param test 1");
         
+        String standard_output = "Float value result: 62.1564";
+        log_inst.fatal("Float value result: {}", 62.15645);
+        result.add_result(test_manager.get_console_output().contains(standard_output), "Float format test");
         
+        standard_output = "这些是结果，abc, abcde, -32, FALSE, TRUE, null, 3, 3823823, -32354, 测试字符串完整的， 结果完成了";
+        log_inst.fatal("这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了", "abc", "abcde", -32, false, true, null, (byte)3, 3823823, (short)-32354, "测试字符串完整的");
+        result.check_log_output_end_with(standard_output, "basic param test 2");
+        
+        String format_prefix = "a";
+        String appender = "";
+        for(int i = 0; i < 1024; ++i) {
+        	appender += "a";
+        }
+        while(format_prefix.length() <= 1024 * 1024 + 1024 + 4) {
+        	log_inst.fatal(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了", "abc", "abcde", -32, false, true, null, (byte)3, 3823823, (short)-32354, "测试字符串完整的");
+        	result.check_log_output_end_with(format_prefix + standard_output, "basic param test 2");
+        	format_prefix += appender;
+        }
+        
+        bq.log log_inst_async = bq.log.create_log("async_log", "appenders_config.ConsoleAppender.type=console\n"
+				+ "						appenders_config.ConsoleAppender.time_zone=localtime\n"
+				+ "						appenders_config.ConsoleAppender.levels=[error,fatal]\n"
+				+ "					\n");
+        format_prefix = "a";
+        while(format_prefix.length() <= 1024 * 1024 + 1024 + 4) {
+        	log_inst_async.fatal(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了", "abc", "abcde", -32, false, true, null, (byte)3, 3823823, (short)-32354, "测试字符串完整的");
+        	log_inst_async.force_flush();
+        	result.check_log_output_end_with(format_prefix + standard_output, "basic param test 2");
+        	format_prefix += appender;
+        }
+		
+		
         return result;
 	}
 	

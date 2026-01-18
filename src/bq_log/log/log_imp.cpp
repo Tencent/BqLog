@@ -33,7 +33,7 @@ namespace bq {
 
     public:
         sync_buffer()
-            : default_buffer_size_(16 * 1024)
+            : default_buffer_size_(4 * 1024)
         {
         }
         ~sync_buffer()
@@ -79,7 +79,6 @@ namespace bq {
             if (java_buffer_size_ != buffer_.capacity() || java_buffer_ptr_ != buffer_.begin()) {
                 java_buffer_size_ = buffer_.capacity();
                 java_buffer_ptr_ = buffer_.begin();
-                bq::util::log_device_console(bq::log_level::error, "####:size:%zu", java_buffer_size_);
                 env->SetObjectArrayElement(java_buffer_obj_, 0, bq::platform::create_new_direct_byte_buffer(env, java_buffer_ptr_, java_buffer_size_, false));
             }
             result.buffer_array_obj_ = java_buffer_obj_;
