@@ -1874,7 +1874,6 @@ jobs:
 
   java_wrapper_freebsd_x86_64:
     runs-on: ubuntu-latest
-    needs: extract_version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
