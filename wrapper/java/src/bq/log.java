@@ -33,7 +33,7 @@ public class log {
 
     @FunctionalInterface
     public interface console_callback_delegate{
-        void callback(long log_id, int category_idx, int log_level, String content);
+        void callback(long log_id, int category_idx, bq.def.log_level log_level, String content);
     }
     
 	private static log_category_base default_category_ = new log_category_base() {
@@ -82,13 +82,13 @@ public class log {
 	private static void native_console_callback(long log_id, int category_idx, int log_level, String content)
     {
         if(console_callback_delegate_ != null){
-            console_callback_delegate_.callback(log_id, category_idx, log_level, content);
+            console_callback_delegate_.callback(log_id, category_idx, bq.def.log_level.values()[log_level], content);
         }
     }
     @SuppressWarnings("unused")
 	private static void native_console_buffer_fetch_and_remove_callback(console_callback_delegate callback_obj, long log_id, int category_idx, int log_level, String content)
     {
-		callback_obj.callback(log_id, category_idx, log_level, content);
+		callback_obj.callback(log_id, category_idx, bq.def.log_level.values()[log_level], content);
     }
     private boolean is_enable_for(log_category_base category, log_level level)
     {
@@ -416,25 +416,55 @@ public class log {
 
 	///Core log functions, there are 6 log levels:
 	///verbose, debug, info, warning, error, fatal
+	///
+    public boolean verbose(String log_format_content)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content);
+    }
     public boolean verbose(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, args);
+    }
+    
+    public boolean debug(String log_format_content)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content);
     }
     public boolean debug(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.debug, log_format_content, args);
     }
+
+    public boolean info(String log_format_content)
+    {
+        return do_log(default_category_, log_level.info, log_format_content);
+    }
     public boolean info(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.info, log_format_content, args);
+    }
+    
+    public boolean warning(String log_format_content)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content);
     }
     public boolean warning(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.warning, log_format_content, args);
     }
+    
+    public boolean error(String log_format_content)
+    {
+        return do_log(default_category_, log_level.error, log_format_content);
+    } 
     public boolean error(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.error, log_format_content, args);
+    }
+    
+    public boolean fatal(String log_format_content)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content);
     }
     public boolean fatal(String log_format_content, Object... args)
     {

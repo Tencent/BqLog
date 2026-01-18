@@ -62,11 +62,6 @@ public class log_decoder implements AutoCloseable {
         log_invoker.__api_log_decoder_destroy(handle_);
     }
 
-	@Override
-    protected void finalize() throws Throwable {
-        log_invoker.__api_log_decoder_destroy(handle_);
-    }
-
     public appender_decode_result decode()
     {
         if(result_ != appender_decode_result.success)

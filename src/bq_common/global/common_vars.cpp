@@ -28,6 +28,7 @@
 #if defined(BQ_APPLE)
 #include <sys/sysctl.h>
 #endif
+#include "bq_common/bq_common.h"
 
 namespace bq {
     static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();
@@ -175,6 +176,23 @@ namespace bq {
         /*delete file_manager_inst_;
         file_manager_inst_ = nullptr;*/
     }
+
+#ifdef BQ_JAVA
+    void common_global_vars::remove_jni_global_ref_thread::run()
+    {
+        bq::platform::jni_env env_holder;
+        if (env_holder.env) {
+            bq::platform::scoped_mutex lock(common_global_vars::get().remove_jni_global_ref_list_mutex_);
+            auto& obj_array = common_global_vars::get().remove_jni_global_ref_list_array_;
+            for (auto obj : obj_array) {
+                env_holder.env->DeleteGlobalRef(obj);
+            }
+            obj_array.clear();
+        }
+    }
+#endif
+
+
 
 }
 #ifdef BQ_WIN

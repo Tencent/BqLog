@@ -146,6 +146,13 @@ namespace bq {
 
 #if defined(BQ_JAVA)
         bq::array<void (*)()> jni_onload_callbacks_inst_;
+        bq::array<jobject> remove_jni_global_ref_list_array_;
+        bq::platform::mutex remove_jni_global_ref_list_mutex_;
+        class remove_jni_global_ref_thread : public bq::platform::thread {
+        protected:
+            virtual void run() override;
+        };
+        remove_jni_global_ref_thread remove_jni_global_ref_thread_;
         bool is_jvm_destroyed() const;
 #endif
 #if defined(BQ_NAPI)

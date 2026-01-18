@@ -156,6 +156,21 @@ namespace bq {
             return JNI_VERSION_1_6;
         }
 
+
+
+        void remove_global_ref_async(jobject recycle_obj)
+        {
+            bq::platform::scoped_mutex lock(common_global_vars::get().remove_jni_global_ref_list_mutex_);
+            common_global_vars::get().remove_jni_global_ref_list_array_.push_back(recycle_obj);
+            if (common_global_vars::get().remove_jni_global_ref_list_array_.size() > 16) {
+                auto thread_status = common_global_vars::get().remove_jni_global_ref_thread_.get_status();
+                if (thread_status == bq::platform::enum_thread_status::init
+                    || thread_status == bq::platform::enum_thread_status::released) {
+                    common_global_vars::get().remove_jni_global_ref_thread_.start();
+                }
+            }
+        }
+
 #ifdef BQ_DYNAMIC_LIB
 #ifdef __cplusplus
         extern "C" {

@@ -9,9 +9,9 @@ public class test_result {
 	private ArrayList<String> failed_infos = new ArrayList<String>();
 	
 	public void add_result(boolean success, String format, Object... args) {
-		total_count.getAndAdd(1);
+		total_count.incrementAndGet();
 		if(success) {
-			success_count.getAndAdd(1);
+			success_count.incrementAndGet();
 		}else {
 			synchronized(mutex){
 				if(failed_infos.size() < 128) {

@@ -40,11 +40,8 @@ namespace bq {
         {
 #if defined(BQ_JAVA)
             if (java_buffer_obj_) {
-                bq::platform::jni_env env;
-                if (env.env) {
-                    env.env->DeleteGlobalRef(java_buffer_obj_);
-                    java_buffer_obj_ = nullptr;
-                }
+                bq::platform::remove_global_ref_async(java_buffer_obj_);
+                java_buffer_obj_ = nullptr;
             }
 #endif
         }

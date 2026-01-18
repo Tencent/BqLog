@@ -38,6 +38,8 @@ namespace bq {
         jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian);
 
         jint jni_init(JavaVM* vm, void* reserved);
+
+        void remove_global_ref_async(jobject recycle_obj);
     }
 }
 #endif
