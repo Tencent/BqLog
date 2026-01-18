@@ -1781,3 +1781,52 @@ jobs:
             adb pull /data/local/tmp/exit_code_rel.txt .
             echo "Release Test Exit Code: $(cat exit_code_rel.txt | xargs)"
             [ "$(cat exit_code_rel.txt | xargs)" = "0" ]
+
+  java_wrapper_win64:
+    runs-on: ${{ matrix.runner.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [ msvc, clang ]
+        cpp_ver: [ 11 ]
+        runner:
+          - label: "x86_64"
+            runs_on: windows-latest
+          - label: "arm64"
+            runs_on: windows-11-arm
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Clang(Attempt 1)
+        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          choco uninstall -y llvm --all-versions || true
+          choco install -y llvm
+      - name: Install Clang(Attempt 2)
+        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          choco install -y llvm
+      - name: Install Clang(Attempt 3)
+        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          choco install -y llvm
+      - name: Build for Windows
+        id: win_run_tests
+        shell: powershell
+        run: |
+          cd build\test\java
+          .\run_win
