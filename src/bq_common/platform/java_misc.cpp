@@ -18,8 +18,8 @@
 namespace bq {
     namespace platform {
         static JavaVM* java_vm = NULL;
-        static BQ_TLS JNIEnv* tls_java_env = NULL;
-        static BQ_TLS bool tls_did_attach = false;
+        //0: default(Java thread or not attached yet), 1: attached, 2: detached (Thread is exiting), 3: attached again(attached again when Thread is exiting)
+        static BQ_TLS int32_t tls_attach_phase = 0;
 
         static jclass cls_byte_buffer_ = nullptr;
         static jmethodID method_byte_buffer_byte_order_ = nullptr;
@@ -37,37 +37,57 @@ namespace bq {
             if (common_global_vars::get().is_jvm_destroyed()) {
                 return;
             }
-            assert(java_vm != NULL && "invoke functions on java_vm before it is initialized");
-            jint get_env_result = java_vm->GetEnv((void**)&tls_java_env, JNI_VERSION_1_6);
+            assert(java_vm != nullptr && "invoke functions on java_vm before it is initialized");
+            jint get_env_result = java_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
             if (JNI_EDETACHED == get_env_result) {
                 using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThreadAsDaemon), 0>;
-                jint attach_result = java_vm->AttachCurrentThreadAsDaemon(reinterpret_cast<attach_param_type>(&tls_java_env), nullptr);
+                jint attach_result = java_vm->AttachCurrentThreadAsDaemon(reinterpret_cast<attach_param_type>(&env), nullptr);
                 if (JNI_OK != attach_result) {
-                    bq::util::log_device_console(log_level::fatal, "jni_env attach error, AttachCurrentThreadAsDaemon error code:%" PRId32, static_cast<int32_t>(attach_result));
-                    tls_java_env = nullptr;
+                    //JVM is Destroying
+                    env = nullptr;
                     return;
                 }
-                tls_did_attach = true;
+                if (tls_attach_phase == 0) {
+                    tls_attach_phase = 1;
+                } else {
+#ifndef NDEBUG
+                    assert(tls_attach_phase == 2 && "invalid tls_attach_phase");
+#else
+                    bq::util::_default_console_output(bq::log_level::error, "invalid tls_attach_phase");
+#endif
+                    tls_attach_phase = 3;
+                }
             }else if (JNI_OK != get_env_result) {
-                bq::util::log_device_console(log_level::fatal, "JVM GetEnv error, error code:%" PRIu32, static_cast<int32_t>(get_env_result));
-                tls_java_env = nullptr;
+                // JVM is Destroying
+                env = nullptr;
                 return;
             }
-            env = tls_java_env;
         }
+
+        jni_env::~jni_env()
+        {
+            if (tls_attach_phase == 3) {
+                jint detach_result = java_vm->DetachCurrentThread();
+                if (JNI_OK != detach_result) {
+                    // JVM is destroying
+                }
+                tls_attach_phase = 2;
+            }
+        }
+
 
         struct tls_java_env_lifecycle_holder
         {
             ~tls_java_env_lifecycle_holder() {
-                if (tls_java_env && tls_did_attach) {
+                if (tls_attach_phase == 1) {
                     if (!common_global_vars::get().is_jvm_destroyed()) {
                         jint detach_result = java_vm->DetachCurrentThread();
                         if (JNI_OK != detach_result) {
-                            bq::util::log_device_console(log_level::fatal, "jni_env attach error, DetachCurrentThread error code:%" PRId32, static_cast<int32_t>(detach_result));
+                            // JVM is destroying
                         }
                     }
                 }
-                tls_java_env = nullptr;
+                tls_attach_phase = 2;
             }
         };
 
