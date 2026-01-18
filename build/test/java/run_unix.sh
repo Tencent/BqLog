@@ -11,7 +11,7 @@ CONFIG=${1:-RelWithDebInfo}
 echo "===== Building BqLog Dynamic Library (Linux) ====="
 pushd "$BUILD_LIB_DIR" > /dev/null
 # dont_execute_this.sh build [arch] [compiler] [java] [node] [static_lib|dynamic_lib]
-./dont_execute_this.sh build native gcc ON OFF dynamic_lib
+./dont_execute_this.sh build native clang ON OFF dynamic_lib
 popd > /dev/null
 
 echo "===== Building Java Test Jar ====="

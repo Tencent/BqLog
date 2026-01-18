@@ -1830,3 +1830,71 @@ jobs:
         run: |
           cd build\test\java
           .\run_win
+
+  java_wrapper_mac_silicon:
+    runs-on: ${{ matrix.runner.runs_on }}
+
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Test for macOS
+        run: |
+          cd build/test/java  
+          chmod +x *.sh
+          ./run_mac.sh
+
+  java_wrapper_ubuntu_x86_64:
+    runs-on: ${{ matrix.runner.runs_on }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Build for Linux
+        run: |
+          cd build/test/java  
+          chmod +x *.sh
+          ./run_linux.sh
+
+  java_wrapper_freebsd_x86_64:
+    runs-on: ubuntu-latest
+    needs: extract_version
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run in FreeBSD
+        id: RunInFreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/test/java  
+            chmod +x *.sh
+            ./run_unix.sh
