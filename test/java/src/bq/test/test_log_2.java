@@ -75,6 +75,12 @@ public class test_log_2 extends test_base{
 							log_content += appender;
 							log_inst_async.info(log_content);
 							System.out.println(Thread.currentThread().getName() + ":" + i + ", " + log_content.length());
+							try {
+								Thread.sleep(1);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
 						}
 						live_thread.decrementAndGet();
 					}
