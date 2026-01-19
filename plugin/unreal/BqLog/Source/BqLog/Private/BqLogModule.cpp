@@ -5,14 +5,14 @@ DEFINE_LOG_CATEGORY_STATIC(LogBqLog, Log, All);
 class FBqLogModule : public IModuleInterface
 {
 private:
-    static void BQ_STDCALL on_bq_log_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+    static void BQ_STDCALL on_bq_log_console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
     {
         (void)log_id;
         (void)category_idx;
         const ANSICHAR* u8_str = reinterpret_cast<const ANSICHAR*>(content ? content : "");
         int32_t tchar_len = (length >= 0) ? length : FCStringAnsi::Strlen(u8_str);
         FUTF8ToTCHAR conv(u8_str, tchar_len);
-        switch (static_cast<bq::log_level>(log_level))
+        switch (log_level)
         {
         case bq::log_level::verbose:
             UE_LOG(LogBqLog, VeryVerbose, TEXT("%.*s"), conv.Length(), conv.Get());
