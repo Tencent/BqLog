@@ -219,13 +219,11 @@ namespace bq {
                         left_thread--;
                         live_thread++;
                         std::thread([&]() {
-                            // printf("Sync Thread %d started\n", t_id);
                             bq::string log_content = "";
                             for(int32_t i = 0; i < 128; ++i) {
                                 log_content += appender;
                                 sync_log.info(log_content.c_str());
                             }
-                            // printf("Sync Thread %d finished\n", t_id);
                             live_thread--;
                         }).detach();
                     } else {
@@ -241,14 +239,11 @@ namespace bq {
                         left_thread--;
                         live_thread++;
                         std::thread([&, t_id]() {
-                            printf("Async Thread %d started\n", t_id);
                             bq::string log_content = "";
                             for(int32_t i = 0; i < 2048; ++i) { 
                                 log_content += appender;
                                 async_log.info(log_content.c_str());
-                                if ((i + 1) % 500 == 0) printf("Async Thread %d iter %d\n", t_id, i + 1);
                             }
-                            printf("Async Thread %d finished\n", t_id);
                             live_thread--;
                         }).detach();
                     } else {
