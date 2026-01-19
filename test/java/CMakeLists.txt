@@ -16,6 +16,9 @@ file(GLOB_RECURSE TEST_SRC_LIST "${TEST_SRC_DIR}/*.java")
 set(ARTIFACTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/test/java")
 file(MAKE_DIRECTORY ${ARTIFACTS_DIR})
 
+# Java compile flags: UTF-8, suppress warnings, include debug info for IDE symbol mapping
+set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn" "-g" "-parameters" "-source" "1.8" "-target" "1.8")
+
 # Build the Test Jar
 # We include both wrapper and test sources.
 add_jar(
