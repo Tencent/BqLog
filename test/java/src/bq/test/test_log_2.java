@@ -25,51 +25,52 @@ public class test_log_2 extends test_base{
 		log_inst_async = bq.log.get_log_by_name("async_log");
 		test_result result = new test_result();
 		log.register_console_callback(null);
-		while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
-			if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
-				Runnable task = new Runnable() {
-					@Override
-					public void run() {
-						String log_content = "";
-						for(int i = 0; i < 128; ++i) {
-							log_content += appender;
-							log_inst_sync.info(log_content);
-						}
-						live_thread.decrementAndGet();
-					}
-				};
-				Thread tr = new Thread(task);
-				tr.setDaemon(false);
-				tr.start();
-				System.out.println("New Thread Start:" + tr.getName());
-				live_thread.incrementAndGet();
-				left_thread.decrementAndGet();
-			}else {
-				try {
-					Thread.sleep(1);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				};
-			}
-		}
-
-		System.out.println("Sync Test Finished");
-		left_thread.setRelease(32);
+		        while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
+		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 2) {
+		                Runnable task = new Runnable() {
+		                    @Override
+		                    public void run() {
+		                        String log_content = "";
+		                        for(int i = 0; i < 128; ++i) {
+		                            log_content += appender;
+		                            log_inst_sync.info(log_content);
+		                        }
+		                        live_thread.decrementAndGet();
+		                    }
+		                };
+		                Thread tr = new Thread(task);
+		                tr.setDaemon(false);
+		                tr.start();
+		                System.out.println("New Thread Start:" + tr.getName());
+		                live_thread.incrementAndGet();
+		                left_thread.decrementAndGet();
+		            }else {
+		                try {
+		                    Thread.sleep(1);
+		                } catch (InterruptedException e) {
+		                    // TODO Auto-generated catch block
+		                    e.printStackTrace();
+		                };
+		            }
+		        }
 		
-		while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
-			if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
-				Runnable task = new Runnable() {
-					@Override
-					public void run() {
-						String log_content = "";
-						for(int i = 0; i < 2048; ++i) {
-							log_content += appender;
-							log_inst_async.info(log_content);
-						}
-						live_thread.decrementAndGet();
-					}
-				};
+		        System.out.println("Sync Test Finished");
+		        left_thread.setRelease(32);
+		        
+		        while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
+		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 2) {
+		                Runnable task = new Runnable() {
+		                    @Override
+		                    public void run() {
+		                        String log_content = "";
+		                        for(int i = 0; i < 2048; ++i) {
+		                            log_content += appender;
+		                            log_inst_async.info(log_content);
+		                        }
+		                        live_thread.decrementAndGet();
+		                    }
+		                };
+		
 				Thread tr = new Thread(task);
 				tr.setDaemon(false);
 				tr.start();
