@@ -213,10 +213,12 @@ namespace bq {
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
             static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
             bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
+            bq::platform::atomic<int32_t> pending_writers_;
 
         public:
             spin_lock_rw_crazy()
                 : counter_(0)
+                , pending_writers_(0)
             {
             }
 
@@ -228,6 +230,10 @@ namespace bq {
             inline void read_lock()
             {
                 while (true) {
+                    if (pending_writers_.load(bq::platform::memory_order::acquire) > 0) {
+                        bq::platform::thread::cpu_relax();
+                        continue;
+                    }
                     counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
                         // read lock success.
@@ -246,6 +252,9 @@ namespace bq {
 
             inline bool try_read_lock()
             {
+                if (pending_writers_.load(bq::platform::memory_order::acquire) > 0) {
+                    return false;
+                }
                 counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
                 if (previous_counter >= 0) {
                     // read lock success.
@@ -263,6 +272,7 @@ namespace bq {
 
             inline void write_lock()
             {
+                pending_writers_.fetch_add(1, bq::platform::memory_order::acq_rel);
                 while (true) {
                     counter_type expected_counter = 0;
                     if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
@@ -270,6 +280,7 @@ namespace bq {
                     }
                     bq::platform::thread::cpu_relax();
                 }
+                pending_writers_.fetch_sub(1, bq::platform::memory_order::release);
             }
 
             inline bool try_write_lock()
