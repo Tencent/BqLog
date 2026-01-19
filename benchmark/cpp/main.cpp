@@ -393,8 +393,8 @@ int main()
     SetConsoleCP(CP_UTF8);
 #endif
     std::cout << "Please input the number of threads which will write log simultaneously:" << std::endl;
-    int32_t thread_count = 10;
-    //std::cin >> thread_count;
+    int32_t thread_count;
+    std::cin >> thread_count;
 
     bq::log::force_flush_all_logs();
     prepare_datas();
