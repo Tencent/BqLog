@@ -211,18 +211,17 @@ namespace bq {
                 std::atomic<int32_t> live_thread{0};
                 std::atomic<int32_t> left_thread{100};
                 bq::string appender;
-                for(int i = 0; i < 32; ++i) appender += "a";
+                for(int32_t i = 0; i < 32; ++i) appender += "a";
                 
                 // Sync Test
                 while(left_thread > 0 || live_thread > 0) {
                     if (left_thread > 0 && live_thread < 5) {
-                        int t_id = left_thread;
                         left_thread--;
                         live_thread++;
-                        std::thread([&, t_id]() {
+                        std::thread([&]() {
                             // printf("Sync Thread %d started\n", t_id);
                             bq::string log_content = "";
-                            for(int i = 0; i < 128; ++i) {
+                            for(int32_t i = 0; i < 128; ++i) {
                                 log_content += appender;
                                 sync_log.info(log_content.c_str());
                             }
@@ -238,13 +237,13 @@ namespace bq {
                 left_thread = 32;
                 while(left_thread > 0 || live_thread > 0) {
                     if (left_thread > 0 && live_thread < 5) {
-                        int t_id = left_thread;
+                        int32_t t_id = left_thread;
                         left_thread--;
                         live_thread++;
                         std::thread([&, t_id]() {
                             printf("Async Thread %d started\n", t_id);
                             bq::string log_content = "";
-                            for(int i = 0; i < 2048; ++i) { 
+                            for(int32_t i = 0; i < 2048; ++i) { 
                                 log_content += appender;
                                 async_log.info(log_content.c_str());
                                 if ((i + 1) % 500 == 0) printf("Async Thread %d iter %d\n", t_id, i + 1);
