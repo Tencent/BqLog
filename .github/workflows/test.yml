@@ -1832,7 +1832,7 @@ jobs:
           .\run_win
 
   java_wrapper_mac_silicon:
-    runs-on: ${{ matrix.runner.runs_on }}
+    runs-on:  macos-latest
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
@@ -1855,7 +1855,7 @@ jobs:
           ./run_mac.sh
 
   java_wrapper_ubuntu_x86_64:
-    runs-on: ${{ matrix.runner.runs_on }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
