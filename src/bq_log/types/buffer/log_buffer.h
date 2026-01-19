@@ -60,9 +60,11 @@ namespace bq {
             bq::oversize_buffer buffer_;
             bq::platform::spin_lock_rw_crazy buffer_lock_;
             uint64_t last_used_epoch_ms_;
+            bool is_thread_finished_;
             oversize_buffer_obj_def(uint32_t size, const bq::string& mmap_file_abs_path, bool auto_create)
                 : buffer_(size, mmap_file_abs_path, auto_create)
                 , last_used_epoch_ms_(0)
+                , is_thread_finished_(false)
             {
             }
         };

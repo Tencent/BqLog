@@ -96,6 +96,18 @@ namespace bq {
                             }
                         }
                     }
+                    //Avoid ABA problem with oversize buffer temporary reference.
+                    auto* buffer_info = pair.value();
+                    auto* log_buf = buffer_info->buffer_;
+                    if (log_buf) {
+                        bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
+                        for (auto& os_buf : log_buf->temprorary_oversize_buffer_.buffers_array_) {
+                            auto& ctx = os_buf->buffer_.get_misc_data<context_head>();
+                            if (ctx.get_tls_info() == buffer_info && ctx.version_ == log_buf->get_version()) {
+                                os_buf->is_thread_finished_ = true;
+                            }
+                        }
+                    }
                 } else {
                     bq::util::aligned_delete(pair.value());
                 }
@@ -842,6 +854,9 @@ namespace bq {
         {
             bq::platform::scoped_spin_lock_read_crazy r_lock(temprorary_oversize_buffer_.array_lock_);
             for (auto& over_size_buffer : temprorary_oversize_buffer_.buffers_array_) {
+                if (over_size_buffer->is_thread_finished_) {
+                    continue;
+                }
                 const auto& oversize_buffer_context = over_size_buffer->buffer_.get_misc_data<context_head>();
                 if (oversize_buffer_context.version_ != parent_context->version_
                     || oversize_buffer_context.get_tls_info() != parent_context->get_tls_info()) {
