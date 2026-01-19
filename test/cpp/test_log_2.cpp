@@ -11,6 +11,8 @@
  */
 #include "test_log.h"
 #include <thread>
+#include <atomic>
+#include <cstdio>
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -193,6 +195,69 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000E+13|"), "layout format");
+            }
+
+            {
+                // Concurrency Stress Test 
+                auto sync_log = bq::log::create_log("sync_log_stress", R"(
+		            appenders_config.appender_1.type=console
+                    log.thread_mode=sync
+	            )");
+                auto async_log = bq::log::create_log("async_log_stress", R"(
+		            appenders_config.appender_1.type=console
+                    log.thread_mode=async
+	            )");
+
+                std::atomic<int32_t> live_thread{0};
+                std::atomic<int32_t> left_thread{100};
+                bq::string appender;
+                for(int i = 0; i < 32; ++i) appender += "a";
+                
+                // Sync Test
+                while(left_thread > 0 || live_thread > 0) {
+                    if (left_thread > 0 && live_thread < 5) {
+                        int t_id = left_thread;
+                        left_thread--;
+                        live_thread++;
+                        std::thread([&, t_id]() {
+                            // printf("Sync Thread %d started\n", t_id);
+                            bq::string log_content = "";
+                            for(int i = 0; i < 128; ++i) {
+                                log_content += appender;
+                                sync_log.info(log_content.c_str());
+                            }
+                            // printf("Sync Thread %d finished\n", t_id);
+                            live_thread--;
+                        }).detach();
+                    } else {
+                        bq::platform::thread::sleep(1);
+                    }
+                }
+                
+                // Async Test
+                left_thread = 32;
+                while(left_thread > 0 || live_thread > 0) {
+                    if (left_thread > 0 && live_thread < 5) {
+                        int t_id = left_thread;
+                        left_thread--;
+                        live_thread++;
+                        std::thread([&, t_id]() {
+                            printf("Async Thread %d started\n", t_id);
+                            bq::string log_content = "";
+                            for(int i = 0; i < 2048; ++i) { 
+                                log_content += appender;
+                                async_log.info(log_content.c_str());
+                                if ((i + 1) % 500 == 0) printf("Async Thread %d iter %d\n", t_id, i + 1);
+                            }
+                            printf("Async Thread %d finished\n", t_id);
+                            live_thread--;
+                        }).detach();
+                    } else {
+                        bq::platform::thread::sleep(1);
+                    }
+                }
+                async_log.force_flush();
+                bq::log::register_console_callback(&test_log::console_callback); 
             }
 
             {
