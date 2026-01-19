@@ -376,7 +376,7 @@ JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1str
     return snapshot_str;
 }
 
-static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
 {
     (void)length;
 
@@ -439,7 +439,7 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir(JNIEn
     env->ReleaseStringUTFChars(dir, dir_c_str);
 }
 
-static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_param, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
 {
     jobject callback_obj = (jobject)pass_through_param;
     (void)length;
@@ -459,7 +459,7 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
         return;
     }
     jstring message = env->NewStringUTF(content);
-    env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int32_t)log_level, message);
+    env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, static_cast<int32_t>(log_level), message);
     if (env->ExceptionCheck()) {
         env->ExceptionDescribe();
         env->ExceptionClear();

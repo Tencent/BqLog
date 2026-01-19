@@ -27,7 +27,7 @@ BQ_PACK_BEGIN
 struct console_msg_head {
     uint64_t log_id;
     int32_t category_idx;
-    int32_t level;
+    bq::log_level level;
     uint32_t length;
 } BQ_PACK_END
 
@@ -50,7 +50,7 @@ static void tsfn_console_call_js(napi_env env, void* param)
         napi_value argv[4];
         argv[0] = bq::make_napi_u64(env, msg->log_id);
         argv[1] = bq::make_napi_i32(env, msg->category_idx);
-        argv[2] = bq::make_napi_i32(env, msg->level);
+        argv[2] = bq::make_napi_i32(env, static_cast<int32_t>(msg->level));
         napi_create_string_utf8(env, (char*)(msg + 1), msg->length, &argv[3]);
         napi_value undefined = bq::make_napi_undefined(env);
         napi_value js_cb = NULL;
@@ -62,7 +62,7 @@ static void tsfn_console_call_js(napi_env env, void* param)
     }
 }
 
-static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
 {
     (void)length;
     uint32_t size = static_cast<uint32_t>(sizeof(console_msg_head)) + static_cast<uint32_t>(length);
@@ -884,7 +884,7 @@ static void BQ_STDCALL _napi_console_buffer_fetch_callback(
     void* pass_through_param,
     uint64_t log_id,
     int32_t category_idx,
-    int32_t log_level,
+    bq::log_level log_level,
     const char* content,
     int32_t length)
 {
@@ -896,7 +896,7 @@ static void BQ_STDCALL _napi_console_buffer_fetch_callback(
     napi_value argv2[4];
     argv2[0] = bq::make_napi_u64(ctx->env, log_id);
     argv2[1] = bq::make_napi_i32(ctx->env, category_idx);
-    argv2[2] = bq::make_napi_i32(ctx->env, log_level);
+    argv2[2] = bq::make_napi_i32(ctx->env, static_cast<int32_t>(log_level));
     argv2[3] = bq::make_napi_str_utf8(ctx->env, content ? content : "");
     napi_value undefined = bq::make_napi_undefined(ctx->env);
     napi_call_function(ctx->env, undefined, ctx->js_cb, 4, argv2, NULL);

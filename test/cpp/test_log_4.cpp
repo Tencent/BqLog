@@ -17,7 +17,7 @@ namespace bq {
         struct test_4_log_entry {
             uint64_t log_id;
             int32_t category_idx;
-            int32_t log_level;
+            bq::log_level log_level;
             bq::string content;
         };
         enum class test_4_check_type {
@@ -34,7 +34,7 @@ namespace bq {
         static test_4_check_type test_4_check_status_ = test_4_check_type::callback;
         static bq::array<test_4_log_entry> test_4_check_array_;
 
-        static bool check(test_4_check_type type, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+        static bool check(test_4_check_type type, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
         {
             (void)length;
             bq::platform::scoped_spin_lock lock(test_4_lock_);
@@ -58,13 +58,13 @@ namespace bq {
             return result;
         }
 
-        static void BQ_STDCALL test_4_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+        static void BQ_STDCALL test_4_console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
         {
             bool check_result = check(test_4_check_type::callback, log_id, category_idx, log_level, content, length);
             result_->add_result(check_result, "console callback check failed:%s", content);
         }
 
-        static void BQ_STDCALL test_4_console_fetch(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+        static void BQ_STDCALL test_4_console_fetch(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
         {
             bool check_result = check(test_4_check_type::fetch, log_id, category_idx, log_level, content, length);
             result_->add_result(check_result, "console callback check failed:%s", content);

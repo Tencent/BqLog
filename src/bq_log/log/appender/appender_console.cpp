@@ -32,7 +32,7 @@ namespace bq {
             if (data.length_ == 0 && text) {
                 data.length_ = static_cast<int32_t>(strlen(text));
             }
-            console_callback_(data.log_id_, data.category_idx_, static_cast<int32_t>(level), text, data.length_);
+            console_callback_(data.log_id_, data.category_idx_, level, text, data.length_);
             data.category_idx_ = 0;
             data.length_ = 0;
             data.log_id_ = 0;
@@ -65,7 +65,7 @@ namespace bq {
         bq::util::aligned_delete(real_buffer);
     }
 
-    void appender_console::console_buffer::insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+    void appender_console::console_buffer::insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
     {
         if (!is_enable()) {
             return;
@@ -97,7 +97,7 @@ namespace bq {
             data += sizeof(uint64_t);
             *reinterpret_cast<int32_t*>(data) = category_idx;
             data += sizeof(uint32_t);
-            *reinterpret_cast<int32_t*>(data) = log_level;
+            *reinterpret_cast<bq::log_level*>(data) = log_level;
             data += sizeof(int32_t);
             *reinterpret_cast<int32_t*>(data) = length;
             data += sizeof(int32_t);
@@ -118,7 +118,7 @@ namespace bq {
         } else if (fetch_thread_id_ != bq::platform::thread::get_current_thread_id()) {
             auto output_error = "Don't fetch console buffer in different threads";
             auto length = static_cast<int32_t>(strlen(output_error));
-            callback(const_cast<void*>(pass_through_param), 0, 0, static_cast<int32_t>(bq::log_level::error), output_error, length);
+            callback(const_cast<void*>(pass_through_param), 0, 0, bq::log_level::error, output_error, length);
             return false;
         }
         auto buffer = buffer_.load_relaxed();
@@ -133,7 +133,7 @@ namespace bq {
             data += sizeof(uint64_t);
             const int32_t category_idx = *reinterpret_cast<int32_t*>(data);
             data += sizeof(uint32_t);
-            const int32_t log_level = *reinterpret_cast<int32_t*>(data);
+            const bq::log_level log_level = *reinterpret_cast<bq::log_level*>(data);
             data += sizeof(int32_t);
             const int32_t length = *reinterpret_cast<int32_t*>(data);
             data += sizeof(int32_t);
@@ -216,7 +216,7 @@ namespace bq {
         data.log_id_ = parent_log_->id();
         util::log_device_console_plain_text(level, log_entry_cache_.c_str());
         if (console_misc.buffer().is_enable()) {
-            console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), (int32_t)level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+            console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
         }
     }
 

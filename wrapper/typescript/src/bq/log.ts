@@ -19,14 +19,21 @@ import { native_export } from "./utils/lib_loader"
 export type console_callback = (
     log_id: bigint,
     category_idx: number,
-    level: number,
+    level: log_level,
     text: string
 ) => void;
+
 export class log {
     private log_id_: bigint = 0n;
     private name_: string = "";
     protected categories_name_array_: Array<string> = [];
     protected static callback_: console_callback | null = null;
+
+    private static inner_callback(log_id: bigint, category_idx: number, level: number, text: string): void {
+        if (log.callback_) {
+            log.callback_(log_id, category_idx, level as log_level, text);
+        }
+    }
 
     /**
      * Get bqLog lib version
@@ -117,8 +124,8 @@ export class log {
      * @param callback
      */
     public static register_console_callback(callback: console_callback): void {
-        log_invoker.__api_set_console_callback(callback);
         log.callback_ = callback;
+        log_invoker.__api_set_console_callback(log.inner_callback);
     }
 
     /**

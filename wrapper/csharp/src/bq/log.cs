@@ -269,14 +269,14 @@ namespace bq
 #if ENABLE_IL2CPP
         [AOT.MonoPInvokeCallback(typeof(type_console_callback))]
 #endif
-        private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, int log_level, sbyte* content, int length)
+        private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, bq.def.log_level log_level, sbyte* content, int length)
         {
             if (console_callback_ != null)
             {
                 try
                 {
                     string value = new string(content, 0, length, System.Text.Encoding.UTF8);
-                    console_callback_(log_id, category_idx, (bq.def.log_level)log_level, value);
+                    console_callback_(log_id, category_idx, log_level, value);
                 }
                 catch (Exception ex)
                 {
@@ -312,11 +312,11 @@ namespace bq
 #if ENABLE_IL2CPP
         [AOT.MonoPInvokeCallback(typeof(type_console_callback))]
 #endif
-        private unsafe static void _native_console_buffer_fetch_callback_wrapper(IntPtr pass_through_param, ulong log_id, int category_idx, int log_level, sbyte* content, int length)
+        private unsafe static void _native_console_buffer_fetch_callback_wrapper(IntPtr pass_through_param, ulong log_id, int category_idx, bq.def.log_level log_level, sbyte* content, int length)
         {
             string value = new string(content, 0, length, System.Text.Encoding.UTF8);
             type_console_callback recover_callback = (type_console_callback)Marshal.GetDelegateForFunctionPointer(pass_through_param, typeof(type_console_callback));
-            recover_callback(log_id, category_idx, (bq.def.log_level)log_level, value);
+            recover_callback(log_id, category_idx, log_level, value);
         }
 
         /// <summary>

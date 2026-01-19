@@ -98,9 +98,9 @@ namespace bq.def
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-    public unsafe delegate void type_func_ptr_console_callback(ulong log_id, int category_idx, int log_level,sbyte* content, int length);
+    public unsafe delegate void type_func_ptr_console_callback(ulong log_id, int category_idx, bq.def.log_level log_level,sbyte* content, int length);
     
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-    public unsafe delegate void type_func_ptr_console_buffer_fetch_callback(IntPtr pass_through_param, ulong log_id, int category_idx, int log_level, sbyte* content, int length);
+    public unsafe delegate void type_func_ptr_console_buffer_fetch_callback(IntPtr pass_through_param, ulong log_id, int category_idx, bq.def.log_level log_level, sbyte* content, int length);
     
 }

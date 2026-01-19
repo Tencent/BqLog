@@ -20,7 +20,7 @@ namespace bq {
         bq::string test_log::log_str;
         const char* test_log::log_c_str = nullptr; // friendly to IDE debugger which can not use natvis.
 
-        void test_log::console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+        void test_log::console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
         {
             (void)log_id;
             (void)category_idx;

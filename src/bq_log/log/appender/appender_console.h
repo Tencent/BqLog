@@ -37,7 +37,7 @@ namespace bq {
         public:
             console_buffer();
             ~console_buffer();
-            void insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
+            void insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length);
             bool fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param);
             void set_enable(bool enalbe);
             bq_forceinline bool is_enable() const { return enable_; }

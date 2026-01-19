@@ -122,7 +122,7 @@ namespace bq {
             static const char* log_c_str; // friendly to IDE debugger which can not use natvis.
 
         private:
-            static void console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
+            static void console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length);
 
             void test_1(test_result& result, const test_category_log& log);
             void test_2(test_result& result, const test_category_log& log);

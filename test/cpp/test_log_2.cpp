@@ -24,7 +24,7 @@ namespace bq {
             static uint64_t current_idx_sync;
             static uint64_t current_idx_async;
             static bool multi_thread_test_end;
-            static void console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length) {
+            static void console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length) {
                 (void)category_idx;
                 (void)log_level;
                 (void)length;

@@ -161,7 +161,7 @@ namespace bq {
         bq::api::__api_set_console_buffer_enable(enable);
     }
 
-    inline void BQ_STDCALL fetch_and_remove_console_buffer_callback_wrapper(void* pass_through_param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+    inline void BQ_STDCALL fetch_and_remove_console_buffer_callback_wrapper(void* pass_through_param, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
     {
         bq::type_func_ptr_console_callback real_callback = (bq::type_func_ptr_console_callback)pass_through_param;
         real_callback(log_id, category_idx, log_level, content, length);
