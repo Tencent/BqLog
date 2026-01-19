@@ -1833,6 +1833,8 @@ jobs:
           Write-Host "Dump dir: $dumpDir"
 
           # Use HKCU to avoid requiring elevated permissions.
+          $key = "HKCU:\Software\Microsoft\Windows\Windows Error Reporting\LocalDumps\java.exe"
+          New-Item -Force -Path $key | Out-Null
           New-ItemProperty -Path $key -Name DumpFolder -PropertyType ExpandString -Value $dumpDir -Force | Out-Null
           New-ItemProperty -Path $key -Name DumpType   -PropertyType DWord       -Value 1       -Force | Out-Null  # 1 = Mini Dump
           New-ItemProperty -Path $key -Name DumpCount  -PropertyType DWord       -Value 10      -Force | Out-Null
