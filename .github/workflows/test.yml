@@ -1833,10 +1833,8 @@ jobs:
           Write-Host "Dump dir: $dumpDir"
 
           # Use HKCU to avoid requiring elevated permissions.
-          $key = "HKCU:\Software\Microsoft\Windows\Windows Error Reporting\LocalDumps\java.exe"
-          New-Item -Force -Path $key | Out-Null
           New-ItemProperty -Path $key -Name DumpFolder -PropertyType ExpandString -Value $dumpDir -Force | Out-Null
-          New-ItemProperty -Path $key -Name DumpType   -PropertyType DWord       -Value 2       -Force | Out-Null  # 2 = full dump
+          New-ItemProperty -Path $key -Name DumpType   -PropertyType DWord       -Value 1       -Force | Out-Null  # 1 = Mini Dump
           New-ItemProperty -Path $key -Name DumpCount  -PropertyType DWord       -Value 10      -Force | Out-Null
 
           Get-ItemProperty -Path $key | Format-List
@@ -1951,11 +1949,64 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
-      - name: Build for Linux
+      - name: Install GDB
+        run: sudo apt-get update && sudo apt-get install -y gdb
+
+      - name: Run Test with Hang Detection
         run: |
-          cd build/test/java  
+          cd build/test/java
           chmod +x *.sh
-          ./run_linux.sh
+          
+          # Run script in background, passing Debug config
+          ./run_linux.sh Debug > test_output.log 2>&1 &
+          SCRIPT_PID=$!
+          
+          echo "Test script running with PID $SCRIPT_PID. Monitoring for hangs..."
+          
+          # Wait up to 10 minutes (build + test)
+          TIMEOUT=600
+          INTERVAL=5
+          ELAPSED=0
+          
+          while kill -0 $SCRIPT_PID 2>/dev/null; do
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+            
+            if [ $ELAPSED -ge $TIMEOUT ]; then
+              echo "!!! TEST TIMED OUT ($TIMEOUT s) !!!"
+              
+              # Try to identify the Java process. 
+              JAVA_PID=$(pgrep -f "BqLogJavaTest.jar")
+              
+              if [ -n "$JAVA_PID" ]; then
+                echo "Found Java process: $JAVA_PID"
+                
+                echo "=== NATIVE STACK TRACE (GDB) ==="
+                sudo gdb -n -batch -ex "thread apply all bt" -p $JAVA_PID || echo "GDB failed"
+                
+                echo "=== JAVA STACK TRACE (jcmd) ==="
+                $JAVA_HOME/bin/jcmd $JAVA_PID Thread.print || echo "jcmd failed"
+              else
+                echo "Java process not found. Stuck in build phase?"
+                ps -ef | grep $SCRIPT_PID
+              fi
+              
+              kill -9 $SCRIPT_PID 2>/dev/null || true
+              if [ -n "$JAVA_PID" ]; then kill -9 $JAVA_PID 2>/dev/null || true; fi
+              
+              echo "=== TEST OUTPUT (Partial) ==="
+              cat test_output.log
+              exit 1
+            fi
+          done
+          
+          wait $SCRIPT_PID
+          EXIT_CODE=$?
+          
+          echo "=== TEST OUTPUT ==="
+          cat test_output.log
+          
+          exit $EXIT_CODE
 
   java_wrapper_freebsd_x86_64:
     runs-on: ubuntu-latest
