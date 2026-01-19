@@ -6,7 +6,7 @@ BUILD_LIB_DIR="$PROJECT_ROOT/build/lib/mac"
 TEST_SRC_DIR="$PROJECT_ROOT/test/java"
 ARTIFACTS_DIR="$PROJECT_ROOT/artifacts"
 
-CONFIG=${1:-RelWithDebInfo}
+CONFIG=${1:-Debug}
 
 echo "===== Building BqLog Dynamic Library (Mac) ====="
 pushd "$BUILD_LIB_DIR" > /dev/null
