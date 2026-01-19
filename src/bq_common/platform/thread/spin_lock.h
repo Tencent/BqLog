@@ -10,16 +10,16 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-/*!
- * \file spin_lock.h
- * TTAS high performance spin lock
- * Important: It's not reentrant!
- *
- * \author pippocao
- * \date 2023/08/21
- *
- *
- */
+ /*!
+  * \file spin_lock.h
+  * TTAS high performance spin lock
+  * Important: It's not reentrant!
+  *
+  * \author pippocao
+  * \date 2023/08/21
+  *
+  *
+  */
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
 #include "bq_common/platform/thread/thread.h"
@@ -35,9 +35,9 @@ namespace bq {
          * machine setup, I’ve temporarily abandoned the MCS spin lock.
          */
 
-        // Similar to Linux MCS lock, but it is a simpler version.
-        // MCS Lock is much faster than normal spin lock which is implemented by single atomic variable
-        // when there are many threads contending for the lock.
+         // Similar to Linux MCS lock, but it is a simpler version.
+         // MCS Lock is much faster than normal spin lock which is implemented by single atomic variable
+         // when there are many threads contending for the lock.
         class mcs_spin_lock {
         public:
             struct lock_node {
@@ -82,7 +82,8 @@ namespace bq {
                     while (node.lock_counter_.load_acquire() == 0) {
                         // bq::platform::thread::cpu_relax();
                     }
-                } else {
+                }
+                else {
                     node.lock_counter_.fetch_add_raw(1); // only access in self thread in this case, so no need to use atomic operation
                 }
             }
@@ -210,17 +211,13 @@ namespace bq {
 
         class spin_lock_rw_crazy {
         private:
-            bq::cache_friendly_type<bq::platform::atomic<uint64_t>> state_;
-
-            static constexpr uint64_t READER_MASK = 0xFFFFFFFFULL;
-            static constexpr uint64_t WRITER_WAITING_INC = 1ULL << 32;
-            static constexpr uint64_t WRITER_ACTIVE_BIT = 1ULL << 63;
-            // Any writer activity (waiting or active) - blocks new readers
-            static constexpr uint64_t WRITER_ANY_MASK = 0xFFFFFFFF00000000ULL; 
+            typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
+            bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
 
         public:
             spin_lock_rw_crazy()
-                : state_(static_cast<uint64_t>(0))
+                : counter_(0)
             {
             }
 
@@ -232,47 +229,45 @@ namespace bq {
             inline void read_lock()
             {
                 while (true) {
-                    uint64_t old = state_.get().load(bq::platform::memory_order::relaxed);
-                    if (old & WRITER_ANY_MASK) {
-                        bq::platform::thread::cpu_relax();
-                        continue;
-                    }
-                    if (state_.get().compare_exchange_weak(old, old + 1, bq::platform::memory_order::acquire, bq::platform::memory_order::relaxed)) {
+                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                    if (previous_counter >= 0) {
+                        // read lock success.
                         break;
                     }
-                    bq::platform::thread::cpu_relax();
+                    counter_.get().fetch_sub_relaxed(1);
+                    while (true) {
+                        bq::platform::thread::cpu_relax();
+                        counter_type current_counter = counter_.get().load_acquire();
+                        if (current_counter >= 0) {
+                            break;
+                        }
+                    }
                 }
             }
 
             inline bool try_read_lock()
             {
-                uint64_t old = state_.get().load(bq::platform::memory_order::relaxed);
-                if (old & WRITER_ANY_MASK) {
-                    return false;
-                }
-                if (state_.get().compare_exchange_strong(old, old + 1, bq::platform::memory_order::acquire, bq::platform::memory_order::relaxed)) {
+                counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                if (previous_counter >= 0) {
+                    // read lock success.
                     return true;
                 }
+                counter_.get().fetch_sub_relaxed(1);
                 return false;
             }
 
             inline void read_unlock()
             {
-                state_.get().fetch_sub(1, bq::platform::memory_order::release);
+                counter_type previous_counter = counter_.get().fetch_sub_release(1);
+                (void)previous_counter;
             }
 
             inline void write_lock()
             {
-                state_.get().fetch_add(WRITER_WAITING_INC, bq::platform::memory_order::acq_rel);
-
                 while (true) {
-                    uint64_t old = state_.get().load(bq::platform::memory_order::relaxed);
-                    
-                    if ((old & READER_MASK) == 0 && (old & WRITER_ACTIVE_BIT) == 0) {
-                        uint64_t desired = (old - WRITER_WAITING_INC) | WRITER_ACTIVE_BIT;
-                        if (state_.get().compare_exchange_weak(old, desired, bq::platform::memory_order::acquire, bq::platform::memory_order::relaxed)) {
-                            break;
-                        }
+                    counter_type expected_counter = 0;
+                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                        break;
                     }
                     bq::platform::thread::cpu_relax();
                 }
@@ -280,18 +275,21 @@ namespace bq {
 
             inline bool try_write_lock()
             {
-                uint64_t old = state_.get().load(bq::platform::memory_order::relaxed);
-                if (old == 0) { // optimization: check for clean state first
-                    if (state_.get().compare_exchange_strong(old, WRITER_ACTIVE_BIT, bq::platform::memory_order::acquire, bq::platform::memory_order::relaxed)) {
-                        return true;
-                    }
+                counter_type expected_counter = 0;
+                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                    return true;
                 }
                 return false;
             }
 
             inline void write_unlock()
             {
-                state_.get().fetch_and(~WRITER_ACTIVE_BIT, bq::platform::memory_order::release);
+                while (true) {
+                    counter_type expected_counter = write_lock_mark_value;
+                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                        break;
+                    }
+                }
             }
         };
 
