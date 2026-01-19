@@ -41,6 +41,7 @@ public class test_log_2 extends test_base{
 				Thread tr = new Thread(task);
 				tr.setDaemon(false);
 				tr.start();
+				System.out.println("New Thread Start:" + tr.getName());
 				live_thread.incrementAndGet();
 				left_thread.decrementAndGet();
 			}else {
@@ -52,8 +53,9 @@ public class test_log_2 extends test_base{
 				};
 			}
 		}
-		
-		left_thread.setRelease(100);
+
+		System.out.println("Sync Test Finished");
+		left_thread.setRelease(32);
 		
 		while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
 			if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
@@ -71,6 +73,7 @@ public class test_log_2 extends test_base{
 				Thread tr = new Thread(task);
 				tr.setDaemon(false);
 				tr.start();
+				System.out.println("New Thread Start:" + tr.getName());
 				live_thread.incrementAndGet();
 				left_thread.decrementAndGet();
 			}else {

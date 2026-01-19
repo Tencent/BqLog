@@ -53,7 +53,7 @@ public class test_log_1 extends test_base{
         while(format_prefix.length() <= 1024 * 1024 + 1024 + 4) {
         	log_inst_async.info(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了", "abc", "abcde", -32, false, true, null, (byte)3, 3823823, (short)-32354, "测试字符串完整的");
         	log_inst_async.force_flush();
-        	result.check_log_output_end_with(format_prefix + standard_output, "basic param test 2");
+        	result.check_log_output_end_with(format_prefix + standard_output, "basic param test\n standard_end:" + format_prefix + standard_output + "\n real_output:" + test_manager.get_console_output());
         	format_prefix += appender;
         }
 		

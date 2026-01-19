@@ -6,7 +6,7 @@ BUILD_LIB_DIR="$PROJECT_ROOT/build/lib/unix_like"
 TEST_SRC_DIR="$PROJECT_ROOT/test/java"
 ARTIFACTS_DIR="$PROJECT_ROOT/artifacts"
 
-CONFIG=${1:-Debug}
+CONFIG=${1:-RelWithDebInfo}
 
 echo "===== Building BqLog Dynamic Library (Unix) ====="
 (
