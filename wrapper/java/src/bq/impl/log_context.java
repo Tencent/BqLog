@@ -321,7 +321,7 @@ public class log_context {
         	 add_param(ring_buffer, (Short)value);
          }else if(cls == StringBuffer.class)
          {
-        	 add_param(ring_buffer, ((StringBuffer)value).chars());
+        	 add_param(ring_buffer, ((StringBuffer)value).toString());
          }else
          {
         	 add_param(ring_buffer, value.toString());
