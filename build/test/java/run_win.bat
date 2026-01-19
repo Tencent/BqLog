@@ -8,7 +8,7 @@ set "TEST_SRC_DIR=%PROJECT_ROOT%\test\java"
 set "ARTIFACTS_DIR=%PROJECT_ROOT%\artifacts"
 
 set "CONFIG=%~1"
-if "%CONFIG%"=="" set "CONFIG=RelWithDebInfo"
+if "%CONFIG%"=="" set "CONFIG=Debug"
 
 echo ===== Building BqLog Dynamic Library (Windows) =====
 pushd "%BUILD_LIB_DIR%"
