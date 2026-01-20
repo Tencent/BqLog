@@ -124,20 +124,83 @@ jobs:
 
           Get-ItemProperty -Path $key | Format-List
 
-      - name: Build for Windows
+      - name: Build for Windows (with Timeout Monitor)
         id: win_run_tests
         continue-on-error: true
         shell: powershell
         run: |
           $ErrorActionPreference = "Continue"
           cd build\test\win64
-
-          # Avoid any interactive `pause` hanging CI.
-          cmd /c "call .\run_test_${{ matrix.cc }}.bat ${{ matrix.cpp_ver }} <nul"
-          $code = $LASTEXITCODE
+          
+          $logFile = "test_output.log"
+          $timeoutSeconds = 600 # 10 mins
+          
+          Write-Host "Starting run_test_${{ matrix.cc }}.bat ${{ matrix.cpp_ver }}..."
+          
+          # Start process
+          $processInfo = New-Object System.Diagnostics.ProcessStartInfo
+          $processInfo.FileName = "cmd.exe"
+          $processInfo.Arguments = "/c call .\run_test_${{ matrix.cc }}.bat ${{ matrix.cpp_ver }} <nul > $logFile 2>&1"
+          $processInfo.RedirectStandardOutput = $false
+          $processInfo.RedirectStandardError = $false
+          $processInfo.UseShellExecute = $false
+          $processInfo.CreateNoWindow = $true
+          
+          $process = [System.Diagnostics.Process]::Start($processInfo)
+          $sw = [System.Diagnostics.Stopwatch]::StartNew()
+          
+          # Start tailing log in background job (simulated)
+          $tailJob = Start-Job -ScriptBlock {
+              param($path)
+              Get-Content $path -Wait -Tail 0
+          } -ArgumentList $logFile
+          
+          while (-not $process.HasExited) {
+            # Check for new logs from tail job
+            Receive-Job -Job $tailJob | Write-Host
+            
+            Start-Sleep -Seconds 5
+            if ($sw.Elapsed.TotalSeconds -gt $timeoutSeconds) {
+              Write-Host "!!! TIMEOUT ($timeoutSeconds s) !!!"
+              
+              $testProc = Get-Process BqLogUnitTest -ErrorAction SilentlyContinue
+              if ($testProc) {
+                Write-Host "Found BqLogUnitTest PID: $($testProc.Id)"
+                # Try to use CDB if available (it might not be in PATH yet, try common locs)
+                $cdb = (Get-Command cdb.exe -ErrorAction SilentlyContinue).Source
+                if (-not $cdb) {
+                   $candidates = @("C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe", "C:\Program Files (x86)\Windows Kits\11\Debuggers\x64\cdb.exe")
+                   foreach ($p in $candidates) { if (Test-Path $p) { $cdb = $p; break } }
+                }
+                if ($cdb) {
+                   Write-Host "Dumping stack with CDB..."
+                   & $cdb -p $testProc.Id -c "~*k; q"
+                } else {
+                   Write-Host "CDB not found, cannot dump stack."
+                }
+              }
+              
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+              if ($testProc) { Stop-Process -Id $testProc.Id -Force -ErrorAction SilentlyContinue }
+              
+              Receive-Job -Job $tailJob | Write-Host
+              Stop-Job $tailJob
+              Remove-Job $tailJob
+              
+              "exitcode=1" >> $env:GITHUB_OUTPUT
+              exit 1
+            }
+          }
+          
+          Receive-Job -Job $tailJob | Write-Host
+          Stop-Job $tailJob
+          Remove-Job $tailJob
+          
+          $code = $process.ExitCode
+          Write-Host "Process exited with code $code"
+          
           "exitcode=$code" >> $env:GITHUB_OUTPUT
-          Write-Host "BqLogUnitTest exitcode=$code"
-          exit 0
+          if ($code -ne 0) { exit 1 }
 
       - name: Print crash stack from dump (cdb)
         if: steps.win_run_tests.outputs.exitcode != '0'
@@ -373,8 +436,44 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} > test_output.log 2>&1 &
+            TEST_PID=$!
+            
+            # Start tail in background
+            tail -f test_output.log &
+            TAIL_PID=$!
+            
+            TIMEOUT=600
+            INTERVAL=10
+            ELAPSED=0
+            
+            while kill -0 $TEST_PID 2>/dev/null; do
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+              if [ $ELAPSED -ge $TIMEOUT ]; then
+                echo "!!! TIMEOUT ($TIMEOUT s) !!!"
+                EXE_PID=$(pgrep -f "BqLogUnitTest")
+                if [ -n "$EXE_PID" ]; then
+                  echo "Found PID: $EXE_PID"
+                  procstat -k $EXE_PID || true
+                  procstat -kk $EXE_PID || true
+                  if command -v gdb >/dev/null; then
+                    gdb -batch -ex "thread apply all bt" -p $EXE_PID || true
+                  fi
+                fi
+                kill -9 $TEST_PID 2>/dev/null || true
+                kill $TAIL_PID 2>/dev/null || true
+                if [ -n "$EXE_PID" ]; then kill -9 $EXE_PID 2>/dev/null || true; fi
+                exit 1
+              fi
+            done
+            
+            wait $TEST_PID
+            EXIT_CODE=$?
+            kill $TAIL_PID 2>/dev/null || true
             touch ../../../UNIT_TEST_SUCCESS
+            if [ $EXIT_CODE -ne 0 ]; then exit $EXIT_CODE; fi
 
       - name: Check Retry
         id: CheckRetry
@@ -430,8 +529,44 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} > test_output.log 2>&1 &
+            TEST_PID=$!
+            
+            # Start tail in background
+            tail -f test_output.log &
+            TAIL_PID=$!
+            
+            TIMEOUT=600
+            INTERVAL=10
+            ELAPSED=0
+            
+            while kill -0 $TEST_PID 2>/dev/null; do
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+              if [ $ELAPSED -ge $TIMEOUT ]; then
+                echo "!!! TIMEOUT ($TIMEOUT s) !!!"
+                EXE_PID=$(pgrep -f "BqLogUnitTest")
+                if [ -n "$EXE_PID" ]; then
+                  echo "Found PID: $EXE_PID"
+                  procstat -k $EXE_PID || true
+                  procstat -kk $EXE_PID || true
+                  if command -v gdb >/dev/null; then
+                    gdb -batch -ex "thread apply all bt" -p $EXE_PID || true
+                  fi
+                fi
+                kill -9 $TEST_PID 2>/dev/null || true
+                kill $TAIL_PID 2>/dev/null || true
+                if [ -n "$EXE_PID" ]; then kill -9 $EXE_PID 2>/dev/null || true; fi
+                exit 1
+              fi
+            done
+            
+            wait $TEST_PID
+            EXIT_CODE=$?
+            kill $TAIL_PID 2>/dev/null || true
             touch ../../../UNIT_TEST_SUCCESS
+            if [ $EXIT_CODE -ne 0 ]; then exit $EXIT_CODE; fi
 
   freeBSD_arm64_test_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -1967,6 +2102,11 @@ jobs:
           
           echo "Test script running with PID $SCRIPT_PID. Monitoring for hangs..."
           
+          # Start tail in background to show logs in real-time
+          touch test_output.log
+          tail -f test_output.log &
+          TAIL_PID=$!
+          
           # Wait up to 10 minutes (build + test)
           TIMEOUT=600
           INTERVAL=5
@@ -1998,8 +2138,7 @@ jobs:
               kill -9 $SCRIPT_PID 2>/dev/null || true
               if [ -n "$JAVA_PID" ]; then kill -9 $JAVA_PID 2>/dev/null || true; fi
               
-              echo "=== TEST OUTPUT (Partial) ==="
-              cat test_output.log
+              kill $TAIL_PID 2>/dev/null || true
               exit 1
             fi
           done
@@ -2007,8 +2146,7 @@ jobs:
           wait $SCRIPT_PID
           EXIT_CODE=$?
           
-          echo "=== TEST OUTPUT ==="
-          cat test_output.log
+          kill $TAIL_PID 2>/dev/null || true
           
           exit $EXIT_CODE
 
