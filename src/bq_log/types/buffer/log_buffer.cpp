@@ -1493,12 +1493,6 @@ namespace bq {
         // Output last N records (most recent)
         size_t start_idx = 0;
         size_t output_count = traverse_record_count_;
-        const size_t MAX_OUTPUT = 500;
-        if (output_count > MAX_OUTPUT) {
-            start_idx = output_count - MAX_OUTPUT;
-            bq::util::log_device_console(bq::log_level::error, "  (showing last %" PRIu64 " of %" PRIu64 " records)", 
-                static_cast<uint64_t>(MAX_OUTPUT), static_cast<uint64_t>(output_count));
-        }
         
         for (size_t i = start_idx; i < output_count; ++i) {
             const traverse_record& rec = traverse_records_[i];

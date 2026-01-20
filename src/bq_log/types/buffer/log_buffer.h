@@ -308,7 +308,7 @@ namespace bq {
             bool traverse_end_block_is_working;
             const void* traverse_end_block;
         };
-        static constexpr size_t MAX_TRAVERSE_RECORDS = 10000;
+        static constexpr size_t MAX_TRAVERSE_RECORDS = 1000000;
         mutable bq::array<traverse_record> traverse_records_;
         mutable size_t traverse_record_count_ = 0;
         
