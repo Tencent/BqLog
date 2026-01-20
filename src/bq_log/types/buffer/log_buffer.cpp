@@ -303,9 +303,14 @@ namespace bq {
         // Principle 1 : If the currently processed block or buffer equals traverse_end_block_, and traverse_end_block_is_working_ is true, it means one full traversal loop has been completed.
         // Principle 2 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
         uint64_t debug_loop_count = 0;
+        uint64_t start_epoch = bq::platform::high_performance_epoch_ms();
         while (!loop_finished) {
             if (++debug_loop_count > 10000000) {
-                debug_dump_status();
+                debug_dump_status(1, debug_loop_count);
+                assert(false && "DEAD LOOP DETECTED IN READ_CHUNK");
+            }
+            if (bq::platform::high_performance_epoch_ms() - start_epoch > 10000) {
+                debug_dump_status(2, debug_loop_count);
                 assert(false && "DEAD LOOP DETECTED IN READ_CHUNK");
             }
             switch (rt_reading.state_) {
@@ -1255,9 +1260,10 @@ namespace bq {
         }
     }
 
-    void log_buffer::debug_dump_status() const
+    void log_buffer::debug_dump_status(int32_t ID, uint64_t extra) const
     {
         bq::util::log_device_console(bq::log_level::error, "==================== LOG BUFFER DEBUG DUMP ====================");
+        bq::util::log_device_console(bq::log_level::error, "ID: %" PRId32, ",Extra: %" PRIu64, ID, extra);
         bq::util::log_device_console(bq::log_level::error, "Current Version: %u", version_);
         bq::util::log_device_console(bq::log_level::error, "Reading Version: %u", rt_cache_.current_reading_.version_);
         bq::util::log_device_console(bq::log_level::error, "Current Group Addr: %p", rt_cache_.current_reading_.cur_group_ ? (const void*)&rt_cache_.current_reading_.cur_group_.value() : nullptr);

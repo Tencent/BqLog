@@ -419,6 +419,8 @@ namespace bq {
         merged_log_level_bitmap_ = tmp;
     }
 
+    static uint64_t last_read_data_epoch = 0;
+    static uint64_t loop_count = 0;
     void log_imp::process(bool is_force_flush)
     {
         constexpr uint64_t flush_io_min_interval_ms = 100;
@@ -430,8 +432,21 @@ namespace bq {
                 bq::log_entry_handle log_item(read_chunk.data_addr, read_chunk.data_size);
                 current_epoch_ms = log_item.get_log_head().timestamp_epoch;
                 process_log_chunk(log_item);
-            } else if (read_chunk.result == enum_buffer_result_code::err_empty_log_buffer) {
+                last_read_data_epoch = bq::platform::high_performance_epoch_ms();
+                loop_count = 0;
+            }
+            else if (read_chunk.result == enum_buffer_result_code::err_empty_log_buffer) {
+                if (last_read_data_epoch != 0 && bq::platform::high_performance_epoch_ms() - last_read_data_epoch > 10000) {
+                    buffer_->debug_dump_status(2, loop_count);
+                }
+                ++loop_count;
                 break;
+            }
+            else {
+                if (last_read_data_epoch != 0 && bq::platform::high_performance_epoch_ms() - last_read_data_epoch > 10000) {
+                    buffer_->debug_dump_status(3, loop_count);
+                }
+                ++loop_count;
             }
         }
         if (0 == current_epoch_ms) {
