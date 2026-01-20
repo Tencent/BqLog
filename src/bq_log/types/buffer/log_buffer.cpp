@@ -201,6 +201,7 @@ namespace bq {
                         break;
                     case log_memory_policy::block_when_full:
                         result.result = enum_buffer_result_code::err_wait_and_retry;
+                        thread_last_update_epoch_ms = current_epoch_ms;
                         break;
                     default:
                         break;
