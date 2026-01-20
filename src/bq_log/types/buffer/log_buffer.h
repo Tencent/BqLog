@@ -281,6 +281,47 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         alignas(BQ_CACHE_LINE_SIZE) bq::platform::thread::thread_id empty_thread_id_ = 0;
         bq::platform::thread::thread_id read_thread_id_ = 0;
+        
+        // Debug traverse records
+        struct traverse_record {
+            enum class source_type : uint8_t {
+                lp_buffer,
+                hp_block,
+                next_block_finding,
+                next_group_finding,
+                traversal_completed
+            };
+            source_type source;
+            read_state state_before;
+            read_state state_after;
+            const void* group_addr;
+            const void* block_addr;
+            const void* tls_addr;
+            uint16_t version;
+            uint32_t seq;
+            uint32_t expected_seq;
+            uint32_t write_seq;
+            context_verify_result verify_result;
+            bool is_removed;
+            bool is_thread_finished;
+            bool is_external_ref;
+            bool traverse_end_block_is_working;
+            const void* traverse_end_block;
+        };
+        static constexpr size_t MAX_TRAVERSE_RECORDS = 10000;
+        mutable bq::array<traverse_record> traverse_records_;
+        mutable size_t traverse_record_count_ = 0;
+        
+        void add_traverse_record(traverse_record::source_type source, 
+                                 read_state state_before,
+                                 read_state state_after,
+                                 const void* group_addr,
+                                 const void* block_addr,
+                                 const context_head* context,
+                                 context_verify_result verify_result,
+                                 bool is_removed) const;
+        void clear_traverse_records() const;
+        void dump_traverse_records() const;
 #endif
     };
 
