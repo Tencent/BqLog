@@ -337,7 +337,7 @@ namespace bq {
                 assert(rt_reading.cur_block_);
 #endif
                 if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
-                    rt_reading.traverse_end_block_is_working_ = false;
+                    //rt_reading.traverse_end_block_is_working_ = false;
                 } else if (rt_reading.traverse_end_block_is_working_ && rt_reading.traverse_end_block_ == rt_reading.cur_block_) {
                     if (rt_reading.version_ == version_) {
                         rt_reading.state_ = read_state::traversal_completed;
