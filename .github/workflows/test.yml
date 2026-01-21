@@ -1858,11 +1858,11 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Continue"
-          $dumpDir = Join-Path $env:GITHUB_WORKSPACE "build"
-          Write-Host "Searching for dumps in: $dumpDir"
-          $dumps = Get-ChildItem -Path $dumpDir -Recurse -Filter *.mdmp -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+          $dumpDir = Join-Path $env:GITHUB_WORKSPACE "win_dumps"
+          Write-Host "Dump dir: $dumpDir"
+          $dumps = Get-ChildItem -Path $dumpDir -Filter *.dmp -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
           if (-not $dumps) {
-            Write-Host "No .mdmp found."
+            Write-Host "No .dmp found (process may have terminated without WER dump)."
             exit 0
           }
 
@@ -1908,9 +1908,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: win_dumps_java_wrapper
-          path: |
-            build/**/*.mdmp
-            build/**/hs_err_pid*.log
+          path: win_dumps/**
           if-no-files-found: ignore
 
       - name: Fail job if tests failed
