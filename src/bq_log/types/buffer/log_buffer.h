@@ -218,9 +218,8 @@ namespace bq {
         void prepare_and_fix_recovery_data();
         void clear_recovery_data();
 
-    public:
-        void debug_dump_status(int32_t ID, uint64_t extra) const;
-    private:
+        void debug_dump_status() const;
+
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         bool rt_try_traverse_to_next_block_in_group(context_verify_result& out_verify_result);

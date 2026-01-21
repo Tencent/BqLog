@@ -104,10 +104,10 @@ int32_t main_logic()
 
     TEST_GROUP_BEGIN(Bq_Log_Test);
     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap", 0));
-    //TEST_GROUP(Bq_Log_Test, bq::test, test_log_buffer);
-    //TEST_GROUP(Bq_Log_Test, bq::test, test_log_appender);
-    //TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
-    //TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_log_buffer);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_log_appender);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_log);
     TEST_GROUP_END(Bq_Log_Test);
 
