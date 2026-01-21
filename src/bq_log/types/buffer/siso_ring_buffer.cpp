@@ -371,7 +371,7 @@ namespace bq {
 
     uint32_t siso_ring_buffer::get_max_alloc_size() const
     {
-        return aligned_blocks_count_* BLOCK_SIZE - static_cast<uint32_t>(data_block_offset);
+        return static_cast<uint32_t>(aligned_blocks_count_* BLOCK_SIZE) - static_cast<uint32_t>(data_block_offset);
     }
 
     void siso_ring_buffer::init_with_memory_map(void* buffer, size_t buffer_size)
