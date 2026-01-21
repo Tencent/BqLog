@@ -1260,9 +1260,9 @@ namespace bq {
         bq::util::log_device_console(bq::log_level::error, "==================== LOG BUFFER DEBUG DUMP ====================");
         bq::util::log_device_console(bq::log_level::error, "Current Version: %u", version_);
         bq::util::log_device_console(bq::log_level::error, "Reading Version: %u", rt_cache_.current_reading_.version_);
-        bq::util::log_device_console(bq::log_level::error, "Current Group Addr: %p", rt_cache_.current_reading_.cur_group_ ? (const void*)&rt_cache_.current_reading_.cur_group_.value() : nullptr);
-        bq::util::log_device_console(bq::log_level::error, "Current Block: %p", (const void*)rt_cache_.current_reading_.cur_block_);
-        bq::util::log_device_console(bq::log_level::error, "Traverse End Block: %p", (const void*)rt_cache_.current_reading_.traverse_end_block_);
+        bq::util::log_device_console(bq::log_level::error, "Current Group Addr: %p", &rt_cache_.current_reading_.cur_group_.value());
+        bq::util::log_device_console(bq::log_level::error, "Current Block: %p", rt_cache_.current_reading_.cur_block_);
+        bq::util::log_device_console(bq::log_level::error, "Traverse End Block: %p", rt_cache_.current_reading_.traverse_end_block_);
         bq::util::log_device_console(bq::log_level::error, "Traverse End Block Is Working: %s", rt_cache_.current_reading_.traverse_end_block_is_working_ ? "true" : "false");
 
         // Dump LP Buffer
@@ -1276,7 +1276,7 @@ namespace bq {
                 uint32_t wt_seq = tls ? tls->wt_data_.current_write_seq_ : 0;
 
                 bq::util::log_device_console(bq::log_level::error, "LP Head Context: Version=%u, Seq=%u, ExpSeq=%u, WtSeq=%u, TLS=%p, ThreadFinished=%d",
-                    context->version_, context->seq_, exp_seq, wt_seq, (const void*)tls, context->is_thread_finished_);
+                    context->version_, context->seq_, exp_seq, wt_seq, tls, context->is_thread_finished_);
                 const_cast<miso_ring_buffer&>(lp_buffer_).return_read_chunk(read_handle);
             }
             else {
@@ -1289,7 +1289,7 @@ namespace bq {
         auto group_iter = const_cast<group_list&>(hp_buffer_).first(group_list::lock_type::no_lock);
         int group_idx = 0;
         while (group_iter) {
-            bq::util::log_device_console(bq::log_level::error, "Group #%d Addr: %p", group_idx++, (const void*)&group_iter.value());
+            bq::util::log_device_console(bq::log_level::error, "Group #%d Addr: %p", group_idx++, &group_iter.value());
             auto& data_head = group_iter.value().get_data_head();
 
             auto dump_list = [&](block_list& list, const char* name) {
@@ -1306,7 +1306,7 @@ namespace bq {
                     }
 
                     bq::util::log_device_console(bq::log_level::error, "  [%s] Block #%d (%p): Version=%u, Seq=%u, ExpSeq=%u, WtSeq=%u, TLS=%p, Finished=%d, Removed=%d, NeedRealloc=%d",
-                        name, block_idx++, (const void*)block, misc.context_.version_, misc.context_.seq_, exp_seq, wt_seq, (const void*)tls,
+                        name, block_idx++, block, misc.context_.version_, misc.context_.seq_, exp_seq, wt_seq, tls,
                         misc.context_.is_thread_finished_, misc.is_removed_, misc.need_reallocate_);
                     block = list.next(block);
                 }
