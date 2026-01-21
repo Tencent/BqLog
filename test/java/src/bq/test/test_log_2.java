@@ -24,76 +24,66 @@ public class test_log_2 extends test_base{
 		log_inst_sync = bq.log.get_log_by_name("sync_log");
 		log_inst_async = bq.log.get_log_by_name("async_log");
 		test_result result = new test_result();
-		bq.log.register_console_callback(null);
-		while (left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
-			if (left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
-				Runnable task = new Runnable() {
-					@Override
-					public void run() {
-						String log_content = "";
-						for (int i = 0; i < 128; ++i) {
-							log_content += appender;
-							log_inst_sync.info(log_content);
-						}
-						live_thread.decrementAndGet();
-					}
-				};
+		log.register_console_callback(null);
+		        while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
+		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
+		                Runnable task = new Runnable() {
+		                    @Override
+		                    public void run() {
+		                        String log_content = "";
+		                        for(int i = 0; i < 128; ++i) {
+		                            log_content += appender;
+		                            log_inst_sync.info(log_content);
+		                        }
+		                        live_thread.decrementAndGet();
+		                    }
+		                };
+		                Thread tr = new Thread(task);
+		                tr.setDaemon(false);
+		                tr.start();
+		                System.out.println("New Thread Start:" + tr.getName());
+		                live_thread.incrementAndGet();
+		                left_thread.decrementAndGet();
+		            }else {
+		                try {
+		                    Thread.sleep(1);
+		                } catch (InterruptedException e) {
+		                    // TODO Auto-generated catch block
+		                    e.printStackTrace();
+		                };
+		            }
+		        }
+		
+		        System.out.println("Sync Test Finished");
+		        left_thread.setRelease(32);
+		        
+		        while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
+		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 2) {
+		                Runnable task = new Runnable() {
+		                    @Override
+		                    public void run() {
+		                        String log_content = "";
+		                        for(int i = 0; i < 2048; ++i) {
+		                            log_content += appender;
+		                            log_inst_async.info(log_content);
+		                        }
+		                        live_thread.decrementAndGet();
+		                    }
+		                };
+		
 				Thread tr = new Thread(task);
 				tr.setDaemon(false);
 				tr.start();
 				System.out.println("New Thread Start:" + tr.getName());
 				live_thread.incrementAndGet();
 				left_thread.decrementAndGet();
-			} else {
+			}else {
 				try {
 					Thread.sleep(1);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-				;
-			}
-		}
-
-		System.out.println("Sync Test Finished");
-		bq.log.register_console_callback(new bq.log.console_callback_delegate() {
-		@Override
-		public void callback(long log_id, int category_idx, log_level level_value, String content) {
-			// TODO Auto-generated method stub
-			System.out.println("#########:" + content.length());
-		}
-	});
-		left_thread.setRelease(32);
-
-		while (left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
-			if (left_thread.getAcquire() > 0 && live_thread.getAcquire() < 2) {
-				Runnable task = new Runnable() {
-					@Override
-					public void run() {
-						String log_content = "";
-						for (int i = 0; i < 2048; ++i) {
-							log_content += appender;
-							log_inst_async.info(log_content);
-							System.out.println(Thread.currentThread().getName() + ":" + i + ", " + log_content.length());
-						}
-						live_thread.decrementAndGet();
-					}
 				};
-
-				Thread tr = new Thread(task);
-				tr.setDaemon(false);
-				tr.start();
-				System.out.println("New Thread Start:" + tr.getName());
-				live_thread.incrementAndGet();
-				left_thread.decrementAndGet();
-			} else {
-				try {
-					Thread.sleep(1);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				;
 			}
 		}
 		log_inst_async.force_flush();
