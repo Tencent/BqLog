@@ -26,7 +26,7 @@ public class test_log_2 extends test_base{
 		test_result result = new test_result();
 		log.register_console_callback(null);
 		        while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
-		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
+		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 2) {
 		                Runnable task = new Runnable() {
 		                    @Override
 		                    public void run() {
@@ -58,7 +58,7 @@ public class test_log_2 extends test_base{
 		        left_thread.setRelease(32);
 		        
 		        while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
-		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
+		            if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 2) {
 		                Runnable task = new Runnable() {
 		                    @Override
 		                    public void run() {

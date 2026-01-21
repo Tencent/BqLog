@@ -235,9 +235,10 @@ namespace bq {
                 left_thread = 32;
                 while(left_thread > 0 || live_thread > 0) {
                     if (left_thread > 0 && live_thread < 5) {
+                        int32_t t_id = left_thread;
                         left_thread--;
                         live_thread++;
-                        std::thread([&]() {
+                        std::thread([&, t_id]() {
                             bq::string log_content = "";
                             for(int32_t i = 0; i < 2048; ++i) { 
                                 log_content += appender;
