@@ -1263,7 +1263,7 @@ namespace bq {
     void log_buffer::debug_dump_status(int32_t ID, uint64_t extra) const
     {
         bq::util::log_device_console(bq::log_level::error, "==================== LOG BUFFER DEBUG DUMP ====================");
-        bq::util::log_device_console(bq::log_level::error, "ID: %" PRId32 ",Extra: %" PRIu64, ID, extra);
+        bq::util::log_device_console(bq::log_level::error, "ID: %" PRId32, ",Extra: %" PRIu64, ID, extra);
         bq::util::log_device_console(bq::log_level::error, "Current Version: %u", version_);
         bq::util::log_device_console(bq::log_level::error, "Reading Version: %u", rt_cache_.current_reading_.version_);
         bq::util::log_device_console(bq::log_level::error, "Current Group Addr: %p", rt_cache_.current_reading_.cur_group_ ? (const void*)&rt_cache_.current_reading_.cur_group_.value() : nullptr);
