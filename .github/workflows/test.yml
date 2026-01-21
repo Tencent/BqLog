@@ -1824,97 +1824,12 @@ jobs:
         shell: bash
         run: |
           choco install -y llvm
-      - name: Enable WER LocalDumps (java.exe)
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          $dumpDir = Join-Path $env:GITHUB_WORKSPACE "win_dumps"
-          New-Item -ItemType Directory -Force -Path $dumpDir | Out-Null
-          Write-Host "Dump dir: $dumpDir"
-
-          # Use HKCU to avoid requiring elevated permissions.
-          $key = "HKCU:\Software\Microsoft\Windows\Windows Error Reporting\LocalDumps\java.exe"
-          New-Item -Force -Path $key | Out-Null
-          New-ItemProperty -Path $key -Name DumpFolder -PropertyType ExpandString -Value $dumpDir -Force | Out-Null
-          New-ItemProperty -Path $key -Name DumpType   -PropertyType DWord       -Value 2       -Force | Out-Null  # 2 = full dump
-          New-ItemProperty -Path $key -Name DumpCount  -PropertyType DWord       -Value 10      -Force | Out-Null
-
-          Get-ItemProperty -Path $key | Format-List
-
       - name: Build for Windows
         id: win_run_tests
-        continue-on-error: true
         shell: powershell
         run: |
           cd build\test\java
-          .\run_win Debug
-          $code = $LASTEXITCODE
-          "exitcode=$code" >> $env:GITHUB_OUTPUT
-          Write-Host "Java Test exitcode=$code"
-          exit 0
-
-      - name: Print crash stack from dump (cdb)
-        if: steps.win_run_tests.outputs.exitcode != '0'
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Continue"
-          $dumpDir = Join-Path $env:GITHUB_WORKSPACE "win_dumps"
-          Write-Host "Dump dir: $dumpDir"
-          $dumps = Get-ChildItem -Path $dumpDir -Filter *.dmp -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
-          if (-not $dumps) {
-            Write-Host "No .dmp found (process may have terminated without WER dump)."
-            exit 0
-          }
-
-          $dump = $dumps[0].FullName
-          Write-Host "Using dump: $dump"
-
-          $cdb = (Get-Command cdb.exe -ErrorAction SilentlyContinue).Source
-          if (-not $cdb) {
-            $candidates = @(
-              "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe",
-              "C:\Program Files (x86)\Windows Kits\11\Debuggers\x64\cdb.exe",
-              "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe",
-              "C:\Program Files (x86)\Windows Kits\11\Debuggers\x86\cdb.exe"
-            )
-            foreach ($p in $candidates) { if (Test-Path $p) { $cdb = $p; break } }
-          }
-
-          if (-not $cdb) {
-            Write-Host "cdb.exe not found, attempting to install WinDbg via Chocolatey..."
-            choco install -y windbg --no-progress
-            $cdb = (Get-Command cdb.exe -ErrorAction SilentlyContinue).Source
-            if (-not $cdb) {
-              $candidates = @(
-                "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe",
-                "C:\Program Files (x86)\Windows Kits\11\Debuggers\x64\cdb.exe"
-              )
-              foreach ($p in $candidates) { if (Test-Path $p) { $cdb = $p; break } }
-            }
-          }
-
-          if (-not $cdb) {
-            Write-Host "Still no cdb.exe found. Dump will still be uploaded as artifact."
-            exit 0
-          }
-
-          Write-Host "Using cdb: $cdb"
-          Write-Host "=== cdb analysis begin ==="
-          & $cdb -z $dump -c "!analyze -v; .ecxr; kv; q" 2>&1
-          Write-Host "=== cdb analysis end ==="
-
-      - name: Upload Windows crash dumps (if any)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: win_dumps_java_wrapper
-          path: win_dumps/**
-          if-no-files-found: ignore
-
-      - name: Fail job if tests failed
-        if: steps.win_run_tests.outputs.exitcode != '0'
-        shell: powershell
-        run: exit 1
+          .\run_win
 
   java_wrapper_mac_silicon:
     runs-on:  macos-latest
