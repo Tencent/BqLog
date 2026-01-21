@@ -83,6 +83,8 @@ namespace bq {
 
         bq_forceinline siso_ring_buffer& get_buffer() { return *(siso_ring_buffer*)buffer_; }
 
+        bq_forceinline void renew() { get_buffer().renew(); }
+
         static constexpr ptrdiff_t get_buffer_data_offset()
         {
             return (ptrdiff_t)((sizeof(block_node_head) + BQ_CACHE_LINE_SIZE - 1) - ((sizeof(block_node_head) + BQ_CACHE_LINE_SIZE - 1) % BQ_CACHE_LINE_SIZE));
@@ -168,13 +170,13 @@ namespace bq {
         bq_forceinline void debug_output() {
             auto block_iter = first();
             while (block_iter) {
-                printf("=>%" PRIu16, get_index_by_block_head(block_iter));
+                bq::util::log_device_console(bq::log_level::error, "=>%" PRIu16, get_index_by_block_head(block_iter));
                 block_iter = next(block_iter);
             }
-            printf("\n");
+            bq::util::log_device_console(bq::log_level::error, "\n");
             for (uint16_t i = 0; i < max_blocks_count_; ++i) {
                 auto& block_head = get_block_head_by_index(i);
-                printf("->%" PRIu8, static_cast<uint8_t>(block_head.get_type()));
+                bq::util::log_device_console(bq::log_level::error, "->%" PRIu8, static_cast<uint8_t>(block_head.get_type()));
             }
             fflush(stdout);
         }

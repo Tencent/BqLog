@@ -126,6 +126,7 @@ namespace bq {
         : config_(config)
         , hp_buffer_(config_, BLOCKS_PER_GROUP_NODE)
         , lp_buffer_(config_)
+        , hp_buffer_max_alloc_size_(UINT32_MAX)
         , version_(config_.need_recovery ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
         , destruction_mark_(bq::make_shared_for_overwrite<destruction_mark>())
         , current_oversize_buffer_index_(0)
@@ -178,7 +179,8 @@ namespace bq {
             thread_update_times = 0;
         }
         log_buffer_write_handle result;
-        while (true) {
+        bool is_invalid_hp_size = is_high_frequency && (size > hp_buffer_max_alloc_size_);
+        while (!is_invalid_hp_size) {
             if (is_high_frequency) {
                 BQ_UNLIKELY_IF(!block_cache)
                 {
@@ -243,7 +245,7 @@ namespace bq {
         }
 
         // For chunks larger than lp_buffer size and hp_buffer size.
-        BQ_UNLIKELY_IF(enum_buffer_result_code::err_alloc_size_invalid == result.result && size > 0)
+        BQ_UNLIKELY_IF((is_invalid_hp_size || enum_buffer_result_code::err_alloc_size_invalid == result.result) && size > 0)
         {
             return wt_alloc_oversize_write_chunk(size, current_epoch_ms);
         }
@@ -517,6 +519,9 @@ namespace bq {
         misc_data.context_.is_thread_finished_ = false;
         misc_data.context_.seq_ = tls_buffer_info.wt_data_.current_write_seq_++;
         auto new_node = hp_buffer_.alloc_new_block(&misc_data, sizeof(block_misc_data));
+        if (hp_buffer_max_alloc_size_ == UINT32_MAX) {
+            hp_buffer_max_alloc_size_ = new_node->get_buffer().get_max_alloc_size();
+        }
         return new_node;
     }
 

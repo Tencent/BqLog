@@ -229,6 +229,7 @@ namespace bq {
             if (result) {
                 result->set_misc_data(misc_data_src, misc_data_size);
                 result->get_buffer().set_thread_check_enable(true);
+                result->renew();
                 iter.value().get_data_head().stage_.push(result);
                 next(iter, lock_type::no_lock);
                 return result;
@@ -265,6 +266,7 @@ namespace bq {
         }
         result->set_misc_data(misc_data_src, misc_data_size);
         result->get_buffer().set_thread_check_enable(true);
+        result->renew();
         node->get_data_head().stage_.push(result);
         head_.lock_.write_unlock();
         return result;

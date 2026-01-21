@@ -238,6 +238,7 @@ namespace bq {
         uint64_t id_; // unique id for log_buffer
         group_list hp_buffer_; // high performance buffer, each thread has its own block, but more memory usage.
         miso_ring_buffer lp_buffer_; // used to save memory for low frequency threads.
+        uint32_t hp_buffer_max_alloc_size_;
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
 

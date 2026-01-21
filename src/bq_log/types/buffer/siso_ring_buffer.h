@@ -171,6 +171,12 @@ namespace bq {
         ~siso_ring_buffer();
 
         /// <summary>
+        /// `renew` resets the cursor to 0. This guarantees the ability 
+        /// to allocate the maximum contiguous memory block at once.
+        /// </summary>
+        void renew();
+
+        /// <summary>
         /// A producer can request a block of memory by calling alloc_write_chunk for writing data,
         /// but the prerequisite is that the result of the returned log_buffer_write_handle must be success.
         /// </summary>
@@ -263,6 +269,8 @@ namespace bq {
         }
         bool is_thread_check_enable() const;
 
+        uint32_t get_max_alloc_size() const;
+
         bq_forceinline memory_map_buffer_state get_memory_map_buffer_state() const
         {
             return mmap_buffer_state_;
@@ -309,6 +317,8 @@ namespace bq {
         void init_with_memory_map(void* buffer, size_t buffer_size);
 
         void init_with_memory(void* buffer, size_t buffer_size);
+
+        void init_cursors();
     };
 
 }

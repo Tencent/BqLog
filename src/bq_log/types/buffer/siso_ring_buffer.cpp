@@ -48,6 +48,11 @@ namespace bq {
     {
     }
 
+    void siso_ring_buffer::renew()
+    {
+        init_cursors();
+    }
+
     log_buffer_write_handle siso_ring_buffer::alloc_write_chunk(uint32_t size)
     {
 #if defined(BQ_LOG_BUFFER_DEBUG)
@@ -364,6 +369,11 @@ namespace bq {
     }
 
 
+    uint32_t siso_ring_buffer::get_max_alloc_size() const
+    {
+        return aligned_blocks_count_* BLOCK_SIZE - static_cast<uint32_t>(data_block_offset);
+    }
+
     void siso_ring_buffer::init_with_memory_map(void* buffer, size_t buffer_size)
     {
         init_with_memory(buffer, buffer_size);
@@ -433,14 +443,20 @@ namespace bq {
         while (aligned_blocks_count_ <= (max_block_count >> 1)) {
             aligned_blocks_count_ <<= 1;
         }
+        head_->aligned_blocks_count_cache_ = aligned_blocks_count_;
+        init_cursors();
+        mmap_buffer_state_ = memory_map_buffer_state::init_with_memory;
+    }
+
+
+    void siso_ring_buffer::init_cursors()
+    {
         head_->rt_writing_cursor_cache_ = 0;
         head_->rt_reading_cursor_cache_ = 0;
         head_->wt_writing_cursor_cache_ = 0;
         head_->wt_reading_cursor_cache_ = 0;
-        head_->aligned_blocks_count_cache_ = aligned_blocks_count_;
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->reading_cursor_, uint32_t).store_release(0);
         BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(head_->writing_cursor_, uint32_t).store_release(0);
-        mmap_buffer_state_ = memory_map_buffer_state::init_with_memory;
     }
 
 }
