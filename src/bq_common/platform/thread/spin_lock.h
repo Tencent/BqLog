@@ -220,7 +220,7 @@ namespace bq {
 
         public:
             spin_lock_rw_crazy()
-                : state_(static_cast<uint64_t>(0))
+                : state_(0)
             {
             }
 
