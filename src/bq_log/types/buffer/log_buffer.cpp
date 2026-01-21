@@ -302,12 +302,7 @@ namespace bq {
         bool loop_finished = false;
         // Principle 1 : If the currently processed block or buffer equals traverse_end_block_, and traverse_end_block_is_working_ is true, it means one full traversal loop has been completed.
         // Principle 2 : If, after reaching the latest version and completing a full traversal loop, no data is read, it means there is truly no data available.
-        uint64_t debug_loop_count = 0;
         while (!loop_finished) {
-            if (++debug_loop_count > 10000) {
-                debug_dump_status();
-                assert(false && "DEAD LOOP DETECTED IN READ_CHUNK");
-            }
             switch (rt_reading.state_) {
             case read_state::lp_buffer_reading:
                 if (rt_read_from_lp_buffer(read_handle)) {
@@ -342,7 +337,7 @@ namespace bq {
                 assert(rt_reading.cur_block_);
 #endif
                 if (context_verify_result::seq_pending == verify_result && (rt_reading.version_ == version_)) {
-                    rt_reading.traverse_end_block_is_working_ = false;
+                    //rt_reading.traverse_end_block_is_working_ = false;
                 } else if (rt_reading.traverse_end_block_is_working_ && rt_reading.traverse_end_block_ == rt_reading.cur_block_) {
                     if (rt_reading.version_ == version_) {
                         rt_reading.state_ = read_state::traversal_completed;
@@ -1253,71 +1248,5 @@ namespace bq {
         if (bq::file_manager::is_dir(memory_map_folder)) {
             bq::file_manager::remove_file_or_dir(memory_map_folder);
         }
-    }
-
-    void log_buffer::debug_dump_status() const
-    {
-        bq::util::log_device_console(bq::log_level::error, "==================== LOG BUFFER DEBUG DUMP ====================");
-        bq::util::log_device_console(bq::log_level::error, "Current Version: %u", version_);
-        bq::util::log_device_console(bq::log_level::error, "Reading Version: %u", rt_cache_.current_reading_.version_);
-        bq::util::log_device_console(bq::log_level::error, "Current Group Addr: %p", &rt_cache_.current_reading_.cur_group_.value());
-        bq::util::log_device_console(bq::log_level::error, "Current Block: %p", rt_cache_.current_reading_.cur_block_);
-        bq::util::log_device_console(bq::log_level::error, "Traverse End Block: %p", rt_cache_.current_reading_.traverse_end_block_);
-        bq::util::log_device_console(bq::log_level::error, "Traverse End Block Is Working: %s", rt_cache_.current_reading_.traverse_end_block_is_working_ ? "true" : "false");
-
-        // Dump LP Buffer
-        {
-            bq::util::log_device_console(bq::log_level::error, "--- LP Buffer Dump ---");
-            auto read_handle = const_cast<miso_ring_buffer&>(lp_buffer_).read_chunk();
-            if (read_handle.result == enum_buffer_result_code::success) {
-                const auto* context = reinterpret_cast<const context_head*>(read_handle.data_addr);
-                auto* tls = context->get_tls_info();
-                uint32_t exp_seq = tls ? tls->rt_data_.current_read_seq_ : 0;
-                uint32_t wt_seq = tls ? tls->wt_data_.current_write_seq_ : 0;
-
-                bq::util::log_device_console(bq::log_level::error, "LP Head Context: Version=%u, Seq=%u, ExpSeq=%u, WtSeq=%u, TLS=%p, ThreadFinished=%d",
-                    context->version_, context->seq_, exp_seq, wt_seq, tls, context->is_thread_finished_);
-                const_cast<miso_ring_buffer&>(lp_buffer_).return_read_chunk(read_handle);
-            }
-            else {
-                bq::util::log_device_console(bq::log_level::error, "LP Buffer Empty or Error: %d", (int)read_handle.result);
-            }
-        }
-
-        // Dump HP Buffer
-        bq::util::log_device_console(bq::log_level::error, "--- HP Buffer Dump ---");
-        auto group_iter = const_cast<group_list&>(hp_buffer_).first(group_list::lock_type::no_lock);
-        int group_idx = 0;
-        while (group_iter) {
-            bq::util::log_device_console(bq::log_level::error, "Group #%d Addr: %p", group_idx++, &group_iter.value());
-            auto& data_head = group_iter.value().get_data_head();
-
-            auto dump_list = [&](block_list& list, const char* name) {
-                auto block = list.first();
-                int block_idx = 0;
-                while (block) {
-                    auto& misc = block->get_misc_data<block_misc_data>();
-                    auto* tls = misc.context_.get_tls_info();
-                    uint32_t exp_seq = 0;
-                    uint32_t wt_seq = 0;
-                    if (tls) {
-                        exp_seq = tls->rt_data_.current_read_seq_;
-                        wt_seq = tls->wt_data_.current_write_seq_;
-                    }
-
-                    bq::util::log_device_console(bq::log_level::error, "  [%s] Block #%d (%p): Version=%u, Seq=%u, ExpSeq=%u, WtSeq=%u, TLS=%p, Finished=%d, Removed=%d, NeedRealloc=%d",
-                        name, block_idx++, block, misc.context_.version_, misc.context_.seq_, exp_seq, wt_seq, tls,
-                        misc.context_.is_thread_finished_, misc.is_removed_, misc.need_reallocate_);
-                    block = list.next(block);
-                }
-            };
-
-            dump_list(data_head.used_, "USED");
-            dump_list(data_head.stage_, "STAGE");
-            dump_list(data_head.free_, "FREE");
-
-            group_iter = const_cast<group_list&>(hp_buffer_).next(group_iter, group_list::lock_type::no_lock);
-        }
-        bq::util::log_device_console(bq::log_level::error, "===============================================================");
     }
 }

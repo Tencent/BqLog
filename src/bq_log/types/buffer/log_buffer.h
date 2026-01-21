@@ -106,7 +106,7 @@ namespace bq {
 
         struct log_tls_info {
 #if !defined(BQ_LOG_BUFFER_DEBUG)
-        public:
+        private:
 #endif
             bq::hash_map_inline<uint64_t, log_tls_buffer_info*>* log_map_ = nullptr;
             uint64_t cur_log_buffer_id_ = 0;
@@ -217,8 +217,6 @@ namespace bq {
         void deregister_seq(const context_head& context);
         void prepare_and_fix_recovery_data();
         void clear_recovery_data();
-
-        void debug_dump_status() const;
 
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
