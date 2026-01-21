@@ -844,9 +844,9 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                /*do_normal_buffer_test(result);
+                do_normal_buffer_test(result);
                 do_linked_list_test(result);
-                do_memory_pool_test(result);*/
+                do_memory_pool_test(result);
                 log_buffer_config config;
                 config.log_name = "log_buffer_test";
                 config.log_categories_name = { "_default" };
@@ -854,9 +854,9 @@ namespace bq {
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = 1000;
 
-                //do_block_list_test(result, config);
+                do_block_list_test(result, config);
                 config.need_recovery = true;
-                //do_block_list_test(result, config);
+                do_block_list_test(result, config);
 
                 do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
