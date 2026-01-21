@@ -228,7 +228,6 @@ namespace bq {
             block_node_head* result = iter.value().get_data_head().free_.pop();
             if (result) {
                 result->set_misc_data(misc_data_src, misc_data_size);
-                result->get_buffer().set_thread_check_enable(true);
                 result->renew();
                 iter.value().get_data_head().stage_.push(result);
                 next(iter, lock_type::no_lock);
@@ -265,7 +264,6 @@ namespace bq {
 #endif
         }
         result->set_misc_data(misc_data_src, misc_data_size);
-        result->get_buffer().set_thread_check_enable(true);
         result->renew();
         node->get_data_head().stage_.push(result);
         head_.lock_.write_unlock();
@@ -274,7 +272,6 @@ namespace bq {
 
     void group_list::recycle_block_thread_unsafe(iterator group, block_node_head* prev_block, block_node_head* recycle_block)
     {
-        recycle_block->get_buffer().set_thread_check_enable(false);
         bool remove_result = group.value().get_data_head().used_.remove_thread_unsafe(prev_block, recycle_block);
         if (remove_result) {
             group.value().get_data_head().free_.push(recycle_block);

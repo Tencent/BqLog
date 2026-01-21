@@ -51,6 +51,12 @@ namespace bq {
     void siso_ring_buffer::renew()
     {
         init_cursors();
+#if defined(BQ_LOG_BUFFER_DEBUG)
+        if (check_thread_) {
+            read_thread_id_.store(empty_thread_id_);
+            write_thread_id_.store(empty_thread_id_);
+        }
+#endif
     }
 
     log_buffer_write_handle siso_ring_buffer::alloc_write_chunk(uint32_t size)
