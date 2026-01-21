@@ -177,6 +177,9 @@ namespace bq {
             thread_last_update_epoch_ms = current_epoch_ms;
             thread_update_times = 0;
         }
+        if (size > 20000) {
+            is_high_frequency = false;
+        }
         log_buffer_write_handle result;
         while (true) {
             if (is_high_frequency) {
