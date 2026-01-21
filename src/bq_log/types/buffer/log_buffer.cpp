@@ -201,6 +201,8 @@ namespace bq {
                         break;
                     case log_memory_policy::block_when_full:
                         result.result = enum_buffer_result_code::err_wait_and_retry;
+                        thread_last_update_epoch_ms = current_epoch_ms;
+                        thread_update_times = config_.high_frequency_threshold_per_second;
                         break;
                     default:
                         break;
@@ -287,8 +289,6 @@ namespace bq {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
             assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for log_buffer!");
         }
-        // Clear traverse records at the start of each read_chunk call
-        clear_traverse_records();
 #endif
         auto& rt_reading = rt_cache_.current_reading_;
         if (rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success) {
@@ -328,21 +328,6 @@ namespace bq {
                 break;
             case read_state::hp_block_reading:
                 rt_reading.hp_handle_cache_ = rt_reading.cur_block_->get_buffer().batch_read();
-#if defined(BQ_LOG_BUFFER_DEBUG)
-                {
-                    auto& blk_misc = rt_reading.cur_block_->get_misc_data<block_misc_data>();
-                    add_traverse_record(
-                        traverse_record::source_type::hp_block,
-                        read_state::hp_block_reading,
-                        rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success ? read_state::hp_block_reading : read_state::next_block_finding,
-                        rt_reading.cur_group_ ? (const void*)&rt_reading.cur_group_.value() : nullptr,
-                        (const void*)rt_reading.cur_block_,
-                        &blk_misc.context_,
-                        rt_cache_.mem_optimize_.verify_result,
-                        blk_misc.is_removed_
-                    );
-                }
-#endif
                 if (enum_buffer_result_code::success == rt_reading.hp_handle_cache_.result) {
                     read_handle = rt_reading.hp_handle_cache_.next();
                     loop_finished = true;
@@ -402,18 +387,6 @@ namespace bq {
                 }
                 break;
             case read_state::traversal_completed:
-#if defined(BQ_LOG_BUFFER_DEBUG)
-                add_traverse_record(
-                    traverse_record::source_type::traversal_completed,
-                    read_state::traversal_completed,
-                    rt_reading.cur_block_ ? read_state::hp_block_reading : read_state::lp_buffer_reading,
-                    rt_reading.cur_group_ ? (const void*)&rt_reading.cur_group_.value() : nullptr,
-                    (const void*)rt_reading.cur_block_,
-                    rt_reading.cur_block_ ? &rt_reading.cur_block_->get_misc_data<block_misc_data>().context_ : nullptr,
-                    context_verify_result::valid,
-                    false
-                );
-#endif
                 if (rt_reading.cur_block_) {
                     read_handle = rt_reading.cur_block_->get_buffer().read_an_empty_chunk();
                     rt_reading.state_ = read_state::hp_block_reading;
@@ -653,18 +626,6 @@ namespace bq {
             if (enum_buffer_result_code::success == read_handle.result) {
                 const auto& context = *reinterpret_cast<const context_head*>(read_handle.data_addr);
                 auto verify_result = verify_context(context);
-#if defined(BQ_LOG_BUFFER_DEBUG)
-                add_traverse_record(
-                    traverse_record::source_type::lp_buffer,
-                    rt_cache_.current_reading_.state_,
-                    rt_cache_.current_reading_.state_,
-                    nullptr, // LP buffer has no group
-                    nullptr, // LP buffer has no block
-                    &context,
-                    verify_result,
-                    false
-                );
-#endif
                 switch (verify_result) {
                 case context_verify_result::valid:
                     BQ_LIKELY_IF(!context.is_thread_finished_)
@@ -764,18 +725,6 @@ namespace bq {
                 || out_verify_result == context_verify_result::version_invalid
                 || out_verify_result == context_verify_result::seq_invalid;
             mem_opt.verify_result = out_verify_result;
-#if defined(BQ_LOG_BUFFER_DEBUG)
-            add_traverse_record(
-                traverse_record::source_type::next_block_finding,
-                rt_reading.state_,
-                rt_reading.state_,
-                rt_reading.cur_group_ ? (const void*)&rt_reading.cur_group_.value() : nullptr,
-                (const void*)next_block,
-                &context,
-                out_verify_result,
-                mem_opt.is_block_marked_removed
-            );
-#endif
             if (mem_opt.left_holes_num_ > 0) {
                 mark_block_need_reallocate(next_block, true);
                 --mem_opt.left_holes_num_;
@@ -855,18 +804,6 @@ namespace bq {
             rt_reading.last_block_ = nullptr;
         }
         rt_reading.cur_group_ = next_group;
-#if defined(BQ_LOG_BUFFER_DEBUG)
-        add_traverse_record(
-            traverse_record::source_type::next_group_finding,
-            rt_reading.state_,
-            rt_reading.state_,
-            next_group ? (const void*)&next_group.value() : nullptr,
-            nullptr,
-            nullptr,
-            context_verify_result::valid,
-            group_removed
-        );
-#endif
         return next_group;
     }
 
@@ -1348,11 +1285,11 @@ namespace bq {
 
                 bq::util::log_device_console(bq::log_level::error, "LP Head Context: Version=%u, Seq=%u, ExpSeq=%u, WtSeq=%u, TLS=%p, ThreadFinished=%d",
                     context->version_, context->seq_, exp_seq, wt_seq, (const void*)tls, context->is_thread_finished_);
+                const_cast<miso_ring_buffer&>(lp_buffer_).return_read_chunk(read_handle);
             }
             else {
                 bq::util::log_device_console(bq::log_level::error, "LP Buffer Empty or Error: %d", (int)read_handle.result);
             }
-            const_cast<miso_ring_buffer&>(lp_buffer_).return_read_chunk(read_handle);
         }
 
         // Dump HP Buffer
@@ -1389,140 +1326,6 @@ namespace bq {
 
             group_iter = const_cast<group_list&>(hp_buffer_).next(group_iter, group_list::lock_type::no_lock);
         }
-
-#if defined(BQ_LOG_BUFFER_DEBUG)
-        // Dump traverse records
-        dump_traverse_records();
-#endif
-
         bq::util::log_device_console(bq::log_level::error, "===============================================================");
     }
-
-#if defined(BQ_LOG_BUFFER_DEBUG)
-    void log_buffer::clear_traverse_records() const
-    {
-        traverse_records_.clear();
-        traverse_record_count_ = 0;
-    }
-
-    void log_buffer::add_traverse_record(
-        traverse_record::source_type source,
-        read_state state_before,
-        read_state state_after,
-        const void* group_addr,
-        const void* block_addr,
-        const context_head* context,
-        context_verify_result verify_result,
-        bool is_removed) const
-    {
-        if (traverse_record_count_ >= MAX_TRAVERSE_RECORDS) {
-            return; // Prevent overflow
-        }
-        
-        traverse_record record;
-        record.source = source;
-        record.state_before = state_before;
-        record.state_after = state_after;
-        record.group_addr = group_addr;
-        record.block_addr = block_addr;
-        record.verify_result = verify_result;
-        record.is_removed = is_removed;
-        record.traverse_end_block_is_working = rt_cache_.current_reading_.traverse_end_block_is_working_;
-        record.traverse_end_block = rt_cache_.current_reading_.traverse_end_block_;
-        
-        if (context) {
-            record.tls_addr = context->get_tls_info();
-            record.version = context->version_;
-            record.seq = context->seq_;
-            record.is_thread_finished = context->is_thread_finished_;
-            record.is_external_ref = context->is_external_ref_;
-            auto* tls = context->get_tls_info();
-            record.expected_seq = tls ? tls->rt_data_.current_read_seq_ : 0;
-            record.write_seq = tls ? tls->wt_data_.current_write_seq_ : 0;
-        } else {
-            record.tls_addr = nullptr;
-            record.version = 0;
-            record.seq = 0;
-            record.expected_seq = 0;
-            record.write_seq = 0;
-            record.is_thread_finished = false;
-            record.is_external_ref = false;
-        }
-        
-        traverse_records_.push_back(record);
-        traverse_record_count_++;
-    }
-
-    void log_buffer::dump_traverse_records() const
-    {
-        bq::util::log_device_console(bq::log_level::error, "--- Traverse Records (count: %" PRIu64 ") ---", static_cast<uint64_t>(traverse_record_count_));
-        
-        auto source_to_str = [](traverse_record::source_type src) -> const char* {
-            switch (src) {
-                case traverse_record::source_type::lp_buffer: return "LP";
-                case traverse_record::source_type::hp_block: return "HP";
-                case traverse_record::source_type::next_block_finding: return "NEXT_BLK";
-                case traverse_record::source_type::next_group_finding: return "NEXT_GRP";
-                case traverse_record::source_type::traversal_completed: return "COMPLETED";
-                default: return "UNKNOWN";
-            }
-        };
-        
-        auto state_to_str = [](read_state state) -> const char* {
-            switch (state) {
-                case read_state::lp_buffer_reading: return "LP_READ";
-                case read_state::hp_block_reading: return "HP_READ";
-                case read_state::next_block_finding: return "FIND_BLK";
-                case read_state::next_group_finding: return "FIND_GRP";
-                case read_state::traversal_completed: return "DONE";
-                default: return "???";
-            }
-        };
-        
-        auto verify_to_str = [](context_verify_result result) -> const char* {
-            switch (result) {
-                case context_verify_result::valid: return "VALID";
-                case context_verify_result::version_pending: return "VER_PEND";
-                case context_verify_result::version_invalid: return "VER_INV";
-                case context_verify_result::seq_pending: return "SEQ_PEND";
-                case context_verify_result::seq_invalid: return "SEQ_INV";
-                default: return "???";
-            }
-        };
-        
-        // Output last N records (most recent)
-        size_t start_idx = 0;
-        size_t output_count = traverse_record_count_;
-        const size_t MAX_OUTPUT = 500;
-        if (output_count > MAX_OUTPUT) {
-            start_idx = output_count - MAX_OUTPUT;
-            bq::util::log_device_console(bq::log_level::error, "  (showing last %" PRIu64 " of %" PRIu64 " records)", 
-                static_cast<uint64_t>(MAX_OUTPUT), static_cast<uint64_t>(output_count));
-        }
-        
-        for (size_t i = start_idx; i < output_count; ++i) {
-            const traverse_record& rec = traverse_records_[i];
-            bq::util::log_device_console(bq::log_level::error, 
-                "  [%" PRIu64 "] %s: %s->%s | Grp=%p Blk=%p | V=%u Seq=%u ExpSeq=%u WtSeq=%u | TLS=%p | Verify=%s | Rm=%d Fin=%d Ext=%d | EndBlk=%p Working=%d",
-                static_cast<uint64_t>(i),
-                source_to_str(rec.source),
-                state_to_str(rec.state_before),
-                state_to_str(rec.state_after),
-                rec.group_addr,
-                rec.block_addr,
-                static_cast<unsigned>(rec.version),
-                static_cast<unsigned>(rec.seq),
-                static_cast<unsigned>(rec.expected_seq),
-                static_cast<unsigned>(rec.write_seq),
-                rec.tls_addr,
-                verify_to_str(rec.verify_result),
-                rec.is_removed ? 1 : 0,
-                rec.is_thread_finished ? 1 : 0,
-                rec.is_external_ref ? 1 : 0,
-                rec.traverse_end_block,
-                rec.traverse_end_block_is_working ? 1 : 0
-            );
-        }
-    }
-#endif
 }
