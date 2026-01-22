@@ -123,7 +123,7 @@ export class log {
      * This can be used for an external system to monitor console log output.
      * @param callback
      */
-    public static register_console_callback(callback: console_callback): void {
+    public static register_console_callback(callback: console_callback| null): void {
         log.callback_ = callback;
         log_invoker.__api_set_console_callback(log.inner_callback);
     }

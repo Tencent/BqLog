@@ -1,4 +1,3 @@
-package bq.test;
 /*
  * Copyright (C) 2026 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -10,16 +9,12 @@ package bq.test;
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-public abstract class test_base {
-	private String name_;
-	
-	public test_base(String name) {
-		this.name_ = name;
-	}
-	
-	public String get_name() {
-		return name_;
-	}
-	
-	public abstract test_result test();
+// Define an interface for the bq library shape to satisfy type checking
+// without importing the value directly.
+import type { bq as BqType } from "../../../../../wrapper/typescript/src/index";
+
+export let bq: typeof BqType;
+
+export function set_bq_lib(lib: typeof BqType) {
+    bq = lib;
 }

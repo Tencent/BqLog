@@ -1,0 +1,16 @@
+{
+  "name": "bqlog-test",
+  "version": "1.0.0",
+  "main": "dist/bq/test/test_main_cjs.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "npm run test:cjs && npm run test:esm",
+    "test:cjs": "ts-node src/bq/test/test_main_cjs.ts",
+    "test:esm": "ts-node --esm src/bq/test/test_main_esm.ts"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0",
+    "@types/node": "^18.0.0"
+  }
+}
