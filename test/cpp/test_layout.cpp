@@ -278,8 +278,10 @@ namespace bq {
             
             // Fill Head
             _log_entry_head_def* head = (_log_entry_head_def*)buffer.data();
-            head->log_format_str_type = (uint8_t)log_arg_type_enum::string_utf8_type;
-            head->log_format_data_len = fmt_len;
+            if (head) {
+                head->log_format_str_type = (uint8_t)log_arg_type_enum::string_utf8_type;
+                head->log_format_data_len = fmt_len;
+            }
             
             // Fill Format
             memcpy(buffer.data() + head_size, fmt.c_str(), fmt_len);
