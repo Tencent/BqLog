@@ -51,7 +51,7 @@ namespace bq {
         console_static_misc_ = nullptr;*/
         bool force_flush_success = false;
         for (uint32_t i = 0; i < 128; ++i) {
-            if (log_manager_inst_->try_flush_all()) {
+            if (log_manager_inst_.try_flush_all()) {
                 force_flush_success = true;
                 break;
             }

@@ -31,16 +31,15 @@ struct console_msg_head {
     uint32_t length;
 } BQ_PACK_END
 
-    static napi_ref console_callback_ { NULL };
-static bq::miso_ring_buffer console_msg_buffer_(bq::log_buffer_config({ "napi_console_cb_msg", bq::array<bq::string>(), 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 }));
+static napi_ref console_callback_; //{NULL} for zero initialization
 
 static void tsfn_console_call_js(napi_env env, void* param)
 {
     console_msg_head* msg = nullptr;
-    bool from_buffer = (param == (void*)&console_msg_buffer_);
+    bool from_buffer = (param == (void*)&bq::log_global_vars::get().console_msg_buffer_);
     bq::log_buffer_read_handle handle;
     if (from_buffer) {
-        handle = console_msg_buffer_.read_chunk();
+        handle = bq::log_global_vars::get().console_msg_buffer_.read_chunk();
         assert(bq::enum_buffer_result_code::success == handle.result);
         msg = (console_msg_head*)handle.data_addr;
     } else {
@@ -58,7 +57,7 @@ static void tsfn_console_call_js(napi_env env, void* param)
         napi_call_function(env, undefined, js_cb, 4, argv, NULL);
     }
     if (from_buffer) {
-        console_msg_buffer_.return_read_chunk(handle);
+        bq::log_global_vars::get().console_msg_buffer_.return_read_chunk(handle);
     }
 }
 
@@ -66,7 +65,7 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
 {
     (void)length;
     uint32_t size = static_cast<uint32_t>(sizeof(console_msg_head)) + static_cast<uint32_t>(length);
-    auto handle = console_msg_buffer_.alloc_write_chunk(size);
+    auto handle = bq::log_global_vars::get().console_msg_buffer_.alloc_write_chunk(size);
     console_msg_head* msg = nullptr;
     bool success = bq::enum_buffer_result_code::success != handle.result;
     if (success) {
@@ -83,8 +82,8 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
             memcpy(msg + 1, content, static_cast<size_t>(length));
         }
     }
-    console_msg_buffer_.commit_write_chunk(handle);
-    bq::platform::napi_call_native_func_in_js_thread(&tsfn_console_call_js, success ? (void*)&console_msg_buffer_ : (void*)msg);
+    bq::log_global_vars::get().console_msg_buffer_.commit_write_chunk(handle);
+    bq::platform::napi_call_native_func_in_js_thread(&tsfn_console_call_js, success ? (void*)&bq::log_global_vars::get().console_msg_buffer_ : (void*)msg);
 }
 
 // ----------------------------- exported N-API functions -----------------------------
@@ -836,7 +835,7 @@ BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_typeof(env, argv[0], &t));
     if (t == napi_function) {
         BQ_NAPI_CALL(env, nullptr, napi_create_reference(env, argv[0], 1, &console_callback_));
-        console_msg_buffer_.set_thread_check_enable(false);
+        bq::log_global_vars::get().console_msg_buffer_.set_thread_check_enable(false);
         bq::log::register_console_callback(on_console_callback);
     } else {
         bq::log::unregister_console_callback(on_console_callback);

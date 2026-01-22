@@ -21,6 +21,7 @@
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"
+#include "bq_log/types/buffer/miso_ring_buffer.h"
 
 namespace bq {
 
@@ -49,9 +50,12 @@ namespace bq {
         jmethodID mid_native_console_callback_ = nullptr;
         jmethodID mid_native_console_buffer_fetch_and_remove_callback_ = nullptr;
 #endif
-        appender_console::console_static_misc* console_static_misc_ = new appender_console::console_static_misc();
-        appender_decoder_manager* appender_decoder_manager_inst_ = new appender_decoder_manager();
-        log_manager* log_manager_inst_ = new log_manager();
+#if defined(BQ_NAPI)
+        bq::miso_ring_buffer console_msg_buffer_{ bq::log_buffer_config{ "napi_console_cb_msg", bq::array<bq::string>{}, 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 } };
+#endif
+        appender_console::console_static_misc console_static_misc_;
+        appender_decoder_manager appender_decoder_manager_inst_;
+        log_manager log_manager_inst_;
     private:
 #if defined(BQ_LOG_BUFFER_DEBUG)
         bq::platform::atomic<int32_t> thread_check_enable_counter_ = 0;
