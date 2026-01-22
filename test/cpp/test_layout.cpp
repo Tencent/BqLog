@@ -76,11 +76,11 @@ namespace bq {
 
             // Add random cases
             std::mt19937 rng(12345);
-            for (int i = 0; i < 1000; ++i) {
-                int len = rng() % 512;
+            for (int32_t i = 0; i < 1000; ++i) {
+                int32_t len = rng() % 512;
                 std::string s;
                 s.reserve((size_t)len);
-                for (int j = 0; j < len; ++j) {
+                for (int32_t j = 0; j < len; ++j) {
                     char c = (char)('a' + (rng() % 26));
                     if (rng() % 20 == 0) c = (rng() % 2) ? '{' : '}';
                     s += c;
@@ -176,15 +176,15 @@ namespace bq {
 
             // Random cases
             std::mt19937 rng(54321);
-            for (int i = 0; i < 1000; ++i) {
-                int len = rng() % 256;
+            for (int32_t i = 0; i < 1000; ++i) {
+                int32_t len = rng() % 256;
                 std::u16string s;
                 s.reserve((size_t)len);
-                for (int j = 0; j < len; ++j) {
-                    int r = rng() % 100;
+                for (int32_t j = 0; j < len; ++j) {
+                    int32_t r = static_cast<int32_t>(rng() % 100);
                     if (r < 80) s += (char16_t)('a' + (rng() % 26));
                     else if (r < 90) s += (rng() % 2) ? u'{' : u'}';
-                    else s += 0x4E00 + (rng() % 100); // CJK char
+                    else s += static_cast<char16_t>(0x4E00 + (rng() % 100)); // CJK char
                 }
                 cases.push_back({s, "Random " + std::to_string(i)});
             }
@@ -239,9 +239,9 @@ namespace bq {
             test_result result;
             
             // Construct a fake log entry
-            // Format: "Benchmark throughput test with some args: int={}, str={}"
+            // Format: "Benchmark throughput test with some args: int32_t={}, str={}"
             // Args: 12345678, "simple_string"
-            std::string fmt = "Benchmark throughput test with some args: int={}, str={}";
+            std::string fmt = "Benchmark throughput test with some args: int32_t={}, str={}";
             uint32_t fmt_len = (uint32_t)fmt.size(); // No null terminator needed if len is correct
             
             // Layout logic expects format string at data + sizeof(head)
@@ -336,5 +336,5 @@ namespace bq {
             
             return result;
         }
-        }
-        }
+    }
+}
