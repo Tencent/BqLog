@@ -137,7 +137,34 @@ namespace bq {
 
         void reverse(uint32_t begin_cursor, uint32_t end_cursor);
         //------------------------- insert functions end ----------------------//
+
+#ifdef BQ_UNIT_TEST
+    public:
+        static uint32_t test_find_brace_and_copy_sw(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_convert_u16_sw(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+        
+        // Throughput test wrappers
+        void test_python_style_format_content_legacy(const bq::log_entry_handle& log_entry);
+        void test_python_style_format_content_sw(const bq::log_entry_handle& log_entry);
+        void test_python_style_format_content_simd(const bq::log_entry_handle& log_entry);
+
+#if defined(BQ_X86)
+        static uint32_t test_find_brace_and_copy_avx2(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_copy_sse(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_convert_u16_avx2(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+        static uint32_t test_find_brace_and_convert_u16_sse(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+#elif defined(BQ_ARM_NEON)
+        static uint32_t test_find_brace_and_copy_neon(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_convert_u16_neon(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+#endif
+#endif
+
     private:
+        // Legacy implementation for benchmark comparison
+        void python_style_format_content_legacy(const bq::log_entry_handle& log_entry);
+        void python_style_format_content_utf8_legacy(const bq::log_entry_handle& log_entry);
+        void python_style_format_content_utf16_legacy(const bq::log_entry_handle& log_entry);
+
         time_zone* time_zone_ptr_;
         const bq::array<bq::string>* categories_name_array_ptr_;
         // todo: use bq::string instead, but need optimize performance
