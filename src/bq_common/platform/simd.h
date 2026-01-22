@@ -48,7 +48,7 @@ namespace bq {
 #else
         false;
 #endif
-        ;
+        
 
     // Helpers for NEON
 #if defined(BQ_ARM_NEON)

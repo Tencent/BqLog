@@ -127,6 +127,10 @@ namespace bq {
                 uint32_t ret_neon = bq::layout::test_find_brace_and_copy_neon(tc.input.c_str(), (uint32_t)tc.input.size(), dst_simd, brace_simd);
                 bool match_neon = (ret_sw == ret_neon) && (brace_sw == brace_simd) && (memcmp(dst_sw, dst_simd, ret_sw) == 0);
                 result.add_result(match_neon, "NEON vs SW: %s (Len: %zu)", tc.desc.c_str(), tc.input.size());
+#else
+                (void)brace_sw;
+                (void)brace_simd;
+                (void)ret_sw;
 #endif
             }
             return result;
@@ -230,6 +234,12 @@ namespace bq {
                 uint32_t ret_neon = bq::layout::test_find_brace_and_convert_u16_neon(tc.input.c_str(), (uint32_t)tc.input.size(), dst_simd, brace_simd, non_ascii_simd);
                 bool match_neon = (ret_sw == ret_neon) && (brace_sw == brace_simd) && (non_ascii_sw == non_ascii_simd) && (memcmp(dst_sw, dst_simd, ret_sw) == 0);
                 result.add_result(match_neon, "NEON U16 vs SW: %s (Len: %zu)", tc.desc.c_str(), tc.input.size());
+#else
+                (void)brace_sw;
+                (void)non_ascii_sw;
+                (void)brace_simd;
+                (void)non_ascii_simd;
+                (void)ret_sw;
 #endif
             }
             return result;
