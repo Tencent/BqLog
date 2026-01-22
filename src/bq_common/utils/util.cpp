@@ -26,35 +26,7 @@
 #include <unistd.h>
 #endif
 
-#if defined(BQ_ARM_NEON)
 
-bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v) {
-#if defined(BQ_ARM_64)
-    return vmaxvq_u16(v);
-#else
-    uint16x4_t hi = vget_high_u16(v);
-    uint16x4_t lo = vget_low_u16(v);
-    uint16x4_t m = vmax_u16(hi, lo);
-    m = vpmax_u16(m, m);
-    m = vpmax_u16(m, m);
-    return vget_lane_u16(m, 0);
-#endif
-}
-
-bq_forceinline uint8_t bq_vmaxvq_u8(uint8x16_t v) {
-#if defined(BQ_ARM_64)
-    return vmaxvq_u8(v);
-#else
-    uint8x8_t hi = vget_high_u8(v);
-    uint8x8_t lo = vget_low_u8(v);
-    uint8x8_t m = vmax_u8(hi, lo);
-    m = vpmax_u8(m, m);
-    m = vpmax_u8(m, m);
-    m = vpmax_u8(m, m);
-    return vget_lane_u8(m, 0);
-#endif
-}
-#endif
 
 namespace bq {
     // Castagnoli CRC32C Polynomial: 0x1EDC6F41 (Reversed: 0x82F63B78)
@@ -92,23 +64,7 @@ namespace bq {
         0xF36E6F75, 0x0105EC76, 0x12551F82, 0xE03E9C81, 0x34F4F86A, 0xC69F7B69, 0xD5CF889D, 0x27A40B9E,
         0x79B737BA, 0x8BDCB4B9, 0x988C474D, 0x6AE7C44E, 0xBE2DA0A5, 0x4C4623A6, 0x5F16D052, 0xAD7D5351
     };
-    static bool _bq_crc32_supported_ = common_global_vars::get().crc32_supported_;
 
-#if defined(BQ_X86)
-    static bool _bq_avx2_supported_ = common_global_vars::get().avx2_support_;
-#endif
-
-    // Internal flag to check if SIMD UTF is supported on current platform
-    static bool _bq_utf_simd_supported_ = []() {
-#if defined(BQ_X86)
-        // Assume basic SSE is available on modern x86 (including Android x86/Atom)
-        return true; 
-#elif defined(BQ_ARM_NEON)
-        return true; // Assume NEON on ARMv8/M1
-#else
-        return false;
-#endif
-    }();
 
     // ---------------- SW Fallbacks ----------------
     bq_forceinline uint32_t _crc32_sw_u8(uint32_t crc, uint8_t v)

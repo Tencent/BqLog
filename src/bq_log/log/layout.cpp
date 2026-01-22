@@ -16,64 +16,12 @@
 #include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
 
-#if defined(BQ_X86)
-#ifdef BQ_MSVC
-#include <intrin.h>
-#else
-#include <immintrin.h>
-#endif
-#elif defined(BQ_ARM_NEON)
-#include <arm_neon.h>
-#endif
-
-// Helpers for NEON
-#if defined(BQ_ARM_NEON)
-bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v) {
-#if defined(BQ_ARM_64)
-    return vmaxvq_u16(v);
-#else
-    uint16x4_t hi = vget_high_u16(v);
-    uint16x4_t lo = vget_low_u16(v);
-    uint16x4_t m = vmax_u16(hi, lo);
-    m = vpmax_u16(m, m);
-    m = vpmax_u16(m, m);
-    return vget_lane_u16(m, 0);
-#endif
-}
-
-bq_forceinline uint8_t bq_vmaxvq_u8(uint8x16_t v) {
-#if defined(BQ_ARM_64)
-    return vmaxvq_u8(v);
-#else
-    uint8x8_t hi = vget_high_u8(v);
-    uint8x8_t lo = vget_low_u8(v);
-    uint8x8_t m = vmax_u8(hi, lo);
-    m = vpmax_u8(m, m);
-    m = vpmax_u8(m, m);
-    m = vpmax_u8(m, m);
-    return vget_lane_u8(m, 0);
-#endif
-}
-#endif
 
 namespace bq {
 
     // =================================================================================================
     // Internal SIMD Helpers for Layout
     // =================================================================================================
-
-#if defined(BQ_X86)
-    static bool _bq_avx2_supported_ = common_global_vars::get().avx2_support_;
-#endif
-    static bool _bq_utf_simd_supported_ = []() {
-#if defined(BQ_X86)
-        return true; 
-#elif defined(BQ_ARM_NEON)
-        return true;
-#else
-        return false;
-#endif
-    }();
 
     // -------------------------------------------------------------------------------------------------
     // find_brace_and_copy (UTF-8 / ASCII)
@@ -124,7 +72,7 @@ namespace bq {
                 _BitScanForward(&index, static_cast<unsigned long>(mask));
                 idx = static_cast<uint32_t>(index);
 #else
-                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<unsigned int>(mask)));
+                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<uint32_t>(mask)));
 #endif
                 // Copy up to idx
                 memcpy(dst, src, idx);
@@ -162,7 +110,7 @@ namespace bq {
                 _BitScanForward(&index, static_cast<unsigned long>(mask));
                 idx = static_cast<uint32_t>(index);
 #else
-                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<unsigned int>(mask)));
+                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<uint32_t>(mask)));
 #endif
                 memcpy(dst, src, idx);
                 found_brace = true;
@@ -803,183 +751,97 @@ namespace bq {
                         bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
 
                         switch (type_info) {
-
                         case bq::log_arg_type_enum::unsupported_type:
-
                             bq::util::log_device_console(bq::log_level::warning, "non_primitivi_type is not supported yet");
-
                             break;
-
                         case bq::log_arg_type_enum::null_type:
-
                             assert(sizeof(void*) >= 4);
-
                             insert_str_utf8("null", static_cast<uint32_t>(sizeof("null") - 1));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::pointer_type:
-
                             assert(sizeof(void*) >= 4);
-
                             {
-
                                 const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
-
                                 insert_pointer(arg_data_ptr);
-
                                 args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); // use 64bit pointer for serialize
-
                             }
-
                             break;
-
                         case bq::log_arg_type_enum::bool_type:
-
                             insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::char_type:
-
                             insert_char(*reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 2));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::char16_type:
-
                             insert_char16(*reinterpret_cast<const char16_t*>(args_data_ptr + args_data_cursor + 2));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::char32_type:
-
                             insert_char32(*reinterpret_cast<const char32_t*>(args_data_ptr + args_data_cursor + 4));
-
                             args_data_cursor += 8;
-
                             break;
-
                         case bq::log_arg_type_enum::int8_type:
-
                             insert_integral_signed(*reinterpret_cast<const int8_t*>(args_data_ptr + args_data_cursor + 2));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::uint8_type:
-
                             insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args_data_ptr + args_data_cursor + 2));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::int16_type:
-
                             insert_integral_signed(*reinterpret_cast<const int16_t*>(args_data_ptr + args_data_cursor + 2));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::uint16_type:
-
                             insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args_data_ptr + args_data_cursor + 2));
-
                             args_data_cursor += 4;
-
                             break;
-
                         case bq::log_arg_type_enum::int32_type:
-
                             insert_integral_signed(*reinterpret_cast<const int32_t*>(args_data_ptr + args_data_cursor + 4));
-
                             args_data_cursor += 8;
-
                             break;
-
                         case bq::log_arg_type_enum::uint32_type:
-
                             insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4));
-
                             args_data_cursor += 8;
-
                             break;
-
                         case bq::log_arg_type_enum::int64_type:
-
                             insert_integral_signed(*reinterpret_cast<const int64_t*>(args_data_ptr + args_data_cursor + 4));
-
                             args_data_cursor += 12;
-
                             break;
-
                         case bq::log_arg_type_enum::uint64_type:
-
                             insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
-
                             args_data_cursor += 12;
-
                             break;
-
                         case bq::log_arg_type_enum::float_type:
-
                             insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
-
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
-
                             break;
-
                         case bq::log_arg_type_enum::double_type:
-
                             insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
-
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
-
                             break;
-
-                        case bq::log_arg_type_enum::string_utf8_type: {
-
+                        case bq::log_arg_type_enum::string_utf8_type: 
+                        {
                             const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-
                             const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
-
                             uint32_t str_len = *len_ptr;
-
                             insert_str_utf8(str, str_len);
-
                             args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-
-                        } break;
-
+                        }
+                        break;
                         case bq::log_arg_type_enum::string_utf16_type: {
-
                             const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-
                             const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
-
                             uint32_t str_len = *len_ptr;
-
                             insert_str_utf16(str, str_len);
-
                             args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-
-                        } break;
-
+                        } 
+                        break;
                         default:
-
                             break;
-
                         }
 
                         assert(args_data_cursor <= args_data_len);
@@ -2068,15 +1930,10 @@ namespace bq {
         bool old_avx = _bq_avx2_supported_;
         _bq_avx2_supported_ = false;
 #endif
-        bool old_utf = _bq_utf_simd_supported_;
-        _bq_utf_simd_supported_ = false;
-        
         python_style_format_content(log_entry);
-        
 #if defined(BQ_X86)
         _bq_avx2_supported_ = old_avx;
 #endif
-        _bq_utf_simd_supported_ = old_utf;
     }
 
     void layout::test_python_style_format_content_simd(const bq::log_entry_handle& log_entry) {

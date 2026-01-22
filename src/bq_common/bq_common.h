@@ -26,25 +26,7 @@
 #define BQ_SRC
 
 #include "bq_common/bq_common_public_include.h"
-
-#if defined(BQ_X86)
-    #ifdef BQ_MSVC
-        #include <intrin.h>
-    #else
-        #include <immintrin.h>
-    #endif
-#elif defined(BQ_ARM)
-    #if defined(BQ_MSVC)
-        #include <intrin.h>
-        #include <arm64_neon.h>
-    #else
-        #include <arm_acle.h>
-    #endif
-    #if defined(BQ_ARM_NEON)
-        #include <arm_neon.h>
-    #endif
-#endif
-
+#include "bq_common/platform/simd.h"
 #include "bq_common/platform/atomic/atomic.h"
 #include "bq_common/utils/utility_types.h"
 #include "bq_common/platform/no_lib_cpp_impl.h"
