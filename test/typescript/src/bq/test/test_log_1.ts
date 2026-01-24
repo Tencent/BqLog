@@ -24,8 +24,10 @@ export class test_log_1 extends test_base {
         const log_inst_sync = bq.log.create_log("sync_log", `appenders_config.ConsoleAppender.type=console
                         appenders_config.ConsoleAppender.time_zone=localtime
                         appenders_config.ConsoleAppender.levels=[info, info, error,info]
-                    
                         log.thread_mode=sync`);
+        const log_inst_async = bq.log.create_log("async_log", `appenders_config.ConsoleAppender.type=console
+                        appenders_config.ConsoleAppender.time_zone=localtime
+                        appenders_config.ConsoleAppender.levels=[error,info]`);
 
         const empty_str = null;
         const full_str = "123";
@@ -42,9 +44,10 @@ export class test_log_1 extends test_base {
         log_inst_sync.info("Float value result: {}", 62.15645);
         result.add_result(test_manager.get_console_output().includes(standard_output_1), "Float format test");
 
-        const standard_output = "这些是结果，abc, abcde, -32, FALSE, TRUE, null, 3, 3823823, -32354, 测试字符串完整的， 结果完成了";
-        
-        log_inst_sync.info("这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了", 
+        var type_str = "SyncTest:";
+        const standard_output_base = "这些是结果，abc, abcde, -32, FALSE, TRUE, null, 3, 3823823, -32354, 测试字符串完整的， 结果完成了";
+        var standard_output = type_str + standard_output_base;
+        log_inst_sync.info(type_str + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
             "abc", "abcde", -32, false, true, null, 3, 3823823, -32354, "测试字符串完整的");
         result.check_log_output_end_with(standard_output, "basic param test 2");
 
@@ -54,22 +57,25 @@ export class test_log_1 extends test_base {
             appender += "a";
         }
         while(format_prefix.length <= 1024 * 1024 + 1024 + 4) {
-            log_inst_sync.info(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了", 
+            log_inst_sync.info(format_prefix + type_str + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
                 "abc", "abcde", -32, false, true, null, 3, 3823823, -32354, "测试字符串完整的");
             result.check_log_output_end_with(format_prefix + standard_output, "basic param test 2");
             format_prefix += appender;
         }
 
-        const log_inst_async = bq.log.create_log("async_log", `appenders_config.ConsoleAppender.type=console
-                        appenders_config.ConsoleAppender.time_zone=localtime
-                        appenders_config.ConsoleAppender.levels=[error,info]
-                    
-                        `);
+        type_str = "Async Test:";
+        standard_output = type_str + standard_output_base;
+
         format_prefix = "a";
+        var last_output = test_manager.get_console_output();
         while(format_prefix.length <= 1024 * 1024 + 1024 + 4) {
-            log_inst_async.info(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了", 
+            log_inst_async.info(format_prefix + type_str + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
                 "abc", "abcde", -32, false, true, null, 3, 3823823, -32354, "测试字符串完整的");
             log_inst_async.force_flush();
+            while(last_output == test_manager.get_console_output()){
+                await new Promise(resolve => setImmediate(resolve));
+            }
+            last_output = test_manager.get_console_output();
             result.check_log_output_end_with(format_prefix + standard_output, "basic param test");
             format_prefix += appender;
         }

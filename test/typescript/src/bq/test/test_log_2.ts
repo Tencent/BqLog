@@ -44,11 +44,12 @@ export class test_log_2 extends test_base {
         const libPath = process.env.BQLOG_LIB_PATH || require.resolve("../../../../../wrapper/typescript/dist/cjs/index.js");
 
         // Sync Log Stress
-        await this.run_worker_pool("sync_log", 100, 5, 128, libPath);
+        await this.run_worker_pool("sync_log", 1024, 5, 128, libPath);
         console.log("Sync Test Finished");
 
         // Async Log Stress
-        await this.run_worker_pool("async_log", 32, 5, 2048, libPath);
+        console.log("Starting Async Test (NodeJS Workers)...");
+        await this.run_worker_pool("async_log", 128, 5, 2048, libPath);
         console.log("Async Test Finished");
 
         this.log_inst_async.force_flush();
