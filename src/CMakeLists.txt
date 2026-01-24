@@ -13,6 +13,17 @@ endif()
 
 OPTION(JAVA_SUPPORT "Support Java" OFF)
 OPTION(NODE_API_SUPPORT "Support Node-API(NodeJs)" OFF)
+OPTION(BQ_ENABLE_ASAN "Enable Address Sanitizer" OFF)
+
+if(BQ_ENABLE_ASAN)
+    if(MSVC)
+        add_compile_options(/fsanitize=address)
+    else()
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        link_libraries(-fsanitize=address)
+    endif()
+    add_compile_definitions(BQ_ASAN_ENABLED)
+endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt)
