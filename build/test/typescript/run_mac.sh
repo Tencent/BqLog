@@ -8,6 +8,11 @@ ARTIFACTS_DIR="$PROJECT_ROOT/artifacts"
 
 CONFIG=${1:-RelWithDebInfo}
 
+echo "===== Installing Node API Headers (Project Root) ====="
+pushd "$PROJECT_ROOT" > /dev/null
+npm install node-api-headers --no-save
+popd > /dev/null
+
 echo "===== Building BqLog Dynamic Library (macOS) ====="
 pushd "$BUILD_LIB_DIR" > /dev/null
 # dont_execute_this.sh build [java] [node] [static_lib|dynamic_lib] [framework|dylib|a]

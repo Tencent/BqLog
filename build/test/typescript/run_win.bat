@@ -10,6 +10,11 @@ set "ARTIFACTS_DIR=%PROJECT_ROOT%\artifacts"
 set "CONFIG=%~1"
 if "%CONFIG%"=="" set "CONFIG=RelWithDebInfo"
 
+echo ===== Installing Node API Headers (Project Root) =====
+pushd "%PROJECT_ROOT%"
+call npm install node-api-headers --no-save
+popd
+
 echo ===== Building BqLog Dynamic Library (Windows) =====
 pushd "%BUILD_LIB_DIR%"
 call dont_execute_this.bat build native msvc OFF ON dynamic_lib

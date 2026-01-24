@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node run_all_tests.js",
     "test:cjs": "ts-node src/bq/test/test_main_cjs.ts",
-    "test:esm": "ts-node --esm src/bq/test/test_main_esm.ts"
+    "test:esm": "node --loader ts-node/esm src/bq/test/test_main_esm.ts"
   },
   "devDependencies": {
     "ts-node": "^10.9.1",

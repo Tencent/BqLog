@@ -12,7 +12,7 @@
     "types": ["node"]
   },
   "ts-node": {
-    "experimentalSpecifierResolution": "explicit"
+    "experimentalSpecifierResolution": "node"
   },
   "include": ["src/**/*"]
 }

@@ -1979,7 +1979,6 @@ jobs:
       - name: Run Node Tests
         if: runner.os != 'Windows'
         run: |
-          npm i node-api-headers    
           chmod +x ${{ matrix.script_path }}
           ./${{ matrix.script_path }}
 
@@ -1987,7 +1986,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          npm i node-api-headers    
           ${{ matrix.script_path }}
 
 

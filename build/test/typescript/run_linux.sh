@@ -8,6 +8,11 @@ ARTIFACTS_DIR="$PROJECT_ROOT/artifacts"
 
 CONFIG=${1:-RelWithDebInfo}
 
+echo "===== Installing Node API Headers (Project Root) ====="
+pushd "$PROJECT_ROOT" > /dev/null
+npm install node-api-headers --no-save
+popd > /dev/null
+
 echo "===== Building BqLog Dynamic Library (Linux) ====="
 pushd "$BUILD_LIB_DIR" > /dev/null
 # Node needs native module built with ON flag for node support
@@ -19,7 +24,7 @@ pushd "$TEST_SRC_DIR" > /dev/null
 npm install
 popd > /dev/null
 
-echo "===== Building TypeScript Wrapper (for tests) ====="
+echo "===== Building TypeScript Wrapper ====="
 pushd "$PROJECT_ROOT/wrapper/typescript" > /dev/null
 npm install
 npm run build
