@@ -98,8 +98,9 @@ namespace bq {
             if (T::global_vars_ptr_) {
                 return *T::global_vars_ptr_;
             }
-            if (&T::global_vars_ptr_ == initializer_mark_
-                && initializer_mark_ != nullptr) {
+            //For recursive calling of `get()` or TLS address reuse between different threads.
+            if (&T::global_vars_ptr_ == BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).load_acquire()
+                && BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).load_acquire() != nullptr) {
                 T::global_vars_ptr_ = T::global_vars_buffer_;
                 return *T::global_vars_buffer_;
             }
@@ -108,14 +109,13 @@ namespace bq {
                 if (atomic_status.load_acquire() == 0) {
                     int32_t expected = 0;
                     if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-                        initializer_mark_ = &T::global_vars_ptr_;
+                        BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).store_release(&T::global_vars_ptr_);
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
                         T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(alignof(T), sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
                         new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
                         get_global_var_destructor().register_destructible_var(T::global_vars_ptr_);
                         atomic_status.store_release(2);
-                        initializer_mark_ = nullptr;
                         return *T::global_vars_ptr_;
                     }
                 }
