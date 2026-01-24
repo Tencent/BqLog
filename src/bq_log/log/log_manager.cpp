@@ -28,7 +28,7 @@ namespace bq {
 
     log_manager& log_manager::instance()
     {
-        return *log_global_vars::get().log_manager_inst_;
+        return log_global_vars::get().log_manager_inst_;
     }
 
     log_manager::~log_manager()

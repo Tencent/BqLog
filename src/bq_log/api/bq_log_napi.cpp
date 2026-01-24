@@ -34,10 +34,10 @@ struct console_msg_head {
 void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
 {
     console_msg_head* msg = nullptr;
-    bool from_buffer = (param == (void*)bq::log_global_vars::get().console_msg_buffer_);
+    bool from_buffer = (param == static_cast<void*>(&bq::log_global_vars::get().console_msg_buffer_));
     bq::log_buffer_read_handle handle;
     if (from_buffer) {
-        handle = bq::log_global_vars::get().console_msg_buffer_->read_chunk();
+        handle = bq::log_global_vars::get().console_msg_buffer_.read_chunk();
         assert(bq::enum_buffer_result_code::success == handle.result);
         msg = (console_msg_head*)handle.data_addr;
     } else {
@@ -55,7 +55,7 @@ void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
         napi_call_function(env, undefined, js_cb, 4, argv, NULL);
     }
     if (from_buffer) {
-        bq::log_global_vars::get().console_msg_buffer_->return_read_chunk(handle);
+        bq::log_global_vars::get().console_msg_buffer_.return_read_chunk(handle);
     }
     else {
         free(msg);
@@ -66,7 +66,7 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
 {
     (void)length;
     uint32_t size = static_cast<uint32_t>(sizeof(console_msg_head)) + static_cast<uint32_t>(length);
-    auto handle = bq::log_global_vars::get().console_msg_buffer_->alloc_write_chunk(size);
+    auto handle = bq::log_global_vars::get().console_msg_buffer_.alloc_write_chunk(size);
     console_msg_head* msg = nullptr;
     bool success = (bq::enum_buffer_result_code::success == handle.result);
     if (success) {
@@ -83,8 +83,8 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
             memcpy(msg + 1, content, static_cast<size_t>(length));
         }
     }
-    bq::log_global_vars::get().console_msg_buffer_->commit_write_chunk(handle);
-    bq::log_global_vars::get().console_callback_dispatcher_.invoke(success ? (void*)bq::log_global_vars::get().console_msg_buffer_ : (void*)msg);
+    bq::log_global_vars::get().console_msg_buffer_.commit_write_chunk(handle);
+    bq::log_global_vars::get().console_callback_dispatcher_.invoke(success ? static_cast<void*>(&bq::log_global_vars::get().console_msg_buffer_) : static_cast<void*>(msg));
 }
 
 // ----------------------------- exported N-API functions -----------------------------
@@ -833,7 +833,7 @@ BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
     BQ_NAPI_CALL(env, nullptr, napi_typeof(env, argv[0], &t));
     if (t == napi_function) {
         bq::log_global_vars::get().console_callback_dispatcher_.register_callback(env, argv[0]);
-        bq::log_global_vars::get().console_msg_buffer_->set_thread_check_enable(false);
+        bq::log_global_vars::get().console_msg_buffer_.set_thread_check_enable(false);
         bq::log::register_console_callback(on_console_callback);
     } else {
         bq::log_global_vars::get().console_callback_dispatcher_.unregister_callback(env);
