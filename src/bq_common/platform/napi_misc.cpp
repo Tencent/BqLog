@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
@@ -179,7 +179,7 @@ namespace bq {
                 if (entries_[i].env == env) {
                     napi_delete_reference(env, entries_[i].js_cb_ref);
                     napi_release_threadsafe_function(entries_[i].tsfn, napi_tsfn_release);
-                    entries_.erase(entries_.begin() + i);
+                    entries_.erase(entries_.begin() + static_cast<ptrdiff_t>(i));
                     return;
                 }
             }
