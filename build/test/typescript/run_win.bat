@@ -13,6 +13,8 @@ if "%CONFIG%"=="" set "CONFIG=RelWithDebInfo"
 echo ===== Installing Node API Headers (Project Root) =====
 pushd "%PROJECT_ROOT%"
 call npm install node-api-headers --no-save
+REM Windows needs node.lib for linking, which node-gyp install provides
+call npx node-gyp install
 popd
 
 echo ===== Building BqLog Dynamic Library (Windows) =====
