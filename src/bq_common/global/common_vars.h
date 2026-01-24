@@ -84,6 +84,7 @@ namespace bq {
         static BQ_TLS T* global_vars_ptr_;
         alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
+        static bq::platform::thread::thread_id initializer_thread_id_;
 
     protected:
         virtual ~global_vars_base()
@@ -94,11 +95,20 @@ namespace bq {
     public:
         static T& get()
         {
+            if (T::global_vars_ptr_) {
+                return *T::global_vars_ptr_;
+            }
+            if (bq::platform::thread::get_current_thread_id() == initializer_thread_id_
+                && initializer_thread_id_ != 0) {
+                T::global_vars_ptr_ = T::global_vars_buffer_;
+                return *T::global_vars_buffer_;
+            }
             if (!T::global_vars_ptr_) {
                 bq::platform::atomic<int32_t>& atomic_status = *reinterpret_cast<bq::platform::atomic<int32_t>*>(&T::global_vars_init_flag_);
                 if (atomic_status.load_acquire() == 0) {
                     int32_t expected = 0;
                     if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                        initializer_thread_id_ = bq::platform::thread::get_current_thread_id();
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
                         T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
@@ -113,9 +123,6 @@ namespace bq {
                 }
                 T::global_vars_ptr_ = T::global_vars_buffer_;
             }
-#ifndef NDEBUG
-            assert(T::global_vars_ptr_ == T::global_vars_buffer_);
-#endif
             return *T::global_vars_ptr_;
         }
     };
@@ -128,6 +135,9 @@ namespace bq {
 
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
+
+    template <typename T, typename Priority_Global_Var_Type>
+    bq::platform::thread::thread_id global_vars_base<T, Priority_Global_Var_Type>::initializer_thread_id_;
 
     struct common_global_vars : public global_vars_base<common_global_vars> {
 #if defined(BQ_WIN)
