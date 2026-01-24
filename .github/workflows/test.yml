@@ -1976,11 +1976,45 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run Node Tests
+      - name: Install GDB (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdb
+
+      - name: Run Node Tests (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           chmod +x ${{ matrix.script_path }}
+          
+          # Enable core dumps on Linux
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            ulimit -c unlimited
+            # Set core pattern to current directory
+            echo "core.%p" | sudo tee /proc/sys/kernel/core_pattern > /dev/null
+          fi
+
+          set +e
           ./${{ matrix.script_path }}
+          EXIT_CODE=$?
+          set -e
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "Test script failed with exit code $EXIT_CODE"
+            
+            if [ "$RUNNER_OS" == "Linux" ]; then
+              CORE_FILE=$(find . -maxdepth 2 -name "core.*" | head -n 1)
+              if [ -n "$CORE_FILE" ]; then
+                echo "Found core dump: $CORE_FILE"
+                NODE_BIN=$(which node)
+                echo "Generating stack trace..."
+                gdb -batch -ex "thread apply all bt full" -ex "quit" "$NODE_BIN" "$CORE_FILE"
+              else
+                echo "No core dump found."
+              fi
+            fi
+            exit $EXIT_CODE
+          fi
 
       - name: Run Node Tests (Windows)
         if: runner.os == 'Windows'
