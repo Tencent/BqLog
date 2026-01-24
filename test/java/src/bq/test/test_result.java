@@ -11,6 +11,7 @@ package bq.test;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class test_result {
 	private AtomicLong success_count = new AtomicLong(0);

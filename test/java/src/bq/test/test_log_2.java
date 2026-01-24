@@ -83,7 +83,6 @@ public class test_log_2 extends test_base{
 				Thread tr = new Thread(task);
 				tr.setDaemon(false);
 				tr.start();
-				System.out.println("New Thread Start:" + tr.getName());
 				live_thread.incrementAndGet();
 				left_thread.decrementAndGet();
 			}else {

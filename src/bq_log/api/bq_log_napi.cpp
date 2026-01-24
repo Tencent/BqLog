@@ -31,21 +31,19 @@ struct console_msg_head {
     uint32_t length;
 } BQ_PACK_END
 
-static napi_ref console_callback_; //{NULL} for zero initialization
-
-static void tsfn_console_call_js(napi_env env, void* param)
+void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
 {
     console_msg_head* msg = nullptr;
-    bool from_buffer = (param == (void*)&bq::log_global_vars::get().console_msg_buffer_);
+    bool from_buffer = (param == (void*)bq::log_global_vars::get().console_msg_buffer_);
     bq::log_buffer_read_handle handle;
     if (from_buffer) {
-        handle = bq::log_global_vars::get().console_msg_buffer_.read_chunk();
+        handle = bq::log_global_vars::get().console_msg_buffer_->read_chunk();
         assert(bq::enum_buffer_result_code::success == handle.result);
         msg = (console_msg_head*)handle.data_addr;
     } else {
         msg = (console_msg_head*)param;
     }
-    if (msg && env && console_callback_) {
+    if (msg && env && js_cb_ref) {
         napi_value argv[4];
         argv[0] = bq::make_napi_u64(env, msg->log_id);
         argv[1] = bq::make_napi_i32(env, msg->category_idx);
@@ -53,11 +51,14 @@ static void tsfn_console_call_js(napi_env env, void* param)
         napi_create_string_utf8(env, (char*)(msg + 1), msg->length, &argv[3]);
         napi_value undefined = bq::make_napi_undefined(env);
         napi_value js_cb = NULL;
-        napi_get_reference_value(env, console_callback_, &js_cb);
+        napi_get_reference_value(env, js_cb_ref, &js_cb);
         napi_call_function(env, undefined, js_cb, 4, argv, NULL);
     }
     if (from_buffer) {
-        bq::log_global_vars::get().console_msg_buffer_.return_read_chunk(handle);
+        bq::log_global_vars::get().console_msg_buffer_->return_read_chunk(handle);
+    }
+    else {
+        free(msg);
     }
 }
 
@@ -65,9 +66,9 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
 {
     (void)length;
     uint32_t size = static_cast<uint32_t>(sizeof(console_msg_head)) + static_cast<uint32_t>(length);
-    auto handle = bq::log_global_vars::get().console_msg_buffer_.alloc_write_chunk(size);
+    auto handle = bq::log_global_vars::get().console_msg_buffer_->alloc_write_chunk(size);
     console_msg_head* msg = nullptr;
-    bool success = bq::enum_buffer_result_code::success != handle.result;
+    bool success = (bq::enum_buffer_result_code::success == handle.result);
     if (success) {
         msg = (console_msg_head*)handle.data_addr;
     } else {
@@ -82,8 +83,8 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
             memcpy(msg + 1, content, static_cast<size_t>(length));
         }
     }
-    bq::log_global_vars::get().console_msg_buffer_.commit_write_chunk(handle);
-    bq::platform::napi_call_native_func_in_js_thread(&tsfn_console_call_js, success ? (void*)&bq::log_global_vars::get().console_msg_buffer_ : (void*)msg);
+    bq::log_global_vars::get().console_msg_buffer_->commit_write_chunk(handle);
+    bq::log_global_vars::get().console_callback_dispatcher_.invoke(success ? (void*)bq::log_global_vars::get().console_msg_buffer_ : (void*)msg);
 }
 
 // ----------------------------- exported N-API functions -----------------------------
@@ -322,14 +323,14 @@ struct arg_info {
 };
 
 #define RECORD_ARG_BY_SIZE_SEQ(SIZE_SEQ_NAME)                               \
-    arg_info_array[i].data_size_ = SIZE_SEQ_NAME.get_element().get_value(); \
-    arg_info_array[i].storage_size_ = SIZE_SEQ_NAME.get_element().get_aligned_value();
+    arg_info_ptr[i].data_size_ = SIZE_SEQ_NAME.get_element().get_value(); \
+    arg_info_ptr[i].storage_size_ = SIZE_SEQ_NAME.get_element().get_aligned_value();
 #define RECORD_STRING_ARG(STRING_VALUE)                                                                        \
     argv_ptr[i] = STRING_VALUE;                                                                                \
     arg_info_ptr[i].type_ = napi_string;                                                                       \
     arg_info_ptr[i].custom_formatter_.reset(env, STRING_VALUE);                                                \
-    arg_info_array[i].data_size_ = arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value(); \
-    arg_info_array[i].storage_size_ = bq::align_4(arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value());
+    arg_info_ptr[i].data_size_ = arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value(); \
+    arg_info_ptr[i].storage_size_ = bq::align_4(arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value());
 
 #define TRANS_AND_RECORD_STRING_ARG                                                          \
     napi_value string_cast_value;                                                            \
@@ -411,7 +412,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
     for (size_t i = (has_category_arg ? 2 : 1); i < argc; ++i) {
         napi_valuetype input_param_type = napi_undefined;
         BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_typeof(env, argv_ptr[i], &input_param_type));
-        arg_info_array[i].type_ = input_param_type;
+        arg_info_ptr[i].type_ = input_param_type;
         switch (input_param_type) {
         case napi_boolean: {
             auto arg_size_seq = bq::tools::make_size_seq<true>(true);
@@ -466,7 +467,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         default:
             break;
         }
-        args_size += arg_info_array[i].storage_size_;
+        args_size += arg_info_ptr[i].storage_size_;
     }
 
     auto handle = bq::api::__api_log_write_begin(log_js_inst->log_id_, static_cast<uint8_t>(log_level), category_index, static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type), static_cast<uint32_t>(format_data_size), nullptr, static_cast<uint32_t>(args_size));
@@ -479,7 +480,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
     for (size_t i = (has_category_arg ? 2 : 1); i < argc; ++i) {
         switch (arg_info_ptr[i].type_) {
         case napi_boolean: {
-            bool bool_value = bq::get_napi_bool(env, argv[i]);
+            bool bool_value = bq::get_napi_bool(env, argv_ptr[i]);
             bq::tools::_type_copy<true>(bool_value, log_args_addr, arg_info_ptr[i].data_size_);
         } break;
         case napi_number: {
@@ -827,17 +828,15 @@ BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
         napi_throw_type_error(env, NULL, "function count error");
         return NULL;
     }
-    if (console_callback_) {
-        napi_delete_reference(env, console_callback_);
-        console_callback_ = NULL;
-    }
+    
     napi_valuetype t = napi_undefined;
     BQ_NAPI_CALL(env, nullptr, napi_typeof(env, argv[0], &t));
     if (t == napi_function) {
-        BQ_NAPI_CALL(env, nullptr, napi_create_reference(env, argv[0], 1, &console_callback_));
-        bq::log_global_vars::get().console_msg_buffer_.set_thread_check_enable(false);
+        bq::log_global_vars::get().console_callback_dispatcher_.register_callback(env, argv[0]);
+        bq::log_global_vars::get().console_msg_buffer_->set_thread_check_enable(false);
         bq::log::register_console_callback(on_console_callback);
     } else {
+        bq::log_global_vars::get().console_callback_dispatcher_.unregister_callback(env);
         bq::log::unregister_console_callback(on_console_callback);
     }
     return bq::make_napi_undefined(env);

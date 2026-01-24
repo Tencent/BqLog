@@ -4,7 +4,7 @@
   "main": "dist/bq/test/test_main_cjs.js",
   "type": "commonjs",
   "scripts": {
-    "test": "npm run test:cjs && npm run test:esm",
+    "test": "node run_all_tests.js",
     "test:cjs": "ts-node src/bq/test/test_main_cjs.ts",
     "test:esm": "ts-node --esm src/bq/test/test_main_esm.ts"
   },

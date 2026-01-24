@@ -100,7 +100,7 @@ namespace bq {
                     int32_t expected = 0;
                     if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
-                        T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(8, sizeof(T)));
+                        T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
                         new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
                         get_global_var_destructor().register_destructible_var(T::global_vars_ptr_);
@@ -157,7 +157,16 @@ namespace bq {
 #endif
 #if defined(BQ_NAPI)
         bq::platform::mutex napi_init_mutex_;
-        bq::array<void (*)(napi_env env, napi_value exports)> napi_init_callbacks_inst_;
+        bq::platform::mutex napi_env_mutex_;
+        bq::array<void (*)(napi_env env, napi_value exports)> napi_init_native_callbacks_inst_;
+        bq::array<napi_property_descriptor> napi_registered_functions_;
+#if defined(BQ_NAPI)
+        napi_threadsafe_function napi_tsfn_native_ = nullptr;
+        napi_threadsafe_function napi_tsfn_js_ = nullptr;
+        napi_env napi_main_env_ = nullptr;
+        bool napi_is_initialized_ = false;
+        bq::array<bq::platform::napi_callback_dispatcher*> napi_dispatchers_;
+#endif
 #endif
 #if defined(BQ_ANDROID)
         jobject android_asset_manager_java_instance_ = nullptr;

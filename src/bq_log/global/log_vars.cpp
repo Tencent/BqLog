@@ -15,6 +15,11 @@
 //
 #include "bq_log/global/log_vars.h"
 #include "bq_common/bq_common.h"
+
+#if defined(BQ_NAPI)
+extern void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param);
+#endif
+
 namespace bq {
     log_global_vars* log_global_var_default_initer_ = &log_global_vars::get();
 
@@ -51,7 +56,7 @@ namespace bq {
         console_static_misc_ = nullptr;*/
         bool force_flush_success = false;
         for (uint32_t i = 0; i < 128; ++i) {
-            if (log_manager_inst_.try_flush_all()) {
+            if (log_manager_inst_->try_flush_all()) {
                 force_flush_success = true;
                 break;
             }
@@ -63,6 +68,9 @@ namespace bq {
     }
 
     log_global_vars::log_global_vars()
+#if defined(BQ_NAPI)
+        : console_callback_dispatcher_(console_callback_handler)
+#endif
     {
 #if defined(BQ_JAVA)
         platform::jni_onload_register register_(&log_global_vars::jni_onload_callback);

@@ -1854,8 +1854,16 @@ jobs:
           chmod +x *.sh
           ./run_mac.sh
 
-  java_wrapper_ubuntu_x86_64:
-    runs-on: ubuntu-latest
+  java_wrapper_ubuntu:
+    runs-on: ${{ matrix.runner.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - label: "x86_64"
+            runs_on: ubuntu-latest
+          - label: "arm64"
+            runs_on: ubuntu-24.04-arm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1897,24 +1905,6 @@ jobs:
             cd build/test/java  
             chmod +x *.sh
             ./run_unix.sh
-
-  java_wrapper_ubuntu_arm64:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Build for Linux
-        run: |
-          cd build/test/java  
-          chmod +x *.sh
-          ./run_linux.sh
 
   csharp_wrapper_tests:
     strategy:

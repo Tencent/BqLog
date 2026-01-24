@@ -151,6 +151,27 @@ namespace bq {
 
         bool napi_call_js_func_in_js_thread(napi_ref js_func_ref, napi_ref this_context_ref, size_t argc, napi_ref* argv_ref);
 
+        struct napi_callback_entry {
+            napi_env env;
+            napi_ref js_cb_ref;
+            napi_threadsafe_function tsfn;
+        };
+
+        using napi_call_handler = void (*)(napi_env env, napi_ref js_cb_ref, void* param);
+
+        class napi_callback_dispatcher {
+        private:
+            bq::array<napi_callback_entry> entries_;
+            napi_call_handler handler_;
+
+        public:
+            napi_callback_dispatcher(napi_call_handler handler);
+            void register_callback(napi_env env, napi_value func);
+            void unregister_callback(napi_env env);
+            void invoke(void* data);
+            void cleanup_env(napi_env env);
+        };
+
         struct napi_init_function_register {
             napi_init_function_register(void (*init_callback)(napi_env env, napi_value exports));
         };

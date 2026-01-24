@@ -9,13 +9,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-import { test_manager } from "./test_manager.js";
-import { test_log_1 } from "./test_log_1.js";
-import { test_log_2 } from "./test_log_2.js";
-import { set_bq_lib, bq } from "./bq_lib.js";
+import { test_manager } from "./test_manager.ts";
+import { test_log_1 } from "./test_log_1.ts";
+import { test_log_2 } from "./test_log_2.ts";
+import { set_bq_lib, bq } from "./bq_lib.ts";
 import { createRequire } from 'module';
 
-// Polyfill require for some environments if needed, but we use import here.
 const require = createRequire(import.meta.url);
 
 async function run_tests() {
@@ -47,12 +46,10 @@ async function run_tests() {
     }
 }
 
-// ESM Entry Point
 async function main() {
     console.log("Running TypeScript Wrapper Tests (ESM Mode)...");
     try {
         // Path to ESM build
-        // Note: We need to use full extension .js for ESM imports in Node
         const libPath = "../../../../../wrapper/typescript/dist/esm/index.js";
         const mod = await import(libPath);
         set_bq_lib(mod.bq);

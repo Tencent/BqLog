@@ -6,12 +6,12 @@ BUILD_LIB_DIR="$PROJECT_ROOT/build/lib/mac"
 TEST_SRC_DIR="$PROJECT_ROOT/test/typescript"
 ARTIFACTS_DIR="$PROJECT_ROOT/artifacts"
 
-CONFIG=${1:-Debug}
+CONFIG=${1:-RelWithDebInfo}
 
 echo "===== Building BqLog Dynamic Library (macOS) ====="
 pushd "$BUILD_LIB_DIR" > /dev/null
 # dont_execute_this.sh build [java] [node] [static_lib|dynamic_lib] [framework|dylib|a]
-#./dont_execute_this.sh build OFF ON dynamic_lib dylib
+./dont_execute_this.sh build OFF ON dynamic_lib dylib
 popd > /dev/null
 
 echo "===== Installing TypeScript Test Dependencies ====="

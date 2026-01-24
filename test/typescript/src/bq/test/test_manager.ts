@@ -9,9 +9,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-import { bq } from "./bq_lib";
-import { test_base } from "./test_base";
-import { test_result } from "./test_result";
+import { bq } from "./bq_lib.ts";
+import { test_base } from "./test_base.ts";
+import { test_result } from "./test_result.ts";
 
 export class test_manager {
     private static test_list: test_base[] = [];

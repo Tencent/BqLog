@@ -9,11 +9,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-import { test_base } from "./test_base";
-import { test_result } from "./test_result";
-import { bq } from "./bq_lib";
-import { test_manager } from "./test_manager";
+import { test_base } from "./test_base.ts";
+import { test_result } from "./test_result.ts";
+import { bq } from "./bq_lib.ts";
+import { test_manager } from "./test_manager.ts";
 import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
+import { pathToFileURL } from "url";
 
 export class test_log_2 extends test_base {
     private log_inst_sync: any; // Type inference difficult without direct import, using any for internal instance
@@ -57,6 +58,11 @@ export class test_log_2 extends test_base {
     }
 
     private run_worker_pool(logName: string, total_tasks: number, concurrent_limit: number, loops: number, libPath: string): Promise<void> {
+        const mode = process.env.BQLOG_TEST_MODE || 'CJS';
+        if (mode === 'ESM' && !libPath.startsWith('file:')) {
+            libPath = pathToFileURL(libPath).href;
+        }
+
         return new Promise((resolve, reject) => {
             let active = 0;
             let started = 0;
@@ -86,7 +92,7 @@ export class test_log_2 extends test_base {
                             start();
                         }
 
-                        function start() {
+                        async function start() {
                             const log_inst = bq.log.get_log_by_name(workerData.logName);
                             const appender = workerData.appender;
                             const count = workerData.count;
@@ -95,6 +101,9 @@ export class test_log_2 extends test_base {
                             for(let i=0; i<count; i++) {
                                 log_content += appender;
                                 log_inst.info(log_content);
+                                if (i % 100 === 0) {
+                                    await new Promise(resolve => setImmediate(resolve));
+                                }
                             }
                             parentPort.postMessage('done');
                         }

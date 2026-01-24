@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
@@ -120,25 +120,117 @@ namespace bq {
     }
 
     namespace platform {
-        // Only single env is supported for now
-        static napi_threadsafe_function tsfn_dispatcher_for_native_func_ = nullptr;
-        static napi_threadsafe_function tsfn_dispatcher_for_js_func_ = nullptr;
-
-        static spin_lock_zero_init napi_init_mutex_;
-        static bool is_napi_initialized_ = false;
-        static bq::array<napi_property_descriptor>* napi_registered_init_functions_ = nullptr;
+        static BQ_TLS napi_env tls_current_env_ = nullptr;
 
         struct native_func_call_ctx {
             void (*fn)(napi_env, void*);
             void* param;
         };
+
+        static void dispatcher_call_native(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data)
+        {
+            native_func_call_ctx* ctx = reinterpret_cast<native_func_call_ctx*>(data);
+            if (ctx) {
+                ctx->fn(env, ctx->param);
+                delete ctx;
+            }
+        }
+
         bool napi_call_native_func_in_js_thread(void (*fn)(napi_env, void*), void* param)
         {
+            auto& common_vars = common_global_vars::get();
+            if (tls_current_env_ && tls_current_env_ == common_vars.napi_main_env_) {
+                fn(tls_current_env_, param);
+                return true;
+            }
             native_func_call_ctx* ctx = new native_func_call_ctx();
             ctx->fn = fn;
             ctx->param = param;
-            napi_status s = napi_call_threadsafe_function(tsfn_dispatcher_for_native_func_, ctx, napi_tsfn_blocking);
+            napi_status s = napi_call_threadsafe_function(common_vars.napi_tsfn_native_, ctx, napi_tsfn_blocking);
             return s == napi_ok;
+        }
+
+        napi_callback_dispatcher::napi_callback_dispatcher(napi_call_handler handler)
+            : handler_(handler)
+        {
+            auto& common_vars = common_global_vars::get();
+            bq::platform::scoped_mutex lock(common_vars.napi_env_mutex_);
+            common_vars.napi_dispatchers_.push_back(this);
+        }
+
+        void napi_callback_dispatcher::register_callback(napi_env env, napi_value func)
+        {
+            auto& common_vars = common_global_vars::get();
+            bq::platform::scoped_mutex lock(common_vars.napi_env_mutex_);
+            unregister_callback(env);
+            napi_callback_entry entry;
+            entry.env = env;
+            napi_create_reference(env, func, 1, &entry.js_cb_ref);
+            napi_value name {};
+            napi_create_string_utf8(env, "bqlog-dispatcher-tsfn", NAPI_AUTO_LENGTH, &name);
+            napi_create_threadsafe_function(env, nullptr, nullptr, name, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_native, &entry.tsfn);
+            napi_unref_threadsafe_function(env, entry.tsfn);
+            entries_.push_back(entry);
+        }
+
+        void napi_callback_dispatcher::unregister_callback(napi_env env)
+        {
+            for (size_t i = 0; i < entries_.size(); ++i) {
+                if (entries_[i].env == env) {
+                    napi_delete_reference(env, entries_[i].js_cb_ref);
+                    napi_release_threadsafe_function(entries_[i].tsfn, napi_tsfn_release);
+                    entries_.erase(entries_.begin() + i);
+                    return;
+                }
+            }
+        }
+
+        struct dispatcher_call_ctx {
+            napi_call_handler handler;
+            napi_ref js_cb_ref;
+            void* param;
+        };
+
+        static void dispatcher_fallback_adapter(napi_env env, void* data)
+        {
+            dispatcher_call_ctx* ctx = (dispatcher_call_ctx*)data;
+            if (ctx) {
+                ctx->handler(env, ctx->js_cb_ref, ctx->param);
+                delete ctx;
+            }
+        }
+
+        void napi_callback_dispatcher::invoke(void* data)
+        {
+            auto& common_vars = common_global_vars::get();
+            bq::platform::scoped_mutex lock(common_vars.napi_env_mutex_);
+            if (entries_.is_empty())
+                return;
+
+            if (tls_current_env_) {
+                for (auto& entry : entries_) {
+                    if (entry.env == tls_current_env_) {
+                        handler_(tls_current_env_, entry.js_cb_ref, data);
+                        return;
+                    }
+                }
+            }
+
+            auto& primary = entries_[0];
+            dispatcher_call_ctx* ctx = new dispatcher_call_ctx();
+            ctx->handler = handler_;
+            ctx->js_cb_ref = primary.js_cb_ref;
+            ctx->param = data;
+
+            native_func_call_ctx* n_ctx = new native_func_call_ctx();
+            n_ctx->fn = dispatcher_fallback_adapter;
+            n_ctx->param = ctx;
+            napi_call_threadsafe_function(primary.tsfn, n_ctx, napi_tsfn_blocking);
+        }
+
+        void napi_callback_dispatcher::cleanup_env(napi_env env)
+        {
+            unregister_callback(env);
         }
 
         struct js_func_call_ctx {
@@ -155,36 +247,20 @@ namespace bq {
             ctx->argv_ref = argv_ref;
             ctx->js_func_ref = js_func_ref;
             ctx->this_context_ref = this_context_ref;
-            napi_status s = napi_call_threadsafe_function(tsfn_dispatcher_for_js_func_, ctx, napi_tsfn_blocking);
+            napi_status s = napi_call_threadsafe_function(common_global_vars::get().napi_tsfn_js_, ctx, napi_tsfn_blocking);
             return s == napi_ok;
         }
 
         napi_init_function_register::napi_init_function_register(void (*init_callback)(napi_env env, napi_value exports))
         {
             bq::platform::scoped_mutex lock(common_global_vars::get().napi_init_mutex_);
-            common_global_vars::get().napi_init_callbacks_inst_.push_back(init_callback);
+            common_global_vars::get().napi_init_native_callbacks_inst_.push_back(init_callback);
         }
 
         __napi_func_register_helper::__napi_func_register_helper(const char* name, napi_callback func)
         {
-            bq::platform::scoped_spin_lock lock(napi_init_mutex_);
-            if (is_napi_initialized_) {
-                // already initialized, ignore new registrations
-                return;
-            }
-            if (!napi_registered_init_functions_) {
-                napi_registered_init_functions_ = new bq::array<napi_property_descriptor>();
-            }
-            napi_registered_init_functions_->push_back(napi_property_descriptor { name, 0, func, 0, 0, 0, napi_default, 0 });
-        }
-
-        static void dispatcher_call_native(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data)
-        {
-            native_func_call_ctx* ctx = reinterpret_cast<native_func_call_ctx*>(data);
-            if (ctx) {
-                ctx->fn(env, ctx->param);
-                delete ctx;
-            }
+            bq::platform::scoped_mutex lock(common_global_vars::get().napi_init_mutex_);
+            common_global_vars::get().napi_registered_functions_.push_back(napi_property_descriptor { name, 0, func, 0, 0, 0, napi_default, 0 });
         }
 
         static void dispatcher_call_js(napi_env env, napi_value /*js_cb*/, void* /*ctx*/, void* data)
@@ -215,34 +291,62 @@ namespace bq {
         static void cleanup_hook(void* p)
         {
             (void)p;
-            napi_release_threadsafe_function(tsfn_dispatcher_for_native_func_, napi_tsfn_abort);
-            napi_release_threadsafe_function(tsfn_dispatcher_for_js_func_, napi_tsfn_abort);
+            auto& common_vars = common_global_vars::get();
+            napi_env env = tls_current_env_;
+            {
+                bq::platform::scoped_mutex lock(common_vars.napi_env_mutex_);
+                for (auto d : common_vars.napi_dispatchers_) {
+                    d->cleanup_env(env);
+                }
+            }
+            if (tls_current_env_ == common_vars.napi_main_env_) {
+                common_vars.napi_main_env_ = nullptr;
+            }
+            tls_current_env_ = nullptr;
+            if (common_vars.napi_tsfn_native_) {
+                napi_release_threadsafe_function(common_vars.napi_tsfn_native_, napi_tsfn_release);
+            }
+            if (common_vars.napi_tsfn_js_) {
+                napi_release_threadsafe_function(common_vars.napi_tsfn_js_, napi_tsfn_release);
+            }
         }
 
         // Module initializer
         napi_value napi_init(napi_env env, napi_value exports)
         {
-            bq::platform::scoped_spin_lock lock(napi_init_mutex_);
-            if (is_napi_initialized_) {
-                return nullptr;
-            }
-            is_napi_initialized_ = true;
+            tls_current_env_ = env;
+            auto& common_vars = common_global_vars::get();
+            bq::platform::scoped_mutex lock(common_vars.napi_init_mutex_);
+            if (!common_vars.napi_is_initialized_) {
+                common_vars.napi_is_initialized_ = true;
+                common_vars.napi_main_env_ = env;
 
-            napi_value name_native {};
-            BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-native-wrapper", NAPI_AUTO_LENGTH, &name_native));
-            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(env, nullptr, nullptr, name_native, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_native, &tsfn_dispatcher_for_native_func_));
-            napi_value name_js {};
-            BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-js-wrapper", NAPI_AUTO_LENGTH, &name_js));
-            BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(env, nullptr, nullptr, name_js, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_js, &tsfn_dispatcher_for_js_func_));
+                napi_value name_native {};
+                BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-native-wrapper", NAPI_AUTO_LENGTH, &name_native));
+                BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(env, nullptr, nullptr, name_native, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_native, &common_vars.napi_tsfn_native_));
+                napi_unref_threadsafe_function(env, common_vars.napi_tsfn_native_);
+                napi_value name_js {};
+                BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-js-wrapper", NAPI_AUTO_LENGTH, &name_js));
+                BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(env, nullptr, nullptr, name_js, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_js, &common_vars.napi_tsfn_js_));
+                napi_unref_threadsafe_function(env, common_vars.napi_tsfn_js_);
+            }
+            else {
+                if (common_vars.napi_tsfn_native_) {
+                    napi_acquire_threadsafe_function(common_vars.napi_tsfn_native_);
+                }
+                if (common_vars.napi_tsfn_js_) {
+                    napi_acquire_threadsafe_function(common_vars.napi_tsfn_js_);
+                }
+            }
             BQ_NAPI_CALL(env, nullptr, napi_add_env_cleanup_hook(env, cleanup_hook, nullptr));
 
-            for (auto callback : common_global_vars::get().napi_init_callbacks_inst_) {
+            for (auto callback : common_vars.napi_init_native_callbacks_inst_) {
                 callback(env, exports);
             }
 
-            if (napi_registered_init_functions_) {
-                BQ_NAPI_CALL(env, nullptr, napi_define_properties(env, exports, napi_registered_init_functions_->size(), napi_registered_init_functions_->begin()));
-                delete napi_registered_init_functions_;
+            auto& reg_funcs = common_vars.napi_registered_functions_;
+            if (reg_funcs.size() > 0) {
+                BQ_NAPI_CALL(env, nullptr, napi_define_properties(env, exports, reg_funcs.size(), reg_funcs.begin()));
             }
             return exports;
         }

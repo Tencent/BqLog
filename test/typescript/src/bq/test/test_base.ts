@@ -9,7 +9,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-import { test_result } from "./test_result";
+import { test_result } from "./test_result.ts";
 
 export abstract class test_base {
     private name: string;

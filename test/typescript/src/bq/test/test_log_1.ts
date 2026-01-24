@@ -9,17 +9,17 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-import { test_base } from "./test_base";
-import { test_result } from "./test_result";
-import { bq } from "./bq_lib";
-import { test_manager } from "./test_manager";
+import { test_base } from "./test_base.ts";
+import { test_result } from "./test_result.ts";
+import { bq } from "./bq_lib.ts";
+import { test_manager } from "./test_manager.ts";
 
 export class test_log_1 extends test_base {
     constructor(name: string) {
         super(name);
     }
 
-    public test(): test_result {
+    public async test(): Promise<test_result> {
         const result = new test_result();
         const log_inst_sync = bq.log.create_log("sync_log", `appenders_config.ConsoleAppender.type=console
                         appenders_config.ConsoleAppender.time_zone=localtime
