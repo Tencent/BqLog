@@ -17,7 +17,7 @@
 namespace bq {
     static size_t get_memory_map_size_unit()
     {
-        return (size_t)getpagesize();
+        return common_global_vars::get().page_size_;
     }
 
     bool memory_map::is_platform_support()

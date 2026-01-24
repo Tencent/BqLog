@@ -141,6 +141,7 @@ namespace bq {
     T** global_vars_base<T, Priority_Global_Var_Type>::initializer_mark_;
 
     struct common_global_vars : public global_vars_base<common_global_vars> {
+        size_t page_size_;
 #if defined(BQ_WIN)
         bq::platform::mutex win_api_mutex_;
 #endif

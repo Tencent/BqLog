@@ -8,6 +8,16 @@ ARTIFACTS_DIR="$PROJECT_ROOT/artifacts"
 
 CONFIG=${1:-RelWithDebInfo}
 
+# Enable ASan for debugging
+export EXTRA_CMAKE_ARGS="-DBQ_ENABLE_ASAN=ON"
+
+# Find and preload libasan (required for ASan to work with P/Invoke)
+ASAN_LIB=$(gcc -print-file-name=libasan.so)
+if [ -f "$ASAN_LIB" ]; then
+    echo "Preloading ASan: $ASAN_LIB"
+    export LD_PRELOAD="$ASAN_LIB"
+fi
+
 echo "===== Building BqLog Dynamic Library (Linux) ====="
 pushd "$BUILD_LIB_DIR" > /dev/null
 ./dont_execute_this.sh build native clang OFF OFF dynamic_lib

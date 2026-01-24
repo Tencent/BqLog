@@ -18,6 +18,16 @@ OPTION(BQ_ENABLE_ASAN "Enable Address Sanitizer" OFF)
 if(BQ_ENABLE_ASAN)
     if(MSVC)
         add_compile_options(/fsanitize=address)
+        # Windows ASan does not support Debug Runtime (/MDd), must use Release Runtime (/MD)
+        foreach(flag_var
+            CMAKE_C_FLAGS_DEBUG
+            CMAKE_CXX_FLAGS_DEBUG
+            CMAKE_C_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+            if(${flag_var} MATCHES "/MDd")
+                string(REPLACE "/MDd" "/MD" ${flag_var} "${${flag_var}}")
+            endif()
+        endforeach()
     else()
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
         link_libraries(-fsanitize=address)

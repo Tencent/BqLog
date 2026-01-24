@@ -28,6 +28,12 @@
 #if defined(BQ_APPLE)
 #include <sys/sysctl.h>
 #endif
+
+#if defined(BQ_POSIX)
+#include <unistd.h>
+#endif
+
+
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -153,6 +159,14 @@ namespace bq {
 
     common_global_vars::common_global_vars()
     {
+#if defined(BQ_WIN)
+        SYSTEM_INFO sysInfo;
+        GetSystemInfo(&sysInfo);
+        page_size_ = static_cast<size_t>(sysInfo.dwPageSize);
+#elif defined(BQ_POSIX)
+        page_size_ = static_cast<size_t>(getpagesize());
+#endif
+
 #if defined(BQ_X86)
         avx2_support_ = check_avx2_support();
 #endif
