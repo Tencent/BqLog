@@ -70,6 +70,20 @@ namespace bq {
             return i;
         }
 
+#ifdef BQ_ASAN_ENABLED
+        template <typename T>
+        BQ_NO_ASAN static T get_value_by_address_safe(const T* addr)
+        {
+            return *addr;
+        }
+#else
+        template <typename T>
+        bq_forceinline T get_value_by_address_safe(const T* addr)
+        {
+            return *addr;
+        }
+#endif
+
         /**
          * @brief SWAR (SIMD Within A Register) implementation for UTF-16.
          * Processes 4 characters (8 bytes) per iteration using bit manipulation
@@ -88,7 +102,7 @@ namespace bq {
             const uint64_t low_bit = 0x0001000100010001ULL;
 
             while (true) {
-                uint64_t v = *chunk;
+                uint64_t v = get_value_by_address_safe(chunk);
                 // Zero detection logic: (v - 0x0001) & ~v & 0x8000
                 if ((v - low_bit) & ~v & mask) {
                     p = reinterpret_cast<const char16_t*>(chunk);
@@ -117,7 +131,7 @@ namespace bq {
             const uint64_t low_bit = 0x0000000100000001ULL;
 
             while (true) {
-                uint64_t v = *chunk;
+                uint64_t v = get_value_by_address_safe(chunk);
                 if ((v - low_bit) & ~v & mask) {
                     p = reinterpret_cast<const char32_t*>(chunk);
                     if (p[0] == 0) return static_cast<size_t>(p - s);

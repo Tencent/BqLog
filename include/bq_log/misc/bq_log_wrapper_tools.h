@@ -309,10 +309,10 @@ namespace bq {
 
             // Fast Path for 4 characters at a time
             while (remaining >= 4) {
-                uint32_t c0 = static_cast<uint32_t>(p[0]);
-                uint32_t c1 = static_cast<uint32_t>(p[1]);
-                uint32_t c2 = static_cast<uint32_t>(p[2]);
-                uint32_t c3 = static_cast<uint32_t>(p[3]);
+                uint32_t c0 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p));
+                uint32_t c1 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p + 1));
+                uint32_t c2 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p + 2));
+                uint32_t c3 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p + 3));
 
                 uint32_t check = (c0 - 1) | (c1 - 1) | (c2 - 1) | (c3 - 1);
 

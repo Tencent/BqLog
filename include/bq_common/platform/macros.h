@@ -309,3 +309,14 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
     #define BQ_CRC_HW_INLINE bq_forceinline
     #define BQ_SIMD_HW_INLINE bq_forceinline
 #endif
+
+
+#if defined(BQ_CLANG)
+    #define BQ_NO_ASAN __attribute__((no_sanitize("address")))
+#elif defined(BQ_GCC)
+    #define BQ_NO_ASAN __attribute__((no_sanitize_address))
+#elif defined(BQ_MSVC)
+    #define BQ_NO_ASAN __declspec(no_sanitize_address)
+#else
+    #define BQ_NO_ASAN
+#endif
