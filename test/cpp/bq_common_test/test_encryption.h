@@ -84,6 +84,7 @@ namespace bq {
 
                     bq::platform::aligned_free(key);    
                     bq::platform::aligned_free(src);
+                    bq::platform::aligned_free(tar);
                 }
             }
 

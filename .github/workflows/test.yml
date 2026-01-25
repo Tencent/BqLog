@@ -128,6 +128,8 @@ jobs:
         id: win_run_tests
         continue-on-error: true
         shell: powershell
+        env:
+          BQ_ENABLE_ASAN: ${{ matrix.cc == 'msvc' && 'TRUE' || 'FALSE' }}
         run: |
           $ErrorActionPreference = "Continue"
           cd build\test\win64
@@ -240,6 +242,8 @@ jobs:
           sudo apt-get update && sudo apt-get install -y gdb       
 
       - name: Build for Linux
+        env:
+          BQ_ENABLE_ASAN: TRUE
         run: |
           cd build/test/linux  
           chmod +x *.sh
@@ -298,6 +302,8 @@ jobs:
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
       - name: Build for Debian
+        env:
+          BQ_ENABLE_ASAN: FALSE
         run: |
           cd build/test/linux  
           chmod +x *.sh
@@ -325,6 +331,8 @@ jobs:
           distribution: 'adopt'
 
       - name: Build for macOS
+        env:
+          BQ_ENABLE_ASAN: TRUE
         run: |
           cd build/test/mac  
           chmod +x *.sh

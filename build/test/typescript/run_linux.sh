@@ -16,17 +16,6 @@ popd > /dev/null
 # Tell CMake where to find node-api-headers
 export NODE_MODULES_ROOT="$PROJECT_ROOT/wrapper/typescript/node_modules"
 
-# Enable ASan for debugging
-export EXTRA_CMAKE_ARGS="-DBQ_ENABLE_ASAN=ON"
-
-# Find libasan path (do not export LD_PRELOAD yet!)
-ASAN_LIB=$(gcc -print-file-name=libasan.so)
-if [ -f "$ASAN_LIB" ]; then
-    echo "Found libasan: $ASAN_LIB"
-else
-    echo "Warning: libasan.so not found, ASan might not work."
-fi
-
 echo "===== Building BqLog Dynamic Library (Linux) ====="
 pushd "$BUILD_LIB_DIR" > /dev/null
 # Node needs native module built with ON flag for node support
@@ -55,11 +44,6 @@ if [ -z "$NODE_LIB" ]; then
 else
     echo "Found Node Lib: $NODE_LIB"
     export BQ_NODE_ADDON="$NODE_LIB"
-fi
-
-if [ -f "$ASAN_LIB" ]; then
-    echo "Running tests with ASan preloaded..."
-    export LD_PRELOAD="$ASAN_LIB"
 fi
 
 npm test
