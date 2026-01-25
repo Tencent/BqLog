@@ -132,8 +132,27 @@ jobs:
           BQ_ENABLE_ASAN: ${{ matrix.cc == 'msvc' && 'TRUE' || 'FALSE' }}
         run: |
           $ErrorActionPreference = "Continue"
-          cd build\test\win64
+          
+          # If ASan is enabled for MSVC, we need to find the runtime DLLs and add to PATH
+          if ($env:BQ_ENABLE_ASAN -eq "TRUE" -and "${{ matrix.cc }}" -eq "msvc") {
+            $target_label = "${{ matrix.runner.label }}"
+            $asan_suffix = if ($target_label -eq "arm64") { "aarch64" } else { "x86_64" }
+            $dll_name = "clang_rt.asan_dynamic-$asan_suffix.dll"
+            
+            Write-Host "Searching for MSVC ASan runtime DLL: $dll_name"
+            $vstool = vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            if ($vstool) {
+              $asan_path = Get-ChildItem -Path "$vstool\VC\Tools\MSVC" -Filter "$dll_name" -Recurse | Select-Object -First 1 -ExpandProperty DirectoryName
+              if ($asan_path) {
+                Write-Host "Found ASan DLLs at: $asan_path"
+                $env:Path = "$asan_path;" + $env:Path
+              } else {
+                Write-Host "Warning: Could not find $dll_name"
+              }
+            }
+          }
 
+          cd build\test\win64
           # Avoid any interactive `pause` hanging CI.
           cmd /c "call .\run_test_${{ matrix.cc }}.bat ${{ matrix.cpp_ver }} <nul"
           $code = $LASTEXITCODE
@@ -1994,6 +2013,8 @@ jobs:
 
       - name: Run Node Tests (Linux/macOS)
         if: runner.os != 'Windows'
+        env:
+          BQ_ENABLE_ASAN: true
         run: |
           chmod +x ${{ matrix.script_path }}
           
