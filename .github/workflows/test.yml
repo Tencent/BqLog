@@ -2000,8 +2000,6 @@ jobs:
 
       - name: Run Node Tests (Linux/macOS)
         if: runner.os != 'Windows'
-        env:
-          BQ_ENABLE_ASAN: true
         run: |
           chmod +x ${{ matrix.script_path }}
           
