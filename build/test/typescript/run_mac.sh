@@ -43,6 +43,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
             export DYLD_INSERT_LIBRARIES="$ASAN_LIB"
             export BQ_ASAN_LIB="$ASAN_LIB"
         fi
+        # Suppress Node leaks
+        SUPP_FILE="$PROJECT_ROOT/test/lsan_suppressions.txt"
+        export LSAN_OPTIONS="suppressions=$SUPP_FILE"
     fi
 fi
 

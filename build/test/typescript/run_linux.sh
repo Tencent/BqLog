@@ -45,6 +45,9 @@ if [[ "$BQ_ENABLE_ASAN_UPPER" == "TRUE" || "$BQ_ENABLE_ASAN_UPPER" == "ON" || "$
         echo "ASan enabled, pre-loading $ASAN_LIB"
         export LD_PRELOAD="$ASAN_LIB"
     fi
+    # Suppress Node leaks
+    SUPP_FILE="$PROJECT_ROOT/test/lsan_suppressions.txt"
+    export LSAN_OPTIONS="suppressions=$SUPP_FILE"
 fi
 
 # Find the .node file

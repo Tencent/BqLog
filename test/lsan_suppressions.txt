@@ -1,0 +1,4 @@
+leak:libjvm
+leak:libjli
+leak:libnode
+leak:node

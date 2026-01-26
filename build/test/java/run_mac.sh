@@ -53,6 +53,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
             echo "ASan enabled, pre-loading $ASAN_LIB"
             export DYLD_INSERT_LIBRARIES="$ASAN_LIB"
         fi
+        # Suppress JVM leaks
+        SUPP_FILE="$PROJECT_ROOT/test/lsan_suppressions.txt"
+        export LSAN_OPTIONS="suppressions=$SUPP_FILE"
     fi
 fi
 
