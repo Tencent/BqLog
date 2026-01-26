@@ -183,6 +183,10 @@ namespace bq {
     {
         return BQ_PACK_ACCESS_BY_TYPE(is_jvm_destroyed_, bq::platform::atomic<bool>).load_acquire();
     }
+
+    void common_global_vars::mark_jvm_destroyed() {
+        BQ_PACK_ACCESS_BY_TYPE(is_jvm_destroyed_, bq::platform::atomic<bool>) = true;
+    }
 #endif
 
     void common_global_vars::partial_destruct()

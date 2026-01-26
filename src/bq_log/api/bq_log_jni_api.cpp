@@ -383,6 +383,7 @@ static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_id
     bq::platform::jni_env env_holder;
     JNIEnv* env = env_holder.env;
     if (!env) {
+        bq::util::_default_console_output(log_level, content);
         return;
     }
     jclass cls = bq::log_global_vars::get().cls_bq_log_;
@@ -474,6 +475,18 @@ static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_para
 JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove_1console_1buffer(JNIEnv*, jclass, jobject callback_obj)
 {
     return bq::api::__api_fetch_and_remove_console_buffer(jni_console_buffer_fetch_callback, callback_obj);
+}
+
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_mark_jvm_destroyed
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1mark_1jvm_1destroyed
+(JNIEnv*, jclass)
+{
+    bq::common_global_vars::get().mark_jvm_destroyed();
+    bq::util::log_device_console(bq::log_level::info, "JVM is destroying");
 }
 
 #ifdef __cplusplus

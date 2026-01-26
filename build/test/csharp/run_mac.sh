@@ -49,6 +49,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
             echo "ASan enabled, pre-loading $ASAN_LIB"
             export DYLD_INSERT_LIBRARIES="$ASAN_LIB"
         fi
+        # Suppress CoreCLR leaks
+        SUPP_FILE="$PROJECT_ROOT/test/lsan_suppressions.txt"
+        export LSAN_OPTIONS="suppressions=$SUPP_FILE"
+        # CoreCLR generates SEGVs for internal checks.
+        export ASAN_OPTIONS="handle_segv=0:allow_user_segv_handler=1"
     fi
 fi
 

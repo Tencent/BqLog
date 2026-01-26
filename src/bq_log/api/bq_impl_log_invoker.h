@@ -223,6 +223,14 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir
 JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove_1console_1buffer
   (JNIEnv *, jclass, jobject);
 
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_mark_jvm_destroyed
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1mark_1jvm_1destroyed
+  (JNIEnv *, jclass);
+
 #ifdef __cplusplus
 }
 #endif

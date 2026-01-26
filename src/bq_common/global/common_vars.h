@@ -166,6 +166,7 @@ namespace bq {
         };
         remove_jni_global_ref_thread remove_jni_global_ref_thread_;
         bool is_jvm_destroyed() const;
+        void mark_jvm_destroyed();
 #endif
 #if defined(BQ_NAPI)
         bq::platform::mutex napi_init_mutex_;

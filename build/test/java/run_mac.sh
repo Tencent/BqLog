@@ -56,6 +56,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
         # Suppress JVM leaks
         SUPP_FILE="$PROJECT_ROOT/test/lsan_suppressions.txt"
         export LSAN_OPTIONS="suppressions=$SUPP_FILE"
+        # JVM generates SEGVs for internal checks.
+        export ASAN_OPTIONS="handle_segv=0:allow_user_segv_handler=1"
     fi
 fi
 

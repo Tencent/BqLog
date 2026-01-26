@@ -24,6 +24,12 @@ public class log {
 	static {
 		try {
 			System.loadLibrary(bq.lib_def.lib_name);
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+				@Override
+				public void run() {
+					log_invoker.__api_mark_jvm_destroyed();
+				}
+			}); 
 		}catch(Exception e)
 		{
 			System.err.println("Failed to Load " + bq.lib_def.lib_name);

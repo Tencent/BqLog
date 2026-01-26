@@ -44,6 +44,22 @@ fi
 echo "Running C# Test on Linux..."
 echo "Lib Path: $LIB_PATH"
 
+# Add ASan support for Linux
+BQ_ENABLE_ASAN_UPPER=$(echo "$BQ_ENABLE_ASAN" | tr '[:lower:]' '[:upper:]')
+if [[ "$BQ_ENABLE_ASAN_UPPER" == "TRUE" || "$BQ_ENABLE_ASAN_UPPER" == "ON" || "$BQ_ENABLE_ASAN_UPPER" == "1" ]]; then
+    # Try to find ASan library
+    ASAN_LIB=$(gcc -print-file-name=libasan.so)
+    if [[ "$ASAN_LIB" != "libasan.so" ]]; then
+        echo "ASan enabled, pre-loading $ASAN_LIB"
+        export LD_PRELOAD="$ASAN_LIB"
+    fi
+    # Suppress CoreCLR leaks
+    SUPP_FILE="$PROJECT_ROOT/test/lsan_suppressions.txt"
+    export LSAN_OPTIONS="suppressions=$SUPP_FILE"
+    # CoreCLR (like JVM) generates SEGVs for internal checks (NullReferenceException, etc.)
+    export ASAN_OPTIONS="handle_segv=0:allow_user_segv_handler=1"
+fi
+
 export LD_LIBRARY_PATH="$LIB_PATH:$LD_LIBRARY_PATH"
 
 if [ -f "$EXE_PATH" ]; then

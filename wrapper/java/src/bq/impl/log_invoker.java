@@ -66,4 +66,6 @@ public class log_invoker {
 	public static native void __api_reset_base_dir(int base_dir_type, String dir);
 	
 	public static native boolean __api_fetch_and_remove_console_buffer(Object callback);
+	
+	public static native void __api_mark_jvm_destroyed();
 }
