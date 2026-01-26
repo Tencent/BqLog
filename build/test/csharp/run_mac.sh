@@ -40,6 +40,18 @@ fi
 echo "Running C# Test on macOS..."
 echo "Lib Path: $LIB_PATH"
 
+# Add ASan support for Mac
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    BQ_ENABLE_ASAN_UPPER=$(echo "$BQ_ENABLE_ASAN" | tr '[:lower:]' '[:upper:]')
+    if [[ "$BQ_ENABLE_ASAN_UPPER" == "TRUE" || "$BQ_ENABLE_ASAN_UPPER" == "ON" || "$BQ_ENABLE_ASAN_UPPER" == "1" ]]; then
+        ASAN_LIB=$(clang -print-file-name=libclang_rt.asan_osx_dynamic.dylib)
+        if [[ "$ASAN_LIB" == /* ]]; then
+            echo "ASan enabled, pre-loading $ASAN_LIB"
+            export DYLD_INSERT_LIBRARIES="$ASAN_LIB"
+        fi
+    fi
+fi
+
 export DYLD_LIBRARY_PATH="$LIB_PATH:$DYLD_LIBRARY_PATH"
 
 if [ -f "$EXE_PATH" ]; then

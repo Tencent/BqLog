@@ -42,4 +42,16 @@ fi
 
 echo "Running Java Test on Linux..."
 echo "Lib Path: $LIB_PATH"
+
+# Add ASan support for Linux
+BQ_ENABLE_ASAN_UPPER=$(echo "$BQ_ENABLE_ASAN" | tr '[:lower:]' '[:upper:]')
+if [[ "$BQ_ENABLE_ASAN_UPPER" == "TRUE" || "$BQ_ENABLE_ASAN_UPPER" == "ON" || "$BQ_ENABLE_ASAN_UPPER" == "1" ]]; then
+    # Try to find ASan library
+    ASAN_LIB=$(gcc -print-file-name=libasan.so)
+    if [[ "$ASAN_LIB" != "libasan.so" ]]; then
+        echo "ASan enabled, pre-loading $ASAN_LIB"
+        export LD_PRELOAD="$ASAN_LIB"
+    fi
+fi
+
 java -Djava.library.path="$LIB_PATH" -jar "$JAR_PATH"

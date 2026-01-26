@@ -1846,8 +1846,16 @@ jobs:
           .\run_win
 
   java_wrapper_mac_silicon:
+    name: java (macos-latest${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
     runs-on:  macos-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        asan:
+          - label: "asan"
+            assan_switch: TRUE
+          - label: " "
+            assan_switch: FALSE
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -1863,12 +1871,15 @@ jobs:
           distribution: 'adopt'
 
       - name: Test for macOS
+        env:
+          BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
           cd build/test/java  
           chmod +x *.sh
           ./run_mac.sh
 
   java_wrapper_ubuntu:
+    name: java (ubuntu-${{ matrix.runner.label }}${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
@@ -1878,6 +1889,11 @@ jobs:
             runs_on: ubuntu-latest
           - label: "arm64"
             runs_on: ubuntu-24.04-arm
+        asan:
+          - label: "asan"
+            assan_switch: TRUE
+          - label: " "
+            assan_switch: FALSE
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1889,6 +1905,8 @@ jobs:
           distribution: 'adopt'
 
       - name: Build for Linux
+        env:
+          BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
           cd build/test/java  
           chmod +x *.sh
@@ -1921,22 +1939,45 @@ jobs:
             ./run_unix.sh
 
   csharp_wrapper_tests:
+    name: csharp (${{ matrix.label }})
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             script_path: build/test/csharp/run_linux.sh
+            asan_switch: TRUE
+            label: "ubuntu-latest, asan"
+          - os: ubuntu-latest
+            script_path: build/test/csharp/run_linux.sh
+            asan_switch: FALSE
+            label: "ubuntu-latest"
           - os: ubuntu-24.04-arm
             script_path: build/test/csharp/run_linux.sh
+            asan_switch: TRUE
+            label: "ubuntu-24.04-arm, asan"
+          - os: ubuntu-24.04-arm
+            script_path: build/test/csharp/run_linux.sh
+            asan_switch: FALSE
+            label: "ubuntu-24.04-arm"
           - os: macos-latest
             script_path: build/test/csharp/run_mac.sh
+            asan_switch: TRUE
+            label: "macos-latest, asan"
+          - os: macos-latest
+            script_path: build/test/csharp/run_mac.sh
+            asan_switch: FALSE
+            label: "macos-latest"
           - os: windows-latest
             script_path: build\test\csharp\run_win.bat
             shell_type: cmd
+            asan_switch: FALSE
+            label: "windows-latest"
           - os: windows-11-arm
             script_path: build\test\csharp\run_win.bat
             shell_type: cmd
+            asan_switch: FALSE
+            label: "windows-11-arm"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -1952,34 +1993,57 @@ jobs:
         uses: lukka/get-cmake@latest
 
       - name: Run C# Tests
-        if: runner.os != 'Windows'
+        env:
+          BQ_ENABLE_ASAN: ${{ matrix.asan_switch }}
+        shell: bash
         run: |
-          chmod +x ${{ matrix.script_path }}
-          ./${{ matrix.script_path }}
-
-      - name: Run C# Tests (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          ${{ matrix.script_path }}
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            ./${{ matrix.script_path }}
+          else
+            chmod +x ${{ matrix.script_path }}
+            ./${{ matrix.script_path }}
+          fi
 
   node_wrapper_tests:
+    name: node (${{ matrix.label }})
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             script_path: build/test/typescript/run_linux.sh
+            asan_switch: TRUE
+            label: "ubuntu-latest, asan"
+          - os: ubuntu-latest
+            script_path: build/test/typescript/run_linux.sh
+            asan_switch: FALSE
+            label: "ubuntu-latest"
           - os: ubuntu-24.04-arm
             script_path: build/test/typescript/run_linux.sh
+            asan_switch: TRUE
+            label: "ubuntu-24.04-arm, asan"
+          - os: ubuntu-24.04-arm
+            script_path: build/test/typescript/run_linux.sh
+            asan_switch: FALSE
+            label: "ubuntu-24.04-arm"
           - os: macos-latest
             script_path: build/test/typescript/run_mac.sh
+            asan_switch: TRUE
+            label: "macos-latest, asan"
+          - os: macos-latest
+            script_path: build/test/typescript/run_mac.sh
+            asan_switch: FALSE
+            label: "macos-latest"
           - os: windows-latest
             script_path: build\test\typescript\run_win.bat
             shell_type: cmd
+            asan_switch: FALSE
+            label: "windows-latest"
           - os: windows-11-arm
             script_path: build\test\typescript\run_win.bat
             shell_type: cmd
+            asan_switch: FALSE
+            label: "windows-11-arm"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -1997,6 +2061,18 @@ jobs:
           sudo apt-get install -y gdb
           # Stop apport to prevent it from intercepting core dumps
           sudo service apport stop || true
+
+      - name: Run Node Tests
+        env:
+          BQ_ENABLE_ASAN: ${{ matrix.asan_switch }}
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            ./${{ matrix.script_path }}
+          else
+            chmod +x ${{ matrix.script_path }}
+            ./${{ matrix.script_path }}
+          fi
 
       - name: Run Node Tests (Linux/macOS)
         if: runner.os != 'Windows'

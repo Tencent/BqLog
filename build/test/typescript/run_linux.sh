@@ -36,6 +36,17 @@ popd > /dev/null
 echo "===== Running TypeScript Tests ====="
 pushd "$TEST_SRC_DIR" > /dev/null
 
+# Add ASan support for Linux
+BQ_ENABLE_ASAN_UPPER=$(echo "$BQ_ENABLE_ASAN" | tr '[:lower:]' '[:upper:]')
+if [[ "$BQ_ENABLE_ASAN_UPPER" == "TRUE" || "$BQ_ENABLE_ASAN_UPPER" == "ON" || "$BQ_ENABLE_ASAN_UPPER" == "1" ]]; then
+    # Try to find ASan library
+    ASAN_LIB=$(gcc -print-file-name=libasan.so)
+    if [[ "$ASAN_LIB" != "libasan.so" ]]; then
+        echo "ASan enabled, pre-loading $ASAN_LIB"
+        export LD_PRELOAD="$ASAN_LIB"
+    fi
+fi
+
 # Find the .node file
 NODE_LIB=$(find "$ARTIFACTS_DIR/dynamic_lib/lib" -name "*.node" 2>/dev/null | head -n 1) || true
 
@@ -50,5 +61,5 @@ else
     cp -f "$NODE_LIB" "$DEST_DIR/BqLog.node"
 fi
 
-npm test
+node run_all_tests.js
 popd > /dev/null
