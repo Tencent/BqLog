@@ -48,15 +48,19 @@ if not exist "%NODE_LIB_DIR%" (
 )
 
 for /r "%NODE_LIB_DIR%" %%f in (*.node) do (
-    set "BQ_NODE_ADDON=%%f"
+    set "NODE_LIB_PATH=%%f"
     goto :found_node
 )
 
 :found_node
-if "%BQ_NODE_ADDON%"=="" (
+if "%NODE_LIB_PATH%"=="" (
     echo Warning: .node file not found in %NODE_LIB_DIR%
 ) else (
-    echo Found Node Lib: %BQ_NODE_ADDON%
+    echo Found Node Lib: %NODE_LIB_PATH%
+    set "DEST_DIR=%PROJECT_ROOT%\wrapper\typescript\dist"
+    if not exist "!DEST_DIR!" mkdir "!DEST_DIR!"
+    echo Copying to !DEST_DIR! ...
+    copy /Y "%NODE_LIB_PATH%" "!DEST_DIR!\BqLog.node" >nul
 )
 
 call npm test

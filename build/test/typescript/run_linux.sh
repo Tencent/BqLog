@@ -43,7 +43,11 @@ if [ -z "$NODE_LIB" ]; then
     echo "Warning: .node file not found via find, checking common locations..."
 else
     echo "Found Node Lib: $NODE_LIB"
-    export BQ_NODE_ADDON="$NODE_LIB"
+    # Copy to wrapper/typescript/dist so loader can find it
+    DEST_DIR="$PROJECT_ROOT/wrapper/typescript/dist"
+    echo "Copying to $DEST_DIR..."
+    mkdir -p "$DEST_DIR"
+    cp -f "$NODE_LIB" "$DEST_DIR/BqLog.node"
 fi
 
 npm test
