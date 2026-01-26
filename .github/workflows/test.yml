@@ -128,29 +128,8 @@ jobs:
         id: win_run_tests
         continue-on-error: true
         shell: powershell
-        env:
-          BQ_ENABLE_ASAN: ${{ matrix.cc == 'msvc' && 'TRUE' || 'FALSE' }}
         run: |
           $ErrorActionPreference = "Continue"
-          
-          # If ASan is enabled for MSVC, we need to find the runtime DLLs and add to PATH
-          if ($env:BQ_ENABLE_ASAN -eq "TRUE" -and "${{ matrix.cc }}" -eq "msvc") {
-            $target_label = "${{ matrix.runner.label }}"
-            $asan_suffix = if ($target_label -eq "arm64") { "aarch64" } else { "x86_64" }
-            $dll_name = "clang_rt.asan_dynamic-$asan_suffix.dll"
-            
-            Write-Host "Searching for MSVC ASan runtime DLL: $dll_name"
-            $vstool = vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-            if ($vstool) {
-              $asan_path = Get-ChildItem -Path "$vstool\VC\Tools\MSVC" -Filter "$dll_name" -Recurse | Select-Object -First 1 -ExpandProperty DirectoryName
-              if ($asan_path) {
-                Write-Host "Found ASan DLLs at: $asan_path"
-                $env:Path = "$asan_path;" + $env:Path
-              } else {
-                Write-Host "Warning: Could not find $dll_name"
-              }
-            }
-          }
 
           cd build\test\win64
           # Avoid any interactive `pause` hanging CI.
@@ -235,6 +214,11 @@ jobs:
             runs_on: ubuntu-latest
           - label: "arm64"
             runs_on: ubuntu-24.04-arm
+        asan:
+          - label: "asan"
+            assan_switch: TRUE
+          - label: " "
+            assan_switch: FALSE
         cc: [ clang, gcc ]
         cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
@@ -262,7 +246,7 @@ jobs:
 
       - name: Build for Linux
         env:
-          BQ_ENABLE_ASAN: TRUE
+          BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
           cd build/test/linux  
           chmod +x *.sh
@@ -321,8 +305,6 @@ jobs:
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
       - name: Build for Debian
-        env:
-          BQ_ENABLE_ASAN: FALSE
         run: |
           cd build/test/linux  
           chmod +x *.sh
@@ -334,6 +316,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        asan:
+          - label: "asan"
+            assan_switch: TRUE
+          - label: " "
+            assan_switch: FALSE
         cpp_ver: [ 11, 14, 17, 20, 23 ]
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
@@ -351,7 +338,7 @@ jobs:
 
       - name: Build for macOS
         env:
-          BQ_ENABLE_ASAN: TRUE
+          BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
           cd build/test/mac  
           chmod +x *.sh

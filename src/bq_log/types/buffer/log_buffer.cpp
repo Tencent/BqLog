@@ -608,6 +608,12 @@ namespace bq {
             assert((recover_map.find(context.get_tls_info()) != recover_map.end()) && "unregister none exist seq");
 #endif
             ++recover_map[context.get_tls_info()];
+#if defined(BQ_UNIT_TEST)
+            // In unit tests, recovery happens in the same process, so the pointer is valid and safe to delete.
+            if (context.is_thread_finished_) {
+                bq::util::aligned_delete(context.get_tls_info());
+            }
+#endif
         }
         refresh_traverse_end_mark();
     }

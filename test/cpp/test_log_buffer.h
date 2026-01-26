@@ -875,7 +875,11 @@ namespace bq {
                 config.policy = log_memory_policy::auto_expand_when_full;
                 do_log_buffer_test(result, config);
 
-                do_recovery_test(result);
+                // Run in a separate thread to ensure TLS cleanup and avoid Sanitizer leak reports.
+                std::thread recovery_test_thread([this, &result]() {
+                    do_recovery_test(result);
+                });
+                recovery_test_thread.join();
                 return result;
             }
         };

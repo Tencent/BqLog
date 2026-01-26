@@ -13,7 +13,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 OPTION(JAVA_SUPPORT "Support Java" OFF)
 
-if(DEFINED ENV{BQ_ENABLE_ASAN} AND "$ENV{BQ_ENABLE_ASAN}" MATCHES "(?i)^(TRUE|ON|1)$")
+set(BQ_ENABLE_ASAN_UPPER "")
+if(DEFINED ENV{BQ_ENABLE_ASAN})
+    string(TOUPPER "$ENV{BQ_ENABLE_ASAN}" BQ_ENABLE_ASAN_UPPER)
+endif()
+
+if(DEFINED ENV{BQ_ENABLE_ASAN} AND BQ_ENABLE_ASAN_UPPER MATCHES "^(TRUE|ON|1)$")
     message(STATUS "BQ_ENABLE_ASAN is TRUE (case-insensitive), enabling Address Sanitizer")
     if(MSVC)
         add_compile_options(/fsanitize=address)
