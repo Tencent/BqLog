@@ -2158,7 +2158,7 @@ jobs:
             
             if [ "$RUNNER_OS" == "Linux" ]; then
               # Search for core files in current dir and /var/crash (apport default)
-              CORE_FILE=$(find . -maxdepth 2 -name "core.*" | head -n 1)
+              CORE_FILE=$(find . -maxdepth 5 -name "core.*" | head -n 1)
               if [ -z "$CORE_FILE" ]; then
                  CORE_FILE=$(find /var/crash -name "*core*" 2>/dev/null | head -n 1)
               fi
