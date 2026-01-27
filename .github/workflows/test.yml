@@ -205,6 +205,7 @@ jobs:
 
   #Linux-ubuntu
   ubuntu:
+    name: ubuntu (${{ matrix.label }})
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
@@ -660,11 +661,30 @@ jobs:
             exit 1
           run: |
             touch UNIT_TEST_STARTED
+            ulimit -c unlimited
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            
+            set +e
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            EXIT_CODE=$?
+            set -e
+
+            if [ $EXIT_CODE -ne 0 ]; then
+                echo "Test failed with exit code $EXIT_CODE"
+                CORE=$(find . -name core -type f | head -n 1)
+                EXE=$(find . -name BqLogUnitTest -type f | head -n 1)
+                if [ -n "$CORE" ] && [ -n "$EXE" ]; then
+                    echo "=== GDB BACKTRACE ==="
+                    gdb --batch -q -ex "thread apply all bt full" -ex "quit" "$EXE" "$CORE"
+                else
+                    echo "Core file or executable not found."
+                    ls -R
+                fi
+                exit $EXIT_CODE
+            fi
             touch ../../../UNIT_TEST_SUCCESS
 
       - name: Check Retry
@@ -723,11 +743,30 @@ jobs:
             done
             exit 1
           run: |
+            ulimit -c unlimited
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
+            
+            set +e
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            EXIT_CODE=$?
+            set -e
+
+            if [ $EXIT_CODE -ne 0 ]; then
+                echo "Test failed with exit code $EXIT_CODE"
+                CORE=$(find . -name core -type f | head -n 1)
+                EXE=$(find . -name BqLogUnitTest -type f | head -n 1)
+                if [ -n "$CORE" ] && [ -n "$EXE" ]; then
+                    echo "=== GDB BACKTRACE ==="
+                    gdb --batch -q -ex "thread apply all bt full" -ex "quit" "$EXE" "$CORE"
+                else
+                    echo "Core file or executable not found."
+                    ls -R
+                fi
+                exit $EXIT_CODE
+            fi 
 
   #Unix-OmnisOS
   omnisOS_x86_64_GCC:
@@ -1797,6 +1836,7 @@ jobs:
             [ "$(cat exit_code_rel.txt | xargs)" = "0" ]
 
   java_wrapper_win64:
+    name: java_wrapper (win-${{ matrix.runner.label }}${{ matrix.cc }})
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
@@ -1846,7 +1886,7 @@ jobs:
           .\run_win
 
   java_wrapper_mac_silicon:
-    name: java (macos-latest${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
+    name: java_wrapper (macos-latest${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
     runs-on:  macos-latest
     strategy:
       fail-fast: false
@@ -1879,7 +1919,7 @@ jobs:
           ./run_mac.sh
 
   java_wrapper_ubuntu:
-    name: java (ubuntu-${{ matrix.runner.label }}${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
+    name: java_wrapper (ubuntu-${{ matrix.runner.label }}${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
@@ -1913,6 +1953,7 @@ jobs:
           ./run_linux.sh
 
   java_wrapper_freebsd_x86_64:
+    name: java_wrapper (freebsd_x86_64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -1969,12 +2010,12 @@ jobs:
             asan_switch: FALSE
             label: "macos-latest"
           - os: windows-latest
-            script_path: build\test\csharp\run_win.bat
+            script_path: build/test/csharp/run_win.bat
             shell_type: cmd
             asan_switch: FALSE
             label: "windows-latest"
           - os: windows-11-arm
-            script_path: build\test\csharp\run_win.bat
+            script_path: build/test/csharp/run_win.bat
             shell_type: cmd
             asan_switch: FALSE
             label: "windows-11-arm"
@@ -2035,12 +2076,12 @@ jobs:
             asan_switch: FALSE
             label: "macos-latest"
           - os: windows-latest
-            script_path: build\test\typescript\run_win.bat
+            script_path: build/test/typescript/run_win.bat
             shell_type: cmd
             asan_switch: FALSE
             label: "windows-latest"
           - os: windows-11-arm
-            script_path: build\test\typescript\run_win.bat
+            script_path: build/test/typescript/run_win.bat
             shell_type: cmd
             asan_switch: FALSE
             label: "windows-11-arm"
