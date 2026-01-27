@@ -187,9 +187,7 @@ namespace bq {
         {
             for (size_t i = 0; i < entries_.size(); ++i) {
                 if (entries_[i].env == env) {
-                    if (entries_[i].token) {
-                        entries_[i].token->is_alive = false;
-                    }
+                    entries_[i].token->is_alive = false;
                     napi_release_threadsafe_function(entries_[i].tsfn, napi_tsfn_release);
                     entries_.erase(entries_.begin() + static_cast<ptrdiff_t>(i));
                     return;
@@ -208,7 +206,7 @@ namespace bq {
         {
             dispatcher_call_ctx* ctx = (dispatcher_call_ctx*)data;
             if (ctx) {
-                if (ctx->token && ctx->token->is_alive) {
+                if (ctx->token->is_alive) {
                     ctx->handler(env, ctx->js_cb_ref, ctx->param);
                 }
                 delete ctx;
