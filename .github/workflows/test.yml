@@ -12,6 +12,7 @@ on:
 jobs:
   #Windows
   win64:
+    name: win64 (${{ matrix.cc }} cpp${{ matrix.cpp_ver }} ${{ matrix.runner.label }})
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
