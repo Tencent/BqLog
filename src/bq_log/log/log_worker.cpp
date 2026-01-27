@@ -122,6 +122,6 @@ namespace bq {
             return;
         }
         // Reliable in most cases, except log_manager is destructing in other thread.
-        //log_manager::instance().try_restart_worker(worker_ptr_);
+        log_manager::instance().try_restart_worker(worker_ptr_);
     }
 }

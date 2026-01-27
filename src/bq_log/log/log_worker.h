@@ -76,8 +76,8 @@ namespace bq {
     // Sometime, the log worker thread may be terminated by external code(for example, on the console callback in Mono)
     // We need a watch dog to restart the thread.
     struct log_worker_watch_dog {
-        bq::platform::thread::thread_id thread_id_;
-        log_worker* worker_ptr_;
+        bq::platform::thread::thread_id thread_id_ = 0;
+        log_worker* worker_ptr_ = nullptr;
 
         ~log_worker_watch_dog();
     };
