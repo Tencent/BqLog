@@ -176,7 +176,7 @@ namespace bq {
 
         bool equals_ignore_case(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& str) const;
 
-        bq::array<typename bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> split(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& delimiter) const;
+        bq::array<typename bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> split(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& delimiter, bool include_empty_string = false) const;
 
         BQ_STRING_CLS_NAME trim() const;
 

@@ -67,10 +67,16 @@ namespace bq {
                     result.add_result(split[4] == "1", "string split test 5");
                     bq::array<bq::string> split2 = bq::string("///////").split("/");
                     bq::array<bq::string> split3 = bq::string("a///////bb").split("/");
+                    bq::array<bq::string> split4 = bq::string("///////").split("/", true);
+                    bq::array<bq::string> split5 = bq::string("a///////bb").split("/", true);
                     result.add_result(split2.size() == 0, "string split test 6");
                     result.add_result(split3.size() == 2, "string split test 7");
                     result.add_result(split3[0] == "a", "string split test 8");
                     result.add_result(split3[1] == "bb", "string split test 9");
+                    result.add_result(split4.size() == 8, "string split test 10");
+                    result.add_result(split5.size() == 8, "string split test 11");
+                    result.add_result(split5[0] == "a", "string split test 12");
+                    result.add_result(split5[7] == "bb", "string split test 13");
 
                     bq::string replace_str = bq::string(TEST_STR1).replace("_", "####");
                     result.add_result(replace_str == "THIS####IS####TEST####STR####1", "string split test 4");

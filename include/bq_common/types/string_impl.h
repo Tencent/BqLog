@@ -375,21 +375,25 @@ namespace bq {
     }
 
     template <typename CHAR_TYPE, typename Allocator>
-    inline bq::array<bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::split(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& delimiter) const
+    inline bq::array<bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::split(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& delimiter, bool include_empty_string/* = false*/) const
     {
         bq::array<bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> result;
         size_type last_offset = 0;
-        while (last_offset < size()) {
+        while (true) {
             size_type new_offset = find(delimiter, last_offset);
             if (new_offset == npos) {
-                bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> lastStr = substr(last_offset);
-                if (!lastStr.is_empty()) {
-                    result.emplace_back(lastStr);
+                if (last_offset < size()) {
+                    bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> lastStr = substr(last_offset);
+                    if (!lastStr.is_empty() || include_empty_string) {
+                        result.emplace_back(lastStr);
+                    }
+                } else if (include_empty_string) {
+                    result.emplace_back(empty_str());
                 }
                 break;
             } else {
                 bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> lastStr = substr(last_offset, new_offset - last_offset);
-                if (!lastStr.is_empty()) {
+                if (!lastStr.is_empty() || include_empty_string) {
                     result.emplace_back(lastStr);
                 }
                 last_offset = new_offset + delimiter.size();
