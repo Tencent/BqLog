@@ -205,7 +205,7 @@ jobs:
 
   #Linux-ubuntu
   ubuntu:
-    name: ubuntu (${{ matrix.label }})
+    name: ubuntu (${{ matrix.runner.label }} ${{ matrix.cc }} ${{ matrix.cpp_ver }} ${{ matrix.asan.label }})
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
