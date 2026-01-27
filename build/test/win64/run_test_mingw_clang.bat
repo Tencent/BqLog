@@ -7,7 +7,7 @@ cd MinGWProj_Clang
 
 cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER="C:\Program Files\LLVM\bin\clang.exe" -DCMAKE_CXX_COMPILER="C:\Program Files\LLVM\bin\clang++.exe" -DCMAKE_BUILD_TYPE=Debug
 cmake --build . --config Debug
-.\BqLogUnitTest.exe
+powershell -ExecutionPolicy Bypass -File ..\run_with_timeout.ps1 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
 
 echo "If your did not see output with color, and there are some strange characters like \033, please run Terminal Windows With Administrative Privileges, then type command below, and run script again"
@@ -20,7 +20,7 @@ IF %exitcode% NEQ 0 (
 
 cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -DCPP_VER=%CPP_VER_PARAM% -DCMAKE_C_COMPILER="C:\Program Files\LLVM\bin\clang.exe" -DCMAKE_CXX_COMPILER="C:\Program Files\LLVM\bin\clang++.exe" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build . --config RelWithDebInfo
-.\BqLogUnitTest.exe
+powershell -ExecutionPolicy Bypass -File ..\run_with_timeout.ps1 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
 
 echo "If your did not see output with color, and there are some strange characters like \033, please run Terminal Windows With Administrative Privileges, then type command below, and run script again"

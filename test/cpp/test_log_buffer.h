@@ -580,21 +580,27 @@ namespace bq {
                     result.add_result(count_result, "[log buffer]chunk count check error, real:%d , expected:%d, debu_str:%s", task_check_vector[i], chunk_count_per_task, config_debug_str.c_str());
                 }
                 test_output_dynamic_param(bq::log_level::info, "\n[log buffer] test finished, time cost:%dms\n", (int32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() - start_time));
+                test_output_dynamic(bq::log_level::info, "[log buffer] checking results...\n");
                 result.add_result(total_chunk == log_buffer_test_total_write_count_.load(), "total write count error, real:%d , expected:%d", log_buffer_test_total_write_count_.load(), total_chunk);
                 result.add_result(total_chunk == readed_chunk, "[log buffer] total chunk count check error, read:%d , expected:%d", readed_chunk, total_chunk);
 
+                test_output_dynamic(bq::log_level::info, "[log buffer] joining threads...\n");
                 for (auto& task : task_thread_vector) {
                     task.join();
                 }
+                test_output_dynamic(bq::log_level::info, "[log buffer] threads joined.\n");
+
                 // If double read is not performed,
                 // there is no guarantee that all memory cleanup will be completed by the next read,
                 // as memory cleanup, for the sake of performance, does not guarantee timeliness.
                 {
+                    test_output_dynamic(bq::log_level::info, "[log buffer] final read 1...\n");
                     auto final_handle = test_buffer.read_chunk();
                     bq::scoped_log_buffer_handle<log_buffer> scoped_final_handle(test_buffer, final_handle);
                     result.add_result(final_handle.result == bq::enum_buffer_result_code::err_empty_log_buffer, "final read test");
                 }
                 {
+                    test_output_dynamic(bq::log_level::info, "[log buffer] final read 2 (wait)...\n");
                     bq::platform::thread::sleep(2000); // make sure oversize buffer out of time.
                     auto final_handle = test_buffer.read_chunk();
                     bq::scoped_log_buffer_handle<log_buffer> scoped_final_handle(test_buffer, final_handle);
@@ -603,9 +609,11 @@ namespace bq {
 #if !defined(BQ_WIN) || !defined(BQ_GCC) // MinGW with GCC has bug on thread_local, so the log buffer recycle may not work properly.
                 result.add_result(test_buffer.get_groups_count() == 0, "group recycle test, expected left group:0, but: %" PRIu32 "", test_buffer.get_groups_count());
 #endif
+                test_output_dynamic(bq::log_level::info, "[log buffer] GC...\n");
                 bq::platform::thread::sleep(group_list::GROUP_NODE_GC_LIFE_TIME_MS * 2);
                 test_buffer.garbage_collect();
                 result.add_result(test_buffer.get_garbage_count() == 0, "group garbage collect test");
+                test_output_dynamic(bq::log_level::info, "[log buffer] done.\n");
             }
 
             void do_recovery_test(test_result& result)

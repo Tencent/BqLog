@@ -17,7 +17,22 @@
     #ifdef BQ_MSVC
         #include <intrin.h>
     #else
-        #include <immintrin.h>
+        // For MinGW/Clang, standard headers like immintrin.h often hide AVX/SSE types
+        // unless -mavx/-msse4.2 is passed globally. However, for runtime dispatch (target attributes),
+        // we need the types/intrinsics to be visible even if the global build is generic x86_64.
+        #ifndef __AVX2__
+            #define __AVX__
+            #define __AVX2__
+            #define __SSE4_1__
+            #define __SSE4_2__
+            #include <immintrin.h>
+            #undef __AVX__
+            #undef __AVX2__
+            #undef __SSE4_1__
+            #undef __SSE4_2__
+        #else
+            #include <immintrin.h>
+        #endif
     #endif
 #elif defined(BQ_ARM)
     #if defined(BQ_MSVC)
