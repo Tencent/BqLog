@@ -174,6 +174,7 @@ namespace bq {
             unregister_callback(env);
             napi_callback_entry entry;
             entry.env = env;
+            entry.token = bq::make_shared<env_lifecycle_token>();
             napi_create_reference(env, func, 1, &entry.js_cb_ref);
             napi_value name {};
             napi_create_string_utf8(env, "bqlog-dispatcher-tsfn", NAPI_AUTO_LENGTH, &name);
@@ -186,6 +187,9 @@ namespace bq {
         {
             for (size_t i = 0; i < entries_.size(); ++i) {
                 if (entries_[i].env == env) {
+                    if (entries_[i].token) {
+                        entries_[i].token->is_alive = false;
+                    }
                     napi_release_threadsafe_function(entries_[i].tsfn, napi_tsfn_release);
                     entries_.erase(entries_.begin() + static_cast<ptrdiff_t>(i));
                     return;
@@ -197,13 +201,16 @@ namespace bq {
             napi_call_handler handler;
             napi_ref js_cb_ref;
             void* param;
+            bq::shared_ptr<env_lifecycle_token> token;
         };
 
         static void dispatcher_fallback_adapter(napi_env env, void* data)
         {
             dispatcher_call_ctx* ctx = (dispatcher_call_ctx*)data;
             if (ctx) {
-                ctx->handler(env, ctx->js_cb_ref, ctx->param);
+                if (ctx->token && ctx->token->is_alive) {
+                    ctx->handler(env, ctx->js_cb_ref, ctx->param);
+                }
                 delete ctx;
             }
         }
@@ -229,6 +236,7 @@ namespace bq {
             ctx->handler = handler_;
             ctx->js_cb_ref = primary.js_cb_ref;
             ctx->param = data;
+            ctx->token = primary.token;
 
             native_func_call_ctx* n_ctx = new native_func_call_ctx();
             n_ctx->fn = dispatcher_fallback_adapter;
