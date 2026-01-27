@@ -158,6 +158,15 @@ namespace bq {
             common_vars.napi_dispatchers_.push_back(this);
         }
 
+        static void tsfn_finalize_cb(napi_env env, void* finalize_data, void* finalize_hint)
+        {
+            (void)finalize_hint;
+            napi_ref ref = (napi_ref)finalize_data;
+            if (ref) {
+                napi_delete_reference(env, ref);
+            }
+        }
+
         void napi_callback_dispatcher::register_callback(napi_env env, napi_value func)
         {
             auto& common_vars = common_global_vars::get();
@@ -165,10 +174,11 @@ namespace bq {
             unregister_callback(env);
             napi_callback_entry entry;
             entry.env = env;
+            entry.token = bq::make_shared<env_lifecycle_token>();
             napi_create_reference(env, func, 1, &entry.js_cb_ref);
             napi_value name {};
             napi_create_string_utf8(env, "bqlog-dispatcher-tsfn", NAPI_AUTO_LENGTH, &name);
-            napi_create_threadsafe_function(env, nullptr, nullptr, name, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_native, &entry.tsfn);
+            napi_create_threadsafe_function(env, nullptr, nullptr, name, 1024, 1, entry.js_cb_ref, tsfn_finalize_cb, nullptr, dispatcher_call_native, &entry.tsfn);
             napi_unref_threadsafe_function(env, entry.tsfn);
             entries_.push_back(entry);
         }
@@ -177,7 +187,7 @@ namespace bq {
         {
             for (size_t i = 0; i < entries_.size(); ++i) {
                 if (entries_[i].env == env) {
-                    napi_delete_reference(env, entries_[i].js_cb_ref);
+                    entries_[i].token->is_alive = false;
                     napi_release_threadsafe_function(entries_[i].tsfn, napi_tsfn_release);
                     entries_.erase(entries_.begin() + static_cast<ptrdiff_t>(i));
                     return;
@@ -189,13 +199,16 @@ namespace bq {
             napi_call_handler handler;
             napi_ref js_cb_ref;
             void* param;
+            bq::shared_ptr<env_lifecycle_token> token;
         };
 
         static void dispatcher_fallback_adapter(napi_env env, void* data)
         {
             dispatcher_call_ctx* ctx = (dispatcher_call_ctx*)data;
             if (ctx) {
-                ctx->handler(env, ctx->js_cb_ref, ctx->param);
+                if (ctx->token->is_alive) {
+                    ctx->handler(env, ctx->js_cb_ref, ctx->param);
+                }
                 delete ctx;
             }
         }
@@ -221,6 +234,7 @@ namespace bq {
             ctx->handler = handler_;
             ctx->js_cb_ref = primary.js_cb_ref;
             ctx->param = data;
+            ctx->token = primary.token;
 
             native_func_call_ctx* n_ctx = new native_func_call_ctx();
             n_ctx->fn = dispatcher_fallback_adapter;

@@ -12,6 +12,7 @@
  */
 
 #include "bq_common/bq_common_public_include.h"
+#include "bq_common/utils/utility_types.h"
 #if defined(BQ_NAPI)
 #include <math.h>
 #include <node_api.h>
@@ -151,10 +152,19 @@ namespace bq {
 
         bool napi_call_js_func_in_js_thread(napi_ref js_func_ref, napi_ref this_context_ref, size_t argc, napi_ref* argv_ref);
 
+        struct env_lifecycle_token {
+            bool is_alive;
+            env_lifecycle_token()
+                : is_alive(true)
+            {
+            }
+        };
+
         struct napi_callback_entry {
             napi_env env;
             napi_ref js_cb_ref;
             napi_threadsafe_function tsfn;
+            bq::shared_ptr<env_lifecycle_token> token;
         };
 
         using napi_call_handler = void (*)(napi_env env, napi_ref js_cb_ref, void* param);

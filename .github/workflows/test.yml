@@ -248,40 +248,10 @@ jobs:
       - name: Build for Linux
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
-          ASAN_OPTIONS: "abort_on_error=1"
         run: |
-          cd build/test/linux
+          cd build/test/linux  
           chmod +x *.sh
-          # Enable core dumps for this session
-          ulimit -c unlimited
-          set +e
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
-          EXIT_CODE=$?
-          set -e
-          if [ $EXIT_CODE -ne 0 ]; then
-              echo "Test script failed with exit code $EXIT_CODE"
-              echo "Searching for core dump file in project root..."
-              CORE=$(find ../../.. -name 'core*' -type f -print -quit 2>/dev/null)
-              if [ -n "$CORE" ]; then
-                  echo "Found core file: $CORE"
-                  EXE=$(which node)
-                  if [ -n "$EXE" ]; then
-                      echo "Found node executable: $EXE"
-                      echo "Generating GDB backtrace from core dump..."
-                      echo "set pagination off" > gdb_cmds.txt
-                      echo "info threads" >> gdb_cmds.txt
-                      echo "thread apply all bt full" >> gdb_cmds.txt
-                      echo "quit" >> gdb_cmds.txt
-                      gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB execution failed."
-                      echo "GDB backtrace finished."
-                  else
-                      echo "Could not find 'node' executable to analyze core dump."
-                  fi
-              else
-                  echo "Core dump file not found."
-              fi
-              exit $EXIT_CODE
-          fi
 
   #linux-debian
   debian:
@@ -2163,20 +2133,11 @@ jobs:
           # Stop apport to prevent it from intercepting core dumps
           sudo service apport stop || true
 
-      - name: Run Node Tests
-        env:
-          BQ_ENABLE_ASAN: ${{ matrix.asan_switch }}
-        shell: bash
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            ./${{ matrix.script_path }}
-          else
-            chmod +x ${{ matrix.script_path }}
-            ./${{ matrix.script_path }}
-          fi
-
       - name: Run Node Tests (Linux/macOS)
         if: runner.os != 'Windows'
+        env:
+          BQ_ENABLE_ASAN: ${{ matrix.asan_switch }}
+          ASAN_OPTIONS: "abort_on_error=1"
         run: |
           chmod +x ${{ matrix.script_path }}
           
@@ -2197,7 +2158,7 @@ jobs:
             
             if [ "$RUNNER_OS" == "Linux" ]; then
               # Search for core files in current dir and /var/crash (apport default)
-              CORE_FILE=$(find . -maxdepth 2 -name "core.*" | head -n 1)
+              CORE_FILE=$(find . -maxdepth 5 -name "core.*" | head -n 1)
               if [ -z "$CORE_FILE" ]; then
                  CORE_FILE=$(find /var/crash -name "*core*" 2>/dev/null | head -n 1)
               fi
