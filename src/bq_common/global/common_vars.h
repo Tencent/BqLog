@@ -10,13 +10,13 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
- //
- //  common_vars.h
- //  Created by Yu Cao on 2025/4/11.
- //  Manages the lifecycle and initialization order of global variables uniformly,
- //  used to avoid the Static Initialization Order Fiasco.
- //  In theory, all global variables with constructors or destructor
- //  should be managed here.
+//
+//  common_vars.h
+//  Created by Yu Cao on 2025/4/11.
+//  Manages the lifecycle and initialization order of global variables uniformly,
+//  used to avoid the Static Initialization Order Fiasco.
+//  In theory, all global variables with constructors or destructor
+//  should be managed here.
 
 #include "bq_common/bq_common.h"
 namespace bq {
@@ -84,6 +84,7 @@ namespace bq {
         static BQ_TLS T* global_vars_ptr_;
         alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
+        static T** initializer_mark_;
 
     protected:
         virtual ~global_vars_base()
@@ -94,13 +95,23 @@ namespace bq {
     public:
         static T& get()
         {
+            if (T::global_vars_ptr_) {
+                return *T::global_vars_ptr_;
+            }
+            //For recursive calling of `get()` or TLS address reuse between different threads.
+            if (&T::global_vars_ptr_ == BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).load_acquire()
+                && BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).load_acquire() != nullptr) {
+                T::global_vars_ptr_ = T::global_vars_buffer_;
+                return *T::global_vars_buffer_;
+            }
             if (!T::global_vars_ptr_) {
                 bq::platform::atomic<int32_t>& atomic_status = *reinterpret_cast<bq::platform::atomic<int32_t>*>(&T::global_vars_init_flag_);
                 if (atomic_status.load_acquire() == 0) {
                     int32_t expected = 0;
                     if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                        BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).store_release(&T::global_vars_ptr_);
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
-                        T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(8, sizeof(T)));
+                        T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(alignof(T), sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
                         new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
                         get_global_var_destructor().register_destructible_var(T::global_vars_ptr_);
@@ -113,9 +124,6 @@ namespace bq {
                 }
                 T::global_vars_ptr_ = T::global_vars_buffer_;
             }
-#ifndef NDEBUG
-            assert(T::global_vars_ptr_ == T::global_vars_buffer_);
-#endif
             return *T::global_vars_ptr_;
         }
     };
@@ -128,6 +136,9 @@ namespace bq {
 
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
+
+    template <typename T, typename Priority_Global_Var_Type>
+    T** global_vars_base<T, Priority_Global_Var_Type>::initializer_mark_;
 
     struct common_global_vars : public global_vars_base<common_global_vars> {
         size_t page_size_;
@@ -159,7 +170,16 @@ namespace bq {
 #endif
 #if defined(BQ_NAPI)
         bq::platform::mutex napi_init_mutex_;
-        bq::array<void (*)(napi_env env, napi_value exports)> napi_init_callbacks_inst_;
+        bq::platform::mutex napi_env_mutex_;
+        bq::array<void (*)(napi_env env, napi_value exports)> napi_init_native_callbacks_inst_;
+        bq::array<napi_property_descriptor> napi_registered_functions_;
+#if defined(BQ_NAPI)
+        napi_threadsafe_function napi_tsfn_native_ = nullptr;
+        napi_threadsafe_function napi_tsfn_js_ = nullptr;
+        napi_env napi_main_env_ = nullptr;
+        bool napi_is_initialized_ = false;
+        bq::array<bq::platform::napi_callback_dispatcher*> napi_dispatchers_;
+#endif
 #endif
 #if defined(BQ_ANDROID)
         jobject android_asset_manager_java_instance_ = nullptr;
@@ -178,7 +198,7 @@ namespace bq {
 
         common_global_vars();
 
-        virtual ~common_global_vars() override {}
+        virtual ~common_global_vars() override { }
 
     protected:
         virtual void partial_destruct() override;
