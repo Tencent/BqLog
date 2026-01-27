@@ -1980,7 +1980,7 @@ jobs:
             ./run_unix.sh
 
   csharp_wrapper_tests:
-    name: csharp (${{ matrix.label }})
+    name: csharp_wrapper (${{ matrix.label }})
     strategy:
       fail-fast: false
       matrix:
@@ -2046,7 +2046,7 @@ jobs:
           fi
 
   node_wrapper_tests:
-    name: node (${{ matrix.label }})
+    name: nodejs_wrapper (${{ matrix.label }})
     strategy:
       fail-fast: false
       matrix:
