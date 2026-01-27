@@ -375,27 +375,24 @@ namespace bq {
     }
 
     template <typename CHAR_TYPE, typename Allocator>
-    inline bq::array<bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::split(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& delimiter, bool include_empty_string/* = false*/) const
+    inline bq::array<bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::split(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& delimiter, bool include_empty_string) const
     {
         bq::array<bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>> result;
         size_type last_offset = 0;
-        while (true) {
+        while (last_offset <= size()) {
             size_type new_offset = find(delimiter, last_offset);
             if (new_offset == npos) {
-                if (last_offset < size()) {
-                    bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> lastStr = substr(last_offset);
-                    if (!lastStr.is_empty() || include_empty_string) {
-                        result.emplace_back(lastStr);
-                    }
-                } else if (include_empty_string) {
-                    result.emplace_back(empty_str());
-                }
+                // No more delimiters found, add the remaining string (could be empty if at end)
+                bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> last_str = (last_offset < size()) ? substr(last_offset) : BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>();
+                if (include_empty_string || !last_str.is_empty())
+                    result.emplace_back(last_str);
                 break;
-            } else {
-                bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> lastStr = substr(last_offset, new_offset - last_offset);
-                if (!lastStr.is_empty() || include_empty_string) {
-                    result.emplace_back(lastStr);
-                }
+            }
+            else {
+                // Found a delimiter, add the substring before it
+                bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> last_str = substr(last_offset, new_offset - last_offset);
+                if (include_empty_string || !last_str.is_empty())
+                    result.emplace_back(last_str);
                 last_offset = new_offset + delimiter.size();
             }
         }
