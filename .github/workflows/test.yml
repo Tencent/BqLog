@@ -673,20 +673,29 @@ jobs:
             set -e
 
             if [ $EXIT_CODE -ne 0 ]; then
-                echo "Test failed with exit code $EXIT_CODE"
+                echo "Test failed with exit code $EXIT_CODE."
                 echo "Waiting 30s for core dump to finish writing..."
                 sleep 30
-                CORE=$(find . -name core -type f | head -n 1)
+                echo "Searching for core dump file and executable..."
+                CORE=$(find . -name 'core*' -type f | head -n 1)
                 EXE=$(find . -name BqLogUnitTest -type f | head -n 1)
+
                 if [ -n "$CORE" ] && [ -n "$EXE" ]; then
-                    echo "=== GDB BACKTRACE ==="
+                    echo "Found core file: $CORE"
+                    echo "Found executable: $EXE"
+                    echo "Preparing GDB commands..."
                     echo "set pagination off" > gdb_cmds.txt
                     echo "thread apply all bt full" >> gdb_cmds.txt
                     echo "quit" >> gdb_cmds.txt
-                    # Use perl for timeout (300s = 5min) to avoid CI hang
-                    perl -e 'alarm shift; exec @ARGV' 300 gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB timed out or failed"
+                    
+                    echo "Starting GDB to generate backtrace..."
+                    gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB execution failed."
+                    echo "GDB backtrace generation finished."
                 else
-                    echo "Core file or executable not found."
+                    echo "Could not find core file or executable."
+                    echo "Core file path: '${CORE}'"
+                    echo "Executable path: '${EXE}'"
+                    echo "Listing current directory structure to help debug..."
                     ls -R
                 fi
                 exit $EXIT_CODE
@@ -761,20 +770,29 @@ jobs:
             set -e
 
             if [ $EXIT_CODE -ne 0 ]; then
-                echo "Test failed with exit code $EXIT_CODE"
+                echo "Test failed with exit code $EXIT_CODE."
                 echo "Waiting 30s for core dump to finish writing..."
                 sleep 30
-                CORE=$(find . -name core -type f | head -n 1)
+                echo "Searching for core dump file and executable..."
+                CORE=$(find . -name 'core*' -type f | head -n 1)
                 EXE=$(find . -name BqLogUnitTest -type f | head -n 1)
+
                 if [ -n "$CORE" ] && [ -n "$EXE" ]; then
-                    echo "=== GDB BACKTRACE ==="
+                    echo "Found core file: $CORE"
+                    echo "Found executable: $EXE"
+                    echo "Preparing GDB commands..."
                     echo "set pagination off" > gdb_cmds.txt
                     echo "thread apply all bt full" >> gdb_cmds.txt
                     echo "quit" >> gdb_cmds.txt
-                    # Use perl for timeout (300s = 5min) to avoid CI hang
-                    perl -e 'alarm shift; exec @ARGV' 300 gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB timed out or failed"
+                    
+                    echo "Starting GDB to generate backtrace..."
+                    gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB execution failed."
+                    echo "GDB backtrace generation finished."
                 else
-                    echo "Core file or executable not found."
+                    echo "Could not find core file or executable."
+                    echo "Core file path: '${CORE}'"
+                    echo "Executable path: '${EXE}'"
+                    echo "Listing current directory structure to help debug..."
                     ls -R
                 fi
                 exit $EXIT_CODE
