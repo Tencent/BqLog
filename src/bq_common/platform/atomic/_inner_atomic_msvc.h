@@ -25,7 +25,7 @@
 namespace bq {
     namespace platform {
         template <typename T, size_t N>
-        class _atomic_base {
+        class alignas(8) _atomic_base {
         public:
             static constexpr bool supported = false;
 
