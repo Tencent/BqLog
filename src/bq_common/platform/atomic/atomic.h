@@ -52,18 +52,6 @@ namespace bq {
             static_assert(base_type::supported, "atomic type is not supported on this platform!");
             typedef typename bq::decay<T>::type value_type;
 
-            bq_forceinline atomic_trivially_constructible<T>& operator=(const value_type& value)
-            {
-                store_seq_cst(value);
-                return *this;
-            }
-
-            bq_forceinline atomic_trivially_constructible<T>& operator=(const atomic_trivially_constructible<T>& rhs)
-            {
-                store_seq_cst(rhs.load_seq_cst());
-                return *this;
-            }
-
             // load
             bq_forceinline value_type load(memory_order order = memory_order::seq_cst) const noexcept
             {
@@ -680,7 +668,12 @@ namespace bq {
             }
         };
 
-        static_assert(bq::is_trivially_constructible<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivially constructible");
+        static_assert(bq::is_trivially_constructible<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivial type");
+        static_assert(bq::is_trivially_copy_assignable<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivial type");
+        static_assert(bq::is_trivially_destructible<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivial type");
+        static_assert(bq::is_trivially_copy_constructible<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivial type");
+        static_assert(bq::is_trivially_move_assignable<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivial type");
+        static_assert(bq::is_trivially_move_constructible<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivial type");
         static_assert(!bq::is_trivially_constructible<atomic<int32_t>>::value, "atomic must not be trivially constructible");
     }
 }
