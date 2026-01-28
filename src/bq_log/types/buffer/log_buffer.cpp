@@ -94,6 +94,9 @@ namespace bq {
                                 context->is_external_ref_ = false;
                                 break;
                             }
+                            else {
+                                bq::util::log_device_console(bq::log_level::error, "waiting");
+                            }
                         }
                     }
                     //Avoid ABA problem with oversize buffer temporary reference.
@@ -128,7 +131,7 @@ namespace bq {
         , lp_buffer_(config_)
         , hp_buffer_max_alloc_size_(UINT32_MAX)
         , version_(config_.need_recovery ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
-        , destruction_mark_(bq::make_shared_for_overwrite<destruction_mark>())
+        , destruction_mark_(bq::make_shared<destruction_mark>())
         , current_oversize_buffer_index_(0)
     {
         static bq::platform::atomic<uint64_t> id_generator(0);

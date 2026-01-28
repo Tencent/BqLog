@@ -528,7 +528,7 @@ namespace bq {
 
     // make_shared with default initialization
     template <typename T>
-    shared_ptr<T> make_shared_for_overwrite()
+    shared_ptr<T> make_shared()
     {
         return shared_ptr<T>(new T);
     }
