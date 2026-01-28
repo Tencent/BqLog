@@ -187,9 +187,9 @@ namespace bq {
         public:
             spin_lock()
             {
-                value_ = false;
+                value_.store_seq_cst(false);
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-                thread_id_ = 0;
+                thread_id_.store_seq_cst(0);
 #endif
             }
             spin_lock(const spin_lock&) = delete;

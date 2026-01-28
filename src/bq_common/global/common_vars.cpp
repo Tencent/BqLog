@@ -145,7 +145,7 @@ namespace bq {
     global_vars_destructor::~global_vars_destructor()
     {
 #ifdef BQ_JAVA
-        is_jvm_destroyed_ = true;
+        is_jvm_destroyed_.store_seq_cst(true);
 #endif
         bq::platform::scoped_spin_lock lock(destructor_mutex_);
         if (destructible_vars_) {
@@ -185,7 +185,7 @@ namespace bq {
     }
 
     void common_global_vars::mark_jvm_destroyed() {
-        is_jvm_destroyed_ = true;
+        is_jvm_destroyed_.store_seq_cst(true);
     }
 #endif
 
