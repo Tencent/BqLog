@@ -142,8 +142,6 @@
 
 // thread_local has use-after-free issue on MinGW GCC
 // use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
-// Note: Do NOT mix __thread/BQ_TLS with thread_local, as they have different
-// lifecycles on some platforms (especially MinGW-Clang on ARM64EC).
 namespace bq {
     template <size_t ID, typename T>
     struct _bq_non_pod_holder_type {
