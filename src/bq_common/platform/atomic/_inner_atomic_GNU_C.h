@@ -95,30 +95,34 @@ namespace bq {
             static_assert(sizeof(T) == N, "please don't use bq::platform::_atomic_base, use bq::platform::atomic instead.");
             static_assert(N == 1 || N == 2 || N == 4 || N == 8, "please don't use bq::platform::_atomic_base, use bq::platform::atomic instead.");
             typedef typename bq::decay<T>::type value_type;
-            typedef typename _atomic_gnu_c_standard_type<sizeof(T)>::value_type api_type;
-            union {
-                alignas(8) value_type value_;
-                alignas(8) api_type value_standard;
-            };
-            _atomic_base()
-                : value_()
+            typedef typename _atomic_gnu_c_standard_type<sizeof(T)>::ptr_type api_ptr_type;
+            alignas(8) value_type value_;
+
+            bq_forceinline api_ptr_type get_value_api_ptr() noexcept
             {
+                return reinterpret_cast<api_ptr_type>(&value_);
             }
-            _atomic_base(const value_type& val)
-                : value_(val)
+
+            bq_forceinline bq::add_const_t<api_ptr_type> get_value_api_ptr() const noexcept
             {
-                __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                // First remove const from &value_, then reinterpret_cast, then add const back
+                return reinterpret_cast<bq::add_const_t<api_ptr_type>>(const_cast<value_type*>(&value_));
+            }
+
+            bq_forceinline void explicit_copy(const value_type& val)
+            {
+                __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline value_type load(memory_order order = memory_order::seq_cst) const noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(get_value_api_ptr(), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(get_value_api_ptr(), __ATOMIC_ACQUIRE));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(get_value_api_ptr(), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -129,33 +133,33 @@ namespace bq {
 
             bq_forceinline value_type load_acquire() const noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(get_value_api_ptr(), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type load_relaxed() const noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(get_value_api_ptr(), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type load_acq_rel() const noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(get_value_api_ptr(), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type load_seq_cst() const noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(&value_standard, __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_load_n(get_value_api_ptr(), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline void store(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_RELAXED);
+                    return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELAXED);
                 case memory_order::release:
-                    return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_RELEASE);
+                    return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELEASE);
                 default:
-                    return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                    return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
                 }
             }
             bq_forceinline void store_raw(value_type val) noexcept
@@ -165,37 +169,37 @@ namespace bq {
 
             bq_forceinline void store_release(value_type val) noexcept
             {
-                return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_RELEASE);
+                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELEASE);
             }
 
             bq_forceinline void store_relaxed(value_type val) noexcept
             {
-                return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_RELAXED);
+                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELAXED);
             }
 
             bq_forceinline void store_acq_rel(value_type val) noexcept
             {
-                return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline void store_seq_cst(value_type val) noexcept
             {
-                return __atomic_store(&value_standard, get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline value_type exchange(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -208,64 +212,64 @@ namespace bq {
 
             bq_forceinline value_type exchange_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type exchange_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type exchange_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type exchange_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type exchange_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_exchange_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline bool compare_exchange_weak(value_type& expected, value_type desired, const memory_order success_order = memory_order::seq_cst, const memory_order fail_order = memory_order::seq_cst) noexcept
             {
                 switch (success_order) {
                 case memory_order::relaxed:
-                    return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+                    return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
                 case memory_order::acquire:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::release:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::acq_rel:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::seq_cst:
                 default:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
                     case memory_order::acquire:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
                     }
                 }
             }
@@ -274,37 +278,37 @@ namespace bq {
             {
                 switch (success_order) {
                 case memory_order::relaxed:
-                    return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+                    return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
                 case memory_order::acquire:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::release:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::acq_rel:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
                     }
                 case memory_order::seq_cst:
                 default:
                     switch (fail_order) {
                     case memory_order::relaxed:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
                     case memory_order::acquire:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
                     default:
-                        return __atomic_compare_exchange(&value_standard, get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+                        return __atomic_compare_exchange(get_value_api_ptr(), get_atomic_ptr(expected), get_atomic_ptr(desired), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
                     }
                 }
             }
@@ -313,15 +317,15 @@ namespace bq {
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -333,42 +337,42 @@ namespace bq {
 
             bq_forceinline value_type add_fetch_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type add_fetch_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type add_fetch_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type add_fetch_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type add_fetch_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_add_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type fetch_add(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -381,42 +385,42 @@ namespace bq {
 
             bq_forceinline value_type fetch_add_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type fetch_add_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type fetch_add_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type fetch_add_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type fetch_add_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_add(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type sub_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -428,42 +432,42 @@ namespace bq {
 
             bq_forceinline value_type sub_fetch_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type sub_fetch_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type sub_fetch_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type sub_fetch_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type sub_fetch_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_sub_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type fetch_sub(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -476,42 +480,42 @@ namespace bq {
 
             bq_forceinline value_type fetch_sub_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type fetch_sub_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type fetch_sub_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type fetch_sub_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type fetch_sub_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_sub(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type xor_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -523,42 +527,42 @@ namespace bq {
 
             bq_forceinline value_type xor_fetch_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type xor_fetch_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type xor_fetch_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type xor_fetch_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type xor_fetch_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_xor_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type fetch_xor(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -571,42 +575,42 @@ namespace bq {
 
             bq_forceinline value_type fetch_xor_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type fetch_xor_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type fetch_xor_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type fetch_xor_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type fetch_xor_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_xor(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type or_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -618,42 +622,42 @@ namespace bq {
 
             bq_forceinline value_type or_fetch_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type or_fetch_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type or_fetch_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type or_fetch_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type or_fetch_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_or_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type fetch_or(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -666,42 +670,42 @@ namespace bq {
 
             bq_forceinline value_type fetch_or_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type fetch_or_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type fetch_or_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type fetch_or_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type fetch_or_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_or(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type and_fetch(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -713,42 +717,42 @@ namespace bq {
 
             bq_forceinline value_type and_fetch_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type and_fetch_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type and_fetch_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type and_fetch_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type and_fetch_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_and_fetch(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
 
             bq_forceinline value_type fetch_and(value_type val, memory_order order) noexcept
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
                 case memory_order::acquire:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
                 case memory_order::release:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
                 case memory_order::acq_rel:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
                 default:
-                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                    return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
                 }
             }
 
@@ -761,27 +765,27 @@ namespace bq {
 
             bq_forceinline value_type fetch_and_acquire(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_ACQUIRE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQUIRE));
             }
 
             bq_forceinline value_type fetch_and_release(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_RELEASE));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE));
             }
 
             bq_forceinline value_type fetch_and_relaxed(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_RELAXED));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED));
             }
 
             bq_forceinline value_type fetch_and_acq_rel(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_ACQ_REL));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_ACQ_REL));
             }
 
             bq_forceinline value_type fetch_and_seq_cst(value_type val) noexcept
             {
-                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(&value_standard, get_atomic_value(val), __ATOMIC_SEQ_CST));
+                return get_value_type_from_atomic_standard_value<value_type>(__atomic_fetch_and(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST));
             }
         };
     }

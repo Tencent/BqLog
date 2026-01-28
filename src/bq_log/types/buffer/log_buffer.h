@@ -294,7 +294,7 @@ namespace bq {
         cur_log_buffer_id_ = buffer->id_;
         auto iter = log_map_->find(buffer->id_);
         if (iter == log_map_->end()) {
-            iter = log_map_->add(buffer->id_, bq::util::aligned_new<log_tls_buffer_info>(BQ_CACHE_LINE_SIZE));
+            iter = log_map_->add(buffer->id_, bq::util::aligned_new<log_tls_buffer_info>(alignof(log_tls_buffer_info)));
             iter->value()->destruction_mark_ = buffer->destruction_mark_;
             iter->value()->buffer_ = const_cast<log_buffer*>(buffer);
         }

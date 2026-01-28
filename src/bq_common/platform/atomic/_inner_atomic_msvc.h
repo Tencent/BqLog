@@ -32,13 +32,10 @@ namespace bq {
         protected:
             typedef typename bq::decay<T>::type value_type;
             value_type value_;
-            _atomic_base()
-                : value_()
+
+            bq_forceinline void explicit_copy(const value_type& val)
             {
-            }
-            _atomic_base(const value_type& value)
-                : value_(value)
-            {
+                value_ = val;
             }
         };
 
@@ -106,11 +103,7 @@ namespace bq {
         typedef typename bq::decay<T>::type value_type;                                                                                                                                                                            \
         typedef typename _atomic_standard_windows_type<sizeof(T)>::value_type api_type;                                                                                                                                            \
         alignas(8) value_type value_;                                                                                                                                                                                              \
-        _atomic_base()                                                                                                                                                                                                             \
-            : value_()                                                                                                                                                                                                             \
-        {                                                                                                                                                                                                                          \
-        }                                                                                                                                                                                                                          \
-        _atomic_base(const value_type& val)                                                                                                                                                                                        \
+        bq_forceinline void explicit_copy(const value_type& val)                                                                                                                                                                   \
         {                                                                                                                                                                                                                          \
             api_type result;                                                                                                                                                                                                       \
             BQ_ATOMIC_INTRINSIC_SEQ_CST(result, _INTRIN_BIT_SUFFIX(_InterlockedExchange, SIZE_BYTE), get_atomic_ptr(&value_), get_atomic_value<value_type>(val));                                                                  \

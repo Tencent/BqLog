@@ -124,19 +124,19 @@ namespace bq {
         /// </summary>
         class spin_lock_zero_init {
         protected:
-            alignas(8) bool value_; // 0 by zero init
+            bq::platform::atomic_trivially_constructible<bool> value_; 
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-            alignas(8) bq::platform::thread::thread_id thread_id_; // 0 by zero init
+            bq::platform::atomic_trivially_constructible<bq::platform::thread::thread_id> thread_id_; 
 #endif
         protected:
-            bq::platform::atomic<bool>& value()
+            bq::platform::atomic_trivially_constructible<bool>& value()
             {
-                return BQ_PACK_ACCESS_BY_TYPE(value_, bq::platform::atomic<bool>);
+                return value_;
             }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-            bq::platform::atomic<bq::platform::thread::thread_id>& thread_id()
+            bq::platform::atomic_trivially_constructible<bq::platform::thread::thread_id>& thread_id()
             {
-                return BQ_PACK_ACCESS_BY_TYPE(thread_id_, bq::platform::atomic<bq::platform::thread::thread_id>);
+                return thread_id_;
             }
 #endif
         public:

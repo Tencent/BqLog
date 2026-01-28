@@ -45,32 +45,20 @@ static_assert(false, "bq::platform::atomic is not supported in your compiler");
 namespace bq {
     namespace platform {
         template <typename T>
-        class atomic : public _atomic_base<T, sizeof(T)> {
-            typedef _atomic_base<T, sizeof(T)> base_type;
-            static_assert(base_type::supported, "atomic type is not supported on this platform!");
+        class atomic_trivially_constructible : public _atomic_base<T, sizeof(T)> {
 
         public:
+            typedef _atomic_base<T, sizeof(T)> base_type;
+            static_assert(base_type::supported, "atomic type is not supported on this platform!");
             typedef typename bq::decay<T>::type value_type;
-            atomic()
-                : base_type()
-            {
-            }
-            atomic(const value_type& value)
-                : base_type(value)
-            {
-            }
-            atomic(const atomic<T>& rhs)
-                : base_type(rhs)
-            {
-            }
 
-            bq_forceinline atomic<T>& operator=(const value_type& value)
+            bq_forceinline atomic_trivially_constructible<T>& operator=(const value_type& value)
             {
                 store_seq_cst(value);
                 return *this;
             }
 
-            bq_forceinline atomic<T>& operator=(const atomic<T>& rhs)
+            bq_forceinline atomic_trivially_constructible<T>& operator=(const atomic_trivially_constructible<T>& rhs)
             {
                 store_seq_cst(rhs.load_seq_cst());
                 return *this;
@@ -544,35 +532,130 @@ namespace bq {
                 return base_type::fetch_and_seq_cst(val);
             }
 
-            bq_forceinline atomic<T>& operator++()
+            bq_forceinline atomic_trivially_constructible<T>& operator++()
             {
                 fetch_add_seq_cst(1);
+                return *this;
+            }
+
+            bq_forceinline atomic_trivially_constructible<T> operator++(int32_t)
+            {
+                atomic_trivially_constructible<T> tmp = *this;
+                fetch_add_seq_cst(1);
+                return tmp;
+            }
+
+            bq_forceinline atomic_trivially_constructible<T>& operator--()
+            {
+                fetch_sub_seq_cst(1);
+                return *this;
+            }
+
+            bq_forceinline atomic_trivially_constructible<T> operator--(int32_t)
+            {
+                atomic_trivially_constructible<T> tmp = *this;
+                fetch_sub_seq_cst(1);
+                return tmp;
+            }
+
+            bq_forceinline atomic_trivially_constructible<T>& operator+=(value_type value)
+            {
+                fetch_add_seq_cst(value);
+                return *this;
+            }
+
+            bq_forceinline atomic_trivially_constructible<T> operator+(value_type value)
+            {
+                atomic_trivially_constructible<T> tmp = *this;
+                tmp.add_fetch_seq_cst(value);
+                return tmp;
+            }
+
+            bq_forceinline atomic_trivially_constructible<T>& operator-=(value_type value)
+            {
+                fetch_sub_seq_cst(value);
+                return *this;
+            }
+
+            bq_forceinline atomic_trivially_constructible<T> operator-(value_type value)
+            {
+                atomic_trivially_constructible<T> tmp = *this;
+                tmp.sub_fetch_seq_cst(value);
+                return tmp;
+            }
+        };
+
+        template <typename T>
+        class atomic : public atomic_trivially_constructible<T>
+        {
+        public:
+            typedef typename atomic_trivially_constructible<T>::base_type base_type;
+            typedef typename atomic_trivially_constructible<T>::value_type value_type;
+            typedef atomic_trivially_constructible<T> trivially_constructible_type;
+        public:
+            atomic()
+            {
+                base_type::explicit_copy(value_type());
+            }
+            atomic(const value_type& value)
+            {
+                base_type::explicit_copy(value);
+            }
+            atomic(const atomic<T>& rhs)
+            {
+                base_type::explicit_copy(rhs.load_seq_cst());
+            }
+
+            atomic(const trivially_constructible_type& rhs)
+            {
+                base_type::explicit_copy(rhs.load_seq_cst());
+            }
+            bq_forceinline atomic<T>& operator=(const value_type& value)
+            {
+                this->store_seq_cst(value);
+                return *this;
+            }
+
+            bq_forceinline atomic<T>& operator=(const atomic<T>& rhs)
+            {
+                this->store_seq_cst(rhs.load_seq_cst());
+                return *this;
+            }
+            
+            bq_forceinline atomic<T>& operator=(const trivially_constructible_type& rhs)
+            {
+                this->store_seq_cst(rhs.load_seq_cst());
+                return *this;
+            }
+            bq_forceinline atomic<T>& operator++()
+            {
+                this->fetch_add_seq_cst(1);
                 return *this;
             }
 
             bq_forceinline atomic<T> operator++(int32_t)
             {
                 atomic<T> tmp = *this;
-                fetch_add_seq_cst(1);
+                this->fetch_add_seq_cst(1);
                 return tmp;
             }
 
             bq_forceinline atomic<T>& operator--()
             {
-                fetch_sub_seq_cst(1);
+                this->fetch_sub_seq_cst(1);
                 return *this;
             }
 
             bq_forceinline atomic<T> operator--(int32_t)
             {
                 atomic<T> tmp = *this;
-                fetch_sub_seq_cst(1);
+                this->fetch_sub_seq_cst(1);
                 return tmp;
             }
 
             bq_forceinline atomic<T>& operator+=(value_type value)
             {
-                fetch_add_seq_cst(value);
+                this->fetch_add_seq_cst(value);
                 return *this;
             }
 
@@ -585,7 +668,7 @@ namespace bq {
 
             bq_forceinline atomic<T>& operator-=(value_type value)
             {
-                fetch_sub_seq_cst(value);
+                this->fetch_sub_seq_cst(value);
                 return *this;
             }
 
@@ -596,5 +679,8 @@ namespace bq {
                 return tmp;
             }
         };
+
+        static_assert(bq::is_trivially_constructible<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivially constructible");
+        static_assert(!bq::is_trivially_constructible<atomic<int32_t>>::value, "atomic must not be trivially constructible");
     }
 }

@@ -223,10 +223,6 @@ bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* fr
 #define BQ_CPP_23 1
 #endif
 
-#if defined(__cpp_aligned_new)
-#define BQ_ALIGNAS_NEW 1
-#endif
-
 #if defined(BQ_GCC) || defined(BQ_CLANG)
 #define BQ_SUPPRESS_NULL_DEREF_BEGIN() \
     _Pragma("GCC diagnostic push")     \

@@ -81,7 +81,7 @@ namespace bq {
                 config.need_recovery = false;
                 config.policy = log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = UINT64_MAX;
-                buffer = bq::util::aligned_new<bq::log_buffer>(BQ_CACHE_LINE_SIZE, config);
+                buffer = bq::util::aligned_new<bq::log_buffer>(alignof(bq::log_buffer), config);
                 log_buffer* expected = nullptr;
                 if (!buffer_.compare_exchange_strong(expected, buffer, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                     bq::util::aligned_delete(buffer);

@@ -186,7 +186,7 @@ namespace bq {
                     }
                 }
             }
-            buffer_ = bq::util::aligned_new<bq::log_buffer>(BQ_CACHE_LINE_SIZE, buffer_config);
+            buffer_ = bq::util::aligned_new<bq::log_buffer>(alignof(bq::log_buffer), buffer_config);
         }
         // init appenders
         {

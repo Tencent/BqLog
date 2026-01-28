@@ -143,16 +143,6 @@ namespace bq {
 
         /// <summary>
         /// Allocates and constructs an object of type `T` with the specified alignment.
-        ///
-        /// If the compiler supports C++17 aligned `new` (indicated by `BQ_ALIGNAS_NEW`),
-        /// the function uses the standard `new` operator, and the `alignment` parameter is ignored.
-        /// In this case, the alignment is determined by the `alignas` specifier in the class definition of `T`.
-        ///
-        /// If the compiler does not support C++17 aligned `new`, the function uses
-        /// `bq::platform::aligned_alloc` to allocate memory with the specified `alignment`,
-        /// and constructs the object using placement new. The caller must ensure that the
-        /// provided `alignment` matches the `alignas` specifier (if any) in the class definition
-        /// of `T` to avoid undefined behavior.
         /// </summary>
         /// <typeparam name="T">The type of the object to allocate and construct.</typeparam>
         /// <typeparam name="V">Variadic template parameters for the constructor arguments of `T`.</typeparam>
@@ -164,27 +154,18 @@ namespace bq {
         template <typename T, typename... V>
         static T* aligned_new(const size_t alignment, V&&... args)
         {
-#if defined(BQ_ALIGNAS_NEW)
-            (void)alignment;
-            return new T(bq::forward<V>(args)...);
-#else
             void* ptr = bq::platform::aligned_alloc(alignment, sizeof(T));
             if (!ptr) {
                 return nullptr;
             }
             new ((void*)ptr, bq::enum_new_dummy::dummy) T(bq::forward<V>(args)...);
             return static_cast<T*>(ptr);
-#endif
         }
         template <typename T, typename... V>
         static void aligned_delete(T* ptr)
         {
-#if defined(BQ_ALIGNAS_NEW)
-            delete ptr;
-#else
             bq::object_destructor<T>::destruct(static_cast<T*>(ptr));
             bq::platform::aligned_free(ptr);
-#endif
         }
     };
 
