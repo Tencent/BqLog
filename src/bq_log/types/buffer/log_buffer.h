@@ -150,11 +150,16 @@ namespace bq {
 
         BQ_PACK_BEGIN
         struct alignas(8) block_misc_data {
-            bq::platform::atomic_trivially_constructible<bool> is_removed_;
+        private:
+            alignas(8) char is_removed_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<bool>)];
+        public:
             alignas(8) bool need_reallocate_;
             alignas(8) context_head context_;
+            bq_forceinline bq::platform::atomic_trivially_constructible<bool>& is_removed() {
+                return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<bool>*>(is_removed_place_holder_));
+            }
         } BQ_PACK_END 
-        static_assert(sizeof(bq::platform::atomic_trivially_constructible<bool>) == 8, "invalid atomic size");
+        static_assert(sizeof(block_misc_data) == 16 + sizeof(context_head), "invalid block_misc_data size");
     
     public : log_buffer(log_buffer_config& config);
 

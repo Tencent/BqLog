@@ -23,13 +23,13 @@
 namespace bq {
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
     {
-        block->get_misc_data<log_buffer::block_misc_data>().is_removed_.store_release(removed);
+        block->get_misc_data<log_buffer::block_misc_data>().is_removed().store_release(removed);
     }
     bq_forceinline static bool is_block_removed(block_node_head* block)
     {
-        if (block->get_misc_data<log_buffer::block_misc_data>().is_removed_.load_raw()) {
+        if (block->get_misc_data<log_buffer::block_misc_data>().is_removed().load_raw()) {
             // inter thread sync
-            if (block->get_misc_data<log_buffer::block_misc_data>().is_removed_.load_acquire()) {
+            if (block->get_misc_data<log_buffer::block_misc_data>().is_removed().load_acquire()) {
                 return true;
             }
         }
