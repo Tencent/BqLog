@@ -185,6 +185,6 @@ namespace bq {
 #endif
     }
 
-    BQ_TLS_NON_POD(platform::tls_java_env_lifecycle_holder, java_env_lifecycle_holder_);
+    BQ_TLS_NON_POD(platform::tls_java_env_lifecycle_holder, java_env_lifecycle_holder_)
 }
 #endif

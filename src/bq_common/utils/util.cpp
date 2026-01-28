@@ -1681,7 +1681,7 @@ namespace bq {
     }
 
     using mixed_aligned_utf16_buffer_type = bq::array<char, bq::aligned_allocator<char, 8>>;
-    BQ_TLS_NON_POD(mixed_aligned_utf16_buffer_type, mixed_utf16_buffer_);
+    BQ_TLS_NON_POD(mixed_aligned_utf16_buffer_type, mixed_utf16_buffer_)
     uint32_t util::utf_mixed_to_utf8(const char* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num)
     {
         auto mark_ptr = memchr(static_cast<const void*>(src), 0xFF, static_cast<size_t>(src_character_num));

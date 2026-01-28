@@ -20,7 +20,7 @@
 #endif
 namespace bq {
     static bq::platform::atomic<int32_t> log_worker_name_seq = 0;
-    BQ_TLS_NON_POD(log_worker_watch_dog, tls_log_worker_watch_dog_);
+    BQ_TLS_NON_POD(log_worker_watch_dog, tls_log_worker_watch_dog_)
 
     log_worker::log_worker()
         : manager_(nullptr)

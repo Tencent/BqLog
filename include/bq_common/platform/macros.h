@@ -142,37 +142,37 @@
 
 // thread_local has use-after-free issue on MinGW GCC
 // use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
-// Note: Do NOT mix __thread/BQ_TLS with thread_local, as they have different
-// lifecycles on some platforms (especially MinGW-Clang on ARM64EC).
 namespace bq {
     template <size_t ID, typename T>
-    struct _bq_non_pod_holder_type {
-        T* ptr_ = nullptr;
-        bool recycled_ = false;
-
-        _bq_non_pod_holder_type() = default;
-
-        ~_bq_non_pod_holder_type()
-        {
-            if (ptr_) {
-                delete ptr_;
-                ptr_ = nullptr;
-                recycled_ = true;
-            }
-        }
-
-        bq_forceinline operator bool() const { return !recycled_; }
-
-        bq_forceinline T& get()
-        {
-            if (!ptr_) {
-                ptr_ = new T();
-            }
-            return *ptr_;
-        }
-    };
+    struct _bq_non_pod_holder_type { };
 }
-#define BQ_TLS_NON_POD(Type, Name) thread_local bq::_bq_non_pod_holder_type<__COUNTER__, Type> Name
+#define BQ_TLS_DEFINE(Type, Name, ID)                                            \
+    BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                        \
+    BQ_TLS bool ____BQ_TSL_##Name##_recycled;                                    \
+    template <>                                                                  \
+    struct _bq_non_pod_holder_type<ID, Type> {                                   \
+        _bq_non_pod_holder_type()                                                \
+        {                                                                        \
+        }                                                                        \
+        ~_bq_non_pod_holder_type()                                               \
+        {                                                                        \
+            if (____BQ_TLS_##Name##_ptr) {                                       \
+                delete ____BQ_TLS_##Name##_ptr;                                  \
+                ____BQ_TLS_##Name##_ptr = nullptr;                               \
+                ____BQ_TSL_##Name##_recycled = true;                             \
+            }                                                                    \
+        }                                                                        \
+        bq_forceinline operator bool() { return !____BQ_TSL_##Name##_recycled; } \
+        bq_forceinline Type& get()                                               \
+        {                                                                        \
+            if (!____BQ_TLS_##Name##_ptr) {                                      \
+                ____BQ_TLS_##Name##_ptr = new Type();                            \
+            }                                                                    \
+            return *____BQ_TLS_##Name##_ptr;                                     \
+        }                                                                        \
+    };                                                                           \
+    thread_local _bq_non_pod_holder_type<ID, Type> Name;
+#define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name, __COUNTER__)
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define BQ_PACK_BEGIN __pragma(pack(push, 1))
