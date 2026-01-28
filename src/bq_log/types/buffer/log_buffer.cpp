@@ -74,7 +74,7 @@ namespace bq {
         if (log_map_) {
             for (auto pair : *log_map_) {
                 bq::shared_ptr<destruction_mark> destruction_protector = pair.value()->destruction_mark_;
-                bq::platform::scoped_spin_lock lock(pair.value()->destruction_mark_->lock_);
+                bq::platform::scoped_mutex lock(pair.value()->destruction_mark_->lock_);
                 // make sure log_buffer obj is still alive.
                 if (!pair.value()->destruction_mark_->is_destructed_) {
                     if (pair.value()->cur_block_) {
@@ -150,7 +150,7 @@ namespace bq {
 
     log_buffer::~log_buffer()
     {
-        bq::platform::scoped_spin_lock lock(destruction_mark_->lock_);
+        bq::platform::scoped_mutex lock(destruction_mark_->lock_);
         destruction_mark_->is_destructed_ = true;
     }
 
