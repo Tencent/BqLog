@@ -80,9 +80,9 @@ namespace bq {
             uint32_t wt_writing_cursor_cache_; // This field is used as snapshot when recovering from memory map file .
             char cache_line_padding1_[BQ_CACHE_LINE_SIZE - 2 * sizeof(uint32_t)];
 
-            char reading_cursor_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<uint32_t>)]; // Used to sync data between read thread and write thread in run-time.
+            alignas(8) char reading_cursor_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<uint32_t>)]; // Used to sync data between read thread and write thread in run-time.
             char cache_line_padding2_[BQ_CACHE_LINE_SIZE - sizeof(reading_cursor_place_holder_)];
-            char writing_cursor_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<uint32_t>)]; // Used to sync data between read thread and write thread in run-time.
+            alignas(8) char writing_cursor_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<uint32_t>)]; // Used to sync data between read thread and write thread in run-time.
             char cache_line_padding3_[BQ_CACHE_LINE_SIZE - sizeof(writing_cursor_place_holder_)];
         
             bq_forceinline bq::platform::atomic_trivially_constructible<uint32_t>& reading_cursor() {

@@ -129,10 +129,6 @@ namespace bq {
             bq::platform::atomic_trivially_constructible<bq::platform::thread::thread_id> thread_id_; 
 #endif
         protected:
-            bq::platform::atomic_trivially_constructible<bool>& value()
-            {
-                return value_;
-            }
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
             bq::platform::atomic_trivially_constructible<bq::platform::thread::thread_id>& thread_id()
             {
@@ -143,7 +139,7 @@ namespace bq {
             inline void lock()
             {
                 while (true) {
-                    if (!value().exchange(true, bq::platform::memory_order::acquire)) {
+                    if (!value_.exchange(true, bq::platform::memory_order::acquire)) {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                         thread_id().store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
 #endif
@@ -152,7 +148,7 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                     assert(bq::platform::thread::get_current_thread_id() != thread_id().load(bq::platform::memory_order::seq_cst) && "spin_lock is not reentrant");
 #endif
-                    while (value().load(bq::platform::memory_order::relaxed)) {
+                    while (value_.load(bq::platform::memory_order::relaxed)) {
                         bq::platform::thread::cpu_relax();
                     }
                 }
@@ -160,7 +156,7 @@ namespace bq {
 
             inline bool try_lock()
             {
-                if (!value().exchange(true, bq::platform::memory_order::acquire)) {
+                if (!value_.exchange(true, bq::platform::memory_order::acquire)) {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                     thread_id().store(bq::platform::thread::get_current_thread_id(), bq::platform::memory_order::seq_cst);
 #endif
@@ -177,7 +173,7 @@ namespace bq {
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
                 thread_id().store(0, bq::platform::memory_order::seq_cst);
 #endif
-                value().store(false, bq::platform::memory_order::release);
+                value_.store(false, bq::platform::memory_order::release);
             }
         };
         static_assert(bq::is_trivially_constructible<spin_lock_zero_init>::value, "spin_lock_zero_init must be trivially constructible");

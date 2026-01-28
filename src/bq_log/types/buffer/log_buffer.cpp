@@ -93,9 +93,6 @@ namespace bq {
                                 context->is_external_ref_ = false;
                                 break;
                             }
-                            else {
-                                bq::util::log_device_console(bq::log_level::error, "waiting");
-                            }
                         }
                     }
                     //Avoid ABA problem with oversize buffer temporary reference.
