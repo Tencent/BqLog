@@ -42,7 +42,7 @@ namespace bq {
     static bq::array<global_var_destructiable*>* destructible_vars_;   //(nullptr)zero initialization
     static global_vars_destructor global_var_destructor_;
 #ifdef BQ_JAVA
-    alignas(8) static bool is_jvm_destroyed_;    // false zero initialization
+    bq::platform::atomic_trivially_constructible<bool> is_jvm_destroyed_;    // false zero initialization
 #endif
 
 #if defined(BQ_X86)
@@ -145,7 +145,7 @@ namespace bq {
     global_vars_destructor::~global_vars_destructor()
     {
 #ifdef BQ_JAVA
-        BQ_PACK_ACCESS_BY_TYPE(is_jvm_destroyed_, bq::platform::atomic<bool>) = true;
+        is_jvm_destroyed_ = true;
 #endif
         bq::platform::scoped_spin_lock lock(destructor_mutex_);
         if (destructible_vars_) {
@@ -181,11 +181,11 @@ namespace bq {
 #ifdef BQ_JAVA
     bool common_global_vars::is_jvm_destroyed() const
     {
-        return BQ_PACK_ACCESS_BY_TYPE(is_jvm_destroyed_, bq::platform::atomic<bool>).load_acquire();
+        return is_jvm_destroyed_.load_acquire();
     }
 
     void common_global_vars::mark_jvm_destroyed() {
-        BQ_PACK_ACCESS_BY_TYPE(is_jvm_destroyed_, bq::platform::atomic<bool>) = true;
+        is_jvm_destroyed_ = true;
     }
 #endif
 

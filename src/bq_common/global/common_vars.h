@@ -84,7 +84,7 @@ namespace bq {
         static BQ_TLS T* global_vars_ptr_;
         alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
-        static T** initializer_mark_;
+        static bq::platform::atomic_trivially_constructible<T**> initializer_mark_;
 
     protected:
         virtual ~global_vars_base()
@@ -99,8 +99,9 @@ namespace bq {
                 return *T::global_vars_ptr_;
             }
             //For recursive calling of `get()` or TLS address reuse between different threads.
-            if (&T::global_vars_ptr_ == BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).load_acquire()
-                && BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).load_acquire() != nullptr) {
+            auto initializer_mark_value_tmp = initializer_mark_.load_acquire();
+            if (&T::global_vars_ptr_ == initializer_mark_value_tmp
+                && initializer_mark_value_tmp != nullptr) {
                 T::global_vars_ptr_ = T::global_vars_buffer_;
                 return *T::global_vars_buffer_;
             }
@@ -109,7 +110,7 @@ namespace bq {
                 if (atomic_status.load_acquire() == 0) {
                     int32_t expected = 0;
                     if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
-                        BQ_PACK_ACCESS_BY_TYPE(initializer_mark_, bq::platform::atomic<T**>).store_release(&T::global_vars_ptr_);
+                        initializer_mark_.store_release(&T::global_vars_ptr_);
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
                         T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(alignof(T), sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
@@ -138,7 +139,7 @@ namespace bq {
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;
 
     template <typename T, typename Priority_Global_Var_Type>
-    T** global_vars_base<T, Priority_Global_Var_Type>::initializer_mark_;
+    bq::platform::atomic_trivially_constructible<T**> global_vars_base<T, Priority_Global_Var_Type>::initializer_mark_;
 
     struct common_global_vars : public global_vars_base<common_global_vars> {
         size_t page_size_;

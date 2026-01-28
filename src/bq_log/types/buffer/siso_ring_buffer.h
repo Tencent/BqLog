@@ -80,10 +80,10 @@ namespace bq {
             uint32_t wt_writing_cursor_cache_; // This field is used as snapshot when recovering from memory map file .
             char cache_line_padding1_[BQ_CACHE_LINE_SIZE - 2 * sizeof(uint32_t)];
 
-            uint32_t reading_cursor_; // Used to sync data between read thread and write thread in run-time.
-            char cache_line_padding2_[BQ_CACHE_LINE_SIZE - sizeof(uint32_t)];
-            uint32_t writing_cursor_; // Used to sync data between read thread and write thread in run-time.
-            char cache_line_padding3_[BQ_CACHE_LINE_SIZE - sizeof(uint32_t)];
+            bq::platform::atomic_trivially_constructible<uint32_t> reading_cursor_; // Used to sync data between read thread and write thread in run-time.
+            char cache_line_padding2_[BQ_CACHE_LINE_SIZE - sizeof(reading_cursor_)];
+            bq::platform::atomic_trivially_constructible<uint32_t> writing_cursor_; // Used to sync data between read thread and write thread in run-time.
+            char cache_line_padding3_[BQ_CACHE_LINE_SIZE - sizeof(writing_cursor_)];
 
         } BQ_PACK_END static_assert(sizeof(head) == 4 * BQ_CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
 

@@ -23,14 +23,13 @@
 namespace bq {
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
     {
-        BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(block->get_misc_data<log_buffer::block_misc_data>().is_removed_, bool).store_release(removed);
+        block->get_misc_data<log_buffer::block_misc_data>().is_removed_.store_release(removed);
     }
     bq_forceinline static bool is_block_removed(block_node_head* block)
     {
-        bool& is_removed_variable = block->get_misc_data<log_buffer::block_misc_data>().is_removed_;
-        if (is_removed_variable) {
+        if (block->get_misc_data<log_buffer::block_misc_data>().is_removed_.load_raw()) {
             // inter thread sync
-            if (BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(is_removed_variable, bool).load_acquire()) {
+            if (block->get_misc_data<log_buffer::block_misc_data>().is_removed_.load_acquire()) {
                 return true;
             }
         }
