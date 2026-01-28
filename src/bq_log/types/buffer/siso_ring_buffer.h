@@ -66,7 +66,7 @@ namespace bq {
         const ptrdiff_t data_block_offset = static_cast<ptrdiff_t>(BQ_POD_RUNTIME_OFFSET_OF(chunk_head_def, data));
 
         BQ_PACK_BEGIN
-        struct alignas(4) head {
+        struct alignas(BQ_CACHE_LINE_SIZE) head {
             uint32_t aligned_blocks_count_cache_; // This field is used as snapshot when recovering from memory map file .
 
             // these cache variables used in reading thread are used to reduce atomic loading, this can improve MESI performance in high concurrency scenario.
