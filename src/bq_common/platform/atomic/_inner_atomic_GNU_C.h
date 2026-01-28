@@ -98,8 +98,8 @@ namespace bq {
             typedef typename _atomic_gnu_c_standard_type<sizeof(T)>::ptr_type api_ptr_type;
             typedef typename _atomic_gnu_c_standard_type<sizeof(T)>::value_type api_type;
             union {
-                alignas(8) value_type value_;
-                alignas(8) api_type value_standard;
+                value_type value_;
+                api_type value_standard;
             };
 
             bq_forceinline void explicit_copy(const value_type& val)
