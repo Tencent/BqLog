@@ -96,7 +96,7 @@ namespace bq {
             static_assert(N == 1 || N == 2 || N == 4 || N == 8, "please don't use bq::platform::_atomic_base, use bq::platform::atomic instead.");
             typedef typename bq::decay<T>::type value_type;
             typedef typename _atomic_gnu_c_standard_type<sizeof(T)>::ptr_type api_ptr_type;
-            alignas(sizeof(value_type)) value_type value_;
+            alignas(8) value_type value_;
 
             bq_forceinline api_ptr_type get_value_api_ptr() noexcept
             {
@@ -111,7 +111,7 @@ namespace bq {
 
             bq_forceinline void explicit_copy(const value_type& val)
             {
-                __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline value_type load(memory_order order = memory_order::seq_cst) const noexcept
@@ -155,11 +155,11 @@ namespace bq {
             {
                 switch (order) {
                 case memory_order::relaxed:
-                    return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELAXED);
+                    return __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED);
                 case memory_order::release:
-                    return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELEASE);
+                    return __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE);
                 default:
-                    return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                    return __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST);
                 }
             }
             bq_forceinline void store_raw(value_type val) noexcept
@@ -169,22 +169,22 @@ namespace bq {
 
             bq_forceinline void store_release(value_type val) noexcept
             {
-                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELEASE);
+                return __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELEASE);
             }
 
             bq_forceinline void store_relaxed(value_type val) noexcept
             {
-                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_RELAXED);
+                return __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_RELAXED);
             }
 
             bq_forceinline void store_acq_rel(value_type val) noexcept
             {
-                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                return __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline void store_seq_cst(value_type val) noexcept
             {
-                return __atomic_store(get_value_api_ptr(), get_atomic_ptr(val), __ATOMIC_SEQ_CST);
+                return __atomic_store_n(get_value_api_ptr(), get_atomic_value(val), __ATOMIC_SEQ_CST);
             }
 
             bq_forceinline value_type exchange(value_type val, memory_order order) noexcept
