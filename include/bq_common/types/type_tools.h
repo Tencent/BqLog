@@ -486,4 +486,43 @@ namespace bq {
 #endif
     template <typename FuncType>
     using function_return_type_t = typename function_return_type<FuncType>::type;
+
+    template <typename T>
+    bq_forceinline T* launder(T* p) noexcept
+    {
+#if defined(BQ_MSVC)
+#if defined(BQ_CPP_17)
+        return __builtin_launder(p);
+#else
+        T* result = p;
+        _ReadWriteBarrier();
+        return result;
+#endif
+#elif BQ_GCC_CLANG_BUILTIN(__builtin_launder)
+        return __builtin_launder(p);
+#elif defined(BQ_GCC)
+        T* result = p;
+        __asm__ __volatile__("" : "+r"(result) : : "memory");
+        return result;
+#else
+        T* result = p;
+        __asm__ __volatile__("" : "+r"(result) : : "memory");
+        return result;
+#endif
+    }
+
+    // Template function used to isolate the casting operation for better code optimization and maintainability.
+    // We avoid performing reinterpret_cast directly in the macro to allow the compiler to potentially inline and optimize
+    // the code more effectively, rather than embedding the cast in a less predictable macro expansion.
+    template <typename TO>
+    bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* from)
+    {
+        return *reinterpret_cast<TO*>(const_cast<char*>(from));
+    }
 }
+
+// Macro designed to generate high-performance code by accessing a variable Var through a forced cast.
+// CAUTION: Use carefully! This bypasses alignment checks for `speed ensure` Var is properly aligned for its type,
+// as misalignment can cause undefined behavior. No alignment verification is performed here.
+#define BQ_PACK_ACCESS_BY_TYPE(Var, Type) bq::__bq_macro_force_cast_ignore_alignment_warning<Type>((const char*)&Var)
+#define BQ_PACK_ACCESS(Var) bq::__bq_macro_force_cast_ignore_alignment_warning<decltype(Var)>((const char*)&Var)

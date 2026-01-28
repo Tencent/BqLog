@@ -372,25 +372,4 @@ namespace bq {
     constexpr bool is_trivially_move_assignable_v = is_trivially_move_assignable<T>::value;
 #endif
 
-    template <typename T>
-    bq_forceinline T* launder(T* p) noexcept
-    {
-#if defined(BQ_MSVC)
-#if defined(BQ_CPP_17)
-        return __builtin_launder(p);
-#else
-        return p;
-#endif
-#elif BQ_GCC_CLANG_BUILTIN(__builtin_launder)
-        return __builtin_launder(p);
-#elif defined(BQ_GCC)
-        T* result = p;
-        __asm__ __volatile__("" : "+r"(result) : : "memory");
-        return result;
-#else
-        T* result = p;
-        __asm__ __volatile__("" : "+r"(result) : : "memory");
-        return result;
-#endif
-    }
 }
