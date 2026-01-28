@@ -245,8 +245,6 @@ namespace bq {
 
     void appender_file_base::set_cache_write_padding(uint8_t new_padding) {
         if (cache_write_padding_ != new_padding) {
-            auto prev_data_ptr = cache_write_;
-            cache_write_padding_ = new_padding;
             if (new_padding > cache_write_padding_) {
                 auto current_using_size = get_total_used_write_cache_size();
                 auto current_total_size = cache_write_entity_->size();
@@ -254,6 +252,8 @@ namespace bq {
                     resize_cache_write_entity(current_using_size + static_cast<size_t>(new_padding) - static_cast<size_t>(cache_write_padding_));
                 }
             }
+            auto prev_data_ptr = cache_write_;
+            cache_write_padding_ = new_padding;
             refresh_cache_write_ptr();
             auto new_data_ptr = cache_write_;
             memmove(new_data_ptr, prev_data_ptr, cache_write_cursor_);
