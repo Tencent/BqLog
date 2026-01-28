@@ -35,7 +35,7 @@
 
 namespace bq {
     const char* get_bq_log_version();
-    BQ_TLS_NON_POD(bq::string, tls_base_dir_cache_)
+    BQ_TLS_NON_POD(bq::string, tls_base_dir_cache_);
 
     namespace api {
         static_assert(sizeof(uintptr_t) == sizeof(log_imp*), "invalid pointer size");

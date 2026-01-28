@@ -59,7 +59,7 @@ namespace bq {
             cur_buffer_info_ = nullptr;
         }
     };
-    BQ_TLS_NON_POD(miso_tls_info, miso_tls_info_)
+    BQ_TLS_NON_POD(miso_tls_info, miso_tls_info_);
 
     /**
      *

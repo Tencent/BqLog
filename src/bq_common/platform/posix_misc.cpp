@@ -31,10 +31,6 @@
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
 #include <cxxabi.h>
 #include <execinfo.h>
-namespace bq {
-    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_)
-    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_)
-}
 #endif
 #include "bq_common/bq_common.h"
 
@@ -566,14 +562,16 @@ namespace bq {
         }
 
 #if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
+        BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);
+        BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_);
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
-            if (!bq::stack_trace_current_str_) {
+            if (!stack_trace_current_str_) {
                 out_str_ptr = nullptr;
                 out_char_count = 0;
                 return; // This occurs when program exit in Main thread.
             }
-            bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
+            bq::string& stack_trace_str_ref = stack_trace_current_str_.get();
             stack_trace_str_ref.clear();
             void* buffer[128];
             char** stacks;
@@ -627,12 +625,12 @@ namespace bq {
 
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count)
         {
-            if (!bq::stack_trace_current_str_u16_) {
+            if (!stack_trace_current_str_u16_) {
                 out_str_ptr = nullptr;
                 out_char_count = 0;
                 return; // This occurs when program exit in Main thread.
             }
-            bq::u16string& stack_trace_str_ref = bq::stack_trace_current_str_u16_.get();
+            bq::u16string& stack_trace_str_ref = stack_trace_current_str_u16_.get();
             const char* u8_str;
             uint32_t u8_char_count;
             get_stack_trace(skip_frame_count, u8_str, u8_char_count);

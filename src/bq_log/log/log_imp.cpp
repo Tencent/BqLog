@@ -106,7 +106,7 @@ namespace bq {
             return static_cast<uint32_t>(buffer_.size());
         }
     };
-    BQ_TLS_NON_POD(sync_buffer, sync_buffer_)
+    BQ_TLS_NON_POD(sync_buffer, sync_buffer_);
 
     log_imp::log_imp()
         : id_(0)
