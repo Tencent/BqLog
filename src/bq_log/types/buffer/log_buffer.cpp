@@ -130,6 +130,7 @@ namespace bq {
         , destruction_mark_(bq::make_shared<destruction_mark>())
         , current_oversize_buffer_index_(0)
     {
+        destruction_mark_->lock_.tmp_output_debug_ = true;
         static bq::platform::atomic<uint64_t> id_generator(0);
         id_ = id_generator.add_fetch_relaxed(1);
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));

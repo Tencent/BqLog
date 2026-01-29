@@ -63,7 +63,13 @@ namespace bq {
 
         void mutex::lock()
         {
+            if (tmp_output_debug_) {
+                printf("Begin Lock Thread ID: 0x%X, Name:%s" PRId32, static_cast<uint32_t>(GetCurrentThreadId()), bq::platform::thread::get_current_thread_name().c_str());
+            }
             EnterCriticalSection(&platform_data_->cs_);
+            if (tmp_output_debug_) {
+                printf("End Lock Thread ID: 0x%X, Name:%s" PRId32, static_cast<uint32_t>(GetCurrentThreadId()), bq::platform::thread::get_current_thread_name().c_str());
+            }
             if (!reentrant_) {
                 thread::thread_id current_thread_id = thread::get_current_thread_id();
                 if (platform_data_->owner_thread_id_.exchange_relaxed(current_thread_id) == current_thread_id) {
@@ -75,6 +81,9 @@ namespace bq {
 
         bool mutex::try_lock()
         {
+            if (tmp_output_debug_) {
+                printf("Begin TryLock Thread ID: 0x%X, Name:%s" PRId32, static_cast<uint32_t>(GetCurrentThreadId()), bq::platform::thread::get_current_thread_name().c_str());
+            }
             if (TryEnterCriticalSection(&platform_data_->cs_)) {
                 if (!reentrant_) {
                     thread::thread_id current_thread_id = thread::get_current_thread_id();
@@ -83,16 +92,29 @@ namespace bq {
                         // assert(false && "mutex recursive lock");
                     }
                 }
+                if (tmp_output_debug_) {
+                    printf("End TryLock Success Thread ID: 0x%X, Name:%s" PRId32, static_cast<uint32_t>(GetCurrentThreadId()), bq::platform::thread::get_current_thread_name().c_str());
+                }
                 return true;
-            } else {
+            }
+            else {
+                if (tmp_output_debug_) {
+                    printf("End TryLock Failed Thread ID: 0x%X, Name:%s" PRId32, static_cast<uint32_t>(GetCurrentThreadId()), bq::platform::thread::get_current_thread_name().c_str());
+                }
                 return false;
             }
         }
 
         bool mutex::unlock()
         {
+            if (tmp_output_debug_) {
+                printf("Begin UnLock Thread ID: 0x%X, Name:%s" PRId32, static_cast<uint32_t>(GetCurrentThreadId()), bq::platform::thread::get_current_thread_name().c_str());
+            }
             platform_data_->owner_thread_id_.store(0, memory_order::release);
             LeaveCriticalSection(&platform_data_->cs_);
+            if (tmp_output_debug_) {
+                printf("End UnLock Thread ID: 0x%X, Name:%s" PRId32, static_cast<uint32_t>(GetCurrentThreadId()), bq::platform::thread::get_current_thread_name().c_str());
+            }
             return true;
         }
 
