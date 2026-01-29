@@ -13,6 +13,8 @@
 #include "bq_common/platform/build_type.h"
 #include <stddef.h>
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include <WinSock2.h>
+#include <windows.h>
 #define BQ_WIN 1
 #ifdef _WIN64
 #define BQ_WIN64 1
@@ -156,6 +158,7 @@ namespace bq {
         }                                                                        \
         ~_bq_non_pod_holder_type()                                               \
         {                                                                        \
+printf("\nBQ_TLS~ %s, Thread ID: 0x%X\n" PRId32, #Name, static_cast<uint32_t>(GetCurrentThreadId())); \
             if (____BQ_TLS_##Name##_ptr) {                                       \
                 delete ____BQ_TLS_##Name##_ptr;                                  \
                 ____BQ_TLS_##Name##_ptr = nullptr;                               \
