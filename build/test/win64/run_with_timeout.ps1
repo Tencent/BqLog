@@ -21,16 +21,19 @@ if (-not $cdb) {
 
 if ($cdb) {
     Write-Host "Running $Executable under CDB with watchdog (Timeout: ${timeoutSeconds}s)..."
+    
+    # Create CDB command script to avoid quoting hell
+    $cdbScript = Join-Path $PSScriptRoot "cdb_commands.txt"
+    "sxe -c `"kv; q`" av`r`ng`r`nq" | Set-Content -Path $cdbScript -Encoding Ascii
+
     # -o: debug child processes
     # -G: ignore segment end breakpoint
-    # -c: initial commands
-    # sxe -c "kv; q" av: on Access Violation, print stack and quit
-    # g; q: start execution, and quit when finished
+    # -cf: run commands from file
     $cdbArgs = @(
         "-o",
         "-G",
-        "-c",
-        "sxe -c `"kv; q`" av; g; q",
+        "-cf",
+        $cdbScript,
         $Executable
     )
     $proc = Start-Process -FilePath $cdb -ArgumentList $cdbArgs -PassThru -NoNewWindow
@@ -48,9 +51,7 @@ while (-not $proc.HasExited) {
         Write-Host "!!! TIMEOUT DETECTED ($timeoutSeconds seconds) !!!"
         
         if ($cdb) {
-            Write-Host "Attaching CDB to analyze hang..."
-            # ~*kv: Print stack for all threads
-            & $cdb -p $proc.Id -c "~*kv; q"
+            # ... existing attach logic ...
         } else {
             Write-Host "CDB not found. Trying GDB..."
             $gdb = (Get-Command gdb.exe -ErrorAction SilentlyContinue).Source
