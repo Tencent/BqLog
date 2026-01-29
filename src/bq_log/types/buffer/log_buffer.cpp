@@ -19,6 +19,9 @@
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
 #include "bq_log/global/log_vars.h"
+#ifdef BQ_WIN
+#include <windows.h>
+#endif
 
 namespace bq {
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
@@ -71,6 +74,9 @@ namespace bq {
 
     log_buffer::log_tls_info::~log_tls_info()
     {
+    #ifdef BQ_WIN
+        printf("\n~log_tls_info() Thread ID: 0x%X\n" PRId32, static_cast<uint32_t>(GetCurrentThreadId()));
+    #endif
         if (log_map_) {
             for (auto pair : *log_map_) {
                 bq::shared_ptr<destruction_mark> destruction_protector = pair.value()->destruction_mark_;
