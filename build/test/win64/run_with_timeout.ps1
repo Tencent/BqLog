@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
-$timeoutSeconds = 600 # 10 minutes
+$timeoutSeconds = 300 # 5 minutes
 
 Write-Host "Running $Executable with watchdog (Timeout: ${timeoutSeconds}s)..."
 
