@@ -5,9 +5,32 @@ param(
 $ErrorActionPreference = "Continue"
 $timeoutSeconds = 300 # 5 minutes
 
-Write-Host "Running $Executable with watchdog (Timeout: ${timeoutSeconds}s)..."
+# Locate CDB
+$cdb = (Get-Command cdb.exe -ErrorAction SilentlyContinue).Source
+if (-not $cdb) {
+    $candidates = @(
+        "C:\Program Files (x86)\Windows Kits\10\Debuggers\arm64\cdb.exe",
+        "C:\Program Files (x86)\Windows Kits\11\Debuggers\arm64\cdb.exe",
+        "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe",
+        "C:\Program Files (x86)\Windows Kits\11\Debuggers\x64\cdb.exe",
+        "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe",
+        "C:\Program Files (x86)\Windows Kits\11\Debuggers\x86\cdb.exe"
+    )
+    foreach ($p in $candidates) { if (Test-Path $p) { $cdb = $p; break } }
+}
 
-$proc = Start-Process -FilePath $Executable -PassThru -NoNewWindow
+if ($cdb) {
+    Write-Host "Running $Executable under CDB with watchdog (Timeout: ${timeoutSeconds}s)..."
+    # -o: debug child processes
+    # -G: ignore segment end breakpoint
+    # -c: initial commands
+    # sxe -c "kv; q" av: on Access Violation, print stack and quit
+    # g; q: start execution, and quit when finished
+    $proc = Start-Process -FilePath $cdb -ArgumentList "-o -G -c ""sxe -c 'kv; q' av; g; q"" $Executable" -PassThru -NoNewWindow
+} else {
+    Write-Host "CDB not found. Running $Executable directly with watchdog (Timeout: ${timeoutSeconds}s)..."
+    $proc = Start-Process -FilePath $Executable -PassThru -NoNewWindow
+}
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -16,20 +39,6 @@ while (-not $proc.HasExited) {
     
     if ($sw.Elapsed.TotalSeconds -gt $timeoutSeconds) {
         Write-Host "!!! TIMEOUT DETECTED ($timeoutSeconds seconds) !!!"
-        
-        # Locate CDB
-        $cdb = (Get-Command cdb.exe -ErrorAction SilentlyContinue).Source
-        if (-not $cdb) {
-            $candidates = @(
-                "C:\Program Files (x86)\Windows Kits\10\Debuggers\arm64\cdb.exe",
-                "C:\Program Files (x86)\Windows Kits\11\Debuggers\arm64\cdb.exe",
-                "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe",
-                "C:\Program Files (x86)\Windows Kits\11\Debuggers\x64\cdb.exe",
-                "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe",
-                "C:\Program Files (x86)\Windows Kits\11\Debuggers\x86\cdb.exe"
-            )
-            foreach ($p in $candidates) { if (Test-Path $p) { $cdb = $p; break } }
-        }
         
         if ($cdb) {
             Write-Host "Attaching CDB to analyze hang..."
