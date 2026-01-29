@@ -26,7 +26,14 @@ if ($cdb) {
     # -c: initial commands
     # sxe -c "kv; q" av: on Access Violation, print stack and quit
     # g; q: start execution, and quit when finished
-    $proc = Start-Process -FilePath $cdb -ArgumentList "-o -G -c ""sxe -c 'kv; q' av; g; q"" $Executable" -PassThru -NoNewWindow
+    $cdbArgs = @(
+        "-o",
+        "-G",
+        "-c",
+        "sxe -c `"kv; q`" av; g; q",
+        $Executable
+    )
+    $proc = Start-Process -FilePath $cdb -ArgumentList $cdbArgs -PassThru -NoNewWindow
 } else {
     Write-Host "CDB not found. Running $Executable directly with watchdog (Timeout: ${timeoutSeconds}s)..."
     $proc = Start-Process -FilePath $Executable -PassThru -NoNewWindow
