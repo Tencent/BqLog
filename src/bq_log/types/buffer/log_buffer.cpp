@@ -75,7 +75,7 @@ namespace bq {
     log_buffer::log_tls_info::~log_tls_info()
     {
     #ifdef BQ_WIN
-        printf("\n~log_tls_info() Thread ID: 0x%X\n" PRId32, static_cast<uint32_t>(GetCurrentThreadId()));
+        printf("\n~log_tls_info() Thread ID: 0x%X\n" , static_cast<uint32_t>(GetCurrentThreadId()));
     #endif
         if (log_map_) {
             for (auto pair : *log_map_) {
@@ -106,6 +106,8 @@ namespace bq {
                     auto* log_buf = buffer_info->buffer_;
                     if (log_buf) {
                         bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
+                        printf("scoped_spin_lock_write_crazy addr 0x%p\n", &(log_buf->temprorary_oversize_buffer_.array_lock_.counter_));
+
                         for (auto& os_buf : log_buf->temprorary_oversize_buffer_.buffers_array_) {
                             auto& ctx = os_buf->buffer_.get_misc_data<context_head>();
                             if (ctx.get_tls_info() == buffer_info && ctx.version_ == log_buf->get_version()) {

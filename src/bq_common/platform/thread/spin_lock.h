@@ -204,16 +204,19 @@ namespace bq {
         /// </summary>
         ///
 
-        class spin_lock_rw_crazy {
-        private:
+        BQ_PACK_BEGIN
+        class alignas(BQ_CACHE_LINE_SIZE) spin_lock_rw_crazy {
+        public:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
             static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
-            bq::cache_friendly_type<bq::platform::atomic<counter_type>> counter_;
+            bq::platform::atomic<counter_type> counter_;
+            char padding_[BQ_CACHE_LINE_SIZE - sizeof(counter_)];
 
         public:
             spin_lock_rw_crazy()
                 : counter_(0)
             {
+                (void)padding_;
             }
 
             spin_lock_rw_crazy(const spin_lock_rw_crazy&) = delete;
@@ -224,15 +227,15 @@ namespace bq {
             inline void read_lock()
             {
                 while (true) {
-                    counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                    counter_type previous_counter = counter_.fetch_add_acq_rel(1);
                     if (previous_counter >= 0) {
                         // read lock success.
                         break;
                     }
-                    counter_.get().fetch_sub_relaxed(1);
+                    counter_.fetch_sub_relaxed(1);
                     while (true) {
                         bq::platform::thread::cpu_relax();
-                        counter_type current_counter = counter_.get().load_acquire();
+                        counter_type current_counter = counter_.load_acquire();
                         if (current_counter >= 0) {
                             break;
                         }
@@ -242,18 +245,18 @@ namespace bq {
 
             inline bool try_read_lock()
             {
-                counter_type previous_counter = counter_.get().fetch_add_acq_rel(1);
+                counter_type previous_counter = counter_.fetch_add_acq_rel(1);
                 if (previous_counter >= 0) {
                     // read lock success.
                     return true;
                 }
-                counter_.get().fetch_sub_relaxed(1);
+                counter_.fetch_sub_relaxed(1);
                 return false;
             }
 
             inline void read_unlock()
             {
-                counter_type previous_counter = counter_.get().fetch_sub_release(1);
+                counter_type previous_counter = counter_.fetch_sub_release(1);
                 (void)previous_counter;
             }
 
@@ -261,7 +264,7 @@ namespace bq {
             {
                 while (true) {
                     counter_type expected_counter = 0;
-                    if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                    if (counter_.compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                         break;
                     }
                     bq::platform::thread::cpu_relax();
@@ -271,7 +274,7 @@ namespace bq {
             inline bool try_write_lock()
             {
                 counter_type expected_counter = 0;
-                if (counter_.get().compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                if (counter_.compare_exchange_strong(expected_counter, write_lock_mark_value, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                     return true;
                 }
                 return false;
@@ -281,12 +284,13 @@ namespace bq {
             {
                 while (true) {
                     counter_type expected_counter = write_lock_mark_value;
-                    if (counter_.get().compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
+                    if (counter_.compare_exchange_strong(expected_counter, 0, bq::platform::memory_order::acq_rel, bq::platform::memory_order::acquire)) {
                         break;
                     }
                 }
             }
-        };
+        }
+        BQ_PACK_END
 
         class scoped_mcs_spin_lock {
         private:

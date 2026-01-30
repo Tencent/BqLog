@@ -31,7 +31,7 @@ namespace bq {
 
         protected:
             typedef typename bq::decay<T>::type value_type;
-            value_type value_;
+            alignas(8) value_type value_;
 
             bq_forceinline void explicit_copy(const value_type& val)
             {
