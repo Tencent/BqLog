@@ -342,7 +342,7 @@ namespace bq {
         void reset()
         {
             if (ptr) {
-                delete ptr;
+                bq::platform::aligned_free(ptr);
                 ptr = nullptr;
             }
         }
@@ -357,14 +357,18 @@ namespace bq {
     template <typename T, typename... Ts>
     unique_ptr<T> make_unique(Ts&&... params)
     {
-        return unique_ptr<T>(new T(bq::forward<Ts>(params)...));
+        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        new (addr, bq::enum_new_dummy::dummy)T(bq::forward<Ts>(params)...);
+        return unique_ptr<T>(static_cast<T*>(addr));
     }
 
     // make a unique_ptr with default initialization
     template <class T>
-    unique_ptr<T> make_unique_for_overwrite()
+    unique_ptr<T> make_unique()
     {
-        return unique_ptr<T>(new T);
+        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        new (addr, bq::enum_new_dummy::dummy)T();
+        return unique_ptr<T>(static_cast<T*>(addr));
     }
 
     // simple substitude of std::shared_ptr
@@ -500,7 +504,7 @@ namespace bq {
                 while (true) {
                     if (expected_value == 1) {
                         if (ref_count_->compare_exchange_strong(expected_value, static_cast<int64_t>(1) << 32, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
-                            delete ptr_;
+                            bq::platform::aligned_free(ptr_);
                             delete ref_count_;
                             break;
                         }
@@ -523,13 +527,17 @@ namespace bq {
     template <typename T, typename... Ts>
     shared_ptr<T> make_shared(Ts&&... params)
     {
-        return shared_ptr<T>(new T(bq::forward<Ts>(params)...));
+        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        new (addr, bq::enum_new_dummy::dummy)T(bq::forward<Ts>(params)...);
+        return shared_ptr<T>(static_cast<T*>(addr));
     }
 
     // make_shared with default initialization
     template <typename T>
     shared_ptr<T> make_shared()
     {
-        return shared_ptr<T>(new T);
+        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        new (addr, bq::enum_new_dummy::dummy)T();
+        return shared_ptr<T>(static_cast<T*>(addr));
     }
 }
