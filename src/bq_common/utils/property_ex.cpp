@@ -278,7 +278,7 @@ namespace bq {
             new (&dest_array, bq::enum_new_dummy::dummy) array_type();
             for (auto& item : src_array) {
                 auto& jv = *item;
-                dest_array.push_back(new property_value(jv));
+                dest_array.push_back(bq::make_unique<property_value>(jv));
             }
             break;
         }
@@ -289,7 +289,7 @@ namespace bq {
             for (auto& item : src_obj) {
                 auto& jk = item.key();
                 auto& jv = *item.value();
-                dest_obj.add(jk, new property_value(jv));
+                dest_obj.add(jk, bq::make_unique<property_value>(jv));
             }
             break;
         }
@@ -416,11 +416,11 @@ namespace bq {
     {
         if (!is_object()) {
             check_and_set_template(bq::move(object_type()), as_object(true), true, enum_property_value_type::object_type);
-            return *as_object().add(name, new property_value())->value();
+            return *as_object().add(name, bq::make_unique<property_value>())->value();
         }
         auto iter = as_object().find(name);
         if (iter == as_object().end()) {
-            iter = as_object().add(name, new property_value());
+            iter = as_object().add(name, bq::make_unique<property_value>());
         }
         return *iter->value();
     }
@@ -478,7 +478,7 @@ namespace bq {
         }
         as_array().set_capacity(idx + 1);
         for (typename array_type::size_type i = as_array().size(); i <= idx; ++i) {
-            as_array(true).push_back(new property_value());
+            as_array(true).push_back(bq::make_unique<property_value>());
         }
         return *as_array(true)[idx];
     }

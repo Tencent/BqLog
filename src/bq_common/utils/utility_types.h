@@ -239,7 +239,7 @@ namespace bq {
         {
         }
         ~unique_ptr() { reset(); }
-        unique_ptr(T* new_ptr)
+        explicit unique_ptr(T* new_ptr)
             : ptr(new_ptr)
         {
         }
@@ -342,6 +342,7 @@ namespace bq {
         void reset()
         {
             if (ptr) {
+                ptr->~T();
                 bq::platform::aligned_free(ptr);
                 ptr = nullptr;
             }
@@ -504,6 +505,7 @@ namespace bq {
                 while (true) {
                     if (expected_value == 1) {
                         if (ref_count_->compare_exchange_strong(expected_value, static_cast<int64_t>(1) << 32, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
+                            ptr_->~T();
                             bq::platform::aligned_free(ptr_);
                             delete ref_count_;
                             break;

@@ -156,8 +156,8 @@ namespace bq {
                     result.add_result(!up_test_2, "test_unique_ptr 2");
                     result.add_result(1 == unique_ptr_counter, "test_unique_ptr 3");
                 }
-                bq::unique_ptr<int32_t> swap1 = new int32_t(11);
-                bq::unique_ptr<int32_t> swap2 = new int32_t(22);
+                bq::unique_ptr<int32_t> swap1 = bq::make_unique<int32_t>(11);
+                bq::unique_ptr<int32_t> swap2 = bq::make_unique<int32_t>(22);
                 swap1.swap(swap2);
                 result.add_result(*swap1 == 22, "test_unique_ptr 4");
                 result.add_result(*swap2 == 11, "test_unique_ptr 5");
