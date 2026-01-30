@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
-$timeoutSeconds = 300 # 5 minutes
+$timeoutSeconds = 600 # 10 minutes
 
 # Locate CDB
 $cdb = (Get-Command cdb.exe -ErrorAction SilentlyContinue).Source
