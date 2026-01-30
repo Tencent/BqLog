@@ -105,9 +105,10 @@ namespace bq {
                     auto* buffer_info = pair.value();
                     auto* log_buf = buffer_info->buffer_;
                     if (log_buf) {
-                        bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
                         printf("scoped_spin_lock_write_crazy addr 0x%p\n", static_cast<void*>(&(log_buf->temprorary_oversize_buffer_.array_lock_.counter_)));
-
+                        fflush(stdout);
+                        bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
+                        
                         for (auto& os_buf : log_buf->temprorary_oversize_buffer_.buffers_array_) {
                             auto& ctx = os_buf->buffer_.get_misc_data<context_head>();
                             if (ctx.get_tls_info() == buffer_info && ctx.version_ == log_buf->get_version()) {
