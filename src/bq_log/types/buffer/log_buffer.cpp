@@ -83,6 +83,21 @@ namespace bq {
                 bq::platform::scoped_mutex lock(pair.value()->destruction_mark_->lock_);
                 // make sure log_buffer obj is still alive.
                 if (!pair.value()->destruction_mark_->is_destructed_) {
+                    //Avoid ABA problem with oversize buffer temporary reference.
+                    auto* buffer_info = pair.value();
+                    auto* log_buf = buffer_info->buffer_;
+                    if (log_buf) {
+                        printf("scoped_spin_lock_write_crazy addr 0x%p, log_buffer_addr:0x%p\n", static_cast<void*>(&(log_buf->temprorary_oversize_buffer_.array_lock_.counter_)), static_cast<void*>(log_buf));
+                        fflush(stdout);
+                        bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
+
+                        for (auto& os_buf : log_buf->temprorary_oversize_buffer_.buffers_array_) {
+                            auto& ctx = os_buf->buffer_.get_misc_data<context_head>();
+                            if (ctx.get_tls_info() == buffer_info && ctx.version_ == log_buf->get_version()) {
+                                os_buf->is_thread_finished_ = true;
+                            }
+                        }
+                    }
                     if (pair.value()->cur_block_) {
                         pair.value()->cur_block_->get_misc_data<log_buffer::block_misc_data>().context_.is_thread_finished_ = true;
                         mark_block_removed(pair.value()->cur_block_, true);
@@ -98,21 +113,6 @@ namespace bq {
                                 context->seq_ = pair.value()->wt_data_.current_write_seq_++;
                                 context->is_external_ref_ = false;
                                 break;
-                            }
-                        }
-                    }
-                    //Avoid ABA problem with oversize buffer temporary reference.
-                    auto* buffer_info = pair.value();
-                    auto* log_buf = buffer_info->buffer_;
-                    if (log_buf) {
-                        printf("scoped_spin_lock_write_crazy addr 0x%p, log_buffer_addr:0x%p\n", static_cast<void*>(&(log_buf->temprorary_oversize_buffer_.array_lock_.counter_)), static_cast<void*>(log_buf));
-                        fflush(stdout);
-                        bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
-                        
-                        for (auto& os_buf : log_buf->temprorary_oversize_buffer_.buffers_array_) {
-                            auto& ctx = os_buf->buffer_.get_misc_data<context_head>();
-                            if (ctx.get_tls_info() == buffer_info && ctx.version_ == log_buf->get_version()) {
-                                os_buf->is_thread_finished_ = true;
                             }
                         }
                     }
