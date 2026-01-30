@@ -21,7 +21,6 @@
  */
 
 #include "bq_common/bq_common_public_include.h"
-#include "bq_common/platform/platform_misc.h"
 
 namespace bq {
     void* aligned_alloc(size_t alignment, size_t size);
