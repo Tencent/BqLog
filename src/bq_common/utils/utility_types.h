@@ -20,6 +20,7 @@
 
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
+#include "bq_common/platform/platform_misc.h"
 namespace bq {
 
     static constexpr size_t BQ_CACHE_LINE_SIZE = 128;

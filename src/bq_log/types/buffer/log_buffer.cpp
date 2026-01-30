@@ -105,7 +105,7 @@ namespace bq {
                     auto* buffer_info = pair.value();
                     auto* log_buf = buffer_info->buffer_;
                     if (log_buf) {
-                        printf("scoped_spin_lock_write_crazy addr 0x%p\n", static_cast<void*>(&(log_buf->temprorary_oversize_buffer_.array_lock_.counter_)));
+                        printf("scoped_spin_lock_write_crazy addr 0x%p, log_buffer_addr:0x%p\n", static_cast<void*>(&(log_buf->temprorary_oversize_buffer_.array_lock_.counter_)), static_cast<void*>(log_buf));
                         fflush(stdout);
                         bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
                         
