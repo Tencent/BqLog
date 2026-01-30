@@ -52,7 +52,7 @@ namespace bq {
         } BQ_PACK_END
 
             struct destruction_mark {
-            bq::platform::mutex lock_;
+            bq::platform::spin_lock lock_;
             bool is_destructed_ = false;
         };
 

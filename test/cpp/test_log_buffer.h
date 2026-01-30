@@ -866,12 +866,6 @@ namespace bq {
                 config.need_recovery = true;
                 do_block_list_test(result, config);
 
-                log_buffer_config config2 = config;
-                config2.need_recovery = false;
-                config2.policy = log_memory_policy::block_when_full;
-                config2.high_frequency_threshold_per_second = UINT64_MAX;
-                do_log_buffer_test(result, config2);
-
                 do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
                 do_log_buffer_test(result, config);

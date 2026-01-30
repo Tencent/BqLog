@@ -19,9 +19,6 @@
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/block_list.h"
 #include "bq_log/global/log_vars.h"
-#ifdef BQ_WIN
-#include <windows.h>
-#endif
 
 namespace bq {
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
@@ -74,23 +71,17 @@ namespace bq {
 
     log_buffer::log_tls_info::~log_tls_info()
     {
-    #ifdef BQ_WIN
-        printf("\n~log_tls_info() Thread ID: 0x%X\n" , static_cast<uint32_t>(GetCurrentThreadId()));
-    #endif
         if (log_map_) {
             for (auto pair : *log_map_) {
                 bq::shared_ptr<destruction_mark> destruction_protector = pair.value()->destruction_mark_;
-                bq::platform::scoped_mutex lock(pair.value()->destruction_mark_->lock_);
+                bq::platform::scoped_spin_lock lock(destruction_protector->lock_);
                 // make sure log_buffer obj is still alive.
-                if (!pair.value()->destruction_mark_->is_destructed_) {
+                if (!destruction_protector->is_destructed_) {
                     //Avoid ABA problem with oversize buffer temporary reference.
                     auto* buffer_info = pair.value();
                     auto* log_buf = buffer_info->buffer_;
                     if (log_buf) {
-                        printf("scoped_spin_lock_write_crazy addr 0x%p, log_buffer_addr:0x%p\n", static_cast<void*>(&(log_buf->temprorary_oversize_buffer_.array_lock_.counter_)), static_cast<void*>(log_buf));
-                        fflush(stdout);
                         bq::platform::scoped_spin_lock_write_crazy w_lock(log_buf->temprorary_oversize_buffer_.array_lock_);
-
                         for (auto& os_buf : log_buf->temprorary_oversize_buffer_.buffers_array_) {
                             auto& ctx = os_buf->buffer_.get_misc_data<context_head>();
                             if (ctx.get_tls_info() == buffer_info && ctx.version_ == log_buf->get_version()) {
@@ -139,7 +130,6 @@ namespace bq {
         , destruction_mark_(bq::make_shared<destruction_mark>())
         , current_oversize_buffer_index_(0)
     {
-        destruction_mark_->lock_.tmp_output_debug_ = true;
         static bq::platform::atomic<uint64_t> id_generator(0);
         id_ = id_generator.add_fetch_relaxed(1);
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
@@ -160,7 +150,7 @@ namespace bq {
 
     log_buffer::~log_buffer()
     {
-        bq::platform::scoped_mutex lock(destruction_mark_->lock_);
+        bq::platform::scoped_spin_lock lock(destruction_mark_->lock_);
         destruction_mark_->is_destructed_ = true;
     }
 

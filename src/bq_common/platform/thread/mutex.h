@@ -56,8 +56,6 @@ namespace bq {
         private:
             bool reentrant_;
             struct mutex_platform_def* platform_data_;
-        public:
-            bool tmp_output_debug_;
         };
 
         class scoped_mutex {
