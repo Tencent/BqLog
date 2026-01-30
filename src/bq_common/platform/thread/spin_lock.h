@@ -204,7 +204,6 @@ namespace bq {
         /// </summary>
         ///
 
-        BQ_PACK_BEGIN
         class alignas(BQ_CACHE_LINE_SIZE) spin_lock_rw_crazy {
         public:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
@@ -289,8 +288,7 @@ namespace bq {
                     }
                 }
             }
-        }
-        BQ_PACK_END
+        };
 
         class scoped_mcs_spin_lock {
         private:
