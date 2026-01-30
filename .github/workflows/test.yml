@@ -314,6 +314,7 @@ jobs:
 
   #Mac
   mac_silicon:
+    name: mac_silicon(arm64 cpp${{matrix.cpp_ver}} ${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
     runs-on: macos-latest
     strategy:
       fail-fast: false
