@@ -20,7 +20,7 @@
 
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
-#include "bq_common/platform/platform_misc.h"
+#include "bq_common/utils/aligned_allocator.h"
 namespace bq {
 
     static constexpr size_t BQ_CACHE_LINE_SIZE = 128;
@@ -194,39 +194,6 @@ namespace bq {
         }
     };
 
-    template <typename T>
-    struct scoped_obj {
-    private:
-        T* ptr;
-
-    public:
-        scoped_obj()
-            : ptr(nullptr)
-        {
-        }
-        scoped_obj(T* new_obj)
-        {
-            ptr = new_obj;
-        }
-        scoped_obj& operator=(const scoped_obj& rhs) = delete;
-        ~scoped_obj()
-        {
-            if (ptr) {
-                delete ptr;
-            }
-        }
-        T* operator->()
-        {
-            return ptr;
-        }
-        T* transfer()
-        {
-            T* tmp = ptr;
-            ptr = nullptr;
-            return tmp;
-        }
-    };
-
     // simple substitude of std::unique_ptr
     // which can handle the vast majority of cases.
     template <typename T>
@@ -240,12 +207,8 @@ namespace bq {
         {
         }
         ~unique_ptr() { reset(); }
-        explicit unique_ptr(T* new_ptr)
-            : ptr(new_ptr)
-        {
-        }
         template <typename D>
-        unique_ptr(unique_ptr<D>&& rhs) noexcept
+        explicit unique_ptr(unique_ptr<D>&& rhs) noexcept
             : ptr(rhs.ptr)
         {
             rhs.ptr = nullptr;
@@ -344,7 +307,7 @@ namespace bq {
         {
             if (ptr) {
                 ptr->~T();
-                bq::platform::aligned_free(ptr);
+                bq::aligned_free(ptr);
                 ptr = nullptr;
             }
         }
@@ -353,13 +316,21 @@ namespace bq {
         template <typename>
         friend class unique_ptr;
 
+        template <typename U, typename... Args>
+        friend unique_ptr<U> make_unique(Args&&...);
+
+        template <typename U>
+        friend unique_ptr<U> make_unique();
+
+        explicit unique_ptr(T* new_ptr) : ptr(new_ptr) {}
+
         T* ptr;
     };
 
     template <typename T, typename... Ts>
     unique_ptr<T> make_unique(Ts&&... params)
     {
-        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
         new (addr, bq::enum_new_dummy::dummy)T(bq::forward<Ts>(params)...);
         return unique_ptr<T>(static_cast<T*>(addr));
     }
@@ -368,7 +339,7 @@ namespace bq {
     template <class T>
     unique_ptr<T> make_unique()
     {
-        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
         new (addr, bq::enum_new_dummy::dummy)T();
         return unique_ptr<T>(static_cast<T*>(addr));
     }
@@ -381,12 +352,6 @@ namespace bq {
         shared_ptr() noexcept
             : ptr_(nullptr)
             , ref_count_(nullptr)
-        {
-        }
-
-        explicit shared_ptr(T* new_ptr)
-            : ptr_(new_ptr)
-            , ref_count_(new_ptr ? new bq::platform::atomic<int64_t>(1) : nullptr)
         {
         }
 
@@ -499,6 +464,18 @@ namespace bq {
         template <typename>
         friend class shared_ptr;
 
+        template <typename U, typename... Args>
+        friend shared_ptr<U> make_shared(Args&&...);
+
+        template <typename U>
+        friend shared_ptr<U> make_shared();
+
+        explicit shared_ptr(T* new_ptr)
+            : ptr_(new_ptr)
+            , ref_count_(new_ptr ? new bq::platform::atomic<int64_t>(1) : nullptr)
+        {
+        }
+
         void release() noexcept
         {
             if (ref_count_) {
@@ -507,7 +484,7 @@ namespace bq {
                     if (expected_value == 1) {
                         if (ref_count_->compare_exchange_strong(expected_value, static_cast<int64_t>(1) << 32, bq::platform::memory_order::seq_cst, bq::platform::memory_order::seq_cst)) {
                             ptr_->~T();
-                            bq::platform::aligned_free(ptr_);
+                            bq::aligned_free(ptr_);
                             delete ref_count_;
                             break;
                         }
@@ -530,7 +507,7 @@ namespace bq {
     template <typename T, typename... Ts>
     shared_ptr<T> make_shared(Ts&&... params)
     {
-        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
         new (addr, bq::enum_new_dummy::dummy)T(bq::forward<Ts>(params)...);
         return shared_ptr<T>(static_cast<T*>(addr));
     }
@@ -539,7 +516,7 @@ namespace bq {
     template <typename T>
     shared_ptr<T> make_shared()
     {
-        void* addr = bq::platform::aligned_alloc(alignof(T), sizeof(T));
+        void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
         new (addr, bq::enum_new_dummy::dummy)T();
         return shared_ptr<T>(static_cast<T*>(addr));
     }

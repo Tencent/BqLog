@@ -24,6 +24,9 @@
 #include "bq_common/platform/platform_misc.h"
 
 namespace bq {
+    void* aligned_alloc(size_t alignment, size_t size);
+    void aligned_free(void* ptr);
+
     template <typename T, size_t Alignment>
     class aligned_allocator : public default_allocator<T> {
     public:
@@ -35,11 +38,11 @@ namespace bq {
 
         value_type* allocate(size_t n)
         {
-            return reinterpret_cast<value_type*>(bq::platform::aligned_alloc(Alignment, n));
+            return reinterpret_cast<value_type*>(aligned_alloc(Alignment, n));
         }
         void deallocate(value_type* p, size_t)
         {
-            bq::platform::aligned_free(p);
+            aligned_free(p);
         }
 
         bool operator==(const aligned_allocator&) const noexcept { return true; }

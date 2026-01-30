@@ -11,7 +11,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "bq_common/bq_common.h"
+#include "bq_common/bq_common_public_include.h"
+#include "bq_common/utils/utility_types.h"
 #if defined(BQ_NAPI)
 #include <math.h>
 #include <node_api.h>

@@ -239,21 +239,19 @@ namespace bq {
             assert(appenders_list_.size() == 0);
             bq::array<bq::string> new_create_appender_names;
             for (const auto& name_key : appender_names) {
-                auto old_iter = tmp_list.find_if([&name_key](const appender_base* appender) {
+                auto old_iter = tmp_list.find_if([&name_key](const bq::unique_ptr<appender_base>& appender) {
                     return appender->get_name() == name_key;
                 });
                 if (old_iter != tmp_list.end()) {
                     if ((*old_iter)->reset(all_apenders_config[name_key])) {
-                        appenders_list_.push_back(*old_iter);
+                        appenders_list_.push_back(bq::move(*old_iter));
                         tmp_list.erase(old_iter);
                         continue;
                     }
                 }
                 new_create_appender_names.push_back(name_key);
             }
-            for (auto appender_delete : tmp_list) {
-                delete appender_delete;
-            }
+            tmp_list.clear();
             for (const auto& name : new_create_appender_names) {
                 add_appender(name, all_apenders_config[name]);
             }
@@ -284,7 +282,6 @@ namespace bq {
 
     bool log_imp::add_appender(const string& name, const bq::property_value& jobj)
     {
-        appender_base* appender_ptr = nullptr;
         const auto& type_obj = jobj["type"];
         if (!type_obj.is_string()) {
             util::log_device_console(bq::log_level::error, "add_appender failed, appender \"%s\" has invalid \"type\" config", name.c_str());
@@ -297,31 +294,28 @@ namespace bq {
                 break;
             }
         }
+        bq::unique_ptr<appender_base> appender;
         if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::console))) {
-            appender_ptr = new appender_console();
+            appender = bq::make_unique<appender_console>();
         } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::text_file))) {
-            appender_ptr = new appender_file_text();
+            appender = bq::make_unique<appender_file_text>();
         } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::raw_file))) {
-            appender_ptr = new appender_file_raw();
+            appender = bq::make_unique<appender_file_raw>();
         } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::compressed_file))) {
-            appender_ptr = new appender_file_compressed();
+            appender = bq::make_unique<appender_file_compressed>();
         } else {
             util::log_device_console(bq::log_level::error, "bq log error: invalid Appender type : %s", type_str.c_str());
             return false;
         }
-        bq::scoped_obj<appender_base> appender(appender_ptr);
         if (!appender->init(name, jobj, this)) {
             return false;
         }
-        appenders_list_.push_back(appender.transfer());
+        appenders_list_.push_back(bq::move(appender));
         return true;
     }
 
     void log_imp::clear()
     {
-        for (auto appender_ptr : appenders_list_) {
-            delete appender_ptr;
-        }
         appenders_list_.clear();
         categories_name_array_.clear();
         categories_name_array_.clear();
@@ -497,7 +491,7 @@ namespace bq {
             case appender_base::appender_type::raw_file:
             case appender_base::appender_type::text_file:
             case appender_base::appender_type::compressed_file:
-                static_cast<bq::appender_file_base*>(appenders_list_[i])->flush_write_cache();
+                static_cast<bq::appender_file_base*>(appenders_list_[i].operator->())->flush_write_cache();
                 break;
             default:
                 break;
@@ -512,7 +506,7 @@ namespace bq {
             case appender_base::appender_type::raw_file:
             case appender_base::appender_type::text_file:
             case appender_base::appender_type::compressed_file:
-                static_cast<bq::appender_file_base*>(appenders_list_[i])->flush_write_io();
+                static_cast<bq::appender_file_base*>(appenders_list_[i].operator->())->flush_write_io();
                 break;
             default:
                 break;

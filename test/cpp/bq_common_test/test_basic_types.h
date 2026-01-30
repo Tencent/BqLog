@@ -142,14 +142,14 @@ namespace bq {
                 result.add_result(bq::is_pod<test_pod_struct1>::value, "test_pod_struct1 pod");
                 result.add_result(!bq::is_pod<test_pod_struct2>::value, "test_pod_struct2 pod");
 
-                bq::unique_ptr<int32_t> up1(new int32_t(22));
+                bq::unique_ptr<int32_t> up1 = bq::make_unique<int32_t>(22);
                 bq::unique_ptr<int32_t> up2(std::move(up1));
                 result.add_result(!up1, "test_unique_ptr 1");
                 result.add_result(*up2 == 22, "test_unique_ptr 2");
 
                 {
                     bq::unique_ptr<test_unique_ptr> up_test_1;
-                    bq::unique_ptr<test_unique_ptr> up_test_2(new test_unique_ptr());
+                    bq::unique_ptr<test_unique_ptr> up_test_2 = bq::make_unique<test_unique_ptr>();
                     result.add_result(!up_test_1, "test_unique_ptr 2");
                     result.add_result(1 == unique_ptr_counter, "test_unique_ptr 1");
                     bq::unique_ptr<test_unique_ptr> up_test_3(bq::move(up_test_2));

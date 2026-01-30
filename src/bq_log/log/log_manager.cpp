@@ -110,12 +110,12 @@ namespace bq {
             }
         }
 
-        bq::scoped_obj<log_imp> log(new log_imp());
+        bq::unique_ptr<log_imp> log = bq::make_unique<log_imp>();
         if (!log->init(log_name, config_obj, category_names)) {
             return 0;
         }
         log->set_config(config_content);
-        log_imp_list_.push_back(log.transfer());
+        log_imp_list_.push_back(bq::move(log));
         return log_imp_list_[log_imp_list_.size() - 1].get()->id();
     }
 

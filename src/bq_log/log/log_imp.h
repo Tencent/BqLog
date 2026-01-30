@@ -129,7 +129,7 @@ namespace bq {
         uint64_t last_log_entry_epoch_ms_;
         uint64_t last_flush_io_epoch_ms_;
         recover_status_enum recover_status_;
-        bq::array_inline<appender_base*> appenders_list_;
+        bq::array_inline<bq::unique_ptr<appender_base>> appenders_list_;
         bq::array<bq::string> categories_name_array_;
         bq::array_inline<uint8_t> categories_mask_array_;
 
