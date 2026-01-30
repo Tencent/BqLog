@@ -717,6 +717,9 @@ namespace bq {
 
         void* aligned_alloc(size_t alignment, size_t size)
         {
+            if (alignment < sizeof(void*)) {
+                alignment = sizeof(void*);
+            }
             return _aligned_malloc(size, alignment);
         }
         void aligned_free(void* ptr)

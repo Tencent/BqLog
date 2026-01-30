@@ -648,6 +648,9 @@ namespace bq {
 
         void* aligned_alloc(size_t alignment, size_t size)
         {
+            if (alignment < sizeof(void*)) {
+                alignment = sizeof(void*);
+            }
             void* p = nullptr;
             if (posix_memalign(&p, alignment, size) != 0) {
                 return nullptr;
