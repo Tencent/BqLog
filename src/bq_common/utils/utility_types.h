@@ -194,14 +194,6 @@ namespace bq {
         }
     };
 
-    template <typename T> class unique_ptr;
-    template <typename T, typename... Args> unique_ptr<T> make_unique(Args&&...);
-    template <typename T> unique_ptr<T> make_unique();
-
-    template <typename T> class shared_ptr;
-    template <typename T, typename... Args> shared_ptr<T> make_shared(Args&&...);
-    template <typename T> shared_ptr<T> make_shared();
-
     // simple substitude of std::unique_ptr
     // which can handle the vast majority of cases.
     template <typename T>
@@ -216,7 +208,7 @@ namespace bq {
         }
         ~unique_ptr() { reset(); }
         template <typename D>
-        explicit unique_ptr(unique_ptr<D>&& rhs) noexcept
+        unique_ptr(unique_ptr<D>&& rhs) noexcept
             : ptr(rhs.ptr)
         {
             rhs.ptr = nullptr;
@@ -378,7 +370,7 @@ namespace bq {
         }
 
         template <typename D>
-        explicit shared_ptr(shared_ptr<D>&& rhs) noexcept
+        shared_ptr(shared_ptr<D>&& rhs) noexcept
             : ptr_(rhs.ptr_)
             , ref_count_(rhs.ref_count_)
         {
