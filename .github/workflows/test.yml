@@ -2199,6 +2199,17 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x' # Keep 8.0 installed to run tools, even if targeting 3.1
+
+      - name: Install Mono (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-devel
+
+      - name: Install Mono (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install mono
       
       - name: Install CMake
         if: runner.os == 'Windows'
