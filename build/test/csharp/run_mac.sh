@@ -17,11 +17,12 @@ popd > /dev/null
 echo "===== Building C# Test Executable ====="
 mkdir -p "$DIR/Build"
 pushd "$DIR/Build" > /dev/null
-cmake "$TEST_SRC_DIR" -DTARGET_PLATFORM:STRING=mac
+cmake "$TEST_SRC_DIR" -DTARGET_PLATFORM:STRING=mac -G "Unix Makefiles"
 cmake --build .
 popd > /dev/null
 
 EXE_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest"
+EXE_DOT_EXE_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest.exe"
 DLL_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest.dll"
 
 LIB_PATH="$ARTIFACTS_DIR/dynamic_lib/lib/$CONFIG"
@@ -61,6 +62,8 @@ export DYLD_LIBRARY_PATH="$LIB_PATH:$DYLD_LIBRARY_PATH"
 
 if [ -f "$EXE_PATH" ]; then
     "$EXE_PATH"
+elif [ -f "$EXE_DOT_EXE_PATH" ]; then
+    mono "$EXE_DOT_EXE_PATH"
 elif [ -f "$DLL_PATH" ]; then
     dotnet "$DLL_PATH"
 else

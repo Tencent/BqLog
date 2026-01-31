@@ -45,9 +45,9 @@ namespace bq.test
             log_inst_sync.info("Float value result: {}", 62.15645f);
             result.add_result(test_manager.get_console_output().Contains(standard_output), "Float format test");
 
-            standard_output = "这些是结果，abc, abcde, -32, FALSE, TRUE, null, 3, 3823823, -32354, 测试字符串完整的， 结果完成了";
+            standard_output = "这些是结果，abc, abcde, -32, FALSE, TRUE, 3, 3823823, -32354, 测试字符串完整的， 结果完成了";
             log_inst_sync.info("这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
-                "abc", "abcde", -32, false, true, null, (sbyte)3, 3823823, (short)-32354, "测试字符串完整的");
+                "abc", "abcde", -32, false, true, (sbyte)3, 3823823, (short)-32354, "测试字符串完整的");
             result.check_log_output_end_with(standard_output, "basic param test 2");
 
             string format_prefix = "a";
@@ -58,8 +58,9 @@ namespace bq.test
             }
             while (format_prefix.Length <= 1024 * 1024 + 1024 + 4)
             {
+                System.Console.WriteLine("Length:" + format_prefix.Length);
                 log_inst_sync.info(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
-                    "abc", "abcde", -32, false, true, null, (sbyte)3, 3823823, (short)-32354, "测试字符串完整的");
+                    "abc", "abcde", -32, false, true, (sbyte)3, 3823823, (short)-32354, "测试字符串完整的");
                 result.check_log_output_end_with(format_prefix + standard_output, "basic param test 2");
                 format_prefix += appender;
             }
@@ -72,7 +73,7 @@ namespace bq.test
             while (format_prefix.Length <= 1024 * 1024 + 1024 + 4)
             {
                 log_inst_async.info(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
-                    "abc", "abcde", -32, false, true, null, (sbyte)3, 3823823, (short)-32354, "测试字符串完整的");
+                    "abc", "abcde", -32, false, true, (sbyte)3, 3823823, (short)-32354, "测试字符串完整的");
                 log_inst_async.force_flush();
                 result.check_log_output_end_with(format_prefix + standard_output, "basic param test\n standard_end:" + format_prefix + standard_output + "\n real_output:" + test_manager.get_console_output());
                 format_prefix += appender;

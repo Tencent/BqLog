@@ -16,15 +16,10 @@ popd > /dev/null
 echo "===== Building C# Test Executable ====="
 mkdir -p "$DIR/Build"
 pushd "$DIR/Build" > /dev/null
-cmake "$TEST_SRC_DIR" -DTARGET_PLATFORM:STRING=linux
+cmake "$TEST_SRC_DIR" -DTARGET_PLATFORM:STRING=linux -G "Unix Makefiles"
 cmake --build .
 popd > /dev/null
 
-# Artifacts are directly output to artifacts/test/csharp by the csproj
-EXE_PATH="$ARTIFACTS_DIR/test/csharp/BqLogTest" # dotnet build uses ProjectName as binary name
-DLL_PATH="$ARTIFACTS_DIR/test/csharp/BqLogTest.dll"
-
-# Check if the output name matches the project name in CMakeLists (BqLogCSharpTest.csproj -> BqLogCSharpTest.dll)
 EXE_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest"
 DLL_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest.dll"
 
@@ -64,6 +59,8 @@ export LD_LIBRARY_PATH="$LIB_PATH:$LD_LIBRARY_PATH"
 
 if [ -f "$EXE_PATH" ]; then
     "$EXE_PATH"
+elif [ -f "$EXE_DOT_EXE_PATH" ]; then
+    mono "$EXE_DOT_EXE_PATH"
 elif [ -f "$DLL_PATH" ]; then
     dotnet "$DLL_PATH"
 else

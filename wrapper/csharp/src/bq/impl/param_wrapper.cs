@@ -264,6 +264,11 @@ namespace bq.impl
             return param;
         }
 
+        /// <summary>
+        /// Deprecated: Converting to Enum causes boxing and leads to GC allocation. Please convert it
+        /// to an int or String manually before passing it.
+        /// </summary>
+        /*
         public unsafe static implicit operator param_wrapper(System.Enum obj)
         {
             param_wrapper param = new param_wrapper();
@@ -274,5 +279,6 @@ namespace bq.impl
             param.aligned_size_ = param.storage_size_;
             return param;
         }
+        */
     }
 }
