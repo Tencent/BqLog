@@ -1912,10 +1912,49 @@ jobs:
           choco install -y llvm
       - name: Build for Windows
         id: win_run_tests
+        continue-on-error: true
         shell: powershell
         run: |
+          $ErrorActionPreference = "Continue"
           cd build\test\java
-          .\run_win
+          cmd /c "call .\run_win.bat <nul"
+          $code = $LASTEXITCODE
+          "exitcode=$code" >> $env:GITHUB_OUTPUT
+          Write-Host "Java wrapper test exitcode=$code"
+          exit 0
+
+      - name: Print JVM crash log (hs_err_pid*.log)
+        if: steps.win_run_tests.outputs.exitcode != '0'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host "=== Searching for JVM crash logs (hs_err_pid*.log) ==="
+          $logs = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Filter "hs_err_pid*.log" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+          if (-not $logs) {
+            Write-Host "No hs_err_pid*.log files found."
+          } else {
+            foreach ($log in $logs) {
+              Write-Host ""
+              Write-Host "=========================================="
+              Write-Host "JVM Crash Log: $($log.FullName)"
+              Write-Host "=========================================="
+              Get-Content $log.FullName -ErrorAction SilentlyContinue
+              Write-Host ""
+            }
+          }
+
+      - name: Upload JVM crash logs
+        if: steps.win_run_tests.outputs.exitcode != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm_crash_logs_win_${{ matrix.runner.label }}_${{ matrix.cc }}
+          path: "**/hs_err_pid*.log"
+          if-no-files-found: ignore
+
+      - name: Fail job if tests failed
+        if: steps.win_run_tests.outputs.exitcode != '0'
+        shell: powershell
+        run: exit 1
 
   java_wrapper_mac_silicon:
     name: java_wrapper (macos-latest${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
@@ -1943,12 +1982,46 @@ jobs:
           distribution: 'adopt'
 
       - name: Test for macOS
+        id: mac_run_tests
+        continue-on-error: true
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
           cd build/test/java  
           chmod +x *.sh
+          set +e
           ./run_mac.sh
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
+
+      - name: Print JVM crash log (hs_err_pid*.log)
+        if: steps.mac_run_tests.outputs.exitcode != '0'
+        run: |
+          echo "=== Searching for JVM crash logs (hs_err_pid*.log) ==="
+          find "$GITHUB_WORKSPACE" -name "hs_err_pid*.log" -type f 2>/dev/null | while read log; do
+            echo ""
+            echo "=========================================="
+            echo "JVM Crash Log: $log"
+            echo "=========================================="
+            cat "$log" 2>/dev/null || echo "Failed to read $log"
+            echo ""
+          done
+          # Check if any logs were found
+          LOG_COUNT=$(find "$GITHUB_WORKSPACE" -name "hs_err_pid*.log" -type f 2>/dev/null | wc -l)
+          if [ "$LOG_COUNT" -eq 0 ]; then
+            echo "No hs_err_pid*.log files found."
+          fi
+
+      - name: Upload JVM crash logs
+        if: steps.mac_run_tests.outputs.exitcode != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm_crash_logs_mac_${{ matrix.asan.label }}
+          path: "**/hs_err_pid*.log"
+          if-no-files-found: ignore
+
+      - name: Fail job if tests failed
+        if: steps.mac_run_tests.outputs.exitcode != '0'
+        run: exit 1
 
   java_wrapper_ubuntu:
     name: java_wrapper (ubuntu-${{ matrix.runner.label }}${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})
@@ -1977,12 +2050,46 @@ jobs:
           distribution: 'adopt'
 
       - name: Build for Linux
+        id: linux_run_tests
+        continue-on-error: true
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
           cd build/test/java  
           chmod +x *.sh
+          set +e
           ./run_linux.sh
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
+
+      - name: Print JVM crash log (hs_err_pid*.log)
+        if: steps.linux_run_tests.outputs.exitcode != '0'
+        run: |
+          echo "=== Searching for JVM crash logs (hs_err_pid*.log) ==="
+          find "$GITHUB_WORKSPACE" -name "hs_err_pid*.log" -type f 2>/dev/null | while read log; do
+            echo ""
+            echo "=========================================="
+            echo "JVM Crash Log: $log"
+            echo "=========================================="
+            cat "$log" 2>/dev/null || echo "Failed to read $log"
+            echo ""
+          done
+          # Check if any logs were found
+          LOG_COUNT=$(find "$GITHUB_WORKSPACE" -name "hs_err_pid*.log" -type f 2>/dev/null | wc -l)
+          if [ "$LOG_COUNT" -eq 0 ]; then
+            echo "No hs_err_pid*.log files found."
+          fi
+
+      - name: Upload JVM crash logs
+        if: steps.linux_run_tests.outputs.exitcode != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm_crash_logs_ubuntu_${{ matrix.runner.label }}_${{ matrix.asan.label }}
+          path: "**/hs_err_pid*.log"
+          if-no-files-found: ignore
+
+      - name: Fail job if tests failed
+        if: steps.linux_run_tests.outputs.exitcode != '0'
+        run: exit 1
 
   java_wrapper_freebsd_x86_64:
     name: java_wrapper (freebsd_x86_64)
@@ -2001,7 +2108,7 @@ jobs:
             pkg install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
-            set -e -x
+            set -x
             pkg info -l openjdk11 | grep 'bin/java'
             export JAVA_HOME="/usr/local/openjdk11"
             export PATH="$JAVA_HOME/bin:$PATH"
@@ -2009,7 +2116,39 @@ jobs:
             echo "PATH=$PATH" >> $GITHUB_ENV
             cd build/test/java  
             chmod +x *.sh
+            
+            set +e
             ./run_unix.sh
+            EXIT_CODE=$?
+            set -e
+            
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "=== Java wrapper test failed with exit code $EXIT_CODE ==="
+              echo "=== Searching for JVM crash logs (hs_err_pid*.log) ==="
+              find . -name "hs_err_pid*.log" -type f 2>/dev/null | while read log; do
+                echo ""
+                echo "=========================================="
+                echo "JVM Crash Log: $log"
+                echo "=========================================="
+                cat "$log" 2>/dev/null || echo "Failed to read $log"
+                echo ""
+              done
+              # Check if any logs were found
+              LOG_COUNT=$(find . -name "hs_err_pid*.log" -type f 2>/dev/null | wc -l)
+              if [ "$LOG_COUNT" -eq 0 ]; then
+                echo "No hs_err_pid*.log files found in current directory."
+                # Also search from workspace root
+                find ../../../ -name "hs_err_pid*.log" -type f 2>/dev/null | while read log; do
+                  echo ""
+                  echo "=========================================="
+                  echo "JVM Crash Log: $log"
+                  echo "=========================================="
+                  cat "$log" 2>/dev/null || echo "Failed to read $log"
+                  echo ""
+                done
+              fi
+              exit $EXIT_CODE
+            fi
 
   csharp_wrapper_tests:
     name: csharp_wrapper (${{ matrix.label }})
