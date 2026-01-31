@@ -53,15 +53,15 @@ namespace bq {
             bq::platform::jni_env env;
             if (env.env) {
                 if (java_.buffer_obj_for_lp_buffer_) {
-                    env.env->DeleteGlobalRef(java_.buffer_obj_for_lp_buffer_);
+                    bq::platform::remove_global_ref_async(java_.buffer_obj_for_lp_buffer_);
                     java_.buffer_obj_for_lp_buffer_ = NULL;
                 }
                 if (java_.buffer_obj_for_hp_buffer_) {
-                    env.env->DeleteGlobalRef(java_.buffer_obj_for_hp_buffer_);
+                    bq::platform::remove_global_ref_async(java_.buffer_obj_for_hp_buffer_);
                     java_.buffer_obj_for_hp_buffer_ = NULL;
                 }
                 if (java_.buffer_obj_for_oversize_buffer_) {
-                    env.env->DeleteGlobalRef(java_.buffer_obj_for_oversize_buffer_);
+                    bq::platform::remove_global_ref_async(java_.buffer_obj_for_oversize_buffer_);
                     java_.buffer_obj_for_oversize_buffer_ = NULL;
                 }
             }
