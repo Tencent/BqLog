@@ -35,7 +35,7 @@ namespace bq.test
         {
             string output = test_manager.get_console_output();
             bool result = false;
-            if (output != null && output.TrimEnd().EndsWith(standard_log))
+            if (output != null && output.EndsWith(standard_log, StringComparison.Ordinal))
             {
                 result = true;
             }

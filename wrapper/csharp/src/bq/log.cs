@@ -229,6 +229,8 @@ namespace bq
 
         public delegate void type_console_callback(ulong log_id, int category_idx, bq.def.log_level log_level, string content);
         private static type_console_callback console_callback_ = null;
+        private static type_func_ptr_console_callback _native_callback_keep_alive_ = null;
+
         /// <summary>
         /// Register a callback that will be invoked whenever a console log message is output. 
         /// This can be used for an external system to monitor console log output.
@@ -241,11 +243,19 @@ namespace bq
             {
                 if (console_callback_ != null)
                 {
-                    log_invoker.__api_register_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                    if (_native_callback_keep_alive_ == null)
+                    {
+                        _native_callback_keep_alive_ = new type_func_ptr_console_callback(_native_console_callback_wrapper);
+                        log_invoker.__api_register_console_callbacks(_native_callback_keep_alive_);
+                    }
                 }
                 else
                 {
-                    log_invoker.__api_unregister_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                    if (_native_callback_keep_alive_ != null)
+                    {
+                        log_invoker.__api_unregister_console_callbacks(_native_callback_keep_alive_);
+                        _native_callback_keep_alive_ = null;
+                    }
                 }
             }
         }
@@ -261,7 +271,11 @@ namespace bq
                 console_callback_ = null;
                 unsafe
                 {
-                    log_invoker.__api_unregister_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                    if (_native_callback_keep_alive_ != null)
+                    {
+                        log_invoker.__api_unregister_console_callbacks(_native_callback_keep_alive_);
+                        _native_callback_keep_alive_ = null;
+                    }
                 }
             }
         }

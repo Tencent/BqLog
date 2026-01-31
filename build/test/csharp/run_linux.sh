@@ -21,6 +21,7 @@ cmake --build .
 popd > /dev/null
 
 EXE_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest"
+EXE_DOT_EXE_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest.exe"
 DLL_PATH="$ARTIFACTS_DIR/test/csharp/BqLogCSharpTest.dll"
 
 LIB_PATH="$ARTIFACTS_DIR/dynamic_lib/lib/$CONFIG"

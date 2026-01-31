@@ -38,9 +38,6 @@ namespace bq.test
             log_inst_async = bq.log.get_log_by_name("async_log");
             test_result result = new test_result();
 
-            // Disable console callback to speed up stress test
-            bq.log.register_console_callback(null);
-
             // Sync Test
             while (Volatile.Read(ref left_thread) > 0 || Volatile.Read(ref live_thread) > 0)
             {
@@ -69,7 +66,7 @@ namespace bq.test
             Console.WriteLine("Sync Test Finished");
 
             // Async Test
-            Interlocked.Exchange(ref left_thread, 32);
+            Interlocked.Exchange(ref left_thread, 128);
 
             while (Volatile.Read(ref left_thread) > 0 || Volatile.Read(ref live_thread) > 0)
             {
