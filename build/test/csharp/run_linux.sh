@@ -16,7 +16,7 @@ popd > /dev/null
 echo "===== Building C# Test Executable ====="
 mkdir -p "$DIR/Build"
 pushd "$DIR/Build" > /dev/null
-cmake "$TEST_SRC_DIR" -DTARGET_PLATFORM:STRING=linux -G "Unix Makefiles"
+cmake "$TEST_SRC_DIR" -G "Unix Makefiles"
 cmake --build .
 popd > /dev/null
 

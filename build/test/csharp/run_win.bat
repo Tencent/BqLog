@@ -18,7 +18,13 @@ popd
 echo ===== Building C# Test Executable =====
 if not exist "%DIR%Build" md "%DIR%Build"
 pushd "%DIR%Build"
-cmake "%TEST_SRC_DIR%" -DTARGET_PLATFORM:STRING=win64
+
+set CMAKE_ARCH_ARGS=
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+    set CMAKE_ARCH_ARGS=-A ARM64
+)
+
+cmake "%TEST_SRC_DIR%" %CMAKE_ARCH_ARGS%
 cmake --build . --config %CONFIG%
 popd
 
