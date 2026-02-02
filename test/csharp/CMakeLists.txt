@@ -34,6 +34,8 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
     set_property(TARGET BqLogCSharpTest PROPERTY VS_GLOBAL_AllowUnsafeBlocks "true")
     # Target .NET Framework 4.7.2 for maximum compatibility on Windows
     set_property(TARGET BqLogCSharpTest PROPERTY VS_DOTNET_TARGET_FRAMEWORK_VERSION "v4.7.2")
+    # Use AnyCPU to support both x64 and ARM64
+    set_property(TARGET BqLogCSharpTest PROPERTY VS_GLOBAL_PlatformTarget "AnyCPU")
 else()
     # For Mono on Mac/Linux
     
