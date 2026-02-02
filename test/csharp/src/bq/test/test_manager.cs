@@ -22,7 +22,7 @@ namespace bq.test
         private static string log_console_output;
 
         // Delegate implementation matching bq.log.type_console_callback
-        private static void DefaultCallback(ulong log_id, int category_idx, log_level level_value, string content)
+        private static void default_callback(ulong log_id, int category_idx, log_level level_value, string content)
         {
             if (log_id != 0)
             {
@@ -41,7 +41,7 @@ namespace bq.test
 
         public static void register_default_console_callback()
         {
-            bq.log.register_console_callback(DefaultCallback);
+            bq.log.register_console_callback(default_callback);
         }
 
         public static bool test()

@@ -21,10 +21,6 @@ namespace bq.test
             Console.WriteLine("Running C# Wrapper Tests...");
             try
             {
-                // Ensure native lib loading if needed, though usually automatic via P/Invoke if DLL is in path.
-                // In Java "System.loadLibrary" was called in static block of bq.log.
-                // In C#, it depends on OS loader.
-                
                 string version = bq.log.get_version();
                 Console.WriteLine("BqLog Version: " + version);
                 if (string.IsNullOrEmpty(version))

@@ -34,8 +34,20 @@ namespace bq.test
 
         public override test_result test()
         {
-            log_inst_sync = bq.log.get_log_by_name("sync_log");
-            log_inst_async = bq.log.get_log_by_name("async_log");
+            log_inst_sync = bq.log.create_log("sync_log", "appenders_config.FileAppender.type=compressed_file\n"
+                    + "						appenders_config.FileAppender.time_zone=localtime\n"
+                    + "						appenders_config.FileAppender.max_file_size=100000000\n"
+                    + "						appenders_config.FileAppender.file_name=sync_log\n"
+                    + "						appenders_config.FileAppender.levels=[info, info, error,info]\n"
+                    + "					\n"
+                    + "						log.thread_mode=sync");
+            log_inst_async = bq.log.create_log("async_log", "appenders_config.FileAppender.type=compressed_file\n"
+                    + "						appenders_config.FileAppender.time_zone=localtime\n"
+                    + "						appenders_config.FileAppender.max_file_size=100000000\n"
+                    + "						appenders_config.FileAppender.file_name=async_log\n"
+                    + "						appenders_config.FileAppender.levels=[error,info]\n"
+                    + "					\n");
+
             test_result result = new test_result();
 
             // Sync Test
@@ -84,7 +96,6 @@ namespace bq.test
                     });
                     tr.IsBackground = false;
                     tr.Start();
-                    Console.WriteLine("New Thread Start:" + tr.ManagedThreadId); 
                     Interlocked.Increment(ref live_thread);
                     Interlocked.Decrement(ref left_thread);
                 }
