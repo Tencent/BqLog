@@ -417,10 +417,18 @@ namespace bq {
 
         void thread::sleep(uint64_t millsec)
         {
-            struct timeval sleep_time;
-            sleep_time.tv_sec = (decltype(sleep_time.tv_sec))(millsec / 1000);
-            sleep_time.tv_usec = (decltype(sleep_time.tv_usec))(millsec % 1000) * 1000;
-            select(0, nullptr, nullptr, nullptr, &sleep_time);
+            struct timespec req;
+            struct timespec rem;
+
+            req.tv_sec = (time_t)(millsec / 1000);
+            req.tv_nsec = (long)((millsec % 1000) * 1000000);
+            while (nanosleep(&req, &rem) == -1) {
+                if (errno == EINTR) {
+                    req = rem;
+                } else {
+                    break;
+                }
+            }
         }
 
         bq::string thread::get_current_thread_name()

@@ -11,42 +11,45 @@
  */
 namespace bq.test
 {
-    using System;
+    using System.Threading;
     using System.Collections.Generic;
     using bq;
     using bq.def;
 
+
     public class test_manager
     {
         private static List<test_base> test_list = new List<test_base>();
-        private static string log_console_output;
-
-        // Delegate implementation matching bq.log.type_console_callback
-        private static void default_callback(ulong log_id, int category_idx, log_level level_value, string content)
-        {
-            if (log_id != 0)
-            {
-                log_console_output = content;
-            }
-            else
-            {
-                Console.WriteLine(content);
-            }
-        }
+        private static Thread fetch_thread = null;
+        private static long fetch_count = 0;
+        private static string log_console_output = null;
 
         public static void add_test(test_base test_obj)
         {
             test_list.Add(test_obj);
         }
 
-        public static void register_default_console_callback()
-        {
-            bq.log.register_console_callback(default_callback);
-        }
-
         public static bool test()
         {
-            register_default_console_callback();
+            bq.log.set_console_buffer_enable(true);
+            fetch_thread = new Thread(() => {
+                while (true)
+                {
+                    Interlocked.Add(ref fetch_count, 1);
+                    while (true)
+                    {
+                        bool fetch_result = bq.log.fetch_and_remove_console_buffer((log_id, category_idx, log_level, content) =>
+                        {
+                            log_console_output = content;
+                        });
+                        if (!fetch_result)
+                        {
+                            break;
+                        }
+                    }
+                }
+            });
+            fetch_thread.Start();
             bool success = true;
             foreach (var test_obj in test_list)
             {
@@ -59,6 +62,11 @@ namespace bq.test
 
         public static string get_console_output()
         {
+            long prev = Interlocked.Read(ref fetch_count);
+            while(prev == Interlocked.Read(ref fetch_count))
+            {
+
+            }
             return log_console_output;
         }
     }

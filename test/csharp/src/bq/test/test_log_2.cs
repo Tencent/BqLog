@@ -107,7 +107,6 @@ namespace bq.test
 
             log_inst_async.force_flush();
             result.add_result(true, "");
-            test_manager.register_default_console_callback();
             return result;
         }
     }

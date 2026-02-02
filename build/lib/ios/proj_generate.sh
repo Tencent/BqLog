@@ -9,6 +9,7 @@ cmake ../../../../src \
     -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
     -DPLATFORM=OS64 \
     -DDEPLOYMENT_TARGET=9.0 \
+    -DCPP_VER=14 \
     -DBUILD_LIB_TYPE=dynamic_lib \
     -DAPPLE_LIB_FORMAT=framework \
     -DTARGET_PLATFORM:STRING=ios
