@@ -74,6 +74,10 @@ namespace bq {
         if (log_map_) {
             for (auto pair : *log_map_) {
                 bq::shared_ptr<destruction_mark> destruction_protector = pair.value()->destruction_mark_;
+                if (!destruction_protector.get()) {
+                    //Impossible Path! Only for [-Werror=null-dereference]
+                    continue;
+                }
                 bq::platform::scoped_spin_lock lock(destruction_protector->lock_);
                 // make sure log_buffer obj is still alive.
                 if (!destruction_protector->is_destructed_) {

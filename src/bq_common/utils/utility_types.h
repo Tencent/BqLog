@@ -412,10 +412,10 @@ namespace bq {
             return *this;
         }
 
-        T* operator->() const { return ptr_; }
-        T& operator*() const { return *ptr_; }
-
         T* get() const noexcept { return ptr_; }
+
+        T* operator->() const { return get(); }
+        T& operator*() const { return *get(); }
 
         int32_t use_count() const noexcept
         {
