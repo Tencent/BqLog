@@ -349,6 +349,42 @@ namespace bq {
         return total_written_count;
     }
 
+    bool file_manager::copy_file(const bq::string& src_path, const bq::string& dest_path)
+    {
+        auto src_file = file_manager::get_lexically_path(src_path);
+        auto dest_file = file_manager::get_lexically_path(dest_path);
+        if (src_file == dest_file)
+            return false;
+
+        auto fill_size = file_manager::instance().get_file_size(src_file);
+
+        auto file_r = file_manager::instance().open_file(src_file, bq::file_open_mode_enum::read);
+        if (!file_r.is_valid()) {
+            return false;
+        }
+        file_manager::instance().seek(file_r, file_manager::seek_option::begin, 0);
+        auto file_w = file_manager::instance().open_file(dest_file, bq::file_open_mode_enum::auto_create | bq::file_open_mode_enum::write);
+        if (!file_w.is_valid()) {
+            return false;
+        }
+        file_manager::instance().truncate_file(file_w, 0);
+        size_t write_size = 0;
+        bq::array<uint8_t> cache_read_;
+        size_t temp_size = 10 * 1024 * 1024;
+        cache_read_.fill_uninitialized(temp_size);
+        while (write_size < fill_size) {
+            if (fill_size - write_size < temp_size)
+                temp_size = fill_size - write_size;
+            if (file_manager::instance().read_file(file_r, cache_read_.begin(), temp_size) >= temp_size) {
+                write_size += temp_size;
+                file_manager::instance().write_file(file_w, cache_read_.begin(), temp_size);
+            }
+        }
+        file_manager::instance().close_file(file_r);
+        file_manager::instance().close_file(file_w);
+        return true;
+    }
+
     bool file_manager::truncate_file(const file_handle& handle, size_t offset)
     {
         auto truncate_errno = platform::truncate_file(handle.platform_handle(), offset);
