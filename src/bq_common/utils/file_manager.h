@@ -204,6 +204,11 @@ namespace bq {
         size_t write_file(const file_handle& handle, const void* data, size_t length, seek_option opt = seek_option::current, int64_t seek_offset = 0);
 
         /// <summary>
+        /// Copy File
+        /// </summary>
+        bool copy_file(const bq::string& src_path, const bq::string& dest_path);
+
+        /// <summary>
         /// truncate file, and the file cursor will be at end of file after calling this
         /// </summary>
         /// <param name="handle">file handle</param>

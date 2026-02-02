@@ -415,79 +415,12 @@ namespace bq {
 #endif
         }
 
-#if defined(CLOCK_MONOTONIC)
-#define BQ_SLEEP_CLOCK_TYPE CLOCK_MONOTONIC
-#else
-#define BQ_SLEEP_CLOCK_TYPE CLOCK_REALTIME
-#endif
         void thread::sleep(uint64_t millsec)
         {
-            if (millsec <= 0) {
-                struct timeval tv {};
-                tv.tv_sec = static_cast<decltype(tv.tv_sec)>(0);
-                tv.tv_usec = static_cast<decltype(tv.tv_usec)>(0);
-                int32_t r = static_cast<int32_t>(select(0, nullptr, nullptr, nullptr, &tv));
-                if (r != 0) {
-                    cpu_relax();
-                }
-                return;
-            }
-
-            constexpr int64_t QUANTUM_MS = 50;
-            constexpr int64_t NS_PER_MS = 1000000LL;
-            constexpr int64_t NS_PER_SEC = 1000000000LL;
-
-            struct timespec start {};
-            if (static_cast<int32_t>(clock_gettime(BQ_SLEEP_CLOCK_TYPE, &start)) != 0)
-                return;
-
-            int64_t deadline_ns = static_cast<int64_t>(start.tv_sec) * NS_PER_SEC + static_cast<int64_t>(start.tv_nsec) + static_cast<int64_t>(millsec) * NS_PER_MS;
-
-            for (;;) {
-                struct timespec now {};
-                if (static_cast<int32_t>(clock_gettime(BQ_SLEEP_CLOCK_TYPE, &now)) != 0)
-                    break;
-
-                int64_t now_ns = static_cast<int64_t>(now.tv_sec) * NS_PER_SEC + static_cast<int64_t>(now.tv_nsec);
-
-                if (now_ns >= deadline_ns)
-                    break;
-
-                int64_t remain_ns = deadline_ns - now_ns;
-                if (remain_ns < NS_PER_MS) {
-                    int64_t micros = remain_ns / 1000LL;
-                    if (micros <= 0)
-                        break;
-                    struct timeval tv_last {};
-                    tv_last.tv_sec = static_cast<decltype(tv_last.tv_sec)>(0);
-                    tv_last.tv_usec = static_cast<decltype(tv_last.tv_usec)>(micros);
-                    while (true) {
-                        auto r = static_cast<int32_t>(select(0, nullptr, nullptr, nullptr, &tv_last));
-                        if (r == 0)
-                            break;
-                        if (r < 0 && errno == EINTR)
-                            continue;
-                        break;
-                    }
-                    break;
-                }
-
-                int64_t remain_ms = remain_ns / NS_PER_MS;
-                int64_t chunk_ms = (remain_ms > QUANTUM_MS) ? QUANTUM_MS : remain_ms;
-
-                struct timeval tv {};
-                tv.tv_sec = static_cast<decltype(tv.tv_sec)>(chunk_ms / 1000);
-                tv.tv_usec = static_cast<decltype(tv.tv_usec)>((chunk_ms % 1000) * 1000);
-
-                while (true) {
-                    int32_t r = static_cast<int32_t>(select(0, nullptr, nullptr, nullptr, &tv));
-                    if (r == 0)
-                        break;
-                    if (r < 0 && errno == EINTR)
-                        continue;
-                    break;
-                }
-            }
+            struct timeval sleep_time;
+            sleep_time.tv_sec = (decltype(sleep_time.tv_sec))(millsec / 1000);
+            sleep_time.tv_usec = (decltype(sleep_time.tv_usec))(millsec % 1000) * 1000;
+            select(0, nullptr, nullptr, nullptr, &sleep_time);
         }
 
         bq::string thread::get_current_thread_name()
