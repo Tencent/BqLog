@@ -19,11 +19,12 @@ pushd "%BUILD_LIB_DIR%"
 call dont_execute_this.bat build native msvc OFF OFF dynamic_lib
 popd
 
-echo ===== Building C# Test Executable =====
+echo ===== Building C# Test (.NET 6.0 SDK) =====
 if not exist "%DIR%Build" md "%DIR%Build"
 pushd "%DIR%Build"
 
-REM Note: Do NOT pass -A for C# projects. C# defaults to AnyCPU which works on all platforms.
+REM Uses dotnet build with SDK-style project for native ARM64 support
+REM (unlike .NET Framework which runs under x64 emulation on ARM64)
 cmake "%TEST_SRC_DIR%"
 cmake --build . --config %CONFIG%
 popd

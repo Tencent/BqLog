@@ -1,14 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
 
-# Enable C# Language support
-# On Windows + VS Generator, this uses MSBuild/CSC (targeting .NET Framework by default).
-# On Linux/Mac + Makefile Generator, we must use custom commands for Mono (mcs) as CMake's native C# support is VS-only.
+# C# Test Project
+# On Windows: Use dotnet build with SDK-style project for native ARM64 support
+# On Linux/Mac: Use Mono compiler (mcs)
 
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    project(BqLogCSharpTest CSharp)
-else()
-    project(BqLogCSharpTest NONE)
-endif()
+project(BqLogCSharpTest NONE)
 
 set(ARTIFACTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/test/csharp")
 file(MAKE_DIRECTORY ${ARTIFACTS_DIR})
@@ -19,27 +15,49 @@ file(GLOB_RECURSE WRAPPER_SRC_LIST "${WRAPPER_SRC_DIR}/*.cs")
 set(TEST_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB_RECURSE TEST_SRC_LIST "${TEST_SRC_DIR}/*.cs")
 
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    add_executable(BqLogCSharpTest ${WRAPPER_SRC_LIST} ${TEST_SRC_LIST})
-
-    set_target_properties(BqLogCSharpTest PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${ARTIFACTS_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY_RELEASE "${ARTIFACTS_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${ARTIFACTS_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${ARTIFACTS_DIR}"
-    )
-
-    # For Visual Studio Generator
-    set_property(TARGET BqLogCSharpTest PROPERTY VS_GLOBAL_AllowUnsafeBlocks "true")
-    # Target .NET Framework 4.7.2 for maximum compatibility on Windows
-    set_property(TARGET BqLogCSharpTest PROPERTY VS_DOTNET_TARGET_FRAMEWORK_VERSION "v4.7.2")
-    # Use AnyCPU to support both x64 and ARM64
-    set_property(TARGET BqLogCSharpTest PROPERTY VS_GLOBAL_PlatformTarget "AnyCPU")
-else()
-    # For Mono on Mac/Linux
+if(WIN32)
+    # ==========================================================================
+    # Windows: Use dotnet build with SDK-style project
+    # This provides native ARM64 support (unlike .NET Framework which runs under x64 emulation)
+    # ==========================================================================
+    find_program(DOTNET_EXECUTABLE dotnet)
+    if(NOT DOTNET_EXECUTABLE)
+        message(FATAL_ERROR "dotnet not found. Please install .NET 6.0 SDK or later.")
+    endif()
     
-    # 1. Find Mono Compiler
+    # Generate source file list for csproj
+    set(CSHARP_SOURCES_XML "")
+    foreach(SRC_FILE ${WRAPPER_SRC_LIST} ${TEST_SRC_LIST})
+        string(APPEND CSHARP_SOURCES_XML "    <Compile Include=\"${SRC_FILE}\" />\n")
+    endforeach()
+    
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_DIR}")
+    
+    # Configure the csproj from template
+    set(CSPROJ_FILE "${CMAKE_CURRENT_BINARY_DIR}/BqLogTest.csproj")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/BqLogTest.csproj.in"
+        "${CSPROJ_FILE}"
+        @ONLY
+    )
+    
+    set(OUTPUT_DLL "${ARTIFACTS_DIR}/BqLogTest.dll")
+    
+    add_custom_command(
+        OUTPUT "${OUTPUT_DLL}"
+        COMMAND ${DOTNET_EXECUTABLE} build "${CSPROJ_FILE}" -c Release -o "${ARTIFACTS_DIR}"
+        DEPENDS ${WRAPPER_SRC_LIST} ${TEST_SRC_LIST} "${CSPROJ_FILE}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Building C# Test with dotnet build (.NET 6.0, native ARM64 support)"
+    )
+    
+    add_custom_target(BqLogCSharpTest ALL DEPENDS "${OUTPUT_DLL}")
+    
+    message(STATUS "C# Test Project Configured (dotnet): ${ARTIFACTS_DIR}/BqLogTest.dll")
+else()
+    # ==========================================================================
+    # Linux/Mac: Use Mono compiler (mcs)
+    # ==========================================================================
     find_program(MCS_EXECUTABLE mcs)
     if(NOT MCS_EXECUTABLE)
         message(FATAL_ERROR "Mono compiler (mcs) not found. Please install Mono (e.g. 'brew install mono' on macOS).")
@@ -47,8 +65,6 @@ else()
 
     set(OUTPUT_EXE "${ARTIFACTS_DIR}/BqLogCSharpTest.exe")
     
-    # 2. Define Custom Command to compile
-    # Note: We use ${WRAPPER_SRC_LIST} and ${TEST_SRC_LIST} which are lists of files.
     add_custom_command(
         OUTPUT "${OUTPUT_EXE}"
         COMMAND ${MCS_EXECUTABLE} -target:exe -out:"${OUTPUT_EXE}" -unsafe ${WRAPPER_SRC_LIST} ${TEST_SRC_LIST}
@@ -57,8 +73,7 @@ else()
         COMMENT "Building C# Test with Mono (mcs)"
     )
     
-    # 3. Define Custom Target to drive the build
     add_custom_target(BqLogCSharpTest ALL DEPENDS "${OUTPUT_EXE}")
+    
+    message(STATUS "C# Test Project Configured (Mono): ${ARTIFACTS_DIR}/BqLogCSharpTest.exe")
 endif()
-
-message(STATUS "C# Test Project Configured: ${ARTIFACTS_DIR}/BqLogCSharpTest.exe")

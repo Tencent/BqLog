@@ -1,5 +1,6 @@
 Build/
 CMakeFiles/
+Output/
 cmake_install.cmake
 Makefile
 *.sln
@@ -7,3 +8,4 @@ Makefile
 *.user
 .vs/
 test/
+
