@@ -199,8 +199,6 @@ namespace bq {
 
         common_global_vars();
 
-        virtual ~common_global_vars() override { }
-
     protected:
         virtual void partial_destruct() override;
     };

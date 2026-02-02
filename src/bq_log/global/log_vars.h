@@ -75,8 +75,6 @@ namespace bq {
     public:
         log_global_vars();
 
-        virtual ~log_global_vars() override { }
-
         bq_forceinline bool is_thread_check_enabled() const
         {
 #if defined(BQ_LOG_BUFFER_DEBUG)
