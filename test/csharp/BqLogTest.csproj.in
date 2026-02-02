@@ -2,16 +2,15 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- Use .NET 6.0 LTS for native ARM64 support on Windows -->
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>BqLogTest</RootNamespace>
+    <AssemblyName>BqLogCSharpTest</AssemblyName>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <OutputPath>@CMAKE_RUNTIME_OUTPUT_DIRECTORY@</OutputPath>
-    <!-- Ensure AnyCPU for cross-architecture support -->
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
