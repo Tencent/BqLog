@@ -80,17 +80,11 @@ namespace bq {
             uint32_t wt_writing_cursor_cache_; // This field is used as snapshot when recovering from memory map file .
             char cache_line_padding1_[BQ_CACHE_LINE_SIZE - 2 * sizeof(uint32_t)];
 
-            alignas(8) char reading_cursor_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<uint32_t>)]; // Used to sync data between read thread and write thread in run-time.
-            char cache_line_padding2_[BQ_CACHE_LINE_SIZE - sizeof(reading_cursor_place_holder_)];
-            alignas(8) char writing_cursor_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<uint32_t>)]; // Used to sync data between read thread and write thread in run-time.
-            char cache_line_padding3_[BQ_CACHE_LINE_SIZE - sizeof(writing_cursor_place_holder_)];
+            bq::platform::atomic_trivially_constructible<uint32_t> reading_cursor_; // Used to sync data between read thread and write thread in run-time.
+            char cache_line_padding2_[BQ_CACHE_LINE_SIZE - sizeof(reading_cursor_)];
+            bq::platform::atomic_trivially_constructible<uint32_t> writing_cursor_; // Used to sync data between read thread and write thread in run-time.
+            char cache_line_padding3_[BQ_CACHE_LINE_SIZE - sizeof(writing_cursor_)];
         
-            bq_forceinline bq::platform::atomic_trivially_constructible<uint32_t>& reading_cursor() {
-                return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<uint32_t>*>(reading_cursor_place_holder_));
-            }
-            bq_forceinline bq::platform::atomic_trivially_constructible<uint32_t>& writing_cursor() {
-                return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<uint32_t>*>(writing_cursor_place_holder_));
-            }
         } BQ_PACK_END static_assert(sizeof(head) == 4 * BQ_CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
 
         head* head_;

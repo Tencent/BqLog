@@ -31,6 +31,16 @@ namespace bq.test
 
         public static bool test()
         {
+            unsafe
+            {
+                bq.impl.log_invoker.__api_register_console_callbacks((ulong log_id, int category_idx, bq.def.log_level log_level, sbyte* content, int length) =>
+                {
+                    if (log_id == 0)
+                    {
+                        System.Console.WriteLine(new string(content, 0, length, System.Text.Encoding.UTF8));
+                    }
+                });
+            }
             bq.log.set_console_buffer_enable(true);
             fetch_thread = new Thread(() => {
                 while (true)

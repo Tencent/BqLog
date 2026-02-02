@@ -30,8 +30,8 @@ namespace bq {
         }
         assert((uintptr_t)&head_->aligned_blocks_count_cache_ % BQ_CACHE_LINE_SIZE == 0 && "head_->aligned_blocks_count_cache_ of siso_ring_buffer should be cache line size aligned");
         assert((uintptr_t)&head_->wt_reading_cursor_cache_ % BQ_CACHE_LINE_SIZE == 0 && "head_->wt_reading_cursor_cache_ of siso_ring_buffer should be cache line size aligned");
-        assert((uintptr_t)&head_->reading_cursor() % BQ_CACHE_LINE_SIZE == 0 && "head_->reading_cursor() of siso_ring_buffer should be cache line size aligned");
-        assert((uintptr_t)&head_->writing_cursor() % BQ_CACHE_LINE_SIZE == 0 && "head_->writing_cursor() of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->reading_cursor_ % BQ_CACHE_LINE_SIZE == 0 && "head_->reading_cursor_ of siso_ring_buffer should be cache line size aligned");
+        assert((uintptr_t)&head_->writing_cursor_ % BQ_CACHE_LINE_SIZE == 0 && "head_->writing_cursor_ of siso_ring_buffer should be cache line size aligned");
         assert((uintptr_t)aligned_blocks_ % BQ_CACHE_LINE_SIZE == 0 && "aligned_blocks_ of siso_ring_buffer should be cache line size aligned");
 #if defined(BQ_LOG_BUFFER_DEBUG)
         (void)padding_;
@@ -102,7 +102,7 @@ namespace bq {
         assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 1");
 #endif
         if (left_space < need_block_count) {
-            head_->wt_reading_cursor_cache_ = head_->reading_cursor().load_acquire();
+            head_->wt_reading_cursor_cache_ = head_->reading_cursor_.load_acquire();
             left_space = static_cast<uint32_t>(head_->wt_reading_cursor_cache_ + aligned_blocks_count_ - head_->wt_writing_cursor_cache_);
 #if defined(BQ_LOG_BUFFER_DEBUG)
             assert(left_space <= aligned_blocks_count_ && "siso ring_buffer wt_reading_cursor_cache_ error 2");
@@ -147,7 +147,7 @@ namespace bq {
             : (block*)(handle.data_addr - data_block_offset);
 
         head_->wt_writing_cursor_cache_ += block_ptr->to_chunk_head().block_num;
-        head_->writing_cursor().store_release(head_->wt_writing_cursor_cache_);
+        head_->writing_cursor_.store_release(head_->wt_writing_cursor_cache_);
 #if defined(BQ_LOG_BUFFER_DEBUG)
         total_write_bytes_ += block_ptr->to_chunk_head().block_num * sizeof(block);
 #endif
@@ -172,7 +172,7 @@ namespace bq {
 #endif
         log_buffer_read_handle handle;
         if (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) == 0) {
-            head_->rt_writing_cursor_cache_ = head_->writing_cursor().load_acquire();
+            head_->rt_writing_cursor_cache_ = head_->writing_cursor_.load_acquire();
 #if defined(BQ_LOG_BUFFER_DEBUG)
             assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) <= aligned_blocks_count_);
 #endif
@@ -254,7 +254,7 @@ namespace bq {
 #endif
 
         head_->rt_reading_cursor_cache_ += block_ptr->to_chunk_head().block_num;
-        head_->reading_cursor().store_release(head_->rt_reading_cursor_cache_);
+        head_->reading_cursor_.store_release(head_->rt_reading_cursor_cache_);
     }
 
     siso_ring_buffer::siso_buffer_batch_read_handle siso_ring_buffer::batch_read()
@@ -274,7 +274,7 @@ namespace bq {
 #endif
         siso_buffer_batch_read_handle handle;
         if (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) == 0) {
-            head_->rt_writing_cursor_cache_ = head_->writing_cursor().load_acquire();
+            head_->rt_writing_cursor_cache_ = head_->writing_cursor_.load_acquire();
 #if defined(BQ_LOG_BUFFER_DEBUG)
             assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - head_->rt_reading_cursor_cache_) <= aligned_blocks_count_);
 #endif
@@ -315,11 +315,11 @@ namespace bq {
         }
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(handle.end_cursor_ == handle.current_cursor_ && "siso_buffer_batch_read_handle::return_batch_read_chunks called with not finished reading handle");
-        assert(handle.start_cursor_ == head_->reading_cursor().load_relaxed() && "invalid batch handle start cursor");
+        assert(handle.start_cursor_ == head_->reading_cursor_.load_relaxed() && "invalid batch handle start cursor");
         assert(handle.end_cursor_ == head_->rt_reading_cursor_cache_ && "invalid batch handle end cursor");
         assert(handle.end_cursor_ == head_->rt_writing_cursor_cache_ && "invalid batch handle end cursor");
 #endif
-        head_->reading_cursor().store_release(head_->rt_reading_cursor_cache_);
+        head_->reading_cursor_.store_release(head_->rt_reading_cursor_cache_);
     }
 
     void siso_ring_buffer::data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data)
@@ -340,7 +340,7 @@ namespace bq {
 #endif
         while (true) {
             if (static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) == 0) {
-                head_->rt_writing_cursor_cache_ = head_->writing_cursor().load_acquire();
+                head_->rt_writing_cursor_cache_ = head_->writing_cursor_.load_acquire();
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(static_cast<uint32_t>(head_->rt_writing_cursor_cache_ - current_read_cursor) <= aligned_blocks_count_);
 #endif
@@ -433,8 +433,8 @@ namespace bq {
         }
         head_->rt_writing_cursor_cache_ = head_->wt_writing_cursor_cache_;
         head_->wt_reading_cursor_cache_ = head_->rt_reading_cursor_cache_;
-        head_->reading_cursor().store_release(head_->rt_reading_cursor_cache_);
-        head_->writing_cursor().store_release(head_->wt_writing_cursor_cache_);
+        head_->reading_cursor_.store_release(head_->rt_reading_cursor_cache_);
+        head_->writing_cursor_.store_release(head_->wt_writing_cursor_cache_);
         mmap_buffer_state_ = memory_map_buffer_state::recover_from_memory_map;
         return true;
     }
@@ -461,8 +461,8 @@ namespace bq {
         head_->rt_reading_cursor_cache_ = 0;
         head_->wt_writing_cursor_cache_ = 0;
         head_->wt_reading_cursor_cache_ = 0;
-        head_->reading_cursor().store_release(0);
-        head_->writing_cursor().store_release(0);
+        head_->reading_cursor_.store_release(0);
+        head_->writing_cursor_.store_release(0);
     }
 
 }

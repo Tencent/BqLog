@@ -1013,6 +1013,10 @@ namespace bq {
             if (array_write_try_lock.owns_lock()) {
                 for (size_t i = temprorary_oversize_buffer_.buffers_array_.size(); i > 0; --i) {
                     auto index = i - 1;
+                    // Skip if this buffer is currently being referenced to avoid dangling pointer
+                    if (rt_oversize_target_buffer_ == temprorary_oversize_buffer_.buffers_array_[index].operator->()) {
+                        continue;
+                    }
                     auto& oversize_buffer = *temprorary_oversize_buffer_.buffers_array_[index];
                     bool is_empty = false;
                     {

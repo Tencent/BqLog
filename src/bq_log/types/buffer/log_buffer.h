@@ -275,6 +275,8 @@ namespace bq {
                 bool traverse_end_block_is_working_ = false;
                 block_node_head* traverse_end_block_ = nullptr;
                 siso_ring_buffer::siso_buffer_batch_read_handle hp_handle_cache_;
+                log_buffer_read_handle rt_oversize_parent_handle_;
+                oversize_buffer_obj_def* rt_oversize_target_buffer_ = nullptr;
             } current_reading_;
 
             // memory fragmentation optimize
