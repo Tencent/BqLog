@@ -17,7 +17,11 @@ function run_command(command, args) {
 
     console.log(`> ${full_command}`);
     // When shell: true, passing command + args as a string avoids DEP0190
-    const result = spawnSync(full_command, { stdio: 'inherit', shell: true });
+    const result = spawnSync(full_command, { 
+        stdio: 'inherit', 
+        shell: true,
+        env: { ...process.env, TS_NODE_CACHE: 'false' }
+    });
     return result.status;
 }
 
