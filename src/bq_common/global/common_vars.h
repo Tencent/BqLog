@@ -82,7 +82,7 @@ namespace bq {
     struct global_vars_base : public global_var_destructiable {
     protected:
         static BQ_TLS T* global_vars_ptr_;
-        alignas(8) static int32_t global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
+        static bq::platform::atomic_trivially_constructible<int64_t> global_vars_init_flag_; // 0 not init, 1 initializing, 2 initialized
         static T* global_vars_buffer_;
         static bq::platform::atomic_trivially_constructible<T**> initializer_mark_;
 
@@ -106,21 +106,20 @@ namespace bq {
                 return *T::global_vars_buffer_;
             }
             if (!T::global_vars_ptr_) {
-                bq::platform::atomic<int32_t>& atomic_status = *reinterpret_cast<bq::platform::atomic<int32_t>*>(&T::global_vars_init_flag_);
-                if (atomic_status.load_acquire() == 0) {
-                    int32_t expected = 0;
-                    if (atomic_status.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
+                if (T::global_vars_init_flag_.load_acquire() == 0) {
+                    int64_t expected = 0;
+                    if (T::global_vars_init_flag_.compare_exchange_strong(expected, 1, bq::platform::memory_order::release, bq::platform::memory_order::acquire)) {
                         initializer_mark_.store_release(&T::global_vars_ptr_);
                         _global_vars_priority_var_initializer<Priority_Global_Var_Type>::init();
                         T::global_vars_buffer_ = static_cast<T*>(bq::platform::aligned_alloc(alignof(T), sizeof(T)));
                         T::global_vars_ptr_ = T::global_vars_buffer_;
                         new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
                         get_global_var_destructor().register_destructible_var(T::global_vars_ptr_);
-                        atomic_status.store_release(2);
+                        T::global_vars_init_flag_.store_release(2);
                         return *T::global_vars_ptr_;
                     }
                 }
-                while (atomic_status.load_acquire() != 2) {
+                while (T::global_vars_init_flag_.load_acquire() != 2) {
                     bq::platform::thread::yield();
                 }
                 T::global_vars_ptr_ = T::global_vars_buffer_;
@@ -133,7 +132,7 @@ namespace bq {
     BQ_TLS T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_ptr_;
 
     template <typename T, typename Priority_Global_Var_Type>
-    alignas(8) int32_t global_vars_base<T, Priority_Global_Var_Type>::global_vars_init_flag_; // Init by Zero Initialization to avoid static init order fiasco
+    bq::platform::atomic_trivially_constructible<int64_t> global_vars_base<T, Priority_Global_Var_Type>::global_vars_init_flag_; // Init by Zero Initialization to avoid static init order fiasco
 
     template <typename T, typename Priority_Global_Var_Type>
     T* global_vars_base<T, Priority_Global_Var_Type>::global_vars_buffer_;

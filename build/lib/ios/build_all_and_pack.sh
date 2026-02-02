@@ -24,6 +24,8 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
             -G Xcode \
             -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
             -DPLATFORM=${TARGET_PLATFORM} \
+            -DDEPLOYMENT_TARGET=9.0 \
+            -DCPP_VER=14 \
             -DBUILD_LIB_TYPE=$BUILD_LIB_TYPE \
             -DAPPLE_LIB_FORMAT=$APPLE_LIB_FORMAT \
             -DTARGET_PLATFORM:STRING=ios
