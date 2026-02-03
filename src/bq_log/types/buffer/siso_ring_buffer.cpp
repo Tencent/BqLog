@@ -135,11 +135,7 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            if (write_thread_id_ == empty_thread_id_) {
-                write_thread_id_ = current_thread_id;
-            } else {
-                assert(current_thread_id == write_thread_id_ && "only single thread writing is supported for siso_ring_buffer!");
-            }
+            assert((current_thread_id == write_thread_id_ || 0 == write_thread_id_ ) && "only single thread writing is supported for siso_ring_buffer!");
         }
 #endif
         block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_)
@@ -223,7 +219,7 @@ namespace bq {
         is_read_chunk_waiting_for_return_ = false;
         if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+            assert((current_thread_id == read_thread_id_ || 0 == read_thread_id_) && "only single thread reading is supported for miso_ring_buffer!");
         }
 #endif
         handle.result = enum_buffer_result_code::err_empty_log_buffer;
@@ -237,7 +233,7 @@ namespace bq {
 
         if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
+            assert((current_thread_id == read_thread_id_ || 0 == read_thread_id_) && "only single thread reading is supported for siso_ring_buffer!");
         }
 #endif
         if (handle.result != enum_buffer_result_code::success) {
@@ -307,7 +303,7 @@ namespace bq {
         is_read_chunk_waiting_for_return_ = false;
         if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for siso_ring_buffer!");
+            assert((current_thread_id == read_thread_id_ || 0 == read_thread_id_) && "only single thread reading is supported for siso_ring_buffer!");
         }
 #endif
         if (handle.result != enum_buffer_result_code::success) {

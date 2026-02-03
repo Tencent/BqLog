@@ -22,7 +22,6 @@ namespace bq.test
 
         public override test_result test()
         {
-            System.Console.ReadKey();
             test_result result = new test_result();
             bq.log log_inst_sync = bq.log.create_log("sync_log", "appenders_config.ConsoleAppender.type=console\n"
                     + "						appenders_config.ConsoleAppender.time_zone=localtime\n"

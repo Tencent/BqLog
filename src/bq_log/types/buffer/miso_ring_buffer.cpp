@@ -289,11 +289,8 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         assert(!is_read_chunk_waiting_for_return_ && "You cant read a chunk before you returning last chunk back");
         if (is_thread_check_enable()) {
-            if (0 == read_thread_id_) {
-                read_thread_id_ = bq::platform::thread::get_current_thread_id();
-            }
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+            assert((current_thread_id == read_thread_id_ || 0 == read_thread_id_) && "only single thread reading is supported for miso_ring_buffer!");
         }
         is_read_chunk_waiting_for_return_ = true;
 #endif
@@ -309,7 +306,7 @@ namespace bq {
         is_read_chunk_waiting_for_return_ = false;
         if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+            assert((current_thread_id == read_thread_id_ || 0 == read_thread_id_) && "only single thread reading is supported for miso_ring_buffer!");
         }
 #endif
         handle.result = enum_buffer_result_code::err_empty_log_buffer;
@@ -324,7 +321,7 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert(current_thread_id == read_thread_id_ && "only single thread reading is supported for miso_ring_buffer!");
+            assert((current_thread_id == read_thread_id_ || 0 == read_thread_id_) && "only single thread reading is supported for miso_ring_buffer!");
         }
         if (handle.result == enum_buffer_result_code::success) {
             assert((handle.data_addr <= (uint8_t*)(aligned_blocks_ + aligned_blocks_count_)) && (handle.data_addr >= (uint8_t*)aligned_blocks_)
