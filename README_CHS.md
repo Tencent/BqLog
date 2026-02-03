@@ -532,10 +532,10 @@ static void set_console_buffer_enable(bool enable);
 static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
 ```
 
-当不适合用回调方式直接从原生线程回调到虚拟机（如 C#、Java、IL2CPP 环境）时，可以改用「主动拉取」：
+当不适合用回调方式直接从原生线程回调到虚拟机（尤其是Mono,NodeJs等从原生线程调用托管函数可能触发GC卡死的环境）时，可以改用「主动拉取」：
 
-- `set_console_buffer_enable(true)`：启用 console 缓存；
-- `fetch_and_remove_console_buffer(...)`：在业务线程中主动读取并消费缓存中的 console 日志。
+- `set_console_buffer_enable(true)`：启用 console 缓存(启用之后，`register_console_callback`的回调将会失效，默认的console输出也会停止)；
+- `fetch_and_remove_console_buffer(...)`：在业务线程中主动读取并消费缓存中的 console 日志，***一定要不停调用，不然console输出会占用越来越多的内存***。
 
 **注意（IL2CPP 环境）：**
 

@@ -536,8 +536,8 @@ static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback o
 
 When it is not suitable to call back directly from native threads to virtual machines (such as C#, Java, IL2CPP environments) using callback method, you can switch to "actively fetch":
 
-- `set_console_buffer_enable(true)`: Enable console buffer;
-- `fetch_and_remove_console_buffer(...)`: Actively read and consume console logs in the buffer in the business thread.
+- `set_console_buffer_enable(true)`: Enables console buffering. (Note: Once enabled, callbacks registered via `register_console_callback` will be disabled, and the default standard console output will stop).
+- `fetch_and_remove_console_buffer(...)`: Proactively fetches and consumes buffered console logs from the logic/worker thread. ***You must call this continuously; otherwise, the accumulated logs will result in unbounded memory growth***.
 
 **Note (IL2CPP environment):**
 
