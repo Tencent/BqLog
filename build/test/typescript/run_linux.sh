@@ -50,7 +50,11 @@ if [[ "$BQ_ENABLE_ASAN_UPPER" == "TRUE" || "$BQ_ENABLE_ASAN_UPPER" == "ON" || "$
     export LSAN_OPTIONS="suppressions=$SUPP_FILE"
     # Node.js (V8) generates SEGVs for internal checks.
     # We must let Node handle them, otherwise ASan kills the process immediately.
-    export ASAN_OPTIONS="${ASAN_OPTIONS}:handle_segv=0:allow_user_segv_handler=1"
+    if [ -z "$ASAN_OPTIONS" ]; then
+        export ASAN_OPTIONS="handle_segv=0:allow_user_segv_handler=1"
+    else
+        export ASAN_OPTIONS="${ASAN_OPTIONS}:handle_segv=0:allow_user_segv_handler=1"
+    fi
 fi
 
 # Find the .node file

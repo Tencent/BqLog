@@ -11,6 +11,7 @@
  */
 namespace bq.test
 {
+    using System;
     using bq;
     using bq.def;
 
@@ -56,6 +57,7 @@ namespace bq.test
             {
                 appender += "a";
             }
+            Console.WriteLine("Sync log Test Begin");
             while (format_prefix.Length <= 1024 * 1024 + 1024 + 4)
             {
                 log_inst_sync.info(format_prefix + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
@@ -64,6 +66,7 @@ namespace bq.test
                 format_prefix += appender;
             }
 
+            Console.WriteLine("ASync log Test Begin");
             bq.log log_inst_async = bq.log.create_log("async_log", "appenders_config.ConsoleAppender.type=console\n"
                     + "						appenders_config.ConsoleAppender.time_zone=localtime\n"
                     + "						appenders_config.ConsoleAppender.levels=[error,info]\n"

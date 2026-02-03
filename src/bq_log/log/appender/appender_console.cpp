@@ -214,9 +214,11 @@ namespace bq {
         data.category_idx_ = static_cast<int32_t>(handle.get_category_idx());
         data.length_ = (int32_t)log_entry_cache_.size();
         data.log_id_ = parent_log_->id();
-        util::log_device_console_plain_text(level, log_entry_cache_.c_str());
         if (console_misc.buffer().is_enable()) {
             console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
+        }
+        else {
+            util::log_device_console_plain_text(level, log_entry_cache_.c_str());
         }
     }
 

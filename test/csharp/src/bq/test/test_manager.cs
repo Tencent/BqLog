@@ -30,16 +30,6 @@ namespace bq.test
 
         public static bool test()
         {
-            unsafe
-            {
-                bq.impl.log_invoker.__api_register_console_callbacks((ulong log_id, int category_idx, bq.def.log_level log_level, sbyte* content, int length) =>
-                {
-                    if (log_id == 0)
-                    {
-                        System.Console.WriteLine(new string(content, 0, length, System.Text.Encoding.UTF8));
-                    }
-                });
-            }
             bq.log.set_console_buffer_enable(true);
             Task.Run(() => {
                 long last_fetch_count = Interlocked.Read(ref fetch_count);
@@ -54,6 +44,7 @@ namespace bq.test
                         });
                         if (!fetch_result)
                         {
+                            Thread.Sleep(1);
                             break;
                         }
                     }
@@ -63,6 +54,7 @@ namespace bq.test
                         Interlocked.Exchange(ref fetch_count, new_fetch_count);
                     }
                     last_fetch_count = new_fetch_count;
+                    Thread.Sleep(1);
                 }
             });
             bool success = true;
@@ -81,7 +73,7 @@ namespace bq.test
             Interlocked.Exchange(ref fetch_count, prev + 1);
             while (Interlocked.Read(ref fetch_count) != prev + 2)
             {
-
+                Thread.Sleep(1);
             }
             return log_console_output;
         }

@@ -2294,7 +2294,7 @@ jobs:
         if: runner.os != 'Windows'
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan_switch }}
-          ASAN_OPTIONS: "abort_on_error=1"
+          ASAN_OPTIONS: "halt_on_error=1:detect_leaks=1:check_initialization_order=1:abort_on_error=1"
         run: |
           chmod +x ${{ matrix.script_path }}
           

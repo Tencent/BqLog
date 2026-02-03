@@ -50,6 +50,7 @@ namespace bq.test
 
             test_result result = new test_result();
 
+            Console.WriteLine("Pressure Sync log Test Begin");
             // Sync Test
             while (Volatile.Read(ref left_thread) > 0 || Volatile.Read(ref live_thread) > 0)
             {
@@ -77,6 +78,7 @@ namespace bq.test
             }
             Console.WriteLine("Sync Test Finished");
 
+            Console.WriteLine("Pressure ASync log Test Begin");
             // Async Test
             Interlocked.Exchange(ref left_thread, 128);
 
@@ -104,6 +106,7 @@ namespace bq.test
                     Thread.Sleep(1);
                 }
             }
+            Console.WriteLine("ASync Test Finished");
 
             log_inst_async.force_flush();
             result.add_result(true, "");
