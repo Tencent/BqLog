@@ -43,9 +43,10 @@ namespace bq.test
             }
             bq.log.set_console_buffer_enable(true);
             fetch_thread = new Thread(() => {
+                long last_fetch_count = Interlocked.Read(ref fetch_count);
                 while (true)
                 {
-                    Interlocked.Add(ref fetch_count, 1);
+                    long new_fetch_count = Interlocked.Read(ref fetch_count);
                     while (true)
                     {
                         bool fetch_result = bq.log.fetch_and_remove_console_buffer((log_id, category_idx, log_level, content) =>
@@ -57,6 +58,12 @@ namespace bq.test
                             break;
                         }
                     }
+                    if(new_fetch_count != last_fetch_count)
+                    {
+                        ++new_fetch_count;
+                        Interlocked.Exchange(ref fetch_count, new_fetch_count);
+                    }
+                    last_fetch_count = new_fetch_count;
                 }
             });
             fetch_thread.Start();
@@ -73,7 +80,8 @@ namespace bq.test
         public static string get_console_output()
         {
             long prev = Interlocked.Read(ref fetch_count);
-            while(prev == Interlocked.Read(ref fetch_count))
+            Interlocked.Exchange(ref fetch_count, prev + 1);
+            while (Interlocked.Read(ref fetch_count) != prev + 2)
             {
 
             }

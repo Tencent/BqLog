@@ -125,6 +125,9 @@ namespace bq {
     {
         constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
         auto read_handle = read_with_cache(VLQ_MAX_SIZE + 1);
+        if (read_handle.len() == 0 && is_read_of_cache_eof()) {
+            return bq::make_tuple(false, appender_file_compressed::item_type::log_template, read_handle);
+        }
         if (read_handle.len() < 2) {
             context.log_parse_fail_reason("decode compressed log file failed, read item head failed");
             return bq::make_tuple(false, appender_file_compressed::item_type::log_template, read_handle);
