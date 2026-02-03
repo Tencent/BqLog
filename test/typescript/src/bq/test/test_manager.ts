@@ -28,7 +28,7 @@ export class test_manager {
         bq.log.set_console_buffer_enable(true);
         
         test_manager.fetch_timer = setInterval(() => {
-            let new_fetch_count = test_manager.fetch_count;
+            let new_fetch_count = 0;
             while(true) {
                 const fetch_result = bq.log.fetch_and_remove_console_buffer((log_id, category_idx, log_level, content) => {
                     test_manager.log_console_output = content;

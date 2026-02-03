@@ -32,7 +32,7 @@ namespace bq.test
         {
             bq.log.set_console_buffer_enable(true);
             Task.Run(() => {
-                long last_fetch_count = Interlocked.Read(ref fetch_count);
+                long last_fetch_count = 0;
                 while (true)
                 {
                     long new_fetch_count = Interlocked.Read(ref fetch_count);

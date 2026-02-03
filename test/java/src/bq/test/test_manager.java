@@ -1,5 +1,4 @@
 package bq.test;
-import java.io.IOException;
 /*
  * Copyright (C) 2026 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -29,7 +28,7 @@ public class test_manager {
         Thread tr = new Thread(new Runnable() {
             @Override
             public void run() {
-                long last_fetch_count = fetch_count.get();
+                long last_fetch_count = 0;
                 while(true) {
                     long new_fetch_count = fetch_count.get();
                     while(true) {
