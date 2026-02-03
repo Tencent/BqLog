@@ -44,7 +44,6 @@ namespace bq.test
                         });
                         if (!fetch_result)
                         {
-                            Thread.Sleep(1);
                             break;
                         }
                     }
@@ -73,7 +72,7 @@ namespace bq.test
             Interlocked.Exchange(ref fetch_count, prev + 1);
             while (Interlocked.Read(ref fetch_count) != prev + 2)
             {
-                Thread.Sleep(1);
+                Thread.Yield();
             }
             return log_console_output;
         }

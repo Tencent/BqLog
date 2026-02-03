@@ -108,6 +108,22 @@ namespace bq.test
             }
             Console.WriteLine("ASync Test Finished");
 
+
+            bq.log log_inst_console = bq.log.create_log("console_log", "appenders_config.Appender1.type=console\n"
+                    + "						appenders_config.Appender1.time_zone=localtime\n"
+                    + "						appenders_config.Appender1.levels=[all]\n"
+                    + "					    log.thread_mode=sync\n");
+            bq.log.set_console_buffer_enable(false);
+            bq.log.register_console_callback((ulong log_id, int category_idx, bq.def.log_level log_level, string content) => {
+                if(log_id != 0)
+                {
+                    result.add_result(log_id == log_inst_console.get_id(), "console callback test 1");
+                    result.add_result(log_level == bq.def.log_level.debug, "console callback test 2");
+                    result.add_result(content.EndsWith("ConsoleTest"), "console callback test 3");
+                }
+            });
+            log_inst_console.debug("ConsoleTest");
+
             log_inst_async.force_flush();
             result.add_result(true, "");
             return result;
