@@ -10,12 +10,8 @@ package bq.test;
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-import java.io.IOException;
-import java.lang.Thread.State;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import bq.log;
-import bq.def.log_level;
 
 public class test_log_2 extends test_base{
 	private bq.log log_inst_sync = null;
@@ -35,7 +31,6 @@ public class test_log_2 extends test_base{
 		log_inst_sync = bq.log.get_log_by_name("sync_log");
 		log_inst_async = bq.log.get_log_by_name("async_log");
 		test_result result = new test_result();
-		log.register_console_callback(null);
 		while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
 			if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
 				Runnable task = new Runnable() {
@@ -94,10 +89,23 @@ public class test_log_2 extends test_base{
 				};
 			}
 		}
+		bq.log log_inst_console = bq.log.create_log("console_log", "appenders_config.Appender1.type=console\n"
+				+ "						appenders_config.Appender1.time_zone=localtime\n"
+				+ "						appenders_config.Appender1.levels=[all]\n"
+				+ "					    log.thread_mode=sync\n");
+		bq.log.set_console_buffer_enable(false);
+		bq.log.register_console_callback((long log_id, int category_idx, bq.def.log_level log_level, String content) -> {
+			if(log_id != 0)
+			{
+				result.add_result(log_id == log_inst_console.get_id(), "console callback test 1");
+				result.add_result(log_level == bq.def.log_level.debug, "console callback test 2");
+				result.add_result(content.endsWith("ConsoleTest"), "console callback test 3");
+			}
+		});
+		log_inst_console.debug("ConsoleTest");
+		bq.log.register_console_callback(null);
 		log_inst_async.force_flush();
 		result.add_result(true, "");
-		test_manager.register_default_console_callback();
 		return result;
 	}
-
 }

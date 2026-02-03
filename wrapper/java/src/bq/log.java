@@ -249,6 +249,8 @@ public class log {
         console_callback_delegate_ = callback;
         if(null != console_callback_delegate_){
             log_invoker.__api_set_console_callback(true);
+        }else {
+            log_invoker.__api_set_console_callback(false);
         }
     }
 

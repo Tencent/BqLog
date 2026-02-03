@@ -1,4 +1,5 @@
 package bq.test;
+import java.io.IOException;
 /*
  * Copyright (C) 2026 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -11,35 +12,49 @@ package bq.test;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 import java.util.ArrayList;
-
-import bq.log;
+import java.util.concurrent.atomic.AtomicLong;
 import bq.def.log_level;
 
 public class test_manager {
 	private static ArrayList<test_base> test_list = new ArrayList<test_base>();
+	private static AtomicLong fetch_count = new AtomicLong(0);
 	private static String log_console_output;
-	private static bq.log.console_callback_delegate default_callback = new bq.log.console_callback_delegate() {
-		@Override
-		public void callback(long log_id, int category_idx, log_level level_value, String content) {
-			// TODO Auto-generated method stub
-			if(log_id != 0) {
-				log_console_output = content;
-			}else {
-				System.out.println(content);
-			}
-		}
-	};
 	
 	public static void add_test(test_base test_obj) {
 		test_list.add(test_obj);
 	}
 	
-	public static void register_default_console_callback() {
-        log.register_console_callback(default_callback);
-	}
-	
 	public static boolean test() {
-		register_default_console_callback();
+		bq.log.set_console_buffer_enable(true);
+        Thread tr = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                long last_fetch_count = fetch_count.get();
+                while(true) {
+                    long new_fetch_count = fetch_count.get();
+                    while(true) {
+                        boolean fetch_result = bq.log.fetch_and_remove_console_buffer((long log_id, int category_idx, log_level level, String content) -> {
+                            log_console_output = content;
+                        });
+                        if(!fetch_result) {
+                            break;
+                        }
+                    }
+                    if(new_fetch_count != last_fetch_count) {
+                        ++new_fetch_count;
+                        fetch_count.set(new_fetch_count);
+                    }
+                    last_fetch_count = new_fetch_count;
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        tr.setDaemon(true);
+        tr.start();
 		boolean success = true;
 		for(int i = 0; i < test_list.size(); ++i) {
 			test_base test_obj = test_list.get(i);
@@ -51,6 +66,11 @@ public class test_manager {
 	}
 	
 	public static String get_console_output() {
+        long prev = fetch_count.get();
+        fetch_count.set(prev + 1);
+        while(fetch_count.get() != prev + 2) {
+            Thread.yield();
+        }
 		return log_console_output;
 	}
 }

@@ -89,23 +89,32 @@ namespace bq {
                 }
             }
         }
-        auto handle = buffer->alloc_write_chunk(static_cast<uint32_t>(write_length), epoch_ms);
-        bq::scoped_log_buffer_handle<log_buffer> scoped_handle(*buffer, handle);
-        if (handle.result == enum_buffer_result_code::success) {
-            uint8_t* data = handle.data_addr;
-            *reinterpret_cast<uint64_t*>(data) = log_id;
-            data += sizeof(uint64_t);
-            *reinterpret_cast<int32_t*>(data) = category_idx;
-            data += sizeof(uint32_t);
-            *reinterpret_cast<bq::log_level*>(data) = log_level;
-            data += sizeof(int32_t);
-            *reinterpret_cast<int32_t*>(data) = length;
-            data += sizeof(int32_t);
-            memcpy(data, content, static_cast<size_t>(length));
-            data[length] = 0;
-        } else {
-            util::log_device_console(log_level::error, "failed to insert data entry to console fetch buffer, ring_buffer error code:%d", (int32_t)handle.result);
-        }
+        bool finished = true;
+        do {
+            finished = true;
+            auto handle = buffer->alloc_write_chunk(static_cast<uint32_t>(write_length), epoch_ms);
+            bq::scoped_log_buffer_handle<log_buffer> scoped_handle(*buffer, handle);
+            if (handle.result == enum_buffer_result_code::success) {
+                uint8_t* data = handle.data_addr;
+                *reinterpret_cast<uint64_t*>(data) = log_id;
+                data += sizeof(uint64_t);
+                *reinterpret_cast<int32_t*>(data) = category_idx;
+                data += sizeof(uint32_t);
+                *reinterpret_cast<bq::log_level*>(data) = log_level;
+                data += sizeof(int32_t);
+                *reinterpret_cast<int32_t*>(data) = length;
+                data += sizeof(int32_t);
+                memcpy(data, content, static_cast<size_t>(length));
+                data[length] = 0;
+            }
+            else if (handle.result == enum_buffer_result_code::err_wait_and_retry) {
+                bq::platform::thread::yield();
+                finished = false;
+            }
+            else {
+                util::log_device_console(log_level::error, "failed to insert data entry to console fetch buffer, ring_buffer error code:%d", (int32_t)handle.result);
+            }
+        }while(!finished);
     }
 
     bool appender_console::console_buffer::fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
