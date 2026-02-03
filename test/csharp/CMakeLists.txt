@@ -22,7 +22,7 @@ if(WIN32)
     # ==========================================================================
     find_program(DOTNET_EXECUTABLE dotnet)
     if(NOT DOTNET_EXECUTABLE)
-        message(FATAL_ERROR "dotnet not found. Please install .NET 6.0 SDK or later.")
+        message(FATAL_ERROR "dotnet not found. Please install .NET 8.0 SDK or later.")
     endif()
     
     # Generate source file list for csproj
@@ -41,19 +41,19 @@ if(WIN32)
         @ONLY
     )
     
-    set(OUTPUT_DLL "${ARTIFACTS_DIR}/BqLogTest.dll")
+    set(OUTPUT_DLL "${ARTIFACTS_DIR}/BqLogCSharpTest.dll")
     
     add_custom_command(
         OUTPUT "${OUTPUT_DLL}"
         COMMAND ${DOTNET_EXECUTABLE} build "${CSPROJ_FILE}" -c Release -o "${ARTIFACTS_DIR}"
         DEPENDS ${WRAPPER_SRC_LIST} ${TEST_SRC_LIST} "${CSPROJ_FILE}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Building C# Test with dotnet build (.NET 6.0, native ARM64 support)"
+        COMMENT "Building C# Test with dotnet build (.NET 8.0, native ARM64 support)"
     )
     
     add_custom_target(BqLogCSharpTest ALL DEPENDS "${OUTPUT_DLL}")
     
-    message(STATUS "C# Test Project Configured (dotnet): ${ARTIFACTS_DIR}/BqLogTest.dll")
+    message(STATUS "C# Test Project Configured (dotnet): ${ARTIFACTS_DIR}/BqLogCSharpTest.dll")
 else()
     # ==========================================================================
     # Linux/Mac: Use Mono compiler (mcs)

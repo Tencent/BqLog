@@ -15,12 +15,11 @@ namespace bq.test
     using System.Collections.Generic;
     using bq;
     using bq.def;
-
+    using System.Threading.Tasks;
 
     public class test_manager
     {
         private static List<test_base> test_list = new List<test_base>();
-        private static Thread fetch_thread = null;
         private static long fetch_count = 0;
         private static string log_console_output = null;
 
@@ -42,7 +41,7 @@ namespace bq.test
                 });
             }
             bq.log.set_console_buffer_enable(true);
-            fetch_thread = new Thread(() => {
+            Task.Run(() => {
                 long last_fetch_count = Interlocked.Read(ref fetch_count);
                 while (true)
                 {
@@ -66,7 +65,6 @@ namespace bq.test
                     last_fetch_count = new_fetch_count;
                 }
             });
-            fetch_thread.Start();
             bool success = true;
             foreach (var test_obj in test_list)
             {
