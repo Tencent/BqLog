@@ -175,8 +175,9 @@ public class log_context {
         	 long str_size = ((long)value.length() << 1);
         	 ring_buffer.putInt(log_arg_type_enum.string_utf16_type.ordinal());  //Works in Little-Endian
         	 ring_buffer.putInt((int)str_size);
+        	 int pos_prev = ring_buffer.position();
         	 ring_buffer.asCharBuffer().put(value);
-        	 ring_buffer.position(ring_buffer.position() + (int)align4(str_size));
+        	 ring_buffer.position(pos_prev + (int)align4(str_size));
          }
      }
      

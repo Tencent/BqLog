@@ -564,6 +564,7 @@ namespace bq {
     template <typename T, typename Allocator, size_t TAIL_BUFFER_SIZE>
     BQ_ARRAY_INLINE bool BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>::set_capacity(size_type new_capacity, bool force_reset /* = false*/)
     {
+        size_type old_capacity = capacity_;
         if (new_capacity < size_) {
             return false;
         }
@@ -596,7 +597,7 @@ namespace bq {
             }
         }
         if (data_) {
-            allocator_.deallocate(data_, capacity_);
+            allocator_.deallocate(data_, old_capacity);
         }
         data_ = new_data;
         return true;
