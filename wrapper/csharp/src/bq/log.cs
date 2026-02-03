@@ -236,6 +236,7 @@ namespace bq
         /// This can be used for an external system to monitor console log output.
         /// </summary>
         /// <param name="callback"></param>
+        [Obsolete("Avoid using in C# (Mono/IL2CPP) due to potential deadlocks. Use set_console_buffer_enable and fetch_and_remove_console_buffer instead.", false)]
         public static void register_console_callback(type_console_callback callback)
         {
             console_callback_ = callback;
