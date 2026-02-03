@@ -16,38 +16,54 @@ import { test_result } from "./test_result.ts";
 export class test_manager {
     private static test_list: test_base[] = [];
     private static log_console_output: string = "";
-
-    // Use any for level type to avoid complex type import issues
-    private static default_callback(log_id: bigint, category_idx: number, level: any, content: string): void {
-        if (log_id !== 0n) {
-            test_manager.log_console_output = content;
-        } else {
-            console.log(content);
-        }
-    }
+    private static fetch_count: number = 0;
+    private static last_fetch_count: number = 0;
+    private static fetch_timer: NodeJS.Timeout | null = null;
 
     public static add_test(test_obj: test_base): void {
         test_manager.test_list.push(test_obj);
     }
 
-    public static register_default_console_callback(): void {
-        // Explicitly disable console buffer to ensure direct callbacks
-        // and avoid potential ring buffer initialization issues in NAPI environment.
-        bq.log.set_console_buffer_enable(false);
-        bq.log.register_console_callback(test_manager.default_callback as any);
-    }
     public static async test(): Promise<boolean> {
-        test_manager.register_default_console_callback();
+        bq.log.set_console_buffer_enable(true);
+        
+        test_manager.fetch_timer = setInterval(() => {
+            let new_fetch_count = test_manager.fetch_count;
+            while(true) {
+                const fetch_result = bq.log.fetch_and_remove_console_buffer((log_id, category_idx, log_level, content) => {
+                    test_manager.log_console_output = content;
+                });
+                if (!fetch_result) {
+                    break;
+                }
+            }
+            if(new_fetch_count != test_manager.last_fetch_count) {
+                ++new_fetch_count;
+                test_manager.fetch_count = new_fetch_count;
+            }
+            test_manager.last_fetch_count = new_fetch_count;
+        }, 1);
+
         let success = true;
         for (const test_obj of test_manager.test_list) {
             const result = await test_obj.test();
             result.output(test_obj.get_name());
             success = success && result.is_all_pass();
         }
+        
+        if (test_manager.fetch_timer) {
+            clearInterval(test_manager.fetch_timer);
+            test_manager.fetch_timer = null;
+        }
         return success;
     }
 
-    public static get_console_output(): string {
+    public static async get_console_output(): Promise<string> {
+        const prev = test_manager.fetch_count;
+        test_manager.fetch_count = prev + 1;
+        while (test_manager.fetch_count !== prev + 2) {
+            await new Promise(resolve => setTimeout(resolve, 1));
+        }
         return test_manager.log_console_output;
     }
 }

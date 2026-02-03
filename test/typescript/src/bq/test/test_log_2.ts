@@ -32,11 +32,21 @@ export class test_log_2 extends test_base {
     }
 
     public async test(): Promise<test_result> {
-        this.log_inst_sync = bq.log.get_log_by_name("sync_log");
-        this.log_inst_async = bq.log.get_log_by_name("async_log");
+        this.log_inst_sync = bq.log.create_log("sync_log", `appenders_config.FileAppender.type=compressed_file
+                        appenders_config.FileAppender.time_zone=localtime
+                        appenders_config.FileAppender.max_file_size=100000000
+                        appenders_config.FileAppender.file_name=Output/sync_log
+                        appenders_config.FileAppender.levels=[info, info, error,info]
+                    
+                        log.thread_mode=sync`);
+        this.log_inst_async = bq.log.create_log("async_log", `appenders_config.FileAppender.type=compressed_file
+                        appenders_config.FileAppender.time_zone=localtime
+                        appenders_config.FileAppender.max_file_size=100000000
+                        appenders_config.FileAppender.file_name=Output/async_log
+                        appenders_config.FileAppender.levels=[error,info]
+                    `);
         
         const result = new test_result();
-        bq.log.register_console_callback(null);
 
         console.log("Starting Sync Test (NodeJS Workers)...");
         
@@ -54,7 +64,23 @@ export class test_log_2 extends test_base {
 
         this.log_inst_async.force_flush();
         result.add_result(true, "");
-        test_manager.register_default_console_callback();
+        
+        const log_inst_console = bq.log.create_log("console_log", `appenders_config.Appender1.type=console
+                        appenders_config.Appender1.time_zone=localtime
+                        appenders_config.Appender1.levels=[all]
+                        log.thread_mode=sync
+                    `);
+        bq.log.set_console_buffer_enable(false);
+        bq.log.register_console_callback((log_id: bigint, category_idx: number, log_level: any, content: string) => {
+            if(log_id != 0n)
+            {
+                result.add_result(log_id == log_inst_console.get_id(), "console callback test 1");
+                result.add_result(log_level == bq.log_level.debug, "console callback test 2");
+                result.add_result(content.endsWith("ConsoleTest"), "console callback test 3");
+            }
+        });
+        log_inst_console.debug("ConsoleTest");
+
         return result;
     }
 

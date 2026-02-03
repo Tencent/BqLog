@@ -33,23 +33,23 @@ export class test_log_1 extends test_base {
         const full_str = "123";
 
         log_inst_sync.debug("AAAA");
-        result.add_result(test_manager.get_console_output() == "", "log level test");
+        result.add_result(await test_manager.get_console_output() == "", "log level test");
 
         log_inst_sync.info("测试字符串");
-        result.check_log_output_end_with("测试字符串", "basic test");
+        await result.check_log_output_end_with("测试字符串", "basic test");
         log_inst_sync.info("测试字符串{},{}", empty_str, full_str);
-        result.check_log_output_end_with("测试字符串null,123", "basic param test 1");
+        await result.check_log_output_end_with("测试字符串null,123", "basic param test 1");
 
         const standard_output_1 = "Float value result: 62.1564";
         log_inst_sync.info("Float value result: {}", 62.15645);
-        result.add_result(test_manager.get_console_output().includes(standard_output_1), "Float format test");
+        result.add_result((await test_manager.get_console_output()).includes(standard_output_1), "Float format test");
 
         var type_str = "SyncTest:";
         const standard_output_base = "这些是结果，abc, abcde, -32, FALSE, TRUE, null, 3, 3823823, -32354, 测试字符串完整的， 结果完成了";
         var standard_output = type_str + standard_output_base;
         log_inst_sync.info(type_str + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
             "abc", "abcde", -32, false, true, null, 3, 3823823, -32354, "测试字符串完整的");
-        result.check_log_output_end_with(standard_output, "basic param test 2");
+        await result.check_log_output_end_with(standard_output, "basic param test 2");
 
         let format_prefix = "a";
         let appender = "";
@@ -59,7 +59,7 @@ export class test_log_1 extends test_base {
         while(format_prefix.length <= 1024 * 1024 + 1024 + 4) {
             log_inst_sync.info(format_prefix + type_str + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
                 "abc", "abcde", -32, false, true, null, 3, 3823823, -32354, "测试字符串完整的");
-            result.check_log_output_end_with(format_prefix + standard_output, "basic param test 2");
+            await result.check_log_output_end_with(format_prefix + standard_output, "basic param test 2");
             format_prefix += appender;
         }
 
@@ -67,16 +67,16 @@ export class test_log_1 extends test_base {
         standard_output = type_str + standard_output_base;
 
         format_prefix = "a";
-        var last_output = test_manager.get_console_output();
+        var last_output = await test_manager.get_console_output();
         while(format_prefix.length <= 1024 * 1024 + 1024 + 4) {
             log_inst_async.info(format_prefix + type_str + "这些是结果，{}, {}, {}, {}, {}, {}, {}, {}, {}, {}， 结果完成了",
                 "abc", "abcde", -32, false, true, null, 3, 3823823, -32354, "测试字符串完整的");
             log_inst_async.force_flush();
-            while(last_output == test_manager.get_console_output()){
+            while(last_output == await test_manager.get_console_output()){
                 await new Promise(resolve => setImmediate(resolve));
             }
-            last_output = test_manager.get_console_output();
-            result.check_log_output_end_with(format_prefix + standard_output, "basic param test");
+            last_output = await test_manager.get_console_output();
+            await result.check_log_output_end_with(format_prefix + standard_output, "basic param test");
             format_prefix += appender;
         }
 

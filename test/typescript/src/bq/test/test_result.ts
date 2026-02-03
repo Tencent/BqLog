@@ -23,8 +23,8 @@ export class test_result {
         }
     }
 
-    public check_log_output_end_with(standard_log: string, error_msg: string): void {
-        const output = test_manager.get_console_output();
+    public async check_log_output_end_with(standard_log: string, error_msg: string): Promise<void> {
+        const output = await test_manager.get_console_output();
         let result = false;
         if (output && output.trimEnd().endsWith(standard_log)) {
             result = true;

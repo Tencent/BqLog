@@ -16,6 +16,7 @@ import { set_bq_lib, bq } from "./bq_lib.ts";
 
 async function run_tests() {
     try {
+        console.log(`Process PID: ${process.pid}`);
         const version = bq.log.get_version();
         console.log("BqLog Version: " + version);
         if (!version) {

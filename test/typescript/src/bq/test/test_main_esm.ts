@@ -19,6 +19,7 @@ const require = createRequire(import.meta.url);
 
 async function run_tests() {
     try {
+        console.log(`Process PID: ${process.pid}`);
         const version = bq.log.get_version();
         console.log("BqLog Version: " + version);
         if (!version) {

@@ -28,13 +28,24 @@ public class test_log_2 extends test_base{
 
 	@Override
 	public test_result test() {
-		log_inst_sync = bq.log.get_log_by_name("sync_log");
-		log_inst_async = bq.log.get_log_by_name("async_log");
+		log_inst_sync = bq.log.create_log("sync_log", "appenders_config.FileAppender.type=compressed_file\n"
+                + "						appenders_config.FileAppender.time_zone=localtime\n"
+                + "						appenders_config.FileAppender.max_file_size=100000000\n"
+                + "						appenders_config.FileAppender.file_name=Output/sync_log\n"
+                + "						appenders_config.FileAppender.levels=[info, info, error,info]\n"
+                + "					\n"
+                + "						log.thread_mode=sync");
+		log_inst_async = bq.log.create_log("async_log", "appenders_config.FileAppender.type=compressed_file\n"
+                + "						appenders_config.FileAppender.time_zone=localtime\n"
+                + "						appenders_config.FileAppender.max_file_size=100000000\n"
+                + "						appenders_config.FileAppender.file_name=Output/async_log\n"
+                + "						appenders_config.FileAppender.levels=[error,info]\n"
+                + "					\n");
 		test_result result = new test_result();
 		while(left_thread.getAcquire() > 0 || live_thread.getAcquire() > 0) {
 			if(left_thread.getAcquire() > 0 && live_thread.getAcquire() < 5) {
 				Runnable task = new Runnable() {
-					@Override
+					@Override	
 					public void run() {
 						String log_content = "";
 						for(int i = 0; i < 128; ++i) {
