@@ -179,10 +179,17 @@ namespace bq {
             }
             virtual void run() override
             {
+                auto tid = bq::platform::thread::get_current_thread_id();
                 uint32_t error_count = 0;
                 for (uint32_t i = 0; i < 10000000; ++i) {
+                    if (i % 500000 == 0) {
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_read] thread %" PRIu64 " before read_lock, iteration %" PRIu32 "\n", tid, i);
+                    }
                     {
                         bq::platform::scoped_spin_lock_read_crazy lock(spin_lock_);
+                        if (i % 500000 == 0) {
+                            test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_read] thread %" PRIu64 " got read_lock, iteration %" PRIu32 "\n", tid, i);
+                        }
                         error_count += (counter_modify_by_write_ % 10 == 0) ? 0U : 1U;
                         counter_modify_by_read_.fetch_add_relaxed(1);
                         counter_modify_by_read_.fetch_add_relaxed(1);
@@ -195,10 +202,15 @@ namespace bq {
                         counter_modify_by_read_.add_fetch_relaxed(1);
                         counter_modify_by_read_.add_fetch_relaxed(1);
                     }
+                    if (i % 500000 == 0) {
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_read] thread %" PRIu64 " released read_lock, iteration %" PRIu32 "\n", tid, i);
+                    }
                     bq::platform::thread::yield();
                 }
+                test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_read] thread %" PRIu64 " finished all iterations\n", tid);
                 result_.add_result(error_count == 0, "spin_lock_rw_crazy test(read lock thread)");
             }
+
         };
 
         class test_thread_spin_lock_write : public bq::platform::thread {
@@ -219,10 +231,17 @@ namespace bq {
             }
             virtual void run() override
             {
+                auto tid = bq::platform::thread::get_current_thread_id();
                 uint32_t error_count = 0;
                 for (uint32_t i = 0; i < 10000000; ++i) {
+                    if (i % 500000 == 0) {
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " before write_lock, iteration %" PRIu32 "\n", tid, i);
+                    }
                     {
                         bq::platform::scoped_spin_lock_write_crazy lock(spin_lock_);
+                        if (i % 500000 == 0) {
+                            test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " got write_lock, iteration %" PRIu32 "\n", tid, i);
+                        }
                         error_count += (counter_modify_by_read_.load_relaxed() % 10 == 0) ? 0U : 1U;
                         counter_modify_by_write_++;
                         counter_modify_by_write_++;
@@ -235,10 +254,15 @@ namespace bq {
                         ++counter_modify_by_write_;
                         ++counter_modify_by_write_;
                     }
+                    if (i % 500000 == 0) {
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " released write_lock, iteration %" PRIu32 "\n", tid, i);
+                    }
                     bq::platform::thread::yield();
                     result_.add_result(error_count == 0, "spin_lock_rw_crazy test(write lock thread)");
                 }
+                test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " finished all iterations\n", tid);
             }
+
         };
 
         class test_thread_name : public bq::platform::thread {
