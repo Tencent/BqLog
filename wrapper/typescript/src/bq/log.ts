@@ -125,7 +125,11 @@ export class log {
      */
     public static register_console_callback(callback: console_callback| null): void {
         log.callback_ = callback;
-        log_invoker.__api_set_console_callback(log.inner_callback);
+        if(null != log.callback_){
+            log_invoker.__api_set_console_callback(log.inner_callback);
+        }else{
+            log_invoker.__api_set_console_callback(null);
+        }
     }
 
     /**

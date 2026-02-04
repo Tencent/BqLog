@@ -80,7 +80,7 @@ export class test_log_2 extends test_base {
             }
         });
         log_inst_console.debug("ConsoleTest");
-
+        bq.log.register_console_callback(null);
         return result;
     }
 

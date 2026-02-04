@@ -26,9 +26,9 @@ export class test_manager {
 
     public static async test(): Promise<boolean> {
         bq.log.set_console_buffer_enable(true);
-        
+        let last_fetch_count = 0;
         test_manager.fetch_timer = setInterval(() => {
-            let new_fetch_count = 0;
+            let new_fetch_count = test_manager.fetch_count;
             while(true) {
                 const fetch_result = bq.log.fetch_and_remove_console_buffer((log_id, category_idx, log_level, content) => {
                     test_manager.log_console_output = content;
@@ -37,11 +37,11 @@ export class test_manager {
                     break;
                 }
             }
-            if(new_fetch_count != test_manager.last_fetch_count) {
+            if(new_fetch_count != last_fetch_count) {
                 ++new_fetch_count;
                 test_manager.fetch_count = new_fetch_count;
             }
-            test_manager.last_fetch_count = new_fetch_count;
+            last_fetch_count = new_fetch_count;
         }, 1);
 
         let success = true;
