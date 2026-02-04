@@ -446,7 +446,7 @@ namespace bq {
                     for (size_t t_len = 1; t_len <= max_test_len; ++t_len) {
                         // --- Pure ASCII ---
                         for(size_t i=0; i<t_len; ++i) {
-                            char c = (char)((rand() % 127) + 1);
+                            char c = static_cast<char>((bq::util::rand() % 127) + 1);
                             src_16[i] = (char16_t)c;
                             src_8[i] = c;
                         }
