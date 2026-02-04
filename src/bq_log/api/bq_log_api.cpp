@@ -272,9 +272,6 @@ namespace bq {
                     assert(false && "unsupported format string type");
                 }
             }
-            bq::_log_entry_ext_head_def* ext_info = reinterpret_cast<bq::_log_entry_ext_head_def*>(chunk_data_ptr + length_without_ext_info);
-            memcpy(&ext_info->thread_name_len_, &thread_info_tls_.thread_name_len_, sizeof(thread_info_tls_.thread_name_len_));
-            memcpy((uint8_t*)ext_info + sizeof(_log_entry_ext_head_def), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
             return handle;
         }
 
@@ -284,6 +281,15 @@ namespace bq {
                 assert(false && "commit invalid log buffer");
                 return;
             }
+            uint8_t * chunk_data_ptr = write_handle.format_data_addr - sizeof(_log_entry_head_def);
+            bq::_log_entry_head_def * head = reinterpret_cast<bq::_log_entry_head_def*>(chunk_data_ptr);
+            bq::_log_entry_ext_head_def * ext_info = reinterpret_cast<bq::_log_entry_ext_head_def*>(chunk_data_ptr + head->ext_info_offset);
+            // thread_info_tls_ should have been initialized in __api_log_write_begin on the same thread
+            memcpy(&ext_info->thread_name_len_, &thread_info_tls_.thread_name_len_, sizeof(thread_info_tls_.thread_name_len_));
+            if(thread_info_tls_.thread_name_len_ > 0) {
+                memcpy((uint8_t*)ext_info + sizeof(_log_entry_ext_head_def), thread_info_tls_.thread_name_, thread_info_tls_.thread_name_len_);
+            }
+
             if (log->get_thread_mode() == log_thread_mode::sync) {
                 log->sync_process(true);
             }
