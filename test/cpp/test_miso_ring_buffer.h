@@ -167,6 +167,7 @@ namespace bq {
                 config.need_recovery = false;
                 bq::miso_ring_buffer ring_buffer1(config);
                 bq::miso_ring_buffer ring_buffer2(config);
+                test_output_dynamic_param(bq::log_level::info, "[miso ring buffer] traverse test begin\n");
                 bq::array<uint32_t> data_src;
                 constexpr uint32_t data_src_size = 4096;
                 data_src.fill_uninitialized(4096 / sizeof(uint32_t));
@@ -206,6 +207,7 @@ namespace bq {
 
                 auto handle1 = ring_buffer1.read_chunk();
                 result.add_result(handle1.result == enum_buffer_result_code::err_empty_log_buffer, "miso traverse test, final");
+                test_output_dynamic_param(bq::log_level::info, "[miso ring buffer] traverse test finished\n");
             }
 
         public:
