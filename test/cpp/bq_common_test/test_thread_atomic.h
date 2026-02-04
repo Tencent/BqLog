@@ -137,8 +137,15 @@ namespace bq {
 
             virtual void run() override
             {
+                auto tid = bq::platform::thread::get_current_thread_id();
                 for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
+                    if (i % 50000 == 0) {
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " before lock, iteration % u\n", tid, i);
+                    }
                     m_ptr->lock();
+                    if (i % 50000 == 0) {
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " got lock, iteration %u\n", tid, i);
+                    }
                     uint32_t value = base_value;
                     i_ptr->i.store_seq_cst(value);
                     for (uint32_t j = 0; j < cas_times_per_loop; ++j) {
@@ -146,11 +153,16 @@ namespace bq {
                         ++value;
                     }
                     m_ptr->unlock();
+                    if (i % 50000 == 0) {
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " released lock, iteration %" PRIu32 "\n", tid, i);
+                    }
                 }
+                test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " finished all iterations\n", tid);
             }
         };
 
         class test_thread_spin_lock_read : public bq::platform::thread {
+
         private:
             test_result& result_;
             bq::platform::spin_lock_rw_crazy& spin_lock_;
