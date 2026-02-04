@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <time.h>
+#include <sched.h>
 #include <sys/select.h>
 #include <sys/time.h>
 
@@ -403,7 +404,7 @@ namespace bq {
 
         void thread::yield()
         {
-            sleep(0);
+            sched_yield();
         }
 
         void thread::cpu_relax()
