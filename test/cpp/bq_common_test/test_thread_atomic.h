@@ -140,11 +140,11 @@ namespace bq {
                 auto tid = bq::platform::thread::get_current_thread_id();
                 for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
                     if (i % 50000 == 0) {
-                        test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " before lock, iteration % u\n", tid, i);
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " before lock, iteration %" PRIu32 "\n", tid, i);
                     }
                     m_ptr->lock();
                     if (i % 50000 == 0) {
-                        test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " got lock, iteration %u\n", tid, i);
+                        test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " got lock, iteration %" PRIu32 "\n", tid, i);
                     }
                     uint32_t value = base_value;
                     i_ptr->i.store_seq_cst(value);
