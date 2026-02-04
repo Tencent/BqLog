@@ -46,7 +46,7 @@ namespace bq {
                 out.clear();
                 out.reserve(size);
                 while (out.size() < size) {
-                    out.push_back((char)((rand() % 127) + 1));
+                    out.push_back((char)((bq::util::rand() % 127) + 1));
                 }
             }
 
@@ -56,13 +56,13 @@ namespace bq {
                 out.clear();
                 out.reserve(size);
                 while (out.size() < size) {
-                    if (rand() % 5 == 0) { // 20% 2-byte chars
+                    if (bq::util::rand() % 5 == 0) { // 20% 2-byte chars
                         // Encode a value between 0x80 and 0x7FF
-                        uint32_t val = static_cast<uint32_t>(0x80 + (rand() % (0x7FF - 0x80 + 1)));
+                        uint32_t val = static_cast<uint32_t>(0x80 + (bq::util::rand() % (0x7FF - 0x80 + 1)));
                         out.push_back((char)(0xC0 | (val >> 6)));
                         out.push_back((char)(0x80 | (val & 0x3F)));
                     } else {
-                        out.push_back((char)((rand() % 127) + 1));
+                        out.push_back((char)((bq::util::rand() % 127) + 1));
                     }
                 }
             }
@@ -73,14 +73,14 @@ namespace bq {
                 out.clear();
                 out.reserve(size);
                 while (out.size() < size) {
-                    if (rand() % 5 == 0) { // 20% Chinese chars
+                    if (bq::util::rand() % 5 == 0) { // 20% Chinese chars
                         // Encode a value between 0x4E00 and 0x9FFF
-                        uint32_t val = static_cast<uint32_t>(0x4E00 + (rand() % (0x9FFF - 0x4E00 + 1)));
+                        uint32_t val = static_cast<uint32_t>(0x4E00 + (bq::util::rand() % (0x9FFF - 0x4E00 + 1)));
                         out.push_back((char)(0xE0 | (val >> 12)));
                         out.push_back((char)(0x80 | ((val >> 6) & 0x3F)));
                         out.push_back((char)(0x80 | (val & 0x3F)));
                     } else {
-                        out.push_back((char)((rand() % 127) + 1));
+                        out.push_back((char)((bq::util::rand() % 127) + 1));
                     }
                 }
             }
@@ -498,11 +498,11 @@ namespace bq {
                         // --- UTF-Mixed Round Trip ---
                         // Generate random mixed content
                         for(size_t i=0; i<t_len; ++i) {
-                            if (rand() % 10 == 0) {
-                                src_16[i] = static_cast<char16_t>(0x4E00 + (rand() % 100));
+                            if (bq::util::rand() % 10 == 0) {
+                                src_16[i] = static_cast<char16_t>(0x4E00 + (bq::util::rand() % 100));
                             }
                             else {
-                                src_16[i] = static_cast<char16_t>((rand() % 127) + 1);
+                                src_16[i] = static_cast<char16_t>((bq::util::rand() % 127) + 1);
                             }
                         }
                         // Reference conversion
@@ -671,7 +671,7 @@ namespace bq {
 
                     for (auto& c : hash_cases) {
                         for (size_t i = 0; i < test_count; ++i) {
-                            size_t len = static_cast<size_t>((rand() % 256) + 1); // Random length 1-256
+                            size_t len = static_cast<size_t>((bq::util::rand() % 256) + 1); // Random length 1-256
                             std::vector<char> src_u8;
                             c.gen_func(src_u8, len);
 
