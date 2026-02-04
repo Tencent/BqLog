@@ -1179,11 +1179,64 @@ jobs:
               exit 1
             fi
 
-            set +e
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            
+            # Run test with timeout (20 minutes = 1200 seconds)
+            TIMEOUT_SECONDS=1200
+            
+            set +e
+            ./run_test_clang.sh ${{ matrix.cpp_ver }} &
+            TEST_PID=$!
+            
+            # Monitor the test process with timeout
+            ELAPSED=0
+            POLL_INTERVAL=10
+            while kill -0 $TEST_PID 2>/dev/null; do
+              sleep $POLL_INTERVAL
+              ELAPSED=$((ELAPSED + POLL_INTERVAL))
+              
+              if [ $ELAPSED -ge $TIMEOUT_SECONDS ]; then
+                echo ""
+                echo "=========================================="
+                echo "TEST TIMEOUT after ${TIMEOUT_SECONDS}s!"
+                echo "Attaching gdb to dump all thread stacks..."
+                echo "=========================================="
+                
+                # Find the actual test executable PID (child of shell)
+                EXE_PID=$(pgrep -P $TEST_PID BqLogUnitTest 2>/dev/null | head -n1)
+                if [ -z "$EXE_PID" ]; then
+                  EXE_PID=$(pgrep BqLogUnitTest 2>/dev/null | head -n1)
+                fi
+                
+                if [ -n "$EXE_PID" ]; then
+                  echo "Found BqLogUnitTest PID: $EXE_PID"
+                  echo "=== GDB live thread dump (OpenBSD) ==="
+                  $GDB_CMD --batch -q \
+                    -ex "set pagination off" \
+                    -ex "info threads" \
+                    -ex "thread apply all bt full" \
+                    -ex "detach" \
+                    -ex "quit" \
+                    -p $EXE_PID 2>&1 || echo "gdb attach failed"
+                else
+                  echo "Could not find BqLogUnitTest process"
+                  echo "Current processes:"
+                  ps aux | grep -i bqlog || true
+                fi
+                
+                # Kill the test process
+                kill -9 $TEST_PID 2>/dev/null || true
+                pkill -9 BqLogUnitTest 2>/dev/null || true
+                
+                echo "Test killed due to timeout"
+                exit 1
+              fi
+            done
+            
+            # Test finished, get exit code
+            wait $TEST_PID
             EXIT_CODE=$?
             set -e
 
@@ -1219,6 +1272,7 @@ jobs:
               exit $EXIT_CODE
             fi
             touch ../../../UNIT_TEST_SUCCESS
+
 
       - name: Check Retry
         id: CheckRetry
@@ -1307,11 +1361,64 @@ jobs:
               exit 1
             fi
 
-            set +e
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            
+            # Run test with timeout (20 minutes = 1200 seconds)
+            TIMEOUT_SECONDS=1200
+            
+            set +e
+            ./run_test_clang.sh ${{ matrix.cpp_ver }} &
+            TEST_PID=$!
+            
+            # Monitor the test process with timeout
+            ELAPSED=0
+            POLL_INTERVAL=10
+            while kill -0 $TEST_PID 2>/dev/null; do
+              sleep $POLL_INTERVAL
+              ELAPSED=$((ELAPSED + POLL_INTERVAL))
+              
+              if [ $ELAPSED -ge $TIMEOUT_SECONDS ]; then
+                echo ""
+                echo "=========================================="
+                echo "TEST TIMEOUT after ${TIMEOUT_SECONDS}s!"
+                echo "Attaching gdb to dump all thread stacks..."
+                echo "=========================================="
+                
+                # Find the actual test executable PID (child of shell)
+                EXE_PID=$(pgrep -P $TEST_PID BqLogUnitTest 2>/dev/null | head -n1)
+                if [ -z "$EXE_PID" ]; then
+                  EXE_PID=$(pgrep BqLogUnitTest 2>/dev/null | head -n1)
+                fi
+                
+                if [ -n "$EXE_PID" ]; then
+                  echo "Found BqLogUnitTest PID: $EXE_PID"
+                  echo "=== GDB live thread dump (OpenBSD) ==="
+                  $GDB_CMD --batch -q \
+                    -ex "set pagination off" \
+                    -ex "info threads" \
+                    -ex "thread apply all bt full" \
+                    -ex "detach" \
+                    -ex "quit" \
+                    -p $EXE_PID 2>&1 || echo "gdb attach failed"
+                else
+                  echo "Could not find BqLogUnitTest process"
+                  echo "Current processes:"
+                  ps aux | grep -i bqlog || true
+                fi
+                
+                # Kill the test process
+                kill -9 $TEST_PID 2>/dev/null || true
+                pkill -9 BqLogUnitTest 2>/dev/null || true
+                
+                echo "Test killed due to timeout"
+                exit 1
+              fi
+            done
+            
+            # Test finished, get exit code
+            wait $TEST_PID
             EXIT_CODE=$?
             set -e
 
@@ -1347,6 +1454,7 @@ jobs:
               exit $EXIT_CODE
             fi
             touch ../../../UNIT_TEST_SUCCESS
+
 
   openBSD_arm64_Clang:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
