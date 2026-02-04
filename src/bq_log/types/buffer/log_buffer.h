@@ -76,10 +76,11 @@ namespace bq {
                 jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
                 jobjectArray buffer_obj_for_oversize_buffer_ = NULL; // oversize buffer;
                 block_node_head* buffer_ref_block_ = nullptr;
-                oversize_buffer* buffer_ref_oversize = nullptr;
+                const uint8_t* buffer_addr_oversize = nullptr; 
                 uint32_t size_ref_oversize = 0;
                 int32_t buffer_offset_ = 0;
             };
+
 #endif
             uint64_t last_update_epoch_ms_ = 0;
             uint64_t update_times_ = 0;

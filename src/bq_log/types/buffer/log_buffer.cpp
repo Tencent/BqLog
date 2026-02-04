@@ -469,9 +469,9 @@ namespace bq {
                 env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_oversize_buffer_, 1, offset_obj);
             }
             auto& over_size_buffer_ref = current_buffer_info.oversize_target_buffer_->buffer_;
-            if (current_buffer_info.java_.buffer_ref_oversize != &over_size_buffer_ref
+            if (current_buffer_info.java_.buffer_addr_oversize != over_size_buffer_ref.get_buffer_addr()
                 || current_buffer_info.java_.size_ref_oversize != over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count()) {
-                current_buffer_info.java_.buffer_ref_oversize = &over_size_buffer_ref;
+                current_buffer_info.java_.buffer_addr_oversize = over_size_buffer_ref.get_buffer_addr();
                 current_buffer_info.java_.size_ref_oversize = over_size_buffer_ref.get_block_size() * over_size_buffer_ref.get_total_blocks_count();
                 env->SetObjectArrayElement(current_buffer_info.java_.buffer_obj_for_oversize_buffer_, 0, bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(over_size_buffer_ref.get_buffer_addr()), current_buffer_info.java_.size_ref_oversize, false));
             }
