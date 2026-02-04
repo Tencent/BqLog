@@ -135,10 +135,10 @@ namespace bq {
                 test_result result;
                 log_creator_1("snapshot.buffer_size = 65536");
                 auto log_inst = test_category_log::get_log_by_name("test_log");
-                test_output_dynamic_param(bq::log_level::info, "[log test] phase 1 begin\n");
+                test_output_dynamic(bq::log_level::info, "[log test] phase 1 begin\n");
                 test_1(result, log_inst);
                 log_creator_2();
-                test_output_dynamic_param(bq::log_level::info, "[log test] phase 2 begin\n");
+                test_output_dynamic(bq::log_level::info, "[log test] phase 2 begin\n");
                 test_2(result, log_inst);
                 log_creator_1("snapshot.buffer_size = 65536");
                 test_1(result, log_inst);
@@ -160,10 +160,10 @@ namespace bq {
                 thread4.join();
                 thread5.join();
 
-                test_output_dynamic_param(bq::log_level::info, "[log test] phase 3 begin\n");
+                test_output_dynamic(bq::log_level::info, "[log test] phase 3 begin\n");
                 test_3(result, log_inst);
 
-                test_output_dynamic_param(bq::log_level::info, "[log test] phase 4 begin\n");
+                test_output_dynamic(bq::log_level::info, "[log test] phase 4 begin\n");
                 test_4(result, log_inst);
                 return result;
             }
