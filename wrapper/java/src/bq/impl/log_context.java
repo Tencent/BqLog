@@ -165,125 +165,128 @@ public class log_context {
          return null;
      }
 
-     public void add_param(ByteBuffer ring_buffer, String value)
+     public void add_param(ByteBuffer log_buffer, String value)
      {
          //utf-16 String
     	 if (null == value)
          {
-    		 ring_buffer.putInt(log_arg_type_enum.null_type.ordinal()); //Works in Little-Endian
+    		 log_buffer.putInt(log_arg_type_enum.null_type.ordinal()); //Works in Little-Endian
          }else {
         	 long str_size = ((long)value.length() << 1);
-        	 ring_buffer.putInt(log_arg_type_enum.string_utf16_type.ordinal());  //Works in Little-Endian
-        	 ring_buffer.putInt((int)str_size);
-        	 int pos_prev = ring_buffer.position();
-        	 ring_buffer.asCharBuffer().put(value);
-        	 ring_buffer.position(pos_prev + (int)align4(str_size));
+        	 log_buffer.putInt(log_arg_type_enum.string_utf16_type.ordinal());  //Works in Little-Endian
+        	 log_buffer.putInt((int)str_size);
+        	 int pos_prev = log_buffer.position();
+        	 //Believe JIT optimization
+        	 for(int i = 0; i < value.length(); ++i) {
+        		 log_buffer.putChar(value.charAt(i));
+        	 }
+        	 log_buffer.position(pos_prev + (int)align4(str_size));
          }
      }
      
-	 public void add_param(ByteBuffer ring_buffer, Map.Entry<int[], long[]> value)
+	 public void add_param(ByteBuffer log_buffer, Map.Entry<int[], long[]> value)
 	 {
-    	 int position = ring_buffer.position();
+    	 int position = log_buffer.position();
     	 int type_info = value.getKey()[0];
-    	 ring_buffer.put((byte)type_info);
+    	 log_buffer.put((byte)type_info);
     	 long pod_value = value.getValue()[0];
     	 long total_size = value.getValue()[1];
     	 //todo use switch
     	 if(total_size <= 4)
     	 {
-        	 ring_buffer.position(position + 2);
+        	 log_buffer.position(position + 2);
     		 if(type_info == log_arg_type_enum.bool_type.ordinal()
     				 || type_info == log_arg_type_enum.int8_type.ordinal())
     		 {
-    			 ring_buffer.put((byte)pod_value);
+    			 log_buffer.put((byte)pod_value);
     		 }else if(type_info == log_arg_type_enum.char16_type.ordinal())
     		 {
-    	    	 ring_buffer.putChar((char)pod_value);
+    	    	 log_buffer.putChar((char)pod_value);
     		 }else if(type_info == log_arg_type_enum.int16_type.ordinal())
     		 {
-    	    	 ring_buffer.putShort((short)pod_value);
+    	    	 log_buffer.putShort((short)pod_value);
     		 }else {
     			 throw new RuntimeException("unkown type " + type_info + " with storage size:" + total_size);
     		 }
-        	 ring_buffer.position(position + 4);
+        	 log_buffer.position(position + 4);
     	 }else if(total_size == 8)
     	 {
-        	 ring_buffer.position(position + 4);
-        	 ring_buffer.putInt((int)pod_value);
+        	 log_buffer.position(position + 4);
+        	 log_buffer.putInt((int)pod_value);
     	 }else if(total_size == 12)
     	 {
-        	 ring_buffer.position(position + 4);
-        	 ring_buffer.putLong(pod_value);
+        	 log_buffer.position(position + 4);
+        	 log_buffer.putLong(pod_value);
     	 }else {
 			 throw new RuntimeException("unkown type " + type_info + " with storage size:" + total_size);
 		 }
     	 param.return_param_wrapper_to_pool(value);
 	 }
 
-     public void add_param(ByteBuffer ring_buffer, Boolean value)
+     public void add_param(ByteBuffer log_buffer, Boolean value)
      {
-    	 ring_buffer.putShort((short)log_arg_type_enum.bool_type.ordinal());
-    	 ring_buffer.putShort((short)(value ? 1 : 0));
+    	 log_buffer.putShort((short)log_arg_type_enum.bool_type.ordinal());
+    	 log_buffer.putShort((short)(value ? 1 : 0));
      }
-     public void add_param(ByteBuffer ring_buffer, Character value)
+     public void add_param(ByteBuffer log_buffer, Character value)
      {
-    	 ring_buffer.putShort((short)log_arg_type_enum.char16_type.ordinal());
-    	 ring_buffer.putShort((short)(int)value);
-     }
-
-     public void add_param(ByteBuffer ring_buffer, Byte value)
-     {
-    	 ring_buffer.putShort((short)log_arg_type_enum.int8_type.ordinal());
-    	 ring_buffer.putShort((short)value);
+    	 log_buffer.putShort((short)log_arg_type_enum.char16_type.ordinal());
+    	 log_buffer.putShort((short)(int)value);
      }
 
-     public void add_param(ByteBuffer ring_buffer, Short value)
+     public void add_param(ByteBuffer log_buffer, Byte value)
      {
-    	 ring_buffer.putShort((short)log_arg_type_enum.int16_type.ordinal());
-    	 ring_buffer.putShort(value);
+    	 log_buffer.putShort((short)log_arg_type_enum.int8_type.ordinal());
+    	 log_buffer.putShort((short)value);
      }
 
-     public void add_param(ByteBuffer ring_buffer, Integer value)
+     public void add_param(ByteBuffer log_buffer, Short value)
      {
-    	 ring_buffer.putInt(log_arg_type_enum.int32_type.ordinal());
-    	 ring_buffer.putInt(value);
+    	 log_buffer.putShort((short)log_arg_type_enum.int16_type.ordinal());
+    	 log_buffer.putShort(value);
      }
 
-     public void add_param(ByteBuffer ring_buffer, Long value)
+     public void add_param(ByteBuffer log_buffer, Integer value)
      {
-    	 ring_buffer.putInt(log_arg_type_enum.int64_type.ordinal());
-    	 ring_buffer.putLong(value);
+    	 log_buffer.putInt(log_arg_type_enum.int32_type.ordinal());
+    	 log_buffer.putInt(value);
+     }
+
+     public void add_param(ByteBuffer log_buffer, Long value)
+     {
+    	 log_buffer.putInt(log_arg_type_enum.int64_type.ordinal());
+    	 log_buffer.putLong(value);
      }
      
-     public void add_param(ByteBuffer ring_buffer, Float value)
+     public void add_param(ByteBuffer log_buffer, Float value)
      {
-    	 ring_buffer.putInt(log_arg_type_enum.float_type.ordinal());
-    	 ring_buffer.putFloat(value);
+    	 log_buffer.putInt(log_arg_type_enum.float_type.ordinal());
+    	 log_buffer.putFloat(value);
      }
-     public void add_param(ByteBuffer ring_buffer, Double value)
+     public void add_param(ByteBuffer log_buffer, Double value)
      {
-    	 ring_buffer.putInt(log_arg_type_enum.double_type.ordinal());
-    	 ring_buffer.putDouble(value);
+    	 log_buffer.putInt(log_arg_type_enum.double_type.ordinal());
+    	 log_buffer.putDouble(value);
      }
      
-     public <T> void add_param(ByteBuffer ring_buffer, T value)
+     public <T> void add_param(ByteBuffer log_buffer, T value)
      {
          if (value == null)
          {
-        	 ring_buffer.putInt(log_arg_type_enum.null_type.ordinal());
+        	 log_buffer.putInt(log_arg_type_enum.null_type.ordinal());
          }
          else
          {
-             add_param(ring_buffer, value.toString());
+             add_param(log_buffer, value.toString());
          }
      }
 
      @SuppressWarnings("unchecked")
-	public void add_param_no_optimized(ByteBuffer ring_buffer, Object value)
+	public void add_param_no_optimized(ByteBuffer log_buffer, Object value)
      {
          if (value == null)
          {
-        	 ring_buffer.putInt(log_arg_type_enum.null_type.ordinal());
+        	 log_buffer.putInt(log_arg_type_enum.null_type.ordinal());
              return;
          }
          Class<? extends Object> cls = value.getClass();
@@ -291,41 +294,41 @@ public class log_context {
          //with those used more frequently generally placed at the beginning.
          if(cls == constants.cls_param_wrapper)
          {
-        	 add_param(ring_buffer, (Map.Entry<int[], long[]>)value);
+        	 add_param(log_buffer, (Map.Entry<int[], long[]>)value);
          }else if(cls == Integer.class)
          {
-        	 add_param(ring_buffer, (Integer)value);
+        	 add_param(log_buffer, (Integer)value);
          }else if(cls == Float.class)
          {
-        	 add_param(ring_buffer, (Float)value);
+        	 add_param(log_buffer, (Float)value);
          }else if(cls == Boolean.class)
          {
-        	 add_param(ring_buffer, (Boolean)value);
+        	 add_param(log_buffer, (Boolean)value);
          }
          else if(cls == String.class)
          {
-        	 add_param(ring_buffer, (String)value);
+        	 add_param(log_buffer, (String)value);
          }else if(cls == Long.class)
          {
-        	 add_param(ring_buffer, (Long)value);
+        	 add_param(log_buffer, (Long)value);
          }else if(cls == Double.class)
          {
-        	 add_param(ring_buffer, (Double)value);
+        	 add_param(log_buffer, (Double)value);
          }else if(cls == Character.class)
          {
-        	 add_param(ring_buffer, (Character)value);
+        	 add_param(log_buffer, (Character)value);
          }else if(cls == Byte.class)
          {
-        	 add_param(ring_buffer, (Byte)value);
+        	 add_param(log_buffer, (Byte)value);
          }else if(cls == Short.class)
          {
-        	 add_param(ring_buffer, (Short)value);
+        	 add_param(log_buffer, (Short)value);
          }else if(cls == StringBuffer.class)
          {
-        	 add_param(ring_buffer, ((StringBuffer)value).toString());
+        	 add_param(log_buffer, ((StringBuffer)value).toString());
          }else
          {
-        	 add_param(ring_buffer, value.toString());
+        	 add_param(log_buffer, value.toString());
          }
      }
 
