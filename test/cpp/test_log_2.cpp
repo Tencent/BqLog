@@ -294,8 +294,8 @@ namespace bq {
                     }
                 }
                 bq::log::force_flush_all_logs();
-                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_sync, "force flush test sync total count");
-                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_async, "force flush test async total count");
+                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_sync, "force flush test sync total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx, test_force_flush_callback::current_idx_sync);
+                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_async, "force flush test async total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx, test_force_flush_callback::current_idx_async);
 
                 bq::log::register_console_callback(&test_log::console_callback);
                 test_output_dynamic(bq::log_level::info, "force flush testing is finished!\n");
