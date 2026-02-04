@@ -22,9 +22,9 @@ namespace bq {
             static test_result* test_result_ptr;
             static uint64_t sync_log_id;
             static uint64_t async_log_id;
-            static uint64_t idx;
-            static uint64_t current_idx_sync;
-            static uint64_t current_idx_async;
+            static bq::platform::atomic<uint64_t> idx;
+            static bq::platform::atomic<uint64_t> current_idx_sync;
+            static bq::platform::atomic<uint64_t> current_idx_async;
             static bool multi_thread_test_end;
             static void console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length) {
                 (void)category_idx;
@@ -33,10 +33,10 @@ namespace bq {
                 if (log_id != sync_log_id && log_id != async_log_id) {
                     return;
                 }
-                uint64_t& ref_idx = (log_id == sync_log_id) ? current_idx_sync : current_idx_async;
-                ++ref_idx;
+                bq::platform::atomic<uint64_t>& ref_idx = (log_id == sync_log_id) ? current_idx_sync : current_idx_async;
+                ref_idx.fetch_add_seq_cst(1);
                 char idx_tmp[32];
-                snprintf(idx_tmp, sizeof(idx_tmp), "%" PRIu64, ref_idx);
+                snprintf(idx_tmp, sizeof(idx_tmp), "%" PRIu64, ref_idx.load_seq_cst());
                 bq::string standard_end_str = (log_id == sync_log_id) ? (bq::string("force flush test sync log ") + idx_tmp) : (bq::string("force flush test async log ") + idx_tmp);
                 bq::string log_content(content, static_cast<size_t>(length));
                 test_result_ptr->add_result(log_content.end_with(standard_end_str), (log_id == sync_log_id) ? "force flush test sync" : "force flush test async");
@@ -46,9 +46,9 @@ namespace bq {
         test_result* test_force_flush_callback::test_result_ptr = nullptr;
         uint64_t test_force_flush_callback::sync_log_id = 0;
         uint64_t test_force_flush_callback::async_log_id = 0;
-        uint64_t test_force_flush_callback::idx = 0;
-        uint64_t test_force_flush_callback::current_idx_sync = 0;
-        uint64_t test_force_flush_callback::current_idx_async = 0; 
+        bq::platform::atomic<uint64_t> test_force_flush_callback::idx = 0;
+        bq::platform::atomic<uint64_t> test_force_flush_callback::current_idx_sync = 0;
+        bq::platform::atomic<uint64_t> test_force_flush_callback::current_idx_async = 0;
         bool test_force_flush_callback::multi_thread_test_end = false;
 
         void test_log::test_2(test_result& result, const test_category_log& log_inst)
@@ -286,16 +286,16 @@ namespace bq {
                 tr2.detach();
 
                 while (true) {
-                    sync_log.info("force flush test sync log {}", ++test_force_flush_callback::idx);
-                    async_log.info("force flush test async log {}", test_force_flush_callback::idx);
+                    sync_log.info("force flush test sync log {}", test_force_flush_callback::idx.add_fetch_seq_cst(1));
+                    async_log.info("force flush test async log {}", test_force_flush_callback::idx.load_seq_cst());
                     if (bq::platform::high_performance_epoch_ms() - start_time >= seconds * 1000) {
                         test_force_flush_callback::multi_thread_test_end = true;
                         break;
                     }
                 }
                 bq::log::force_flush_all_logs();
-                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_sync, "force flush test sync total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx, test_force_flush_callback::current_idx_sync);
-                result.add_result(test_force_flush_callback::idx == test_force_flush_callback::current_idx_async, "force flush test async total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx, test_force_flush_callback::current_idx_async);
+                result.add_result(test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_sync.load_seq_cst(), "force flush test sync total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst());
+                result.add_result(test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_async.load_seq_cst(), "force flush test async total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst());
 
                 bq::log::register_console_callback(&test_log::console_callback);
                 test_output_dynamic(bq::log_level::info, "force flush testing is finished!\n");
