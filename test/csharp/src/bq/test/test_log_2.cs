@@ -114,7 +114,7 @@ namespace bq.test
                     + "						appenders_config.Appender1.levels=[all]\n"
                     + "					    log.thread_mode=sync\n");
             bq.log.set_console_buffer_enable(false);
-#pragma warning disable CS0618 // ���ͻ��Ա�ѹ�ʱ
+#pragma warning disable CS0618
             bq.log.register_console_callback((ulong log_id, int category_idx, bq.def.log_level log_level, string content) => {
                 if(log_id != 0)
                 {
@@ -123,7 +123,7 @@ namespace bq.test
                     result.add_result(content.EndsWith("ConsoleTest"), "console callback test 3");
                 }
             });
-#pragma warning restore CS0618 // ���ͻ��Ա�ѹ�ʱ
+#pragma warning restore CS0618
             log_inst_console.debug("ConsoleTest");
 
             log_inst_async.force_flush();
