@@ -21,6 +21,12 @@ namespace bq.test
         {
         }
 
+        enum TestEnum
+        {
+            None,
+            Value1
+        }
+
         public override test_result test()
         {
             test_result result = new test_result();
@@ -37,8 +43,8 @@ namespace bq.test
             log_inst_sync.debug("AAAA");
             result.add_result(test_manager.get_console_output() == null, "log level test");
 
-            log_inst_sync.info("测试字符串");
-            result.check_log_output_end_with("测试字符串", "basic test");
+            log_inst_sync.info("测试字符串{}", TestEnum.Value1);
+            result.check_log_output_end_with("测试字符串1", "basic test");
             log_inst_sync.info("测试字符串{},{}", empty_str, full_str);
             result.check_log_output_end_with("测试字符串null,123", "basic param test 1");
 
