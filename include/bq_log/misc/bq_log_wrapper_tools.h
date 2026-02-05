@@ -574,7 +574,7 @@ namespace bq {
         template <bool INCLUDE_TYPE_INFO, typename STR_TYPE>
         struct _serialize_str_helper_by_type : public _serialize_str_helper_by_type_impl<
             INCLUDE_TYPE_INFO, 
-            bq::condition_value<(_is_bq_string_like<STR_TYPE>::value || _is_std_string_view_like<STR_TYPE>::value),
+            bq::condition_value<(_custom_type_helper<STR_TYPE>::is_valid || _is_bq_string_like<STR_TYPE>::value || _is_std_string_view_like<STR_TYPE>::value),
             _string_type,
             _string_type::cls_type,
             bq::condition_value<bq::is_array<STR_TYPE>::value, _string_type,

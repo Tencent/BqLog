@@ -40,112 +40,113 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
     if(should_print_stack){
         bq::api::__api_get_stack_trace_utf16(&stack_string_def, 0);
     }
-    auto format_size_seq = bq::tools::make_size_seq<false>(FormatString);
-    size_t aligned_format_data_size = bq::align_4(format_size_seq.get_element().get_value() + (stack_string_def.len << 1));
-    size_t total_data_size = sizeof(bq::_log_entry_head_def) + aligned_format_data_size;
+    size_t format_size = sizeof(char16_t) * bq_log_format_str_size(FormatString);
+    size_t total_format_data_size = format_size + stack_string_def.len;
+    size_t total_args_size = 0;
     for (FBqLogAny& Arg : const_cast<TArray<FBqLogAny>&>(Args))
     {
         switch (Arg.Type) {
         case EBqLogAnyType::None:
-            total_data_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Bool:
-            total_data_size += bq::tools::make_size_seq<true>(true).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(true).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Int32:
-            total_data_size += bq::tools::make_size_seq<true>(static_cast<int32_t>(Arg.I32)).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(static_cast<int32_t>(Arg.I32)).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Int64:
-            total_data_size += bq::tools::make_size_seq<true>(static_cast<int64_t>(Arg.I64)).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(static_cast<int64_t>(Arg.I64)).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Float:
-            total_data_size += bq::tools::make_size_seq<true>(Arg.F).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.F).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Double:
-            total_data_size += bq::tools::make_size_seq<true>(Arg.D).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.D).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::String:
-            total_data_size += bq::tools::make_size_seq<true>(Arg.S).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.S).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Name:
-            total_data_size += bq::tools::make_size_seq<true>(Arg.N).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.N).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Text:
-            total_data_size += bq::tools::make_size_seq<true>(Arg.T).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.T).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Object:
             if (Arg.Obj == nullptr)
             {
-                total_data_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
+                total_args_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
             }
             else
             {
                 Arg.FormattedString = Arg.Obj->GetName();
-                total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+                total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             }
             break;
         case EBqLogAnyType::Class:
             if (Arg.Cls.Get())
             {
                 Arg.FormattedString = Arg.Cls->GetName();
-                total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+                total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             }
             else
             {
-                total_data_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
+                total_args_size += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
             }
             break;
         case EBqLogAnyType::SoftObject:
             Arg.FormattedString = Arg.SoftPath.ToString();
-            total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Vector:
             Arg.FormattedString = Arg.V.ToString();
-            total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Rotator:
             Arg.FormattedString = Arg.R.ToString();
-            total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Transform:
             Arg.FormattedString = Arg.Xform.ToString();
-            total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Color:
             Arg.FormattedString = Arg.Color.ToString();
-            total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::LinearColor:
             Arg.FormattedString = Arg.LColor.ToString();
-            total_data_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
+            total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
         break;
         }
     }
 
-    auto handle = bq::api::__api_log_buffer_alloc(log_id, (uint32_t)total_data_size);
+    auto handle = bq::api::__api_log_write_begin(log_id
+        , static_cast<uint8_t>(static_cast<int32_t>(Level))
+        , static_cast<uint32_t>(CategoryIndex)
+        , static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type)
+        , static_cast<uint32_t>(total_format_data_size)
+        , should_print_stack ? nullptr : reinterpret_cast<const void*>(bq_log_format_str_chars(FormatString))
+        , static_cast<uint32_t>(total_args_size));
     if (handle.result != bq::enum_buffer_result_code::success) {
         return false;
     }
-    bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
-    head->category_idx = CategoryIndex;
-    head->level = static_cast<uint8_t>(static_cast<int32_t>(Level));
-    head->log_format_str_type = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
-    size_t log_args_offset = static_cast<size_t>(sizeof(bq::_log_entry_head_def) + aligned_format_data_size);
-    head->log_args_offset = (uint32_t)log_args_offset;
-    uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
-    bq::tools::_type_copy<false>(FormatString, log_format_content_addr, format_size_seq.get_element().get_value());
-    if (stack_string_def.len > 0) {
-        memcpy(log_format_content_addr + format_size_seq.get_element().get_value(), stack_string_def.str, stack_string_def.len << 1);
-        *(uint32_t*)log_format_content_addr += (stack_string_def.len << 1);
+    if(should_print_stack){
+        //Ugly hack
+        bq::tools::_type_copy<false>(FormatString, handle.format_data_addr - sizeof(uint32_t), total_format_data_size);
+        memcpy(handle.format_data_addr + format_size, stack_string_def.str, stack_string_def.len);
+        *reinterpret_cast<uint32_t*>(handle.format_data_addr - sizeof(uint32_t)) = static_cast<uint32_t>(total_format_data_size);
     }
-    uint8_t* log_args_addr = handle.data_addr + log_args_offset;
+    uint8_t* log_args_addr = handle.format_data_addr + bq::align_4(total_format_data_size);
     for (const FBqLogAny& Arg : Args) {
         switch (Arg.Type)
         {
         case EBqLogAnyType::None:
             bq::tools::_type_copy<true>(nullptr, log_args_addr, bq::tools::make_size_seq<true>(nullptr).get_value());
             log_args_addr += bq::tools::make_size_seq<true>(nullptr).get_element().get_aligned_value();
+            break;
         case EBqLogAnyType::Bool:
             bq::tools::_type_copy<true>(Arg.B, log_args_addr, bq::tools::make_size_seq<true>(Arg.B).get_value());
             log_args_addr += bq::tools::make_size_seq<true>(Arg.B).get_element().get_aligned_value();
@@ -176,7 +177,7 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
             break;
         case EBqLogAnyType::Text:
             bq::tools::_type_copy<true>(Arg.T, log_args_addr, bq::tools::make_size_seq<true>(Arg.T).get_value());
-            log_args_addr += bq::tools::make_size_seq<true>(Arg.T).get_element().get_aligned_value(); 
+            log_args_addr += bq::tools::make_size_seq<true>(Arg.T).get_element().get_aligned_value();
             break;
         case EBqLogAnyType::Object:
             if (Arg.Obj == nullptr)
@@ -197,7 +198,7 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
             }else{
                 bq::tools::_type_copy<true>(Arg.FormattedString, log_args_addr, bq::tools::make_size_seq<true>(Arg.FormattedString).get_value());
                 log_args_addr += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
-            }                
+            }
             break;
             case EBqLogAnyType::SoftObject:
             case EBqLogAnyType::Vector:
@@ -213,7 +214,7 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
             break;
         }
     }
-    bq::api::__api_log_buffer_commit(log_id, handle);
+    bq::api::__api_log_write_finish(log_id, handle);
     return true;
 }
 
