@@ -137,15 +137,15 @@ namespace bq {
 
             virtual void run() override
             {
-                auto tid = bq::platform::thread::get_current_thread_id();
+                //auto tid = bq::platform::thread::get_current_thread_id();
                 for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
-                    if (i % 50000 == 0) {
+                    /*if (i % 50000 == 0) {
                         test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " before lock, iteration %" PRIu32 "\n", tid, i);
-                    }
+                    }*/
                     m_ptr->lock();
-                    if (i % 50000 == 0) {
+                    /*if (i % 50000 == 0) {
                         test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " got lock, iteration %" PRIu32 "\n", tid, i);
-                    }
+                    }*/
                     uint32_t value = base_value;
                     i_ptr->i.store_seq_cst(value);
                     for (uint32_t j = 0; j < cas_times_per_loop; ++j) {
@@ -153,11 +153,11 @@ namespace bq {
                         ++value;
                     }
                     m_ptr->unlock();
-                    if (i % 50000 == 0) {
+                    /*if (i % 50000 == 0) {
                         test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " released lock, iteration %" PRIu32 "\n", tid, i);
-                    }
+                    }*/
                 }
-                test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " finished all iterations\n", tid);
+                //test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " finished all iterations\n", tid);
             }
         };
 
@@ -231,17 +231,17 @@ namespace bq {
             }
             virtual void run() override
             {
-                auto tid = bq::platform::thread::get_current_thread_id();
+                //auto tid = bq::platform::thread::get_current_thread_id();
                 uint32_t error_count = 0;
                 for (uint32_t i = 0; i < 10000000; ++i) {
-                    if (i % 500000 == 0) {
+                    /*if (i % 500000 == 0) {
                         test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " before write_lock, iteration %" PRIu32 "\n", tid, i);
-                    }
+                    }*/
                     {
                         bq::platform::scoped_spin_lock_write_crazy lock(spin_lock_);
-                        if (i % 500000 == 0) {
+                        /*if (i % 500000 == 0) {
                             test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " got write_lock, iteration %" PRIu32 "\n", tid, i);
-                        }
+                        }*/
                         error_count += (counter_modify_by_read_.load_relaxed() % 10 == 0) ? 0U : 1U;
                         counter_modify_by_write_++;
                         counter_modify_by_write_++;
@@ -254,13 +254,13 @@ namespace bq {
                         ++counter_modify_by_write_;
                         ++counter_modify_by_write_;
                     }
-                    if (i % 500000 == 0) {
+                    /*if (i % 500000 == 0) {
                         test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " released write_lock, iteration %" PRIu32 "\n", tid, i);
-                    }
+                    }*/
                     bq::platform::thread::yield();
                     result_.add_result(error_count == 0, "spin_lock_rw_crazy test(write lock thread)");
                 }
-                test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " finished all iterations\n", tid);
+                //test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " finished all iterations\n", tid);
             }
 
         };

@@ -694,7 +694,7 @@ jobs:
                     echo "set pagination off" > gdb_cmds.txt
                     echo "thread apply all bt full" >> gdb_cmds.txt
                     echo "quit" >> gdb_cmds.txt
-                    
+            
                     echo "Starting GDB to generate backtrace..."
                     gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB execution failed."
                     echo "GDB backtrace generation finished."
@@ -791,7 +791,7 @@ jobs:
                     echo "set pagination off" > gdb_cmds.txt
                     echo "thread apply all bt full" >> gdb_cmds.txt
                     echo "quit" >> gdb_cmds.txt
-                    
+            
                     echo "Starting GDB to generate backtrace..."
                     gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB execution failed."
                     echo "GDB backtrace generation finished."
@@ -988,7 +988,7 @@ jobs:
               echo "Test failed with exit code $EXIT_CODE"
               # Look for core files. DragonflyBSD often names them <progname>.core
               CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name '*.core' \) 2>/dev/null | head -n1)"
-              
+            
               EXE=""
               for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
                 if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
@@ -1079,7 +1079,7 @@ jobs:
               echo "Test failed with exit code $EXIT_CODE"
               # Look for core files. DragonflyBSD often names them <progname>.core
               CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name '*.core' \) 2>/dev/null | head -n1)"
-              
+            
               EXE=""
               for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
                 if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
@@ -1179,86 +1179,11 @@ jobs:
               exit 1
             fi
 
+            set +e
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            
-            # Run test with timeout (15 minutes = 900 seconds)
-            TIMEOUT_SECONDS=900
-            
-            set +e
-            ./run_test_clang.sh ${{ matrix.cpp_ver }} &
-            TEST_PID=$!
-            
-            # Monitor the test process with timeout
-            ELAPSED=0
-            POLL_INTERVAL=10
-            while kill -0 $TEST_PID 2>/dev/null; do
-              sleep $POLL_INTERVAL
-              ELAPSED=$((ELAPSED + POLL_INTERVAL))
-              
-              if [ $ELAPSED -ge $TIMEOUT_SECONDS ]; then
-                echo ""
-                echo "=========================================="
-                echo "TEST TIMEOUT after ${TIMEOUT_SECONDS}s!"
-                echo "Attaching gdb to dump all thread stacks..."
-                echo "=========================================="
-                
-                # Find the actual test executable PID (child of shell)
-                EXE_PID=$(pgrep -P $TEST_PID BqLogUnitTest 2>/dev/null | head -n1)
-                if [ -z "$EXE_PID" ]; then
-                  EXE_PID=$(pgrep BqLogUnitTest 2>/dev/null | head -n1)
-                fi
-                
-                if [ -n "$EXE_PID" ]; then
-                  echo "Found BqLogUnitTest PID: $EXE_PID"
-                  
-                  # 查找可执行文件路径
-                  EXE=""
-                  for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
-                    if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
-                  done
-                  
-                  echo "Executable path: ${EXE:-<not found>}"
-                  echo "=== GDB live thread dump (OpenBSD) ==="
-                  
-                  if [ -n "$EXE" ]; then
-                    $GDB_CMD --batch -q \
-                      -ex "file $EXE" \
-                      -ex "attach $EXE_PID" \
-                      -ex "set pagination off" \
-                      -ex "info threads" \
-                      -ex "thread apply all bt full" \
-                      -ex "detach" \
-                      -ex "quit" \
-                      2>&1 || echo "gdb attach failed"
-                  else
-                    echo "WARNING: Executable not found, stack trace may not have symbols"
-                    $GDB_CMD --batch -q \
-                      -ex "set pagination off" \
-                      -ex "info threads" \
-                      -ex "thread apply all bt full" \
-                      -ex "detach" \
-                      -ex "quit" \
-                      -p $EXE_PID 2>&1 || echo "gdb attach failed"
-                  fi
-                else
-                  echo "Could not find BqLogUnitTest process"
-                  echo "Current processes:"
-                  ps aux | grep -i bqlog || true
-                fi
-                
-                # Kill the test process
-                kill -9 $TEST_PID 2>/dev/null || true
-                pkill -9 BqLogUnitTest 2>/dev/null || true
-                
-                echo "Test killed due to timeout"
-                exit 1
-              fi
-            done
-            
-            # Test finished, get exit code
-            wait $TEST_PID
+            ./run_test_clang.sh ${{ matrix.cpp_ver }}
             EXIT_CODE=$?
             set -e
 
@@ -1294,7 +1219,6 @@ jobs:
               exit $EXIT_CODE
             fi
             touch ../../../UNIT_TEST_SUCCESS
-
 
       - name: Check Retry
         id: CheckRetry
@@ -1383,86 +1307,11 @@ jobs:
               exit 1
             fi
 
+            set +e
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            
-            # Run test with timeout (20 minutes = 1200 seconds)
-            TIMEOUT_SECONDS=1200
-            
-            set +e
-            ./run_test_clang.sh ${{ matrix.cpp_ver }} &
-            TEST_PID=$!
-            
-            # Monitor the test process with timeout
-            ELAPSED=0
-            POLL_INTERVAL=10
-            while kill -0 $TEST_PID 2>/dev/null; do
-              sleep $POLL_INTERVAL
-              ELAPSED=$((ELAPSED + POLL_INTERVAL))
-              
-              if [ $ELAPSED -ge $TIMEOUT_SECONDS ]; then
-                echo ""
-                echo "=========================================="
-                echo "TEST TIMEOUT after ${TIMEOUT_SECONDS}s!"
-                echo "Attaching gdb to dump all thread stacks..."
-                echo "=========================================="
-                
-                # Find the actual test executable PID (child of shell)
-                EXE_PID=$(pgrep -P $TEST_PID BqLogUnitTest 2>/dev/null | head -n1)
-                if [ -z "$EXE_PID" ]; then
-                  EXE_PID=$(pgrep BqLogUnitTest 2>/dev/null | head -n1)
-                fi
-                
-                if [ -n "$EXE_PID" ]; then
-                  echo "Found BqLogUnitTest PID: $EXE_PID"
-                  
-                  # 查找可执行文件路径
-                  EXE=""
-                  for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
-                    if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
-                  done
-                  
-                  echo "Executable path: ${EXE:-<not found>}"
-                  echo "=== GDB live thread dump (OpenBSD) ==="
-                  
-                  if [ -n "$EXE" ]; then
-                    $GDB_CMD --batch -q \
-                      -ex "file $EXE" \
-                      -ex "attach $EXE_PID" \
-                      -ex "set pagination off" \
-                      -ex "info threads" \
-                      -ex "thread apply all bt full" \
-                      -ex "detach" \
-                      -ex "quit" \
-                      2>&1 || echo "gdb attach failed"
-                  else
-                    echo "WARNING: Executable not found, stack trace may not have symbols"
-                    $GDB_CMD --batch -q \
-                      -ex "set pagination off" \
-                      -ex "info threads" \
-                      -ex "thread apply all bt full" \
-                      -ex "detach" \
-                      -ex "quit" \
-                      -p $EXE_PID 2>&1 || echo "gdb attach failed"
-                  fi
-                else
-                  echo "Could not find BqLogUnitTest process"
-                  echo "Current processes:"
-                  ps aux | grep -i bqlog || true
-                fi
-                
-                # Kill the test process
-                kill -9 $TEST_PID 2>/dev/null || true
-                pkill -9 BqLogUnitTest 2>/dev/null || true
-                
-                echo "Test killed due to timeout"
-                exit 1
-              fi
-            done
-            
-            # Test finished, get exit code
-            wait $TEST_PID
+            ./run_test_clang.sh ${{ matrix.cpp_ver }}
             EXIT_CODE=$?
             set -e
 
@@ -1499,9 +1348,7 @@ jobs:
             fi
             touch ../../../UNIT_TEST_SUCCESS
 
-
   openBSD_arm64_Clang:
-
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
     runs-on: ubuntu-latest
     strategy:
@@ -2352,7 +2199,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Dotnet
         uses: actions/setup-dotnet@v4
         with:
@@ -2368,7 +2215,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install mono
-      
+
       - name: Install CMake
         if: runner.os == 'Windows'
         uses: lukka/get-cmake@latest
@@ -2465,14 +2312,14 @@ jobs:
 
           if [ $EXIT_CODE -ne 0 ]; then
             echo "Test script failed with exit code $EXIT_CODE"
-            
+          
             if [ "$RUNNER_OS" == "Linux" ]; then
               # Search for core files in current dir and /var/crash (apport default)
               CORE_FILE=$(find . -maxdepth 5 -name "core.*" | head -n 1)
               if [ -z "$CORE_FILE" ]; then
                  CORE_FILE=$(find /var/crash -name "*core*" 2>/dev/null | head -n 1)
               fi
-              
+          
               if [ -n "$CORE_FILE" ]; then
                 echo "Found core dump: $CORE_FILE"
                 NODE_BIN=$(which node)

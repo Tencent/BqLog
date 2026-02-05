@@ -13,10 +13,14 @@ import { test_base } from "./test_base.ts";
 import { test_result } from "./test_result.ts";
 import { bq } from "./bq_lib.ts";
 import { test_manager } from "./test_manager.ts";
-import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
-import { pathToFileURL } from "url";
+import { Worker } from "worker_threads";
+import { pathToFileURL, fileURLToPath } from "url";
+import * as path from "path";
+
+
 
 export class test_log_2 extends test_base {
+
     private log_inst_sync: any; // Type inference difficult without direct import, using any for internal instance
     private log_inst_async: any;
     private appender: string = "";
@@ -50,17 +54,15 @@ export class test_log_2 extends test_base {
 
         console.log("Starting Sync Test (NodeJS Workers)...");
         
-        // Locate library path for workers from env set by test_main
-        const libPath = process.env.BQLOG_LIB_PATH || require.resolve("../../../../../wrapper/typescript/dist/cjs/index.js");
+        const lib_path = process.env.BQLOG_LIB_PATH || require.resolve("../../../../../wrapper/typescript/dist/cjs/index.js");
 
-        // Sync Log Stress
-        await this.run_worker_pool("sync_log", 1024, 5, 128, libPath);
+        await this.run_worker_pool("sync_log", 1024, 5, 128, lib_path);
         console.log("Sync Test Finished");
 
-        // Async Log Stress
         console.log("Starting Async Test (NodeJS Workers)...");
-        await this.run_worker_pool("async_log", 128, 5, 2048, libPath);
+        await this.run_worker_pool("async_log", 128, 5, 2048, lib_path);
         console.log("Async Test Finished");
+
 
         this.log_inst_async.force_flush();
         result.add_result(true, "");
@@ -84,11 +86,15 @@ export class test_log_2 extends test_base {
         return result;
     }
 
-    private run_worker_pool(logName: string, total_tasks: number, concurrent_limit: number, loops: number, libPath: string): Promise<void> {
+    private run_worker_pool(log_name: string, total_tasks: number, concurrent_limit: number, loops: number, lib_path: string): Promise<void> {
         const mode = process.env.BQLOG_TEST_MODE || 'CJS';
-        if (mode === 'ESM' && !libPath.startsWith('file:')) {
-            libPath = pathToFileURL(libPath).href;
+        if (mode === 'ESM' && !lib_path.startsWith('file:')) {
+            lib_path = pathToFileURL(lib_path).href;
         }
+
+        const worker_script_path = path.join(process.cwd(), 'src/bq/test/worker_script.ts');
+
+
 
         return new Promise((resolve, reject) => {
             let active = 0;
@@ -100,48 +106,13 @@ export class test_log_2 extends test_base {
                     active++;
                     started++;
                     
-                    const worker = new Worker(`
-                        const { parentPort, workerData } = require('worker_threads');
-                        
-                        let bq;
-                        if (workerData.mode === 'ESM') {
-                            // Async import in worker eval is tricky, we use a simple hack:
-                            // We can't use top-level await in eval in all node versions.
-                            // But we can use dynamic import().then().
-                            import(workerData.libPath).then(mod => {
-                                bq = mod.bq;
-                                start();
-                            });
-                        } else {
-                            // CJS
-                            const mod = require(workerData.libPath);
-                            bq = mod.bq;
-                            start();
-                        }
-
-                        async function start() {
-                            const log_inst = bq.log.get_log_by_name(workerData.logName);
-                            const appender = workerData.appender;
-                            const count = workerData.count;
-                            
-                            let log_content = "";
-                            for(let i=0; i<count; i++) {
-                                log_content += appender;
-                                log_inst.info(log_content);
-                                if (i % 100 === 0) {
-                                    await new Promise(resolve => setImmediate(resolve));
-                                }
-                            }
-                            parentPort.postMessage('done');
-                        }
-                    `, {
-                        eval: true,
+                    const worker = new Worker(worker_script_path, {
                         workerData: {
-                            libPath: libPath,
-                            logName: logName,
+                            lib_path: lib_path,
+                            log_name: log_name,
                             appender: this.appender,
                             count: loops,
-                            mode: process.env.BQLOG_TEST_MODE || 'CJS'
+                            mode: mode
                         }
                     });
 
@@ -165,3 +136,4 @@ export class test_log_2 extends test_base {
         });
     }
 }
+
