@@ -123,8 +123,9 @@ namespace bq.test
                     result.add_result(content.EndsWith("ConsoleTest"), "console callback test 3");
                 }
             });
-#pragma warning restore CS0618
             log_inst_console.debug("ConsoleTest");
+            bq.log.register_console_callback(null);
+#pragma warning restore CS0618
 
             log_inst_async.force_flush();
             result.add_result(true, "");
