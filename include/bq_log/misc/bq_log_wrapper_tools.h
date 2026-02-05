@@ -462,26 +462,33 @@ namespace bq {
             }
         };
 
-        template <size_t CHAR_SIZE>
+        template <size_t CHAR_SIZE, typename T = void>
         struct null_str_impl {
         };
 
-        template <>
-        struct null_str_impl<1> {
+        template <typename T>
+        struct null_str_impl<1, T> {
             static constexpr char value[4] = { 'n', 'u', 'l', 'l' };
         };
-        template <>
-        struct null_str_impl<2> {
+        template <typename T>
+        constexpr char null_str_impl<1, T>::value[4];
+
+        template <typename T>
+        struct null_str_impl<2, T> {
             static constexpr char16_t value[4] = { u'n', u'u', u'l', u'l' };
         };
-        template <>
-        struct null_str_impl<4> {
-            static constexpr char16_t value[4] = {u'n', u'u', u'l', u'l'};
+        template <typename T>
+        constexpr char16_t null_str_impl<2, T>::value[4];
+
+        template <typename T>
+        struct null_str_impl<4, T> {
+            static constexpr char16_t value[4] = { u'n', u'u', u'l', u'l' };
         };
+        template <typename T>
+        constexpr char16_t null_str_impl<4, T>::value[4];
 
         template <typename CHAR_TYPE>
-        struct null_str : null_str_impl<sizeof(CHAR_TYPE)>{
-        };
+        using null_str = null_str_impl<sizeof(CHAR_TYPE)>;
 
         template <typename CHAR_TYPE>
         struct _serialize_str_helper_by_encode : public _serialize_str_helper_by_encode_impl<CHAR_TYPE, sizeof(CHAR_TYPE)> {
