@@ -21,10 +21,6 @@ namespace bq {
     namespace platform {
         struct thread_platform_def {
             bq::platform::atomic<HANDLE> thread_handle = INVALID_HANDLE_VALUE;
-#if defined(BQ_JAVA)
-            JavaVM* jvm = nullptr;
-            JNIEnv* jenv = nullptr;
-#endif
         };
 
         struct thread_platform_processor {
@@ -45,22 +41,6 @@ namespace bq {
             platform_data_ = (thread_platform_def*)malloc(sizeof(thread_platform_def));
             new (platform_data_, bq::enum_new_dummy::dummy) thread_platform_def();
         }
-
-#if defined(BQ_JAVA)
-        void thread::attach_to_jvm()
-        {
-            assert(status_.load() == enum_thread_status::init && "attach_to_jvm can only be called before thread is running!");
-            platform_data_->jvm = get_jvm();
-        }
-
-        JNIEnv* thread::get_jni_env()
-        {
-            auto current_thread_id = get_current_thread_id();
-            auto thread_id_this = get_thread_id();
-            assert(current_thread_id == thread_id_this && "bq_thread::get_jni_env can only be called in the thread which is created by bq_thread instance!");
-            return platform_data_->jenv;
-        }
-#endif
 
         void thread::set_thread_name(const bq::string& thread_name)
         {
@@ -283,17 +263,6 @@ namespace bq {
 
         void thread::internal_run()
         {
-#if defined(BQ_JAVA)
-            if (platform_data_->jvm) {
-                using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThread), 0>;
-                jint result = platform_data_->jvm->AttachCurrentThread(reinterpret_cast<attach_param_type>(&platform_data_->jenv), NULL);
-                if (result != JNI_OK) {
-                    bq::util::log_device_console(bq::log_level::error, "failed to JavaVM AttachCurrentThread, result code %" PRId32, static_cast<int32_t>(result));
-                    assert(false && "failed to JavaVM AttachCurrentThread");
-                    return;
-                }
-            }
-#endif
             while (status_.load() != enum_thread_status::running
                 && status_.load() != enum_thread_status::pendding_cancel
                 && status_.load() != enum_thread_status::detached) {
@@ -311,9 +280,7 @@ namespace bq {
             thread_id_ = 0;
             bq::util::log_device_console(log_level::info, "thread cancel success");
 #if defined(BQ_JAVA)
-            if (platform_data_->jvm) {
-                platform_data_->jvm->DetachCurrentThread();
-            }
+            bq::platform::try_to_detach_thread();
 #endif
             status_.store_seq_cst(enum_thread_status::released);
         }

@@ -30,9 +30,6 @@ namespace bq {
         , wait_flag_(false)
         , awake_flag_(false)
     {
-#if defined(BQ_JAVA)
-        attach_to_jvm();
-#endif
     }
 
     log_worker::~log_worker()

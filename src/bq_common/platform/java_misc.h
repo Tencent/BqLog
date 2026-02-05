@@ -39,6 +39,8 @@ namespace bq {
 
         jint jni_init(JavaVM* vm, void* reserved);
 
+        void try_to_detach_thread();
+
         //Sometimes, you need remove global-ref in TLS variable destructor when thread is exiting.
         // This function can help you do that in an async way to avoid JVM errors.
         void remove_global_ref_async(jobject recycle_obj);

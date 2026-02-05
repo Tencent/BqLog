@@ -57,11 +57,6 @@ namespace bq {
 
             thread(thread&& rhs) = delete;
 
-#if defined(BQ_JAVA)
-            void attach_to_jvm();
-            JNIEnv* get_jni_env();
-#endif
-
             thread& operator=(const thread& rhs) = delete;
 
             thread& operator=(thread&& rhs) = delete;

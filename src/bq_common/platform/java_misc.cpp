@@ -79,15 +79,7 @@ namespace bq {
         struct tls_java_env_lifecycle_holder
         {
             ~tls_java_env_lifecycle_holder() {
-                if (tls_attach_phase == 1) {
-                    if (!common_global_vars::get().is_jvm_destroyed()) {
-                        jint detach_result = java_vm->DetachCurrentThread();
-                        if (JNI_OK != detach_result) {
-                            // JVM is destroying
-                        }
-                    }
-                }
-                tls_attach_phase = 2;
+                try_to_detach_thread();
             }
         };
 
@@ -142,6 +134,19 @@ namespace bq {
             env->DeleteLocalRef(jobj_big_endian_local);
 
             env->DeleteLocalRef(cls_byte_order);
+        }
+
+        void try_to_detach_thread()
+        {
+            if (tls_attach_phase == 1) {
+                if (!common_global_vars::get().is_jvm_destroyed()) {
+                    jint detach_result = java_vm->DetachCurrentThread();
+                    if (JNI_OK != detach_result) {
+                        // JVM is destroying
+                    }
+                }
+            }
+            tls_attach_phase = 2;
         }
 
         jint jni_init(JavaVM* vm, void* reserved)
