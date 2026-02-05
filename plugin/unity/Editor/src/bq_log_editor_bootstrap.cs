@@ -24,135 +24,70 @@ namespace BqLog.Editor
     [InitializeOnLoad]
     public static class bq_log_editor_bootstrap
     {
-#if !UNITY_2017_1_OR_NEWER && !UNITY_5_3_OR_NEWER
-        private static bool was_compiling_;
-#endif
-        private static bq.log.type_console_callback s_console_callback;
         static bq_log_editor_bootstrap()
         {
-            // Try to register once on next editor update (after domain reload)
-            EditorApplication.delayCall += register_callback;
-
-#if UNITY_2017_1_OR_NEWER
-            AssemblyReloadEvents.afterAssemblyReload -= on_after_assembly_reload;
-            AssemblyReloadEvents.afterAssemblyReload += on_after_assembly_reload;
-            EditorApplication.wantsToQuit += on_quit;
-            EditorApplication.playModeStateChanged -= on_play_mode_changed;
-            EditorApplication.playModeStateChanged += on_play_mode_changed;
-#elif UNITY_5_3_OR_NEWER
-            // 5.3+：Use DidReloadScripts
-            // delayCall has already been used to register once after domain reload
-            EditorApplication.quitting += on_quit;
-            #pragma warning disable 618
-            EditorApplication.playmodeStateChanged -= on_play_mode_changed_legacy;
-            EditorApplication.playmodeStateChanged += on_play_mode_changed_legacy;
-            #pragma warning restore 618
-#else
-            // 5.0–5.2：no hook for domain reload, poll compilation state
-            was_compiling_ = EditorApplication.isCompiling;
-            EditorApplication.update -= poll_compilation_and_register;
-            EditorApplication.update += poll_compilation_and_register;
-            EditorApplication.quitting += on_quit;
-#endif
+            EditorApplication.update -= on_editor_update;
+            EditorApplication.update += on_editor_update;
+            bq.log.set_console_buffer_enable(true);
         }
 
 
-#if UNITY_2017_1_OR_NEWER
-        private static void on_play_mode_changed(PlayModeStateChange state)
+        static void on_editor_update()
         {
-            if (state == PlayModeStateChange.ExitingEditMode ||
-                state == PlayModeStateChange.EnteredEditMode)
-                bq.log.register_console_callback(null);
-            else if (state == PlayModeStateChange.EnteredPlayMode)
+            while (bq.log.fetch_and_remove_console_buffer((ulong log_id, int category_idx, bq.def.log_level log_level, string content) => {
+                log_no_stack(log_level, content);
+            }))
             {
-                Debug.Log($"[BqLog] Re-register on PlayMode: {state}");
-                register_callback();
+
             }
         }
-        private static bool on_quit()
-        {
-            Debug.Log("[BqLog] Try To Register Console Callback By Assembly on_quit");
-            bq.log.register_console_callback(null);
-            return true;
-        }
-        private static void on_after_assembly_reload()
-        {
-            register_callback();
-        }
-#elif UNITY_5_3_OR_NEWER
-        private static void on_quit(){
-            bq.log.register_console_callback(null);
-        }
-        [UnityEditor.Callbacks.DidReloadScripts]
-        private static void on_after_assembly_reload()
-        {
-            register_callback();
-        }
-        private static void on_play_mode_changed_legacy()
-        {
-            //need process for user
-            bq.log.register_console_callback(null);
-        }
-#else
-        private static void on_quit(){
-            bq.log.register_console_callback(null);
-        }
-        private static void poll_compilation_and_register()
-        {
-            bool now = EditorApplication.isCompiling;
-            if (was_compiling_ && !now)
-            {
-                register_callback();
-            }
-            was_compiling_ = now;
-        }
-#endif
 
-        private static void register_callback()
+        private static void log_no_stack(bq.def.log_level log_level, string msg)
         {
-            Debug.Log("[BqLog] Try To Register Console Callback By Assembly Reload");
-            s_console_callback = new bq.log.type_console_callback(console_callback);
-            bq.log.register_console_callback(s_console_callback);//
-        }
-
-        private static void console_callback(ulong log_id, int category_idx, bq.def.log_level level, string content)
-        {
-            switch (level)
+#if UNITY_2017_1_OR_NEWER
+            switch (log_level)
             {
-                case bq.def.log_level.verbose:
-                case bq.def.log_level.debug:
-                case bq.def.log_level.info:
-                    log_no_stack(LogType.Log, content);
+                case log_level.verbose:
+                    Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "[Bq] {0}", msg);
                     break;
-                case bq.def.log_level.warning:
-                    log_no_stack(LogType.Warning, content);
+                case log_level.debug:
+                    Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "[Bq] {0}", msg);
                     break;
-                case bq.def.log_level.error:
-                    log_no_stack(LogType.Error, content);
+                case log_level.info:
+                    Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "[Bq] {0}", msg);
                     break;
-                case bq.def.log_level.fatal:
-                    log_no_stack(LogType.Exception, content);
+                case log_level.warning:
+                    Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, null, "[Bq] {0}", msg);
+                    break;
+                case log_level.error:
+                    Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, null, "[Bq] {0}", msg);
+                    break;
+                case log_level.fatal:
+                    Debug.LogFormat(LogType.Assert, LogOption.NoStacktrace, null, "[Bq] {0}", msg);
                     break;
                 default:
-                    log_no_stack(LogType.Log, content);
+                    Debug.Log(msg);
                     break;
             }
-        }
-
-        private static void log_no_stack(LogType type, string msg)
-        {
-#if UNITY_2017_1_OR_NEWER
-            Debug.LogFormat(type, LogOption.NoStacktrace, null, "bq {0}", msg);
 #else
-            switch (type)
+            switch (log_level)
             {
-                case LogType.Warning:
+                case log_level.verbose:
+                    Debug.Log(msg);
+                    break;
+                case log_level.debug:
+                    Debug.Log(msg);
+                    break;
+                case log_level.info:
+                    Debug.Log(msg);
+                    break;
+                case log_level.warning:
                     Debug.LogWarning(msg);
                     break;
-                case LogType.Error:
+                case log_level.error:
                     Debug.LogError(msg);
                     break;
-                case LogType.Exception:
+                case log_level.fatal:
                     Debug.LogError(msg);
                     break;
                 default:
