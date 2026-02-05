@@ -225,10 +225,10 @@ namespace bq {
         }
         bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
-        size_t format_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content);
+        size_t format_size = bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_size(log_format_content);
         size_t total_format_data_size = format_size + bq::get<1>(stack_info);
         bq::_api_log_write_handle handle;
-        const void* format_data_ptr = should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content);
+        const void* format_data_ptr = should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_addr(log_format_content);
         handle = bq::api::__api_log_write_begin(log_id_,
                 static_cast<uint8_t>(level),
                 category_index,
@@ -257,12 +257,12 @@ namespace bq {
         }
         bool should_print_stack = (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << (int32_t)level));
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
-        size_t format_size = bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_size(log_format_content);
+        size_t format_size = bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_size(log_format_content);
         size_t total_format_data_size = format_size + bq::get<1>(stack_info);
         auto args_size_seq = bq::tools::make_size_seq<true>(args...);
         size_t total_args_size = args_size_seq.get_total();
         bq::_api_log_write_handle handle;
-        const void* format_data_ptr = should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<false, STR>::get_storage_data_addr(log_format_content);
+        const void* format_data_ptr = should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_addr(log_format_content);
         handle = bq::api::__api_log_write_begin(log_id_,
             static_cast<uint8_t>(level),
             category_index,
