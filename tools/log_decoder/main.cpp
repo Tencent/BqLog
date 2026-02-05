@@ -70,13 +70,13 @@ static void print_help(const char* prog)
     CONSOLE_OUTPUT(bq::log_level::debug, "%s", output.c_str());
 }
 
-static bool parse_args(int argc, char* argv[], Options& opt)
+static bool parse_args(int32_t argc, char* argv[], Options& opt)
 {
     if (argc <= 1) {
         opt.show_help = true;
         return true;
     }
-    for (int i = 1; i < argc; ++i) {
+    for (int32_t i = 1; i < argc; ++i) {
         const bq::string arg(argv[i]);
         if (arg == "-h" || arg == "--help") {
             opt.show_help = true;
@@ -136,12 +136,12 @@ static bq::string wchar_to_utf8(const wchar_t* wstr)
     if (!wstr || !*wstr) {
         return bq::string();
     }
-    int utf8_len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+    int32_t utf8_len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
     if (utf8_len <= 0) {
         return bq::string();
     }
     bq::string result;
-    result.fill_uninitialized(utf8_len - 1);  // -1 to exclude null terminator
+    result.fill_uninitialized(static_cast<size_t>(utf8_len - 1));  // -1 to exclude null terminator
     WideCharToMultiByte(CP_UTF8, 0, wstr, -1, result.begin(), utf8_len, NULL, NULL);
     return result;
 }
@@ -154,7 +154,7 @@ int32_t main(int32_t argc, char* argv[])
     SetConsoleCP(CP_UTF8);
     
     // Get UTF-16 encoded command line arguments
-    int wargc;
+    int32_t wargc;
     LPWSTR* wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
     
     // Convert to UTF-8 strings
@@ -163,10 +163,10 @@ int32_t main(int32_t argc, char* argv[])
     if (wargv) {
         utf8_args.set_capacity(wargc);
         utf8_argv_ptrs.set_capacity(wargc);
-        for (int i = 0; i < wargc; ++i) {
+        for (int32_t i = 0; i < wargc; ++i) {
             utf8_args.push_back(wchar_to_utf8(wargv[i]));
         }
-        for (int i = 0; i < wargc; ++i) {
+        for (int32_t i = 0; i < wargc; ++i) {
             utf8_argv_ptrs.push_back(utf8_args[i].begin());
         }
         argc = wargc;
