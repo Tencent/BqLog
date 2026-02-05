@@ -201,7 +201,8 @@ namespace bq {
         enum class _string_type {
             c_style_type,
             array_type,
-            cls_type
+            cls_type,
+            custom_type
         };
 
         template <typename T>
@@ -344,6 +345,18 @@ namespace bq {
             static bq_forceinline size_t get_array_string_storage_size(const CHAR_TYPE (&str)[N])
             {
                 return ((str[N - 1] == '\0') ? (N - 1) : N) * sizeof(CHAR_TYPE);
+            }
+
+            template <typename T>
+            static bq_forceinline bq::enable_if_t<_custom_type_helper<T>::has_member_size_func, size_t> get_custom_string_storage_size(const T& str)
+            {
+                return str.bq_log_format_str_size() * sizeof(CHAR_TYPE);
+            }
+
+            template <typename T>
+            static bq_forceinline bq::enable_if_t<_custom_type_helper<T>::has_global_size_func, size_t> get_custom_string_storage_size(const T& str)
+            {
+                return bq_log_format_str_size(str) * sizeof(CHAR_TYPE);
             }
 
             template <typename T>
@@ -570,15 +583,83 @@ namespace bq {
                 }
             }
         };
+        template <bool INCLUDE_TYPE_INFO>
+        struct _serialize_str_helper_by_type_impl<INCLUDE_TYPE_INFO, _string_type::custom_type> {
+            template <typename STRING_TYPE>
+            static bq_forceinline size_t get_storage_data_size(const STRING_TYPE& str)
+            {
+                static_assert(sizeof(typename _custom_type_helper<STRING_TYPE>::char_type) == 1 || sizeof(typename _custom_type_helper<STRING_TYPE>::char_type) == 2 || sizeof(typename _custom_type_helper<STRING_TYPE>::char_type) == 4, "invalid char type!");
+                size_t str_data_len = _serialize_str_helper_by_encode<typename _custom_type_helper<STRING_TYPE>::char_type>::template get_custom_string_storage_size<STRING_TYPE>(str);
+                return str_data_len;
+            }
+
+            template <typename STRING_TYPE>
+            static bq_forceinline const bq::enable_if_t<_custom_type_helper<STRING_TYPE>::has_member_c_str_func, const bq::remove_cv_t<typename _custom_type_helper<STRING_TYPE>::char_type>*> get_storage_data_addr(const STRING_TYPE& str)
+            {
+                return str.bq_log_format_str_chars();
+            }
+            template <typename STRING_TYPE>
+            static bq_forceinline const bq::enable_if_t<_custom_type_helper<STRING_TYPE>::has_global_c_str_func, const bq::remove_cv_t<typename _custom_type_helper<STRING_TYPE>::char_type>*> get_storage_data_addr(const STRING_TYPE& str)
+            {
+                return bq_log_format_str_chars(str);
+            }
+            template <typename STRING_TYPE>
+            static bq_forceinline const bq::enable_if_t<_custom_type_helper<STRING_TYPE>::has_member_custom_format_func || _custom_type_helper<STRING_TYPE>::has_global_custom_format_func, const bq::remove_cv_t<typename _custom_type_helper<STRING_TYPE>::char_type>*> get_storage_data_addr(const STRING_TYPE& str)
+            {
+                (void)str;
+                return nullptr;
+            }
+            template <typename STRING_TYPE>
+            static bq_forceinline bq::enable_if_t<_custom_type_helper<STRING_TYPE>::has_member_c_str_func || _custom_type_helper<STRING_TYPE>::has_global_c_str_func, void> type_copy(const STRING_TYPE& str, uint8_t* data_addr, size_t data_size)
+            {
+                _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<STRING_TYPE>());
+                data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
+                // potential risk, data_size may bigger than max uint32_t
+                uint32_t string_size = (uint32_t)(data_size - bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4 + sizeof(uint32_t), sizeof(uint32_t)>::value);
+                *((uint32_t*)(data_addr)) = string_size;
+                data_addr += sizeof(uint32_t);
+                if (string_size > 0) {
+                    _serialize_str_helper_by_encode<typename _custom_type_helper<STRING_TYPE>::char_type>::c_style_string_copy(data_addr, get_storage_data_addr(str), string_size);
+                }
+            }
+            template <typename STRING_TYPE>
+            static bq_forceinline bq::enable_if_t<_custom_type_helper<STRING_TYPE>::has_member_custom_format_func, void> type_copy(const STRING_TYPE& str, uint8_t* data_addr, size_t data_size)
+            {
+                _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<STRING_TYPE>());
+                data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
+                // potential risk, data_size may bigger than max uint32_t
+                uint32_t string_size = (uint32_t)(data_size - bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4 + sizeof(uint32_t), sizeof(uint32_t)>::value);
+                *((uint32_t*)(data_addr)) = string_size;
+                data_addr += sizeof(uint32_t);
+                if (string_size > 0) {
+                    str.bq_log_custom_format(reinterpret_cast<typename _custom_type_helper<STRING_TYPE>::char_type*>(data_addr), data_size);
+                }
+            }
+            template <typename STRING_TYPE>
+            static bq_forceinline bq::enable_if_t<_custom_type_helper<STRING_TYPE>::has_global_custom_format_func, void> type_copy(const STRING_TYPE& str, uint8_t* data_addr, size_t data_size)
+            {
+                _type_copy_type_info<INCLUDE_TYPE_INFO>(data_addr, _get_log_param_type_enum<STRING_TYPE>());
+                data_addr += bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4, 0>::value;
+                // potential risk, data_size may bigger than max uint32_t
+                uint32_t string_size = (uint32_t)(data_size - bq::condition_value<INCLUDE_TYPE_INFO, size_t, 4 + sizeof(uint32_t), sizeof(uint32_t)>::value);
+                *((uint32_t*)(data_addr)) = string_size;
+                data_addr += sizeof(uint32_t);
+                if (string_size > 0) {
+                    bq_log_custom_format(str, reinterpret_cast<typename _custom_type_helper<STRING_TYPE>::char_type*>(data_addr), data_size);
+                }
+            }
+        };
 
         template <bool INCLUDE_TYPE_INFO, typename STR_TYPE>
         struct _serialize_str_helper_by_type : public _serialize_str_helper_by_type_impl<
             INCLUDE_TYPE_INFO, 
-            bq::condition_value<(_custom_type_helper<STR_TYPE>::is_valid || _is_bq_string_like<STR_TYPE>::value || _is_std_string_view_like<STR_TYPE>::value),
-            _string_type,
-            _string_type::cls_type,
-            bq::condition_value<bq::is_array<STR_TYPE>::value, _string_type,
-            _string_type::array_type, _string_type::c_style_type>::value>::value>{
+            bq::condition_value<(_custom_type_helper<STR_TYPE>::is_valid), _string_type, _string_type::custom_type, 
+            bq::condition_value<(_is_bq_string_like<STR_TYPE>::value || _is_std_string_view_like<STR_TYPE>::value), _string_type, _string_type::cls_type,
+            bq::condition_value<(bq::is_array<STR_TYPE>::value), _string_type, _string_type::array_type,
+            _string_type::c_style_type
+            >::value
+            >::value
+            >::value>{
         };
 
         //================================================string helpers end============================================

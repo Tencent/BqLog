@@ -40,7 +40,6 @@ namespace bq {
                 bq::string standard_end_str = (log_id == sync_log_id) ? (bq::string("force flush test sync log ") + idx_tmp) : (bq::string("force flush test async log ") + idx_tmp);
                 bq::string log_content(content, static_cast<size_t>(length));
                 test_result_ptr->add_result(log_content.end_with(standard_end_str), (log_id == sync_log_id) ? "force flush test sync" : "force flush test async");
-
             }
         };
         test_result* test_force_flush_callback::test_result_ptr = nullptr;
