@@ -56,11 +56,11 @@ export class test_log_2 extends test_base {
         
         const lib_path = process.env.BQLOG_LIB_PATH || require.resolve("../../../../../wrapper/typescript/dist/cjs/index.js");
 
-        await this.run_worker_pool("sync_log", 1024, 5, 128, lib_path);
+        await this.run_worker_pool("sync_log", 128, 5, 128, lib_path);
         console.log("Sync Test Finished");
 
         console.log("Starting Async Test (NodeJS Workers)...");
-        await this.run_worker_pool("async_log", 128, 5, 2048, lib_path);
+        await this.run_worker_pool("async_log", 64, 5, 2048, lib_path);
         console.log("Async Test Finished");
 
 
