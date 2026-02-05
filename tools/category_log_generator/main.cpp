@@ -13,6 +13,10 @@
 #include "category_generator.h"
 
 #include <iostream>
+#if defined(WIN32)
+#include "Windows.h"
+#include <shellapi.h> // for CommandLineToArgvW
+#endif // WIN
 
 static void print_usage(std::ostream& os)
 {
@@ -29,8 +33,51 @@ static void print_usage(std::ostream& os)
        << "  BqLog_CategoryLogGenerator DemoCategoryLog ./categories.txt ./out\n\n";
 }
 
+#if defined(WIN32)
+// Convert wide string to UTF-8
+static bq::string wchar_to_utf8(const wchar_t* wstr)
+{
+    if (!wstr || !*wstr) {
+        return bq::string();
+    }
+    int utf8_len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+    if (utf8_len <= 0) {
+        return bq::string();
+    }
+    bq::string result;
+    result.fill_uninitialized(utf8_len - 1); // -1 to exclude null terminator
+    WideCharToMultiByte(CP_UTF8, 0, wstr, -1, result.begin(), utf8_len, NULL, NULL);
+    return result;
+}
+#endif
+
 int32_t main(int32_t argc, char* argv[])
 {
+#if defined(WIN32)
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    // Get UTF-16 encoded command line arguments
+    int wargc;
+    LPWSTR* wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
+
+    // Convert to UTF-8 strings
+    bq::array<bq::string> utf8_args;
+    bq::array<char*> utf8_argv_ptrs;
+    if (wargv) {
+        utf8_args.set_capacity(wargc);
+        utf8_argv_ptrs.set_capacity(wargc);
+        for (int i = 0; i < wargc; ++i) {
+            utf8_args.push_back(wchar_to_utf8(wargv[i]));
+        }
+        for (int i = 0; i < wargc; ++i) {
+            utf8_argv_ptrs.push_back(utf8_args[i].begin());
+        }
+        argc = wargc;
+        argv = utf8_argv_ptrs.begin();
+        LocalFree(wargv);
+    }
+#endif
     bq::string help_flag1 = "--help";
     bq::string help_flag2 = "-h";
 
