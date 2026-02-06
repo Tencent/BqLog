@@ -40,7 +40,7 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
     if(should_print_stack){
         bq::api::__api_get_stack_trace_utf16(&stack_string_def, 0);
     }
-    size_t format_size = sizeof(char16_t) * bq_log_format_str_size(FormatString);
+    size_t format_size = bq::tools::_serialize_str_helper_by_type<FString>::get_storage_data_size(FormatString);
     size_t total_format_data_size = format_size + stack_string_def.len;
     size_t total_args_size = 0;
     for (FBqLogAny& Arg : const_cast<TArray<FBqLogAny>&>(Args))
@@ -122,20 +122,20 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
         break;
         }
     }
-
+    const void* format_data_ptr = should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<FString>::get_storage_data_addr(FormatString);
     auto handle = bq::api::__api_log_write_begin(log_id
         , static_cast<uint8_t>(static_cast<int32_t>(Level))
         , static_cast<uint32_t>(CategoryIndex)
         , static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type)
         , static_cast<uint32_t>(total_format_data_size)
-        , should_print_stack ? nullptr : reinterpret_cast<const void*>(bq_log_format_str_chars(FormatString))
+        , format_data_ptr
         , static_cast<uint32_t>(total_args_size));
     if (handle.result != bq::enum_buffer_result_code::success) {
         return false;
     }
-    if(should_print_stack){
+    if(!format_data_ptr){
         //Ugly hack
-        bq::tools::_type_copy<false>(FormatString, handle.format_data_addr - sizeof(uint32_t), total_format_data_size);
+        bq::tools::_type_copy<false>(FormatString, handle.format_data_addr - sizeof(uint32_t), total_format_data_size + sizeof(uint32_t));
         memcpy(handle.format_data_addr + format_size, stack_string_def.str, stack_string_def.len);
         *reinterpret_cast<uint32_t*>(handle.format_data_addr - sizeof(uint32_t)) = static_cast<uint32_t>(total_format_data_size);
     }
