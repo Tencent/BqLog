@@ -25,6 +25,7 @@
         }
       },
       "nativeLib": {
+        "headerPath": "../../../../../artifacts/dynamic_lib/include",
         "debugSymbol": {
           "strip": true,
           "exclude": []

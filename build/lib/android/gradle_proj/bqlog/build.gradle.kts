@@ -6,6 +6,17 @@ android {
     namespace = "com.tencent.bqlog"
     compileSdk = 36
 
+    buildFeatures {
+        prefabPublishing = true
+    }
+
+    prefab {
+        create("BqLog") {
+            headers = "../../../../../artifacts/dynamic_lib/include"
+            libraryName = "libBqLog"
+        }
+    }
+
     defaultConfig {
         minSdk = 21
 
