@@ -76,7 +76,7 @@ namespace bq {
                 jobjectArray buffer_obj_for_hp_buffer_ = NULL; // siso_ring_buffer on block_node;
                 jobjectArray buffer_obj_for_oversize_buffer_ = NULL; // oversize buffer;
                 block_node_head* buffer_ref_block_ = nullptr;
-                const uint8_t* buffer_addr_oversize = nullptr; 
+                const uint8_t* buffer_addr_oversize = nullptr;
                 uint32_t size_ref_oversize = 0;
                 int32_t buffer_offset_ = 0;
             };
@@ -129,7 +129,7 @@ namespace bq {
             log_tls_buffer_info* ptr;
         } BQ_PACK_END
 
-        BQ_PACK_BEGIN struct alignas(8) context_head {
+            BQ_PACK_BEGIN struct alignas(8) context_head {
         public:
             uint16_t version_;
             bool is_thread_finished_;
@@ -145,24 +145,25 @@ namespace bq {
             {
                 tls_info_.ptr = tls_info;
             }
-        } BQ_PACK_END 
-        static_assert(sizeof(context_head) == 16, "context_head size must be 16");
+        } BQ_PACK_END static_assert(sizeof(context_head) == 16, "context_head size must be 16");
         static_assert(sizeof(context_head) % 8 == 0, "context_head size must be a multiple of 8");
 
         BQ_PACK_BEGIN
         struct alignas(8) block_misc_data {
         private:
             alignas(8) char is_removed_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<bool>)];
+
         public:
             alignas(8) bool need_reallocate_;
             alignas(8) context_head context_;
-            bq_forceinline bq::platform::atomic_trivially_constructible<bool>& is_removed() {
+            bq_forceinline bq::platform::atomic_trivially_constructible<bool>& is_removed()
+            {
                 return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<bool>*>(is_removed_place_holder_));
             }
-        } BQ_PACK_END 
-        static_assert(sizeof(block_misc_data) == 16 + sizeof(context_head), "invalid block_misc_data size");
-    
-    public : log_buffer(log_buffer_config& config);
+        } BQ_PACK_END static_assert(sizeof(block_misc_data) == 16 + sizeof(context_head), "invalid block_misc_data size");
+
+    public:
+        log_buffer(log_buffer_config& config);
 
         ~log_buffer();
 
@@ -178,11 +179,13 @@ namespace bq {
         bq::java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
 
-        bq_forceinline uint16_t get_version() const {
+        bq_forceinline uint16_t get_version() const
+        {
             return version_;
         }
 
-        bq_forceinline uint16_t get_current_reading_version() const {
+        bq_forceinline uint16_t get_current_reading_version() const
+        {
             return rt_cache_.current_reading_.version_;
         }
 

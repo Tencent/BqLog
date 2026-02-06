@@ -100,7 +100,6 @@ namespace bq {
         }
 
     private:
-
         bq_forceinline siso_ring_buffer& get_buffer() { return *(siso_ring_buffer*)siso_buffer_obj_; }
 
         bq_forceinline const siso_ring_buffer& get_buffer() const { return *(const siso_ring_buffer*)siso_buffer_obj_; }

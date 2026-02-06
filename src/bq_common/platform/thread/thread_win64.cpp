@@ -78,7 +78,7 @@ namespace bq {
                 assert(false && "create thread failed, see the device log output for more information");
                 return;
             }
-            
+
             // If the previous status is init or released, we can set it to running.
             // internal_run() is spinning and waiting for this status change.
             auto expected_status = enum_thread_status::init;

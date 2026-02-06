@@ -387,8 +387,7 @@ namespace bq {
                 if (include_empty_string || !last_str.is_empty())
                     result.emplace_back(last_str);
                 break;
-            }
-            else {
+            } else {
                 // Found a delimiter, add the substring before it
                 bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator> last_str = substr(last_offset, new_offset - last_offset);
                 if (include_empty_string || !last_str.is_empty())
@@ -425,7 +424,7 @@ namespace bq {
     template <typename CHAR_TYPE, typename Allocator>
     inline uint64_t BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::get_hash(const bq::BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>& str)
     {
-        //Slower than bq::util::get_hash_64 and produces a different hash value, but suitable for header-only files.
+        // Slower than bq::util::get_hash_64 and produces a different hash value, but suitable for header-only files.
         uint64_t hash = 0;
         for (size_type i = 0; i < str.size(); i++) {
             hash *= 1099511628211ull;

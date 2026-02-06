@@ -74,6 +74,7 @@ namespace bq {
         virtual void flush_write_cache();
         // flush appender file to physical disk.
         void flush_write_io();
+
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
 
@@ -97,9 +98,9 @@ namespace bq {
 
         virtual void on_log_item_new_begin(bq::log_entry_handle& read_handle) override;
 
-        size_t get_current_file_size() const {return current_file_size_;}
+        size_t get_current_file_size() const { return current_file_size_; }
 
-        file_handle& get_file_handle() {return file_;}
+        file_handle& get_file_handle() { return file_; }
 
         // data() returned by read_with_cache_handle will be invalid after next calling of "read_with_cache"
         virtual read_with_cache_handle read_with_cache(size_t size);
@@ -110,7 +111,7 @@ namespace bq {
 
         void return_write_cache(const write_with_cache_handle& handle);
 
-        //Low performance function, try to use write cache first
+        // Low performance function, try to use write cache first
         size_t direct_write(const void* data, size_t size, bq::file_manager::seek_option seek_opt, int64_t seek_offset);
 
         void mark_write_finished();
@@ -155,9 +156,11 @@ namespace bq {
 
         bool is_recovery_enabled() const;
 
-        bq_forceinline size_t get_total_used_write_cache_size() const {
+        bq_forceinline size_t get_total_used_write_cache_size() const
+        {
             return cache_write_head_size_ + static_cast<size_t>(cache_write_padding_) + cache_write_cursor_;
         }
+
     private:
         bq::string config_file_name_;
         bool always_create_new_file_;
@@ -170,6 +173,7 @@ namespace bq {
         uint64_t capacity_limit_;
         uint64_t current_file_expire_time_epoch_ms_;
         bool flush_when_destruct_ = true;
+
     private:
         BQ_PACK_BEGIN
         struct mmap_head {
@@ -179,14 +183,14 @@ namespace bq {
             uint32_t file_path_size_;
             char file_path_[1];
             char padding1_[DEFAULT_BUFFER_ALIGNMENT - sizeof(uint64_t) * 3 - sizeof(file_path_)];
-        }BQ_PACK_END
-        static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
+        } BQ_PACK_END static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
         bq::unique_ptr<bq::normal_buffer> cache_write_entity_;
         mmap_head* cache_write_head_ = nullptr;
         size_t cache_write_head_size_ = sizeof(mmap_head);
         uint8_t* cache_write_ = nullptr;
         size_t cache_write_cursor_ = 0;
         uint8_t cache_write_padding_ = 0;
+
     protected:
         // Cache part
         // Caching can reduce calls to fwrite, enhancing file write performance.
@@ -200,39 +204,48 @@ namespace bq {
         size_t read_file_pos_ = 0;
         bool cache_read_eof_ = false;
 
-        bq_forceinline size_t get_pendding_flush_written_size() const {
+        bq_forceinline size_t get_pendding_flush_written_size() const
+        {
             return cache_write_head_ ? static_cast<size_t>(cache_write_head_->cache_write_finished_cursor_) : static_cast<size_t>(0);
         }
 
-        bq_forceinline size_t get_written_size() const {
+        bq_forceinline size_t get_written_size() const
+        {
             return cache_write_cursor_;
         }
 
-        bq_forceinline size_t get_cache_write_size() const {
+        bq_forceinline size_t get_cache_write_size() const
+        {
             return cache_write_head_ ? static_cast<size_t>(cache_write_head_->write_cache_size_) : static_cast<size_t>(0);
         }
 
-        bq_forceinline size_t get_cache_write_finished_cursor() const {
+        bq_forceinline size_t get_cache_write_finished_cursor() const
+        {
             return cache_write_head_ ? static_cast<size_t>(cache_write_head_->cache_write_finished_cursor_) : static_cast<size_t>(0);
         }
 
-        bq_forceinline bool is_read_of_cache_eof() const {
+        bq_forceinline bool is_read_of_cache_eof() const
+        {
             return cache_read_eof_;
         }
 
-        bq_forceinline size_t get_cache_write_head_size() const {
+        bq_forceinline size_t get_cache_write_head_size() const
+        {
             return cache_write_head_size_;
         }
 
-        bq_forceinline uint8_t* get_cache_write_ptr_base() {
+        bq_forceinline uint8_t* get_cache_write_ptr_base()
+        {
             return cache_write_;
         }
 
-        bq_forceinline size_t get_cache_read_cursor() const {
+        bq_forceinline size_t get_cache_read_cursor() const
+        {
             return cache_read_cursor_;
         }
 
-        bq_forceinline size_t get_read_file_pos() const {
+        bq_forceinline size_t get_read_file_pos() const
+        {
             return read_file_pos_;
         }
     };

@@ -574,12 +574,12 @@ namespace bq {
         };
 
         template <typename T>
-        class atomic : public atomic_trivially_constructible<T>
-        {
+        class atomic : public atomic_trivially_constructible<T> {
         public:
             typedef typename atomic_trivially_constructible<T>::base_type base_type;
             typedef typename atomic_trivially_constructible<T>::value_type value_type;
             typedef atomic_trivially_constructible<T> trivially_constructible_type;
+
         public:
             atomic()
             {
@@ -609,7 +609,7 @@ namespace bq {
                 this->store_seq_cst(rhs.load_seq_cst());
                 return *this;
             }
-            
+
             bq_forceinline atomic<T>& operator=(const trivially_constructible_type& rhs)
             {
                 this->store_seq_cst(rhs.load_seq_cst());

@@ -215,7 +215,7 @@ namespace bq {
         }
         switch (log->get_thread_mode()) {
         case log_thread_mode::sync:
-            //do nothing
+            // do nothing
             break;
         case log_thread_mode::async:
         case log_thread_mode::independent: {
@@ -223,8 +223,7 @@ namespace bq {
             scoped_thread_check_disable disable_helper;
             (void)disable_helper;
             log->process(true);
-        }
-            break;
+        } break;
         default:
             break;
         }

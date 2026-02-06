@@ -50,14 +50,15 @@ namespace bq {
         jmethodID mid_native_console_callback_ = nullptr;
         jmethodID mid_native_console_buffer_fetch_and_remove_callback_ = nullptr;
 #endif
-        //Global variables are initialized using placement new; therefore, do not construct objects here, as alignment (alignas) cannot be guaranteed.
+        // Global variables are initialized using placement new; therefore, do not construct objects here, as alignment (alignas) cannot be guaranteed.
 #if defined(BQ_NAPI)
-        bq::miso_ring_buffer console_msg_buffer_{ bq::log_buffer_config{ "napi_console_cb_msg",bq::array<bq::string>{}, 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 } };
+        bq::miso_ring_buffer console_msg_buffer_ { bq::log_buffer_config { "napi_console_cb_msg", bq::array<bq::string> {}, 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 } };
         bq::platform::napi_callback_dispatcher console_callback_dispatcher_;
 #endif
         appender_console::console_static_misc console_static_misc_;
         appender_decoder_manager appender_decoder_manager_inst_;
         log_manager log_manager_inst_;
+
     private:
 #if defined(BQ_LOG_BUFFER_DEBUG)
         bq::platform::atomic<int32_t> thread_check_enable_counter_ = 0;

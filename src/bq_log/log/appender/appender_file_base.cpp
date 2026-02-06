@@ -55,11 +55,11 @@ namespace bq {
         }
         if (error_code != 0 && error_code !=
 #if defined(BQ_WIN)
-            ERROR_DISK_FULL
+                ERROR_DISK_FULL
 #else
-            ENOSPC
+                ENOSPC
 #endif
-            ) {
+        ) {
             char error_text[256] = { 0 };
             auto epoch = bq::platform::high_performance_epoch_ms();
             struct tm time_st;
@@ -143,13 +143,11 @@ namespace bq {
         }
     }
 
-
     void appender_file_base::on_log_item_recovery_begin(bq::log_entry_handle& read_handle)
     {
         flush_write_cache();
         refresh_file_handle(read_handle);
     }
-
 
     void appender_file_base::on_log_item_recovery_end()
     {
@@ -235,15 +233,16 @@ namespace bq {
         return real_write_size;
     }
 
-    void appender_file_base::mark_write_finished() {
+    void appender_file_base::mark_write_finished()
+    {
 #ifndef NDEBUG
         assert(!cache_write_already_allocated_ && "mark_write_finished must be called after return_write_cache()");
 #endif
         cache_write_head_->cache_write_finished_cursor_ = cache_write_cursor_;
     }
 
-
-    void appender_file_base::set_cache_write_padding(uint8_t new_padding) {
+    void appender_file_base::set_cache_write_padding(uint8_t new_padding)
+    {
         if (cache_write_padding_ != new_padding) {
             if (new_padding > cache_write_padding_) {
                 auto current_using_size = get_total_used_write_cache_size();
@@ -259,7 +258,6 @@ namespace bq {
             memmove(new_data_ptr, prev_data_ptr, cache_write_cursor_);
         }
     }
-
 
     bool appender_file_base::on_appender_file_recovery_begin()
     {
@@ -278,10 +276,8 @@ namespace bq {
         return true;
     }
 
-
     void appender_file_base::on_appender_file_recovery_end()
     {
-
     }
 
     void appender_file_base::set_flush_when_destruct(bool flush)
@@ -336,8 +332,7 @@ namespace bq {
         bool new_created = !cache_write_entity_;
         if (new_created) {
             cache_write_entity_ = bq::make_unique<bq::normal_buffer>(new_size, is_recovery_enabled() ? get_mmap_file_path() : "", true);
-        }
-        else {
+        } else {
             cache_write_entity_->resize(new_size);
         }
         cache_write_head_ = static_cast<mmap_head*>(cache_write_entity_->data());
@@ -350,10 +345,9 @@ namespace bq {
     void appender_file_base::refresh_cache_write_ptr()
     {
         if (cache_write_head_) {
-            cache_write_ = reinterpret_cast<uint8_t*>(cache_write_head_) + static_cast<ptrdiff_t>(cache_write_head_size_) + static_cast<ptrdiff_t>(cache_write_padding_); 
+            cache_write_ = reinterpret_cast<uint8_t*>(cache_write_head_) + static_cast<ptrdiff_t>(cache_write_head_size_) + static_cast<ptrdiff_t>(cache_write_padding_);
             cache_write_head_->write_cache_size_ = static_cast<uint64_t>((static_cast<uint8_t*>(cache_write_entity_->data()) + cache_write_entity_->size()) - cache_write_);
-        }
-        else {
+        } else {
             cache_write_ = nullptr;
         }
     }
@@ -363,7 +357,8 @@ namespace bq {
         return TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + parent_log_->get_name() + "/appenders/" + get_name() + ".mmap", 0);
     }
 
-    void appender_file_base::clean_cache_write() {
+    void appender_file_base::clean_cache_write()
+    {
         if (cache_write_head_) {
             cache_write_head_->cache_write_finished_cursor_ = 0;
         }
@@ -371,7 +366,6 @@ namespace bq {
         cache_write_padding_ = 0;
         refresh_cache_write_ptr();
     }
-
 
     bool appender_file_base::is_recovery_enabled() const
     {
@@ -422,8 +416,7 @@ namespace bq {
 
         if (config_obj["enable_rolling_log_file"].is_bool()) {
             enable_rolling_log_file_ = (bool)config_obj["enable_rolling_log_file"];
-        }
-        else {
+        } else {
             enable_rolling_log_file_ = true;
         }
     }
@@ -433,8 +426,8 @@ namespace bq {
         size_t new_head_size = 0;
         if (need_recovery) {
             new_head_size = static_cast<size_t>(BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_))
-                            + bq::align_8(mmap_file_abs_path.size());
-        }else {
+                + bq::align_8(mmap_file_abs_path.size());
+        } else {
             new_head_size = sizeof(mmap_head);
         }
         assert(cache_write_cursor_ == 0 && "calling to appender_file_base::refresh_cache_write_head_size is not allowed when cache write is not empty!");
@@ -452,7 +445,8 @@ namespace bq {
         resize_cache_write_entity(new_total_size);
     }
 
-    bool appender_file_base::try_recover() {
+    bool appender_file_base::try_recover()
+    {
         bq::string mmap_file_path = get_mmap_file_path();
         size_t file_size = bq::file_manager::get_file_size(mmap_file_path);
         cache_write_entity_ = bq::make_unique<bq::normal_buffer>(file_size, mmap_file_path, false);
@@ -470,7 +464,7 @@ namespace bq {
         current_file_path.insert_batch(current_file_path.end(), cache_write_head_->file_path_, static_cast<size_t>(cache_write_head_->file_path_size_));
         cache_write_head_size_ = BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_)
             + bq::align_8(current_file_path.size());
-        
+
         if (file_manager::is_file(current_file_path)) {
             file_ = file_manager::instance().open_file(current_file_path, file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
         }

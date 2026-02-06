@@ -75,13 +75,13 @@ namespace bq {
             for (auto pair : *log_map_) {
                 bq::shared_ptr<destruction_mark> destruction_protector = pair.value()->destruction_mark_;
                 if (!destruction_protector.get()) {
-                    //Impossible Path! Only for [-Werror=null-dereference]
+                    // Impossible Path! Only for [-Werror=null-dereference]
                     continue;
                 }
                 bq::platform::scoped_spin_lock lock(destruction_protector->lock_);
                 // make sure log_buffer obj is still alive.
                 if (!destruction_protector->is_destructed_) {
-                    //Avoid ABA problem with oversize buffer temporary reference.
+                    // Avoid ABA problem with oversize buffer temporary reference.
                     auto* buffer_info = pair.value();
                     auto* log_buf = buffer_info->buffer_;
                     if (log_buf) {
@@ -820,13 +820,12 @@ namespace bq {
         ++rt_reading.version_;
     }
 
-    void log_buffer::refresh_traverse_end_mark() 
+    void log_buffer::refresh_traverse_end_mark()
     {
         auto& rt_reading = rt_cache_.current_reading_;
         if (rt_cache_.mem_optimize_.is_block_marked_removed && rt_reading.cur_block_) {
             rt_reading.traverse_end_block_is_working_ = false;
-        }
-        else {
+        } else {
             rt_reading.traverse_end_block_is_working_ = true;
             rt_reading.traverse_end_block_ = rt_reading.cur_block_;
         }
@@ -1068,7 +1067,6 @@ namespace bq {
         }
     }
 
-
 #if defined(BQ_UNIT_TEST)
     const log_buffer::log_tls_buffer_info& log_buffer::get_buffer_info_for_this_thread() const
     {
@@ -1234,11 +1232,11 @@ namespace bq {
             }
         }
 #ifdef BQ_UNIT_TEST
-        //Debug output
-        //bq::util::set_log_device_console_min_level(bq::log_level::info);
-        //bq::util::log_device_console(bq::log_level::info, "log_buffer recovery records:");
+        // Debug output
+        // bq::util::set_log_device_console_min_level(bq::log_level::info);
+        // bq::util::log_device_console(bq::log_level::info, "log_buffer recovery records:");
         for (size_t i = 0; i < rt_cache_.current_reading_.recovery_records_.size(); ++i) {
-            //bq::util::log_device_console(bq::log_level::info, " version :%" PRIu64, static_cast<uint64_t>(version_ - 1U - i));
+            // bq::util::log_device_console(bq::log_level::info, " version :%" PRIu64, static_cast<uint64_t>(version_ - 1U - i));
             for (const auto& record : rt_cache_.current_reading_.recovery_records_[i]) {
                 const auto& seq_map = rt_cache_.current_reading_.recovery_seq_records_[i][record.key()];
                 bq::util::log_device_console(bq::log_level::info, "\t\t tls_info addr: %p, min valid seq: %" PRIu32 ", max valid seq:%" PRIu64, record.key(), record.value(), static_cast<uint64_t>(record.value() + seq_map.size() - 1));
@@ -1248,7 +1246,7 @@ namespace bq {
                     auto seq_iter = seq_map.find(cur_min_seq);
                     if (seq_iter == seq_map.end()) {
                         bq::util::log_device_console(bq::log_level::error, "miss seq:%" PRIu32, cur_min_seq);
-                    }else if (seq_iter->value() != 1) {
+                    } else if (seq_iter->value() != 1) {
                         bq::util::log_device_console(bq::log_level::error, "duplicate seq:%" PRIu32 ", count:%" PRIu16 "", cur_min_seq, seq_iter->value());
                     }
                     --left_count;
@@ -1256,7 +1254,7 @@ namespace bq {
                 }
             }
         }
-        //bq::util::set_log_device_console_min_level(bq::log_level::warning);
+        // bq::util::set_log_device_console_min_level(bq::log_level::warning);
 #endif
     }
 

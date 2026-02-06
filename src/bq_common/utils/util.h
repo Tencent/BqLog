@@ -71,7 +71,7 @@ namespace bq {
         static uint64_t rand64();
 
         /// <summary>
-        /// `UTF-Mixed` is a custom format in BqLog designed to maximize UTF-16 to UTF-8 conversion performance. 
+        /// `UTF-Mixed` is a custom format in BqLog designed to maximize UTF-16 to UTF-8 conversion performance.
         /// It consists of a UTF-8 prefix followed by a UTF-16 suffix, separated by a 0xFF character
         /// (0xFF is not guaranteed to be present when the whole string is ASCII characters).
         /// </summary>
@@ -96,7 +96,7 @@ namespace bq {
 
         /// <summary>
         /// Computes the hash of a `utf_mixed` string as if it were converted back to UTF-16.
-        /// This is useful for recovering the original UTF-16 hash from a compressed `utf_mixed` storage 
+        /// This is useful for recovering the original UTF-16 hash from a compressed `utf_mixed` storage
         /// without fully decoding it to a new string object.
         /// </summary>
         /// <param name="mixed">Pointer to the utf_mixed data</param>
@@ -108,7 +108,7 @@ namespace bq {
         /// High performance convert utf16 to utf8 (SIMD accelerated)
         /// </summary>
         static uint32_t utf16_to_utf8(const char16_t* BQ_RESTRICT src, uint32_t src_character_num, char* BQ_RESTRICT dst, uint32_t dst_character_num);
-        
+
         /// <summary>
         /// High performance convert utf8 to utf16 (SIMD accelerated)
         /// </summary>

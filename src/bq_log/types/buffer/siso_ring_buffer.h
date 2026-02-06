@@ -84,11 +84,13 @@ namespace bq {
             char cache_line_padding2_[BQ_CACHE_LINE_SIZE - sizeof(reading_cursor_place_holder_)];
             alignas(8) char writing_cursor_place_holder_[sizeof(bq::platform::atomic_trivially_constructible<uint32_t>)]; // Used to sync data between read thread and write thread in run-time.
             char cache_line_padding3_[BQ_CACHE_LINE_SIZE - sizeof(writing_cursor_place_holder_)];
-        
-            bq_forceinline bq::platform::atomic_trivially_constructible<uint32_t>& reading_cursor() {
+
+            bq_forceinline bq::platform::atomic_trivially_constructible<uint32_t>& reading_cursor()
+            {
                 return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<uint32_t>*>(reading_cursor_place_holder_));
             }
-            bq_forceinline bq::platform::atomic_trivially_constructible<uint32_t>& writing_cursor() {
+            bq_forceinline bq::platform::atomic_trivially_constructible<uint32_t>& writing_cursor()
+            {
                 return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<uint32_t>*>(writing_cursor_place_holder_));
             }
         } BQ_PACK_END static_assert(sizeof(head) == 4 * BQ_CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
@@ -177,7 +179,7 @@ namespace bq {
         ~siso_ring_buffer();
 
         /// <summary>
-        /// `renew` resets the cursor to 0. This guarantees the ability 
+        /// `renew` resets the cursor to 0. This guarantees the ability
         /// to allocate the maximum contiguous memory block at once.
         /// </summary>
         void renew();

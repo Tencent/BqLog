@@ -27,21 +27,17 @@
 namespace bq {
     namespace string_tools {
         template <typename T, typename = void>
-        struct __has_value_type : bq::false_type {};
+        struct __has_value_type : bq::false_type { };
 
         template <typename T>
-        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type {};
+        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type { };
 
         template <typename T>
-        struct is_c_str_compatible : bq::bool_type<bq::string::template is_std_string_compatible<T>::value ||
-            bq::u16string::template is_std_string_compatible<T>::value ||
-            bq::u32string::template is_std_string_compatible<T>::value> {
+        struct is_c_str_compatible : bq::bool_type<bq::string::template is_std_string_compatible<T>::value || bq::u16string::template is_std_string_compatible<T>::value || bq::u32string::template is_std_string_compatible<T>::value> {
         };
 
         template <typename T>
-        struct is_data_compatible : bq::bool_type<bq::string::template is_std_string_view_compatible<T>::value ||
-            bq::u16string::template is_std_string_view_compatible<T>::value ||
-            bq::u32string::template is_std_string_view_compatible<T>::value> {
+        struct is_data_compatible : bq::bool_type<bq::string::template is_std_string_view_compatible<T>::value || bq::u16string::template is_std_string_view_compatible<T>::value || bq::u32string::template is_std_string_view_compatible<T>::value> {
         };
 
         template <typename T>
@@ -62,7 +58,8 @@ namespace bq {
          * when the input is a string literal.
          */
         template <typename T>
-        static BQ_FUNC_RETURN_CONSTEXPR size_t constexpr_len(const T* str) {
+        static BQ_FUNC_RETURN_CONSTEXPR size_t constexpr_len(const T* str)
+        {
             size_t i = 0;
             while (str[i] != 0) {
                 i++;
@@ -89,11 +86,13 @@ namespace bq {
          * Processes 4 characters (8 bytes) per iteration using bit manipulation
          * to detect the null terminator.
          */
-        static bq_forceinline size_t u16_len_rt(const char16_t* s) {
+        static bq_forceinline size_t u16_len_rt(const char16_t* s)
+        {
             const char16_t* p = s;
             // Align to 8-byte boundary
             while ((reinterpret_cast<uintptr_t>(p) & 7) != 0) {
-                if (*p == 0) return static_cast<size_t>(p - s);
+                if (*p == 0)
+                    return static_cast<size_t>(p - s);
                 p++;
             }
 
@@ -106,10 +105,14 @@ namespace bq {
                 // Zero detection logic: (v - 0x0001) & ~v & 0x8000
                 if ((v - low_bit) & ~v & mask) {
                     p = reinterpret_cast<const char16_t*>(chunk);
-                    if (p[0] == 0) return static_cast<size_t>(p - s);
-                    if (p[1] == 0) return static_cast<size_t>(p + 1 - s);
-                    if (p[2] == 0) return static_cast<size_t>(p + 2 - s);
-                    if (p[3] == 0) return static_cast<size_t>(p + 3 - s);
+                    if (p[0] == 0)
+                        return static_cast<size_t>(p - s);
+                    if (p[1] == 0)
+                        return static_cast<size_t>(p + 1 - s);
+                    if (p[2] == 0)
+                        return static_cast<size_t>(p + 2 - s);
+                    if (p[3] == 0)
+                        return static_cast<size_t>(p + 3 - s);
                 }
                 chunk++;
             }
@@ -119,10 +122,12 @@ namespace bq {
          * @brief SWAR implementation for UTF-32.
          * Processes 2 characters (8 bytes) per iteration.
          */
-        static bq_forceinline size_t u32_len_rt(const char32_t* s) {
+        static bq_forceinline size_t u32_len_rt(const char32_t* s)
+        {
             const char32_t* p = s;
             while ((reinterpret_cast<uintptr_t>(p) & 7) != 0) {
-                if (*p == 0) return static_cast<size_t>(p - s);
+                if (*p == 0)
+                    return static_cast<size_t>(p - s);
                 p++;
             }
 
@@ -134,8 +139,10 @@ namespace bq {
                 uint64_t v = get_value_by_address_safe(chunk);
                 if ((v - low_bit) & ~v & mask) {
                     p = reinterpret_cast<const char32_t*>(chunk);
-                    if (p[0] == 0) return static_cast<size_t>(p - s);
-                    if (p[1] == 0) return static_cast<size_t>(p + 1 - s);
+                    if (p[0] == 0)
+                        return static_cast<size_t>(p - s);
+                    if (p[1] == 0)
+                        return static_cast<size_t>(p + 1 - s);
                 }
                 chunk++;
             }
@@ -145,14 +152,16 @@ namespace bq {
 
         template <typename T, bool WCHAR_SIZE_IS_16>
         struct string_len_dispatch {
-            static BQ_FUNC_RETURN_CONSTEXPR size_t exec(const T* s) {
+            static BQ_FUNC_RETURN_CONSTEXPR size_t exec(const T* s)
+            {
                 return constexpr_len(s);
             }
         };
 
         template <bool WCHAR_SIZE_IS_16>
         struct string_len_dispatch<char, WCHAR_SIZE_IS_16> {
-            static bq_forceinline size_t exec(const char* s) {
+            static bq_forceinline size_t exec(const char* s)
+            {
 #if BQ_GCC_CLANG_BUILTIN(__builtin_wcslen)
                 return __builtin_strlen(s);
 #else
@@ -163,7 +172,8 @@ namespace bq {
 
         template <bool WCHAR_SIZE_IS_16>
         struct string_len_dispatch<wchar_t, WCHAR_SIZE_IS_16> {
-            static bq_forceinline size_t exec(const wchar_t* s) {
+            static bq_forceinline size_t exec(const wchar_t* s)
+            {
 #if BQ_GCC_CLANG_BUILTIN(__builtin_wcslen)
                 return __builtin_wcslen(s);
 #else
@@ -174,26 +184,30 @@ namespace bq {
 
         template <>
         struct string_len_dispatch<char16_t, true> {
-            static bq_forceinline size_t exec(const char16_t* s) {
+            static bq_forceinline size_t exec(const char16_t* s)
+            {
                 return string_len_dispatch<wchar_t, true>::exec(reinterpret_cast<const wchar_t*>(s));
             }
         };
         template <>
         struct string_len_dispatch<char16_t, false> {
-            static bq_forceinline size_t exec(const char16_t* s) {
+            static bq_forceinline size_t exec(const char16_t* s)
+            {
                 return u16_len_rt(s);
             }
         };
 
         template <>
         struct string_len_dispatch<char32_t, true> {
-            static bq_forceinline size_t exec(const char32_t* s) {
+            static bq_forceinline size_t exec(const char32_t* s)
+            {
                 return u32_len_rt(s);
             }
         };
         template <>
         struct string_len_dispatch<char32_t, false> {
-            static bq_forceinline size_t exec(const char32_t* s) {
+            static bq_forceinline size_t exec(const char32_t* s)
+            {
                 return string_len_dispatch<wchar_t, false>::exec(reinterpret_cast<const wchar_t*>(s));
             }
         };
@@ -206,7 +220,8 @@ namespace bq {
          * 3. Runtime (u16/u32): Uses 64-bit SWAR to process multiple units per cycle.
          */
         template <typename CHAR_TYPE>
-        BQ_FUNC_RETURN_CONSTEXPR size_t string_len_ptr(const CHAR_TYPE* str) {
+        BQ_FUNC_RETURN_CONSTEXPR size_t string_len_ptr(const CHAR_TYPE* str)
+        {
             if (!str) {
                 return 0;
             }
@@ -215,32 +230,37 @@ namespace bq {
             {
                 return constexpr_len(str);
             }
-            else {
+            else
+            {
 #endif
-                return string_len_dispatch<CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t)>::exec(str);
+                return string_len_dispatch < CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t) > ::exec(str);
 #if BQ_GCC_CLANG_BUILTIN(__builtin_constant_p)
             }
 #endif
         }
         template <typename CHAR_TYPE, size_t N>
-        BQ_FUNC_RETURN_CONSTEXPR size_t string_len_array(const CHAR_TYPE(&str)[N]) {
-            BQ_LIKELY_IF(str[N - 1] == '\0') {
-                return N - 1; //constexpr_len(str);
+        BQ_FUNC_RETURN_CONSTEXPR size_t string_len_array(const CHAR_TYPE (&str)[N])
+        {
+            BQ_LIKELY_IF(str[N - 1] == '\0')
+            {
+                return N - 1; // constexpr_len(str);
             }
-            else {
+            else
+            {
                 return N;
-                }
+            }
         }
         template <typename STR_TYPE>
-        bq_forceinline bq::enable_if_t<bq::is_pointer<STR_TYPE>::value, size_t> string_len(const STR_TYPE& str) {
+        bq_forceinline bq::enable_if_t<bq::is_pointer<STR_TYPE>::value, size_t> string_len(const STR_TYPE& str)
+        {
             return string_len_ptr(str);
         }
 
         template <typename STR_TYPE>
-        bq_forceinline bq::enable_if_t<bq::is_array<STR_TYPE>::value, size_t> string_len(const STR_TYPE& str) {
+        bq_forceinline bq::enable_if_t<bq::is_array<STR_TYPE>::value, size_t> string_len(const STR_TYPE& str)
+        {
             return string_len_array(str);
         }
-
 
         template <typename CHAR_TYPE>
         inline const CHAR_TYPE* find_char(const CHAR_TYPE* str, CHAR_TYPE c)
@@ -285,16 +305,23 @@ namespace bq {
             return strstr(str1, str2);
         }
 
-
         template <typename CHAR_TYPE>
-        struct inner_empty_str_def {};
+        struct inner_empty_str_def { };
         template <>
-        struct inner_empty_str_def<char> { static const char* value() { return ""; } };
+        struct inner_empty_str_def<char> {
+            static const char* value() { return ""; }
+        };
         template <>
-        struct inner_empty_str_def<wchar_t> { static const wchar_t* value() { return L""; } };
+        struct inner_empty_str_def<wchar_t> {
+            static const wchar_t* value() { return L""; }
+        };
         template <>
-        struct inner_empty_str_def<char16_t> { static const char16_t* value() { return u""; } };
+        struct inner_empty_str_def<char16_t> {
+            static const char16_t* value() { return u""; }
+        };
         template <>
-        struct inner_empty_str_def<char32_t> { static const char32_t* value() { return U""; } };
+        struct inner_empty_str_def<char32_t> {
+            static const char32_t* value() { return U""; }
+        };
     }
- }
+}

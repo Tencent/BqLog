@@ -117,7 +117,7 @@ namespace bq {
     {
         block_node_head* current_node = first();
         while (current_node) {
-            new (static_cast<void*>(current_node), bq::enum_new_dummy::dummy) block_node_head(block_list_type::list_keep_prev, 
+            new (static_cast<void*>(current_node), bq::enum_new_dummy::dummy) block_node_head(block_list_type::list_keep_prev,
                 reinterpret_cast<uint8_t*>(current_node) + block_node_head::get_buffer_data_offset(), buffer_size_per_block_ - (size_t)block_node_head::get_buffer_data_offset(), true);
             current_node = next(current_node);
         }

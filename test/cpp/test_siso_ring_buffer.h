@@ -117,7 +117,6 @@ namespace bq {
                     bq::scoped_log_buffer_handle<siso_ring_buffer> scoped_new_handle(*ring_buffer_ptr_, new_handle);
                     test_result_ptr_->add_result(new_handle.result == enum_buffer_result_code::err_empty_log_buffer, "[siso ring buffer %s] chunk count mismatch, overflow 1", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
                     test_result_ptr_->add_result(left_read_count_ == 0, "[siso ring buffer %s]total block count mismatch", ring_buffer_ptr_->get_is_memory_recovery() ? "with mmap" : "without mmap");
-
                 }
                 --siso_ring_buffer_test_alive_read_thread_count;
             }
@@ -191,7 +190,7 @@ namespace bq {
                         last_read_count = current_read_count;
                         if (current_time - start_time > 300000) {
                             test_output_dynamic_param(bq::log_level::info, "siso ring buffer time out, give up: time cost:%dms              \r", (int32_t)(current_time - start_time));
-                            timeout = true;  
+                            timeout = true;
                             break;
                         }
                     }

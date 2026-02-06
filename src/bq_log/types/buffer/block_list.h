@@ -106,6 +106,7 @@ namespace bq {
         alignas(8) const uint8_t* data_range_start_;
         alignas(8) const uint8_t* data_range_end_;
         alignas(8) block_list_type type_;
+
     private:
         void reset(uint16_t max_blocks_count, const uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
         bool try_recover_from_memory_map(uint16_t max_blocks_count, const uint8_t* buffers_base_addr, size_t blocks_total_buffer_size);
@@ -167,7 +168,8 @@ namespace bq {
             return false;
         }
 
-        bq_forceinline void debug_output() {
+        bq_forceinline void debug_output()
+        {
             auto block_iter = first();
             while (block_iter) {
                 bq::util::log_device_console(bq::log_level::error, "=>%" PRIu16, get_index_by_block_head(block_iter));
@@ -285,7 +287,7 @@ namespace bq {
         bq_forceinline bool remove_thread_unsafe(block_node_head* prev_block_node, block_node_head* remove_block_node)
         {
 #if defined(BQ_UNIT_TEST) || defined(BQ_LOG_BUFFER_DEBUG)
-            //make sure remove_block_node is in the list
+            // make sure remove_block_node is in the list
             if (!is_include(remove_block_node)) {
                 return false;
             }
@@ -308,8 +310,7 @@ namespace bq {
                 if (next_block != remove_block_node) {
                     check_prev = false;
                 }
-            }
-            else {
+            } else {
                 if (first() != remove_block_node) {
                     check_prev = false;
                 }
@@ -320,8 +321,7 @@ namespace bq {
 #endif
             if (!prev_block_node) {
                 head_ = remove_block_node->next_;
-            }
-            else {
+            } else {
                 prev_block_node->next_ = remove_block_node->next_;
             }
             return true;

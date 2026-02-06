@@ -30,6 +30,7 @@ namespace bq {
         size_t buffer_size_;
         create_memory_map_result mmap_result_;
         bool delete_mmap_when_destruct_;
+
     public:
         normal_buffer(size_t size, const bq::string& mmap_file_abs_path = "", bool auto_create = true);
 

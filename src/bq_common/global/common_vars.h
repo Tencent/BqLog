@@ -36,6 +36,7 @@ namespace bq {
 
     struct global_var_destructiable {
         friend struct global_vars_destructor;
+
     protected:
         virtual void partial_destruct()
         {
@@ -98,7 +99,7 @@ namespace bq {
             if (T::global_vars_ptr_) {
                 return *T::global_vars_ptr_;
             }
-            //For recursive calling of `get()` or TLS address reuse between different threads.
+            // For recursive calling of `get()` or TLS address reuse between different threads.
             auto initializer_mark_value_tmp = initializer_mark_.load_acquire();
             if (&T::global_vars_ptr_ == initializer_mark_value_tmp
                 && initializer_mark_value_tmp != nullptr) {

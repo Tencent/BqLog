@@ -16,7 +16,6 @@
 #include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
 
-
 namespace bq {
 
     // =================================================================================================
@@ -53,7 +52,7 @@ namespace bq {
     {
         const char* start = src;
         const char* end = src + len;
-        
+
         const __m256i brace_l = _mm256_set1_epi8('{'); // 0x7B
         const __m256i brace_r = _mm256_set1_epi8('}'); // 0x7D
 
@@ -62,7 +61,7 @@ namespace bq {
             __m256i cmp_l = _mm256_cmpeq_epi8(chunk, brace_l);
             __m256i cmp_r = _mm256_cmpeq_epi8(chunk, brace_r);
             __m256i mask_v = _mm256_or_si256(cmp_l, cmp_r);
-            
+
             int32_t mask = _mm256_movemask_epi8(mask_v);
             if (mask != 0) {
                 // Found brace
@@ -79,12 +78,12 @@ namespace bq {
                 found_brace = true;
                 return static_cast<uint32_t>(src - start) + idx;
             }
-            
+
             _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), chunk);
             src += 32;
             dst += 32;
         }
-        
+
         return static_cast<uint32_t>(src - start) + _impl_find_brace_and_copy_sw(src, static_cast<uint32_t>(end - src), dst, found_brace);
     }
 
@@ -92,7 +91,7 @@ namespace bq {
     {
         const char* start = src;
         const char* end = src + len;
-        
+
         const __m128i brace_l = _mm_set1_epi8('{');
         const __m128i brace_r = _mm_set1_epi8('}');
 
@@ -101,7 +100,7 @@ namespace bq {
             __m128i cmp_l = _mm_cmpeq_epi8(chunk, brace_l);
             __m128i cmp_r = _mm_cmpeq_epi8(chunk, brace_r);
             __m128i mask_v = _mm_or_si128(cmp_l, cmp_r);
-            
+
             int32_t mask = _mm_movemask_epi8(mask_v);
             if (mask != 0) {
                 uint32_t idx = 0;
@@ -116,7 +115,7 @@ namespace bq {
                 found_brace = true;
                 return static_cast<uint32_t>(src - start) + idx;
             }
-            
+
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), chunk);
             src += 16;
             dst += 16;
@@ -128,7 +127,7 @@ namespace bq {
     {
         const char* start = src;
         const char* end = src + len;
-        
+
         const uint8x16_t brace_l = vdupq_n_u8('{');
         const uint8x16_t brace_r = vdupq_n_u8('}');
 
@@ -137,11 +136,11 @@ namespace bq {
             uint8x16_t cmp_l = vceqq_u8(chunk, brace_l);
             uint8x16_t cmp_r = vceqq_u8(chunk, brace_r);
             uint8x16_t mask_v = vorrq_u8(cmp_l, cmp_r);
-            
+
             if (bq_vmaxvq_u8(mask_v) != 0) {
-                break; 
+                break;
             }
-            
+
             vst1q_u8(reinterpret_cast<uint8_t*>(dst), chunk);
             src += 16;
             dst += 16;
@@ -165,7 +164,6 @@ namespace bq {
 #endif
     }
 
-
     // -------------------------------------------------------------------------------------------------
     // find_brace_and_convert_utf16_to_utf8
     // Converts from UTF-16 to UTF-8 until '{', '}', end, OR non-ASCII char.
@@ -177,7 +175,7 @@ namespace bq {
     {
         const char16_t* start = src;
         const char16_t* end = src + len;
-        
+
         while (src < end) {
             char16_t c = *src;
             if (c >= 0x80) {
@@ -203,7 +201,7 @@ namespace bq {
     {
         const char16_t* start = src;
         const char16_t* end = src + len;
-        
+
         const __m256i brace_l = _mm256_set1_epi16(u'{');
         const __m256i brace_r = _mm256_set1_epi16(u'}');
         const __m256i ascii_mask = _mm256_set1_epi16(static_cast<int16_t>(0xFF80u)); // Check for high byte or bit 7
@@ -211,12 +209,12 @@ namespace bq {
         // Process 16 chars (32 bytes) at a time
         while (src + 16 <= end) {
             __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src));
-            
+
             // Check non-ASCII
             if (!_mm256_testz_si256(chunk, ascii_mask)) {
                 // Found non-ASCII (or potentially garbage high bytes if bad input, but we assume valid U16 or stop)
                 non_ascii = true; // Potentially, but let SW verify exact position
-                break; 
+                break;
             }
 
             // Check braces
@@ -228,10 +226,10 @@ namespace bq {
             }
 
             // Safe to pack and store
-            __m256i compressed = _mm256_packus_epi16(chunk, chunk); 
+            __m256i compressed = _mm256_packus_epi16(chunk, chunk);
             __m256i permuted = _mm256_permute4x64_epi64(compressed, 0xD8);
             _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm256_castsi256_si128(permuted));
-            
+
             src += 16;
             dst += 16;
         }
@@ -243,7 +241,7 @@ namespace bq {
     {
         const char16_t* start = src;
         const char16_t* end = src + len;
-        
+
         const __m128i brace_l = _mm_set1_epi16(u'{');
         const __m128i brace_r = _mm_set1_epi16(u'}');
         const __m128i ascii_mask = _mm_set1_epi16(static_cast<int16_t>(0xFF80u));
@@ -251,7 +249,7 @@ namespace bq {
         while (src + 8 <= end) {
             __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
 
-             if (!_mm_testz_si128(chunk, ascii_mask)) {
+            if (!_mm_testz_si128(chunk, ascii_mask)) {
                 non_ascii = true;
                 break;
             }
@@ -264,7 +262,7 @@ namespace bq {
 
             __m128i compressed = _mm_packus_epi16(chunk, chunk);
             _mm_storel_epi64(reinterpret_cast<__m128i*>(dst), compressed);
-            
+
             src += 8;
             dst += 8;
         }
@@ -276,13 +274,13 @@ namespace bq {
     {
         const char16_t* start = src;
         const char16_t* end = src + len;
-        
+
         const uint16x8_t brace_l = vdupq_n_u16(u'{');
         const uint16x8_t brace_r = vdupq_n_u16(u'}');
 
         while (src + 8 <= end) {
             uint16x8_t chunk = vld1q_u16(reinterpret_cast<const uint16_t*>(src));
-            
+
             // Check non-ASCII (any >= 0x80)
             if (bq_vmaxvq_u16(chunk) >= 0x80) {
                 non_ascii = true;
@@ -317,7 +315,6 @@ namespace bq {
         return _impl_find_brace_and_convert_u16_sw(src, len, dst, found_brace, non_ascii);
 #endif
     }
-
 
     layout::layout()
         : time_zone_ptr_(nullptr)
@@ -626,7 +623,7 @@ namespace bq {
         } while (temp != 0);
         expand_format_content_buff_size(format_content_cursor + bitcount + 3); // 3->e+0
         // 1.000000 -> 1.0000
-        int32_t jump = static_cast<int32_t>(format_content_cursor) - (static_cast<int32_t>(begin_cursor + format_info_.width - bitcount) - 2); // 2->e+ 
+        int32_t jump = static_cast<int32_t>(format_content_cursor) - (static_cast<int32_t>(begin_cursor + format_info_.width - bitcount) - 2); // 2->e+
         if (jump > 0) {
             format_content_cursor -= static_cast<uint32_t>(jump);
             if (format_content_cursor == begin_cursor)
@@ -690,20 +687,20 @@ namespace bq {
             // Step 1: Utilize SIMD-accelerated search to copy content until a brace is encountered.
             uint32_t remaining = format_data_len - i;
             uint32_t copied = find_brace_and_copy(format_data_ptr + i, remaining, &format_content[format_content_cursor], found_brace);
-            
+
             i += copied;
             format_content_cursor += copied;
 
             if (found_brace) {
                 // Ensure space for potential next characters.
-                
+
                 char c = format_data_ptr[i]; // Expecting '{' or '}'
                 i++; // Advance past the brace
 
                 if (i < format_data_len) {
                     char next_c = format_data_ptr[i];
                     // Only handle "}}" as escape. "{{" is handled by nested brace detection logic.
-                    if (c == '}' && next_c == '}') { 
+                    if (c == '}' && next_c == '}') {
                         expand_format_content_buff_size(format_content_cursor + 1);
                         format_content[format_content_cursor++] = '}';
                         i++;
@@ -717,7 +714,8 @@ namespace bq {
                     continue;
                 }
 
-                if (format_info_.used) format_info_.reset();
+                if (format_info_.used)
+                    format_info_.reset();
 
                 // Parse format string (e.g. "{:.2f}")
                 if (args_data_cursor < args_data_len) {
@@ -725,27 +723,27 @@ namespace bq {
                     int32_t format_spec_len = 0;
                     bool format_spec_closed = false;
                     for (uint32_t k = i; k < format_data_len && k < i + 20; ++k) { // Limit lookahead to avoid excessive scanning.
-                         char c_scan = format_data_ptr[k];
-                         if (c_scan == '}') {
-                             format_spec_closed = true;
-                             break;
-                         }
-                         if (c_scan == '{') {
-                             // Nested brace found (including {{), treat the starting brace as literal
-                             format_spec_closed = false; 
-                             break;
-                         }
-                         format_spec_len++;
+                        char c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            // Nested brace found (including {{), treat the starting brace as literal
+                            format_spec_closed = false;
+                            break;
+                        }
+                        format_spec_len++;
                     }
 
                     if (format_spec_closed) {
-                         format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
-                         if (format_info_.offset != 0) {
-                             i += (format_info_.offset + 1); // advance past format spec and '}'
-                         } else {
-                             i += static_cast<uint32_t>(format_spec_len + 1); // advance past content and '}'
-                         }
-                         
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1); // advance past format spec and '}'
+                        } else {
+                            i += static_cast<uint32_t>(format_spec_len + 1); // advance past content and '}'
+                        }
+
                         auto write_begin_pos = format_content_cursor;
                         uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
                         bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
@@ -823,30 +821,27 @@ namespace bq {
                             insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                             break;
-                        case bq::log_arg_type_enum::string_utf8_type: 
-                        {
+                        case bq::log_arg_type_enum::string_utf8_type: {
                             const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
                             const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf8(str, str_len);
                             args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                        }
-                        break;
+                        } break;
                         case bq::log_arg_type_enum::string_utf16_type: {
                             const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
                             const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf16(str, str_len);
                             args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                        } 
-                        break;
+                        } break;
                         default:
                             break;
                         }
 
                         assert(args_data_cursor <= args_data_len);
                         fill_and_alignment(write_begin_pos);
-                        
+
                         // Check buffer size after insertion (insert functions handle it, but good to be safe)
                         uint32_t safe_buff_size = format_content_cursor + (format_data_len - i); // Approx remaining
                         expand_format_content_buff_size(safe_buff_size);
@@ -883,12 +878,12 @@ namespace bq {
         while (i < wchar_len) {
             bool found_brace = false;
             bool non_ascii = false;
-            
+
             // Step 1: Attempt Optimistic Conversion and Copy utilizing SIMD.
             // This process stops at the first non-ASCII character or brace.
             uint32_t remaining = wchar_len - i;
             uint32_t processed = find_brace_and_convert_u16(format_data_ptr + i, remaining, &format_content[format_content_cursor], found_brace, non_ascii);
-            
+
             i += processed;
             format_content_cursor += processed;
 
@@ -897,7 +892,7 @@ namespace bq {
                 if (i < wchar_len) {
                     char16_t c = format_data_ptr[i];
                     i++;
-                    
+
                     if (c < 0x80) {
                         format_content[format_content_cursor++] = (char)c;
                     } else if (c < 0x800) {
@@ -932,13 +927,13 @@ namespace bq {
             }
 
             if (found_brace) {
-                char16_t c = format_data_ptr[i]; 
-                i++; 
+                char16_t c = format_data_ptr[i];
+                i++;
 
                 if (i < wchar_len) {
                     char16_t next_c = format_data_ptr[i];
                     // Only handle "}}" as escape. "{{" is handled by nested brace detection logic.
-                    if (c == '}' && next_c == '}') { 
+                    if (c == '}' && next_c == '}') {
                         expand_format_content_buff_size(format_content_cursor + 1);
                         format_content[format_content_cursor++] = static_cast<char>('}');
                         i++;
@@ -952,43 +947,44 @@ namespace bq {
                     continue;
                 }
 
-                if (format_info_.used) format_info_.reset();
+                if (format_info_.used)
+                    format_info_.reset();
 
                 // Parse format string (simple scan in U16)
                 if (args_data_cursor < args_data_len) {
-                    
+
                     int32_t format_spec_len = 0;
                     bool format_spec_closed = false;
                     for (uint32_t k = i; k < wchar_len && k < i + 20; ++k) {
-                         char16_t c_scan = format_data_ptr[k];
-                         if (c_scan == '}') {
-                             format_spec_closed = true;
-                             break;
-                         }
-                         if (c_scan == '{') {
-                             bool is_escaped = false;
-                             if (k + 1 < wchar_len && format_data_ptr[k+1] == '{') {
-                                 is_escaped = true;
-                             }
-                             
-                             if (!is_escaped) {
-                                 format_spec_closed = false;
-                                 break;
-                             } else {
-                                 k++;
-                                 format_spec_len++;
-                             }
-                         }
-                         format_spec_len++;
+                        char16_t c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            bool is_escaped = false;
+                            if (k + 1 < wchar_len && format_data_ptr[k + 1] == '{') {
+                                is_escaped = true;
+                            }
+
+                            if (!is_escaped) {
+                                format_spec_closed = false;
+                                break;
+                            } else {
+                                k++;
+                                format_spec_len++;
+                            }
+                        }
+                        format_spec_len++;
                     }
 
                     if (format_spec_closed) {
-                         format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
-                         if (format_info_.offset != 0) {
-                             i += (format_info_.offset + 1); 
-                         } else {
-                             i += static_cast<uint32_t>(format_spec_len + 1);
-                         }
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1);
+                        } else {
+                            i += static_cast<uint32_t>(format_spec_len + 1);
+                        }
 
                         auto write_begin_pos = format_content_cursor;
                         uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
@@ -1008,7 +1004,7 @@ namespace bq {
                             {
                                 const void* ptr_data = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
                                 insert_pointer(ptr_data);
-                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); 
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             }
                             break;
                         case bq::log_arg_type_enum::bool_type:
@@ -1087,7 +1083,7 @@ namespace bq {
 
                         assert(args_data_cursor <= args_data_len);
                         fill_and_alignment(write_begin_pos);
-                        
+
                         safe_buff_size = format_content_cursor + (uint32_t)((wchar_len - i) * 3 / 2);
                         expand_format_content_buff_size(safe_buff_size);
                     } else {
@@ -1529,7 +1525,7 @@ namespace bq {
 
         while (i < format_data_len) {
             bool found_brace = false;
-            
+
             // Legacy slow copy
             while (i < format_data_len) {
                 char c = format_data_ptr[i];
@@ -1543,12 +1539,12 @@ namespace bq {
             }
 
             if (found_brace) {
-                char c = format_data_ptr[i]; 
-                i++; 
+                char c = format_data_ptr[i];
+                i++;
 
                 if (i < format_data_len) {
                     char next_c = format_data_ptr[i];
-                    if (c == '}' && next_c == '}') { 
+                    if (c == '}' && next_c == '}') {
                         expand_format_content_buff_size(format_content_cursor + 1);
                         format_content[format_content_cursor++] = '}';
                         i++;
@@ -1562,32 +1558,33 @@ namespace bq {
                     continue;
                 }
 
-                if (format_info_.used) format_info_.reset();
+                if (format_info_.used)
+                    format_info_.reset();
 
                 if (args_data_cursor < args_data_len) {
                     int32_t format_spec_len = 0;
                     bool format_spec_closed = false;
                     for (uint32_t k = i; k < format_data_len && k < i + 20; ++k) {
-                         char c_scan = format_data_ptr[k];
-                         if (c_scan == '}') {
-                             format_spec_closed = true;
-                             break;
-                         }
-                         if (c_scan == '{') {
-                             format_spec_closed = false; 
-                             break;
-                         }
-                         format_spec_len++;
+                        char c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            format_spec_closed = false;
+                            break;
+                        }
+                        format_spec_len++;
                     }
 
                     if (format_spec_closed) {
-                         format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
-                         if (format_info_.offset != 0) {
-                             i += (format_info_.offset + 1); 
-                         } else {
-                             i += static_cast<uint32_t>(format_spec_len + 1); 
-                         }
-                         
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1);
+                        } else {
+                            i += static_cast<uint32_t>(format_spec_len + 1);
+                        }
+
                         auto write_begin_pos = format_content_cursor;
                         uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
                         bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
@@ -1606,7 +1603,7 @@ namespace bq {
                             {
                                 const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
                                 insert_pointer(arg_data_ptr);
-                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); 
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             }
                             break;
                         case bq::log_arg_type_enum::bool_type:
@@ -1665,29 +1662,27 @@ namespace bq {
                             insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                             break;
-                        case bq::log_arg_type_enum::string_utf8_type:
-                            {
-                                const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                                const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
-                                uint32_t str_len = *len_ptr;
-                                insert_str_utf8(str, str_len);
-                                args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                            } break;
-                        case bq::log_arg_type_enum::string_utf16_type:
-                            {
-                                const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                                const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
-                                uint32_t str_len = *len_ptr;
-                                insert_str_utf16(str, str_len);
-                                args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                            } break;
+                        case bq::log_arg_type_enum::string_utf8_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf8(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        case bq::log_arg_type_enum::string_utf16_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf16(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
                         default:
                             break;
                         }
 
                         assert(args_data_cursor <= args_data_len);
                         fill_and_alignment(write_begin_pos);
-                        
+
                         expand_format_content_buff_size(format_content_cursor + (format_data_len - i));
 
                     } else {
@@ -1718,7 +1713,7 @@ namespace bq {
 
         while (i < wchar_len) {
             bool found_brace = false;
-            
+
             // Legacy slow copy
             while (i < wchar_len) {
                 char16_t c = format_data_ptr[i];
@@ -1726,7 +1721,7 @@ namespace bq {
                     found_brace = true;
                     break;
                 }
-                
+
                 // Legacy scalar utf16->utf8 conversion
                 if (c < 0x80) {
                     format_content[format_content_cursor++] = (char)c;
@@ -1736,7 +1731,7 @@ namespace bq {
                     format_content[format_content_cursor++] = (char)(0x80 | (c & 0x3F));
                 } else if (c >= 0xD800 && c <= 0xDBFF) {
                     if (i + 1 < wchar_len) {
-                        char16_t c2 = format_data_ptr[i+1];
+                        char16_t c2 = format_data_ptr[i + 1];
                         if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
                             i++; // consume extra char
                             uint32_t codepoint = static_cast<uint32_t>(0x10000) + (static_cast<uint32_t>(c) - 0xD800) * 0x400 + (static_cast<uint32_t>(c2) - 0xDC00);
@@ -1755,17 +1750,17 @@ namespace bq {
                     format_content[format_content_cursor++] = (char)(0x80 | ((c >> 6) & 0x3F));
                     format_content[format_content_cursor++] = (char)(0x80 | (c & 0x3F));
                 }
-                
+
                 i++;
             }
 
             if (found_brace) {
-                char16_t c = format_data_ptr[i]; 
-                i++; 
+                char16_t c = format_data_ptr[i];
+                i++;
 
                 if (i < wchar_len) {
                     char16_t next_c = format_data_ptr[i];
-                    if (c == '}' && next_c == '}') { 
+                    if (c == '}' && next_c == '}') {
                         expand_format_content_buff_size(format_content_cursor + 1);
                         format_content[format_content_cursor++] = '}';
                         i++;
@@ -1779,31 +1774,32 @@ namespace bq {
                     continue;
                 }
 
-                if (format_info_.used) format_info_.reset();
+                if (format_info_.used)
+                    format_info_.reset();
 
                 if (args_data_cursor < args_data_len) {
                     int32_t format_spec_len = 0;
                     bool format_spec_closed = false;
                     for (uint32_t k = i; k < wchar_len && k < i + 20; ++k) {
-                         char16_t c_scan = format_data_ptr[k];
-                         if (c_scan == '}') {
-                             format_spec_closed = true;
-                             break;
-                         }
-                         if (c_scan == '{') {
-                             format_spec_closed = false;
-                             break;
-                         }
-                         format_spec_len++;
+                        char16_t c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            format_spec_closed = false;
+                            break;
+                        }
+                        format_spec_len++;
                     }
 
                     if (format_spec_closed) {
-                         format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
-                         if (format_info_.offset != 0) {
-                             i += (format_info_.offset + 1); 
-                         } else {
-                             i += (uint32_t)(format_spec_len + 1);
-                         }
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1);
+                        } else {
+                            i += (uint32_t)(format_spec_len + 1);
+                        }
 
                         auto write_begin_pos = format_content_cursor;
                         uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
@@ -1823,7 +1819,7 @@ namespace bq {
                             {
                                 const void* ptr_data = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
                                 insert_pointer(ptr_data);
-                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); 
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             }
                             break;
                         case bq::log_arg_type_enum::bool_type:
@@ -1882,29 +1878,27 @@ namespace bq {
                             insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                             break;
-                        case bq::log_arg_type_enum::string_utf8_type:
-                            {
-                                const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                                const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
-                                uint32_t str_len = *len_ptr;
-                                insert_str_utf8(str, str_len);
-                                args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                            } break;
-                        case bq::log_arg_type_enum::string_utf16_type:
-                            {
-                                const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                                const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
-                                uint32_t str_len = *len_ptr;
-                                insert_str_utf16(str, str_len);
-                                args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                            } break;
+                        case bq::log_arg_type_enum::string_utf8_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf8(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        case bq::log_arg_type_enum::string_utf16_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf16(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
                         default:
                             break;
                         }
 
                         assert(args_data_cursor <= args_data_len);
                         fill_and_alignment(write_begin_pos);
-                        
+
                         safe_buff_size = format_content_cursor + (uint32_t)((wchar_len - i) * 3 / 2);
                         expand_format_content_buff_size(safe_buff_size);
                     } else {
@@ -1919,12 +1913,14 @@ namespace bq {
         }
     }
 
-    void layout::test_python_style_format_content_legacy(const bq::log_entry_handle& log_entry) {
+    void layout::test_python_style_format_content_legacy(const bq::log_entry_handle& log_entry)
+    {
         format_content_cursor = 0;
         python_style_format_content_legacy(log_entry);
     }
-    
-    void layout::test_python_style_format_content_sw(const bq::log_entry_handle& log_entry) {
+
+    void layout::test_python_style_format_content_sw(const bq::log_entry_handle& log_entry)
+    {
         format_content_cursor = 0;
 #if defined(BQ_X86)
         bool old_avx = _bq_avx2_supported_;
@@ -1936,7 +1932,8 @@ namespace bq {
 #endif
     }
 
-    void layout::test_python_style_format_content_simd(const bq::log_entry_handle& log_entry) {
+    void layout::test_python_style_format_content_simd(const bq::log_entry_handle& log_entry)
+    {
         format_content_cursor = 0;
         python_style_format_content(log_entry);
     }

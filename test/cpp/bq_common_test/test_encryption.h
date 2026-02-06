@@ -80,9 +80,7 @@ namespace bq {
                     compare_result2 = memcmp(src, tar, buff_size);
                     result.add_result(compare_result2 == 0, "[with hardware acceleration]vernam enc test 2 for key size:%" PRIu32 ", data size:%" PRIu32 ", offset:%" PRIu32, static_cast<uint32_t>(key_size), static_cast<uint32_t>(buff_size), static_cast<uint32_t>(offset));
 
-                    
-
-                    bq::platform::aligned_free(key);    
+                    bq::platform::aligned_free(key);
                     bq::platform::aligned_free(src);
                     bq::platform::aligned_free(tar);
                 }
@@ -106,7 +104,8 @@ RwlHK/5N7a45aDoHUHHqJg14Lw1wI1PB4yjOOcbghw+KvH9L+q9T94zsSA/cxAb2
 sUW3Yvn+lgdwFAfhhMo1AkBSVop+u94LplzwfOH5U2q7dWnhZvSY1bMd+d/ZFPar
 eSFkEwI+QE7YZLQUCjw/GRTS6LczBS+EOgpfomXN272r
 -----END RSA PRIVATE KEY-----
-)", R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC/KY6/zAKjjd+6G256EHBGqyCnfCBGFtAbZX2qb8IuVmnUhoVa3HfwqQz5IWzm5TKdojUD5L9SYy116HQFERLppq+AY16EeYv0pR61TnyzTgFRRXuuqmItIwECq2WucZ8Ys3AEQsfDY6Z31OINLx0ftCh7QKZHkPzvJy/y9pgwvQ== pippocao@PIPPOCAO-PC6
+)",
+                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC/KY6/zAKjjd+6G256EHBGqyCnfCBGFtAbZX2qb8IuVmnUhoVa3HfwqQz5IWzm5TKdojUD5L9SYy116HQFERLppq+AY16EeYv0pR61TnyzTgFRRXuuqmItIwECq2WucZ8Ys3AEQsfDY6Z31OINLx0ftCh7QKZHkPzvJy/y9pgwvQ== pippocao@PIPPOCAO-PC6
 )"));
                 prepared_keys.add(2048, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAsDsX+mR4jZ+E9Y3I7gqAQ20PZ7w59xxMMkQmI4h4f3+h8/gp
@@ -135,7 +134,8 @@ xzlyjQKBgQCS5jIIWeN5wODwa+N2pZ6JrnooN/NmF+5ElfoToLh3Yb/yYqYQSM8e
 4mDhezXYzHmEuHxQp9URDdcoGcLxcH+eg1MZvuUVt0OdIdb8Ai7zXG1zw7QNWK6j
 4lI5KbODGCPuKpSUdRbJLaCvwT0MgO18buV4Z9e+qZKTdwYaZtW6dw==
 -----END RSA PRIVATE KEY-----
-)", R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwOxf6ZHiNn4T1jcjuCoBDbQ9nvDn3HEwyRCYjiHh/f6Hz+CmNQqd6ErccjjqQO/B5R2LpC2/BrESSXa08u3oe1e+AhFCcdFmTOvzlamfTjOwFEwiOxt2aBOkFmhe4UTibKxNWK4ODOgSpN/4xZqo+Njpx/NRyGwj6b0oxUrdN+LIXU4NhOBz8aovF9wdbmgvAAUdRToSthO1gS1k5w15/XvtGV2mxRtU3gGtrmpl6KvWq+r3oYSAgBO4N+4DQ7oGsp/k5NkaZXumlUD4LRPLTuh/iEx7V68FMTh6BJklkE6ZtBxwJD94NO4Yut3LPM2bUE2aLCf5unloezAdytKrB pippocao@PIPPOCAO-PC6
+)",
+                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwOxf6ZHiNn4T1jcjuCoBDbQ9nvDn3HEwyRCYjiHh/f6Hz+CmNQqd6ErccjjqQO/B5R2LpC2/BrESSXa08u3oe1e+AhFCcdFmTOvzlamfTjOwFEwiOxt2aBOkFmhe4UTibKxNWK4ODOgSpN/4xZqo+Njpx/NRyGwj6b0oxUrdN+LIXU4NhOBz8aovF9wdbmgvAAUdRToSthO1gS1k5w15/XvtGV2mxRtU3gGtrmpl6KvWq+r3oYSAgBO4N+4DQ7oGsp/k5NkaZXumlUD4LRPLTuh/iEx7V68FMTh6BJklkE6ZtBxwJD94NO4Yut3LPM2bUE2aLCf5unloezAdytKrB pippocao@PIPPOCAO-PC6
 )"));
                 prepared_keys.add(3072, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
 MIIG4wIBAAKCAYEAqIFB3BDzMOp0gROwcooA6BBUzgAMHH3Eo5jLIa85r06KCe2q
@@ -176,7 +176,8 @@ fQENFlR59jEzpUwpQxT/HjTqvsYzLfX9EaGUsjmX3+3KTyrY8UXJVzwPNYdsToK6
 0WEFBPKZy3KYVHhqLtpDHqiNK7GogUJa90DXFsNYW/rBtUaNtR5nj/BlEI2rwllx
 JxZx//0tTpObn4N6UnqAFhHEXdN6J7v+MujJ4GqgBXfJ2hlnK1pM
 -----END RSA PRIVATE KEY-----
-)", R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCogUHcEPMw6nSBE7ByigDoEFTOAAwcfcSjmMshrzmvTooJ7aqI04XY+ROtaXrv9bY+p1frodXOv1MJBixn8omWeqKrolmMwEFEg96tlwKgmKojyiP2XG/Pu3kE4gBaex/UnG2D7QC8synJeSY3QDTq6x8EgZbqkfuHaAiLANWybo3lnBR5mRlhDaR3eBX//6wGQAfFRC26m7gnODQ2g7a/4yOis38OH0UZxA54rJT+vNrKSGdKtjWW5TXGEEMBDOdJlgpI6DydM05G6+t7Vrf3l5IKmPiY63GBHSbY7WhHyyHLhj2HMUe8P2Acr8j2VP5dZDy2ub/gD2omVH6CxTSpgGojcPSCRbq/g2v9GhzmI086BbM2SrX+BOorGK5Y/D32GknGQqkOulkA2tbXcr+QRjKILo2jxHU9jyphJTcJchptVT4lW5ctC1Lx3pXPFY/2YFJl/ZO/987s3DtG8/vfcPDIu9oeb4zw9y/FCjpEN42WpyNAuxFrf5Hw0o/0DM0= pippocao@PIPPOCAO-PC6
+)",
+                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCogUHcEPMw6nSBE7ByigDoEFTOAAwcfcSjmMshrzmvTooJ7aqI04XY+ROtaXrv9bY+p1frodXOv1MJBixn8omWeqKrolmMwEFEg96tlwKgmKojyiP2XG/Pu3kE4gBaex/UnG2D7QC8synJeSY3QDTq6x8EgZbqkfuHaAiLANWybo3lnBR5mRlhDaR3eBX//6wGQAfFRC26m7gnODQ2g7a/4yOis38OH0UZxA54rJT+vNrKSGdKtjWW5TXGEEMBDOdJlgpI6DydM05G6+t7Vrf3l5IKmPiY63GBHSbY7WhHyyHLhj2HMUe8P2Acr8j2VP5dZDy2ub/gD2omVH6CxTSpgGojcPSCRbq/g2v9GhzmI086BbM2SrX+BOorGK5Y/D32GknGQqkOulkA2tbXcr+QRjKILo2jxHU9jyphJTcJchptVT4lW5ctC1Lx3pXPFY/2YFJl/ZO/987s3DtG8/vfcPDIu9oeb4zw9y/FCjpEN42WpyNAuxFrf5Hw0o/0DM0= pippocao@PIPPOCAO-PC6
 )"));
 
                 prepared_keys.add(4096, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
@@ -230,7 +231,8 @@ Sz4/PWsKd0o45292ySV7H9CxtBPcwazHBQIyGqqpDRwgDbWrYqI+qBZE3wxOzLmK
 /54P08pgOE5ry1LXYWdJaPUXo/HDKuHYku5YCxVs8fZvN+eLWDUn1S3I5iagncQg
 MttqXIwbSxsmAN+jRnT37Oj3TE0eo00cepJj6HRNjH02M/K2bDnnTir/qNw=
 -----END RSA PRIVATE KEY-----
-)", R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCr8m4sHOJ8Pqed2nFhNO/0M/0X6vG4iNZePjdPy+osKUumD/7UfLwKoJT+zBx4W5HYJ5UiJcexcwdlB364l4ZkoOuI6asmRwwHELZ66yLrVYkZXfHZhlFVUSODLzo97DkIcRFG8hujxeUPmdo+/mBrfEfIED0YFWXMvmOP/asNkeLP8fsFje1Q/QXk813eJAT1FoKY/eH6aZ+bSRwCC1KNMBCb0qkfcpgtk+BlHqgo1NCfwGCY12+FOHca+4FlXAASTvmumJ34gXwjtrqmeKlwsQ8f78erVs0dMPJg/eXH4rt5X8NkRdNLKxE7IW42StStVApV4a40Cclh0SygKKAwbdgIScZFI3rRIFbEqOsQrArQt7eNeUpd1Ny5OAO7Vy+xEsr40FYlJh2GjJwX/G+US5se2IS01dvBEP519JSzVm4X0tOpAYiloKqoiVi4hmI2y0HnmkRoYlGvP7AUoY/chDhX9cWsdPTpCY2GUIIX3gYnHpA2N/dEgkMEFd0b1NTihdM3FQ1AB59H/CbszbE9xrcICfZwGDE2Q9zP9gWTOZedFtCwEtqWRZjxOk/muYLH+OWZstssazKgMLeZsunBMBhPl5PdVpovSUdvZCzU132ooOyo3ZVsxeER+mXhcvgOK9lK+c1c2/LyDQdx5XWLK81w6+n3RaL+sdWYWyF5SQ== pippocao@PIPPOCAO-PC6
+)",
+                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCr8m4sHOJ8Pqed2nFhNO/0M/0X6vG4iNZePjdPy+osKUumD/7UfLwKoJT+zBx4W5HYJ5UiJcexcwdlB364l4ZkoOuI6asmRwwHELZ66yLrVYkZXfHZhlFVUSODLzo97DkIcRFG8hujxeUPmdo+/mBrfEfIED0YFWXMvmOP/asNkeLP8fsFje1Q/QXk813eJAT1FoKY/eH6aZ+bSRwCC1KNMBCb0qkfcpgtk+BlHqgo1NCfwGCY12+FOHca+4FlXAASTvmumJ34gXwjtrqmeKlwsQ8f78erVs0dMPJg/eXH4rt5X8NkRdNLKxE7IW42StStVApV4a40Cclh0SygKKAwbdgIScZFI3rRIFbEqOsQrArQt7eNeUpd1Ny5OAO7Vy+xEsr40FYlJh2GjJwX/G+US5se2IS01dvBEP519JSzVm4X0tOpAYiloKqoiVi4hmI2y0HnmkRoYlGvP7AUoY/chDhX9cWsdPTpCY2GUIIX3gYnHpA2N/dEgkMEFd0b1NTihdM3FQ1AB59H/CbszbE9xrcICfZwGDE2Q9zP9gWTOZedFtCwEtqWRZjxOk/muYLH+OWZstssazKgMLeZsunBMBhPl5PdVpovSUdvZCzU132ooOyo3ZVsxeER+mXhcvgOK9lK+c1c2/LyDQdx5XWLK81w6+n3RaL+sdWYWyF5SQ== pippocao@PIPPOCAO-PC6
 )"));
 
                 prepared_keys.add(7680, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
@@ -326,7 +328,8 @@ eh9VuwmKHRz9ls+f4TH+lQuaHPioy7pM1MVn7G3vG12mtd+mpg8JQP8n1cLHXA2u
 ArFUnMeTkD7RieR/CSO4GO5i2pNov209JYWZrBhDIZ+4jpHBMSXIx3S9G58NsC9k
 rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
 -----END RSA PRIVATE KEY-----
-)", R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAADwQDn1/ZihFPT0Doh/qvaAwBEbX/I3Iw5jyzeq2IWec0Uhr6v9KZA489UvhpVKRpiGGOsWyVZQUxfx8poW3I3+FfPAe8RHW+PsaSEnlIv+Ip348RnZxmS2g3dgS3J2Fs97U441gWwAXTTIvLKXA1YoqUxjvDdrh7e8843RaYFuSMwfob8gw5iyuia/LKye5xXxEKLRieQfmWoLpXL8j61JSIoJwQLqj9hAAhGgreLq5MO6RtUWYNQ9pW3XxfTWMMBXjKiob/zDcppu9BcxgkDwJI+lSp2HUTTFXZcbSvdF5K5i+CY82BRT7Y6ohykqsJUcZHYUwW1Rme7Mk/Ei5g6iIqqTFud4e9GR5eu10H4y7liUrnKWf2hrJA8KXveQYwudfKqVsAomNhAjKQGi5J92FhRCkCbuZiFX3yuLTc/NrZsJVndLIVQdggclz/Fy78FuXA7b/fmWvGYyU9TfWmJbPGV0FGuo58ANHXrOw8lqNjrckVCpDA94wDRd1Im+Keqj+NJuj59r9njSuRpMLSNDpPcOvNrnfAK8L/6nwEbBdF5kkBmGfXflbKF7ZmG+f895jVosCrtW5//7lEDkfPn+5xW34ZtrwdVbbA/tkA+vwA9LKKwL27CWDyjMV9qXLMUg41cfEsf1yxQzcXvv+IePyTJ8oHLwNjxxpQ0ChgRKbDxz7iKZA86T01D46ki+1lpHwaaJ0SSSek0o8vYWo19Tt+fPubT9hQhA1pPx9mwmSr/6HYjRAJRdfAXcZj/0WA43aC3wb5MbQyp59+esJ7+YrQDq3Lhtzxx5eqBLwe6XSnZDASSVC0yqw3sTfWZPLpPsrn6+RYgpwgKMLNNyH2CGExulaT5Y4dWUfkLcHW864jo3r1nIr4NufUox/lTgByTHtI9+1M0Am6SlULf9peAk+F9xUUs2n5AgUTjLomyeY826/CRg6JD5KL4ljjkZ4fL66Fi6ofPJrbIbSvK0V4ec29yu0cImOO/66iCIfv/52smWykqmNVCtuiPB5fvBxCwnEdqAjmYlU60fBXKxZuTFDx2/cd+Szx4vjYH8v2z1E8/N+kWK58J9S/FNq9wrM/ls5GIB3YPcIJ20s/l62rpMSrkK1B/e4+yf4v6e5Ho8lyS3k9UfJiuWhVcX7Boo0W3/lnyhhOnLAR+G5XBQAUK+3o/Z9ZO+IoUxKmAyMpbQbxyrcUFFAhIeiHLakW74YN6M6X69e46WUQlmm2LSZUqSMMxkUjPMOG70gUmGXXYUGb8iPcV2XPEIPeQPsGbKMPkzr8= pippocao@PIPPOCAO-PC6
+)",
+                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAADwQDn1/ZihFPT0Doh/qvaAwBEbX/I3Iw5jyzeq2IWec0Uhr6v9KZA489UvhpVKRpiGGOsWyVZQUxfx8poW3I3+FfPAe8RHW+PsaSEnlIv+Ip348RnZxmS2g3dgS3J2Fs97U441gWwAXTTIvLKXA1YoqUxjvDdrh7e8843RaYFuSMwfob8gw5iyuia/LKye5xXxEKLRieQfmWoLpXL8j61JSIoJwQLqj9hAAhGgreLq5MO6RtUWYNQ9pW3XxfTWMMBXjKiob/zDcppu9BcxgkDwJI+lSp2HUTTFXZcbSvdF5K5i+CY82BRT7Y6ohykqsJUcZHYUwW1Rme7Mk/Ei5g6iIqqTFud4e9GR5eu10H4y7liUrnKWf2hrJA8KXveQYwudfKqVsAomNhAjKQGi5J92FhRCkCbuZiFX3yuLTc/NrZsJVndLIVQdggclz/Fy78FuXA7b/fmWvGYyU9TfWmJbPGV0FGuo58ANHXrOw8lqNjrckVCpDA94wDRd1Im+Keqj+NJuj59r9njSuRpMLSNDpPcOvNrnfAK8L/6nwEbBdF5kkBmGfXflbKF7ZmG+f895jVosCrtW5//7lEDkfPn+5xW34ZtrwdVbbA/tkA+vwA9LKKwL27CWDyjMV9qXLMUg41cfEsf1yxQzcXvv+IePyTJ8oHLwNjxxpQ0ChgRKbDxz7iKZA86T01D46ki+1lpHwaaJ0SSSek0o8vYWo19Tt+fPubT9hQhA1pPx9mwmSr/6HYjRAJRdfAXcZj/0WA43aC3wb5MbQyp59+esJ7+YrQDq3Lhtzxx5eqBLwe6XSnZDASSVC0yqw3sTfWZPLpPsrn6+RYgpwgKMLNNyH2CGExulaT5Y4dWUfkLcHW864jo3r1nIr4NufUox/lTgByTHtI9+1M0Am6SlULf9peAk+F9xUUs2n5AgUTjLomyeY826/CRg6JD5KL4ljjkZ4fL66Fi6ofPJrbIbSvK0V4ec29yu0cImOO/66iCIfv/52smWykqmNVCtuiPB5fvBxCwnEdqAjmYlU60fBXKxZuTFDx2/cd+Szx4vjYH8v2z1E8/N+kWK58J9S/FNq9wrM/ls5GIB3YPcIJ20s/l62rpMSrkK1B/e4+yf4v6e5Ho8lyS3k9UfJiuWhVcX7Boo0W3/lnyhhOnLAR+G5XBQAUK+3o/Z9ZO+IoUxKmAyMpbQbxyrcUFFAhIeiHLakW74YN6M6X69e46WUQlmm2LSZUqSMMxkUjPMOG70gUmGXXYUGb8iPcV2XPEIPeQPsGbKMPkzr8= pippocao@PIPPOCAO-PC6
 )"));
 
                 bq::string base_dir = bq::file_manager::get_base_dir(1);
@@ -352,8 +355,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                         bq::util::log_device_console(bq::log_level::warning, "ssh-key-gen failed out:%s, use pre generated key instead", out_str.c_str());
                         pub_key_text = bq::get<1>(prepared_keys[key_bits]);
                         pri_key_text = bq::get<0>(prepared_keys[key_bits]);
-                    }
-                    else {
+                    } else {
                         pub_key_text = bq::file_manager::read_all_text(bq::file_manager::combine_path(output_dir, "id_rsa.pub"));
                         pri_key_text = bq::file_manager::read_all_text(bq::file_manager::combine_path(output_dir, "id_rsa"));
                     }

@@ -275,8 +275,7 @@ namespace bq {
         bool remove_result = group.value().get_data_head().used_.remove_thread_unsafe(prev_block, recycle_block);
         if (remove_result) {
             group.value().get_data_head().free_.push(recycle_block);
-        }
-        else {
+        } else {
 #ifdef BQ_UNIT_TEST
             bq::util::log_device_console(bq::log_level::error, "free list:");
             group.value().get_data_head().free_.debug_output();
@@ -284,7 +283,7 @@ namespace bq {
             group.value().get_data_head().used_.debug_output();
             bq::util::log_device_console(bq::log_level::error, "stage list:");
             group.value().get_data_head().stage_.debug_output();
-            assert(false && "recycle_block_thread_unsafe failed, block not found in used list");    
+            assert(false && "recycle_block_thread_unsafe failed, block not found in used list");
 #endif
         }
     }

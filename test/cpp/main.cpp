@@ -138,7 +138,8 @@ int32_t main(int32_t argc, char** argv)
 }
 
 #if defined(BQ_ANDROID)
-int32_t test_main() {
+int32_t test_main()
+{
     return main_logic();
 }
 #endif

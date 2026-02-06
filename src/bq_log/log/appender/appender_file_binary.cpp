@@ -21,8 +21,7 @@ namespace bq {
             if (!rsa::parse_public_key_ssh(pub_key_str, rsa_pub_key_)) {
                 return false;
             }
-        }
-        else {
+        } else {
             enc_type_ = appender_encryption_type::plaintext;
         }
         if (!appender_file_base::init_impl(config_obj)) {
@@ -188,7 +187,7 @@ namespace bq {
         appender_file_base::flush_write_cache();
         update_write_cache_padding();
         if (enc_type_ == appender_encryption_type::rsa_aes_xor && get_pendding_flush_written_size() > 0) {
-            //revert
+            // revert
             vernam::vernam_encrypt_32bytes_aligned(
                 get_cache_write_ptr_base(),
                 get_pendding_flush_written_size(),
@@ -201,7 +200,7 @@ namespace bq {
     bool appender_file_binary::seek_read_file_absolute(size_t pos)
     {
         if (appender_file_base::seek_read_file_absolute(pos)) {
-            
+
             return true;
         }
         return false;
@@ -215,7 +214,8 @@ namespace bq {
         }
     }
 
-    bool appender_file_binary::on_appender_file_recovery_begin() {
+    bool appender_file_binary::on_appender_file_recovery_begin()
+    {
         if (!appender_file_base::on_appender_file_recovery_begin()) {
             return false;
         }
@@ -223,18 +223,20 @@ namespace bq {
         return true;
     }
 
-    void appender_file_binary::on_appender_file_recovery_end() {
+    void appender_file_binary::on_appender_file_recovery_end()
+    {
         appender_file_base::on_appender_file_recovery_end();
     }
 
-    void appender_file_binary::on_log_item_recovery_begin(bq::log_entry_handle& read_handle) {
+    void appender_file_binary::on_log_item_recovery_begin(bq::log_entry_handle& read_handle)
+    {
         appender_file_base::on_log_item_recovery_begin(read_handle);
         append_new_segment(appender_segment_type::recovery_by_log_buffer);
     }
-    void appender_file_binary::on_log_item_recovery_end() {
+    void appender_file_binary::on_log_item_recovery_end()
+    {
         appender_file_base::on_log_item_recovery_end();
     }
-
 
     void appender_file_binary::on_log_item_new_begin(bq::log_entry_handle& read_handle)
     {
@@ -246,8 +248,7 @@ namespace bq {
     {
         uint64_t current_read_pos = static_cast<uint64_t>(get_read_file_pos());
         assert(((current_read_pos >= cur_read_seg_.start_pos) && (current_read_pos <= cur_read_seg_.end_pos)) && "read beyond file size");
-        while (current_read_pos == cur_read_seg_.end_pos)
-        {
+        while (current_read_pos == cur_read_seg_.end_pos) {
             if (!read_to_next_segment()) {
                 return appender_file_base::read_with_cache(0);
             }
@@ -259,7 +260,8 @@ namespace bq {
         return appender_file_base::read_with_cache(size);
     }
 
-    bool appender_file_binary::read_to_correct_segment() {
+    bool appender_file_binary::read_to_correct_segment()
+    {
         auto current_file_read_pos_backup = get_read_file_pos();
         cur_read_seg_.end_pos = static_cast<uint64_t>(sizeof(appender_file_header));
         bool found_segment = false;
@@ -292,10 +294,7 @@ namespace bq {
             return false;
         }
         if (seg_head.next_seg_pos < new_seg_start_pos + sizeof(appender_file_segment_head)) {
-            bq::util::log_device_console(bq::log_level::error, "file format of segment start pos: %" PRIu64 ", invalid segment end pos:%" PRIu64 ", file path:%s"
-                , new_seg_start_pos
-                , seg_head.next_seg_pos
-                , get_file_handle().abs_file_path().c_str());
+            bq::util::log_device_console(bq::log_level::error, "file format of segment start pos: %" PRIu64 ", invalid segment end pos:%" PRIu64 ", file path:%s", new_seg_start_pos, seg_head.next_seg_pos, get_file_handle().abs_file_path().c_str());
             return false;
         }
         cur_read_seg_.start_pos = new_seg_start_pos;
@@ -315,7 +314,7 @@ namespace bq {
         }
         if (has_segment) {
             uint64_t new_seg_start_pos = static_cast<uint64_t>(get_current_file_size());
-            //record the start of current segment on prev segment's head
+            // record the start of current segment on prev segment's head
             direct_write(&new_seg_start_pos, sizeof(new_seg_start_pos), bq::file_manager::seek_option::begin,
                 static_cast<int64_t>(cur_read_seg_.start_pos) + static_cast<int64_t>(BQ_POD_RUNTIME_OFFSET_OF(appender_file_segment_head, next_seg_pos)));
         }
@@ -373,8 +372,7 @@ namespace bq {
     {
         if (enc_type_ != appender_encryption_type::rsa_aes_xor || xor_key_blob_.is_empty()) {
             set_cache_write_padding(0);
-        }
-        else {
+        } else {
             auto file_pos = get_current_file_size();
             auto enc_start_pos = static_cast<size_t>(file_pos & (xor_key_blob_.size() - 1));
             size_t target_align = enc_start_pos & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));

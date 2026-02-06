@@ -53,8 +53,7 @@ namespace bq {
         if (payload_metadata_.magic_number[0] != 2 || payload_metadata_.magic_number[1] != 2 || payload_metadata_.magic_number[2] != 7) {
             if (cur_read_seg_.xor_key_blob.is_empty()) {
                 util::log_device_console(log_level::error, "decode log file failed, magic number mismatch");
-            }
-            else {
+            } else {
                 util::log_device_console(log_level::error, "decode log file failed, magic number mismatch, please check your private key");
             }
             return appender_decode_result::failed_decode_error;
@@ -77,8 +76,7 @@ namespace bq {
                     return appender_decode_result::failed_io_error;
                 }
                 memcpy(&name[0], read_handle.data(), name_len);
-            }
-            else if (i != 0) {
+            } else if (i != 0) {
                 util::log_device_console(log_level::error, "category name length mismatch");
                 return appender_decode_result::failed_decode_error;
             }
@@ -94,18 +92,17 @@ namespace bq {
         do {
             result = decode_private();
             if (appender_decode_result::success == result
-                || appender_decode_result::eof == result
-            ) {
+                || appender_decode_result::eof == result) {
                 break;
             }
             lose_data = true;
             if (appender_decode_result::success != read_to_next_segment()) {
                 break;
             }
-        }while(true);
+        } while (true);
         if (lose_data) {
             bq::string error_tips;
-            error_tips += "/*********************************************************************/\n";  
+            error_tips += "/*********************************************************************/\n";
             error_tips += "/*       WARNING: Some log data may be lost or corrupted here        */\n";
             error_tips += "/*********************************************************************/\n";
             decoded_text_.insert_batch(decoded_text_.begin(), error_tips.begin(), error_tips.size());
@@ -132,8 +129,7 @@ namespace bq {
         if (final_cache_cursor >= 0 && final_cache_cursor <= static_cast<int64_t>(cache_read_.size())) {
             cache_read_cursor_ = static_cast<size_t>(final_cache_cursor);
             return true;
-        }
-        else {
+        } else {
             return seek_read_file_absolute(static_cast<size_t>(static_cast<size_t_to_int_t>(current_file_cursor_) + offset));
         }
     }
@@ -179,12 +175,12 @@ namespace bq {
             }
             auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + static_cast<ptrdiff_t>(read_offset), expected_read_size);
             current_file_cursor_ += read_size;
-            cache_read_cursor_ = read_offset;  
-            
+            cache_read_cursor_ = read_offset;
+
             if (read_size < total_size - read_offset) {
                 cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(read_offset + read_size), total_size - read_offset - read_size);
             }
-            
+
             if (!cur_read_seg_.xor_key_blob.is_empty() && read_size > 0) {
                 size_t file_offset_start = current_file_cursor_ - read_size;
                 vernam::vernam_encrypt_32bytes_aligned(
@@ -248,9 +244,7 @@ namespace bq {
             return appender_decode_result::eof;
         }
         if (seg_head.next_seg_pos < current_file_cursor_) {
-            bq::util::log_device_console(bq::log_level::error, "file format of segment start pos: %" PRIu64 ", invalid segment end pos:%" PRIu64
-                , new_seg_start_pos
-                , seg_head.next_seg_pos);
+            bq::util::log_device_console(bq::log_level::error, "file format of segment start pos: %" PRIu64 ", invalid segment end pos:%" PRIu64, new_seg_start_pos, seg_head.next_seg_pos);
             return appender_decode_result::eof;
         }
         if (seg_head.enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor && seg_head.has_key) {
@@ -298,8 +292,7 @@ namespace bq {
             if (is_cur_seg_recover) {
                 decoded_text_.insert_batch(decoded_text_.end(), log_global_vars::get().log_recover_start_str_, strlen(log_global_vars::get().log_recover_start_str_));
                 decoded_text_.push_back('\n');
-            }
-            else if (is_last_seg_recover) {
+            } else if (is_last_seg_recover) {
                 decoded_text_.insert_batch(decoded_text_.end(), log_global_vars::get().log_recover_end_str_, strlen(log_global_vars::get().log_recover_end_str_));
                 decoded_text_.push_back('\n');
             }

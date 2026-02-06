@@ -19,6 +19,7 @@ namespace bq {
     class log_imp;
     class appender_base {
         friend class log_imp;
+
     public:
         enum appender_type {
             console,
@@ -65,11 +66,12 @@ namespace bq {
 
         virtual void log_impl(const log_entry_handle& handle) = 0;
 
-        virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) {(void)read_handle; }
+        virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) { (void)read_handle; }
 
-        virtual void on_log_item_recovery_end() {}
+        virtual void on_log_item_recovery_end() { }
 
-        virtual void on_log_item_new_begin(bq::log_entry_handle& read_handle) {(void)read_handle; }
+        virtual void on_log_item_new_begin(bq::log_entry_handle& read_handle) { (void)read_handle; }
+
     protected:
         time_zone time_zone_;
         const log_imp* parent_log_;
@@ -78,6 +80,7 @@ namespace bq {
         bool appenders_enable = true;
         bq::array<bq::string> categories_mask_config_;
         bq::array_inline<uint8_t> categories_mask_array_;
+
     private:
         log_level_bitmap log_level_bitmap_;
         bq::string name_;

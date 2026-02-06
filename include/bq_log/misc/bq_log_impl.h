@@ -230,17 +230,17 @@ namespace bq {
         bq::_api_log_write_handle handle;
         const void* format_data_ptr = should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_addr(log_format_content);
         handle = bq::api::__api_log_write_begin(log_id_,
-                static_cast<uint8_t>(level),
-                category_index,
-                static_cast<uint8_t>(is_bq_log_format<STR>::arg_type),
-                static_cast<uint32_t>(total_format_data_size),
-                format_data_ptr,
-                0);
+            static_cast<uint8_t>(level),
+            category_index,
+            static_cast<uint8_t>(is_bq_log_format<STR>::arg_type),
+            static_cast<uint32_t>(total_format_data_size),
+            format_data_ptr,
+            0);
         if (handle.result != bq::enum_buffer_result_code::success) {
             return false;
         }
         if (!format_data_ptr) {
-            //Ugly hack
+            // Ugly hack
             bq::tools::_type_copy<false>(log_format_content, handle.format_data_addr - sizeof(uint32_t), total_format_data_size + sizeof(uint32_t));
             memcpy(handle.format_data_addr + format_size, bq::get<0>(stack_info), bq::get<1>(stack_info));
             *reinterpret_cast<uint32_t*>(handle.format_data_addr - sizeof(uint32_t)) = static_cast<uint32_t>(total_format_data_size);
@@ -274,7 +274,7 @@ namespace bq {
             return false;
         }
         if (!format_data_ptr) {
-            //Ugly hack
+            // Ugly hack
             bq::tools::_type_copy<false>(log_format_content, handle.format_data_addr - sizeof(uint32_t), total_format_data_size + sizeof(uint32_t));
             memcpy(handle.format_data_addr + format_size, bq::get<0>(stack_info), bq::get<1>(stack_info));
             *reinterpret_cast<uint32_t*>(handle.format_data_addr - sizeof(uint32_t)) = static_cast<uint32_t>(total_format_data_size);

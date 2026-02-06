@@ -197,7 +197,7 @@ namespace bq {
 
 #if defined(__cplusplus) && (__cplusplus >= 201703L)
 #define BQ_CPP_17 1
-#define BQ_CONSTEXPR_IF if constexpr 
+#define BQ_CONSTEXPR_IF if constexpr
 #else
 #define BQ_CONSTEXPR_IF if
 #endif
@@ -257,7 +257,6 @@ namespace bq {
 #define BQ_IN_UNREAL 0
 #endif
 
-
 #if defined(BQ_ANDROID) || defined(BQ_IOS) || defined(BQ_OHOS)
 #define BQ_MOBILE_PLATFORM
 #endif
@@ -270,36 +269,33 @@ namespace bq {
 #define BQ_RESTRICT
 #endif
 
-
-
 // Target attribute for GCC/Clang to enable specific instruction sets for specific functions.
 #if (defined(BQ_CLANG) || defined(BQ_GCC))
-    #if defined(BQ_X86)
-        #define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
-        #define BQ_HW_SIMD_TARGET __attribute__((target("avx2")))
-        #define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))
-    #else
-        #define BQ_HW_CRC_TARGET
-        #define BQ_HW_SIMD_TARGET
-        #define BQ_HW_SIMD_SSE_TARGET
-    #endif
-    #define BQ_CRC_HW_INLINE inline
-    #define BQ_SIMD_HW_INLINE inline
+#if defined(BQ_X86)
+#define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
+#define BQ_HW_SIMD_TARGET __attribute__((target("avx2")))
+#define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))
 #else
-    #define BQ_HW_CRC_TARGET
-    #define BQ_HW_SIMD_TARGET
-    #define BQ_HW_SIMD_SSE_TARGET
-    #define BQ_CRC_HW_INLINE bq_forceinline
-    #define BQ_SIMD_HW_INLINE bq_forceinline
+#define BQ_HW_CRC_TARGET
+#define BQ_HW_SIMD_TARGET
+#define BQ_HW_SIMD_SSE_TARGET
+#endif
+#define BQ_CRC_HW_INLINE inline
+#define BQ_SIMD_HW_INLINE inline
+#else
+#define BQ_HW_CRC_TARGET
+#define BQ_HW_SIMD_TARGET
+#define BQ_HW_SIMD_SSE_TARGET
+#define BQ_CRC_HW_INLINE bq_forceinline
+#define BQ_SIMD_HW_INLINE bq_forceinline
 #endif
 
-
 #if defined(BQ_CLANG)
-    #define BQ_NO_ASAN __attribute__((no_sanitize("address")))
+#define BQ_NO_ASAN __attribute__((no_sanitize("address")))
 #elif defined(BQ_GCC)
-    #define BQ_NO_ASAN __attribute__((no_sanitize_address))
+#define BQ_NO_ASAN __attribute__((no_sanitize_address))
 #elif defined(BQ_MSVC)
-    #define BQ_NO_ASAN __declspec(no_sanitize_address)
+#define BQ_NO_ASAN __declspec(no_sanitize_address)
 #else
-    #define BQ_NO_ASAN
+#define BQ_NO_ASAN
 #endif

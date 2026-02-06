@@ -20,87 +20,110 @@
 
 namespace bq {
     namespace test {
-        void clear_appender_file_base_test_folder() {
+        void clear_appender_file_base_test_folder()
+        {
             if (bq::file_manager::is_dir(TO_ABSOLUTE_PATH("appender_test", 0))) {
                 bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("appender_test", 0));
             }
         }
         class appender_file_base_for_test : public appender_file_base {
-            template<typename AppenderType>
+            template <typename AppenderType>
             friend void do_appender_test(test_result& result, const bq::string test_name, bool use_decoder, const bq::string& pub_key, const bq::string& private_key);
+
         protected:
-            virtual bool parse_exist_log_file(parse_file_context& context) override {
+            virtual bool parse_exist_log_file(parse_file_context& context) override
+            {
                 (void)context;
                 return true;
             }
-            virtual bq::string get_file_ext_name() override {
+            virtual bq::string get_file_ext_name() override
+            {
                 return ".ft";
             }
-            virtual bool init_impl(const bq::property_value& config_obj) override{
+            virtual bool init_impl(const bq::property_value& config_obj) override
+            {
                 appender_file_base::init_impl(config_obj);
                 set_flush_when_destruct(false);
                 open_new_indexed_file_by_name();
                 return true;
             }
+
         public:
-            void read_mode() {
+            void read_mode()
+            {
                 seek_read_file_absolute(static_cast<size_t>(0));
             }
         };
         class appender_file_binary_for_test : public appender_file_binary {
-            template<typename AppenderType>
+            template <typename AppenderType>
             friend void do_appender_test(test_result& result, const bq::string test_name, bool use_decoder, const bq::string& pub_key, const bq::string& private_key);
+
         protected:
-            virtual bool parse_exist_log_file(parse_file_context& context) override {
+            virtual bool parse_exist_log_file(parse_file_context& context) override
+            {
                 return appender_file_binary::parse_exist_log_file(context);
             }
-            virtual bq::string get_file_ext_name() override {
+            virtual bq::string get_file_ext_name() override
+            {
                 return ".bt";
             }
-            virtual appender_file_binary::appender_format_type get_appender_format() const override{
+            virtual appender_file_binary::appender_format_type get_appender_format() const override
+            {
                 return appender_format_type::raw;
             }
-            virtual uint32_t get_binary_format_version() const override{
+            virtual uint32_t get_binary_format_version() const override
+            {
                 return 1;
             }
-            virtual bool init_impl(const bq::property_value& config_obj) override{
+            virtual bool init_impl(const bq::property_value& config_obj) override
+            {
                 appender_file_binary::init_impl(config_obj);
                 set_flush_when_destruct(false);
                 open_new_indexed_file_by_name();
                 return true;
             }
+
         public:
-            void read_mode() {
-                parse_file_context context("test_appender_file");;
-                parse_exist_log_file(context); //used to seek file to begin of data section
+            void read_mode()
+            {
+                parse_file_context context("test_appender_file");
+                ;
+                parse_exist_log_file(context); // used to seek file to begin of data section
             }
         };
         class appender_file_binary_rolling_for_test : public appender_file_binary_for_test {
-            template<typename AppenderType>
+            template <typename AppenderType>
             friend void do_appender_test(test_result& result, const bq::string test_name, bool use_decoder, const bq::string& pub_key, const bq::string& private_key);
+
         protected:
-            virtual bool init_impl(const bq::property_value& config_obj) {
+            virtual bool init_impl(const bq::property_value& config_obj)
+            {
                 const_cast<bq::property_value&>(config_obj).add_object_item("max_file_size", static_cast<bq::property_value::integral_type>(1024 * 1024 * 3));
                 return appender_file_binary_for_test::init_impl(config_obj);
             }
         };
         class appender_decoder_for_test : public appender_decoder_base {
-            template<typename AppenderType>
+            template <typename AppenderType>
             friend void do_appender_test(test_result& result, const bq::string test_name, bool use_decoder, const bq::string& pub_key, const bq::string& private_key);
+
         protected:
-            virtual appender_decode_result init_private() override {
+            virtual appender_decode_result init_private() override
+            {
                 return appender_decode_result::success;
             }
-            virtual appender_decode_result decode_private() override {
+            virtual appender_decode_result decode_private() override
+            {
                 return appender_decode_result::success;
             }
-            virtual uint32_t get_binary_format_version() const override {
+            virtual uint32_t get_binary_format_version() const override
+            {
                 return 1;
             }
         };
 
-        template<typename AppenderType>
-        void do_appender_test(test_result& result, const bq::string test_name, bool use_decoder, const bq::string& pub_key, const bq::string& private_key) {
+        template <typename AppenderType>
+        void do_appender_test(test_result& result, const bq::string test_name, bool use_decoder, const bq::string& pub_key, const bq::string& private_key)
+        {
             test_output_dynamic_param(bq::log_level::info, "%s test begin, please wait...                \r", test_name.c_str());
             clear_appender_file_base_test_folder();
             log_imp log_obj;
@@ -166,7 +189,7 @@ namespace bq {
                 size_t left_read_size = total_write_size;
                 size_t byte_pos = 0;
                 bool check_result = true;
-                for (int32_t file_idx = 1; ; ++file_idx) {
+                for (int32_t file_idx = 1;; ++file_idx) {
                     char idx_str[32];
                     snprintf(idx_str, sizeof(idx_str), "%" PRId32, file_idx);
                     auto file_path = TO_ABSOLUTE_PATH("appender_test/" + test_name + +idx_str + ".bt", 0);
@@ -210,8 +233,7 @@ namespace bq {
                     }
                 }
                 result.add_result(check_result, "%s read content test", test_name.c_str());
-            }
-            else {
+            } else {
                 AppenderType appender_read;
                 appender_read.init("test_appender", appender_config, &log_obj);
                 appender_read.read_mode();
@@ -246,25 +268,28 @@ namespace bq {
             test_output_dynamic(bq::log_level::info, "                                                                              \r");
         }
 
-
         class test_log_appender : public test_base {
         private:
-            void do_console_appender_test(test_result& result) {
+            void do_console_appender_test(test_result& result)
+            {
                 test_output_dynamic(bq::log_level::info, "appender_console test begin, please wait...                \r");
                 clear_appender_file_base_test_folder();
                 (void)result;
             }
-            void do_file_appender_test(test_result& result) {
+            void do_file_appender_test(test_result& result)
+            {
                 do_appender_test<appender_file_base_for_test>(result, "appender_file_base_test", false, "", "");
-                
             }
-            void do_binary_appender_test(test_result& result) {
+            void do_binary_appender_test(test_result& result)
+            {
                 do_appender_test<appender_file_binary_for_test>(result, "appender_file_binary_test", false, "", "");
             }
-            void do_binary_appender_rolling_test(test_result& result) {
+            void do_binary_appender_rolling_test(test_result& result)
+            {
                 do_appender_test<appender_file_binary_rolling_for_test>(result, "appender_file_binary_rolling_test", true, "", "");
             }
-            void do_binary_appender_test_with_enc(test_result& result) {
+            void do_binary_appender_test_with_enc(test_result& result)
+            {
                 bq::string pub_key = bq::string("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+FonyOHuS2uC6IZc16bfd6qQk4ykBOt3nTfBFc")
                     + "Nr8ZWvvcf4H0hFkrpMtQ0AJO057GhVTQCCfnvfStSq2Yra+O5VGpI5Q6NLrUuVERimjNgwtxbXt3P8Nw87jEIJiY/8m2FUXhZE"
                     + "PwoA7t+2/953cNE1itJskJtojwaUlMN0dXBJxs4NP8MfBPPZQ5vNV8xgEf1SCQzQBAJsofy1kPHHqJNBXUBsNA44SP5H95JOz+"
@@ -298,6 +323,7 @@ namespace bq {
                     + "-----END RSA PRIVATE KEY-----\n";
                 do_appender_test<appender_file_binary_for_test>(result, "appender_file_binary_test_with_enc", true, pub_key, priv_key);
             }
+
         public:
             virtual test_result test() override
             {

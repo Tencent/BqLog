@@ -59,7 +59,7 @@ namespace bq {
         java_buffer_info get_sync_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
         {
             (void)handle;
-            java_buffer_info result{};
+            java_buffer_info result {};
             result.buffer_array_obj_ = nullptr;
             result.offset_store_ = &java_buffer_offset_;
             java_buffer_offset_ = 0;
@@ -339,15 +339,13 @@ namespace bq {
                 for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
                     appenders_list_[i]->on_log_item_new_begin(read_handle);
                 }
-            }
-            else {
+            } else {
                 recover_status_ = recover_status_enum::in_recovering;
                 for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); i++) {
                     appenders_list_[i]->on_log_item_recovery_begin(read_handle);
                 }
             }
-        }
-        else if (recover_status_ == recover_status_enum::in_recovering) {
+        } else if (recover_status_ == recover_status_enum::in_recovering) {
             auto current_version = buffer_->get_current_reading_version();
             auto version = buffer_->get_version();
             if (current_version == version) {

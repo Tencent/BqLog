@@ -66,8 +66,7 @@ namespace bq {
         uint32_t log_format_data_len;
 
         static constexpr uint32_t get_head_size_without_format_str();
-    } BQ_PACK_END 
-    constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
+    } BQ_PACK_END constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
     {
         return offsetof(_log_entry_head_def, log_format_str_type);
     }
@@ -76,7 +75,6 @@ namespace bq {
         "_log_entry_head_def::get_head_size_without_format_str() must equal 32");
     static_assert(sizeof(_log_entry_head_def) == 40,
         "_log_entry_head_def's memory layout must be packed!");
-
 
     BQ_PACK_BEGIN
     struct alignas(4) _api_string_def {
@@ -96,7 +94,6 @@ namespace bq {
         uint8_t* format_data_addr;
         enum_buffer_result_code result;
     } BQ_PACK_END static_assert(sizeof(_api_log_buffer_chunk_read_handle) == sizeof(decltype(_api_log_buffer_chunk_read_handle::format_data_addr)) + sizeof(decltype(_api_log_buffer_chunk_read_handle::result)), "_api_log_buffer_chunk_read_handle's memory layout must be packed!");
-
 
     BQ_PACK_BEGIN
     struct alignas(4) _api_log_write_handle {

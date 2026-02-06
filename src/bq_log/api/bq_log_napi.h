@@ -11,4 +11,4 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
- #include "bq_common/bq_common_public_include.h"
+#include "bq_common/bq_common_public_include.h"

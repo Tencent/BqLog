@@ -18,7 +18,7 @@
 namespace bq {
     namespace platform {
         static JavaVM* java_vm = NULL;
-        //0: default(Java thread or not attached yet), 1: attached, 2: detached (Thread is exiting), 3: attached again(attached again when Thread is exiting)
+        // 0: default(Java thread or not attached yet), 1: attached, 2: detached (Thread is exiting), 3: attached again(attached again when Thread is exiting)
         static BQ_TLS int32_t tls_attach_phase = 0;
 
         static jclass cls_byte_buffer_ = nullptr;
@@ -43,7 +43,7 @@ namespace bq {
                 using attach_param_type = function_argument_type_t<decltype(&JavaVM::AttachCurrentThreadAsDaemon), 0>;
                 jint attach_result = java_vm->AttachCurrentThreadAsDaemon(reinterpret_cast<attach_param_type>(&env), nullptr);
                 if (JNI_OK != attach_result) {
-                    //JVM is Destroying
+                    // JVM is Destroying
                     env = nullptr;
                     return;
                 }
@@ -57,7 +57,7 @@ namespace bq {
 #endif
                     tls_attach_phase = 3;
                 }
-            }else if (JNI_OK != get_env_result) {
+            } else if (JNI_OK != get_env_result) {
                 // JVM is Destroying
                 env = nullptr;
                 return;
@@ -75,10 +75,9 @@ namespace bq {
             }
         }
 
-
-        struct tls_java_env_lifecycle_holder
-        {
-            ~tls_java_env_lifecycle_holder() {
+        struct tls_java_env_lifecycle_holder {
+            ~tls_java_env_lifecycle_holder()
+            {
                 try_to_detach_thread();
             }
         };
@@ -120,11 +119,11 @@ namespace bq {
             env->DeleteLocalRef(cls_byte_buffer_local);
 
             method_byte_buffer_byte_order_ = env->GetMethodID(cls_byte_buffer_, "order", "(Ljava/nio/ByteOrder;)Ljava/nio/ByteBuffer;");
-            
+
             jclass cls_byte_order = env->FindClass("java/nio/ByteOrder");
             jfieldID little_endian_field = env->GetStaticFieldID(cls_byte_order, "LITTLE_ENDIAN", "Ljava/nio/ByteOrder;");
             jfieldID big_endian_field = env->GetStaticFieldID(cls_byte_order, "BIG_ENDIAN", "Ljava/nio/ByteOrder;");
-            
+
             jobject jobj_little_endian_local = env->GetStaticObjectField(cls_byte_order, little_endian_field);
             jobj_little_endian_value_ = env->NewGlobalRef(jobj_little_endian_local);
             env->DeleteLocalRef(jobj_little_endian_local);
@@ -160,8 +159,6 @@ namespace bq {
             }
             return JNI_VERSION_1_6;
         }
-
-
 
         void remove_global_ref_async(jobject recycle_obj)
         {

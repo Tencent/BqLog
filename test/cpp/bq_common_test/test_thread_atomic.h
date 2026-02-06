@@ -50,7 +50,8 @@ namespace bq {
             bq::platform::atomic<uint32_t>& i_;
 
             test_thread_cas(test_atomic_struct<uint32_t>& i, bq::array<uint32_t>& a)
-                : a_(a), i_(i.i)
+                : a_(a)
+                , i_(i.i)
             {
             }
 
@@ -137,7 +138,7 @@ namespace bq {
 
             virtual void run() override
             {
-                //auto tid = bq::platform::thread::get_current_thread_id();
+                // auto tid = bq::platform::thread::get_current_thread_id();
                 for (uint32_t i = 0; i < TEST_THREAD_ATOMIC_LOOP_TIMES; ++i) {
                     /*if (i % 50000 == 0) {
                         test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " before lock, iteration %" PRIu32 "\n", tid, i);
@@ -157,7 +158,7 @@ namespace bq {
                         test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " released lock, iteration %" PRIu32 "\n", tid, i);
                     }*/
                 }
-                //test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " finished all iterations\n", tid);
+                // test_output_dynamic_param(bq::log_level::info, "[spin_lock] thread %" PRIu64 " finished all iterations\n", tid);
             }
         };
 
@@ -210,7 +211,6 @@ namespace bq {
                 test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_read] thread %" PRIu64 " finished all iterations\n", tid);
                 result_.add_result(error_count == 0, "spin_lock_rw_crazy test(read lock thread)");
             }
-
         };
 
         class test_thread_spin_lock_write : public bq::platform::thread {
@@ -231,7 +231,7 @@ namespace bq {
             }
             virtual void run() override
             {
-                //auto tid = bq::platform::thread::get_current_thread_id();
+                // auto tid = bq::platform::thread::get_current_thread_id();
                 uint32_t error_count = 0;
                 for (uint32_t i = 0; i < 10000000; ++i) {
                     /*if (i % 500000 == 0) {
@@ -260,9 +260,8 @@ namespace bq {
                     bq::platform::thread::yield();
                     result_.add_result(error_count == 0, "spin_lock_rw_crazy test(write lock thread)");
                 }
-                //test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " finished all iterations\n", tid);
+                // test_output_dynamic_param(bq::log_level::info, "[spin_lock_rw_crazy_write] thread %" PRIu64 " finished all iterations\n", tid);
             }
-
         };
 
         class test_thread_name : public bq::platform::thread {
@@ -290,7 +289,8 @@ namespace bq {
             bq::platform::thread::thread_id last_tid_ = 0;
             bq::platform::thread::thread_id last_obj_tid_ = 0;
             bq::string last_name_;
-            virtual void run() override {
+            virtual void run() override
+            {
                 run_count_.fetch_add_release(1);
                 last_tid_ = bq::platform::thread::get_current_thread_id();
                 last_obj_tid_ = get_thread_id();
@@ -301,9 +301,11 @@ namespace bq {
         class test_thread_detach : public bq::platform::thread {
         public:
             bq::platform::atomic<bool>* flag_ptr = nullptr;
-            virtual void run() override {
+            virtual void run() override
+            {
                 bq::platform::thread::sleep(100);
-                if (flag_ptr) flag_ptr->store_seq_cst(true);
+                if (flag_ptr)
+                    flag_ptr->store_seq_cst(true);
             }
         };
 
@@ -616,8 +618,8 @@ namespace bq {
                 }
 
 #ifndef BQ_IN_GITHUB_ACTIONS
-                //Condition variable timeouts are significantly prolonged and inaccurate due to severe time dilation 
-                //in the non-hardware-accelerated virtual machine environment
+                // Condition variable timeouts are significantly prolonged and inaccurate due to severe time dilation
+                // in the non-hardware-accelerated virtual machine environment
                 {
                     constexpr uint64_t precision_ms = 500;
                     constexpr uint64_t sleep_time_ms = 5000;
@@ -680,7 +682,7 @@ namespace bq {
                     result.add_result(t_restart.last_name_ == "Run2", "thread name test Run2");
                     auto tid2 = t_restart.last_tid_;
                     result.add_result(tid2 == t_restart.last_obj_tid_, "thread id member check 2");
-                    
+
                     // On POSIX, thread ID (pthread_t) can be reused immediately after join.
                     // So we cannot strictly assert tid1 != tid2.
                     // We only care that thread_id_ member is updated to the current running thread's ID (verified above).
@@ -698,7 +700,7 @@ namespace bq {
                     t_detach.flag_ptr = &flag;
                     t_detach.start();
                     t_detach.detach();
-                    
+
                     result.add_result(t_detach.get_status() == bq::platform::enum_thread_status::detached, "thread status detached test");
 
                     while (!flag.load()) {

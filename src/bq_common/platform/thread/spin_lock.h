@@ -124,9 +124,9 @@ namespace bq {
         /// </summary>
         class spin_lock_zero_init {
         protected:
-            bq::platform::atomic_trivially_constructible<bool> value_; 
+            bq::platform::atomic_trivially_constructible<bool> value_;
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-            bq::platform::atomic_trivially_constructible<bq::platform::thread::thread_id> thread_id_; 
+            bq::platform::atomic_trivially_constructible<bq::platform::thread::thread_id> thread_id_;
 #endif
         protected:
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
@@ -207,7 +207,7 @@ namespace bq {
         class alignas(BQ_CACHE_LINE_SIZE) spin_lock_rw_crazy {
         public:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
-            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
             bq::platform::atomic<counter_type> counter_;
             char padding_[BQ_CACHE_LINE_SIZE - sizeof(counter_)];
 

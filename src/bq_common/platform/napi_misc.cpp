@@ -343,8 +343,7 @@ namespace bq {
                 BQ_NAPI_CALL(env, nullptr, napi_create_string_utf8(env, "bqlog-tsfn-js-wrapper", NAPI_AUTO_LENGTH, &name_js));
                 BQ_NAPI_CALL(env, nullptr, napi_create_threadsafe_function(env, nullptr, nullptr, name_js, 1024, 1, nullptr, nullptr, nullptr, dispatcher_call_js, &common_vars.napi_tsfn_js_));
                 napi_unref_threadsafe_function(env, common_vars.napi_tsfn_js_);
-            }
-            else {
+            } else {
                 if (common_vars.napi_tsfn_native_) {
                     napi_acquire_threadsafe_function(common_vars.napi_tsfn_native_);
                 }

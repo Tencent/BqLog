@@ -9,7 +9,6 @@
 #include <iostream>
 #include <vector>
 
-
 static bq::log compressed_log = bq::log::create_log("compress", R"(
 		appenders_config.appender_3.type=compressed_file
 		appenders_config.appender_3.levels=[all]
@@ -62,20 +61,28 @@ static bq::array<bq::tuple<size_t, size_t>> positions;
 static constexpr size_t character_pool_size = 1024 * 1024 * 8;
 static constexpr size_t logs_count = 2000000;
 
-template<typename CHAR>
+template <typename CHAR>
 struct benchmark_string_view {
 public:
     using value_type = CHAR;
     using size_type = size_t;
+
 private:
     const CHAR* data_;
     size_t size_;
+
 public:
-    benchmark_string_view(const CHAR* data, size_t size) : data_(data), size_(size) {}
-    const CHAR* data() const {
+    benchmark_string_view(const CHAR* data, size_t size)
+        : data_(data)
+        , size_(size)
+    {
+    }
+    const CHAR* data() const
+    {
         return data_;
     }
-    size_t size() const {
+    size_t size() const
+    {
         return size_;
     }
 };
@@ -92,8 +99,7 @@ static void prepare_datas()
         chinese_charset_u16[i] = (char16_t)(0x4E00 + (i % 20902));
         if ((i % 200) < 100) {
             mixed_charset_u16[i] = (char16_t)((i % 95) + 32);
-        }
-        else {
+        } else {
             mixed_charset_u16[i] = (char16_t)(0x4E00 + (i % 20902));
         }
     }
@@ -120,7 +126,7 @@ void test_compress_ascii_utf8(int32_t thread_count)
             for (size_t i = 0; i < logs_count; ++i) {
                 log_obj.info(benchmark_string_view<char>(ascii_charset.begin() + bq::get<0>(positions[i]), bq::get<1>(positions[i])));
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -131,7 +137,7 @@ void test_compress_ascii_utf8(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_compress_ascii_utf16(int32_t thread_count)
@@ -148,7 +154,7 @@ void test_compress_ascii_utf16(int32_t thread_count)
             for (size_t i = 0; i < logs_count; ++i) {
                 log_obj.info(benchmark_string_view<char16_t>(ascii_charset_u16.begin() + bq::get<0>(positions[i]), bq::get<1>(positions[i])));
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -159,7 +165,7 @@ void test_compress_ascii_utf16(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_compress_chinese_utf16(int32_t thread_count)
@@ -176,7 +182,7 @@ void test_compress_chinese_utf16(int32_t thread_count)
             for (size_t i = 0; i < logs_count; ++i) {
                 log_obj.info(benchmark_string_view<char16_t>(chinese_charset_u16.begin() + bq::get<0>(positions[i]), bq::get<1>(positions[i])));
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -187,7 +193,7 @@ void test_compress_chinese_utf16(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_compress_mixed_utf16(int32_t thread_count)
@@ -204,7 +210,7 @@ void test_compress_mixed_utf16(int32_t thread_count)
             for (size_t i = 0; i < logs_count; ++i) {
                 log_obj.info(benchmark_string_view<char16_t>(mixed_charset_u16.begin() + bq::get<0>(positions[i]), bq::get<1>(positions[i])));
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -215,7 +221,7 @@ void test_compress_mixed_utf16(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_compress_multi_param(int32_t thread_count)
@@ -232,7 +238,7 @@ void test_compress_multi_param(int32_t thread_count)
             for (int i = 0; i < 2000000; ++i) {
                 log_obj.info("idx:{}, num:{}, This test, {}, {}", idx, i, 2.4232f, true);
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -243,7 +249,7 @@ void test_compress_multi_param(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_compress_enc_multi_param(int32_t thread_count)
@@ -260,7 +266,7 @@ void test_compress_enc_multi_param(int32_t thread_count)
             for (int i = 0; i < 2000000; ++i) {
                 log_obj.info("idx:{}, num:{}, This test, {}, {}", idx, i, 2.4232f, true);
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -271,7 +277,7 @@ void test_compress_enc_multi_param(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_text_multi_param(int32_t thread_count)
@@ -288,7 +294,7 @@ void test_text_multi_param(int32_t thread_count)
             for (int i = 0; i < 2000000; ++i) {
                 log_obj.info("idx:{}, num:{}, This test, {}, {}", idx, i, 2.4232f, true);
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -299,7 +305,7 @@ void test_text_multi_param(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_compress_no_param(int32_t thread_count)
@@ -316,7 +322,7 @@ void test_compress_no_param(int32_t thread_count)
             for (int i = 0; i < 2000000; ++i) {
                 log_obj.info("Empty Log, No Param");
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -327,7 +333,7 @@ void test_compress_no_param(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_compress_enc_no_param(int32_t thread_count)
@@ -344,7 +350,7 @@ void test_compress_enc_no_param(int32_t thread_count)
             for (int i = 0; i < 2000000; ++i) {
                 log_obj.info("Empty Log, No Param");
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -355,7 +361,7 @@ void test_compress_enc_no_param(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 void test_text_no_param(int32_t thread_count)
@@ -372,7 +378,7 @@ void test_text_no_param(int32_t thread_count)
             for (int i = 0; i < 2000000; ++i) {
                 log_obj.info("Empty Log, No Param");
             }
-            });
+        });
         threads[idx] = st;
     }
     for (int32_t idx = 0; idx < thread_count; ++idx) {
@@ -383,7 +389,7 @@ void test_text_no_param(int32_t thread_count)
     uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl
-        << std::endl;
+              << std::endl;
 }
 
 int main()

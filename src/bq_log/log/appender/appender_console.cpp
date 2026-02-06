@@ -106,15 +106,13 @@ namespace bq {
                 data += sizeof(int32_t);
                 memcpy(data, content, static_cast<size_t>(length));
                 data[length] = 0;
-            }
-            else if (handle.result == enum_buffer_result_code::err_wait_and_retry) {
+            } else if (handle.result == enum_buffer_result_code::err_wait_and_retry) {
                 bq::platform::thread::yield();
                 finished = false;
-            }
-            else {
+            } else {
                 util::log_device_console(log_level::error, "failed to insert data entry to console fetch buffer, ring_buffer error code:%d", (int32_t)handle.result);
             }
-        }while(!finished);
+        } while (!finished);
     }
 
     bool appender_console::console_buffer::fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param)
@@ -225,8 +223,7 @@ namespace bq {
         data.log_id_ = parent_log_->id();
         if (console_misc.buffer().is_enable()) {
             console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
-        }
-        else {
+        } else {
             util::log_device_console_plain_text(level, log_entry_cache_.c_str());
         }
     }
@@ -238,7 +235,7 @@ namespace bq {
     }
 
     void appender_console::on_log_item_recovery_end()
-    {   
+    {
         appender_base::on_log_item_recovery_end();
         util::log_device_console_plain_text(bq::log_level::info, log_global_vars::get().log_recover_end_str_);
     }

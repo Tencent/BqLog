@@ -164,7 +164,8 @@ namespace bq {
         template <typename U>
         bq::enable_if_t<!get_thread_name_func_sfinae1<U>::value
                 && get_thread_name_func_sfinae2<U>::value,
-            bq::string> get_thread_name_impl(U thread_handle)
+            bq::string>
+        get_thread_name_impl(U thread_handle)
         {
             char thread_name_buf[thread_name_max_len()] = { 0 };
             pthread_get_name_np(thread_handle, thread_name_buf, sizeof(thread_name_buf));
@@ -176,7 +177,8 @@ namespace bq {
         bq::enable_if_t<!get_thread_name_func_sfinae1<U>::value
                 && !get_thread_name_func_sfinae2<U>::value
                 && get_thread_name_func_sfinae3<U>::value,
-            bq::string> get_thread_name_impl(U thread_handle)
+            bq::string>
+        get_thread_name_impl(U thread_handle)
         {
             (void)thread_handle;
             assert(thread_handle == pthread_self() && "prctl(PR_GET_NAME) can only get current thread name!");
@@ -192,7 +194,8 @@ namespace bq {
         bq::enable_if_t<!get_thread_name_func_sfinae1<U>::value
                 && !get_thread_name_func_sfinae2<U>::value
                 && !get_thread_name_func_sfinae3<U>::value,
-            bq::string> get_thread_name_impl(U thread_handle)
+            bq::string>
+        get_thread_name_impl(U thread_handle)
         {
             char thread_name_buf[64] = { 0 };
             uint64_t tid = static_cast<uint64_t>(thread_handle);
@@ -214,7 +217,8 @@ namespace bq {
         template <typename U>
         bq::enable_if_t<!set_thread_name_func_sfinae1<U>::value
                 && set_thread_name_func_sfinae2<U>::value,
-            bool> set_thread_name_impl(U thread_handle, const bq::string& thread_name)
+            bool>
+        set_thread_name_impl(U thread_handle, const bq::string& thread_name)
         {
             using func_type = int32_t (*)(pthread_t, const char*);
             auto func_ptr = reinterpret_cast<func_type>(reinterpret_cast<void*>(&::pthread_setname_np));
@@ -227,7 +231,8 @@ namespace bq {
         bq::enable_if_t<!set_thread_name_func_sfinae1<U>::value
                 && !set_thread_name_func_sfinae2<U>::value
                 && set_thread_name_func_sfinae3<U>::value,
-            bool> set_thread_name_impl(U thread_handle, const bq::string& thread_name)
+            bool>
+        set_thread_name_impl(U thread_handle, const bq::string& thread_name)
         {
             pthread_set_name_np(thread_handle, thread_name.c_str());
             return true;
@@ -239,7 +244,8 @@ namespace bq {
                 && !set_thread_name_func_sfinae2<U>::value
                 && !set_thread_name_func_sfinae3<U>::value
                 && set_thread_name_func_sfinae4<U>::value,
-            bool> set_thread_name_impl(U thread_handle, const bq::string& thread_name)
+            bool>
+        set_thread_name_impl(U thread_handle, const bq::string& thread_name)
         {
             (void)thread_handle;
             assert(thread_handle == pthread_self() && "pthread_setname_np can only set current thread name!");
@@ -256,7 +262,8 @@ namespace bq {
                 && !set_thread_name_func_sfinae3<U>::value
                 && !set_thread_name_func_sfinae4<U>::value
                 && set_thread_name_func_sfinae5<U>::value,
-            bool> set_thread_name_impl(U thread_handle, const bq::string& thread_name)
+            bool>
+        set_thread_name_impl(U thread_handle, const bq::string& thread_name)
         {
             (void)thread_handle;
             assert(thread_handle == pthread_self() && "prctl(PR_SET_NAME) can only set current thread name!");
@@ -270,7 +277,8 @@ namespace bq {
                 && !set_thread_name_func_sfinae3<U>::value
                 && !set_thread_name_func_sfinae4<U>::value
                 && !set_thread_name_func_sfinae5<U>::value,
-            bool> set_thread_name_impl(U thread_handle, const bq::string& thread_name)
+            bool>
+        set_thread_name_impl(U thread_handle, const bq::string& thread_name)
         {
             (void)thread_handle;
             (void)thread_name;
@@ -344,7 +352,7 @@ namespace bq {
                 return;
             }
             thread_id_ = (thread_id)(platform_data_->thread_handle);
-            
+
             // If the previous status is init or released, we can set it to running.
             // internal_run() is spinning and waiting for this status change.
             auto expected_status = enum_thread_status::init;

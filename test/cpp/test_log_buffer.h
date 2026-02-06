@@ -59,12 +59,12 @@ namespace bq {
 
         class miso_linked_list_test_remove_task {
         private:
-            bq::platform::atomic<bool>(&miso_linked_insert_task_status_array_)[log_buffer_total_task];
+            bq::platform::atomic<bool> (&miso_linked_insert_task_status_array_)[log_buffer_total_task];
             bq::miso_linked_list<int32_t>& linked_list_;
             test_result& result_;
 
         public:
-            miso_linked_list_test_remove_task(bq::platform::atomic<bool>(&miso_linked_insert_task_status_array)[log_buffer_total_task], bq::miso_linked_list<int32_t>& linked_list, test_result& result)
+            miso_linked_list_test_remove_task(bq::platform::atomic<bool> (&miso_linked_insert_task_status_array)[log_buffer_total_task], bq::miso_linked_list<int32_t>& linked_list, test_result& result)
                 : miso_linked_insert_task_status_array_(miso_linked_insert_task_status_array)
                 , linked_list_(linked_list)
                 , result_(result)
@@ -274,7 +274,8 @@ namespace bq {
 
         class test_log_buffer : public test_base {
         private:
-            void do_normal_buffer_test(test_result& result) {
+            void do_normal_buffer_test(test_result& result)
+            {
                 size_t prev_size = 0;
                 for (int32_t i = 0; i < 1024; ++i) {
                     std::random_device sd;
@@ -748,18 +749,16 @@ namespace bq {
                             }
                             result.add_result(valid, "recovery multi thread test read content check, phase:%s, version:%" PRIu32 ", thread idx:%" PRIu32 ", index:%" PRIu32 "", must_success ? "1" : "2", read_version, read_thread_idx, read_message_idx);
                             if (valid) {
-                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32  ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
+                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
                                 if (message_verify_group[read_version][read_thread_idx] != read_message_idx) {
                                     message_verify_group[read_version][read_thread_idx] = read_message_idx + 1; // resync
-                                }
-                                else {
+                                } else {
                                     ++message_verify_group[read_version][read_thread_idx];
                                 }
                             }
                             if (read_seq != seq_records[read_version][read_thread_idx]
-                                && read_seq != seq_records[read_version][read_thread_idx]+1
-                            ) {
-                                bq::util::log_device_console(bq::log_level::info, "recovery multi thread test read seq order check miss match(don't worry, it's possible), version:%" PRIu32 ", thread idx:%" PRIu32 ", expected seq:%" PRIu32 ", but read seq:%" PRIu32 "", read_version, read_thread_idx, seq_records[read_version][read_thread_idx], read_seq);         
+                                && read_seq != seq_records[read_version][read_thread_idx] + 1) {
+                                bq::util::log_device_console(bq::log_level::info, "recovery multi thread test read seq order check miss match(don't worry, it's possible), version:%" PRIu32 ", thread idx:%" PRIu32 ", expected seq:%" PRIu32 ", but read seq:%" PRIu32 "", read_version, read_thread_idx, seq_records[read_version][read_thread_idx], read_seq);
                             }
                             seq_records[read_version][read_thread_idx] = read_seq;
                         }
@@ -821,7 +820,7 @@ namespace bq {
                     std::random_device sd;
                     std::minstd_rand linear_ran(sd());
                     std::uniform_int_distribution<uint32_t> rand_seq(MESSAGE_PER_VERSION * 2, MESSAGE_PER_VERSION * 3);
-                    uint32_t total_read_count = (uint32_t)rand_seq(linear_ran);        
+                    uint32_t total_read_count = (uint32_t)rand_seq(linear_ran);
 
                     read_message_count += verify(test_recovery_buffer, false, total_read_count);
                     for (auto& task : task_thread_vector) {

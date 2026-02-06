@@ -84,8 +84,7 @@ namespace bq {
                     }
                 }
                 return true;
-            }
-            else {
+            } else {
                 return false;
             }
         }

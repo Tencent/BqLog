@@ -110,11 +110,12 @@ namespace bq {
         void process_log_chunk(bq::log_entry_handle& read_handle);
 
     private:
-        enum class recover_status_enum{
-            not_started,         // not started recovery or no recovery data found
-            in_recovering,      // in recovering
-            recovered,          // recovered finished
+        enum class recover_status_enum {
+            not_started, // not started recovery or no recovery data found
+            in_recovering, // in recovering
+            recovered, // recovered finished
         };
+
     private:
         uint64_t id_;
         log_thread_mode thread_mode_;

@@ -1148,11 +1148,7 @@ namespace bq {
             snapeshot2.join();
             test_output(bq::log_level::info, "full log test finished              \n");
 
-            bq::log custom_test_log = bq::log::create_log("custom_log", bq::string("appenders_config.ConsoleAppender.type=console\n")
-                + "						appenders_config.ConsoleAppender.time_zone=localtime\n"
-                + "						appenders_config.ConsoleAppender.levels=[all]\n"
-                + "					\n"
-                + "						log.thread_mode=sync");
+            bq::log custom_test_log = bq::log::create_log("custom_log", bq::string("appenders_config.ConsoleAppender.type=console\n") + "						appenders_config.ConsoleAppender.time_zone=localtime\n" + "						appenders_config.ConsoleAppender.levels=[all]\n" + "					\n" + "						log.thread_mode=sync");
             custom_type1 test_var1;
             custom_type2 test_var2;
             custom_type3 test_var3;
@@ -1178,7 +1174,6 @@ namespace bq {
             result.add_result(output_str_ptr->end_with("custom_type5"), "custom_type5");
             custom_test_log.error("param:{}", test_var5);
             result.add_result(output_str_ptr->end_with("param:custom_type5"), "custom_type5 param");
-
 
             test_output(bq::log_level::info, "custom type log test finished              \n");
         }

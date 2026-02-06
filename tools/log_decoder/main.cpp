@@ -16,9 +16,8 @@
 #include "common_header.h"
 #if defined(WIN32)
 #include "Windows.h"
-#include <shellapi.h>  // for CommandLineToArgvW
+#include <shellapi.h> // for CommandLineToArgvW
 #endif // WIN
-
 
 struct Options {
     bq::string input_path;
@@ -141,7 +140,7 @@ static bq::string wchar_to_utf8(const wchar_t* wstr)
         return bq::string();
     }
     bq::string result;
-    result.fill_uninitialized(static_cast<size_t>(utf8_len - 1));  // -1 to exclude null terminator
+    result.fill_uninitialized(static_cast<size_t>(utf8_len - 1)); // -1 to exclude null terminator
     WideCharToMultiByte(CP_UTF8, 0, wstr, -1, result.begin(), utf8_len, NULL, NULL);
     return result;
 }
@@ -152,11 +151,11 @@ int32_t main(int32_t argc, char* argv[])
 #if defined(WIN32)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
-    
+
     // Get UTF-16 encoded command line arguments
     int32_t wargc;
     LPWSTR* wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
-    
+
     // Convert to UTF-8 strings
     bq::array<bq::string> utf8_args;
     bq::array<char*> utf8_argv_ptrs;

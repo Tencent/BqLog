@@ -94,7 +94,7 @@ namespace bq {
         enum class appender_encryption_type : uint8_t {
             plaintext = 1,
             rsa_aes_xor
-        };        
+        };
         enum class appender_segment_type : uint8_t {
             normal = 1,
             recovery_by_appender,
@@ -106,8 +106,7 @@ namespace bq {
             uint32_t version;
             appender_format_type format;
             char padding[3];
-        } BQ_PACK_END
-        static_assert(sizeof(appender_file_header) == 8, "appender_file_header size error");
+        } BQ_PACK_END static_assert(sizeof(appender_file_header) == 8, "appender_file_header size error");
 
         BQ_PACK_BEGIN
         struct appender_file_segment_head {
@@ -116,12 +115,10 @@ namespace bq {
             appender_encryption_type enc_type;
             bool has_key;
             char padding[1];
-        }
-        BQ_PACK_END
-        static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_header size error");
+        } BQ_PACK_END static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_header size error");
 
-        //Only exist in first segment
-        BQ_PACK_BEGIN 
+        // Only exist in first segment
+        BQ_PACK_BEGIN
         struct appender_payload_metadata {
             char magic_number[3];
             bool use_local_time;
@@ -130,16 +127,15 @@ namespace bq {
             int32_t time_zone_diff_to_gmt_ms;
             char time_zone_str[32];
             uint32_t category_count;
-        } 
-        BQ_PACK_END
+        } BQ_PACK_END
 
-        struct seg_info {
+            struct seg_info {
             uint64_t start_pos;
             uint64_t end_pos;
             appender_encryption_type enc_type_;
         };
 
-    public: 
+    public:
         bq_forceinline static constexpr size_t get_xor_key_blob_size()
         {
             return 32 * 1024; // 32 KiB
@@ -174,6 +170,7 @@ namespace bq {
         bool read_to_next_segment();
         void append_new_segment(appender_segment_type type);
         void update_write_cache_padding();
+
     private:
         bq::rsa::public_key rsa_pub_key_;
         seg_info cur_read_seg_;

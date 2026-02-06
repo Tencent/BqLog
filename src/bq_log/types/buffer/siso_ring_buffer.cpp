@@ -135,7 +135,7 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
         if (is_thread_check_enable()) {
             bq::platform::thread::thread_id current_thread_id = bq::platform::thread::get_current_thread_id();
-            assert((current_thread_id == write_thread_id_ || 0 == write_thread_id_ ) && "only single thread writing is supported for siso_ring_buffer!");
+            assert((current_thread_id == write_thread_id_ || 0 == write_thread_id_) && "only single thread writing is supported for siso_ring_buffer!");
         }
 #endif
         block* block_ptr = (handle.data_addr == (uint8_t*)aligned_blocks_)
@@ -370,10 +370,9 @@ namespace bq {
 #endif
     }
 
-
     uint32_t siso_ring_buffer::get_max_alloc_size() const
     {
-        return static_cast<uint32_t>(aligned_blocks_count_* BLOCK_SIZE) - static_cast<uint32_t>(data_block_offset);
+        return static_cast<uint32_t>(aligned_blocks_count_ * BLOCK_SIZE) - static_cast<uint32_t>(data_block_offset);
     }
 
     void siso_ring_buffer::init_with_memory_map(void* buffer, size_t buffer_size)
@@ -449,7 +448,6 @@ namespace bq {
         init_cursors();
         mmap_buffer_state_ = memory_map_buffer_state::init_with_memory;
     }
-
 
     void siso_ring_buffer::init_cursors()
     {

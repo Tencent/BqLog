@@ -250,7 +250,8 @@ namespace bq {
             return static_cast<void*>(ptr_);
         }
 
-        operator bool() const {
+        operator bool() const
+        {
             return ptr_ != nullptr;
         }
 
@@ -322,7 +323,10 @@ namespace bq {
         template <typename U>
         friend unique_ptr<U> make_unique();
 
-        explicit unique_ptr(T* new_ptr) : ptr_(new_ptr) {}
+        explicit unique_ptr(T* new_ptr)
+            : ptr_(new_ptr)
+        {
+        }
 
         T* ptr_;
     };
@@ -331,7 +335,7 @@ namespace bq {
     unique_ptr<T> make_unique(Ts&&... params)
     {
         void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
-        new (addr, bq::enum_new_dummy::dummy)T(bq::forward<Ts>(params)...);
+        new (addr, bq::enum_new_dummy::dummy) T(bq::forward<Ts>(params)...);
         return unique_ptr<T>(static_cast<T*>(addr));
     }
 
@@ -340,7 +344,7 @@ namespace bq {
     unique_ptr<T> make_unique()
     {
         void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
-        new (addr, bq::enum_new_dummy::dummy)T();
+        new (addr, bq::enum_new_dummy::dummy) T();
         return unique_ptr<T>(static_cast<T*>(addr));
     }
 
@@ -508,7 +512,7 @@ namespace bq {
     shared_ptr<T> make_shared(Ts&&... params)
     {
         void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
-        new (addr, bq::enum_new_dummy::dummy)T(bq::forward<Ts>(params)...);
+        new (addr, bq::enum_new_dummy::dummy) T(bq::forward<Ts>(params)...);
         return shared_ptr<T>(static_cast<T*>(addr));
     }
 
@@ -517,7 +521,7 @@ namespace bq {
     shared_ptr<T> make_shared()
     {
         void* addr = bq::aligned_alloc(alignof(T), sizeof(T));
-        new (addr, bq::enum_new_dummy::dummy)T();
+        new (addr, bq::enum_new_dummy::dummy) T();
         return shared_ptr<T>(static_cast<T*>(addr));
     }
 }

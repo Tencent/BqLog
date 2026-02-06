@@ -21,22 +21,20 @@
 #include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
-    normal_buffer::normal_buffer(size_t size, const bq::string& mmap_file_abs_path/* = ""*/, bool auto_create/* = true */ )
+    normal_buffer::normal_buffer(size_t size, const bq::string& mmap_file_abs_path /* = ""*/, bool auto_create /* = true */)
         : buffer_data_(nullptr)
         , buffer_size_(0)
         , delete_mmap_when_destruct_(false)
     {
         if (mmap_file_abs_path.is_empty()) {
             mmap_result_ = create_memory_map_result::failed;
-        }
-        else {
+        } else {
             mmap_result_ = create_memory_map(size, mmap_file_abs_path, auto_create);
         }
         if (mmap_result_ == create_memory_map_result::failed) {
             buffer_data_ = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, size);
             buffer_size_ = size;
-        }
-        else {
+        } else {
             buffer_data_ = memory_map_handle_.get_mapped_data();
             buffer_size_ = memory_map_handle_.get_mapped_size();
         }
@@ -51,8 +49,7 @@ namespace bq {
             if (delete_mmap_when_destruct_) {
                 bq::file_manager::remove_file_or_dir(mmap_file_path);
             }
-        }
-        else {
+        } else {
             bq::platform::aligned_free(buffer_data_);
         }
     }
@@ -73,11 +70,10 @@ namespace bq {
                 back_updata = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, prev_size);
                 memcpy(back_updata, data(), size());
             }
-        }
-        else {
+        } else {
             back_updata = data();
         }
-        if(is_from_mmap){
+        if (is_from_mmap) {
             do {
                 bq::memory_map::release_memory_map(memory_map_handle_);
                 new_size = bq::memory_map::get_min_size_of_memory_map_file(0, new_size);
@@ -99,7 +95,7 @@ namespace bq {
                 }
                 buffer_data_ = memory_map_handle_.get_mapped_data();
                 buffer_size_ = memory_map_handle_.get_mapped_size();
-            }while(false);
+            } while (false);
         }
         if (!is_memory_mapped()) {
             buffer_data_ = bq::platform::aligned_alloc(BQ_CACHE_LINE_SIZE, new_size);
@@ -111,7 +107,7 @@ namespace bq {
         }
     }
 
-    create_memory_map_result normal_buffer::create_memory_map(size_t  size, const bq::string& mmap_file_abs_path, bool auto_create)
+    create_memory_map_result normal_buffer::create_memory_map(size_t size, const bq::string& mmap_file_abs_path, bool auto_create)
     {
         if (!bq::memory_map::is_platform_support() || mmap_file_abs_path.is_empty()) {
             return create_memory_map_result::failed;
@@ -122,7 +118,7 @@ namespace bq {
             }
         }
         auto create_opt = auto_create ? (file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive) : (file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
-        
+
         if (auto_create || bq::file_manager::is_file(mmap_file_abs_path)) {
             memory_map_file_ = bq::file_manager::instance().open_file(mmap_file_abs_path, create_opt);
         }

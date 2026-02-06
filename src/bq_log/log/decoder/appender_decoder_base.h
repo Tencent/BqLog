@@ -81,6 +81,7 @@ namespace bq {
         appender_decode_result read_to_next_segment();
 
         size_t read_from_file_directly(void* dst, size_t size);
+
     protected:
         bq::string decoded_text_;
         bq::layout layout_;

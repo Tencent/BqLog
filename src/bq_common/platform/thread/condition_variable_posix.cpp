@@ -64,7 +64,7 @@ namespace bq {
             free(platform_data_);
             platform_data_ = nullptr;
         }
-        
+
         static uint64_t get_current_ns(bool use_monotonic)
         {
             struct timespec ts;
@@ -124,7 +124,7 @@ namespace bq {
 
                 if (result == 0)
                     return true;
-                
+
                 if (result != ETIMEDOUT) {
                     bq::util::log_device_console(log_level::error, "pthread_cond_timedwait failed: %d", result);
                     return true;

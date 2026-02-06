@@ -139,7 +139,7 @@ namespace bq {
                     auto group_handle_A_3 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/aa/dd/exclusive_A.txt", true), file_open_mode_enum::read);
                     bq::util::set_log_device_console_min_level(bq::log_level::fatal);
                     auto group_handle_A_4 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/aa/dd/exclusive_A.txt", true), file_open_mode_enum::write);
-                    bq::util::set_log_device_console_min_level(bq::log_level::warning); 
+                    bq::util::set_log_device_console_min_level(bq::log_level::warning);
                     result.add_result(group_handle_A_3 && !group_handle_A_4, "exclusive test 3");
                 }
 

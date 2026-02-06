@@ -13,7 +13,6 @@
 #include "bq_common/platform/simd.h"
 #include "bq_common/bq_common.h"
 
-
 namespace bq {
     bool _bq_crc32_supported_ = common_global_vars::get().crc32_supported_;
 

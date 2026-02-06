@@ -134,7 +134,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_formate_templa
     if (cursor < read_handle.len()) {
         size_t data_len = read_handle.len() - cursor;
         const char* data_ptr = (const char*)read_handle.data() + cursor;
-        
+
         if (sub_type == appender_file_compressed::template_sub_type::format_template_utf8) {
             info.fmt_string.insert_batch(info.fmt_string.begin(), (const char*)(const uint8_t*)read_handle.data() + cursor, (read_handle.len() - cursor));
         } else {
@@ -407,8 +407,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
             auto aligned_utf8_len = bq::align_4(utf8_len);
             if (aligned_utf8_len < max_utf8_str_len) {
                 raw_data_.erase(raw_data_.begin() + raw_cursor + static_cast<ptrdiff_t>(aligned_utf8_len), max_utf8_str_len - aligned_utf8_len);
-            }
-            else if (aligned_utf8_len > max_utf8_str_len) {
+            } else if (aligned_utf8_len > max_utf8_str_len) {
                 raw_data_.fill_uninitialized(aligned_utf8_len - max_utf8_str_len);
             }
             *((uint32_t*)(uint8_t*)(raw_data_.begin() + size_raw_cursor)) = utf8_len;
@@ -426,7 +425,7 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
     }
     size_t ext_info_size = sizeof(_log_entry_ext_head_def) + thread_info_iter->value().thread_name.size();
     size_t ext_info_offset = bq::align_4(raw_data_.size());
-    size_t fill_size = ext_info_offset - + ext_info_size + raw_data_.size();
+    size_t fill_size = ext_info_offset - +ext_info_size + raw_data_.size();
     raw_data_.fill_uninitialized(fill_size);
     bq::log_entry_handle entry(raw_data_.begin(), (uint32_t)raw_data_.size());
     // head is invalid now, because raw_data may have expanded it's capacity.

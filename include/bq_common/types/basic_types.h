@@ -18,7 +18,7 @@
  *
  */
 namespace bq {
-    enum class log_level : int32_t{
+    enum class log_level : int32_t {
         verbose,
         debug,
         info,

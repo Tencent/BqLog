@@ -33,20 +33,20 @@
 #include <unistd.h>
 #endif
 
-
 #include "bq_common/bq_common.h"
 
 namespace bq {
     static common_global_vars* common_global_var_default_initer_ = &common_global_vars::get();
-    static bq::platform::spin_lock_zero_init destructor_mutex_;  //zero initialization
-    static bq::array<global_var_destructiable*>* destructible_vars_;   //(nullptr)zero initialization
+    static bq::platform::spin_lock_zero_init destructor_mutex_; // zero initialization
+    static bq::array<global_var_destructiable*>* destructible_vars_; //(nullptr)zero initialization
     static global_vars_destructor global_var_destructor_;
 #ifdef BQ_JAVA
-    bq::platform::atomic_trivially_constructible<bool> is_jvm_destroyed_;    // false zero initialization
+    bq::platform::atomic_trivially_constructible<bool> is_jvm_destroyed_; // false zero initialization
 #endif
 
 #if defined(BQ_X86)
-    static bool check_avx2_support() {
+    static bool check_avx2_support()
+    {
         bool result = false;
         int32_t regs[4];
         int32_t id;
@@ -76,7 +76,8 @@ namespace bq {
     }
 #endif
 
-    static bool check_crc32_support() {
+    static bool check_crc32_support()
+    {
         bool result = false;
 #if defined(BQ_X86)
         int32_t regs[4];
@@ -98,23 +99,23 @@ namespace bq {
             result = (val != 0);
         }
 #elif defined(BQ_LINUX) || defined(BQ_ANDROID)
-        // Manual definitions to avoid dependency on <asm/hwcap.h>
-        #ifndef AT_HWCAP
-        #define AT_HWCAP 16
-        #endif
-        #ifndef AT_HWCAP2
-        #define AT_HWCAP2 26
-        #endif
+// Manual definitions to avoid dependency on <asm/hwcap.h>
+#ifndef AT_HWCAP
+#define AT_HWCAP 16
+#endif
+#ifndef AT_HWCAP2
+#define AT_HWCAP2 26
+#endif
 
-        #if defined(__aarch64__) || defined(BQ_ARM_64)
-            auto aux = getauxval(AT_HWCAP);
-            // ARM64: HWCAP_CRC32 is bit 7
-            result = (aux & (1 << 7)) != 0;
-        #else
+#if defined(__aarch64__) || defined(BQ_ARM_64)
+        auto aux = getauxval(AT_HWCAP);
+        // ARM64: HWCAP_CRC32 is bit 7
+        result = (aux & (1 << 7)) != 0;
+#else
         auto aux = getauxval(AT_HWCAP2);
-            // ARM32: HWCAP2_CRC32 is bit 4
-            result = (aux & (1 << 4)) != 0;
-        #endif
+        // ARM32: HWCAP2_CRC32 is bit 4
+        result = (aux & (1 << 4)) != 0;
+#endif
 #endif
 #endif
 #ifdef BQ_UNIT_TEST
@@ -128,7 +129,8 @@ namespace bq {
         return result;
     }
 
-    global_vars_destructor& get_global_var_destructor() {
+    global_vars_destructor& get_global_var_destructor()
+    {
         return global_var_destructor_;
     }
 
@@ -140,7 +142,6 @@ namespace bq {
         }
         destructible_vars_->push_back(var);
     }
-
 
     global_vars_destructor::~global_vars_destructor()
     {
@@ -184,7 +185,8 @@ namespace bq {
         return is_jvm_destroyed_.load_acquire();
     }
 
-    void common_global_vars::mark_jvm_destroyed() {
+    void common_global_vars::mark_jvm_destroyed()
+    {
         is_jvm_destroyed_.store_seq_cst(true);
     }
 #endif
@@ -209,8 +211,6 @@ namespace bq {
         }
     }
 #endif
-
-
 
 }
 #ifdef BQ_WIN

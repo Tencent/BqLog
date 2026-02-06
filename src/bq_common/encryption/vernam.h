@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *
  * \file xor.h
- * \date 2025/12/11 
+ * \date 2025/12/11
  *
  * \author pippocao
  *
@@ -26,8 +26,8 @@
 namespace bq {
     class vernam {
     public:
-        static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = 32; //256 bites alignment to improve SIMD performance
-        static_assert((DEFAULT_BUFFER_ALIGNMENT& (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == 0, "DEFAULT_BUFFER_ALIGNMENT must be power of two");
+        static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = 32; // 256 bites alignment to improve SIMD performance
+        static_assert((DEFAULT_BUFFER_ALIGNMENT & (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == 0, "DEFAULT_BUFFER_ALIGNMENT must be power of two");
         /// <summary>
         /// Encrypt/Decrypt buffer in-place with Vernam Cipher.
         /// Attention: buf must be aligned to DEFAULT_BUFFER_ALIGNMENT relative to key_stream_offset.
@@ -38,7 +38,7 @@ namespace bq {
         /// <param name="key_size_pow2"></param>
         /// <param name="key_stream_offset"></param>
         static void vernam_encrypt_32bytes_aligned(uint8_t* BQ_RESTRICT buf, size_t len, const uint8_t* BQ_RESTRICT key, size_t key_size_pow2, size_t key_stream_offset);
-    
+
 #ifdef BQ_UNIT_TEST
         enum class mode : int32_t {
             auto_detect = 0,

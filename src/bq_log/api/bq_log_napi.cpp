@@ -31,7 +31,8 @@ struct console_msg_head {
     uint32_t length;
 } BQ_PACK_END
 
-void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
+    void
+    console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
 {
     console_msg_head* msg = nullptr;
     bool from_buffer = (param == static_cast<void*>(&bq::log_global_vars::get().console_msg_buffer_));
@@ -56,8 +57,7 @@ void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
     }
     if (from_buffer) {
         bq::log_global_vars::get().console_msg_buffer_.return_read_chunk(handle);
-    }
-    else {
+    } else {
         free(msg);
     }
 }
@@ -322,13 +322,13 @@ struct arg_info {
     js_string_custom_formater<true> custom_formatter_;
 };
 
-#define RECORD_ARG_BY_SIZE_SEQ(SIZE_SEQ_NAME)                               \
+#define RECORD_ARG_BY_SIZE_SEQ(SIZE_SEQ_NAME)                             \
     arg_info_ptr[i].data_size_ = SIZE_SEQ_NAME.get_element().get_value(); \
     arg_info_ptr[i].storage_size_ = SIZE_SEQ_NAME.get_element().get_aligned_value();
-#define RECORD_STRING_ARG(STRING_VALUE)                                                                        \
-    argv_ptr[i] = STRING_VALUE;                                                                                \
-    arg_info_ptr[i].type_ = napi_string;                                                                       \
-    arg_info_ptr[i].custom_formatter_.reset(env, STRING_VALUE);                                                \
+#define RECORD_STRING_ARG(STRING_VALUE)                                                                      \
+    argv_ptr[i] = STRING_VALUE;                                                                              \
+    arg_info_ptr[i].type_ = napi_string;                                                                     \
+    arg_info_ptr[i].custom_formatter_.reset(env, STRING_VALUE);                                              \
     arg_info_ptr[i].data_size_ = arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value(); \
     arg_info_ptr[i].storage_size_ = bq::align_4(arg_info_ptr[i].custom_formatter_.get_size_seq().get_element().get_value());
 
@@ -828,7 +828,7 @@ BQ_NAPI_DEF(set_console_callback, napi_env, env, napi_callback_info, info)
         napi_throw_type_error(env, NULL, "function count error");
         return NULL;
     }
-    
+
     napi_valuetype t = napi_undefined;
     BQ_NAPI_CALL(env, nullptr, napi_typeof(env, argv[0], &t));
     if (t == napi_function) {

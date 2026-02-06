@@ -14,62 +14,62 @@
 #include "bq_common/platform/macros.h"
 
 #if defined(BQ_X86)
-    #ifdef BQ_MSVC
-        #include <intrin.h>
-    #else
-        // For MinGW/Clang, standard headers like immintrin.h often hide AVX/SSE types
-        // unless -mavx/-msse4.2 is passed globally. However, for runtime dispatch (target attributes),
-        // we need the types/intrinsics to be visible even if the global build is generic x86_64.
-        #if defined(__clang__)
-            #ifndef __AVX__
-                #define __AVX__
-                #define BQ_DEF_AVX
-            #endif
-            #ifndef __AVX2__
-                #define __AVX2__
-                #define BQ_DEF_AVX2
-            #endif
-            #ifndef __SSE4_1__
-                #define __SSE4_1__
-                #define BQ_DEF_SSE4_1
-            #endif
-            #ifndef __SSE4_2__
-                #define __SSE4_2__
-                #define BQ_DEF_SSE4_2
-            #endif
-            
-            #include <immintrin.h>
-            
-            #ifdef BQ_DEF_AVX
-                #undef __AVX__
-                #undef BQ_DEF_AVX
-            #endif
-            #ifdef BQ_DEF_AVX2
-                #undef __AVX2__
-                #undef BQ_DEF_AVX2
-            #endif
-            #ifdef BQ_DEF_SSE4_1
-                #undef __SSE4_1__
-                #undef BQ_DEF_SSE4_1
-            #endif
-            #ifdef BQ_DEF_SSE4_2
-                #undef __SSE4_2__
-                #undef BQ_DEF_SSE4_2
-            #endif
-        #else
-            #include <immintrin.h>
-        #endif
-    #endif
+#ifdef BQ_MSVC
+#include <intrin.h>
+#else
+// For MinGW/Clang, standard headers like immintrin.h often hide AVX/SSE types
+// unless -mavx/-msse4.2 is passed globally. However, for runtime dispatch (target attributes),
+// we need the types/intrinsics to be visible even if the global build is generic x86_64.
+#if defined(__clang__)
+#ifndef __AVX__
+#define __AVX__
+#define BQ_DEF_AVX
+#endif
+#ifndef __AVX2__
+#define __AVX2__
+#define BQ_DEF_AVX2
+#endif
+#ifndef __SSE4_1__
+#define __SSE4_1__
+#define BQ_DEF_SSE4_1
+#endif
+#ifndef __SSE4_2__
+#define __SSE4_2__
+#define BQ_DEF_SSE4_2
+#endif
+
+#include <immintrin.h>
+
+#ifdef BQ_DEF_AVX
+#undef __AVX__
+#undef BQ_DEF_AVX
+#endif
+#ifdef BQ_DEF_AVX2
+#undef __AVX2__
+#undef BQ_DEF_AVX2
+#endif
+#ifdef BQ_DEF_SSE4_1
+#undef __SSE4_1__
+#undef BQ_DEF_SSE4_1
+#endif
+#ifdef BQ_DEF_SSE4_2
+#undef __SSE4_2__
+#undef BQ_DEF_SSE4_2
+#endif
+#else
+#include <immintrin.h>
+#endif
+#endif
 #elif defined(BQ_ARM)
-    #if defined(BQ_MSVC)
-        #include <intrin.h>
-        #include <arm64_neon.h>
-    #else
-        #include <arm_acle.h>
-    #endif
-    #if defined(BQ_ARM_NEON)
-        #include <arm_neon.h>
-    #endif
+#if defined(BQ_MSVC)
+#include <intrin.h>
+#include <arm64_neon.h>
+#else
+#include <arm_acle.h>
+#endif
+#if defined(BQ_ARM_NEON)
+#include <arm_neon.h>
+#endif
 #endif
 
 namespace bq {
@@ -80,7 +80,7 @@ namespace bq {
 #endif
 
     // Internal flag to check if SIMD UTF is supported on current platform
-    constexpr bool _bq_utf_simd_supported_ = 
+    constexpr bool _bq_utf_simd_supported_ =
 #if defined(BQ_X86)
         // Assume basic SSE is available on modern x86 (including Android x86/Atom)
         true;
@@ -89,11 +89,11 @@ namespace bq {
 #else
         false;
 #endif
-        
 
     // Helpers for NEON
 #if defined(BQ_ARM_NEON)
-    bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v) {
+    bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v)
+    {
 #if defined(BQ_ARM_64)
         return vmaxvq_u16(v);
 #else
@@ -106,7 +106,8 @@ namespace bq {
 #endif
     }
 
-    bq_forceinline uint8_t bq_vmaxvq_u8(uint8x16_t v) {
+    bq_forceinline uint8_t bq_vmaxvq_u8(uint8x16_t v)
+    {
 #if defined(BQ_ARM_64)
         return vmaxvq_u8(v);
 #else

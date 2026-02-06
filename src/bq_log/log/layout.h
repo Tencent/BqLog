@@ -142,7 +142,7 @@ namespace bq {
     public:
         static uint32_t test_find_brace_and_copy_sw(const char* src, uint32_t len, char* dst, bool& found_brace);
         static uint32_t test_find_brace_and_convert_u16_sw(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
-        
+
         // Throughput test wrappers
         void test_python_style_format_content_legacy(const bq::log_entry_handle& log_entry);
         void test_python_style_format_content_sw(const bq::log_entry_handle& log_entry);

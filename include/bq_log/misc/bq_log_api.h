@@ -56,12 +56,11 @@ namespace bq {
         /// <param name="config_content_utf8">json config content</param>
         BQ_API bool __api_log_reset_config(const char* log_name_utf8, const char* config_content_utf8);
 
-        
         /// <summary>
         /// Initiates a log write operation and allocates the necessary buffer space.
         /// </summary>
         /// <remarks>
-        /// If manual population is required, the starting address for argument data is calculated as: 
+        /// If manual population is required, the starting address for argument data is calculated as:
         /// <code>handle.format_data_addr + align4(format_str_bytes_len)</code>
         /// </remarks>
         /// <param name="log_id">The unique identifier for the log entry.</param>
@@ -70,7 +69,7 @@ namespace bq {
         /// <param name="format_string_type">The character encoding type of the format string (e.g., log_arg_type_enum::string_utf16_type).</param>
         /// <param name="format_str_bytes_len">The length of the format string in bytes.</param>
         /// <param name="format_str_data">
-        /// Pointer to the format string data. 
+        /// Pointer to the format string data.
         /// If NULL, indicates a zero-copy scenario where the caller must manually write data to the allocated buffer.
         /// </param>
         /// <param name="args_data_bytes_len">The length of the variable arguments data in bytes.</param>

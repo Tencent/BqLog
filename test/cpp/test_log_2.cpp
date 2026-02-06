@@ -26,7 +26,8 @@ namespace bq {
             static bq::platform::atomic<uint64_t> current_idx_sync;
             static bq::platform::atomic<uint64_t> current_idx_async;
             static bool multi_thread_test_end;
-            static void console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length) {
+            static void console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
+            {
                 (void)category_idx;
                 (void)log_level;
                 (void)length;
@@ -88,7 +89,7 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\tNULL Pointer Str Test null, null"), "log update 4");
             }
             {
-                int64_t i{ 12 };
+                int64_t i { 12 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       +12|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:10b}|", i);
@@ -129,7 +130,7 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|00000C|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X000C|"), "layout format");
-                double dd{ 3.14159265758 / 2.3 };
+                double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
@@ -197,7 +198,7 @@ namespace bq {
             }
 
             {
-                // Concurrency Stress Test 
+                // Concurrency Stress Test
                 auto sync_log = bq::log::create_log("sync_log_stress", R"(
 		            appenders_config.appender_1.type=console
                     log.thread_mode=sync
@@ -207,19 +208,20 @@ namespace bq {
                     log.thread_mode=async
 	            )");
 
-                std::atomic<int32_t> live_thread{0};
-                std::atomic<int32_t> left_thread{100};
+                std::atomic<int32_t> live_thread { 0 };
+                std::atomic<int32_t> left_thread { 100 };
                 bq::string appender;
-                for(int32_t i = 0; i < 32; ++i) appender += "a";
-                
+                for (int32_t i = 0; i < 32; ++i)
+                    appender += "a";
+
                 // Sync Test
-                while(left_thread > 0 || live_thread > 0) {
+                while (left_thread > 0 || live_thread > 0) {
                     if (left_thread > 0 && live_thread < 5) {
                         left_thread--;
                         live_thread++;
                         std::thread([&]() {
                             bq::string log_content = "";
-                            for(int32_t i = 0; i < 128; ++i) {
+                            for (int32_t i = 0; i < 128; ++i) {
                                 log_content += appender;
                                 sync_log.info(log_content.c_str());
                             }
@@ -229,16 +231,16 @@ namespace bq {
                         bq::platform::thread::sleep(1);
                     }
                 }
-                
+
                 // Async Test
                 left_thread = 128;
-                while(left_thread > 0 || live_thread > 0) {
+                while (left_thread > 0 || live_thread > 0) {
                     if (left_thread > 0 && live_thread < 5) {
                         left_thread--;
                         live_thread++;
                         std::thread([&]() {
                             bq::string log_content = "";
-                            for(int32_t i = 0; i < 2048; ++i) { 
+                            for (int32_t i = 0; i < 2048; ++i) {
                                 log_content += appender;
                                 async_log.info(log_content.c_str());
                             }
@@ -249,13 +251,13 @@ namespace bq {
                     }
                 }
                 async_log.force_flush();
-                bq::log::register_console_callback(&test_log::console_callback); 
+                bq::log::register_console_callback(&test_log::console_callback);
             }
 
             {
                 const uint64_t seconds = 10;
                 test_output_dynamic_param(bq::log_level::info, "testing force flush. wait for %" PRIu64 " seconds please...\n if error exist, an assert will be triggered\n", seconds);
-                bq::log::register_console_callback(&test_force_flush_callback::console_callback); 
+                bq::log::register_console_callback(&test_force_flush_callback::console_callback);
                 test_force_flush_callback::test_result_ptr = &result;
                 uint64_t start_time = bq::platform::high_performance_epoch_ms();
                 auto sync_log = bq::log::create_log("sync_log", R"(
@@ -274,14 +276,14 @@ namespace bq {
                         log_obj.force_flush();
                         bq::platform::thread::sleep(3);
                     }
-                    });
+                });
                 tr1.detach();
                 std::thread tr2([]() {
                     while (!test_force_flush_callback::multi_thread_test_end) {
                         bq::log::force_flush_all_logs();
                         bq::platform::thread::sleep(3);
                     }
-                    });
+                });
                 tr2.detach();
 
                 while (true) {
@@ -299,7 +301,7 @@ namespace bq {
                 bq::log::register_console_callback(&test_log::console_callback);
                 test_output_dynamic(bq::log_level::info, "force flush testing is finished!\n");
             }
-            
+
             {
                 // snapshot test
                 auto snapshot_log = test_category_log::create_log("snapshot_log", R"(

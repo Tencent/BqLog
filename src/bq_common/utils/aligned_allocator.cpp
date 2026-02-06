@@ -27,8 +27,9 @@ namespace bq {
     {
         return bq::platform::aligned_alloc(alignment, size);
     }
-    void aligned_free(void* ptr) {
+    void aligned_free(void* ptr)
+    {
         return bq::platform::aligned_free(ptr);
     }
-    
+
 }

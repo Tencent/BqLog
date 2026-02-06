@@ -92,23 +92,15 @@ static BQ_TLS struct {
     bq::java_buffer_info java_info_;
 } tls_write_handle_;
 
-
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_write_begin
  * Signature: (JBJJLjava/lang/String;JZ)[Ljava/nio/ByteBuffer;
  */
-JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1begin
-(JNIEnv* env, jclass, jlong log_id, jbyte log_level, jlong category_index, jlong format_str_bytes_len, jstring format_str_data, jlong args_data_bytes_len, jboolean finished)
+JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1begin(JNIEnv* env, jclass, jlong log_id, jbyte log_level, jlong category_index, jlong format_str_bytes_len, jstring format_str_data, jlong args_data_bytes_len, jboolean finished)
 {
     auto& handle = tls_write_handle_.write_handle_;
-    handle = bq::api::__api_log_write_begin(static_cast<uint64_t>(log_id)
-                , static_cast<uint8_t>(log_level)
-                , static_cast<uint32_t>(category_index)
-                , static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type)
-                , static_cast<uint32_t>(format_str_bytes_len)
-                , nullptr
-                , static_cast<uint32_t>(args_data_bytes_len));
+    handle = bq::api::__api_log_write_begin(static_cast<uint64_t>(log_id), static_cast<uint8_t>(log_level), static_cast<uint32_t>(category_index), static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type), static_cast<uint32_t>(format_str_bytes_len), nullptr, static_cast<uint32_t>(args_data_bytes_len));
     if (handle.result != bq::enum_buffer_result_code::success) {
         return nullptr;
     }
@@ -120,11 +112,11 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1be
     if (log) {
         if (log->get_thread_mode() == bq::log_thread_mode::sync) {
             tls_write_handle_.java_info_ = log->get_sync_java_buffer_info(env, inner_handle);
-        }else {
+        } else {
             tls_write_handle_.java_info_ = log->get_buffer().get_java_buffer_info(env, inner_handle);
         }
     }
-    bq::log_entry_handle log_entry_handle_obj(inner_handle.data_addr, 0);  //0 for dummy
+    bq::log_entry_handle log_entry_handle_obj(inner_handle.data_addr, 0); // 0 for dummy
     *tls_write_handle_.java_info_.offset_store_ += static_cast<int32_t>(log_entry_handle_obj.get_log_args_offset());
     if (finished) {
         bq::api::__api_log_write_finish(static_cast<uint64_t>(log_id), tls_write_handle_.write_handle_);
@@ -137,13 +129,10 @@ JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1be
  * Method:    __api_log_write_finish
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1finish
-(JNIEnv*, jclass, jlong log_id)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1finish(JNIEnv*, jclass, jlong log_id)
 {
     bq::api::__api_log_write_finish(static_cast<uint64_t>(log_id), tls_write_handle_.write_handle_);
 }
-
-
 
 /*
  * Class:     bq_impl_log_invoker
@@ -482,8 +471,7 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove
  * Method:    __api_mark_jvm_destroyed
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1mark_1jvm_1destroyed
-(JNIEnv*, jclass)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1mark_1jvm_1destroyed(JNIEnv*, jclass)
 {
     bq::common_global_vars::get().mark_jvm_destroyed();
     bq::util::log_device_console(bq::log_level::info, "JVM is destroying");

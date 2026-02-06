@@ -20,7 +20,6 @@
  *
  */
 
-
 #define BQ_STRING_INLINE inline
 #define BQ_STRING_INLINE_MACRO(X) X
 
@@ -38,4 +37,3 @@
 #undef BQ_STRING_INLINE_MACRO
 #undef BQ_STRING_CLS_NAME
 #undef BQ_STRING_INLINE
-
