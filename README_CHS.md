@@ -184,7 +184,7 @@
 
 - **Android**
   - 下载 `android_libs_{version}`；
-  - 可以直接引入其中的 `.aar` 包，或手动引入 `.so` + 仓库下 `/wrapper/java/src` 源码（后者方便自定义及调试）。
+  - 可以直接引入其中的 `.aar` 包(AAR 基于 AGP 标准打包，内含 Prefab Native 头文件及动态库），或手动引入 `.so` + 仓库下 `/wrapper/java/src` 源码。
 
 - **Server**
   - 下载对应平台动态库 `{os}_{arch}_libs_{version}` 并引入；
