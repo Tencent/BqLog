@@ -79,11 +79,6 @@
 
 ---
 
-## Technical articles
-
-- **[Why BqLog is so fast - High Performance Realtime Compressed Log Format](docs/Article%201_Why%20is%20BqLog%20so%20fast%20-%20High%20Performance%20Realtime%20Compressed%20Log%20Format.MD)**
-- **[Why BqLog is so fast - High Concurrency Ring Buffer](docs/Article%202_Why%20is%20BqLog%20so%20fast%20-%20High%20Concurrency%20Ring%20Buffer.MD)**
-
 ---
 
 ## Table of contents
@@ -134,7 +129,7 @@
 1. Added HarmonyOS support, including ArkTS and C++.
 2. Added Node.js support (CJS and ESM).
 3. Improved cross-platform compatibility, stability and generality; supports more Unix systems.
-4. Average performance improved by about 40%.
+4. Average performance improved by ~80% for UTF-8, and by >500% for UTF-16 environments (C#, Unreal, Unity).
 5. Android no longer must be used together with Java.
 6. Removed the `is_in_sandbox` config and replaced it with `base_dir_type`; added filters for snapshots and support for opening a new log file on each startup. See [Configuration](#configuration).
 7. Added high-performance hybrid asymmetric encryption, ***almost zero overhead***; see [6. Log encryption and decryption](#6-log-encryption-and-decryption).
