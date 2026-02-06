@@ -168,7 +168,7 @@
   - Add `/include` directory to your header search path.
   - Windows + Visual Studio: please add compile option `/Zc:__cplusplus`.
   - Android supports `ANDROID_STL = none`.
-  - If you need to enable Java / NAPI (Node.js / HarmonyOS ArkTS) support, as well as system link libraries and some macro definitions, please refer to `/src/CMakeLists.txt`.
+  - If you need to enable Java / NAPI (Node.js / HarmonyOS ArkTS) support, as well as system link libraries and some macro definitions, please refer to `/src/CMakeLists.txt`(If the file implies complexity, consider using AI to interpret it.).
   - When NAPI environment (Node.js or HarmonyOS ArkTS) is present, or when Java / C# needs to call, it is not recommended to integrate directly as "pure C++ source", because initialization and library loading processes need to be handled manually; using prebuilt packages and corresponding wrappers is more recommended.
 
 ### C# (Unity / Tuanjie Engine / .NET)

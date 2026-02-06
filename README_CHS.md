@@ -166,7 +166,7 @@
   - 将 `/include` 目录添加到头文件搜索路径。
   - Windows + Visual Studio：请添加编译选项 `/Zc:__cplusplus`。
   - Android 模式下支持 `ANDROID_STL = none`。
-  - 如需启用 Java / NAPI（Node.js / HarmonyOS ArkTS）支持，以及系统链接库与部分宏定义，请参考 `/src/CMakeLists.txt`。
+  - 如需启用 Java / NAPI（Node.js / HarmonyOS ArkTS）支持，以及系统链接库与部分宏定义，请参考 `/src/CMakeLists.txt`（如果觉得难以理解，建议求助AI提炼）。
   - 当存在 NAPI 环境（Node.js 或 HarmonyOS ArkTS）或需要 Java / C# 调用时，不推荐以「纯 C++ 源码」直接集成，因为需要手动处理初始化和库加载流程；更推荐使用预编译包及对应 wrapper。
 
 ### C#（Unity / 团结引擎 / .NET）
