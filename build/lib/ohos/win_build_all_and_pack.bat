@@ -34,17 +34,29 @@ for %%T in (armeabi-v7a arm64-v8a x86_64) do (
       cmake --build . -- -j%PARALLEL_JOBS% || goto :error
       cmake --build . --target install || goto :error
 
-      REM Strip symbols for dynamic lib
+      REM Strip symbols for dynamic lib (same as Android: move original to symbols, strip back to lib)
       if /I "%%L"=="dynamic_lib" (
-        set "SOURCE_SO=..\..\..\..\install\dynamic_lib\lib\%%C\%%T\libBqLog.so"
-        set "STRIP_SO=..\..\..\..\install\dynamic_lib\lib_strip\%%C\%%T\libBqLog.so"
-        for %%I in ("!STRIP_SO!") do set "DEST_DIR=%%~dpI"
-        if not exist "!DEST_DIR!" mkdir "!DEST_DIR!"
-        echo SOURCE_SO:!SOURCE_SO!
+        set "BASE_INSTALL_DIR=..\..\..\..\install\dynamic_lib"
+        set "SOURCE_SO=!BASE_INSTALL_DIR!\lib\%%C\%%T\libBqLog.so"
+        set "SYMBOL_SO=!BASE_INSTALL_DIR!\symbols\%%C\%%T\libBqLog.so"
 
-        set "STRIP_EXE=%NDK_PATH%\llvm\bin\llvm-strip.exe"
-        if not exist "!STRIP_EXE!" set "STRIP_EXE=%NDK_PATH%\llvm\bin\llvm-strip"
-        "!STRIP_EXE!" -s "!SOURCE_SO!" -o "!STRIP_SO!" || goto :error
+        for %%I in ("!SYMBOL_SO!") do set "SYMBOL_DIR=%%~dpI"
+        if not exist "!SYMBOL_DIR!" mkdir "!SYMBOL_DIR!"
+
+        echo [Stripping] Moving !SOURCE_SO! to !SYMBOL_SO!
+
+        if exist "!SOURCE_SO!" (
+          move /Y "!SOURCE_SO!" "!SYMBOL_SO!" >nul
+
+          for %%I in ("!SOURCE_SO!") do set "LIB_DIR=%%~dpI"
+          if not exist "!LIB_DIR!" mkdir "!LIB_DIR!"
+
+          set "STRIP_EXE=%NDK_PATH%\llvm\bin\llvm-strip.exe"
+          if not exist "!STRIP_EXE!" set "STRIP_EXE=%NDK_PATH%\llvm\bin\llvm-strip"
+          "!STRIP_EXE!" -s "!SYMBOL_SO!" -o "!SOURCE_SO!" || goto :error
+        ) else (
+          echo Error: !SOURCE_SO! not found, skip strip.
+        )
       )
 
       popd
@@ -57,6 +69,25 @@ call hvigorw clean --no-daemon || goto :error
 call hvigorw assembleHar --mode module -p module=bqlog@default -p product=default --no-daemon -p buildMode=release --no-parallel || goto :error
 if not exist "..\..\..\..\install\dynamic_lib" mkdir "..\..\..\..\install\dynamic_lib"
 copy /Y "bqlog\build\default\outputs\default\bqlog.har" "..\..\..\..\install\dynamic_lib\bqlog.har" >nul || goto :error
+
+REM Extract har symbols: copy the native .so from har build intermediates to symbols/har/{abi}/
+set "HAR_NATIVE_DIR=bqlog\build\default\intermediates\cmake\default\obj"
+set "SYMBOL_HAR_DIR=..\..\..\..\install\dynamic_lib\symbols\har"
+if exist "!HAR_NATIVE_DIR!" (
+  for /D %%A in ("!HAR_NATIVE_DIR!\*") do (
+    set "ABI_NAME=%%~nxA"
+    set "HAR_SO=%%A\libBqLog.so"
+    if exist "!HAR_SO!" (
+      set "DEST_DIR=!SYMBOL_HAR_DIR!\!ABI_NAME!"
+      if not exist "!DEST_DIR!" mkdir "!DEST_DIR!"
+      copy /Y "!HAR_SO!" "!DEST_DIR!\libBqLog.so" >nul
+      echo [HAR Symbols] Copied !HAR_SO! to !DEST_DIR!\libBqLog.so
+    )
+  )
+) else (
+  echo Warning: HAR native intermediates dir not found at !HAR_NATIVE_DIR!, skip har symbol extraction.
+)
+
 popd
 
 REM Package the library
