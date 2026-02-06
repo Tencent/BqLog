@@ -11,7 +11,7 @@
  */
 #include "bq_log/global/version.h"
 namespace bq {
-    const char* const BQ_LOG_VERSION = "2.0.1";
+    const char* const BQ_LOG_VERSION = "2.1.0";
 
     const char* get_bq_log_version()
     {
