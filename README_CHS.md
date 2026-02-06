@@ -1,9 +1,9 @@
-# BqLog (扁鹊日志) (V 2.0.1) ([ChangeLog](CHANGELOG.md))
+# BqLog (扁鹊日志) (V 2.1.0) ([ChangeLog](CHANGELOG.md))
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.0.1-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![Release Version](https://img.shields.io/badge/release-2.1.0-red.svg)](https://github.com/Tencent/BqLog/releases)
 
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。  
-> **BqLog 2.0.1 版本正式发布！带来了纯血鸿蒙支持、Node.js 支持、更强的并发性能以及高强度的非对称混合加密能力。**
+> **BqLog 2.1.0 版本正式发布！带来了纯血鸿蒙支持、Node.js 支持、更强的并发性能以及高强度的非对称混合加密能力。**
 
 ---
 

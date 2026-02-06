@@ -1,9 +1,9 @@
-# BqLog (BianQue Log) (V 2.0.1) ([ChangeLog](CHANGELOG.md))
+# BqLog (BianQue Log) (V 2.1.0) ([ChangeLog](CHANGELOG.md))
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.0.1-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![Release Version](https://img.shields.io/badge/release-2.1.0-red.svg)](https://github.com/Tencent/BqLog/releases)
 
 > BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
-> **BqLog 2.0.1 is officially released! It brings native HarmonyOS support, Node.js support, stronger concurrency performance, and high-strength hybrid asymmetric encryption for logs.**
+> **BqLog 2.1.0 is officially released! It brings native HarmonyOS support, Node.js support, stronger concurrency performance, and high-strength hybrid asymmetric encryption for logs.**
 
 > [简体中文文档](./README_CHS.md)
 
