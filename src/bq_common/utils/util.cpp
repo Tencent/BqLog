@@ -1888,3 +1888,6 @@ namespace bq {
 #endif
 #endif
 }
+#ifdef BQ_WIN
+#include "bq_common/platform/win64_includes_end.h"
+#endif
