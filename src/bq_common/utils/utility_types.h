@@ -203,15 +203,15 @@ namespace bq {
 
     public:
         unique_ptr()
-            : ptr(nullptr)
+            : ptr_(nullptr)
         {
         }
         ~unique_ptr() { reset(); }
         template <typename D>
         unique_ptr(unique_ptr<D>&& rhs) noexcept
-            : ptr(rhs.ptr)
+            : ptr_(rhs.ptr_)
         {
-            rhs.ptr = nullptr;
+            rhs.ptr_ = nullptr;
         }
 
         unique_ptr(const unique_ptr&) = delete;
@@ -221,94 +221,94 @@ namespace bq {
         template <typename D>
         unique_ptr& operator=(unique_ptr<D>&& rhs)
         {
-            if (ptr != rhs.ptr) {
+            if (ptr_ != rhs.ptr_) {
                 reset();
-                ptr = rhs.ptr;
-                rhs.ptr = nullptr;
+                ptr_ = rhs.ptr_;
+                rhs.ptr_ = nullptr;
             }
             return *this;
         }
         T* operator->()
         {
-            return ptr;
+            return ptr_;
         }
         const T* operator->() const
         {
-            return ptr;
+            return ptr_;
         }
         T& operator*()
         {
-            return *ptr;
+            return *ptr_;
         }
         const T& operator*() const
         {
-            return *ptr;
+            return *ptr_;
         }
 
         operator void*() const
         {
-            return static_cast<void*>(ptr);
+            return static_cast<void*>(ptr_);
         }
 
         operator bool() const {
-            return ptr;
+            return ptr_ != nullptr;
         }
 
         template <typename D>
         bool operator==(const unique_ptr<D>& rhs) const
         {
-            return ptr == rhs.operator->();
+            return ptr_ == rhs.operator->();
         }
         bool operator==(decltype(nullptr)) const
         {
-            return ptr == nullptr;
+            return ptr_ == nullptr;
         }
         template <typename D>
         bool operator!=(const unique_ptr<D>& rhs) const
         {
-            return ptr != rhs.operator->();
+            return ptr_ != rhs.operator->();
         }
         template <typename D>
         bool operator<(const unique_ptr<D>& rhs) const
         {
-            return ptr < rhs.operator->();
+            return ptr_ < rhs.operator->();
         }
         template <typename D>
         bool operator<=(const unique_ptr<D>& rhs) const
         {
-            return ptr <= rhs.operator->();
+            return ptr_ <= rhs.operator->();
         }
         template <typename D>
         bool operator>(const unique_ptr<D>& rhs) const
         {
-            return ptr > rhs.operator->();
+            return ptr_ > rhs.operator->();
         }
         template <typename D>
         bool operator>=(const unique_ptr<D>& rhs) const
         {
-            return ptr >= rhs.operator->();
+            return ptr_ >= rhs.operator->();
         }
         T* get()
         {
-            return ptr;
+            return ptr_;
         }
         bq::enable_if_t<!bq::is_const<T>::value, const T*> get() const
         {
-            return ptr;
+            return ptr_;
         }
         template <typename D>
         void swap(unique_ptr<D>& rhs)
         {
-            auto old = ptr;
-            ptr = rhs.ptr;
-            rhs.ptr = old;
+            auto old = ptr_;
+            ptr_ = rhs.ptr_;
+            rhs.ptr_ = old;
         }
         void reset()
         {
-            if (ptr) {
-                ptr->~T();
-                bq::aligned_free(ptr);
-                ptr = nullptr;
+            if (ptr_) {
+                ptr_->~T();
+                bq::aligned_free(ptr_);
+                ptr_ = nullptr;
             }
         }
 
@@ -322,9 +322,9 @@ namespace bq {
         template <typename U>
         friend unique_ptr<U> make_unique();
 
-        explicit unique_ptr(T* new_ptr) : ptr(new_ptr) {}
+        explicit unique_ptr(T* new_ptr) : ptr_(new_ptr) {}
 
-        T* ptr;
+        T* ptr_;
     };
 
     template <typename T, typename... Ts>
