@@ -43,11 +43,12 @@ namespace bq {
 
     void log_snapshot::reset_config(const bq::property_value& snapshot_config)
     {
-        buffer_size_ = 0;
+        uint32_t new_buffer_size = 0;
         if (snapshot_config["buffer_size"].is_integral()) {
-            buffer_size_ = static_cast<uint32_t>(static_cast<int64_t>(snapshot_config["buffer_size"]));
+            new_buffer_size = static_cast<uint32_t>(static_cast<int64_t>(snapshot_config["buffer_size"]));
         }
         bq::platform::scoped_spin_lock scoped_lock(lock_);
+        buffer_size_ = new_buffer_size;
         if (buffer_size_ != 0) {
             if (snapshot_buffer_) {
                 auto current_usable_buffer_size = (uint32_t)(snapshot_buffer_->get_block_size() * snapshot_buffer_->get_total_blocks_count());
