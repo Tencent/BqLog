@@ -108,7 +108,6 @@ namespace bq {
                 data[length] = 0;
             } else if (handle.result == enum_buffer_result_code::err_wait_and_retry) {
                 bq::platform::thread::yield();
-                finished = false;
             } else {
                 util::log_device_console(log_level::error, "failed to insert data entry to console fetch buffer, ring_buffer error code:%d", (int32_t)handle.result);
             }
