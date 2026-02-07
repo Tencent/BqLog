@@ -24,82 +24,13 @@ if [[ "$uname_s" != "Darwin" ]]; then
   exit 1
 fi
 
-NDK_PATH="$ANDROID_NDK_ROOT"
-
-# Try to use darwin-arm64 if available, otherwise fallback to darwin-x86_64
-if [[ -d "$NDK_PATH/toolchains/llvm/prebuilt/darwin-arm64/bin" ]]; then
-  HOST_TAG="darwin-arm64"
-  echo "Using NDK host toolchain: darwin-arm64"
-elif [[ -d "$NDK_PATH/toolchains/llvm/prebuilt/darwin-x86_64/bin" ]]; then
-  HOST_TAG="darwin-x86_64"
-  echo "Using NDK host toolchain: darwin-x86_64"
-else
-  echo "Neither darwin-arm64 nor darwin-x86_64 toolchain found in NDK. Build cancelled!"
-  exit 1
-fi
-
-# Detect number of CPU cores for parallel build
-PARALLEL_JOBS="${PARALLEL_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || echo 8)}"
-
-BUILD_TARGET=(armeabi-v7a arm64-v8a x86_64 x86)
-BUILD_CONFIGS=(Debug RelWithDebInfo MinSizeRel Release)
-
-echo "NDK: $NDK_PATH"
-echo "HOST_TAG: $HOST_TAG"
-echo "Parallel jobs: $PARALLEL_JOBS"
-
-rm -rf "../../../artifacts"
-rm -rf "../../../install"
-
-for build_target in "${BUILD_TARGET[@]}"; do
-  rm -rf "$build_target"
-  mkdir -p "$build_target"
-  cd "$build_target"
-
-  # Select minimum ANDROID_API for each ABI (64-bit requires >= 21)
-  case "$build_target" in
-    arm64-v8a|x86_64) ANDROID_API=21 ;;
-    *) ANDROID_API=19 ;;
-  esac
-
-  for build_config in "${BUILD_CONFIGS[@]}"; do
-    mkdir -p "$build_config"
-    cd "$build_config"
-
-    cmake ../../../../../src \
-      -DANDROID_ABI="$build_target" \
-      -DANDROID_PLATFORM="android-${ANDROID_API}" \
-      -DANDROID_NDK="$NDK_PATH" \
-      -DCMAKE_BUILD_TYPE="$build_config" \
-      -DBUILD_LIB_TYPE=dynamic_lib \
-      -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/android.toolchain.cmake" \
-      -DTARGET_PLATFORM:STRING=android \
-      -DANDROID_STL=none
-
-    # Build and install
-    cmake --build . -- -j"${PARALLEL_JOBS}"
-    cmake --build . --target install
-
-    # Strip symbols
-    SOURCE_SO=../../../../../install/dynamic_lib/lib/"$build_config"/"$build_target"/libBqLog.so
-    SYMBOL_SO=../../../../../install/dynamic_lib/symbols/"$build_config"/"$build_target"/libBqLog.so
-    mkdir -p "$(dirname "$SYMBOL_SO")"
-    echo "SOURCE_SO:$SOURCE_SO"
-    echo "SYMBOL_SO:$SYMBOL_SO"
-    mv "$SOURCE_SO" "$SYMBOL_SO"
-    "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/llvm-strip" -s "$SYMBOL_SO" -o "$SOURCE_SO"
-
-    cd ..
-  done
-  cd ..
-done
+echo "NDK: $ANDROID_NDK_ROOT"
 
 pushd "gradle_proj" >/dev/null
 chmod +x ./gradlew
 ./gradlew assemble
 popd >/dev/null
 
-# Package the library
 rm -rf pack
 mkdir -p pack
 pushd "pack" >/dev/null

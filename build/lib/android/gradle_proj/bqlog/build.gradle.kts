@@ -22,7 +22,6 @@ android {
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            // "NONE", "SYMBOL_TABLE", "FULL"
             debugSymbolLevel = "FULL"
         }
         externalNativeBuild {
@@ -69,33 +68,6 @@ android {
     }
 }
 
-fun dependencies() {
-    // Add your dependencies here if needed
-}
-fun createCopySymbolsTask(buildType: String, buildTypePrefix: String, relativePath: String) {
-    val capitalizedBuildType = buildType.replaceFirstChar { it.uppercase() }
-    tasks.register<Copy>("copySymbols$capitalizedBuildType") {
-        val destDir = rootProject.file("$relativePath/symbols/aar_$buildType")
-        dependsOn(tasks.matching {
-            it.name.contains("externalNativeBuild$capitalizedBuildType") ||
-            it.name.contains("buildCMake$capitalizedBuildType")
-        })
-        from(layout.buildDirectory.dir("intermediates/cxx/$buildTypePrefix")) {
-            include("**/obj/**/libBqLog.so")
-        }
-        into(destDir)
-
-        eachFile {
-            val abi = file.parentFile.name
-            path = "$abi/${file.name}"
-        }
-        includeEmptyDirs = false
-        doFirst {
-            destDir.mkdirs()
-            println("Copying symbols for $buildType to: ${destDir.absolutePath}")
-        }
-    }
-}
 fun createCopyAarTask(taskName: String, buildType: String, relativePath: String) {
     tasks.register<Copy>(taskName) {
         val aarName = "bqlog-$buildType.aar"
@@ -115,12 +87,8 @@ fun createCopyAarTask(taskName: String, buildType: String, relativePath: String)
 createCopyAarTask("copyAarRelease", "release", "../../../../install/dynamic_lib")
 createCopyAarTask("copyAarDebug", "debug", "../../../../install/dynamic_lib")
 
-createCopySymbolsTask("release", "RelWithDebInfo", "../../../../install/dynamic_lib")
-createCopySymbolsTask("debug", "Debug", "../../../../install/dynamic_lib")
-
 tasks.named("assemble") {
     finalizedBy("copyAarRelease")
     finalizedBy("copyAarDebug")
-    finalizedBy("copySymbolsRelease")
-    finalizedBy("copySymbolsDebug")
 }
+
