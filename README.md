@@ -186,7 +186,7 @@
 
 - **Android**
   - Download `android_libs_{version}`;
-  - You can directly import the `.aar` package within(The AAR follows standard AGP packaging conventions, with native headers and prebuilt libraries exported via Prefab.), or manually import `.so` + `/wrapper/java/src` source code under the repository.
+  - You can directly import the `.aar` package within(The AAR follows standard AGP packaging conventions, with native headers and prebuilt libraries exported via Prefab.), or manually import `/src` + `/wrapper/java/src` source code under the repository.
 
 - **Server**
   - Download the dynamic library `{os}_{arch}_libs_{version}` for the corresponding platform and import it;
