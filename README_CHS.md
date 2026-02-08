@@ -130,6 +130,8 @@
 
 ---
 
+<a id="从-1x-版本升级到-2x-版本的变化"></a>
+
 ## 🔄 从 1.x 版本升级到 2.x 版本的变化
 
 1. 增加对鸿蒙系统的支持，包括 ArkTS 和 C++ 两种语言。
@@ -147,6 +149,8 @@
 13. 复盘能力增加可靠性，从实验性功能变成正式能力。见[程序异常退出的数据保护](#3-程序异常退出的数据保护)。
 
 ---
+
+<a id="将-bqlog-引入您的项目"></a>
 
 ## 🚀 将 BqLog 引入您的项目
 
@@ -227,6 +231,8 @@ npm install ./bqlog-{version}.tgz
 
 ---
 
+<a id="简单的-demo"></a>
+
 ## 📝 简单的 Demo
 
 ### C++
@@ -298,6 +304,8 @@ log.info("Hello Java! value: {}", 3.14);
 
 ---
 
+<a id="架构介绍"></a>
+
 ## 🏗️ 架构介绍
 
 ![基础结构](docs/img/log_structure.png)
@@ -315,6 +323,8 @@ log.info("Hello Java! value: {}", 3.14);
 在极端情况下，例如一个 Unity 游戏运行在 Android 上，同时涉及 Java/Kotlin、C#、C++，它们都可以共享同一个 Log 对象，统一日志输出。
 
 ---
+
+<a id="主流程-api-使用说明"></a>
 
 ## 🔑 主流程 API 使用说明
 
@@ -674,6 +684,8 @@ namespace tools {
 
 ---
 
+<a id="同步日志和异步日志"></a>
+
 ## ⚡ 同步日志和异步日志
 
 BqLog 通过配置项 `log.thread_mode` 决定日志对象采用同步还是异步模式。两者的区别如下：
@@ -721,6 +733,8 @@ void thread_a()
 
 ---
 
+<a id="appender-介绍"></a>
+
 ## 📂 Appender 介绍
 
 Appender 表示日志的最终输出目标，其概念与 Log4j 中的 Appender 基本一致。  
@@ -757,6 +771,8 @@ Appender 表示日志的最终输出目标，其概念与 Log4j 中的 Appender 
 > 加密格式基于 OpenSSH 风格的 `ssh-rsa` 公钥文本（PEM），私钥需由 `ssh-keygen` 生成，详见 [日志加密和解密](#7-日志加密和解密)。
 
 ---
+
+<a id="配置说明"></a>
 
 ## ⚙️ 配置说明
 
@@ -1052,6 +1068,8 @@ log.print_stack_levels=[error,fatal]
 
 ---
 
+<a id="离线解码二进制格式的-appender"></a>
+
 ## 🔍 离线解码二进制格式的 Appender
 
 在程序之外，BqLog 提供了预编译的命令行工具用于解码压缩二进制日志文件。  
@@ -1070,6 +1088,8 @@ log.print_stack_levels=[error,fatal]
 - **注意：不同版本的 BqLog 之间二进制格式可能不兼容**，请使用匹配版本的解码器。
 
 ---
+
+<a id="构建说明"></a>
 
 ## 🛠️ 构建说明
 
@@ -1109,6 +1129,8 @@ Benchmark 工程脚本位于 `/build/benchmark`。
 同样包含生成工程脚本与直接运行脚本，可用于评估不同平台和配置下的性能表现。
 
 ---
+
+<a id="高级使用话题"></a>
 
 ## 🧩 高级使用话题
 
@@ -1630,6 +1652,8 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 - `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件（PEM），支持常见 PKCS#1 / PKCS#8 形式。
 
 ---
+
+<a id="benchmark"></a>
 
 ## 📊 Benchmark
 
@@ -2302,6 +2326,8 @@ public class main {
 <img src="docs/img/benchmark_no_param.png" alt="不带参数的结果" style="width: 100%;">
 
 ---
+
+<a id="如何贡献代码"></a>
 
 ## 🤝 如何贡献代码
 
