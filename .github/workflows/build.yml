@@ -815,6 +815,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -835,6 +836,36 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native clang YES NO
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like  
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES NO
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -850,6 +881,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -871,6 +903,37 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native gcc YES NO
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
   build_freebsd_x86_64_tools_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -880,6 +943,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -902,6 +966,38 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack_clang.sh
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_clang.sh
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -917,6 +1013,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -940,6 +1037,39 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack_gcc.sh
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_gcc.sh
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
   #freebsd_arm64
   build_freebsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
@@ -950,6 +1080,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
@@ -971,6 +1102,37 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native clang YES NO
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/lib/unix_like  
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES NO
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -986,6 +1148,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
@@ -1008,6 +1171,38 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native gcc YES NO
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
   build_freebsd_arm64_tools_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -1017,6 +1212,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
@@ -1040,6 +1236,39 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack_clang.sh
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_clang.sh
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1055,6 +1284,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
@@ -1080,6 +1310,41 @@ jobs:
             ./build_all_and_pack_gcc.sh
   
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc
+
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack_gcc.sh
+  
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
   #openbsd_x86_64
   build_openbsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
@@ -1090,6 +1355,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
+        continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
@@ -1112,6 +1378,38 @@ jobs:
             export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native clang YES NO
 
+
+      - name: "Retry: Run in OpenBSD"
+        id: RunInOpenBSD_retry
+        if: steps.RunInOpenBSD.outcome == 'failure'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add  cmake bash jdk%11
+
+          run: |
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack.sh native clang YES NO
+
+
+      - name: "Verify: Run in OpenBSD"
+        if: steps.RunInOpenBSD.outcome == 'failure' && steps.RunInOpenBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OpenBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1127,6 +1425,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
+        continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
@@ -1150,6 +1449,39 @@ jobs:
             export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack_clang.sh
 
+
+      - name: "Retry: Run in OpenBSD"
+        id: RunInOpenBSD_retry
+        if: steps.RunInOpenBSD.outcome == 'failure'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add  cmake bash jdk%11
+
+          run: |
+            set -e -x
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack_clang.sh
+
+
+      - name: "Verify: Run in OpenBSD"
+        if: steps.RunInOpenBSD.outcome == 'failure' && steps.RunInOpenBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OpenBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1166,6 +1498,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
+        continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
@@ -1190,6 +1523,40 @@ jobs:
             export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native clang YES NO
 
+
+      - name: "Retry: Run in OpenBSD"
+        id: RunInOpenBSD_retry
+        if: steps.RunInOpenBSD.outcome == 'failure'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add  cmake bash jdk%11
+
+          run: |
+            set -e -x
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack.sh native clang YES NO
+
+
+      - name: "Verify: Run in OpenBSD"
+        if: steps.RunInOpenBSD.outcome == 'failure' && steps.RunInOpenBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OpenBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1205,6 +1572,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSD
+        continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
@@ -1230,6 +1598,41 @@ jobs:
             export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack_clang.sh
 
+
+      - name: "Retry: Run in OpenBSD"
+        id: RunInOpenBSD_retry
+        if: steps.RunInOpenBSD.outcome == 'failure'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add  cmake bash jdk%11
+
+          run: |
+            set -e -x
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+            cd build/tools/unix_like  
+            chmod +x category_log_generator/*.sh
+            chmod +x log_decoder/*.sh
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack_clang.sh
+
+
+      - name: "Verify: Run in OpenBSD"
+        if: steps.RunInOpenBSD.outcome == 'failure' && steps.RunInOpenBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OpenBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1246,6 +1649,7 @@ jobs:
 
       - name: Run in Solaris (GCC)
         id: RunInSolarisGcc
+        continue-on-error: true
         uses: vmactions/solaris-vm@v1
         with:
           usesh: true
@@ -1295,6 +1699,65 @@ jobs:
             export BQ_UNIX_VERSION=solaris
             ./build_all_and_pack.sh native gcc YES NO
 
+
+      - name: "Retry: Run in Solaris (GCC)"
+        id: RunInSolarisGcc_retry
+        if: steps.RunInSolarisGcc.outcome == 'failure'
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "11.4-gcc"
+          prepare: |
+            pkg publisher
+            pkg install -v --accept \
+              developer/build/cmake \
+              developer/build/gnu-make \
+              developer/debug/gdb \
+              developer/gcc-14 \
+              shell/bash
+            pkgutil -U || true
+            pkgutil -y -i jdk8 || {
+              echo "CSWjdk8 not available in this catalog; Java will be optional." >&2
+            }
+          run: |
+            set -e -x
+            JAVA_HOME=""
+            for d in /opt/csw/java/jdk1.8*; do
+              if [ -x "$d/bin/java" ] && [ -f "$d/include/jni.h" ]; then
+                JAVA_HOME="$d"
+                break
+              fi
+            done
+            
+            if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] && [ -f "$JAVA_HOME/include/jni.h" ]; then
+              export JAVA_HOME
+              PATH="$JAVA_HOME/bin:$PATH"; export PATH
+              java -version
+              echo "JAVA_HOME=$JAVA_HOME"
+              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+              echo "PATH=$PATH" >> "$GITHUB_ENV"
+            else
+              echo "No JDK8 with JNI headers found (jni.h not present)."
+              # exit 1
+            fi
+            
+            ls "$JAVA_HOME"
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack.sh native gcc YES NO
+
+
+      - name: "Verify: Run in Solaris (GCC)"
+        if: steps.RunInSolarisGcc.outcome == 'failure' && steps.RunInSolarisGcc_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in Solaris (GCC) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1310,6 +1773,7 @@ jobs:
 
       - name: Run in Solaris (GCC)
         id: RunInSolarisToolsGcc
+        continue-on-error: true
         uses: vmactions/solaris-vm@v1
         with:
           usesh: true
@@ -1333,6 +1797,39 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=solaris
             ./build_all_and_pack_gcc.sh
+
+      - name: "Retry: Run in Solaris (GCC)"
+        id: RunInSolarisToolsGcc_retry
+        if: steps.RunInSolarisToolsGcc.outcome == 'failure'
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "11.4-gcc"
+          prepare: |
+            pkg install -v --accept \
+              developer/build/cmake \
+              developer/build/gnu-make \
+              developer/debug/gdb \
+              developer/gcc-14 \
+              shell/bash
+          run: |
+            set -e -x
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack_gcc.sh
+
+      - name: "Verify: Run in Solaris (GCC)"
+        if: steps.RunInSolarisToolsGcc.outcome == 'failure' && steps.RunInSolarisToolsGcc_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in Solaris (GCC) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1349,6 +1846,7 @@ jobs:
 
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibs
+        continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -1376,6 +1874,43 @@ jobs:
             export MM_CHARSET=UTF-8
             ./build_all_and_pack.sh native clang YES NO
 
+
+      - name: "Retry: Run in DragonFlyBSD"
+        id: RunInDragonFlyBSDLibs_retry
+        if: steps.RunInDragonFlyBSDLibs.outcome == 'failure'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+          run: |
+            set -e -x
+            # Java
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+  
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack.sh native clang YES NO
+
+
+      - name: "Verify: Run in DragonFlyBSD"
+        if: steps.RunInDragonFlyBSDLibs.outcome == 'failure' && steps.RunInDragonFlyBSDLibs_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in DragonFlyBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1391,6 +1926,7 @@ jobs:
 
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibs
+        continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -1418,6 +1954,43 @@ jobs:
             export MM_CHARSET=UTF-8
             ./build_all_and_pack.sh native gcc YES NO
 
+
+      - name: "Retry: Run in DragonFlyBSD"
+        id: RunInDragonFlyBSDLibs_retry
+        if: steps.RunInDragonFlyBSDLibs.outcome == 'failure'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+          run: |
+            set -e -x
+            # Java
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+  
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack.sh native gcc YES NO
+
+
+      - name: "Verify: Run in DragonFlyBSD"
+        if: steps.RunInDragonFlyBSDLibs.outcome == 'failure' && steps.RunInDragonFlyBSDLibs_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in DragonFlyBSD failed after retry"
+          exit 1
   build_dragonflybsd_x86_64_tools_clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -1427,6 +2000,7 @@ jobs:
 
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDTools
+        continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -1454,6 +2028,43 @@ jobs:
             export MM_CHARSET=UTF-8
             ./build_all_and_pack_clang.sh
 
+
+      - name: "Retry: Run in DragonFlyBSD"
+        id: RunInDragonFlyBSDTools_retry
+        if: steps.RunInDragonFlyBSDTools.outcome == 'failure'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+  
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack_clang.sh
+
+
+      - name: "Verify: Run in DragonFlyBSD"
+        if: steps.RunInDragonFlyBSDTools.outcome == 'failure' && steps.RunInDragonFlyBSDTools_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in DragonFlyBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1469,6 +2080,7 @@ jobs:
 
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDTools
+        continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -1496,6 +2108,43 @@ jobs:
             export MM_CHARSET=UTF-8
             ./build_all_and_pack_gcc.sh
 
+
+      - name: "Retry: Run in DragonFlyBSD"
+        id: RunInDragonFlyBSDTools_retry
+        if: steps.RunInDragonFlyBSDTools.outcome == 'failure'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+  
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack_gcc.sh
+
+
+      - name: "Verify: Run in DragonFlyBSD"
+        if: steps.RunInDragonFlyBSDTools.outcome == 'failure' && steps.RunInDragonFlyBSDTools_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in DragonFlyBSD failed after retry"
+          exit 1
   # OmniOS
   build_omnios_x86_64_libs_gcc:
     runs-on: ubuntu-latest
@@ -1506,6 +2155,7 @@ jobs:
 
       - name: Run in OmniOS (GCC only)
         id: RunInOmniOSLibs
+        continue-on-error: true
         uses: vmactions/omnios-vm@v1
         with:
           usesh: true
@@ -1545,6 +2195,55 @@ jobs:
             export BQ_UNIX_VERSION=omnios
             ./build_all_and_pack.sh native gcc YES NO
 
+
+      - name: "Retry: Run in OmniOS (GCC only)"
+        id: RunInOmniOSLibs_retry
+        if: steps.RunInOmniOSLibs.outcome == 'failure'
+        uses: vmactions/omnios-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            set -e
+            pkg refresh --full
+            if ! pkg publisher | grep -q '^extra\.omnios'; then
+              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
+              [ -n "$REL" ] || REL="r151054"
+              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
+              pkg refresh --full
+            fi
+              
+            pkg install -v --accept shell/bash developer/build/gnu-make || true
+            pkg install -v --accept ooce/developer/cmake
+            pkg install -v --accept developer/gcc13
+            pkg install -v --accept runtime/java/openjdk11
+          run: |
+            set -e -x
+
+            export PATH="/opt/gcc-13/bin:$PATH"
+            export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
+            ls -l "$JAVA_HOME"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+
+            command -v gcc >/dev/null 2>&1 || { echo "gcc not found; ensure gcc installed"; exit 1; }
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=omnios
+            ./build_all_and_pack.sh native gcc YES NO
+
+
+      - name: "Verify: Run in OmniOS (GCC only)"
+        if: steps.RunInOmniOSLibs.outcome == 'failure' && steps.RunInOmniOSLibs_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OmniOS (GCC only) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1560,6 +2259,7 @@ jobs:
 
       - name: Run in OmniOS (GCC only)
         id: RunInOmniOSTools
+        continue-on-error: true
         uses: vmactions/omnios-vm@v1
         with:
           usesh: true
@@ -1600,6 +2300,56 @@ jobs:
             export BQ_UNIX_VERSION=omnios
             ./build_all_and_pack_gcc.sh
 
+
+      - name: "Retry: Run in OmniOS (GCC only)"
+        id: RunInOmniOSTools_retry
+        if: steps.RunInOmniOSTools.outcome == 'failure'
+        uses: vmactions/omnios-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            set -e
+            pkg refresh --full
+            if ! pkg publisher | grep -q '^extra\.omnios'; then
+              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
+              [ -n "$REL" ] || REL="r151054"
+              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
+              pkg refresh --full
+            fi
+
+            pkg install -v --accept shell/bash developer/build/gnu-make || true
+            pkg install -v --accept ooce/developer/cmake
+            pkg install -v --accept developer/gcc13
+            pkg install -v --accept runtime/java/openjdk11
+          run: |
+            set -e -x
+
+            export PATH="/opt/gcc-13/bin:$PATH"
+            export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+
+            command -v gcc >/dev/null 2>&1 || { echo "gcc not found; ensure ooce/gcc-13/12/11 installed"; exit 1; }
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=omnios
+            ./build_all_and_pack_gcc.sh
+
+
+      - name: "Verify: Run in OmniOS (GCC only)"
+        if: steps.RunInOmniOSTools.outcome == 'failure' && steps.RunInOmniOSTools_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OmniOS (GCC only) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1614,6 +2364,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (Clang, x86_64)
+        id: vm_step_1
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -1678,6 +2430,80 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native clang YES NO
+
+      - name: "Retry: Run in NetBSD (Clang, x86_64)"
+        id: vm_step_1_retry
+        if: steps.vm_step_1.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+          
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+          
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            # Use Clang (NetBSD base provides clang)
+            export CC=clang CXX=clang++
+            clang --version || true
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES NO
+
+      - name: "Verify: Run in NetBSD (Clang, x86_64)"
+        if: steps.vm_step_1.outcome == 'failure' && steps.vm_step_1_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (Clang, x86_64) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1691,6 +2517,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (GCC, x86_64)
+        id: vm_step_2
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -1752,6 +2580,77 @@ jobs:
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native gcc YES NO
 
+
+      - name: "Retry: Run in NetBSD (GCC, x86_64)"
+        id: vm_step_2_retry
+        if: steps.vm_step_2.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+
+      - name: "Verify: Run in NetBSD (GCC, x86_64)"
+        if: steps.vm_step_2.outcome == 'failure' && steps.vm_step_2_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (GCC, x86_64) failed after retry"
+          exit 1
   build_netbsd_x86_64_tools_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -1759,6 +2658,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (Clang, x86_64)
+        id: vm_step_3
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -1822,6 +2723,79 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack_clang.sh
+
+      - name: "Retry: Run in NetBSD (Clang, x86_64)"
+        id: vm_step_3_retry
+        if: steps.vm_step_3.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            export CC=clang CXX=clang++
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_clang.sh
+
+      - name: "Verify: Run in NetBSD (Clang, x86_64)"
+        if: steps.vm_step_3.outcome == 'failure' && steps.vm_step_3_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (Clang, x86_64) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1835,6 +2809,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (GCC, x86_64)
+        id: vm_step_4
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -1898,6 +2874,79 @@ jobs:
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack_gcc.sh
 
+
+      - name: "Retry: Run in NetBSD (GCC, x86_64)"
+        id: vm_step_4_retry
+        if: steps.vm_step_4.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_gcc.sh
+
+
+      - name: "Verify: Run in NetBSD (GCC, x86_64)"
+        if: steps.vm_step_4.outcome == 'failure' && steps.vm_step_4_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (GCC, x86_64) failed after retry"
+          exit 1
   # netbsd_arm64 (aarch64)
   build_netbsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
@@ -1906,6 +2955,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (Clang, arm64)
+        id: vm_step_5
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -1968,6 +3019,78 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native clang YES NO
+
+      - name: "Retry: Run in NetBSD (Clang, arm64)"
+        id: vm_step_5_retry
+        if: steps.vm_step_5.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            export CC=clang CXX=clang++
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES NO
+
+      - name: "Verify: Run in NetBSD (Clang, arm64)"
+        if: steps.vm_step_5.outcome == 'failure' && steps.vm_step_5_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (Clang, arm64) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -1981,6 +3104,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (GCC, arm64)
+        id: vm_step_6
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -2043,6 +3168,78 @@ jobs:
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native gcc YES NO
 
+
+      - name: "Retry: Run in NetBSD (GCC, arm64)"
+        id: vm_step_6_retry
+        if: steps.vm_step_6.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES NO
+
+
+      - name: "Verify: Run in NetBSD (GCC, arm64)"
+        if: steps.vm_step_6.outcome == 'failure' && steps.vm_step_6_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (GCC, arm64) failed after retry"
+          exit 1
   build_netbsd_arm64_tools_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -2050,6 +3247,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (Clang, arm64)
+        id: vm_step_7
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -2114,6 +3313,80 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack_clang.sh
+
+      - name: "Retry: Run in NetBSD (Clang, arm64)"
+        id: vm_step_7_retry
+        if: steps.vm_step_7.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            export CC=clang CXX=clang++
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_clang.sh
+
+      - name: "Verify: Run in NetBSD (Clang, arm64)"
+        if: steps.vm_step_7.outcome == 'failure' && steps.vm_step_7_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (Clang, arm64) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -2127,6 +3400,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (GCC, arm64)
+        id: vm_step_8
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -2191,6 +3466,80 @@ jobs:
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack_gcc.sh
 
+
+      - name: "Retry: Run in NetBSD (GCC, arm64)"
+        id: vm_step_8_retry
+        if: steps.vm_step_8.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                # aarch64
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+            cd build/tools/unix_like
+            [ -d category_log_generator ] && chmod +x category_log_generator/*.sh
+            [ -d log_decoder ] && chmod +x log_decoder/*.sh
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack_gcc.sh
+
+
+      - name: "Verify: Run in NetBSD (GCC, arm64)"
+        if: steps.vm_step_8.outcome == 'failure' && steps.vm_step_8_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (GCC, arm64) failed after retry"
+          exit 1
   #iOS
   build_ios_lib:
     runs-on: macos-latest
@@ -2727,6 +4076,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -2751,6 +4101,40 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native clang YES YES
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            # Install node-api-headers at repo root before build
+            npm install node-api-headers
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES YES
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -2767,6 +4151,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSD
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -2791,6 +4176,40 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native gcc YES YES
             
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSD_retry
+        if: steps.RunInFreeBSD.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            # Install node-api-headers at repo root before build
+            npm install node-api-headers
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES YES
+            
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSD.outcome == 'failure' && steps.RunInFreeBSD_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
   nodejs_build_freebsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -2800,6 +4219,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSDArmClang
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
@@ -2824,6 +4244,40 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native clang YES YES
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSDArmClang_retry
+        if: steps.RunInFreeBSDArmClang.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            npm install node-api-headers
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native clang YES YES
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSDArmClang.outcome == 'failure' && steps.RunInFreeBSDArmClang_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -2839,6 +4293,7 @@ jobs:
 
       - name: Run in FreeBSD
         id: RunInFreeBSDArmGcc
+        continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
@@ -2863,6 +4318,40 @@ jobs:
             export BQ_UNIX_VERSION=freebsd
             ./build_all_and_pack.sh native gcc YES YES            
 
+
+      - name: "Retry: Run in FreeBSD"
+        id: RunInFreeBSDArmGcc_retry
+        if: steps.RunInFreeBSDArmGcc.outcome == 'failure'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+            echo "PATH=$PATH" >> $GITHUB_ENV
+
+            npm install node-api-headers
+
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=freebsd
+            ./build_all_and_pack.sh native gcc YES YES            
+
+
+      - name: "Verify: Run in FreeBSD"
+        if: steps.RunInFreeBSDArmGcc.outcome == 'failure' && steps.RunInFreeBSDArmGcc_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in FreeBSD failed after retry"
+          exit 1
   nodejs_build_openbsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -2872,6 +4361,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSDLibsClang
+        continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
@@ -2896,6 +4386,40 @@ jobs:
             export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native clang YES YES
 
+
+      - name: "Retry: Run in OpenBSD"
+        id: RunInOpenBSDLibsClang_retry
+        if: steps.RunInOpenBSDLibsClang.outcome == 'failure'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add cmake bash jdk%11
+            pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
+          run: |
+            set -e -x
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            npm install node-api-headers
+            
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack.sh native clang YES YES
+
+
+      - name: "Verify: Run in OpenBSD"
+        if: steps.RunInOpenBSDLibsClang.outcome == 'failure' && steps.RunInOpenBSDLibsClang_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OpenBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -2911,6 +4435,7 @@ jobs:
 
       - name: Run in OpenBSD
         id: RunInOpenBSDArmLibsClang
+        continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
@@ -2936,6 +4461,41 @@ jobs:
             export BQ_UNIX_VERSION=openbsd
             ./build_all_and_pack.sh native clang YES YES
 
+
+      - name: "Retry: Run in OpenBSD"
+        id: RunInOpenBSDArmLibsClang_retry
+        if: steps.RunInOpenBSDArmLibsClang.outcome == 'failure'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg_add cmake bash jdk%11
+            pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
+          run: |
+            set -e -x
+            test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
+            export JAVA_HOME="/usr/local/jdk-11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            npm install node-api-headers
+            
+            cd build/lib/unix_like
+            chmod +x *.sh
+            ls -l
+            export BQ_UNIX_VERSION=openbsd
+            ./build_all_and_pack.sh native clang YES YES
+
+
+      - name: "Verify: Run in OpenBSD"
+        if: steps.RunInOpenBSDArmLibsClang.outcome == 'failure' && steps.RunInOpenBSDArmLibsClang_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OpenBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -2951,6 +4511,7 @@ jobs:
 
       - name: Run in Solaris (GCC)
         id: RunInSolarisGccNode
+        continue-on-error: true
         uses: vmactions/solaris-vm@v1
         with:
           usesh: true
@@ -3020,6 +4581,85 @@ jobs:
             export BQ_UNIX_VERSION=solaris
             ./build_all_and_pack.sh native gcc YES YES
 
+
+      - name: "Retry: Run in Solaris (GCC)"
+        id: RunInSolarisGccNode_retry
+        if: steps.RunInSolarisGccNode.outcome == 'failure'
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "11.4-gcc"
+          prepare: |
+            set -e
+            pkg publisher
+            pkg install -v --accept \
+              developer/build/cmake \
+              developer/build/gnu-make \
+              developer/debug/gdb \
+              developer/gcc-14 \
+              shell/bash
+
+            if ! command -v pkgutil >/dev/null 2>&1; then
+              echo "Bootstrapping OpenCSW pkgutil..."
+              pkgadd -n -d http://get.opencsw.org/now CSWpkgutil || true
+            fi
+
+            if [ -x /opt/csw/bin/pkgutil ]; then
+              /opt/csw/bin/pkgutil -U || true
+              /opt/csw/bin/pkgutil -y -i jdk8 || {
+                echo "CSWjdk8 not available in OpenCSW; Java will be optional." >&2
+              }
+            else
+              echo "pkgutil not found; skipping OpenCSW packages." >&2
+            fi
+            
+            pkg search -r jdk
+            pkg search -r nodejs
+            pkg install runtime/nodejs
+          run: |
+            set -e -x
+            PATH="/opt/csw/bin:$PATH"; export PATH
+            JAVA_HOME=""; export JAVA_HOME
+            for d in /opt/csw/java/jdk1.8*; do
+              if [ -x "$d/bin/java" ] && [ -f "$d/include/jni.h" ]; then
+                JAVA_HOME="$d"
+                break
+              fi
+            done
+            
+            if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] && [ -f "$JAVA_HOME/include/jni.h" ]; then
+              export JAVA_HOME
+              PATH="$JAVA_HOME/bin:$PATH"; export PATH
+              java -version
+              echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+              echo "PATH=$PATH" >> "$GITHUB_ENV"
+            else
+              echo "No JDK8 with JNI headers found (jni.h not present)."
+            fi
+            
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            node -v
+            npm -v
+            npm config set strict-ssl false
+            npm install node-api-headers
+            
+            ls "$JAVA_HOME" || true
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=solaris
+            ./build_all_and_pack.sh native gcc YES YES
+
+
+      - name: "Verify: Run in Solaris (GCC)"
+        if: steps.RunInSolarisGccNode.outcome == 'failure' && steps.RunInSolarisGccNode_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in Solaris (GCC) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -3035,6 +4675,7 @@ jobs:
 
       - name: Run in OmniOS (GCC only)
         id: RunInOmniOSLibsNode
+        continue-on-error: true
         uses: vmactions/omnios-vm@v1
         with:
           usesh: true
@@ -3076,6 +4717,57 @@ jobs:
             export BQ_UNIX_VERSION=omnios
             ./build_all_and_pack.sh native gcc YES YES
 
+
+      - name: "Retry: Run in OmniOS (GCC only)"
+        id: RunInOmniOSLibsNode_retry
+        if: steps.RunInOmniOSLibsNode.outcome == 'failure'
+        uses: vmactions/omnios-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            set -e
+            pkg refresh --full
+            if ! pkg publisher | grep -q '^extra\.omnios'; then
+              REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
+              [ -n "$REL" ] || REL="r151054"
+              pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
+              pkg refresh --full
+            fi
+
+            pkg install -v --accept shell/bash developer/build/gnu-make || true
+            pkg install -v --accept ooce/developer/cmake
+            pkg install -v --accept developer/gcc13
+            pkg install -v --accept runtime/java/openjdk11
+            pkg install -v --accept ooce/runtime/node-22
+          run: |
+            set -e -x
+            
+            export PATH="/opt/gcc-13/bin:$PATH"
+            export JAVA_HOME="/usr/jdk/instances/openjdk11.0"
+            ls -l "$JAVA_HOME"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH INCLUDE
+            
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=omnios
+            ./build_all_and_pack.sh native gcc YES YES
+
+
+      - name: "Verify: Run in OmniOS (GCC only)"
+        if: steps.RunInOmniOSLibsNode.outcome == 'failure' && steps.RunInOmniOSLibsNode_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in OmniOS (GCC only) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -3091,6 +4783,7 @@ jobs:
 
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibsClang
+        continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -3118,6 +4811,43 @@ jobs:
             export MM_CHARSET=UTF-8
             ./build_all_and_pack.sh native clang YES YES
 
+
+      - name: "Retry: Run in DragonFlyBSD"
+        id: RunInDragonFlyBSDLibsClang_retry
+        if: steps.RunInDragonFlyBSDLibsClang.outcome == 'failure'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            npm install node-api-headers
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+            
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack.sh native clang YES YES
+
+
+      - name: "Verify: Run in DragonFlyBSD"
+        if: steps.RunInDragonFlyBSDLibsClang.outcome == 'failure' && steps.RunInDragonFlyBSDLibsClang_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in DragonFlyBSD failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -3133,6 +4863,7 @@ jobs:
 
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibsGcc
+        continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -3160,6 +4891,43 @@ jobs:
             export MM_CHARSET=UTF-8
             ./build_all_and_pack.sh native gcc YES YES
 
+
+      - name: "Retry: Run in DragonFlyBSD"
+        id: RunInDragonFlyBSDLibsGcc_retry
+        if: steps.RunInDragonFlyBSDLibsGcc.outcome == 'failure'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+          run: |
+            set -e -x
+            pkg info -l openjdk11 | grep 'bin/java'
+            export JAVA_HOME="/usr/local/openjdk11"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            java -version
+            npm install node-api-headers
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=dragonflybsd
+            
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LC_CTYPE=en_US.UTF-8
+            export MM_CHARSET=UTF-8
+            ./build_all_and_pack.sh native gcc YES YES
+
+
+      - name: "Verify: Run in DragonFlyBSD"
+        if: steps.RunInDragonFlyBSDLibsGcc.outcome == 'failure' && steps.RunInDragonFlyBSDLibsGcc_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in DragonFlyBSD failed after retry"
+          exit 1
   nodejs_build_netbsd_x86_64_libs_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -3167,6 +4935,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (Clang, x86_64)
+        id: vm_step_9
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -3232,6 +5002,81 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native clang YES YES
+
+      - name: "Retry: Run in NetBSD (Clang, x86_64)"
+        id: vm_step_9_retry
+        if: steps.vm_step_9.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            export CC=clang CXX=clang++
+            clang --version || true
+            
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES YES
+
+      - name: "Verify: Run in NetBSD (Clang, x86_64)"
+        if: steps.vm_step_9.outcome == 'failure' && steps.vm_step_9_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (Clang, x86_64) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -3245,6 +5090,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (GCC, x86_64)
+        id: vm_step_10
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -3308,6 +5155,79 @@ jobs:
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native gcc YES YES
 
+
+      - name: "Retry: Run in NetBSD (GCC, x86_64)"
+        id: vm_step_10_retry
+        if: steps.vm_step_10.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES YES
+
+
+      - name: "Verify: Run in NetBSD (GCC, x86_64)"
+        if: steps.vm_step_10.outcome == 'failure' && steps.vm_step_10_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (GCC, x86_64) failed after retry"
+          exit 1
   nodejs_build_netbsd_arm64_libs_Clang:
     runs-on: ubuntu-latest
     needs: extract_version
@@ -3315,6 +5235,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (Clang, arm64)
+        id: vm_step_11
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -3379,6 +5301,80 @@ jobs:
             ls -l
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native clang YES YES
+
+      - name: "Retry: Run in NetBSD (Clang, arm64)"
+        id: vm_step_11_retry
+        if: steps.vm_step_11.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            export CC=clang CXX=clang++
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native clang YES YES
+
+      - name: "Verify: Run in NetBSD (Clang, arm64)"
+        if: steps.vm_step_11.outcome == 'failure' && steps.vm_step_11_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (Clang, arm64) failed after retry"
+          exit 1
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -3392,6 +5388,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run in NetBSD (GCC, arm64)
+        id: vm_step_12
+        continue-on-error: true
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -3456,6 +5454,80 @@ jobs:
             export BQ_UNIX_VERSION=netbsd
             ./build_all_and_pack.sh native gcc YES YES
 
+
+      - name: "Retry: Run in NetBSD (GCC, arm64)"
+        id: vm_step_12_retry
+        if: steps.vm_step_12.outcome == 'failure'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: aarch64
+          usesh: true
+          mem: 8192
+          release: "10.1"
+          prepare: |
+            set -e
+            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+
+            /usr/sbin/pkg_add -v pkgin || true
+            pkgin -y update || true
+            pkgin -y install cmake gmake bash gdb || true
+            pkgin -y install clang || true
+            pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
+
+            ARCH="$(uname -m)"
+            URLS=""
+            case "$ARCH" in
+              amd64|x86_64)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                ;;
+              aarch64|arm64|evbarm)
+                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                ;;
+              *)
+                echo "Unknown arch $ARCH; please set xbase URL manually" >&2
+                exit 1
+                ;;
+            esac
+
+            fetched=0
+            for u in $URLS; do
+              echo "Fetching $u"
+              if /usr/bin/ftp -o /tmp/xbase.tar.xz "$u"; then
+                tar -xJpf /tmp/xbase.tar.xz -C /
+                fetched=1
+                break
+              fi
+            done
+            if [ "$fetched" -ne 1 ]; then
+              echo "Failed to fetch/extract xbase.tar.xz (tried: $URLS)" >&2
+              exit 1
+            fi
+            ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
+
+            pkgin -y install openjdk17 || true
+            pkgin -y install nodejs npm || true
+          run: |
+            set -e -x
+            export JAVA_HOME="/usr/pkg/java/openjdk17"
+            export PATH="$JAVA_HOME/bin:/usr/pkg/bin:/usr/pkg/sbin:$PATH"
+            java -version
+            command -v node >/dev/null 2>&1 || { echo "Node.js not found" >&2; exit 1; }
+            npm install node-api-headers
+            echo "JAVA_HOME=${JAVA_HOME:-}" >> "$GITHUB_ENV"
+            echo "PATH=$PATH" >> "$GITHUB_ENV"
+            
+            cd build/lib/unix_like
+            chmod +x *.sh 2>/dev/null || true
+            ls -l
+            export BQ_UNIX_VERSION=netbsd
+            ./build_all_and_pack.sh native gcc YES YES
+
+
+      - name: "Verify: Run in NetBSD (GCC, arm64)"
+        if: steps.vm_step_12.outcome == 'failure' && steps.vm_step_12_retry.outcome == 'failure'
+        run: |
+          echo "::error::Run in NetBSD (GCC, arm64) failed after retry"
+          exit 1
   nodejs_collect_and_stage_prebuilds:
     runs-on: ubuntu-latest
     needs:
