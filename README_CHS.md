@@ -1,13 +1,22 @@
 # BqLog (扁鹊日志) (V 2.1.0) ([ChangeLog](CHANGELOG.md))
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
 [![Release Version](https://img.shields.io/badge/release-2.1.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS-lightgrey.svg?style=flat)]()
+[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript-blue.svg?style=flat)]()
 
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。  
 > **BqLog 2.1.0 版本正式发布！带来了纯血鸿蒙支持、Node.js 支持、更强的并发性能以及高强度的非对称混合加密能力。**
 
+> [English Document](./README.md)
+
 ---
 
-## 如果您有以下困扰，可以尝试 BqLog
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.1.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases/tag/Release_2.1.0)
+
+## 💡 如果您有以下困扰，可以尝试 BqLog
 
 - 如果您的客户端产品（尤其是游戏）希望同时满足以下「不可能三角」：
   - 方便追溯问题（日志应写尽写）
@@ -18,7 +27,7 @@
 
 ---
 
-## 支持操作系统和平台
+## 🖥️ 支持操作系统和平台
 
 - Windows 64-bit
 - macOS
@@ -30,7 +39,7 @@
 
 ---
 
-## 支持编程语言及开发环境
+## 🌐 支持编程语言及开发环境
 
 - C++（C++11 及以上，支持 MSVC、Clang、GCC、MinGW-GCC、MinGW-Clang）
 - Java / Kotlin（Android & Server）
@@ -41,7 +50,7 @@
 
 ---
 
-## 支持的硬件架构
+## 🔧 支持的硬件架构
 
 - x86
 - x86_64
@@ -50,7 +59,7 @@
 
 ---
 
-## 支持的引入方式
+## 📦 支持的引入方式
 
 - 动态库
 - 静态库
@@ -58,7 +67,7 @@
 
 ---
 
-## 特点
+## ✨ 特点
 
 - 相比常见开源日志库有显著性能优势（详见 [Benchmark](#benchmark)），不仅适用于服务器和客户端，也非常适合移动端设备。
 - 内存消耗少：在 [Benchmark](#benchmark) 用例中，10 线程、2,000 万条日志，BqLog 自身内存消耗约为 1 MB。
@@ -77,9 +86,7 @@
 
 ---
 
----
-
-## 目录
+## 📑 目录
 
 **[从 1.x 版本升级到 2.x 版本的变化](#从-1x-版本升级到-2x-版本的变化)**  
 **[将 BqLog 引入您的项目](#将-bqlog-引入您的项目)**  
@@ -122,7 +129,7 @@
 
 ---
 
-## 从 1.x 版本升级到 2.x 版本的变化
+## 🔄 从 1.x 版本升级到 2.x 版本的变化
 
 1. 增加对鸿蒙系统的支持，包括 ArkTS 和 C++ 两种语言。
 2. 增加对 Node.js 的支持（CJS 和 ESM）。
@@ -136,11 +143,11 @@
 10. 单条日志长度不再受log.buffer_size限制
 11. 可以精确手动设置时区
 12. `raw_file`类型的appender不再维护，标记为`废弃`，请用`compressed_file`类型替代。
-13. 复盘能力增加可靠性，从实验性功能变成正式能力。见[程序异常退出的数据保护](#3-程序异常退出的数据保护))。
+13. 复盘能力增加可靠性，从实验性功能变成正式能力。见[程序异常退出的数据保护](#3-程序异常退出的数据保护)。
 
 ---
 
-## 将 BqLog 引入您的项目
+## 🚀 将 BqLog 引入您的项目
 
 > 以下示例假定您已在 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载对应版本的二进制包或源码。
 
@@ -219,7 +226,7 @@ npm install ./bqlog-{version}.tgz
 
 ---
 
-## 简单的 Demo
+## 📝 简单的 Demo
 
 ### C++
 
@@ -290,7 +297,7 @@ log.info("Hello Java! value: {}", 3.14);
 
 ---
 
-## 架构介绍
+## 🏗️ 架构介绍
 
 ![基础结构](docs/img/log_structure.png)
 
@@ -308,7 +315,7 @@ log.info("Hello Java! value: {}", 3.14);
 
 ---
 
-## 主流程 API 使用说明
+## 🔑 主流程 API 使用说明
 
 > 说明：以下 API 均声明在 `bq::log`（C++）或 `bq.log`（其他语言 Wrapper）类中。  
 > 为节约篇幅，这里仅列出 C++ API，其它语言 Wrapper 拥有一致的接口命名与语义。
@@ -666,7 +673,7 @@ namespace tools {
 
 ---
 
-## 同步日志和异步日志
+## ⚡ 同步日志和异步日志
 
 BqLog 通过配置项 `log.thread_mode` 决定日志对象采用同步还是异步模式。两者的区别如下：
 
@@ -713,7 +720,7 @@ void thread_a()
 
 ---
 
-## Appender 介绍
+## 📂 Appender 介绍
 
 Appender 表示日志的最终输出目标，其概念与 Log4j 中的 Appender 基本一致。  
 目前 BqLog 提供以下几种 Appender：
@@ -750,7 +757,7 @@ Appender 表示日志的最终输出目标，其概念与 Log4j 中的 Appender 
 
 ---
 
-## 配置说明
+## ⚙️ 配置说明
 
 所谓「配置」，即 `create_log` 和 `reset_config` 函数中的 `config` 字符串。  
 该字符串采用 **properties 文件格式**，支持 `#` 单行注释（需独立成行并以 `#` 开头）。
@@ -1044,7 +1051,7 @@ log.print_stack_levels=[error,fatal]
 
 ---
 
-## 离线解码二进制格式的 Appender
+## 🔍 离线解码二进制格式的 Appender
 
 在程序之外，BqLog 提供了预编译的命令行工具用于解码压缩二进制日志文件。  
 从 Releases 下载对应操作系统与架构的工具包 `{os}_{arch}_tools_{version}`，解压后可找到：
@@ -1063,7 +1070,7 @@ log.print_stack_levels=[error,fatal]
 
 ---
 
-## 构建说明
+## 🛠️ 构建说明
 
 对于需要自行修改与编译 BqLog 的用户，所有构建脚本位于 `/build` 目录：
 
@@ -1102,7 +1109,7 @@ Benchmark 工程脚本位于 `/build/benchmark`。
 
 ---
 
-## 高级使用话题
+## 🧩 高级使用话题
 
 ### 1. 无 Heap Alloc
 
@@ -1623,7 +1630,7 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 
 ---
 
-## Benchmark
+## 📊 Benchmark
 
 ### 1. Benchmark 说明
 
@@ -2295,7 +2302,7 @@ public class main {
 
 ---
 
-## 如何贡献代码
+## 🤝 如何贡献代码
 
 若您希望贡献代码，请确保您的改动能通过仓库中 GitHub Actions 下的以下工作流：
 

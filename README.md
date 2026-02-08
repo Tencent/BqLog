@@ -1,6 +1,11 @@
 # BqLog (BianQue Log) (V 2.1.0) ([ChangeLog](CHANGELOG.md))
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
 [![Release Version](https://img.shields.io/badge/release-2.1.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS-lightgrey.svg?style=flat)]()
+[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript-blue.svg?style=flat)]()
 
 > BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
 > **BqLog 2.1.0 is officially released! It brings native HarmonyOS support, Node.js support, stronger concurrency performance, and high-strength hybrid asymmetric encryption for logs.**
@@ -9,7 +14,9 @@
 
 ---
 
-## If you have the following pain points, try BqLog
+[![Download](https://img.shields.io/badge/⬇_Download-Release_2.1.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases/tag/Release_2.1.0)
+
+## 💡 If you have the following pain points, try BqLog
 
 - If your client product (especially games) wants to satisfy this "impossible triangle" at the same time:
   - Easy troubleshooting (log as much as possible)
@@ -20,7 +27,7 @@
 
 ---
 
-## Supported operating systems and platforms
+## 🖥️ Supported operating systems and platforms
 
 - Windows 64-bit
 - macOS
@@ -32,7 +39,7 @@
 
 ---
 
-## Supported languages and environments
+## 🌐 Supported languages and environments
 
 - C++ (C++11 and later, supports MSVC, Clang, GCC, MinGW-GCC, MinGW-Clang)
 - Java / Kotlin (Android & Server)
@@ -43,7 +50,7 @@
 
 ---
 
-## Supported hardware architectures
+## 🔧 Supported hardware architectures
 
 - x86
 - x86_64
@@ -52,7 +59,7 @@
 
 ---
 
-## Ways to integrate
+## 📦 Ways to integrate
 
 - Dynamic library
 - Static library
@@ -60,7 +67,7 @@
 
 ---
 
-## Highlights
+## ✨ Highlights
 
 - Significant performance advantage over common open-source logging libraries (see [Benchmark](#benchmark)); suitable for server, client, and mobile.
 - Low memory usage: in the [Benchmark](#benchmark) case (10 threads, 20,000,000 log entries), BqLog itself uses about 1 MB of memory.
@@ -79,9 +86,7 @@
 
 ---
 
----
-
-## Table of contents
+## 📑 Table of contents
 
 **[Changes from 1.x to 2.x](#changes-from-1x-to-2x)**  
 **[Integrating BqLog into your project](#integrating-bqlog-into-your-project)**  
@@ -124,7 +129,7 @@
 
 ---
 
-## Changes from 1.x to 2.x
+## 🔄 Changes from 1.x to 2.x
 
 1. Added HarmonyOS support, including ArkTS and C++.
 2. Added Node.js support (CJS and ESM).
@@ -142,7 +147,7 @@
 
 ---
 
-## Integrating BqLog into your project
+## 🚀 Integrating BqLog into your project
 
 > The examples below assume you have already downloaded the corresponding binary package or source code from the [Releases page](https://github.com/Tencent/BqLog/releases).
 
@@ -221,7 +226,7 @@ Refer to `/demo/nodejs` directory under the repository.
 
 ---
 
-## Simple Demo
+## 📝 Simple Demo
 
 ### C++
 
@@ -292,7 +297,7 @@ For more examples, refer to `/demo/java` directory.
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
 ![Structure](docs/img/log_structure.png)
 
@@ -310,7 +315,7 @@ In extreme cases, such as a Unity game running on Android, involving Java/Kotlin
 
 ---
 
-## Main-flow API usage
+## 🔑 Main-flow API usage
 
 > Note: The following APIs are all declared in `bq::log` (C++) or `bq.log` (other language Wrappers) class.
 > To save space, only C++ APIs are listed here; other language Wrappers have consistent interface naming and semantics.
@@ -668,7 +673,7 @@ This tool class is used to decode log files output by binary Appenders (such as 
 
 ---
 
-## Synchronous vs asynchronous logging
+## ⚡ Synchronous vs asynchronous logging
 
 BqLog determines whether the log object uses synchronous or asynchronous mode through the configuration item `log.thread_mode`. The differences are as follows:
 
@@ -715,7 +720,7 @@ The conclusion is: **Please ensure that the parameters passed in a single log ca
 
 ---
 
-## Appender overview
+## 📂 Appender overview
 
 Appender represents the final output destination of the log, and its concept is basically consistent with the Appender in Log4j.
 Currently BqLog provides the following types of Appenders:
@@ -752,7 +757,7 @@ Comprehensive comparison is as follows:
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 "Configuration" refers to the `config` string in `create_log` and `reset_config` functions.
 This string uses **properties file format**, supports `#` single-line comments (must be on a separate line and start with `#`).
@@ -1045,7 +1050,7 @@ Applicable to: Need to report "recent period" logs of this Log after detecting a
 
 ---
 
-## Offline decoder for binary Appenders
+## 🔍 Offline decoder for binary Appenders
 
 Outside program, BqLog provides precompiled command line tools for decoding compressed binary log files.
 Download tool package `{os}_{arch}_tools_{version}` corresponding to OS and architecture from Releases, unzip to find:
@@ -1064,7 +1069,7 @@ Usage:
 
 ---
 
-## Build
+## 🛠️ Build
 
 For users who need to modify and compile BqLog themselves, all build scripts are located in `/build` directory:
 
@@ -1103,7 +1108,7 @@ Also contain generation project script and direct run script, can be used to eva
 
 ---
 
-## Advanced topics
+## 🧩 Advanced topics
 
 ### 1. No Heap Alloc
 
@@ -1624,7 +1629,7 @@ Where:
 
 ---
 
-## Benchmark
+## 📊 Benchmark
 
 ### 1. Benchmark description
 
@@ -2296,7 +2301,7 @@ An interesting phenomenon is that in "no parameter" case, Log4j2's time cost is 
 
 ---
 
-## How to contribute
+## 🤝 How to contribute
 
 If you want to contribute code, please make sure your changes can pass the following workflows under GitHub Actions in the repository:
 
