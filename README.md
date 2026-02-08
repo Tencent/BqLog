@@ -1,6 +1,7 @@
-# BqLog (BianQue Log) (V 2.1.0) ([ChangeLog](CHANGELOG.md))
+# BqLog (BianQue Log) V 2.1.0
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
 [![Release Version](https://img.shields.io/badge/release-2.1.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.1.0-orange.svg?style=flat)](CHANGELOG.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
