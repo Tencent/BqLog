@@ -190,7 +190,7 @@
 
 - **.NET**
   - 下载对应平台的动态库包 `{os}_{arch}_libs_{version}`，引入其中动态库；
-  - 将仓库下 `/wrapper/csharp/src` 源码加入工程。
+  - 将 C# wrapper 源码加入工程 —— 可以直接使用仓库下 `/wrapper/csharp/src`，也可以从 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 `c#_wrapper_{version}` 预打包的源码包。
 
 ### Java / Kotlin（Android / Server）
 

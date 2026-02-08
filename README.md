@@ -190,7 +190,7 @@
 
 - **.NET**
   - Download the dynamic library package `{os}_{arch}_libs_{version}` for the corresponding platform, and import the dynamic libraries within;
-  - Add the `/wrapper/csharp/src` source code under the repository to your project.
+  - Add the C# wrapper source to your project — either clone the repository and include `/wrapper/csharp/src`, or download `c#_wrapper_{version}` from the [Releases page](https://github.com/Tencent/BqLog/releases) which contains the same source files pre-packaged.
 
 ### Java / Kotlin (Android / Server)
 
