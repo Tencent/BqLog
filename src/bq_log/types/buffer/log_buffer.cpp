@@ -717,8 +717,6 @@ namespace bq {
 #endif
         if ((!block_removed && is_cur_block_in_group) || rt_reading.cur_block_ == nullptr) {
             rt_reading.last_block_ = rt_reading.cur_block_;
-        } else if (block_removed && !next_block) {
-            rt_reading.cur_block_ = rt_reading.last_block_;
         }
 
         // Verify and prepare for next block
@@ -736,6 +734,9 @@ namespace bq {
             rt_reading.cur_block_ = next_block;
             return true;
         } else {
+            if (block_removed) {
+                rt_reading.cur_block_ = rt_reading.last_block_;
+            }
             mem_opt.is_block_marked_removed = false;
             mem_opt.verify_result = context_verify_result::version_invalid;
         }
