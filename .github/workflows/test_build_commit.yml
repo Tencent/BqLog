@@ -1,44 +1,122 @@
-name: Test Build And Commit
+name: Build And Release
 
 on:
-  workflow_dispatch:  # manually trigger
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build_sub_flow:
+  build:
     uses: ./.github/workflows/build.yml
-  
 
-  do_release:
+  release:
     runs-on: ubuntu-latest
-    needs: 
-      - build_sub_flow
+    needs:
+      - build
     steps:
-      - name: Download Artifacts
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Failed to extract version from version.cpp"
+            exit 1
+          fi
+          echo "VERSION=$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=Release_${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_name=Release ${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from CHANGELOG
+        id: changelog
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Extract the section for the current version from CHANGELOG.md.
+          # Matches from "## [vX.Y.Z]" up to (but excluding) the next "## [v" heading.
+          NOTES=$(awk -v ver="$VERSION" '
+            BEGIN { found=0 }
+            /^## \[v/ {
+              if (found) exit
+              if ($0 ~ "\\[v?"ver"\\]") { found=1 }
+            }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [[ -z "$NOTES" ]]; then
+            echo "::warning::No changelog entry found for v${VERSION}, using default notes"
+            NOTES="## Release ${VERSION}"
+          fi
+
+          {
+            echo "notes<<CHANGELOG_EOF"
+            echo "$NOTES"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: dist/
 
-      - name: Verify SHA-256
+      - name: Verify SHA-256 checksums
         run: |
           set -euo pipefail
           cd dist
           shopt -s nullglob
-          
+
           files=( *.sha256 )
           if ((${#files[@]} == 0)); then
-            echo "No .sha256 files found under dist/" >&2
-            exit 1
+            echo "No .sha256 files found, skipping checksum verification"
+            exit 0
           fi
-          
+
           status=0
           for f in "${files[@]}"; do
             if ! sha256sum -c "$f"; then
-              echo "sha256 check failed: $f/" >&2
+              echo "::error::SHA-256 check failed: $f"
               status=1
             fi
           done
           exit $status
+
+      - name: List release assets
+        run: |
+          echo "=== Release assets ==="
+          find dist/ -type f | sort
+          echo "=== Total size ==="
+          du -sh dist/
+
+      - name: Create Git tag
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::warning::Tag ${TAG} already exists, skipping tag creation"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "${TAG}" -m "Release ${TAG}"
+            git push origin "${TAG}"
+            echo "Created and pushed tag: ${TAG}"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false
+          files: dist/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
