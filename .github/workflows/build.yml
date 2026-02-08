@@ -2,6 +2,10 @@ name: Build
 on:  
   workflow_dispatch:  # manually trigger
   workflow_call:
+    outputs:
+      version:
+        description: "Extracted version string"
+        value: ${{ jobs.extract_version.outputs.version }}
 
 permissions:
   contents: write

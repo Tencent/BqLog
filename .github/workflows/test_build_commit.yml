@@ -18,13 +18,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract version
+      - name: Set version outputs
         id: version
         run: |
-          set -euo pipefail
-          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
+          VERSION="${{ needs.build.outputs.version }}"
           if [[ -z "$VERSION" ]]; then
-            echo "::error::Failed to extract version from version.cpp"
+            echo "::error::Failed to get version from build job"
             exit 1
           fi
           echo "VERSION=$VERSION"
