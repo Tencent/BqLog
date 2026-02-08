@@ -61,13 +61,57 @@ jobs:
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          merge-multiple: true
-          path: dist/
+          path: downloaded_artifacts/
+
+      - name: Pack release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release_assets
+
+          # Known archive extensions, collect directly
+          ARCHIVE_EXTS="zip tar.gz tgz tar.bz2 tar.xz aar har tgz"
+
+          for artifact_dir in downloaded_artifacts/*/; do
+            name="$(basename "$artifact_dir")"
+            echo "=== Processing artifact: $name ==="
+
+            # Collect existing archives and sha256 files from this artifact into release_assets
+            found_archive=false
+            while IFS= read -r -d '' f; do
+              fname="$(basename "$f")"
+              case "$fname" in
+                *.zip|*.tar.gz|*.tgz|*.tar.bz2|*.tar.xz)
+                  cp -f "$f" "release_assets/$fname"
+                  echo "  Collected archive: $fname"
+                  found_archive=true
+                  ;;
+                *.sha256)
+                  cp -f "$f" "release_assets/$fname"
+                  echo "  Collected checksum: $fname"
+                  ;;
+              esac
+            done < <(find "$artifact_dir" -type f -print0)
+
+            # If no archive found in this artifact, it contains loose files that need to be packed
+            if [[ "$found_archive" == "false" ]]; then
+              # Check if there are actual files (skip empty directories)
+              file_count=$(find "$artifact_dir" -type f | wc -l)
+              if (( file_count == 0 )); then
+                echo "  Skipped (empty)"
+                continue
+              fi
+
+              archive_name="${name}.zip"
+              echo "  No archive found, packing as: $archive_name"
+              (cd "$artifact_dir" && zip -qry "$OLDPWD/release_assets/$archive_name" .)
+              (cd release_assets && sha256sum "$archive_name" > "$archive_name.sha256")
+            fi
+          done
 
       - name: Verify SHA-256 checksums
         run: |
           set -euo pipefail
-          cd dist
+          cd release_assets
           shopt -s nullglob
 
           files=( *.sha256 )
@@ -88,9 +132,9 @@ jobs:
       - name: List release assets
         run: |
           echo "=== Release assets ==="
-          find dist/ -type f | sort
+          find release_assets/ -type f | sort
           echo "=== Total size ==="
-          du -sh dist/
+          du -sh release_assets/
 
       - name: Create Git tag
         run: |
@@ -115,6 +159,6 @@ jobs:
           body: ${{ steps.changelog.outputs.notes }}
           draft: false
           prerelease: false
-          files: dist/**/*
+          files: release_assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
