@@ -2162,8 +2162,6 @@ jobs:
           mem: 8192
           prepare: |
             set -e
-            echo "nameserver 8.8.8.8" > /etc/resolv.conf
-            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -2207,8 +2205,6 @@ jobs:
           mem: 8192
           prepare: |
             set -e
-            echo "nameserver 8.8.8.8" > /etc/resolv.conf
-            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -2270,8 +2266,6 @@ jobs:
           mem: 8192
           prepare: |
             set -e
-            echo "nameserver 8.8.8.8" > /etc/resolv.conf
-            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -2316,8 +2310,6 @@ jobs:
           mem: 8192
           prepare: |
             set -e
-            echo "nameserver 8.8.8.8" > /etc/resolv.conf
-            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -4690,8 +4682,6 @@ jobs:
           mem: 8192
           prepare: |
             set -e
-            echo "nameserver 8.8.8.8" > /etc/resolv.conf
-            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -4737,8 +4727,6 @@ jobs:
           mem: 8192
           prepare: |
             set -e
-            echo "nameserver 8.8.8.8" > /etc/resolv.conf
-            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
