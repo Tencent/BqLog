@@ -2153,15 +2153,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Resolve pkg.omnios.org on host
+        run: |
+          PKG_IP=$(dig +short pkg.omnios.org A | grep -E '^[0-9]+\.' | head -1)
+          echo "PKG_OMNIOS_IP=$PKG_IP" >> "$GITHUB_ENV"
+          echo "Resolved pkg.omnios.org -> $PKG_IP"
+
       - name: Run in OmniOS (GCC only)
         id: RunInOmniOSLibs
         continue-on-error: true
         uses: vmactions/omnios-vm@v1
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
             set -e
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+              echo "Added pkg.omnios.org -> $PKG_OMNIOS_IP to /etc/hosts"
+            fi
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -2201,10 +2214,16 @@ jobs:
         if: steps.RunInOmniOSLibs.outcome == 'failure'
         uses: vmactions/omnios-vm@v1
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
             set -e
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+            fi
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -2257,15 +2276,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Resolve pkg.omnios.org on host
+        run: |
+          PKG_IP=$(dig +short pkg.omnios.org A | grep -E '^[0-9]+\.' | head -1)
+          echo "PKG_OMNIOS_IP=$PKG_IP" >> "$GITHUB_ENV"
+          echo "Resolved pkg.omnios.org -> $PKG_IP"
+
       - name: Run in OmniOS (GCC only)
         id: RunInOmniOSTools
         continue-on-error: true
         uses: vmactions/omnios-vm@v1
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
             set -e
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+            fi
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -2306,10 +2337,16 @@ jobs:
         if: steps.RunInOmniOSTools.outcome == 'failure'
         uses: vmactions/omnios-vm@v1
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
             set -e
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+            fi
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -4673,15 +4710,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Resolve pkg.omnios.org on host
+        run: |
+          PKG_IP=$(dig +short pkg.omnios.org A | grep -E '^[0-9]+\.' | head -1)
+          echo "PKG_OMNIOS_IP=$PKG_IP" >> "$GITHUB_ENV"
+          echo "Resolved pkg.omnios.org -> $PKG_IP"
+
       - name: Run in OmniOS (GCC only)
         id: RunInOmniOSLibsNode
         continue-on-error: true
         uses: vmactions/omnios-vm@v1
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
             set -e
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+            fi
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
@@ -4723,10 +4772,16 @@ jobs:
         if: steps.RunInOmniOSLibsNode.outcome == 'failure'
         uses: vmactions/omnios-vm@v1
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
             set -e
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+            fi
             pkg refresh --full
             if ! pkg publisher | grep -q '^extra\.omnios'; then
               REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
