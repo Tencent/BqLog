@@ -8,8 +8,8 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS-lightgrey.svg?style=flat)]()
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript-blue.svg?style=flat)]()
 
-> BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
-> **BqLog 2.1.0 is officially released! It brings native HarmonyOS support, Node.js support, stronger concurrency performance, and high-strength hybrid asymmetric encryption for logs.**
+> BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".   
+> **BqLog 2.1.0 is officially released! With native HarmonyOS NEXT and Node.js support, ***multiple times faster than 1.x***, and asymmetric hybrid encryption.**
 
 > [简体中文文档](./README_CHS.md)
 

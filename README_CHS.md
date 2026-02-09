@@ -9,7 +9,7 @@
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript-blue.svg?style=flat)]()
 
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。  
-> **BqLog 2.1.0 版本正式发布！带来了纯血鸿蒙支持、Node.js 支持、更强的并发性能以及高强度的非对称混合加密能力。**
+> **BqLog 2.1.0 正式发布！新增纯血鸿蒙与 Node.js 支持，***性能较 1.x 实现数倍提升***，并带来非对称混合加密能力。**
 
 > [English Document](./README.md)
 
