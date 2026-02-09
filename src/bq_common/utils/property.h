@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -13,26 +13,26 @@
 // author: eggdai
 #include <inttypes.h>
 #include <stddef.h>
-#include "bq_common/bq_common.h"
+#include "bq_common/bq_common_public_include.h"
 
 namespace bq {
     class property {
-        typedef hash_map<string, string> hash_type;
+        typedef hash_map<bq::string, bq::string> hash_type;
 
     public:
-        bool load(const string& file_name, bool in_sand_box);
-        bool load(const string& context);
-        bool store(const string& file_name, bool in_sand_box);
-        void set(const string& key, const string& default_value = "");
-        string get(const string& key, const string& default_value = "");
+        bool load(const bq::string& file_name, int32_t base_dir_type);
+        bool load(const bq::string& context);
+        bool store(const bq::string& file_name, int32_t base_dir_type);
+        void set(const bq::string& key, const bq::string& default_value = "");
+        bq::string get(const bq::string& key, const bq::string& default_value = "");
         hash_type& maps() { return properties; }
-        array<string>& keys() { return key_list; }
+        array<bq::string>& keys() { return key_list; }
         bq::string serialize() const;
 
-        static array<tuple<string, string>> parse(const string& context);
+        static bq::array<bq::tuple<bq::string, bq::string>> parse(const bq::string& context);
 
     private:
         hash_type properties;
-        array<string> key_list;
+        bq::array<bq::string> key_list;
     };
 }

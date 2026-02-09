@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,8 +9,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "bq_common/platform/ps_misc.h"
+#if defined(BQ_PS)
 #include "bq_common/bq_common.h"
-#if BQ_PS
 #include <time.h>
 namespace bq {
     namespace platform {
@@ -22,10 +23,10 @@ namespace bq {
             return epoch_milliseconds;
         }
 
-        static bq::string base_dir = "./";
-        const bq::string& get_base_dir(bool is_sandbox)
+        base_dir_initializer::base_dir_initializer()
         {
-            return base_dir;
+            set_base_dir_0("./");
+            set_base_dir_1("./");
         }
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)

@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -61,6 +61,16 @@ namespace bq {
 #if defined(BQ_CPP_14)
     template <typename T>
     constexpr bool is_pod_v = is_pod<T>::value;
+#endif
+    //------------------------------------------------------------------------------------------
+
+    template <typename Base, typename Derived>
+    struct is_base_of : bool_type<__is_base_of(Base, Derived)> {
+    };
+
+#if defined(BQ_CPP_14)
+    template <typename Base, typename Derived>
+    constexpr bool is_base_of_v = is_base_of<Base, Derived>::value;
 #endif
     //------------------------------------------------------------------------------------------
 
@@ -361,4 +371,5 @@ namespace bq {
     template <typename T>
     constexpr bool is_trivially_move_assignable_v = is_trivially_move_assignable<T>::value;
 #endif
+
 }

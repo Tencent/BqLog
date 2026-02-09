@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -24,9 +24,9 @@
 
 namespace bq {
     /*===========================================================BQ_HASH_MAP_ITER_CLS_NAME==============================================================*/
-    template <typename K, typename V, bool C>
+    template <typename K, typename V, typename Allocator, bool C>
     template <bool C_>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>& BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator=(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, C_>& rhs)
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>& BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator=(const BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C_>& rhs)
     {
         parent_ = rhs.parent_;
         node_index_ = rhs.node_index_;
@@ -34,11 +34,11 @@ namespace bq {
         return *this;
     }
 
-    template <typename K_, typename V_, bool C1, bool C2>
-    BQ_HASH_MAP_INLINE bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2)
+    template <typename K_, typename V_, typename Allocator1, typename Allocator2, bool C1, bool C2>
+    BQ_HASH_MAP_INLINE bool operator==(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator1, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator2, C2>& map2)
     {
-        if (map1.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX
-            && map2.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>::BQ_HASH_MAP_INVALID_INDEX) {
+        if (map1.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator1, C1>::BQ_HASH_MAP_INVALID_INDEX
+            && map2.node_index_ == BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator2, C2>::BQ_HASH_MAP_INVALID_INDEX) {
             return true;
         }
         return (map1.node_index_ == map2.node_index_)
@@ -46,61 +46,61 @@ namespace bq {
             && (map1.bucket_idx_ == map2.bucket_idx_);
     }
 
-    template <typename K_, typename V_, bool C1, bool C2>
-    BQ_HASH_MAP_INLINE bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, C2>& map2)
+    template <typename K_, typename V_, typename Allocator1, typename Allocator2, bool C1, bool C2>
+    BQ_HASH_MAP_INLINE bool operator!=(const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator1, C1>& map1, const BQ_HASH_MAP_ITER_CLS_NAME<K_, V_, Allocator2, C2>& map2)
     {
         return !(map1 == map2);
     }
 
-    template <typename K, typename V, bool C>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>& BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator++()
+    template <typename K, typename V, typename Allocator, bool C>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>& BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator++()
     {
         node_index_ = parent_->get_next_node_index(node_index_);
-        bucket_idx_ = (node_index_ == BQ_HASH_MAP_CLS_NAME<K, V>::BQ_HASH_MAP_INVALID_INDEX) ? node_index_ : parent_->nodes_[node_index_].bucket_idx;
+        bucket_idx_ = (node_index_ == BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::BQ_HASH_MAP_INVALID_INDEX) ? node_index_ : parent_->nodes_[node_index_].bucket_idx;
         return *this;
     }
 
-    template <typename K, typename V, bool C>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, C> BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator++(int32_t)
+    template <typename K, typename V, typename Allocator, bool C>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C> BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator++(int32_t)
     {
-        BQ_HASH_MAP_ITER_CLS_NAME<K, V, C> next_iter = *this;
+        BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C> next_iter = *this;
         operator++();
         return next_iter;
     }
 
-    template <typename K, typename V, bool C>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator bool() const
+    template <typename K, typename V, typename Allocator, bool C>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator bool() const
     {
         return parent_->iterator_legal_check(*this);
     }
 
-    template <typename K, typename V, bool C>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::pair_type_ref BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator*()
+    template <typename K, typename V, typename Allocator, bool C>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::pair_type_ref BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator*()
     {
         return parent_->nodes_[node_index_].entry;
     }
 
-    template <typename K, typename V, bool C>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::pair_type_ptr BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator->()
+    template <typename K, typename V, typename Allocator, bool C>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::pair_type_ptr BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator->()
     {
         return &parent_->nodes_[node_index_].entry;
     }
 
-    template <typename K, typename V, bool C>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::const_pair_type_ref BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator*() const
+    template <typename K, typename V, typename Allocator, bool C>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::const_pair_type_ref BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator*() const
     {
         return parent_->nodes_[node_index_].entry;
     }
 
-    template <typename K, typename V, bool C>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::const_pair_type_ptr BQ_HASH_MAP_ITER_CLS_NAME<K, V, C>::operator->() const
+    template <typename K, typename V, typename Allocator, bool C>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::const_pair_type_ptr BQ_HASH_MAP_ITER_CLS_NAME<K, V, Allocator, C>::operator->() const
     {
         return &parent_->nodes_[node_index_].entry;
     }
 
     /*===========================================================BQ_HASH_MAP_CLS_NAME==============================================================*/
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V>::BQ_HASH_MAP_CLS_NAME(size_type init_bucket_size /* = 0 */)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::BQ_HASH_MAP_CLS_NAME(size_type init_bucket_size /* = 0 */)
     {
         size_ = 0;
         head_ = BQ_HASH_MAP_INVALID_INDEX;
@@ -110,14 +110,14 @@ namespace bq {
         expand_nodes(buckets_size());
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V>::~BQ_HASH_MAP_CLS_NAME()
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::~BQ_HASH_MAP_CLS_NAME()
     {
         reset();
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V>::BQ_HASH_MAP_CLS_NAME(const BQ_HASH_MAP_CLS_NAME<K, V>& rhs)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::BQ_HASH_MAP_CLS_NAME(const BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& rhs)
         : buckets_(decltype(buckets_)())
         , nodes_(decltype(nodes_)())
     {
@@ -127,13 +127,13 @@ namespace bq {
         free_ = BQ_HASH_MAP_INVALID_INDEX;
         expand_buckets(rhs.buckets_size());
         expand_nodes(rhs.nodes_size());
-        for (BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter) {
+        for (BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter) {
             add(iter->key(), iter->value());
         }
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V>::BQ_HASH_MAP_CLS_NAME(BQ_HASH_MAP_CLS_NAME<K, V>&& rhs)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::BQ_HASH_MAP_CLS_NAME(BQ_HASH_MAP_CLS_NAME<K, V, Allocator>&& rhs)
     {
         size_ = rhs.size_;
         head_ = rhs.head_;
@@ -154,32 +154,32 @@ namespace bq {
         rhs.nodes_.size_ = 0;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::size() const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size() const
     {
         return size_;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::buckets_size() const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::buckets_size() const
     {
         return static_cast<size_type>(buckets_.size());
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::nodes_size() const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::nodes_size() const
     {
         return static_cast<size_type>(nodes_.size());
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V>::is_empty() const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::is_empty() const
     {
         return size_ == 0;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::value_type& BQ_HASH_MAP_CLS_NAME<K, V>::operator[](const_key_type_ref key)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::value_type& BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::operator[](const_key_type_ref key)
     {
         auto iter = find(key);
         if (!iter) {
@@ -188,22 +188,22 @@ namespace bq {
         return iter->value();
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::find(const_key_type_ref key)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::find(const_key_type_ref key)
     {
         auto node_bucket_indices_pair = find_index_and_bucket_idx_by_key(key);
         return iterator(this, node_bucket_indices_pair.key(), node_bucket_indices_pair.value());
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V>::find(const_key_type_ref key) const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::find(const_key_type_ref key) const
     {
         auto node_bucket_indices_pair = find_index_and_bucket_idx_by_key(key);
         return const_iterator(this, node_bucket_indices_pair.key(), node_bucket_indices_pair.value());
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::add(const_key_type_ref key)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::add(const_key_type_ref key)
     {
         iterator iter = alloc_node_by_key(key);
         construct_value(iter);
@@ -211,9 +211,9 @@ namespace bq {
         return iter;
     }
 
-    template <typename K, typename V>
+    template <typename K, typename V, typename Allocator>
     template <typename V_>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::add(const_key_type_ref key, V_&& value)
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::add(const_key_type_ref key, V_&& value)
     {
         iterator iter = alloc_node_by_key(key);
         construct_value(iter, bq::forward<V_>(value));
@@ -221,20 +221,20 @@ namespace bq {
         return iter;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V>& BQ_HASH_MAP_CLS_NAME<K, V>::operator=(const BQ_HASH_MAP_CLS_NAME<K, V>& rhs)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::operator=(const BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& rhs)
     {
         clear();
         expand_buckets(rhs.buckets_size());
         expand_nodes(rhs.nodes_size());
-        for (BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter) {
+        for (BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter) {
             add(iter->key(), iter->value());
         }
         return *this;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V>& BQ_HASH_MAP_CLS_NAME<K, V>::operator=(BQ_HASH_MAP_CLS_NAME<K, V>&& rhs)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_CLS_NAME<K, V, Allocator>& BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::operator=(BQ_HASH_MAP_CLS_NAME<K, V, Allocator>&& rhs)
     {
         reset();
 
@@ -259,8 +259,8 @@ namespace bq {
         return *this;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V>::erase(iterator where_it)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::erase(iterator where_it)
     {
         if (!iterator_legal_check(where_it)) {
             return false;
@@ -301,8 +301,8 @@ namespace bq {
         return true;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V>::erase(const_key_type_ref key)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::erase(const_key_type_ref key)
     {
         auto iter = find(key);
         if (!iter) {
@@ -311,8 +311,8 @@ namespace bq {
         return erase(iter);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::begin()
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::begin()
     {
         if (head_ != BQ_HASH_MAP_INVALID_INDEX) {
             return iterator(this, head_, nodes_[head_].bucket_idx);
@@ -320,8 +320,8 @@ namespace bq {
         return end();
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V>::begin() const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::begin() const
     {
         if (head_ != BQ_HASH_MAP_INVALID_INDEX) {
             return const_iterator(this, head_, nodes_[head_].bucket_idx);
@@ -329,20 +329,20 @@ namespace bq {
         return end();
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::end()
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::end()
     {
         return iterator(this, BQ_HASH_MAP_INVALID_INDEX, BQ_HASH_MAP_INVALID_INDEX);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V>::end() const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::const_iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::end() const
     {
         return const_iterator(this, BQ_HASH_MAP_INVALID_INDEX, BQ_HASH_MAP_INVALID_INDEX);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V>::iterator_legal_check(const const_iterator& iter) const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE bool BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::iterator_legal_check(const const_iterator& iter) const
     {
         if (iter.node_index_ == BQ_HASH_MAP_INVALID_INDEX) {
             return false;
@@ -359,20 +359,20 @@ namespace bq {
         return true;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::set_expand_rate(float rate)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::set_expand_rate(float rate)
     {
         expand_rate_ = rate;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE float BQ_HASH_MAP_CLS_NAME<K, V>::get_expand_rate() const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE float BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::get_expand_rate() const
     {
         return expand_rate_;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::clear()
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::clear()
     {
         for (auto iter = begin(); iter != end(); ++iter) {
             destruct(iter);
@@ -395,19 +395,19 @@ namespace bq {
         head_ = BQ_HASH_MAP_INVALID_INDEX;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::reset()
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::reset()
     {
         for (auto iter = begin(); iter != end(); ++iter) {
             destruct(iter);
         }
         if (buckets_.data_) {
-            free(buckets_.data_);
+            buckets_allocator_.deallocate(buckets_.data_, buckets_.size_);
             buckets_.data_ = nullptr;
             buckets_.size_ = 0;
         }
         if (nodes_.data_) {
-            free(nodes_.data_);
+            nodes_allocator_.deallocate(nodes_.data_, nodes_.size_);
             nodes_.data_ = nullptr;
             nodes_.size_ = 0;
         }
@@ -417,60 +417,60 @@ namespace bq {
         free_ = BQ_HASH_MAP_INVALID_INDEX;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::construct_value(iterator& iter)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::construct_value(iterator& iter)
     {
         new (&(iter->value()), bq::enum_new_dummy::dummy) V();
     }
 
-    template <typename K, typename V>
+    template <typename K, typename V, typename Allocator>
     template <typename V_>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::construct_value(iterator& iter, V_&& arg)
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::construct_value(iterator& iter, V_&& arg)
     {
         new (&(iter->value()), bq::enum_new_dummy::dummy) V(bq::forward<V_>(arg));
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::destruct_value(iterator& iter)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::destruct_value(iterator& iter)
     {
         bq::object_destructor<V>::destruct(&iter->value());
     }
 
-    template <typename K, typename V>
+    template <typename K, typename V, typename Allocator>
     template <typename K_>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::construct_key(iterator& iter, K_&& key)
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::construct_key(iterator& iter, K_&& key)
     {
         new (&iter->key_, bq::enum_new_dummy::dummy) K(bq::forward<K_>(key));
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::destruct_key(iterator& iter)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::destruct_key(iterator& iter)
     {
         bq::object_destructor<K>::destruct(&iter->key_);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::destruct(iterator& iter)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::destruct(iterator& iter)
     {
         destruct_key(iter);
         destruct_value(iter);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::get_bucket_index_by_key(const_key_type_ref key) const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::get_bucket_index_by_key(const_key_type_ref key) const
     {
         auto hash_code = hash_calculate_type::hash_code(key);
         return get_bucket_index_by_hash(hash_code);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::get_bucket_index_by_hash(typename hash_calculate_type::hash_value_type hash_code) const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::get_bucket_index_by_hash(typename hash_calculate_type::hash_value_type hash_code) const
     {
         return static_cast<size_type>(hash_code) & (buckets_size() - 1);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::get_prev_node_index(typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type node_index) const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::get_prev_node_index(typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type node_index) const
     {
         if (node_index == BQ_HASH_MAP_INVALID_INDEX) {
             return BQ_HASH_MAP_INVALID_INDEX;
@@ -478,8 +478,8 @@ namespace bq {
         return nodes_[node_index].prev;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type BQ_HASH_MAP_CLS_NAME<K, V>::get_next_node_index(typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type node_index) const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::get_next_node_index(typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type node_index) const
     {
         if (node_index == BQ_HASH_MAP_INVALID_INDEX) {
             return BQ_HASH_MAP_INVALID_INDEX;
@@ -487,17 +487,17 @@ namespace bq {
         return nodes_[node_index].next;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::expand_buckets(typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type size)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::expand_buckets(typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type size)
     {
         if (size <= buckets_size()) {
             return;
         }
         size_type capacity = bq::roundup_pow_of_two(size);
         if (buckets_.size() > 0) {
-            free(buckets_.data_);
+            buckets_allocator_.deallocate(buckets_.data_, buckets_.size_);
         }
-        buckets_.data_ = (typename decltype(buckets_)::value_type*)malloc(sizeof(typename decltype(buckets_)::value_type) * capacity);
+        buckets_.data_ = buckets_allocator_.allocate(capacity);
         buckets_.size_ = capacity;
         memset(&buckets_[0], 0xFF, capacity * sizeof(typename decltype(buckets_)::value_type));
 
@@ -559,16 +559,16 @@ namespace bq {
         }
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V>::expand_nodes(typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type size)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE void BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::expand_nodes(typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type size)
     {
         size_type old_space = static_cast<size_type>(nodes_.size());
         if (size <= old_space) {
             return;
         }
-        BQ_HASH_MAP_CLS_NAME<K, V>::size_type new_space = bq::roundup_pow_of_two(size);
+        BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type new_space = bq::roundup_pow_of_two(size);
         using alloc_type = typename decltype(nodes_)::value_type;
-        alloc_type* new_data = (alloc_type*)malloc(sizeof(alloc_type) * new_space);
+        alloc_type* new_data = nodes_allocator_.allocate(new_space);
         for (size_type i = 0; i < old_space; ++i) {
             new_data[i].bucket_idx = nodes_[i].bucket_idx;
             new_data[i].prev = nodes_[i].prev;
@@ -585,14 +585,14 @@ namespace bq {
             destruct(iter);
         }
         if (nodes_.data_) {
-            free(nodes_.data_);
+            nodes_allocator_.deallocate(nodes_.data_, nodes_.size_);
         }
         nodes_.data_ = new_data;
         nodes_.size_ = new_space;
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE BQ_HASH_MAP_KV_CLS_NAME<typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type, typename BQ_HASH_MAP_CLS_NAME<K, V>::size_type> BQ_HASH_MAP_CLS_NAME<K, V>::find_index_and_bucket_idx_by_key(const_key_type_ref key) const
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE BQ_HASH_MAP_KV_CLS_NAME<typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type, typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::size_type> BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::find_index_and_bucket_idx_by_key(const_key_type_ref key) const
     {
         size_type index = BQ_HASH_MAP_INVALID_INDEX;
         size_type bucket_idx = BQ_HASH_MAP_INVALID_INDEX;
@@ -615,10 +615,10 @@ namespace bq {
         return BQ_HASH_MAP_KV_CLS_NAME<size_type, size_type>(index, bucket_idx);
     }
 
-    template <typename K, typename V>
-    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V>::iterator BQ_HASH_MAP_CLS_NAME<K, V>::alloc_node_by_key(const_key_type_ref key)
+    template <typename K, typename V, typename Allocator>
+    BQ_HASH_MAP_INLINE typename BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::iterator BQ_HASH_MAP_CLS_NAME<K, V, Allocator>::alloc_node_by_key(const_key_type_ref key)
     {
-        uint32_t expected_bucket_size = (uint32_t)((size() + 1) * expand_rate_) + 1;
+        uint32_t expected_bucket_size = static_cast<uint32_t>((static_cast<float>((size() + 1)) * expand_rate_)) + 1;
         if (expected_bucket_size > buckets_size()) {
             expand_buckets(expected_bucket_size);
         }

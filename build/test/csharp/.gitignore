@@ -1,0 +1,11 @@
+Build/
+CMakeFiles/
+Output/
+cmake_install.cmake
+Makefile
+*.sln
+*.vcxproj
+*.user
+.vs/
+test/
+

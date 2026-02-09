@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -10,12 +10,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <stdio.h>
-#include "bq_common/misc/assert.h"
-#include "bq_common/platform/macros.h"
+
+#include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/platform_misc.h"
-#include "bq_common/types/array.h"
-#include "bq_common/types/string.h"
 #include "bq_common/platform/thread/mutex.h"
 #include "bq_common/platform/atomic/atomic.h"
 
@@ -97,8 +94,11 @@ namespace bq {
         return static_cast<file_open_mode_enum>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
     }
 
+    struct common_global_vars;
+
     class file_manager {
         friend file_handle;
+        friend struct common_global_vars;
 
     private:
         struct file_descriptor {
@@ -135,10 +135,10 @@ namespace bq {
     public:
         // Functions with file path
         // tool functions IMPORTANT: all the path parameter is relative to platform::get_base_dir(path of the executable file on Win, Linux and Mac, app path on mobile devices)
-        static const bq::string& get_base_dir(bool in_sand_box);
+        static bq::string get_base_dir(int32_t base_dir_type);
 
-        static string trans_process_relative_path_to_absolute_path(const bq::string& relative_path, bool in_sand_box);
-        static string trans_process_absolute_path_to_relative_path(const bq::string& absolute_path, bool in_sand_box);
+        static string trans_process_relative_path_to_absolute_path(const bq::string& relative_path, int32_t base_dir_type);
+        static string trans_process_absolute_path_to_relative_path(const bq::string& absolute_path, int32_t base_dir_type);
 
         static bool create_directory(const bq::string& path);
 
@@ -178,12 +178,6 @@ namespace bq {
         // Functions withs file file_handle.
 
         /// <summary>
-        /// is current handle in sandbox.(this only make sense for Android and iOS.)
-        /// </summary>
-        /// <returns>true means in sandbox, otherwise not or handle is not valid</returns>
-        // bool is_handle_in_sandbox(const file_handle& handle) const;
-
-        /// <summary>
         /// whether a handle is valid
         /// </summary>
         /// <param name="handle"></param>
@@ -194,7 +188,6 @@ namespace bq {
         /// open a file in binary mode, and return file handle
         /// </summary>
         /// <param name="relative_path_to_base_dir">file path and name relative from the base directory</param>
-        /// <param name="in_sand_box"></param>
         /// <returns>file handle, may be empty handle if file is not exist and auto_create is set to false, and also could be empty handle if file is already locked by another process</returns>
         /// @warning SEEK_END is used by default inside the function
         file_handle open_file(const bq::string& path, file_open_mode_enum open_mode);
@@ -209,6 +202,11 @@ namespace bq {
         /// <param name="seek_offset"></param>
         /// <returns>the number of objects written successfully, which may be less than count if an error occurs.</returns>
         size_t write_file(const file_handle& handle, const void* data, size_t length, seek_option opt = seek_option::current, int64_t seek_offset = 0);
+
+        /// <summary>
+        /// Copy File
+        /// </summary>
+        bool copy_file(const bq::string& src_path, const bq::string& dest_path);
 
         /// <summary>
         /// truncate file, and the file cursor will be at end of file after calling this
@@ -287,13 +285,10 @@ namespace bq {
         size_t get_file_size(const file_handle& handle) const;
 
     private:
-        static file_manager& scoped_static_instance();
         int32_t get_file_descriptor_index_by_handle(const file_handle& handle) const;
         void inc_ref(const file_handle& handle);
 
     private:
-        static file_manager* static_inst_cache_;
-
         uint32_t seq_generator;
 
         array<file_descriptor> file_descriptors;
@@ -301,9 +296,9 @@ namespace bq {
         bq::platform::mutex mutex;
     };
 #ifndef TO_ABSOLUTE_PATH
-#define TO_ABSOLUTE_PATH(path, is_in_sand) bq::file_manager::trans_process_relative_path_to_absolute_path(path, is_in_sand)
+#define TO_ABSOLUTE_PATH(path, base_dir_type) bq::file_manager::trans_process_relative_path_to_absolute_path(path, base_dir_type)
 #endif
 #ifndef TO_RELATIVE_PATH
-#define TO_RELATIVE_PATH(path, is_in_sand) bq::file_manager::trans_process_absolute_path_to_relative_path(path, is_in_sand)
+#define TO_RELATIVE_PATH(path, base_dir_type) bq::file_manager::trans_process_absolute_path_to_relative_path(path, base_dir_type)
 #endif
 }

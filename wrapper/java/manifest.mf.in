@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Implementation-Title: BqLogWrapper_Java
+Implementation-Version: @PROJECT_VERSION@
+Implementation-Vendor: Tencent
+Specification-Title: BqLog
+Specification-Version: @PROJECT_VERSION@
+Automatic-Module-Name: com.tencent.bqlog

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -15,12 +15,14 @@
 #include "template/category_log_template_cpp.h"
 #include "template/category_log_template_csharp.h"
 #include "template/category_log_template_java.h"
+#include "template/category_log_template_typescript.h"
+#include "template/category_log_template_unreal.h"
 
 namespace bq {
     bool category_generator::parse_config_file(const bq::string& file_path, category_node& category_root)
     {
         bq::array<bq::string> lines;
-        bq::string abs_path = TO_ABSOLUTE_PATH(file_path, true);
+        bq::string abs_path = TO_ABSOLUTE_PATH(file_path, 0);
         if (!bq::file_manager::is_file(abs_path)) {
             bq::util::log_device_console(bq::log_level::error, "failed to read CategoryConfigFile:%s", abs_path.c_str());
             return false;
@@ -39,14 +41,16 @@ namespace bq {
                 end_pos = content.size();
             }
             string line = content.substr(search_start, end_pos - search_start);
-
-            bq::array<bq::string> comment_split = line.split("//");
-            if (comment_split.is_empty()) {
-                continue;
+            search_start = end_pos + 1;
+            bq::string comment;
+            bq::string category;
+            auto pos = line.find("//");
+            if (pos != bq::string::npos) {
+                comment = line.substr(pos + 2);
+                category = line.substr(0, pos);
+            } else {
+                category = line;
             }
-            bq::string category = comment_split[0];
-            bq::string comment = comment_split.size() > 1 ? comment_split[1] : "";
-
             category = category.trim();
             if (category.is_empty()) {
                 continue;
@@ -62,7 +66,7 @@ namespace bq {
                 if (check_index > 0 && c == '.') {
                     continue;
                 }
-                bq::util::log_device_console(bq::log_level::error, "category config file format error at line %ze, content is :%s", line_num, line.c_str());
+                bq::util::log_device_console(bq::log_level::error, "category config file format error at line %" PRIu64 ", content is :%s", static_cast<uint64_t>(line_num), line.c_str());
                 output_config_file_format(std::cerr);
                 return false;
             }
@@ -81,7 +85,7 @@ namespace bq {
             return false;
         }
         bq::string code;
-        bq::string abs_dir = TO_ABSOLUTE_PATH(output_path, true);
+        bq::string abs_dir = TO_ABSOLUTE_PATH(output_path, 0);
 
         category_log_template_cpp cpp(class_name);
         code = cpp.generate(root_node);
@@ -97,6 +101,16 @@ namespace bq {
         code = java.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".java"), code);
         bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".java").c_str());
+
+        category_log_template_typescript ts(class_name);
+        code = ts.generate(root_node);
+        bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".ts"), code);
+        bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".ts").c_str());
+
+        category_log_template_unreal unreal(class_name);
+        code = unreal.generate(root_node);
+        bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + "_for_UE.h"), code);
+        bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".cpp").c_str());
 
         return true;
     }

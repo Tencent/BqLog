@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -22,6 +22,7 @@
 
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_types.h"
+#include "bq_log/utils/time_zone.h"
 
 namespace bq {
     class layout {
@@ -61,7 +62,7 @@ namespace bq {
     public:
         layout();
 
-        enum_layout_result do_layout(const bq::log_entry_handle& log_entry, bool gmt_time, const bq::array<bq::string>* categories_name_array_ptr);
+        enum_layout_result do_layout(const bq::log_entry_handle& log_entry, time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr);
 
         inline const char* get_formated_str()
         {
@@ -74,6 +75,15 @@ namespace bq {
         inline uint32_t get_formated_str_len() const
         {
             return format_content_cursor;
+        }
+
+        inline void tidy_memory()
+        {
+            if (format_content.capacity() > 1024) {
+                format_content.clear();
+                format_content.set_capacity(1024, true);
+            }
+            format_content_cursor = 0;
         }
 
     private:
@@ -92,8 +102,6 @@ namespace bq {
         void python_style_format_content_utf8(const bq::log_entry_handle& log_entry);
 
         void python_style_format_content_utf16(const bq::log_entry_handle& log_entry);
-
-        void clear_format_content();
 
         template <typename T>
         format_info c20_format(const T* style, int32_t len);
@@ -129,12 +137,35 @@ namespace bq {
 
         void reverse(uint32_t begin_cursor, uint32_t end_cursor);
         //------------------------- insert functions end ----------------------//
+
+#ifdef BQ_UNIT_TEST
+    public:
+        static uint32_t test_find_brace_and_copy_sw(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_convert_u16_sw(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+
+        // Throughput test wrappers
+        void test_python_style_format_content_legacy(const bq::log_entry_handle& log_entry);
+        void test_python_style_format_content_sw(const bq::log_entry_handle& log_entry);
+        void test_python_style_format_content_simd(const bq::log_entry_handle& log_entry);
+
+#if defined(BQ_X86)
+        static uint32_t test_find_brace_and_copy_avx2(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_copy_sse(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_convert_u16_avx2(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+        static uint32_t test_find_brace_and_convert_u16_sse(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+#elif defined(BQ_ARM_NEON)
+        static uint32_t test_find_brace_and_copy_neon(const char* src, uint32_t len, char* dst, bool& found_brace);
+        static uint32_t test_find_brace_and_convert_u16_neon(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii);
+#endif
+#endif
+
     private:
-        bool is_gmt_time_;
-        static constexpr uint32_t MAX_TIME_STR_LEN = 128;
-        char time_cache_[MAX_TIME_STR_LEN + 1];
-        size_t time_cache_len_;
-        uint64_t last_time_epoch_cache_ = 0;
+        // Legacy implementation for benchmark comparison
+        void python_style_format_content_legacy(const bq::log_entry_handle& log_entry);
+        void python_style_format_content_utf8_legacy(const bq::log_entry_handle& log_entry);
+        void python_style_format_content_utf16_legacy(const bq::log_entry_handle& log_entry);
+
+        time_zone* time_zone_ptr_;
         const bq::array<bq::string>* categories_name_array_ptr_;
         // todo: use bq::string instead, but need optimize performance
         bq::array<char> format_content;

@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -20,8 +20,7 @@
  * we exclude STL and libc++ to reduce the final executable and library file size
  *
  */
-#include <stdint.h>
-#include "bq_common/platform/macros.h"
+#include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/thread/mutex.h"
 #include "bq_common/platform/platform_misc.h"
 
@@ -70,7 +69,8 @@ namespace bq {
         template <typename Predicate>
         bool condition_variable::wait_for(bq::platform::mutex& lock, uint64_t wait_time_ms, Predicate stop_waiting)
         {
-            uint64_t last_epoch = bq::platform::high_performance_epoch_ms();
+            uint64_t last_epoch = platform::high_performance_epoch_ms();
+            ;
             uint64_t current_epoch = last_epoch;
             while (!stop_waiting()) {
                 if (current_epoch >= last_epoch + wait_time_ms) {
@@ -82,7 +82,7 @@ namespace bq {
                     return false;
                 }
                 last_epoch = current_epoch;
-                current_epoch = bq::platform::high_performance_epoch_ms();
+                current_epoch = platform::high_performance_epoch_ms();
             }
             return true;
         }

@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -10,37 +10,34 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_base.h"
-#include "bq_log/log/layout.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/buffer/log_buffer.h"
 #include "bq_common/bq_common.h"
 
 namespace bq {
     class appender_console : public appender_base {
+        friend struct log_global_vars;
+
     private:
-        class console_callbacks {
+        class console_callback {
         private:
-            bq::platform::mutex mutex_;
-            bq::hash_map<bq::type_func_ptr_console_callback, bool> callbacks_;
+            friend void _default_console_callback_dispacher(bq::log_level level, const char* text);
+            bq::platform::spin_lock lock_;
 
         public:
             void register_callback(bq::type_func_ptr_console_callback callback);
-            void erase_callback(bq::type_func_ptr_console_callback callback);
-            void call(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
         };
 
-        class console_ring_buffer {
+        class console_buffer {
         private:
             bool enable_;
-            class ring_buffer* buffer_;
-            bq::platform::mutex fetch_lock_;
-            bq::platform::spin_lock_rw_crazy insert_lock_;
+            bq::platform::atomic<log_buffer*> buffer_;
+            bq::platform::thread::thread_id fetch_thread_id_;
 
         public:
-            console_ring_buffer();
-            ~console_ring_buffer();
-            void insert(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length);
+            console_buffer();
+            ~console_buffer();
+            void insert(uint64_t epoch_ms, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length);
             bool fetch_and_remove(bq::type_func_ptr_console_buffer_fetch_callback callback, const void* pass_through_param);
             void set_enable(bool enalbe);
             bq_forceinline bool is_enable() const { return enable_; }
@@ -48,12 +45,12 @@ namespace bq {
 
         class console_static_misc {
         private:
-            console_callbacks callbacks_;
-            console_ring_buffer buffer_;
+            console_callback callback_;
+            console_buffer buffer_;
 
         public:
-            bq_forceinline console_callbacks& callback() { return callbacks_; }
-            bq_forceinline console_ring_buffer& buffer() { return buffer_; }
+            bq_forceinline console_callback& callback() { return callback_; }
+            bq_forceinline console_buffer& buffer() { return buffer_; }
         };
 
     public:
@@ -68,7 +65,10 @@ namespace bq {
 
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
+        virtual bool reset_impl(const bq::property_value& config_obj) override;
         virtual void log_impl(const log_entry_handle& handle) override;
+        virtual void on_log_item_recovery_begin(bq::log_entry_handle& read_handle) override;
+        virtual void on_log_item_recovery_end() override;
 
     private:
         static console_static_misc& get_console_misc();

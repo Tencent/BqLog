@@ -1,1018 +1,1368 @@
-# BqLog(扁鹊日志)(V 1.5.0)  ([ChangeLog](/CHANGELOG.md))
-[![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](https://github.com/Tencent/BqLog/blob/main/LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-1.5.0-red.svg)](https://github.com/Tencent/BqLog/releases)  
-> [中文文档](./README_CHS.md)  
-> BqLog is a lightweight, high-performance logging system used in projects such as "Honor of Kings," and it has been successfully deployed and is running smoothly.  
-> ***Version 1.5.x of BqLog is on its way! Originating from mobile clients, this new version of BqLog can achieve more than double the performance on desktop and server devices by lifting some memory usage restrictions.***   
-> **v1.5.0 will be the final stable version before the 2.x series.** 
+# BqLog (BianQue Log) V 2.1.0
+[![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
+[![Release Version](https://img.shields.io/badge/release-2.1.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.1.0-orange.svg?style=flat)](CHANGELOG.md)
+[![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS-lightgrey.svg?style=flat)]()
+[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript-blue.svg?style=flat)]()
 
-## Supported Platforms
-- Windows 64 bit
-- MacOS
-- Linux
-- iOS
-- Android(X86_64, arm64-v8a、armeabi-v7a)(Support 16 KB page sizes)
-- Unix(Pass the test on FreeBSD)
+> BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
+> **BqLog 2.1.0 is officially released! It brings native HarmonyOS support, Node.js support, stronger concurrency performance, and high-strength hybrid asymmetric encryption for logs.**
 
-## Supported Languages
- - C++
- - Java
- - Kotlin
- - C#
+> [简体中文文档](./README_CHS.md)
 
-## Features
-- Compared to existing open-source logging libraries, BqLog offers significant performance advantages (see [Benchmark](#5-benchmark-results)). It is not only suitable for servers and clients but also highly compatible with mobile devices.
-- With low memory consumption, in the [Benchmark](#benchmark) case of 10 threads and 20,000,000 log entries, BqLog itself consumes less than 1 MB of memory.
-- Provides a high-performance, high-compression real-time log format
-- Can be used normally in game engines (`Unity`, `Unreal`), with [support for common types provided for Unreal](#6-using-bqlog-in-unreal).
-- Supports `UTF-8`, `UTF-16`, `UTF-32` characters and strings, as well as common parameter types like bool, float, double, and various lengths and types of integers
-- Supports `C++20` `format specifications`
-- Asynchronous logging supports crash review to avoid data loss (inspired by XLog)
-- Extremely small size, with the dynamic library being only about 200k after Android compilation
-- Does not generate additional heap allocations in Java and C#, avoiding constant new object creation during runtime
-- Only depends on the standard C language library and platform APIs, and can be compiled in Android's `ANDROID_STL = none` mode
-- Supports `C++11` and later compilation standards, and can be compiled under strict requirements of -Wall -Wextra -pedantic -Werror
-- Compilation module is based on `CMake` and provides compilation scripts for different platforms, making it easy to use
-- Supports custom parameter types
-- Very friendly to code suggestions
+---
 
-## Tech Articles
- - **[Why is BqLog so fast - High Performance Realtime Compressed Log Format](/docs/Article%201_Why%20is%20BqLog%20so%20fast%20-%20High%20Performance%20Realtime%20Compressed%20Log%20Format.MD)**
- - **[Why is BqLog so fast - High-Concurrency Ring Buffer](/docs/Article%202_Why%20is%20BqLog%20so%20fast%20-%20High%20Concurrency%20Ring%20Buffer.MD)**
+[![Download](https://img.shields.io/badge/⬇_Download-Release_2.1.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases/tag/Release_2.1.0)
 
-## Menu
-**[Integrating BqLog into Your Project](#integrating-bqlog-into-your-project)**  
-**[Simple Demo](#simple-demo)**  
-**[Architecture Overview](#architecture-overview)**  
-**[Main Process API Usage Instructions](#main-process-api-usage-instructions)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1-Creating a Log Object](#1-creating-a-log-object)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2-Retrieving a Log Object](#2-retrieving-a-log-object)  
-[&nbsp;&nbsp;&nbsp;&nbsp;3-Logging Messages](#3-logging-messages)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4-Other APIs](#4-other-apis)  
-**[Synchronous and Asynchronous Logging](#synchronous-and-asynchronous-logging)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1. Thread safety of asynchronous logging](#thread-safety-of-asynchronous-logging)  
-**[Introduction to Appenders](#introduction-to-appenders)**  
+## 💡 If you have the following pain points, try BqLog
+
+- If your client product (especially games) wants to satisfy this "impossible triangle" at the same time:
+  - Easy troubleshooting (log as much as possible)
+  - Good performance (log as little as possible)
+  - Save storage space (better not log at all)
+- If you are a backend service developer and your current logging library cannot handle **high-concurrency scenarios**, causing log loss or application stalls.
+- If your programming language is one of C++, Java, C#, Kotlin, TypeScript, JavaScript, or you use multiple languages at the same time and want a **unified cross-language logging solution**.
+
+---
+
+## 🖥️ Supported operating systems and platforms
+
+- Windows 64-bit
+- macOS
+- Linux (including embedded Linux)
+- iOS (iPhone, iPad, Apple Vision, Apple Watch and other Apple devices and simulators)
+- Android
+- HarmonyOS (phones, tablets, smart TV, and all HarmonyOS devices and simulators)
+- Unix (tested on FreeBSD, NetBSD, OpenBSD, Solaris, DragonFly, OmniOS, etc.)
+
+---
+
+## 🌐 Supported languages and environments
+
+- C++ (C++11 and later, supports MSVC, Clang, GCC, MinGW-GCC, MinGW-Clang)
+- Java / Kotlin (Android & Server)
+- C# (Unity, Tuanjie Engine, .NET)
+- **ArkTS / C++ (HarmonyOS)**
+- **JavaScript / TypeScript (Node.js, supports CJS and ESM)**
+- **Unreal Engine (UE4 & UE5)**
+
+---
+
+## 🔧 Supported hardware architectures
+
+- x86
+- x86_64
+- ARM32
+- ARM64
+
+---
+
+## 📦 Ways to integrate
+
+- Dynamic library
+- Static library
+- Source code
+
+---
+
+## ✨ Highlights
+
+- Significant performance advantage over common open-source logging libraries (see [Benchmark](#benchmark)); suitable for server, client, and mobile.
+- Low memory usage: in the [Benchmark](#benchmark) case (10 threads, 20,000,000 log entries), BqLog itself uses about 1 MB of memory.
+- Provides a high-performance, high-compression real-time compressed log format.
+- With less than 10% performance overhead, supports strong hybrid asymmetric encryption of logs to protect log content (optional).
+- Works well inside game engines (`Unity`, `Unreal`, etc.), with [Supporting of UE builtin data types and Blueprint](#5-using-bqlog-in-unreal).
+- Supports `utf8`, `utf16`, `utf32` characters and strings, as well as bool, float, double, and integer types of various sizes.
+- Supports `C++20` `std::format` style format strings (without positional index and time formatting).
+- Asynchronous logging supports crash recovery and tries to avoid data loss.
+- On Java, C#, TypeScript wrappers, it can achieve "zero extra heap alloc" (or very close), avoiding continuous object allocations.
+- Depends only on the standard C library and platform APIs; can be compiled with Android `ANDROID_STL = none`.
+- Supports `C++11` and later standards and works under very strict compiler options.
+- Build system is based on `CMake` and provides multi-platform scripts, easy to integrate.
+- Supports custom parameter types.
+- Very friendly for code completion and IDE hints.
+
+---
+
+## 📑 Table of contents
+
+**[Changes from 1.x to 2.x](#changes-from-1x-to-2x)**  
+**[Integrating BqLog into your project](#integrating-bqlog-into-your-project)**  
+**[Simple demo](#simple-demo)**  
+**[Architecture](#architecture)**  
+**[Main-flow API usage](#main-flow-api-usage)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. Create a Log object](#1-create-a-log-object)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. Get a Log object](#2-get-a-log-object)  
+[&nbsp;&nbsp;&nbsp;&nbsp;3. Write logs](#3-write-logs)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4. Other APIs](#4-other-apis)  
+**[Synchronous vs asynchronous logging](#synchronous-vs-asynchronous-logging)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. Thread-safety notes for asynchronous logging](#thread-safety-notes-for-asynchronous-logging)  
+**[Appender overview](#appender-overview)**  
 [&nbsp;&nbsp;&nbsp;&nbsp;1. ConsoleAppender](#consoleappender)  
 [&nbsp;&nbsp;&nbsp;&nbsp;2. TextFileAppender](#textfileappender)  
-[&nbsp;&nbsp;&nbsp;&nbsp;3. CompressedFileAppender(Highly Recommended)](#compressedfileappender)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. RawFileAppender](#rawfileappender)  
-**[Configuration Instructions](#configuration-instructions)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1. Complete Example](#1-complete-example)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2. Detailed Explanation](#2-detailed-explanation)  
-**[Offline Decoding of Binary Format Appenders](#offline-decoding-of-binary-format-appenders)**  
-**[Build Instructions](#build-instructions)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1. Library Build](#1-library-build)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2. Demo Build and Run](#2-demo-build-and-run)  
-[&nbsp;&nbsp;&nbsp;&nbsp;3. Automated Test Run Instructions](#3-automated-test-run-instructions)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. Benchmark Run Instructions](#4-benchmark-run-instructions)  
-**[Advanced Usage Topics](#advanced-usage-topics)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1. No Heap Allocation](#1-no-heap-allocation)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2. Log Objects with Category Support](#2-log-objects-with-category-support)  
-[&nbsp;&nbsp;&nbsp;&nbsp;3. Data Protection on Program Abnormal Exit](#3-data-protection-on-program-abnormal-exit)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. About NDK and ANDROID_STL = none](#4-about-ndk-and-android_stlnone)  
-[&nbsp;&nbsp;&nbsp;&nbsp;5. Custom Parameter Types](#5-custom-parameter-types)  
-[&nbsp;&nbsp;&nbsp;&nbsp;6. Using BqLog in Unreal Engine](#6-using-bqlog-in-unreal)  
+[&nbsp;&nbsp;&nbsp;&nbsp;3. (Recommended) CompressedFileAppender](#compressedfileappender)  
+**[Configuration](#configuration)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. Full example](#1-full-example)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. Detailed explanation](#2-detailed-explanation)  
+**[Offline decoder for binary Appenders](#offline-decoder-for-binary-appenders)**  
+**[Build](#build)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. Library build](#1-library-build)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. Demo build & run](#2-demo-build-and-run)  
+[&nbsp;&nbsp;&nbsp;&nbsp;3. Automated tests](#3-automated-tests)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4. Benchmark](#4-benchmark-build-run)  
+**[Advanced topics](#advanced-topics)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. No Heap Alloc](#1-no-heap-alloc)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. Log objects with Category support](#2-log-objects-with-category-support)  
+[&nbsp;&nbsp;&nbsp;&nbsp;3. Data protection on abnormal exit](#3-data-protection-on-abnormal-exit)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4. Custom parameter types](#4-custom-parameter-types)  
+[&nbsp;&nbsp;&nbsp;&nbsp;5. Using BqLog in Unreal](#5-using-bqlog-in-unreal)  
+[&nbsp;&nbsp;&nbsp;&nbsp;6. Log encryption and decryption](#6-log-encryption-and-decryption)  
 **[Benchmark](#benchmark)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1. Benchmark Description](#1-benchmark-description)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2. BqLog C++ Benchmark Code](#2-bqlog-c-benchmark-code)  
-[&nbsp;&nbsp;&nbsp;&nbsp;3. BqLog Java Benchmark Code](#3-bqlog-java-benchmark-code)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. Log4j Benchmark Code](#4-log4j-benchmark-code)  
-[&nbsp;&nbsp;&nbsp;&nbsp;5. Benchmark Results](#5-benchmark-results)  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. Benchmark description](#1-benchmark-description)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. BqLog C++ Benchmark code](#2-bqlog-c-benchmark-code)  
+[&nbsp;&nbsp;&nbsp;&nbsp;3. BqLog Java Benchmark code](#3-bqlog-java-benchmark-code)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4. Log4j Benchmark code](#4-log4j-benchmark-code)  
+[&nbsp;&nbsp;&nbsp;&nbsp;5. Benchmark results](#5-benchmark-results)  
+**[How to contribute](#how-to-contribute)**  
 
+---
 
+<a id="changes-from-1x-to-2x"></a>
 
-## Integrating BqLog into Your Project
-BqLog can be integrated into your project in various forms. For C++, it supports dynamic libraries, static libraries, and source files. For Java and C#, it supports dynamic libraries with wrapper source code. Below are the methods to include BqLog:
+## 🔄 Changes from 1.x to 2.x
 
-### C++ (Dynamic Library)
-The code repository includes precompiled dynamic library files located in /dist/dynamic_lib/. To integrate BqLog into your project using the library files, you need to do the following:
-- Select the dynamic library file corresponding to your platform and add it to your project's build system.
-- Copy the /dist/dynamic_lib/include directory into your project and add it to the include directory list. (If you are using XCode's .framework library, you can skip this step as the .framework file already includes the header files).
+1. Added HarmonyOS support, including ArkTS and C++.
+2. Added Node.js support (CJS and ESM).
+3. Improved cross-platform compatibility, stability and generality; supports more Unix systems.
+4. Average performance improved by ~80% for UTF-8, and by >500% for UTF-16 environments (C#, Unreal, Unity).
+5. Android no longer must be used together with Java.
+6. Removed the `is_in_sandbox` config and replaced it with `base_dir_type`; added filters for snapshots and support for opening a new log file on each startup. See [Configuration](#configuration).
+7. Added high-performance hybrid asymmetric encryption, ***almost zero overhead***; see [6. Log encryption and decryption](#6-log-encryption-and-decryption).
+8. Provides Unity, Tuanjie Engine, and Unreal Engine plugins, making it easy to use in game engines; provides ConsoleAppender redirection to game-engine editors and Blueprint support for Unreal. See [5. Using BqLog in Unreal](#5-using-bqlog-in-unreal).
+9. The repository no longer ships binaries. From 2.x on, please download platform- and language-specific packages from the [Releases page](https://github.com/Tencent/BqLog/releases).
+10. The size of a single log entry is not limited by `log.buffer_size` anymore;
+11. The timezone can be specified manually.
+12. The `raw_file` appender is deprecated and no longer maintained in 2.x; please use the `compressed_file` appender instead.
+13. The Recovery feature's reliability has been improved and it has been promoted from experimental (beta) to stable (release). see [3. Data protection on abnormal exit](#3-data-protection-on-abnormal-exit).
 
-### C++ (Static Library)
-The code repository includes precompiled static library files located in /dist/static_lib/. To integrate BqLog into your project using the library files, you need to do the following:
-- Select the static library file corresponding to your platform and add it to your project's build system.
-- Copy the /dist/static_lib/include directory into your project and add it to the include directory list. (If you are using XCode's .framework library, you can skip this step as the .framework file already includes the header files).
+---
 
-### C++ (Source Code)
-BqLog also supports direct inclusion of source code into your project for compilation. To integrate BqLog using the source code, follow these steps:
-- Copy the /src directory into your project as a source code reference.
-- Copy the /include directory into your project and add it to the include directory list.
-- If compiling the Windows version in Visual Studio, add /Zc:__cplusplus to the compilation options to ensure the current C++ compiler standard support is correctly determined.
-- If using the source code in Android's NDK, please refer to [4. About NDK and ANDROID_STL = none](#4-about-ndk-and-android_stlnone) for important considerations.
+<a id="integrating-bqlog-into-your-project"></a>
 
-### C#
-In C#, BqLog can be used via a native dynamic library and a C# Wrapper, supporting Mono, Microsoft CLR, and Unity engines. Unity is compatible with both Mono and IL2CPP modes. To use BqLog in C#, follow these steps:
-- Select the dynamic library file corresponding to your platform from /dist/dynamic_lib/ and add it to your project (for Unity, refer to [ Unity Import and configure plug-ins](https://docs.unity3d.com/Manual/PluginInspector.html)). 
-- Copy the source code files from /wrapper/csharp/src into your project.
+## 🚀 Integrating BqLog into your project
 
-### Java
-In Java, BqLog can be used via a native dynamic library and a Java Wrapper, supporting common JVM environments and Android. To integrate BqLog into a JVM, follow these steps:
-- Select the dynamic library file corresponding to your platform from /dist/dynamic_lib/ and add it to your project.
-- Copy the source code files from /wrapper/java/src into your project.
-- (Optional) Copy the /dist/dynamic_lib/include directory into your project and add it to the include directory list if you intend to call BqLog from the NDK.
+> The examples below assume you have already downloaded the corresponding binary package or source code from the [Releases page](https://github.com/Tencent/BqLog/releases).
 
-<br><br>
+### C++ (dynamic / static / source)
 
-## Simple Demo
-The following code will output over 1000 logs to your console (or ADB Logcat if on Android)
+- **Dynamic library**
+  Download `dynamic_lib_{version}` archive:
+  - Add `dynamic_lib/include` directory to your header search path;
+  - Link against the dynamic library file in `dynamic_lib/lib` for your platform.
+
+- **Static library**
+  Download `static_lib_{version}` archive:
+  - Add `static_lib/include` directory to your header search path;
+  - Link against the static library file in `static_lib/lib` for your platform.
+
+- **Source integration**
+  - Add the `/src` directory under the repo into your project sources compilation;
+  - Add `/include` directory to your header search path.
+  - Windows + Visual Studio: please add compile option `/Zc:__cplusplus`.
+  - Android supports `ANDROID_STL = none`.
+  - If you need to enable Java / NAPI (Node.js / HarmonyOS ArkTS) support, as well as system link libraries and some macro definitions, please refer to `/src/CMakeLists.txt`(If the file implies complexity, consider using AI to interpret it.).
+  - When NAPI environment (Node.js or HarmonyOS ArkTS) is present, or when Java / C# needs to call, it is not recommended to integrate directly as "pure C++ source", because initialization and library loading processes need to be handled manually; using prebuilt packages and corresponding wrappers is more recommended.
+
+### C# (Unity / Tuanjie Engine / .NET)
+
+- **Unity**
+  - Download `unity_package_{version}`;
+  - Unzip and in Unity Package Manager select "Install from tarball", pointing to the `.tar` file inside to import;
+  - Official Unity does not support HarmonyOS yet; if you need HarmonyOS support, you can integrate it yourself as needed.
+
+- **Tuanjie Engine**
+  - Download `tuanjie_package_{version}`;
+  - Unzip and import via Unity Package Manager as tarball similarly;
+  - The main difference from Unity is that HarmonyOS related support is already integrated.
+
+- **.NET**
+  - Download the dynamic library package `{os}_{arch}_libs_{version}` for the corresponding platform, and import the dynamic libraries within;
+  - Add the C# wrapper source to your project — either clone the repository and include `/wrapper/csharp/src`, or download `c#_wrapper_{version}` from the [Releases page](https://github.com/Tencent/BqLog/releases) which contains the same source files pre-packaged.
+
+### Java / Kotlin (Android / Server)
+
+- **Android**
+  - Download `android_libs_{version}`;
+  - You can directly import the `.aar` package within(The AAR follows standard AGP packaging conventions, with native headers and prebuilt libraries exported via Prefab.), or manually import `/src` + `/wrapper/java/src` source code under the repository.
+
+- **Server**
+  - Download the dynamic library `{os}_{arch}_libs_{version}` for the corresponding platform and import it;
+  - Then download `java_wrapper_{version}`, import the jar package or directly add `/wrapper/java/src` source code under the repository.
+
+### HarmonyOS (ArkTS / C++)
+
+- Download `harmony_os_libs_{version}`;
+- Import the `har` package, or directly import `.so` + `/wrapper/typescript/src` source code under the repository (optional);
+- Supports direct calling from ArkTS side, also supports calling from Native C++ side.
+
+### Node.js
+
+- Supports CommonJS and ES Modules.
+- From Releases download `nodejs_npm_{version}` package, unzip to find `bqlog-{version}.tgz` inside, install via npm:
+
+```bash
+npm install ./bqlog-{version}.tgz
+```
+
+Refer to `/demo/nodejs` directory under the repository.
+
+### Unreal Engine
+
+- **Prebuilt**
+  - Download `unreal_plugin_prebuilt_{version}` from Releases;
+  - Unzip and according to your engine version, select the corresponding compressed package, unzip to the `Plugins` directory of your game project.
+
+- **Source**
+  - Download `unreal_plugin_source_{version}` from Releases;
+  - Unzip and according to your engine version, select the corresponding compressed package, unzip to the `Plugins` directory of your game project, to be recompiled by the engine.
+
+---
+
+<a id="simple-demo"></a>
+
+## 📝 Simple Demo
+
 ### C++
+
 ```cpp
-#if defined(WIN32)
-#include <windows.h>
-#endif
 #include <string>
 #include <bq_log/bq_log.h>
-int main()
-{
-#if defined(WIN32)
-    // Switch Windows command line to UTF-8 because BqLog outputs all final text in UTF-8 encoding to avoid display issues
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-#endif
-    // This string is the log configuration. Here it configures a logger with one appender (output target) named appender_0, which outputs to the console.
+
+int main() {
+    // Config: output to console
     std::string config = R"(
-            # This appender's output target is the console
-            appenders_config.appender_0.type=console           
-            # This appender uses local time for timestamps
-            appenders_config.appender_0.time_zone=default local time   
-            # This appender outputs logs of these 6 levels (no spaces in between)
-            appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-        )";
-    bq::log log = bq::log::create_log("my_first_log", config);   // Create a log object using the config
-    for(int i = 0; i < 1024; ++i)
-    {
-        log.info("This is an info test log, the format string is UTF-8, param int:{}, param bool :{}, param string8:{}, param string16:{}, param string32:{}, param float:{}", i, true, "utf8-string", u"utf16-string", U"utf32-string", 4.3464f);  
-    }
-    log.error(U"This is an error test log, the format string is UTF-32");  
-    bq::log::force_flush_all_logs();   // BqLog defaults to asynchronous output. To ensure logs are visible before program exit, force flush to sync output once.
+        appenders_config.appender_console.type=console
+        appenders_config.appender_console.levels=[all]
+    )";
+    auto log = bq::log::create_log("main_log", config);
+
+    log.info("Hello BqLog 2.0! int:{}, float:{}", 123, 3.14f);
+    log.force_flush(); // Force flush (usually used before program exit)
+
     return 0;
 }
 ```
 
+For more examples, refer to `/demo/cpp` directory.
+
+### Typescript (Node.js, ArkTS on HarmonyOS)
+
+```typescript
+import { bq } from "bqlog"; // ESM style
+// const { bq } = require("bqlog"); // CommonJS style
+
+const config = `
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+`;
+const log = bq.log.create_log("node_log", config);
+
+log.info("Hello from Node.js! params: {}, {}", "text", 123);
+bq.log.force_flush_all_logs();
+```
+
+For more examples, refer to `/demo/nodejs` directory.
+
 ### C#
+
 ```csharp
-using System.Text;
-using System;
-
-public class demo_main {
-
-    public static void Main(string[] args) {
-        Console.OutputEncoding = Encoding.UTF8;
-        Console.InputEncoding = Encoding.UTF8;
-        string config = @"
-            # This appender's output target is the console
-            appenders_config.appender_0.type=console           
-            # This appender uses local time for timestamps
-            ppenders_config.appender_0.time_zone=default local time   
-            # This appender outputs logs of these 6 levels (no spaces in between)
-            appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-        ";
-        bq.log log = bq.log.create_log("my_first_log", config);   // Create a log object using the config
-        for (int i = 0; i < 1024; ++i)
-        {
-            log.info("This is an info test log, the format string is UTF-16, param int:{}, param bool :{}, param string:{}, param float:{}", i, true, "String Text", 4.3464f);
-        }
-
-
-        bq.log.force_flush_all_logs();
-        Console.ReadKey();
-    }
-
-}
+string config = @"
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+";
+var log = bq.log.create_log("cs_log", config);
+log.info("Hello C#! value:{}", 42);
 ```
 
-### Java#
+For more examples, refer to `/demo/csharp` directory.
+
+### Java (Android / Server)
+
 ```java
-public class demo_main {
-
-    public static void main(String[] args) {
-        // TODO Auto-generated method stub
-        String config = """
-            # This appender's output target is the console
-            appenders_config.appender_0.type=console           
-            # This appender uses local time for timestamps
-            appenders_config.appender_0.time_zone=default local time   
-            # This appender outputs logs of these 6 levels (no spaces in between)
-            appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-        """;
-        bq.log log = bq.log.create_log("my_first_log", config);   // Create a log object using the config
-        for (int i = 0; i < 1024; ++i)
-        {
-            log.info("This is an info test log, the format string is UTF-16, param int:{}, param bool :{}, param string:{}, param float:{}", i, true, "String Text", 4.3464f);
-        }
-        bq.log.force_flush_all_logs();
-    }
-}
-
+String config = """
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+""";
+bq.log.Log log = bq.log.Log.createLog("java_log", config);
+log.info("Hello Java! value: {}", 3.14);
 ```
 
-<br><br>
+For more examples, refer to `/demo/java` directory.
 
+---
 
-## Architecture Overview
+<a id="architecture"></a>
 
-![Basic Structure](docs/img/log_structure.png)  
-  
+## 🏗️ Architecture
 
-The diagram above clearly illustrates the basic structure of BqLog. On the right side of the diagram is the internal implementation of the BqLog library, while on the left side is your program and code. Your program can call BqLog using the provided wrappers (object-oriented APIs for different languages).
-In the diagram, two Logs are created: one named "Log A" and the other named "Log B." Each Log is attached to one or more Appenders. An Appender can be understood as the output target of the log content. This can be the console (ADB Logcat logs for Android), text files, or even specialized formats like compressed log files or regular binary log format files.
+![Structure](docs/img/log_structure.png)
 
-**Within the same process, wrappers for different languages can access the same Log object. For example, if a Log object named Log A is created in Java, it can also be accessed and used from the C++ side by the name Log A.**  
-In extreme cases, such as a Unity-developed game running on the Android system, you might involve Java, Kotlin, C#, and C++ languages within the same app. They can all share the same Log object. You can create the Log on the Java side using create_log, and then access it in other languages using get_log_by_name.
+The figure above shows the overall architecture of BqLog. The right side of the figure is `BqLog Core Engine`, and the left side is your business application and various language Wrappers.
+Your program accesses the core engine through `BqLog Wrapper` provided by BqLog (such as C++, Java, C#, TypeScript, etc.).
 
+- The user program creates multiple Log objects, such as `Log A`, `Log B`, `Log C`;
+- Each Log object can mount one or more Appenders, which can be understood as the "output destination" of log content (Console / Text File / Compressed File, etc.);
+- The Log object is responsible for "receiving logs + writing to buffer (ring queue)"; the Appender is responsible for "actual output to terminal or file".
 
-<br><br>
+**Within the same process, Wrappers of different languages can access the same Log object.**
+For example: An Android application creates a Log object named `Log A` on the Java side, and the NDK C++ side can get the same Log object via the name `"Log A"` and write logs.
 
-## Main Process API Usage Instructions
+In extreme cases, such as a Unity game running on Android, involving Java/Kotlin, C#, and C++ simultaneously, they can all share the same Log object to unify log output.
 
-**Note: The following APIs are declared in the bq::log (or bq.log) class. To save space, only the C++ APIs are listed. The APIs in Java and C# are identical and will not be repeated here.**  
-**In C++, `bq::string` is the UTF-8 string type in the BqLog library. You can also pass in c-style strings like char or `std::string` or `std::string_view`, which will be automatically and implicitly converted.**
+---
 
-### 1. Creating a Log Object
-A log object can be created using the create_log static function. Its declaration is as follows:
+<a id="main-flow-api-usage"></a>
+
+## 🔑 Main-flow API usage
+
+> Note: The following APIs are all declared in `bq::log` (C++) or `bq.log` (other language Wrappers) class.
+> To save space, only C++ APIs are listed here; other language Wrappers have consistent interface naming and semantics.
+
+`bq::string` appearing in C++ is a UTF-8 string type defined internally by BqLog. In most cases, you can directly pass `char*`, `std::string`, `std::string_view`, etc., and BqLog will perform implicit conversion.
+
+### 1. Create a Log object
+
+Create Log through `create_log` static function:
 
 ```cpp
-//C++ API
-    /// <summary>
-    /// Create a log object
-    /// </summary>
-    /// <param name="log_name">If the log name is an empty string, bqLog will automatically assign you a unique log name. If the log name already exists, it will return the previously existing log object and overwrite the previous configuration with the new config.</param>
-    /// <param name="config_content">Log config string</param>
-    /// <returns>A log object, if create failed, the is_valid() method of it will return false</returns>
-    static log create_log(const bq::string& log_name, const bq::string& config_content);
+/// <summary>
+/// Create a log object
+/// </summary>
+/// <param name="log_name">
+/// If the log name is an empty string, bqLog will automatically assign you a unique log name.
+/// If the log name already exists, it will return the previously existing log object and
+/// update its configuration (with some fields not modifiable).
+/// </param>
+/// <param name="config_content">Log config string</param>
+/// <returns>A log object, if create failed, the is_valid() method of it will return false</returns>
+static log create_log(const bq::string& log_name, const bq::string& config_content);
 ```
 
-The code creates a log object by passing in the name of the log object and a configuration string. The log configuration can be referenced in the [Configuration Instructions](#configuration-instructions).
-Here are a few key points to note:
-1. Regardless of whether it is C# or Java, the returned log object will never be null. However, due to configuration errors or other reasons, an invalid log object might be created. Therefore, you should use the is_valid() function to check the returned object. Performing operations on an invalid object may cause the program to crash.
-2. If an empty string is passed as the log name, bqLog will automatically generate a unique log name, such as "AutoBqLog_1."
-3. Calling create_log on an already existing log object with the same name will not create a new log object but will overwrite the previous configuration with the new one. However, some parameters cannot be modified in this process; see [Configuration Instructions](#configuration-instructions) for details.
-4. Except when using in the NDK (refer to [4. About NDK and ANDROID_STL = none](#4-about-ndk-and-android_stlnone)), you can initialize the log object directly in global or static variables using this API in other situations.
+Key points:
 
+1. Whether in C# or Java, the return value of `create_log` will **never be null**. If creation fails due to incorrect configuration, etc., it can be judged via `is_valid()`.
+2. If `log_name` is an empty string, BqLog will automatically assign a unique name, such as `"AutoBqLog_1"`.
+3. If `create_log` is called for an existing Log with the same name, it will not create a new object, but reuse the original object and overwrite its configuration (some fields cannot be modified, such as `buffer_size`, see Configuration chapter).
+4. You can initialize Log objects directly via this API in global variables or static variables without worrying about Static Initialization Order Fiasco, destruction order, or multi-threading issues.
 
-### 2. Retrieving a Log Object
-If a log object has already been created elsewhere, you can obtain the created log object directly using the get_log_by_name function.
+### 2. Get a Log object
+
+If a Log object has already been created elsewhere, it can be retrieved directly by name:
+
 ```cpp
-//C++ API
-    /// <summary>
-    /// Get a log object by it's name
-    /// </summary>
-    /// <param name="log_name">Name of the log object you want to find</param>
-    /// <returns>A log object, if the log object with specific name was not found, the is_valid() method of it will return false</returns>
-    static log get_log_by_name(const bq::string& log_name);
+// C++ API
+/// <summary>
+/// Get a log object by its name
+/// </summary>
+/// <param name="log_name">Name of the log object you want to find</param>
+/// <returns>
+/// A log object. If the log object with specific name was not found,
+/// the is_valid() method of it will return false.
+/// </returns>
+static log get_log_by_name(const bq::string& log_name);
 ```
-You can also use this function to initialize a log object in global variables or static functions. However, note that you must ensure the log object with the specified name already exists. Otherwise, the returned log object will be unusable, and its is_valid() method will return false.
 
+You can also use this function to initialize Log objects in global variables or static variables.
+Note: Please ensure that the Log object with this name has already been created via `create_log`, otherwise the returned object will be in `!is_valid()` state.
 
-### 3. Logging Messages
+### 3. Write logs
+
 ```cpp
-    ///Core log functions, there are 6 log levels:
-    ///verbose, debug, info, warning, error, fatal
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_format_content, const Args&... args) const;
-```
-When logging messages, pay attention to three key points:
-#### 1. Log Levels  
-As you can see, our logs are divided into six levels: verbose, debug, info, warning, error, and fatal, consistent with Android. Their importance increases sequentially. When output to the console, they will appear in different colors.
-![Log Levels](docs/img/log_level.png)  
-#### 2. Format String (STR Parameter)
-The STR parameter is similar to the first parameter of printf and can be various common string types, including:
-- Java's java.lang.String
-- C#'s string
-- Various encodings of C++'s C-style strings and `std::string` (`char*`, `char16_t*`, `char32_t*`, `wchar_t*`, `std::string`, `std::u8string`, `std::u16string`, `std::u32string`, `std::wstring`, `std::string_view`, `std::u16string_view`, `std::u32string_view`, `std::wstring_view` and even custom string types, which you can refer to in[Custom Parameter Types](#5-custom-parameter-types) )
+/// Core log functions, there are 6 log levels:
+/// verbose, debug, info, warning, error, fatal
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_format_content, const Args&... args) const;
 
-#### 3. format parameters 
-You can add various parameters after the STR parameter. These parameters will be formatted into the specified places in the STR, following rules similar to C++20's std::format (except for the lack of support for positional arguments and date time format). For example, using a single {} represents a default formatting of a parameter, and {:.2f} specifies the precision for formatting a floating-point number.
-**Try to use formatted parameters to output logs rather than concatenating strings manually. This approach is optimal for performance and compressed format storage.**  
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_format_content, const Args&... args) const;
+```
+
+Writing logs requires focusing on three aspects:
+
+#### 1. Log Level
+
+Logs are divided into 6 levels: `verbose`, `debug`, `info`, `warning`, `error`, `fatal`, consistent with Android log levels, with increasing importance.
+When outputting to the console, different levels will be distinguished by different colors (under ConsoleAppender).
+
+![Log Level](docs/img/log_level.png)
+
+#### 2. format string (`STR` parameter)
+
+`STR` is similar to the first parameter of `printf`, used to describe the log format, supporting common string types under different languages, for example:
+
+- `java.lang.String` in Java
+- `string` in C#
+- `FName`, `FString`, `FText`, etc. in Unreal
+- Common string forms in C++:
+  - C-style strings: `char*`, `char16_t*`, `char32_t*`, `wchar_t*`
+  - Standard library strings: `std::string`, `std::u8string`, `std::u16string`, `std::u32string`, `std::wstring`, etc.
+
+BqLog will unify them into UTF encoding suitable for storage and output internally.
+
+#### 3. format parameters
+
+`STR` can be followed by any number of parameters, which will be formatted into `{}` positions according to `C++20 std::format` rules (positional index and time formatting are not supported).
+
+**It is strongly recommended to use format parameter way to output logs instead of manually splicing strings.**
+This can significantly improve performance and allow the compressed format to achieve optimal results.
+
 Currently supported parameter types include:
-- Null pointers (output as null)
-- Pointers (output as a hexadecimal address starting with 0x)
-- bool
-- Single-byte characters (char)
-- Double-byte characters (char16_t, wchar_t, C#'s char, Java's char)
-- Four-byte characters (char32_t or wchar_t)
-- 8-bit integers
-- 8-bit unsigned integers
-- 16-bit integers
-- 16-bit unsigned integers
-- 32-bit integers
-- 32-bit unsigned integers
-- 64-bit integers
-- 64-bit unsigned integers
-- 32-bit floating-point numbers
-- 64-bit floating-point numbers
-- Other unknown POD types in C++ (limited to sizes 1, 2, 4, or 8 bytes, treated as int8, int16, int32, and int64 respectively)
-- Strings, including all string types mentioned in [STR Parameter](#2-format-string-str-parameter)
-- Any class or object in C# and Java (outputting their ToString() string)
-- Custom parameter types, as detailed in Custom Parameter Types
 
-### 4. Other APIs  
-There are additional commonly used APIs that can accomplish specific tasks. For detailed API descriptions, refer to bq_log/bq_log.h, as well as the bq.log class in Java and C#. Here are some key APIs that need to be highlighted:  
+- Null pointer (outputs `null`)
+- Pointer (outputs 16-hex address starting with `0x`)
+- `bool`
+- Single-byte character (`char`)
+- Double-byte character (`char16_t`, `wchar_t`, C# `char`, Java `char`)
+- Four-byte character (`char32_t` or `wchar_t` on some platforms)
+- 8/16/32/64-bit integers and unsigned integers
+- 32-bit and 64-bit floating point numbers
+- Other C++ POD types (sizes of 1, 2, 4, 8 bytes, treated as `int8`/`int16`/`int32`/`int64`)
+- All string types mentioned in [STR parameter](#2-format-string-str-parameter) above
+- Any object in C# and Java (output via `ToString()` result)
+- Custom parameter types (see [Custom parameter types](#4-custom-parameter-types))
 
-#### Uninitialize BqLog
+### 4. Other APIs
+
+For more details, please refer to the header file `bq_log/bq_log.h`, and `bq.log` class comments in Java / C# / TypeScript wrappers.
+Here we focus on introducing several common capabilities.
+
+#### Data protection on abnormal exit
+
 ```cpp
-    /// <summary>
-    /// Uninitialize BqLog, please invoke this function before your program exist.
-    /// </summary>
-    static void uninit();
+/// <summary>
+/// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk.
+/// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer
+/// in the event of a crash. However, this functionality does not guarantee success,
+/// and only supports POSIX systems.
+/// </summary>
+static void enable_auto_crash_handle();
 ```
-It is recommended to execute `uninit()` before exiting the program or uninstalling the self-implemented dynamic library that uses BqLog, otherwise the program may get stuck when exiting under certain specific circumstances.
 
-#### Crash Protection
+Detailed introduction see [Data protection on abnormal exit](#3-data-protection-on-abnormal-exit).
+
+#### Force flush buffer
+
 ```cpp
-    /// <summary>
-    /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
-    /// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
-    /// this functionality does not guarantee success, and only support POSIX systems.
-    /// </summary>
-    static void enable_auto_crash_handle();
+/// <summary>
+/// Synchronously flush the buffer of all log objects
+/// to ensure that all data in the buffer is processed after the call.
+/// </summary>
+static void force_flush_all_logs();
+
+/// <summary>
+/// Synchronously flush the buffer of this log object
+/// to ensure that all data in the buffer is processed after the call.
+/// </summary>
+void force_flush();
 ```
-For a detailed introduction, see[Data Protection on Program Abnormal Exit](#3-data-protection-on-program-abnormal-exit)  
-  
-#### Force Flush Asynchronous Buffer Synchronously
+
+BqLog uses asynchronous logging by default. Sometimes it is necessary to ensure that certain key logs are "immediately written to disk", `force_flush` / `force_flush_all_logs()` can be called in key paths or before program exit.
+
+#### Intercept Console Output
+
 ```cpp
-    /// <summary>
-    /// Synchronously flush the buffer of all log objects
-    /// to ensure that all data in the buffer is processed after the call.
-    /// </summary>
-    static void force_flush_all_logs();
-    /// <summary>
-    /// Synchronously flush the buffer of this log object
-    /// to ensure that all data in the buffer is processed after the call.
-    /// </summary>
-    void force_flush();
+/// <summary>
+/// Register a callback that will be invoked whenever a console log message is output.
+/// This can be used for an external system to monitor console log output.
+/// </summary>
+/// <param name="callback"></param>
+static void register_console_callback(bq::type_func_ptr_console_callback callback);
+
+/// <summary>
+/// Unregister a console callback.
+/// </summary>
+/// <param name="callback"></param>
+static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
 ```
-Since bqLog uses asynchronous logging by default, there are times when you might want to immediately synchronize and output all logs. In such cases, you need to forcefully call force_flush().
-  
-#### Intercepting Console Output
+
+[ConsoleAppender](#consoleappender) outputs to terminal (ADB Logcat for Android) by default, but this cannot cover all situations (such as self-developed game engines, self-developed IDEs, etc.).
+By registering a callback, console output can be forwarded to self-developed systems.
+
+**Note:**
+
+1. Do not call any "synchronous flushing BqLog log functions" in console callback, otherwise it is extremely easy to cause deadlock.
+2. When using Unity / Tuanjie Engine / Unreal plugins, there is no need to manually call this interface, the plugin has automatically redirected ConsoleAppender output to the editor log window.
+
+#### Actively fetch Console Output
+
 ```cpp
-    /// <summary>
-    /// Register a callback that will be invoked whenever a console log message is output. 
-    /// This can be used for an external system to monitor console log output.
-    /// </summary>
-    /// <param name="callback"></param>
-    static void register_console_callback(bq::type_func_ptr_console_callback callback);
+/// <summary>
+/// Enable or disable the console appender buffer.
+/// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke
+/// callbacks from a native thread, we can enable this option.
+/// This way, all console outputs will be saved in the buffer until we fetch them.
+/// </summary>
+static void set_console_buffer_enable(bool enable);
 
-    /// <summary>
-    /// Unregister a console callback.
-    /// </summary>
-    /// <param name="callback"></param>
-    static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
+/// <summary>
+/// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
+/// If the console appender buffer is not empty, the on_console_callback function will be invoked
+/// for this log entry. Please ensure not to output synchronized BQ logs within the callback function.
+/// </summary>
+/// <param name="on_console_callback">
+/// A callback function to be invoked for the fetched log entry if the console appender buffer is not empty
+/// </param>
+/// <returns>
+/// True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.
+/// </returns>
+static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
 ```
-The output of[ConsoleAppender](#consoleappender) goes to the console or ADB Logcat logs on Android, but this may not cover all situations. For instance, in custom game engines or custom IDEs, a mechanism is provided to call a callback function for each console log output. This allows you to reprocess and output the console log anywhere in your program.  
-**Additional Caution:** Do not output any synchronized BQ logs within the console callback as it may easily lead to deadlocks.  
 
+When it is not suitable to call back directly from native threads to virtual machines (such as C#, Java, IL2CPP environments) using callback method, you can switch to "actively fetch":
 
-#### Actively Fetching Console Output
+- `set_console_buffer_enable(true)`: Enables console buffering. (Note: Once enabled, callbacks registered via `register_console_callback` will be disabled, and the default standard console output will stop).
+- `fetch_and_remove_console_buffer(...)`: Proactively fetches and consumes buffered console logs from the logic/worker thread. ***You must call this continuously; otherwise, the accumulated logs will result in unbounded memory growth***.
+
+**Note (IL2CPP environment):**
+
+- Please ensure `on_console_callback` is a `static unsafe` method;
+- And add `[MonoPInvokeCallback(typeof(type_console_callback))]` attribute to ensure the callback is not collected by GC.
+
+#### Modify Log Configuration
+
 ```cpp
-    /// <summary>
-    /// Enable or disable the console appender buffer.
-    /// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread,
-    /// we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
-    /// </summary>
-    /// <param name="enable"></param>
-    /// <returns></returns>
-    static void set_console_buffer_enable(bool enable);
-
-    /// <summary>
-    /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
-    /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry.
-    /// Please ensure not to output synchronized BQ logs within the callback function.
-    /// </summary>
-    /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
-    /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
-    static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
+/// <summary>
+/// Modify the log configuration, but some fields, such as buffer_size, cannot be modified.
+/// </summary>
+/// <param name="config_content"></param>
+/// <returns></returns>
+bool reset_config(const bq::string& config_content);
 ```
-In addition to intercepting console output through a console callback, you can actively fetch console log outputs. Sometimes, we may not want the console log output to come through a callback because you do not know which thread the callback will come from (for example, in some C# virtual machines, or JVMs, the VM might be performing garbage collection when the console callback is called, which could potentially lead to hangs or crashes).
 
-The method used here involves enabling the console buffer through `set_console_buffer_enable`. This causes every console log output to be stored in memory until we actively call `fetch_and_remove_console_buffer` to retrieve it. Therefore, if you choose to use this method, remember to promptly fetch and clear logs to avoid unreleased memory.  
-**Additional Caution:** Do not output any synchronized BQ logs within the console callback as it may easily lead to deadlocks.  
-**Additional Caution:** If you are using this code in an IL2CPP environment, please make sure that the on_console_callback is marked as static unsafe and is decorated with the [MonoPInvokeCallback(typeof(type_console_callback))] attribute.  
+If you need to adjust some configurations at runtime, you can call `reset_config`.
+Some fields (such as `buffer_size`, `thread_mode`, etc.) are not allowed to be modified at runtime due to safety and implementation complexity considerations, see the corresponding table in the Configuration chapter.
 
+#### Temporarily disable or enable certain Appenders
 
-  
-#### Modifying Log Configuration
 ```cpp
-    /// <summary>
-    /// Modify the log configuration, but some fields, such as buffer_size, cannot be modified.
-    /// </summary>
-    /// <param name="config_content"></param>
-    /// <returns></returns>
-    bool reset_config(const bq::string& config_content);
+/// <summary>
+/// Temporarily disable or enable a specific Appender.
+/// </summary>
+/// <param name="appender_name"></param>
+/// <param name="enable"></param>
+void set_appender_enable(const bq::string& appender_name, bool enable);
 ```
-Sometimes you may want to modify the configuration of a log within your program. In addition to recreating the log object to overwrite the configuration(See[Creating a Log Object](#1-creating-a-log-object))，you can also use the reset interface. However, note that not all configuration items can be modified this way. For details, refer to the [Configuration Instructions](#configuration-instructions)
-  
-#### Temporarily Disabling and Enabling Certain Appenders
+
+By default, Appenders declared in the configuration are all enabled.
+Through this API, you can temporarily close/open certain Appenders during operation as needed (for example, temporarily closing a file output).
+
+#### Snapshot
+
 ```cpp
-    /// <summary>
-    /// Temporarily disable or enable a specific Appender.
-    /// </summary>
-    /// <param name="appender_name"></param>
-    /// <param name="enable"></param>
-    void set_appenders_enable(const bq::string& appender_name, bool enable);
+/// <summary>
+/// Works only when snapshot is configured.
+/// It will decode the snapshot buffer to text.
+/// </summary>
+/// <param name="time_zone_config">
+/// Use this to specify the time display of log text.
+/// such as: "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"
+/// </param>
+/// <returns>the decoded snapshot buffer</returns>
+bq::string take_snapshot(const bq::string& time_zone_config) const;
 ```
-By default, the Appenders in the configuration are active, but a mechanism is provided here to temporarily disable and re-enable them. 
-  
-#### Snapshot Output
+
+Certain scenarios (such as anomaly detection, key event reporting) require obtaining a snapshot of logs for "the recent period", which can be achieved through this function:
+
+1. Enable `snapshot` in configuration (see [snapshot](#snapshot-configuration) configuration section), and set buffer size, level and category filtering;
+2. Call `take_snapshot()` when a snapshot is needed, then you can obtain the formatted recent log string.
+   The return type in C++ is `bq::string`, which can be implicitly converted to `std::string` or C-style string.
+
+#### Decode binary log files
+
 ```cpp
-    /// <summary>
-    /// Works only when snapshot is configured.
-    /// It will decode the snapshot buffer to text.
-    /// </summary>
-    /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
-    /// <returns>the decoded snapshot buffer</returns>
-    bq::string take_snapshot(bool use_gmt_time) const;
+namespace bq {
+namespace tools {
+
+    // This is a utility class for decoding binary log formats.
+    // To use it, first create a log_decoder object,
+    // then call its decode function to decode.
+    // After each successful call,
+    // you can use get_last_decoded_log_entry() to retrieve the decoded result.
+    // Each call decodes one log entry.
+    struct log_decoder {
+    private:
+        bq::string decode_text_;
+        bq::appender_decode_result result_ = bq::appender_decode_result::success;
+        uint32_t handle_ = 0;
+
+    public:
+        /// <summary>
+        /// Create a log_decoder object, with each log_decoder object corresponding to a binary log file.
+        /// </summary>
+        /// <param name="log_file_path">
+        /// the path of a binary log file, it can be a relative path or absolute path
+        /// </param>
+        /// <param name="priv_key">
+        /// private key generated by "ssh-keygen" to decrypt encrypted log file,
+        /// leave it empty when log file is not encrypted.
+        /// </param>
+        log_decoder(const bq::string& log_file_path, const bq::string& priv_key = "");
+
+        ~log_decoder();
+
+        /// <summary>
+        /// Decode a log entry. Each call of this function will decode only 1 log entry.
+        /// </summary>
+        /// <returns>
+        /// decode result, appender_decode_result::eof means the whole log file was decoded
+        /// </returns>
+        bq::appender_decode_result decode();
+
+        /// <summary>
+        /// get the last decode result
+        /// </summary>
+        bq::appender_decode_result get_last_decode_result() const;
+
+        /// <summary>
+        /// get the last decoded log entry content
+        /// </summary>
+        const bq::string& get_last_decoded_log_entry() const;
+
+        /// <summary>
+        /// Directly decode a log file to a text file.
+        /// </summary>
+        /// <param name="log_file_path"></param>
+        /// <param name="output_file"></param>
+        /// <param name="priv_key">
+        /// private key generated by "ssh-keygen" to decrypt encrypted log file,
+        /// leave it empty when log file is not encrypted.
+        /// </param>
+        /// <returns>success or not</returns>
+        static bool decode_file(const bq::string& log_file_path,
+                                const bq::string& output_file,
+                                const bq::string& priv_key = "");
+    };
+
+} // namespace tools
+} // namespace bq
 ```
-Sometimes, certain special features require outputting the last part of the logs, which can be done using the snapshot feature.
-To enable this feature, you first need to activate the snapshot in the log configuration and set the maximum buffer size, in bytes. Additionally, you need to specify the log levels and categories to be filtered for the snapshot (optional). For detailed configuration, please refer to [Snapshot Configuration](#snapshot).
-When a snapshot is needed, calling take_snapshot() will return the formatted string containing the most recent log entries stored in the snapshot buffer. In C++, the type is `bq::string`, which can be implicitly converted to `std::string`.
 
-#### Decoding Binary Log Files
-```cpp
-namespace bq{
-    namespace tools {
-        //This is a utility class for decoding binary log formats. 
-        //To use it, first create a log_decoder object, 
-        //then call its decode function to decode. 
-        //After each successful call, 
-        //you can use get_last_decoded_log_entry() to retrieve the decoded result. 
-        //Each call decodes one log entry.
-        struct log_decoder
-        {
-        private:
-            bq::string decode_text_;
-            bq::appender_decode_result result_ = bq::appender_decode_result::success;
-            uint32_t handle_ = 0;
-        public:
-            /// <summary>
-            /// Create a log_decoder object, with each log_decoder object corresponding to a binary log file.
-            /// </summary>
-            /// <param name="log_file_path">the path of a binary log file, is can be relative path or absolute path</param>
-            log_decoder(const bq::string& log_file_path);
-            ~log_decoder();
-            /// <summary>
-            /// Decode a log entry. each call of this function will decode only 1 log entry
-            /// </summary>
-            /// <returns>decode result, appender_decode_result::eof means the whole log file was decoded</returns>
-            bq::appender_decode_result decode();
-            /// <summary>
-            /// get the last decode result
-            /// </summary>
-            /// <returns></returns>
-            bq::appender_decode_result get_last_decode_result() const;
-            /// <summary>
-            /// get the last decode log entry content
-            /// </summary>
-            /// <returns></returns>
-            const bq::string& get_last_decoded_log_entry() const;
-        };
-    }
-}
-```
-This is a utility class that can decode log files output by binary-type Appenders at runtime, such as [CompressedFileAppender](#compressedfileappender) and [RawFileAppender](#rawfileappender)。  
-To use it, first create a log_decoder object. Then, each time you call the decode() function, it decodes one log entry in sequence. If the result returned is bq::appender_decode_result::success, you can call get_last_decoded_log_entry() to get the formatted text content of the last decoded log entry.
-If the result is bq::appender_decode_result::eof, it means all logs have been read completely.
-  
-<br><br>
+This tool class is used to decode log files output by binary Appenders (such as [CompressedFileAppender](#compressedfileappender)) at runtime.
 
-## Synchronous and Asynchronous Logging
+- Create `log_decoder` object;
+- Call `decode()` repeatedly, decoding one log per time:
+  - If it returns `bq::appender_decode_result::success`, you can call `get_last_decoded_log_entry()` to get the text;
+  - If it returns `bq::appender_decode_result::eof`, it means decoding has reached the end of the file;
+- If the log has encryption enabled, you need to pass in the private key string when constructing `log_decoder` or calling `decode_file` (see "Log encryption and decryption" later).
 
-BqLog allows you to configure whether a log object is synchronous or asynchronous through the [thread_mode](#logthread_mode) setting. The key differences between these two modes are as follows:
+---
 
-|                 | Synchronous Logging                                                | Asynchronous Logging                                              |
-|-----------------|--------------------------------------------------------------------|-------------------------------------------------------------------|
-|     Behavior    | After calling the logging function, the log is immediately written to the corresponding appender. | After calling the logging function, the log is not immediately written; instead, it is handed off to a worker thread for periodic processing. |
-|     Performance | Low, as the thread writing the log needs to block and wait for the log to be written to the corresponding appender before returning from the logging function. | High, as the thread writing the log does not need to wait for the actual output and can return immediately after logging. |
-| Thread Safety   | High, but it requires that the log parameters are not modified during the execution of the logging function. | High, but it requires that the log parameters are not modified during the execution of the logging function. |
+<a id="synchronous-vs-asynchronous-logging"></a>
 
-### Thread Safety of Asynchronous Logging
+## ⚡ Synchronous vs asynchronous logging
 
-A common misconception about asynchronous logging is that it is less thread-safe, with users concerned that the parameters may be reclaimed by the time the worker thread processes the log. For example:
+BqLog determines whether the log object uses synchronous or asynchronous mode through the configuration item `log.thread_mode`. The differences are as follows:
+
+|                    | **Synchronous Logging**                                                                 | **Asynchronous Logging**                                                                 |
+|:------------------:|------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| **Behavior**    | After calling the log function, the log will be output synchronously to the corresponding Appender immediately, ensuring that this log has been processed when the function returns.                                  | After calling the log function, the log is written to the buffer and processed asynchronously by the worker thread, and the thread writing the log returns quickly.                                |
+| **Performance** | Lower performance, calling thread needs to block waiting for Appender output to complete.                                                              | Higher performance, calling thread does not need to wait for actual output.                                                                 |
+| **Thread Safety** | Thread-safe under the premise that "parameters are not modified during the call"; performance is limited by serial output under multiple threads.                                                | Thread-safe under the premise that "parameters are not modified during the call"; internally improves scalability through high-concurrency ring queue and worker thread scheduling.                       |
+
+### Thread-safety notes for asynchronous logging
+
+Common concern with asynchronous logging is: **When the worker thread actually processes the log, the parameters are already invalid (lifecycle ended)**. For example:
 
 ```cpp
 {
     const char str_array[5] = {'T', 'E', 'S', 'T', '\0'};
     const char* str_ptr = str_array;
-    log_obj.info("This is test param: {}, {}", str_array, str_ptr);
+    log_obj.info("This is test param :{}, {}", str_array, str_ptr);
 }
 ```
 
-In the above example, `str_array` is stored on the stack, and once the scope is exited, its memory is no longer valid. Users might worry that if asynchronous logging is used, by the time the worker thread processes the log, `str_array` and `str_ptr` will be invalid variables.
+`str_array` is a stack variable, and the memory is invalid after leaving the scope.
+The worry is: if the worker thread processes it later, will it read a dangling pointer?
 
-However, such a situation will not occur because BqLog copies all parameter contents into its internal `ring_buffer` during the execution of the `info` function. Once the `info` function returns, the external variables like `str_array` or `str_ptr` are no longer needed. Moreover, the `ring_buffer` will not store a `const char*` pointer address but will always store the entire string.
+**This will NOT happen in BqLog:**
 
-The real potential issue arises in the following scenario:
+- During the call of `info` (or other log functions), BqLog copies all parameter contents completely to the internal ring buffer;
+- Once the log function returns, it means the data required for this log has been safely stored in BqLog's internal cache;
+- Subsequent worker threads only read internal cache and will not access data on the caller's stack.
+
+**The situation that may really cause problems is "parameter content is modified by other threads during the call":**
 
 ```cpp
-static std::string global_str = "hello world";   // This is a global variable modified by multiple threads.
+static std::string global_str = "hello world";   // This is a global variable, multiple threads are modifying it at the same time.
 
 void thread_a()
 {
-    log_obj.info("This is test param: {}", global_str);
+    log_obj.info("This is test param :{}", global_str);
 }
 ```
 
-If the content of `global_str` changes during the execution of the `info` function, it may lead to undefined behavior. BqLog will do its best to prevent a crash, but the correctness of the final output cannot be guaranteed.
-
-<br><br>
-
-## Introduction to Appenders
-An Appender represents the log output target. The concept of Appenders in bqLog is basically the same as in Log4j. Currently, bqLog provides the following types of Appenders:
-### ConsoleAppender
-The output target of this Appender is the console, including Android's ADB and the corresponding console on iOS. The text encoding is UTF-8.
-### TextFileAppender
-This Appender outputs log files directly in UTF-8 text format.
-### CompressedFileAppender
-This Appender outputs log files in a compressed format, which is the `highly recommended format by bqLog`. It has the highest performance among all Appenders and produces the smallest output file. However, the final file needs to be decoded. Decoding can be done at [runtime decoding](#decoding-binary-log-files)，or [offline decoding](#offline-decoding-of-binary-format-appenders)。
-### RawFileAppender
-This Appender outputs the binary log content from memory directly to a file. Its performance is higher than that of TextFileAppender, but it consumes more storage space. The final file needs to be decoded. Decoding can be done at [runtime decoding](#decoding-binary-log-files)，or [offline decoding](#offline-decoding-of-binary-format-appenders)。This Appender is not recommended for use.
-  
-Below is a comprehensive comparison of the various Appenders:
-
-| Name                    | Output Target | Directly Readable | Output Performance | Output Size |
-|-------------------------|---------------|-------------------|--------------------|-------------|
-| ConsoleAppender         | Console       | ✔                 | Low                | -           |
-| TextFileAppender        | File          | ✔                 | Low                | Large       |
-| CompressedFileAppender  | File          | ✘                 | High               | Small       |
-| RawFileAppender         | File          | ✘                 | Medium             | Large       |
-
-
-<br><br>
-
-## Configuration Instructions
-
-Configuration refers to the config string in the create_log and reset_config functions. This string uses the properties file format and supports # comments (but remember to start a new line with # for comments).
-
-### 1. Complete Example
-Below is a complete example:
-```ini
-# This configuration sets up a log object with a total of 5 Appenders, including two TextFileAppenders that output to two different files.
-
-# The first Appender is named appender_0 and its type is ConsoleAppender
-appenders_config.appender_0.type=console
-# The time zone for appender_0 is the system's local time
-appenders_config.appender_0.time_zone=default local time
-# appender_0 will output all 6 levels of logs (note: there should be no spaces between log levels, or it will fail to parse)
-appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal]
-
-# The second Appender is named appender_1 and its type is TextFileAppender
-appenders_config.appender_1.type=text_file
-# The time zone for appender_1 is GMT, which is UTC+0
-appenders_config.appender_1.time_zone=gmt
-# appender_1 only outputs logs of level info and above, others will be ignored
-appenders_config.appender_1.levels=[info,warning,error,fatal]
-# The path for appender_1 will be in the relative bqLog directory of the program, with filenames starting with normal, followed by the date and .log extension
-# On iOS, it will be saved in /var/mobile/Containers/Data/Application/[APP]/Library/Caches/bqLog
-# On Android, it will be saved in [android.content.Context.getExternalFilesDir()]/bqLog
-appenders_config.appender_1.file_name=bqLog/normal
-# The maximum file size is 10,000,000 bytes; if exceeded, a new file will be created
-appenders_config.appender_1.max_file_size=10000000
-# Files older than ten days will be cleaned up
-appenders_config.appender_1.expire_time_days=10
-# If the total size of output exceeds 100,000,000 bytes, files will be cleaned up starting from the oldest
-appenders_config.appender_1.capacity_limit=100000000
-
-# The third Appender is named appender_2 and its type is TextFileAppender
-appenders_config.appender_2.type=text_file
-# appender_2 will output all levels of logs
-appenders_config.appender_2.levels=[all]
-# The path for appender_2 will be in the relative bqLog directory of the program, with filenames starting with new_normal, followed by the date and .log extension
-appenders_config.appender_2.file_name=bqLog/new_normal
-# This option is only effective on Android, saving logs in the internal storage directory, which is [android.content.Context.getFilesDir()]/bqLog
-appenders_config.appender_2.is_in_sandbox=true
-
-# The fourth Appender is named appender_3 and its type is CompressedFileAppender
-appenders_config.appender_3.type=compressed_file
-# appender_3 will output all levels of logs
-appenders_config.appender_3.levels=[all]
-# The path for appender_3 will be in the absolute path ~/bqLog directory of the program, with filenames starting with compress_log, followed by the date and .logcompr extension
-appenders_config.appender_3.file_name=~/bqLog/compress_log
-
-# The fifth Appender is named appender_4 and its type is RawFileAppender
-appenders_config.appender_4.type=raw_file
-# appender_4 is disabled by default and can be enabled later using set_appenders_enable
-appenders_config.appender_4.enable=false
-# appender_4 will output all levels of logs
-appenders_config.appender_4.levels=[all]
-# The path for appender_4 will be in the relative bqLog directory of the program, with filenames starting with raw_log, followed by the date and .lograw extension
-appenders_config.appender_4.file_name=bqLog/raw_log
-# Logs will only be processed if their category starts with ModuleA, ModuleB.SystemC, otherwise all will be ignored (the concept of Category is explained in detail in the advanced usage topics later)
-appenders_config.appender_4.categories_mask=[ModuleA,ModuleB.SystemC]
-
-# The total asynchronous buffer size is 65535 bytes; the specific meaning is explained later
-log.buffer_size=65535
-# The reliability level of the log is normal; the specific meaning is explained later
-log.reliable_level=normal
-# Logs will only be processed if their category matches the following three wildcards, otherwise all will be ignored (the concept of Category is explained in detail in the advanced usage topics later)
-log.categories_mask=[*default,ModuleA,ModuleB.SystemC]
-# This is an asynchronous log; asynchronous logs are the highest performing and recommended log type
-log.thread_mode=async
-# If the log level is error or fatal, include call stack information with each log entry
-log.print_stack_levels=[error,fatal]
-
-# Enable snapshot functionality, snapshot cache size is 64K
-snapshot.buffer_size=65536
-# Only logs with info and error levels will be recorded in the snapshot
-snapshot.levels=[info,error]
-# Only logs whose category starts with ModuleA, ModuleB.SystemC will be recorded in the snapshot, otherwise they will be ignored
-snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
-```
-
-
-### 2. Detailed Explanation
-
-### appenders_config
-The `appenders_config` is a set of configurations for Appenders. The first parameter following `appenders_config` is the name of the Appender, and all Appenders with the same name share the same configuration.
-
-| Name               | Required | Configurable Values                                          | Default       | Applicable to ConsoleAppender | Applicable to TextFileAppender | Applicable to CompressedFileAppender | Applicable to RawFileAppender |
-|--------------------|----------|-------------------------------------------------------------|---------------|------------------------------|-------------------------------|-------------------------------------|------------------------------|
-| type               | ✔        | console, text_file, compressed_file, raw_file               |               | ✔                            | ✔                             | ✔                                   | ✔                            |
-| enable             | ✘        | Whether the Appender is enabled by default                  | true          | ✔                            | ✔                             | ✔                                   | ✔                            |
-| levels             | ✘        | Array of log levels                                         | [all]         | ✔                            | ✔                             | ✔                                   | ✔                            |
-| time_zone          | ✘        | gmt or any other string                                     | Local time    | ✔                            | ✔                             | ✔                                   | ✔                            |
-| file_name          | ✔        | Relative or absolute path                                   |               | ✘                            | ✔                             | ✔                                   | ✔                            |
-| is_in_sandbox      | ✘        | true, false                                                 | false         | ✘                            | ✔                             | ✔                                   | ✔                            |
-| max_file_size      | ✘        | Positive integer or 0                                       | 0             | ✘                            | ✔                             | ✔                                   | ✔                            |
-| expire_time_days   | ✘        | Positive integer or 0                                       | 0             | ✘                            | ✔                             | ✔                                   | ✔                            |
-| capacity_limit     | ✘        | Positive integer or 0                                       | 0             | ✘                            | ✔                             | ✔                                   | ✔                            |
-| categories_mask    | ✘        | Array of strings enclosed in []                             | Empty         | ✔                            | ✔                             | ✔                                   | ✔                            |
-
-#### appenders_config.xxx.type
-Specifies the type of the Appender.
-- `console`: Represents [ConsoleAppender](#consoleappender)
-- `text_file`: Represents [TextFileAppender](#textfileappender)
-- `compressed_file`: Represents [CompressedFileAppender](#compressedfileappender)
-- `raw_file`: Represents [RawFileAppender](#rawfileappender)
-
-#### appenders_config.xxx.enable
-Defaults to `true`. If set to `false`, the Appender will be disabled by default and can be enabled later using `set_appenders_enable`.
-
-#### appenders_config.xxx.levels
-An array enclosed in `[]`, containing any combination of `verbose`, `debug`, `info`, `warning`, `error`, `fatal`, or `[all]` to accept all levels. **Note: Do not include spaces between levels, or it will fail to parse.**
-
-#### appenders_config.xxx.time_zone
-Specifies the time zone of the logs. `gmt` represents Greenwich Mean Time (UTC+0), and any other string or leaving it empty will use the local time zone. The time zone affects two things:
-- The timestamp of formatted text logs (applicable to ConsoleAppender and TextFileAppender)
-- A new log file will be created when midnight is crossed in the specified time zone (applicable to TextFileAppender, CompressedFileAppender, and RawFileAppender).
-
-#### appenders_config.xxx.file_name
-The path and filename prefix for saving files. The path can be absolute (not recommended for Android and iOS) or relative. The final output filename will be this path and name, followed by the date, file number, and the Appender's extension.
-
-#### appenders_config.xxx.is_in_sandbox
-Only meaningful on Android:
-- `true`: Files are stored in the Internal Storage directory (android.content.Context.getFilesDir()). If not available, they are stored in the External Storage directory (android.content.Context.getExternalFilesDir()). If that is also not available, they are stored in the Cache directory (android.content.Context.getCacheDir()).
-- `false`: Files are stored in the External Storage directory by default. If not available, they are stored in the Internal Storage directory. If that is also not available, they are stored in the Cache directory.
-
-#### appenders_config.xxx.max_file_size
-The maximum file size in bytes. When the saved file exceeds this size, a new log file is created, with file numbers incrementing sequentially. `0` disables this feature.
-
-#### appenders_config.xxx.expire_time_days
-The maximum number of days to keep files. Files older than this will be automatically deleted. `0` disables this feature.
-
-#### appenders_config.xxx.capacity_limit
-The maximum total size of files output by this Appender in the output directory. If this limit is exceeded, files are deleted starting from the oldest until the total size is within the limit. `0` disables this feature.
-
-#### appenders_config.xxx.categories_mask
-If the log object is a [Log object that supports categories](#2-log-objects-with-category-support), this can be used to filter a tree-like list of categories. When the array is not empty, this feature is active. For example, `[*default,ModuleA,ModuleB.SystemC]` means that logs with the default category (logs without a category parameter) and logs under the categories ModuleA and ModuleB.SystemC will be processed by this Appender. Other categories will be ignored. The effective range of an Appender's categories_mask is the intersection of the Appender's categories_mask and the global [log.categories_mask](#logcategories_mask) on the log object. If your log is in asynchronous mode (see [log.thread_mode](#logthread_mode)), this option will have a slight delay in effect.
-
-### log
-Log configuration applies to the entire log object. The following configurations are available:
-
-| Name              | Required | Configurable Values               | Default  | Can be modified in reset_config |
-|-------------------|----------|-----------------------------------|----------|---------------------------------|
-| thread_mode       | ✘        | sync, async, independent          | async    | ✘                               |
-| buffer_size       | ✘        | 32-bit positive integer           | 65536    | ✘                               |
-| reliable_level    | ✘        | low, normal, high                 | normal   | ✔                               |
-| categories_mask   | ✘        | Array of strings enclosed in []   | Empty    | ✔                               |
-| print_stack_levels| ✘        | Array of log levels               | Empty    | ✔                               |
-
-#### log.thread_mode
-The threading mode of the log. When writing logs, the log data is first written to a log buffer. This setting specifies which thread processes the buffered data.
-- `sync`: Data is processed synchronously in the current logging thread. When you call a logging function like `info`, the log data is processed when the function returns.
-- `async` (default): The logging thread returns immediately, and the buffered log data is processed by a worker thread. The entire process has only one worker thread responsible for handling all asynchronous logs.
-- `independent`: The logging thread returns immediately, and a dedicated thread processes the log data for this log object. This option can be used to offload the worker thread's burden when there are many log objects with large log volumes.
-
-#### log.buffer_size
-The size of the log buffer in bytes.
-
-#### log.reliable_level
-Mainly for asynchronous log mode. Can be set to:
-Here is the English translation for your GitHub README:
+If other threads modify the content of `global_str` during the process of `info` function processing input parameters to buffer writing, it will cause undefined output content (although BqLog will try to ensure no crash).
+The conclusion is: **Please ensure that the parameters passed in a single log call are not modified during the call**, regardless of synchronous/asynchronous.
 
 ---
 
-### Asynchronous Logging Modes:
-Mainly for asynchronous log mode. Can be set to:
-- **low**: If the log buffer is full, in asynchronous mode, the newly written log data will be discarded directly, ensuring the program is not blocked.
-- **normal**: If the log buffer is full, in asynchronous mode, the logging thread will block and wait until there is enough space in the buffer before writing the log and returning. (The worker thread will periodically process the buffer. If the buffer fills up quickly, the worker thread will reduce its sleep time and process the buffer faster, so there’s no need to worry about waiting too long.) This mode also has the ability to handle unfinished logs after an abnormal program exit (crash, power failure, process kill, etc.). Upon the next program restart, it will attempt to process the remaining log data. This feature relies on mechanisms similar to `mmap` and is supported on Windows, Linux, Android, macOS, iOS, etc., but its success rate may vary depending on the operating system's implementation.
-- **high**: In addition to the capabilities of the `normal` mode, this mode offers a higher chance of ensuring that data is written to disk in real-time. However, it comes with a significant performance cost, approaching that of synchronous logging.
+<a id="appender-overview"></a>
 
-#### log.categories_mask
-The logic is the same as the [appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask) on the Appender, but it applies to the entire log object. If your log is in asynchronous mode (see [log.thread_mode](#logthread_mode)), this option will have a slight delay in effect.
+## 📂 Appender overview
 
-#### log.print_stack_levels
-The configuration method is the same as in [appenders_config.levels](#appenders_configxxxlevels). For each log entry that matches the level, the call stack information will be appended. However, please note that this feature should ideally only be used in a Debug environment. In a production environment, enable it only for error and fatal logs because it will significantly degrade performance and cause garbage collection (GC) in Java and C#. Currently, stack information is clearly and friendly displayed on `Java`, `C#`, and `Win64`. On other platforms, it is relatively difficult to read, providing only address information without symbol tables.
-<br><br>
+Appender represents the final output destination of the log, and its concept is basically consistent with the Appender in Log4j.
+Currently BqLog provides the following types of Appenders:
 
-### Snapshot
-The snapshot configuration is for setting up log snapshots. In some special scenarios, such as when an exception is detected, it may be necessary to capture the last portion of a log object for reporting. This is where the snapshot feature comes in handy.
+### ConsoleAppender
 
-The following configurations are available:
-| Name               | Required | Configurable Values             | Default Value | Modifiable in reset_config |
-|--------------------|---------|----------------------------------|---------------|----------------------------|
-| buffer_size        | No      | 32-bit positive integer          | 0             | Yes                        |
-| levels             | No      | Array of log levels              | all           | Yes                        |
-| categories_mask    | No      | Array of strings enclosed in []  | Empty         | Yes                        |
+- Output destination: Console / Terminal;
+- Output to ADB Logcat on Android;
+- Output encoding: UTF-8 text.
 
-#### snapshot.buffer_size
-The size of the snapshot cache. If set to 0 or not configured, the snapshot functionality will be disabled.
+### TextFileAppender
 
-#### snapshot.levels
-Only logs with log levels configured in this array will be recorded in the snapshot. If not configured, the default is "all", which differs from the previous behavior.
+- Output log files directly in UTF-8 text format;
+- Log files are human-readable, suitable for quick troubleshooting.
 
-#### snapshot.categories_mask
-The logic is the same as [appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask). Only logs with matching categories will have a chance to be captured in the snapshot. If this option is not configured, logs from all categories will be recorded.
-<br><br>
+### CompressedFileAppender
 
+- Output log files in high-performance compressed format;
+- It is **BqLog's recommended default file output format**;
+- Highest performance among all Appenders, smallest output file size;
+- Reading requires BqLog's built-in decoding tool or `bq::tools::log_decoder`;
+- Supports encryption (based on RSA2048 + AES256 hybrid encryption).
 
-## Offline Decoding of Binary Format Appenders
-Outside of program execution, bqLog also provides precompiled binary file decoding command-line tools. The directory paths are as follows:
+Comprehensive comparison is as follows:
 
-| Platform | Path              | Executable Name                 |
-|----------|-------------------|---------------------------------|
-| mac      | /bin/tools/mac    | BqLog_LogDecoder                |
-| windows  | /bin/tools/win64  | BqLog_LogDecoder.exe            |
-| linux    | /bin/tools/linux  | BqLog_LogDecoder                |
-| unix     | /build/tools      | Need to manually build binaries |
+| Name                     | Output Destination | Plaintext Readable | Output Performance | Output Size | Encryption Support |
+|--------------------------|---------|-------------|----------|----------|-------------|
+| ConsoleAppender          | Console   | ✔           | Low       | -        | ✘           |
+| TextFileAppender         | File     | ✔           | Low       | Large       | ✘           |
+| CompressedFileAppender   | File     | ✘           | High       | Small       | ✔           |
+
+> Note: "Encryption" mentioned in the article refers only to CompressedFileAppender supporting hybrid encryption format using "RSA2048 public key + AES256 symmetric key".
+> The encryption format is based on OpenSSH style `ssh-rsa` public key text (PEM), and the private key needs to be generated by `ssh-keygen`, see [Log encryption and decryption](#7-log-encryption-and-decryption).
+
+---
+
+<a id="configuration"></a>
+
+## ⚙️ Configuration
+
+"Configuration" refers to the `config` string in `create_log` and `reset_config` functions.
+This string uses **properties file format**, supports `#` single-line comments (must be on a separate line and start with `#`).
+
+### 1. Full example
+
+```ini
+# This config configures 5 Appenders for the log object, including two TextFileAppenders outputting to different files.
+
+# The first Appender is named appender_0, type is ConsoleAppender
+appenders_config.appender_0.type=console
+# appender_0 uses system local time
+appenders_config.appender_0.time_zone=localtime
+# appender_0 will output logs of all 6 levels (Note: do not have spaces between different log levels, otherwise parsing fails)
+appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal]
+
+# The second Appender is named appender_1, type is TextFileAppender
+appenders_config.appender_1.type=text_file
+# Use GMT time (UTC0)
+appenders_config.appender_1.time_zone=gmt
+# Only output logs of info and above four levels, other levels will be ignored
+appenders_config.appender_1.levels=[info,warning,error,fatal]
+# base_dir_type determines the base directory of relative path, here is 1:
+# iOS: /var/mobile/Containers/Data/Application/[APP]/Documents
+# Android: [android.content.Context.getExternalFilesDir()]
+# HarmonyOS: /data/storage/el2/base/cache
+# Other platforms: current working directory
+appenders_config.appender_1.base_dir_type=1
+# appender_1 save path is relative path bqLog/normal, using rolling file:
+# Filename like normal_YYYYMMDD_xxx.log, see "Path and Rolling Strategy" later.
+appenders_config.appender_1.file_name=bqLog/normal
+# Maximum 10,000,000 bytes per file, new file if exceeded
+appenders_config.appender_1.max_file_size=10000000
+# Old files older than 10 days will be automatically cleaned
+appenders_config.appender_1.expire_time_days=10
+# When total size of all files of this Appender in the same output directory exceeds 100,000,000 bytes,
+# clean from oldest files by date
+appenders_config.appender_1.capacity_limit=100000000
+
+# The third Appender is named appender_2, type is TextFileAppender
+appenders_config.appender_2.type=text_file
+# Output all levels logs
+appenders_config.appender_2.levels=[all]
+# base_dir_type is 0:
+# iOS: /var/mobile/Containers/Data/Application/[APP]/Library/Application Support
+# Android: [android.content.Context.getFilesDir()]
+# HarmonyOS: /data/storage/el2/base/files
+# Other platforms: current working directory
+appenders_config.appender_2.base_dir_type=0
+# Path is bqLog/new_normal, filename like new_normal_YYYYMMDD_xxx.log
+appenders_config.appender_2.file_name=bqLog/new_normal
+
+# The fourth Appender is named appender_3, type is CompressedFileAppender
+appenders_config.appender_3.type=compressed_file
+# Output all levels logs
+appenders_config.appender_3.levels=[all]
+# Save path is ~/bqLog/compress_log, filename like compress_log_YYYYMMDD_xxx.logcompr
+appenders_config.appender_3.file_name=~/bqLog/compress_log
+# appender_3 output content will use RSA2048 public key below for hybrid encryption
+appenders_config.appender_3.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+Fo........rest of your rsa2048 public key...... user@hostname
+
+# The fifth Appender is named appender_4, type is ConsoleAppender
+appenders_config.appender_4.type=console
+# appender_4 is disabled by default, can be enabled via set_appender_enable later
+appenders_config.appender_4.enable=false
+# Output all levels logs
+appenders_config.appender_4.levels=[all]
+# Output logs only when Category starts with ModuleA or ModuleB.SystemC, others ignored
+# (Concept of Category see "Log objects with Category support" later)
+appenders_config.appender_4.categories_mask=[ModuleA,ModuleB.SystemC]
+
+# Overall asynchronous buffer size is 65535 bytes, see meaning later
+log.buffer_size=65535
+# Enable log Crash recovery function, see "Data protection on abnormal exit"
+log.recovery=true
+# Process logs only when log Category matches any wildcard below, others ignored
+log.categories_mask=[*default,ModuleA,ModuleB.SystemC]
+# Use asynchronous log mode (Recommended)
+log.thread_mode=async
+# Attach call stack after each log when log level is error or fatal
+log.print_stack_levels=[error,fatal]
+
+# Enable snapshot function, snapshot buffer size is 64KB
+snapshot.buffer_size=65536
+# Only record logs of info and error levels to snapshot
+snapshot.levels=[info,error]
+# Record to snapshot only when Category is ModuleA.SystemA.ClassA or starts with ModuleB
+snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
+```
+
+### 2. Detailed explanation
+
+#### `appenders_config`
+
+`appenders_config` is a set of configurations about Appender.
+`<name>` in `appenders_config.<name>.xxx` is the Appender name, configurations with same `<name>` act on the same Appender instance.
+
+| Name                         | Mandatory | Configurable Values                                | Default Value             | ConsoleAppender | TextFileAppender | CompressedFileAppender |
+|------------------------------|---------|-----------------------------------------|--------------------|-----------------|------------------|------------------------|
+| `type`                       | ✔       | `console` / `text_file` / `compressed_file` / `raw_file` | -                  | ✔               | ✔                | ✔ (Encryption requires this type)      |
+| `enable`                     | ✘       | `true` / `false`                        | `true`             | ✔               | ✔                | ✔                      |
+| `levels`                     | ✘       | Log level array (`[verbose,...]` or `[all]`) | `[all]`            | ✔               | ✔                | ✔                      |
+| `time_zone`                  | ✘       | `gmt` / `localtime` / `Z` / `UTC` / `utc+8` / `utc-2` / `utc+11:30` etc. | `localtime` | ✔               | ✔                | ✔ (Affects rolling date)      |
+| `file_name`                  | ✔ (File type) | Relative or absolute path (no extension)                | -                  | ✘               | ✔                | ✔                      |
+| `base_dir_type`             | ✘       | `0` / `1`                               | `0`                | ✘               | ✔                | ✔                      |
+| `max_file_size`             | ✘       | Positive integer or `0`                            | `0` (Unlimited)       | ✘               | ✔                | ✔                      |
+| `expire_time_seconds`       | ✘       | Positive integer or `0`                            | `0` (No clean)       | ✘               | ✔                | ✔                      |
+| `expire_time_days`          | ✘       | Positive integer or `0`                            | `0` (No clean)       | ✘               | ✔                | ✔                      |
+| `capacity_limit`            | ✘       | Positive integer or `0`                            | `0` (Unlimited)       | ✘               | ✔                | ✔                      |
+| `categories_mask`           | ✘       | String array (`[]`)                       | Empty (No filtering)        | ✔               | ✔                | ✔                      |
+| `always_create_new_file`    | ✘       | `true` / `false`                        | `false`            | ✘               | ✔                | ✔                      |
+| `enable_rolling_log_file`    | ✘       | `true` / `false`                        | `true`            | ✘               | ✔                | ✔                      |
+| `pub_key`                   | ✘       | RSA2048 Public Key (OpenSSH `ssh-rsa` text)  | Empty (No encryption)        | ✘               | ✘                | ✔ (Enable hybrid encryption)      |
+
+##### (1) `appenders_config.xxx.type`
+
+Specify Appender type:
+
+- `console` → [ConsoleAppender](#consoleappender)
+- `text_file` → [TextFileAppender](#textfileappender)
+- `compressed_file` → [CompressedFileAppender](#compressedfileappender)
+
+##### (2) `appenders_config.xxx.enable`
+
+Whether to enable this Appender by default, default is `true`.
+If `false`, Appenders will be created during initialization but not actually output, can be switched at runtime via `set_appender_enable`.
+
+##### (3) `appenders_config.xxx.levels`
+
+Array wrapped in `[]`, content is:
+
+- Arbitrary combination: `[verbose,debug,info,warning,error,fatal]`
+- Or special value `[all]`, indicating all levels are output.
+
+##### (4) `appenders_config.xxx.time_zone`
+
+Specify timezone used for timestamp formatting, also affects "date boundary" for rolling files by date:
+
+- `"gmt"`, `"Z"`, `"UTC"`: Use UTC0 (Greenwich Mean Time);
+- `"localtime"`: Use system local time;
+- `"utc+8"`, `"utc-2"`, `"utc+11:30"` etc.: Explicitly specify offset.
+
+Effect:
+
+- ConsoleAppender / TextFileAppender: Determine display of time field in log text;
+- TextFileAppender / CompressedFileAppender / RawFileAppender: Determine cut-off point for file rolling by date (0 o'clock every day).
+
+##### (5) `appenders_config.xxx.base_dir_type`
+
+Specify base directory when `file_name` is relative path:
+
+- `0`
+  - Android: Try in order
+    - `android.content.Context.getFilesDir()`
+    - `android.content.Context.getExternalFilesDir()`
+    - `android.content.Context.getCacheDir()`
+  - iOS: `/var/mobile/Containers/Data/Application/[APP]/Library/Application Support`
+  - HarmonyOS: `/data/storage/el2/base/files`
+  - Other platforms: Process current working directory
+- `1`
+  - Android: Try in order
+    - `android.content.Context.getExternalFilesDir()`
+    - `android.content.Context.getFilesDir()`
+    - `android.content.Context.getCacheDir()`
+  - iOS: `/var/mobile/Containers/Data/Application/[APP]/Documents`
+  - HarmonyOS: `/data/storage/el2/base/cache`
+  - Other platforms: Process current working directory
+
+##### (6) `appenders_config.xxx.file_name`
+
+Specify path and filename prefix of log file, example:
+
+```ini
+appenders_config.appender_3.file_name=~/bqLog/compress_log
+```
+
+Final actual filename will be auto-completed by BqLog with date and rolling number, for example:
+
+- `compress_log_20250101_0001.logcompr` (CompressedFileAppender)
+- `normal_20250101_0001.log` (TextFileAppender)
+
+If it is relative path, it is based on directory corresponding to `base_dir_type`.
+
+##### Brief description of other fields
+
+- `max_file_size`: Max bytes per single file, new file created if exceeded; `0` means not split by size.
+- `expire_time_seconds`: Clean up expired files by seconds; `0` disables this function.
+- `expire_time_days`: Clean up expired files by days; `0` disables this function.
+- `capacity_limit`: Limit total size of files output by this Appender, delete from oldest files by time when exceeded.
+- `categories_mask`: Output logs only when log Category matches prefix in this array (see [Log objects with Category support](#2-log-objects-with-category-support)).
+- `always_create_new_file`: When `true`, create new file every time process restarts even within same day; default `false` is append write.
+- `enable_rolling_log_file`: When `true` (default), enable rolling file function by data.
+- - `pub_key`: Provide encryption public key for CompressedFileAppender, string content should be completely copied from `.pub` file generated by `ssh-keygen`, and start with `ssh-rsa `. Details see [Log encryption and decryption](#6-log-encryption-and-decryption).
+
+---
+
+### `log` Configuration
+
+`log.xxx` configuration acts on the entire Log object.
+
+| Name                                      | Mandatory | Configurable Values                               | Default Value                                                         | Modifiable via `reset_config` |
+|-------------------------------------------|---------|----------------------------------------|----------------------------------------------------------------|--------------------------------|
+| `log.thread_mode`                         | ✘       | `sync` / `async` / `independent`       | `async`                                                        | ✘                              |
+| `log.buffer_size`                         | ✘       | 32-bit Positive Integer                            | Desktop/Server: `65536`; Mobile: `32768`                         | ✘                              |
+| `log.recovery`                            | ✘       | `true` / `false`                       | `false`                                                        | ✘                              |
+| `log.categories_mask`                     | ✘       | String array (`[]`)                      | Empty (No filtering)                                                   | ✔                              |
+| `log.print_stack_levels`                  | ✘       | Log level array                           | Empty (No call stack printing)                                             | ✔                              |
+| `log.buffer_policy_when_full`             | ✘       | `discard` / `block` / `expand`         | `block`                                                        | ✘                              |
+| `log.high_perform_mode_freq_threshold_per_second` | ✘ | 64-bit Positive Integer                            | `1000`                                                         | ✘                              |
+
+#### `log.thread_mode`
+
+Determines which thread processes data in buffer:
+
+- `sync`: Synchronous log mode. The thread writing logs is directly responsible for processing and outputting logs, output is completed when call ends; (Low performance, not recommended)
+- `async` (Default): Asynchronous mode. Thread writing logs only writes to buffer, global worker thread uniformly handles output of all asynchronous log objects;
+- `independent`: Independent asynchronous mode. Create a dedicated worker thread for this Log object alone. Suitable for scenarios where single Log write volume is huge and complete decoupling from other Logs is desired.
+
+#### `log.buffer_size`
+
+Log buffer size (bytes).
+Larger buffer can withstand larger burst write peaks, but memory usage will also increase.
+
+#### `log.recovery`
+
+- `true`
+  When asynchronous log (`log.thread_mode` is `async` or `independent`) encounters abnormal program exit, data in buffer that has not been flushed to disk will be rewritten to log file after next startup.
+- `false`
+  Log data in buffer will be lost when process exits abnormally and `force_flush()` is not called.
+
+Detailed behavior see [Data protection on abnormal exit](#3-data-protection-on-abnormal-exit).
+
+#### `log.categories_mask`
+
+Behavior consistent with `appenders_config.xxx.categories_mask`, but scope is entire Log object.
+
+- For synchronous logs: Filtering is done in calling thread;
+- For asynchronous logs: Filtering is done when writing to buffer, reducing unnecessary data entry/exit.
+
+See [Log objects with Category support](#2-log-objects-with-category-support).
+
+#### `log.print_stack_levels`
+
+Configuration method similar to `appenders_config.xxx.levels`, used to specify which log levels need to automatically attach call stack. For example:
+
+```ini
+log.print_stack_levels=[error,fatal]
+```
+
+Recommended to enable only in Debug / Test environment to avoid significant impact on online performance.
+
+#### `log.buffer_policy_when_full`
+
+Behavior when buffer is full:
+
+- `discard`: Discard newly written logs until buffer has enough space;
+- `block` (Recommended Default): Thread writing logs will block waiting for space in buffer;
+- `expand` (Not Recommended): Buffer will dynamically expand to twice original size until writable.
+  May significantly increase memory usage, although BqLog reduces expansion frequency through good thread scheduling, it is still recommended to use with caution.
+
+#### `log.high_perform_mode_freq_threshold_per_second`
+
+This configuration item is used to control "High Performance Mode" trigger threshold:
+
+- When number of logs recorded by a single thread in one second exceeds this value, the thread will automatically enter high performance mode;
+- Under high performance mode, internal resources more suitable for high frequency writing will be allocated for this thread;
+- When writing frequency drops, it will automatically exit high performance mode and release related resources.
+
+Default value is `1000` (entries/second).
+Configuring as `0` means disabling this function.
+
+To reduce memory fragmentation, physical memory allocation is usually performed in batches of "several cache lines" as a group (16 for desktop platforms, usually 2 for high-end mobile platforms). Therefore, even if only one thread enters high performance mode, it will occupy extra space of one group of caches.
+
+---
+
+### `snapshot` Configuration
+
+`snapshot.xxx` is used to configure log snapshot function of this Log object.
+Applicable to: Need to report "recent period" logs of this Log after detecting anomaly.
+
+| Name                   | Mandatory | Configurable Values       | Default Value | Modifiable via `reset_config` |
+|------------------------|---------|----------------|--------|--------------------------------|
+| `snapshot.buffer_size` | ✘       | 32-bit Positive Integer    | `0`    | ✔                              |
+| `snapshot.levels`      | ✘       | Log level array   | `[all]`| ✔                              |
+| `snapshot.categories_mask` | ✘   | String array     | Empty     | ✔                              |
+
+- `snapshot.buffer_size`: Snapshot buffer size (bytes), snapshot function disabled when `0` or not configured;
+- `snapshot.levels`: Only levels in configuration will be written to snapshot; defaults to `[all]` if not configured (slightly different from `levels` default behavior above);
+- `snapshot.categories_mask`: Behavior consistent with `appenders_config.xxx.categories_mask`, only matching Category will be written to snapshot; filter all Categories if not configured.
+
+---
+
+<a id="offline-decoder-for-binary-appenders"></a>
+
+## 🔍 Offline decoder for binary Appenders
+
+Outside program, BqLog provides precompiled command line tools for decoding compressed binary log files.
+Download tool package `{os}_{arch}_tools_{version}` corresponding to OS and architecture from Releases, unzip to find:
+
+- `BqLog_LogDecoder`
 
 Usage:
+
 ```bash
-./BqLog_LogDecoder <file_to_decode> [output_file]
-```
-If the output file path is not provided, the decoded text will be printed directly in the current command-line window.  （**standard output stream**)
-**Note: Binary files from different versions of bqLog may not be compatible.**
-
-<br><br>
-
-## Build Instructions
-For users who need to make modifications and compile:
-
-All build scripts for BqLog are located in the /build directory and are categorized as follows:
-```
-/build  
-├── demo    // Demo builds  
-├── lib     // Native static and dynamic library builds  
-├── test    // Test project builds  
-├── tools   // Tools project builds  
-└── wrapper // Wrappers projects for Java and C#  
+./BqLog_LogDecoder FileToDecode [-o OutputFile] [-k PrivateKeyFile]
 ```
 
-### 1. Library Build
-The scripts for building libraries on different platforms are located here. Before running them, set the following environment variables (depending on your build environment, these may be necessary):
-- `ANDROID_NDK_ROOT`: Path to the Android NDK, required for building Android libraries.
-- `VS_PATH`: Path to Visual Studio, which must include the "devenv.com" executable (needed for Windows libraries).
-- `JAVA_HOME`: Path to the JDK, required for almost all platforms (if you do not need the Java Wrapper, you can remove the -DJAVA_SUPPORT=ON configuration from the relevant scripts).
+- When `-o` is not specified, decoding result is output directly to standard output;
+- If log file is encrypted format, private key file path needs to be specified via `-k` (see [Log encryption and decryption](#6-log-encryption-and-decryption));
+- **Note: Binary format may be incompatible between different versions of BqLog**, please use matching version of decoder.
 
-### 2. Demo Build and Run
-For C# and Java demos, you need to place the relevant platform's dynamic libraries in a path that the program can load.
+---
 
-### 3. Automated Test Run Instructions
-The test cases have scripts for generating the project and corresponding scripts for direct generation and execution.
+<a id="build"></a>
 
-### 4. Benchmark Run Instructions
-Benchmark has scripts for generating the project and corresponding scripts for direct generation and execution.
+## 🛠️ Build
 
-<br><br>
+For users who need to modify and compile BqLog themselves, all build scripts are located in `/build` directory:
 
-## Advanced Usage Topics
+```text
+/build
+├── demo       # Demo Build
+├── lib        # Native Static Library and Dynamic Library Build
+├── test       # Test Project Build
+├── tools      # Tools Project Build (Including LogDecoder, CategoryLogGenerator, etc.)
+├── wrapper    # Language Wrapper Projects (Java / C# etc.)
+├── benchmark  # Benchmark Project Build
+└── plugin     # Game Engine Plugin Build (Unity / Tuanjie / Unreal)
+```
 
-### 1. No Heap Allocation
+### 1. Library build
 
-In runtime environments like Java and C#, typical logging libraries may generate small heap allocations with each log entry, eventually leading to garbage collection (GC) and performance degradation. BqLog minimizes this issue in both C# and Java. Heap allocations generally come from two sources:
-- **Internal object creation within functions**  
-  Typical functions may create objects and process strings, but such operations are absent in BqLog.
-- **Boxing and unboxing operations**  
-  These operations occur when passing primitive type parameters (like int, float) for log formatting. In BqLog's C# Wrapper, there are no boxing and unboxing operations if the number of parameters is 12 or fewer; only when exceeding this number will such operations occur. In BqLog's Java Wrapper, there is no 12-parameter limit, but you need to use specific code to avoid boxing and unboxing, for example:
-  ```java
-  // Java
-  // Using bq.utils.param.no_boxing to wrap the boolean variable false avoids boxing and unboxing,
-  // whereas passing the primitive type parameter 5.3245f directly causes boxing, leading to GC.
-  import static bq.utils.param.no_boxing;
-  my_demo_log.info(my_demo_log.cat.node_2.node_5, "Demo Log Test Log, {}, {}", no_boxing(false), 5.3245f);
-  ```
+Build scripts for different platforms are located under `/build/lib`. Please ensure necessary environment variables are set before building:
 
-### 2. Log Objects with Category Support
+- `ANDROID_NDK_ROOT`: Android NDK path (Required for compiling Android library);
+- `JAVA_HOME`: JDK path (Most scripts enable Java Wrapper by default, if you don't need it, you can remove `-DJAVA_SUPPORT=ON` in CMake or script yourself).
 
-#### Category Logging Concept and Usage
+### 2. Demo build and run
 
-In the Unreal Engine, logs have a Category concept, but it's not very code-friendly. In BqLog, Category represents the concept of categorization, used to differentiate which module or functionality a log belongs to. Categories are hierarchical, and each Category can have subcategories. For example, below is a typical Category hierarchy:
+Demo project build scripts are located in `/build/demo`.
+Note: C# and Java Demos need to manually place dynamic library of corresponding platform to path searchable at runtime (or specify via environment variable / runtime parameter).
 
-```cpp
-/*default  
+### 3. Automated tests
+
+Test project generation script and "generate + run" script are located in `/build/test`.
+Recommended to ensure all test cases pass before submitting.
+
+### 4. Benchmark build run
+
+Benchmark project scripts are located in `/build/benchmark`.
+Also contain generation project script and direct run script, can be used to evaluate performance under different platforms and configurations.
+
+---
+
+<a id="advanced-topics"></a>
+
+## 🧩 Advanced topics
+
+### 1. No Heap Alloc
+
+In runtimes like Java, C#, TypeScript, logging library usually generates small amount of Heap allocation when writing each log, which will trigger GC and affect performance over time.
+BqLog strives to achieve "Zero or extremely low Heap Alloc" on these platforms via following ways:
+
+- **Internally avoid creating temporary objects and strings in log path**;
+- **Avoid extra array allocation caused by variable parameters** (avoided via polymorphism overload in C#);
+- **Reduce boxing/unboxing**:
+
+  - In C# Wrapper, when parameter count ≤ 12, no boxing/unboxing operation will occur, boxing degenerates only when exceeding 12 parameters;
+  - TypeScript passes parameters directly via NAPI, avoiding multi-layer boxing;
+  - Java Wrapper uses special tool methods to manually avoid boxing, for example:
+
+```java
+// Java
+// Primitive parameters wrapped using bq.utils.param.no_boxing will not cause boxing,
+// naked passing 5.3245f will cause boxing, increasing GC risk.
+import static bq.utils.param.no_boxing;
+
+my_demo_log.info(
+    my_demo_log.cat.node_2.node_5,
+    "Demo Log Test Log, {}, {}",
+    no_boxing(false),
+    5.3245f
+);
+```
+
+Using above APIs reasonably can significantly reduce GC interference and obtain stable high performance log behavior.
+
+---
+
+### 2. Log objects with Category support
+
+#### Category Concept and Usage
+
+In Unreal Engine, log has Category concept, but native interface is not very friendly to code hints.
+In BqLog, Category is used to identify "which module / subsystem a log belongs to", and supports multi-level hierarchy structure.
+
+For example, we define a business log object, its Category tree is roughly:
+
+```text
+*default
 ├── Shop 
-    ├── Manager 
-    ├── Seller 
+│   ├── Manager 
+│   └── Seller 
 ├── Factory
-    ├── People 
-        ├── Manager 
-        ├── Worker 
-    ├── Machine 
-    ├── House 
-├── Transport 
+│   ├── People 
+│   │   ├── Manager 
+│   │   └── Worker 
+│   ├── Machine 
+│   └── House 
+└── Transport 
     ├── Vehicles
-        ├── Driver
-        ├── Maintenance
-    ├── Trains
+    │   ├── Driver
+    │   └── Maintenance
+    └── Trains
 ```
 
-This is a log object related to sales, with many log categories. Here's an example of how to use such a logging system:
+Usage (C++ Example):
 
 ```cpp
-my_category_log.info("Log0");  // The Category of this log is the default category, *default
-my_category_log.info(my_category_log.cat.Shop, "Log1");  // The Category of this log is Shop
-my_category_log.info(my_category_log.cat.Shop.Seller, "Log2"); // The Category of this log is Shop.Seller
-my_category_log.info(my_category_log.cat.Transport.Vehicles.Driver, "Log3"); // The Category of this log is Transport.Vehicles.Driver
-my_category_log.info(my_category_log.cat.Factory, "Log4"); // The Category of this log is Factory
-my_category_log.info(my_category_log.cat.Factory.People, "Log5"); // The Category of this log is Factory.People
+my_category_log.info("Log0");  // Category = *default
+my_category_log.info(my_category_log.cat.Shop, "Log1");  // Category = Shop
+my_category_log.info(my_category_log.cat.Shop.Seller, "Log2"); // Category = Shop.Seller
+my_category_log.info(my_category_log.cat.Transport.Vehicles.Driver, "Log3"); // Category = Transport.Vehicles.Driver
+my_category_log.info(my_category_log.cat.Factory, "Log4"); // Category = Factory
+my_category_log.info(my_category_log.cat.Factory.People, "Log5"); // Category = Factory.People
 ```
 
-The final output will be:
-```cpp
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     Log0
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Shop] Log1
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Shop.Seller] Log2
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Transport.Vehicles.Driver] Log3
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Factory] Log4
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Factory.People] Log5
+Output Example:
+
+```text
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] Log0
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Shop] Log1
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Shop.Seller] Log2
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Transport.Vehicles.Driver] Log3
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Factory] Log4
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Factory.People] Log5
 ```
 
-Using the [category_mask](#logcategories_mask) from the previous configuration section, you can filter output. Additionally, if you use the [ConsoleCallback interception](#intercepting-console-output), the callback will have the Category Index of the log. You can use this parameter with the log object's functions:
+Cooperating with `categories_mask` in configuration earlier, flexible filtering can be performed on output side.
+Combined with [Intercept Console Output](#intercept-console-output), you can get Category name list via `category_idx` + following API:
+
 ```cpp
 /// <summary>
-/// Get log categories count
+/// get log categories count
 /// </summary>
-/// <returns></returns>
 decltype(categories_name_array_)::size_type get_categories_count() const;
 
 /// <summary>
-/// Get names of all categories
+/// get names of all categories
 /// </summary>
-/// <returns></returns>
 const bq::array<bq::string>& get_categories_name_array() const;
 ```
-These functions allow you to get the corresponding Category content, enabling complex filtering functionalities in custom interfaces.
 
-#### Generating Category Log Classes
-Log classes that support categories are not the default `bq::log` or `bq.log`; they need to be generated. This is done using a tool provided by bqLog.
+This is often used to display multi-dimensional filters in custom UI.
 
-First, you need to prepare a text file that contains all your category configurations, for example:
-##### BussinessCategories.txt
-```
-// This configuration file supports comments using double slashes
-Shop.Manager  // You don't need to list Shop separately; this will automatically generate both Shop and Shop.Manager categories
-Shop.Seller
-Factory.People.Manager
-Factory.People.Worker
-Factory.Machine
-Factory.House
-Transport.Vehicles.Driver
-Transport.Vehicles.Maintenance
-Transport.Trains
-```
+#### Category Log Class Generation
 
-Next, use the BqLog command-line tool to generate the corresponding category-supported log class. The tool can be found at:
-| Platform | Path            | Executable Name                |
-|----------|-----------------|--------------------------------|
-| mac      | /bin/tools/mac  | BqLog_CategoryLogGenerator     |
-| windows  | /bin/tools/win64| BqLog_CategoryLogGenerator.exe |
-| linux    | /bin/tools/linux| BqLog_CategoryLogGenerator     |
-| unix like| /build/tools    | Need to manually build binaries|
+Log class supporting Category is not the default `bq::log` / `bq.log`, but a dedicated class generated by tools.
+Generation steps are as follows:
 
-Usage:
-```bash
-./BqLog_CategoryLogGenerator <class_name> <config_file> [output_directory]
-```
-In this example, if you run:
-```bash
-./BqLog_CategoryLogGenerator business_log /your_dir/BussinessCategories.txt ./
-```
-It will generate three files in the current directory:
-- business_log.h
-- business_log.java
-- business_log.cs
+1. Prepare a text configuration file defining all Categories:
 
-These files are wrappers for C++, Java, and C#, respectively. Include them in your project to create the corresponding log objects. For example, in C++:
-```cpp
-bq::business_log my_log = bq::business_log::create_log("MyLog", config);
-```
-Or retrieve an already created object:
-```cpp
-bq::business_log my_log = bq::business_log::get_log_by_name("MyLog");
-```
+   **BussinessCategories.txt**
 
-When you type `my_log.cat` followed by a dot (`.`), if your IDE has code completion, it will show the predefined categories for selection. Alternatively, you can omit this parameter, and the log will be output with the default empty category.
+   ```text
+   // This config file supports comments with double slash
+   Shop.Manager      // No need to list Shop separately, this line automatically generates Shop and Shop.Manager
+   Shop.Seller
+   Factory.People.Manager
+   Factory.People.Worker
+   Factory.Machine
+   Factory.House
+   Transport.Vehicles.Driver
+   Transport.Vehicles.Maintenance
+   Transport.Trains
+   ```
 
-### 3. Data Protection on Program Abnormal Exit
-If BqLog is used for asynchronous logging, there may be cases where the program exits abnormally, leaving the in-memory data not yet written to the log file. BqLog provides two mechanisms to minimize the loss caused by such abnormal exits.
+2. Use BqLog built-in command line tool to generate corresponding class:
+   Download `{os}_{arch}_tools_{version}` in Releases, unzip to find:
 
-#### Abnormal Signal Handling Mechanism
-```cpp
-    /// <summary>
-    /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
-    /// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
-    /// this functionality does not guarantee success, and only support POSIX systems.
-    /// </summary>
-    static void enable_auto_crash_handle();
-```
-Calling this API of `bq::Log` enables the mechanism. However, this mechanism is only supported on non-Windows platforms. When the program encounters abnormal signals such as SIGABORT, SIGSEGV, or SIGBUS, this API forces the log buffer data to be flushed before the program exits.
+  - `BqLog_CategoryLogGenerator`
 
-Key points:
-- This mechanism uses `sigaction` internally. If your program also uses `sigaction`, do not worry. BqLog records the previous signal handler before registering its own, and after processing the signal, it will call the previous handler, avoiding overwriting it. You should be concerned about your `sigaction` mechanism overwriting BqLog's exception handler.
-- This is an emergency handling mechanism and does not guarantee 100% success, as memory or other areas might already be corrupted when the issue occurs.
+3. Usage:
 
-#### Recovery Mechanism
-Refer to the configuration section [log.reliable_level](#logreliable_level). When this configuration is set to `high`, supported systems will try to ensure that the log buffer data is archived on the disk. The next time the log system starts, it will prioritize recovering the unprocessed archive content from the disk. This mechanism also relies on the operating system and does not guarantee 100% success.
-  
+   ```bash
+   ./BqLog_CategoryLogGenerator ClassNameToGenerate CategoryConfigFile [OutputDirectory, default current directory]
+   ```
 
-### 4. About NDK and ANDROID_STL=none
+   Example:
 
-If you are using BqLog within the NDK, there are three key points to note:
+   ```bash
+   ./BqLog_CategoryLogGenerator business_log /path/to/BussinessCategories.txt ./
+   ```
 
-- **Explicitly Call bq.log or Load the Dynamic Library in Java or Kotlin**:  
-  You must explicitly call `bq.log` or the generated category-supported log class in Java or Kotlin, or explicitly call `System.loadLibrary` to load the dynamic library before using BqLog features in C++. This is because Android needs to obtain various storage paths, which can only be retrieved after `JNI_OnLoad` is triggered. `JNI_OnLoad` relies on loading the dynamic library from the Java side. If you are using BqLog's dynamic library directly, simply referencing `bq.log` or the generated category-supported log class in Java or Kotlin will trigger this operation within the static block of `bq.log`. However, if you integrate BqLog's C++ code into your own dynamic library for compilation, you must explicitly call `System.loadLibrary` in Java or Kotlin to load the dynamic library first. Then you can use BqLog features in Java, Kotlin, and C++.
+   Will generate 5 files in current directory:
 
-- **Avoid Initializing Log Objects in Global or Static Variables in C++**:  
-  If you compile BqLog's C++ source code with your NDK code, do not initialize log objects in C++ global or static variables. For the same reason as above, global and static variable initialization occurs before `JNI_OnLoad` is triggered. Accessing some BqLog APIs at this point will cause the program to crash. However, if your library is a standalone `.so`, ensure that BqLog's library is loaded on the Java or Kotlin side before loading your library. Refer to the previous point.
+  - `business_log.h` (C++ header wrapper)
+  - `business_log.java` (Java wrapper)
+  - `business_log.cs` (C# wrapper)
+  - `business_log.ts` (TypeScript wrapper)
+  - `business_log_for_UE.h` (Coordinate with UE project, Category can be referenced in Blueprint)
 
-- **About ANDROID_STL = none**:  
-  If you compile BqLog's C++ source code with your NDK code and need to set `ANDROID_STL = none`, there are two scenarios:
-  1. **You do not use `new` or `scoped static` features**: In this case, add the `BQ_NO_LIBCPP` macro to your compilation options.
-  2. **You use `new` or `scoped static` features**: If you have your own implementation of these features, search for `BQ_NO_LIBCPP` in the code and comment out any conflicting implementations.
-  
+4. Import these files in project to use Log class with Category.
+   For example C++:
 
-### 5. Custom Parameter Types
+   ```cpp
+   bq::business_log my_log = bq::business_log::create_log("MyLog", config);
+   ```
 
-In the [format parameters](#3-format-parameters) section, the supported parameter types were mentioned. It is evident that C++ by default only supports common parameter types. However, BqLog also supports two methods to implement custom parameter types.
+   Or get created Log object with same name:
 
-___________________________________________________________________________________________________________________
-*Important Note: Please ensure you include your relevant custom class and function declarations before `bq_log.h` or the generated category header file to ensure compatibility with various compilers. Failure to do so may result in compilation issues, particularly with Method 2 when using clang if the order is incorrect.*
-___________________________________________________________________________________________________________________
+   ```cpp
+   bq::business_log my_log = bq::business_log::get_log_by_name("MyLog");
+   ```
 
-#### Method 1: Implement bq_log_format_str_size() and bq_log_format_str_chars in the Class
+   Use `.` completion on `my_log.cat` to get pre-defined Category list.
+   If Category parameter is not passed, `*default` is used by default.
+
+---
+
+### 3. Data protection on abnormal exit
+
+When BqLog uses asynchronous mode, if program exits abnormally (crash, etc.), logs in buffer may not be flushed to disk in time.
+BqLog provides two mechanisms to minimize loss:
+
+#### 1) Signal handling mechanism (POSIX)
 
 ```cpp
-// "custom_bq_log_type.h"
+/// <summary>
+/// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk.
+/// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash.
+/// However, this functionality does not guarantee success, and only supports POSIX systems.
+/// </summary>
+static void enable_auto_crash_handle();
+```
+
+After calling `bq::log::enable_auto_crash_handle()`, BqLog will register several signal handlers on POSIX system:
+
+- When process receives exception signals such as `SIGABRT`, `SIGSEGV`, `SIGBUS`, try to force flush buffer (`force_flush_all_logs`) in signal processing callback;
+- Internally implemented via `sigaction`, and old signal processing handle will be saved before registration, and original processing logic will be called after self-processing is completed to minimize impact on host program.
+
+However, please note:
+
+- This mechanism is essentially "emergency remediation", **cannot guarantee 100% success** - if memory itself is severely corrupted, any operation may fail;
+- This mechanism only works on POSIX platforms, and will not take effect on Windows.
+
+#### 2) Recovery Mechanism (Recovery)
+
+Refer to configuration item [`log.recovery`](#logrecovery).
+When this item is `true`, BqLog will try to use platform features on some platforms to ensure content in asynchronous buffer has temporary stub on disk; next time startup, "recovery" can be performed to try to restore logs not fully flushed to disk.
+
+Specific implementation details depend on operating system capabilities and will be continuously enhanced in future versions.
+
+---
+
+### 4. Custom parameter types
+
+As explained in [format parameters](#3-format-parameters) earlier, a large number of common types are supported by default.
+If you need to extend custom types, there are two ways:
+
+> **Important Hint:**
+> Please be sure to `#include` your custom class and related function declarations before `bq_log.h` or generated Category header file.
+> Some compilers (especially Clang) may fail to compile when include order is incorrect.
+
+#### Method 1: Implement `bq_log_format_str_size()` and `bq_log_format_str_chars()` in class
+
+```cpp
+// custom_bq_log_type.h
 class A {
 private:
     bool value_;
 
 public:
-    A(bool value): value_(value) {}
+    explicit A(bool value) : value_(value) {}
 
-    // This returns the number of characters, not the number of bytes. Ensure the return type is size_t.
-    size_t bq_log_format_str_size() const
-    {
-        if (value_) {
-            return strlen("true");
-        } else {
-            return strlen("false");
-        }
+    // Return "character count" instead of "byte count", return type must be size_t
+    size_t bq_log_format_str_size() const {
+        return value_ ? strlen("true") : strlen("false");
     }
 
-    // Returns the address of the first character of the actual string, which can be char*, char16_t*, char32_t*, or wchar_t*.
-    const char* bq_log_format_str_chars() const
-    {
-        if (value_) {
-            return "true";
-        } else {
-            return "false";
-        }
+    // Return actual string start character address, can be char* / char16_t* / char32_t* / wchar_t*
+    const char* bq_log_format_str_chars() const {
+        return value_ ? "true" : "false";
     }
 };
 ```
+
+Usage Example:
 
 ```cpp
 #include "custom_bq_log_type.h"
@@ -1024,42 +1374,46 @@ void output(const bq::log& log_obj)
 }
 ```
 
-#### Method 2: Implement Global bq_log_format_str_size() and bq_log_format_str_chars() Functions
-Sometimes, you may need to customize parameters for types you cannot modify (e.g., Unreal's `FString` and `FName`) or for unsupported primitive types. In such cases, you can use global functions for customization. Ensure the following function declarations are included before you use the parameter type.
+#### Method 2: Implement global `bq_log_format_str_size()` and `bq_log_format_str_chars()`
 
-Since custom types take precedence over built-in types, you can even use this method to override BqLog's output for standard types. For example, you can make `int32_t` types output "PLUS" for positive values, "MINUS" for negative values, and "ZERO" for zero.
+Applicable to cases where type definition cannot be modified (such as `FString`, `FName`, etc. of Unreal), or wishing to override default output method of built-in types.
+
+Since priority of custom types is higher than built-in types, you can even redefine output of `int32_t`, for example:
 
 ```cpp
 // custom_bq_log_type.h
 #pragma once
 #include <map>
 #include <cinttypes>
+#include <cstring>
 
-// Override the default output for int32_t parameters
+// Override int32_t default output behavior
 size_t bq_log_format_str_size(const int32_t& param);
 const char* bq_log_format_str_chars(const int32_t& param);
 
-// Allow std::map to be used as a parameter
+// Allow std::map to be passed as parameter
 template <typename KEY, typename VALUE>
 size_t bq_log_format_str_size(const std::map<KEY, VALUE>& param);
+
 template <typename KEY, typename VALUE>
 const char16_t* bq_log_format_str_chars(const std::map<KEY, VALUE>& param);
 
+// Implementation
 template <typename KEY, typename VALUE>
 size_t bq_log_format_str_size(const std::map<KEY, VALUE>& param)
 {
-    if (param.size() == 0) {
+    if (param.empty()) {
         return strlen("empty");
     } else {
         return strlen("full");
     }
 }
 
-// This version can use UTF-16 encoding
+// Use UTF-16 encoding
 template <typename KEY, typename VALUE>
 const char16_t* bq_log_format_str_chars(const std::map<KEY, VALUE>& param)
 {
-    if (param.size() == 0) {
+    if (param.empty()) {
         return u"empty";
     } else {
         return u"full";
@@ -1075,7 +1429,7 @@ size_t bq_log_format_str_size(const int32_t& param)
 {
     if (param > 0) {
         return strlen("PLUS");
-    } else if(param < 0){
+    } else if (param < 0) {
         return strlen("MINUS");
     } else {
         return strlen("ZERO");
@@ -1094,31 +1448,43 @@ const char* bq_log_format_str_chars(const int32_t& param)
 }
 ```
 
+Usage Example:
+
 ```cpp
-#include "custom_bq_log_type.h"
-// Ensure the custom global functions appear before bq_log.h
+#include "custom_bq_log_type.h"   // Ensure before bq_log.h
 #include "bq_log/bq_log.h"
 
-void output(const bq::log& log_obj)
+void output(const bq::log& my_category_log)
 {
     std::map<int, bool> param0;
     std::map<int, bool> param1;
     param0[5] = false;
-    log_obj.info("This should be full:{}", param0); // Outputs: This should be full:full
-    log_obj.info("This should be empty:{}", param1); // Outputs: This should be empty:empty
-    log_obj.info("This should be PLUS:{}", 5); // Outputs: This should be PLUS:PLUS
-    log_obj.info("This should be MINUS:{}", -1); // Outputs: This should be MINUS:MINUS
-    log_obj.info(param0); // Outputs: Full
+
+    my_category_log.info("This should be full:{}", param0);   // Output full
+    my_category_log.info("This should be empty:{}", param1);  // Output empty
+    my_category_log.info("This should be PLUS:{}", 5);        // Output PLUS
+    my_category_log.info("This should be MINUS:{}", -1);      // Output MINUS
+    my_category_log.info(param0);                             // Output full
 }
 ```
 
-### 6. Using BqLog in Unreal
-#### 1. Support for FName, FString, FText
-`FString`, `FName`, and `FText` are common string types in Unreal. BqLog includes adapters that automatically work in the Unreal environment, compatible with both Unreal 4 and Unreal 5. You can use the following code directly:
+---
+
+### 5. Using BqLog in Unreal
+
+#### 1) Support for `FName` / `FString` / `FText`
+
+In Unreal environment, BqLog has built-in adapters:
+
+- Automatically support `FString`, `FName`, `FText` as format string and parameters;
+- Compatible with UE4 and UE5.
+
+Example:
 
 ```cpp
 bq::log log_my = bq::log::create_log("AAA", config);   // config omitted
-FString fstring_1 = TEXT("This is a test FString {}");
+
+FString fstring_1 = TEXT("This is a test FString{}");
 FString fstring_2 = TEXT("This is also a test FString");
 log_my.error(fstring_1, fstring_2);
 
@@ -1128,14 +1494,21 @@ log_my.error(fstring_1, text1);
 log_my.error(fstring_1, name1);
 ```
 
-As shown, `FString`, `FName`, and `FText` can be used directly as format parameters or as variadic arguments. If you wish to define your own adapter versions, define the global macro `BQ_LOG_DISABLE_ADAPTER_FOR_UE` in your project. This will disable the built-in adapters, allowing you to define your own version. For detailed instructions, see [Method 2: Implement Global bq_log_format_str_size() and bq_log_format_str_chars() Functions](#method-2-implement-global-bq_log_format_str_size-and-bq_log_format_str_chars-functions).
+If you wish to customize adaptation behavior, you can also use "Method 2 (Global Function)" above to define `bq_log_format_str_size` and `bq_log_format_str_chars` yourself.
 
-#### 2. Redirecting BqLog Output to Unreal's Log Output Panel
-BqLog includes a Console Appender that targets the system's standard output stream. In environments like Unreal, this output is not visible, so you need to redirect Console output to UE's log output using the [intercepting Console output](#intercepting-console-output) method. Here's an example:
+#### 2) Redirect BqLog output to Unreal Log Window
+
+If you have imported Unreal plugin according to [Unreal Engine Integration Instructions](#unreal-engine), BqLog logs will be automatically redirected to Unreal's Output Log.
+If plugin is not used, but BqLog is integrated directly at C++ level, you can use console callback to forward yourself:
 
 ```cpp
-// You can use category_idx, log_id to get the corresponding log object name and category name (see previous API), and output to different CategoryNames in UE_LOG.
-static void on_bq_log(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+// You can get Log name and Category name based on different category_idx / log_id,
+// forward them to different UE_LOG Categories.
+static void on_bq_log(uint64_t log_id,
+                      int32_t category_idx,
+                      int32_t log_level,
+                      const char* content,
+                      int32_t length)
 {
     switch (log_level)
     {
@@ -1162,25 +1535,150 @@ static void on_bq_log(uint64_t log_id, int32_t category_idx, int32_t log_level, 
     }
 }
 
-void call_this_on_your_game_start()
+void CallThisOnYourGameStart()
 {
     bq::log::register_console_callback(&on_bq_log);
 }
 ```
 
-This code demonstrates how to intercept BqLog's console output and redirect it to Unreal Engine's logging system, making the log messages visible in the Unreal log output panel.
+#### 3) Using BqLog in Blueprint
 
-## Benchmark
+After importing plugin according to [Unreal Engine Integration Instructions](#unreal-engine), BqLog can be called directly in Blueprint:
 
-### 1. Benchmark Description
-The testing environment is as follows:
-- **CPU**: 13th Gen Intel(R) Core(TM) i9-13900K 3.00 GHz
+1. **Create Log Data Asset**
+
+  - Create Data Asset in Unreal project, type select BqLog:
+    - Default Log Type (without Category):  
+      <img src="docs/img/ue_pick_data_asset_1.png" alt="Default Log Creation" style="width: 455px">
+    - If Log Class with Category is generated according to [Category Log Class Generation](#category-log-class-generation), and `{category}.h` and `{category}_for_UE.h` are added to project:  
+      <img src="docs/img/ue_pick_data_asset_2.png" alt="Category Log Creation" style="width: 455px">
+
+2. **Configure Log Parameters**
+
+  - Double click to open Data Asset, configure log object name and creation method:  
+    - `Create New Log`: Create a new Log object at runtime:  
+      <img src="docs/img/ue_create_log_config_1.png" alt="Config Log Params Create New Log" style="width: 455px">
+    - `Get Log By Name`: Only get Log with same name created elsewhere:  
+      <img src="docs/img/ue_create_log_config_2.png" alt="Config Log Params Get Log By Name" style="width: 455px">
+
+3. **Call Log Node in Blueprint**  
+  
+   <img src="docs/img/ue_print_log.png" alt="Blueprint Call Log" style="width: 655px">
+
+  - Area 1: Add log parameters;
+  - Area 2: Added log parameter nodes, can be deleted via right click menu (Remove ArgX);
+  - Area 3: Select log object (i.e. Data Asset just created);
+  - Area 4: Displayed only when log object has Category, can select log Category.
+
+4. **Test**
+
+  - Run Blueprint, if configured correctly and there is ConsoleAppender output, similar output can be seen in Log window:
+
+    ```text
+    LogBqLog: Display: [Bussiness_Log_Obj] UTC+7 2025-11-27 14:49:19.381[tid-27732 ] [I] [Factory.People.Manager] Test Log Arg0:String Arg, Arg1:TRUE, Arg2:1.000000,0.000000,0.000000|2.999996,0.00[...]
+    ```
+
+---
+
+### 6. Log encryption and decryption
+
+For external distribution clients (especially internet games and Apps), log encryption is an important requirement.
+In version 1.x, there are still a lot of plaintext in BqLog's binary logs. Since 2.x, a complete log encryption scheme has been introduced.  
+This solution offers high performance with negligible overhead and robust security.
+
+#### 1) Encryption Algorithm Description
+
+BqLog uses **RSA2048 + AES256** hybrid encryption:
+
+- Only applicable to `CompressedFileAppender`;
+- Use RSA2048 key pair generated by `ssh-keygen`:
+  - Public Key: OpenSSH `ssh-rsa ...` text (essentially OpenSSH expression of PKCS#8 public key);
+  - Private Key: PEM format, `-----BEGIN RSA PRIVATE KEY-----` or `-----BEGIN OPENSSH PRIVATE KEY-----` block (compatible with PKCS#1/PKCS#8 private key representation);
+- When writing logs:
+  - Encrypt randomly generated AES256 symmetric key using public key;
+  - Actual log content is encrypted via AES256;
+  - Overall encoding is BqLog custom encryption compression format.
+
+Therefore, from cryptography and standard format perspective:
+
+- **Public Key**: OpenSSH `ssh-rsa` text, underlying is PKCS#8 compatible RSA public key;
+- **Private Key**: PEM encoded RSA private key (PKCS#1 or PKCS#8), BqLog tool is compatible with `ssh-keygen` default output when parsing.
+
+#### 2) Configure Encryption
+
+Execute in terminal:
+
+```bash
+ssh-keygen -t rsa -b 2048 -m PEM -N "" -f "Your Key File Path"
+```
+
+Will generate two files:
+
+- `<Your Key File Path>`: Private key file, such as `id_rsa`, usually starting with `-----BEGIN RSA PRIVATE KEY-----`;
+- `<Your Key File Path>.pub`: Public key file, such as `id_rsa.pub`, starting with `ssh-rsa `.
+
+Please ensure:
+
+- Public key content starts with `ssh-rsa `;
+- Private key content is standard PEM block.
+
+Add in corresponding CompressedFileAppender configuration:
+
+```properties
+appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+Fo........rest of your rsa2048 public key...... user@hostname
+```
+
+Where value is full line content in public key file (trailing newline can be removed, but do not break spaces in between).
+
+Thus, log content output by this Appender will be format using mixed encryption of above RSA2048 public key + AES256 symmetric key.
+
+#### 3) Decrypt Logs
+
+When decrypting encrypted logs, private key file is required. Recommended to use BqLog built-in command line tool `BqLog_LogDecoder`:
+
+- Usage see [Offline decoder for binary Appenders](#offline-decoder-for-binary-appenders).
+
+Example:
+
+```bash
+./BqLog_LogDecoder FileToDecode -o OutputFile -k "./YourPrivateKeyFilePath"
+```
+
+Where:
+
+- `FileToDecode`: Compressed encrypted log file path;
+- `-o OutputFile`: Optional, specify decoded text save path, output to standard output if not filled;
+- `-k "./YourPrivateKeyFilePath"`: Point to private key file (PEM) generated by `ssh-keygen`, supporting common PKCS#1 / PKCS#8 forms.
+
+---
+
+<a id="benchmark"></a>
+
+## 📊 Benchmark
+
+### 1. Benchmark description
+
+Test Environment:
+
+- **CPU**: 13th Gen Intel(R) Core(TM) i9-13900K @ 3.00 GHz
 - **Memory**: 128 GB
 - **OS**: Windows 11
 
-The test case involves writing logs simultaneously using 1 to 10 threads, with each thread writing 2,000,000 logs. There are versions with four parameters and versions without parameters. The total time taken is calculated after synchronously waiting for all logs to be written to the hard drive. We only compare against Log4j because other log libraries, including any well-known open-source Java logging library, C++'s spdlog, and C#'s Log4net, do not match the performance of Log4j combined with LMAX Disruptor.
+Test Cases:
 
-### 2. BqLog C++ Benchmark Code
+- Use 1~10 threads to write logs simultaneously;
+- Each thread writes 2,000,000 log entries:
+  - One with 4 parameters formatted log;
+  - One with no parameter plain text log;
+- Wait for all threads to finish, then call `force_flush_all_logs()`, count total time from start of writing to all logs flushed to disk.
+
+Comparison Objects:
+
+- BqLog 2.x (C++ / Java, TextFileAppender and CompressedFileAppender)
+- Log4j2 (Only TextFileAppender, **gzip compression not used when rolling**, because its compression is done on existing text files during rolling, performance model is different, cannot be compared fairly)
+
+### 2. BqLog C++ Benchmark code
+
 ```cpp
 #if defined(WIN32)
 #include <windows.h>
@@ -1193,41 +1691,45 @@ The test case involves writing logs simultaneously using 1 to 10 threads, with e
 #include <iostream>
 #include <vector>
 
-
 void test_compress_multi_param(int32_t thread_count)
 {
     std::cout << "============================================================" << std::endl;
     std::cout << "=========Begin Compressed File Log Test 1, 4 params=========" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([idx, &log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
-                log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
-                    , i
-                    , 2.4232f
-                    , true);
+                log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                    idx, i, 2.4232f, true);
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
 
@@ -1236,35 +1738,40 @@ void test_text_multi_param(int32_t thread_count)
     std::cout << "============================================================" << std::endl;
     std::cout << "============Begin Text File Log Test 2, 4 params============" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("text");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([idx, &log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
-                log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
-                    , i
-                    , 2.4232f
-                    , true);
+                log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                    idx, i, 2.4232f, true);
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
 
@@ -1273,33 +1780,39 @@ void test_compress_no_param(int32_t thread_count)
     std::cout << "============================================================" << std::endl;
     std::cout << "=========Begin Compressed File Log Test 3, no param=========" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
-    bq::platform::atomic<int32_t> count(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([&log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
                 log_obj.info("Empty Log, No Param");
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
 
@@ -1308,36 +1821,41 @@ void test_text_no_param(int32_t thread_count)
     std::cout << "============================================================" << std::endl;
     std::cout << "============Begin Text File Log Test 4, no param============" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("text");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
-    bq::platform::atomic<int32_t> count(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([&log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
                 log_obj.info("Empty Log, No Param");
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
-
 
 int main()
 {
@@ -1348,23 +1866,26 @@ int main()
     bq::log compressed_log = bq::log::create_log("compress", R"(
         appenders_config.appender_3.type=compressed_file
         appenders_config.appender_3.levels=[all]
-        appenders_config.appender_3.file_name= benchmark_output/compress_
-        appenders_config.appender_3.capacity_limit= 1
+        appenders_config.appender_3.file_name=benchmark_output/compress_
+        appenders_config.appender_3.capacity_limit=1
     )");
+
     bq::log text_log = bq::log::create_log("text", R"(
         appenders_config.appender_3.type=text_file
         appenders_config.appender_3.levels=[all]
-        appenders_config.appender_3.file_name= benchmark_output/text_
-        appenders_config.appender_3.capacity_limit= 1
+        appenders_config.appender_3.file_name=benchmark_output/text_
+        appenders_config.appender_3.capacity_limit=1
     )");
+
     std::cout << "Please input the number of threads which will write log simultaneously:" << std::endl;
-    int32_t thread_count;
+    int32_t thread_count = 0;
     std::cin >> thread_count;
 
+    // Trigger capacity_limit with one log to make sure old log files is deleted
     compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
     text_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
     bq::log::force_flush_all_logs();
-    
+
     test_compress_multi_param(thread_count);
     test_text_multi_param(thread_count);
     test_compress_no_param(thread_count);
@@ -1372,34 +1893,28 @@ int main()
 
     return 0;
 }
-
 ```
 
-### 3. BqLog Java benchmark Code
+### 3. BqLog Java Benchmark code
+
 ```java
-import java.io.IOException;
-import java.util.*;
+import java.util.Scanner;
 
 /**
- * @author pippocao
- *
- *    Please copy dynamic native library to your classpath before you run this benchmark.
- *  Or set the Native Library Location to the directory of the dynamic libraries for the current platform under `(ProjectRoot)/dist`. 
- *  Otherwise, you may encounter an `UnsatisfiedLinkError`.
+ * Please ensure that the dynamic library corresponding to the current platform is in java.library.path before running,
+ * or configure Native Library Location in IDE pointing to dynamic library directory under (ProjectRoot)/dist.
+ * Otherwise UnsatisfiedLinkError may be encountered.
  */
 public class benchmark_main {
-    
-    static abstract class benchmark_thread implements Runnable
-    {
+
+    static abstract class benchmark_thread implements Runnable {
         protected int idx;
-        public benchmark_thread(int idx)
-        {
+        public benchmark_thread(int idx) {
             this.idx = idx;
         }
     }
-    
-    private static void test_compress_multi_param(int thread_count) throws Exception
-    {
+
+    private static void test_compress_multi_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("=========Begin Compressed File Log Test 1, 4 params=========");
         bq.log log_obj = bq.log.get_log_by_name("compress");
@@ -1407,37 +1922,37 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
-                        log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
-                            , bq.utils.param.no_boxing(i)
-                            , bq.utils.param.no_boxing(2.4232f)
-                            , bq.utils.param.no_boxing(true));
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                            bq.utils.param.no_boxing(idx),
+                            bq.utils.param.no_boxing(i),
+                            bq.utils.param.no_boxing(2.4232f),
+                            bq.utils.param.no_boxing(true));
                     }
                 }
             };
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_text_multi_param(int thread_count) throws Exception
-    {
+    private static void test_text_multi_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 2, 4 params============");
         bq.log log_obj = bq.log.get_log_by_name("text");
@@ -1445,37 +1960,37 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
-                        log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
-                            , bq.utils.param.no_boxing(i)
-                            , bq.utils.param.no_boxing(2.4232f)
-                            , bq.utils.param.no_boxing(true));
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                            bq.utils.param.no_boxing(idx),
+                            bq.utils.param.no_boxing(i),
+                            bq.utils.param.no_boxing(2.4232f),
+                            bq.utils.param.no_boxing(true));
                     }
                 }
             };
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_compress_no_param(int thread_count) throws Exception
-    {
+    private static void test_compress_no_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("=========Begin Compressed File Log Test 3, no param=========");
         bq.log log_obj = bq.log.get_log_by_name("compress");
@@ -1483,14 +1998,12 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
                         log_obj.info("Empty Log, No Param");
                     }
                 }
@@ -1498,19 +2011,20 @@ public class benchmark_main {
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_text_no_param(int thread_count) throws Exception
-    {
+    private static void test_text_no_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 4, no param============");
         bq.log log_obj = bq.log.get_log_by_name("text");
@@ -1518,14 +2032,12 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
                         log_obj.info("Empty Log, No Param");
                     }
                 }
@@ -1533,46 +2045,42 @@ public class benchmark_main {
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
-    
 
     public static void main(String[] args) throws Exception {
-        // TODO Auto-generated method stub
         bq.log compressed_log =  bq.log.create_log("compress", """
-                appenders_config.appender_3.type=compressed_file
-                appenders_config.appender_3.levels=[all]
-                appenders_config.appender_3.file_name= benchmark_output/compress_
-                appenders_config.appender_3.capacity_limit= 1
-            """);
+            appenders_config.appender_3.type=compressed_file
+            appenders_config.appender_3.levels=[all]
+            appenders_config.appender_3.file_name=benchmark_output/compress_
+            appenders_config.appender_3.capacity_limit=1
+        """);
 
         bq.log text_log =  bq.log.create_log("text", """
-                appenders_config.appender_3.type=text_file
-                appenders_config.appender_3.levels=[all]
-                appenders_config.appender_3.file_name= benchmark_output/text_
-                appenders_config.appender_3.capacity_limit= 1
-            """);
-        
+            appenders_config.appender_3.type=text_file
+            appenders_config.appender_3.levels=[all]
+            appenders_config.appender_3.file_name=benchmark_output/text_
+            appenders_config.appender_3.capacity_limit=1
+        """);
 
         System.out.println("Please input the number of threads which will write log simultaneously:");
         int thread_count = 0;
-        Scanner scanner = new Scanner(System.in);
-        try {
+
+        try (Scanner scanner = new Scanner(System.in)) {
             thread_count = scanner.nextInt();
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return;
-        }finally {
-            scanner.close();
         }
 
         compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
@@ -1588,151 +2096,153 @@ public class benchmark_main {
 }
 ```
 
+### 4. Log4j Benchmark code
 
-### 4. Log4j benchmark Code
+Log4j2 part only tests text output format, because its gzip compression is "re-gzip compression on existing text files during rolling", which is completely different from BqLog's real-time compression mode performance model, and cannot be directly benchmarked.
 
-Log4j only tested the text format because its gzip compression is reapplied during the rolling process, adding extra performance overhead and making it incomparable to BqLog's CompressedFileAppender.
+**Dependencies:**
 
-Here is the relevant Log4j2 configuration:
 ```xml
-  <!-- pom.xml -->
-  <dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-api</artifactId>
-    <version>2.23.1</version>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-core</artifactId>
-    <version>2.23.1</version>
-  </dependency>
-  <dependency>
-    <groupId>com.lmax</groupId>
-    <artifactId>disruptor</artifactId>
-    <version>3.4.2</version>
-  </dependency>
+<!-- pom.xml -->
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-api</artifactId>
+  <version>2.23.1</version>
+</dependency>
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-core</artifactId>
+  <version>2.23.1</version>
+</dependency>
+<dependency>
+  <groupId>com.lmax</groupId>
+  <artifactId>disruptor</artifactId>
+  <version>3.4.2</version>
+</dependency>
 ```
 
-```cpp
-#log4j2.component.properties
+Enable AsyncLogger:
+
+```properties
+# log4j2.component.properties
 log4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector
 ```
+
+Log4j2 Configuration:
 
 ```xml
 <!-- log4j2.xml -->
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
-    <Appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </Console>
-        <!-- RollingFile Appender for gzip compressed files -->
-        <RollingRandomAccessFile  name="my_appender" fileName="logs/compress.log" filePattern="logs/compress-%d{yyyy-MM-dd}-%i.log" immediateFlush="false">
-            <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n</Pattern>
-            </PatternLayout>
-            <Policies>
-                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
-            </Policies>
-            <DefaultRolloverStrategy max="5"/>
-        </RollingRandomAccessFile >
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </Console>
 
-        <!-- Async Appender wrapping the other appenders -->
-        <Async name="Async" includeLocation="false" bufferSize="262144">
-            <!-- <AppenderRef ref="Console"/>-->
-            <AppenderRef ref="my_appender"/>
-        </Async>
-    </Appenders>
+    <!-- RollingRandomAccessFile, for text output demo -->
+    <RollingRandomAccessFile name="my_appender"
+                             fileName="logs/compress.log"
+                             filePattern="logs/compress-%d{yyyy-MM-dd}-%i.log"
+                             immediateFlush="false">
+      <PatternLayout>
+        <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+      </Policies>
+      <DefaultRolloverStrategy max="5"/>
+    </RollingRandomAccessFile>
 
-    <Loggers>
-        <Root level="info">
-            <AppenderRef ref="Async"/>
-        </Root>
-    </Loggers>
+    <!-- Async Appender -->
+    <Async name="Async" includeLocation="false" bufferSize="262144">
+      <!-- <AppenderRef ref="Console"/> -->
+      <AppenderRef ref="my_appender"/>
+    </Async>
+  </Appenders>
+
+  <Loggers>
+    <Root level="info">
+      <AppenderRef ref="Async"/>
+    </Root>
+  </Loggers>
 </Configuration>
-
 ```
 
-Here is the source code.
+Source Code:
 
 ```java
 package bq.benchmark.log4j;
 
-import java.util.*;
+import java.util.Scanner;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.async.AsyncLoggerContextSelector;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.async.AsyncLoggerContextSelector;
+
 import static org.apache.logging.log4j.util.Unbox.box;
 
 public class main {
+
     public static final Logger log_obj = LogManager.getLogger(main.class);
-    
-    static abstract class benchmark_thread implements Runnable
-    {
+
+    static abstract class benchmark_thread implements Runnable {
         protected int idx;
         protected Logger log_obj;
-        public benchmark_thread(int idx, Logger log_obj)
-        {
+        public benchmark_thread(int idx, Logger log_obj) {
             this.idx = idx;
             this.log_obj = log_obj;
         }
     }
 
-    private static void test_text_multi_param(int thread_count) throws Exception
-    {
+    private static void test_text_multi_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 1, 4 params============");
         Thread[] threads = new Thread[thread_count];
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx, log_obj) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
-                        log_obj.info("idx:{}, num:{}, This test, {}, {}", box(idx)
-                            , box(i)
-                            , box(2.4232f)
-                            , box(true));
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                            box(idx), box(i), box(2.4232f), box(true));
                     }
                 }
             };
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
-        org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+
+        org.apache.logging.log4j.core.LoggerContext context =
+            (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
         context.stop();
         LogManager.shutdown();
+
         long flush_time = System.currentTimeMillis();
         System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_text_no_param(int thread_count) throws Exception
-    {
+    private static void test_text_no_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 1, no param============");
         Thread[] threads = new Thread[thread_count];
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx, log_obj) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
                         log_obj.info("Empty Log, No Param");
                     }
                 }
@@ -1740,73 +2250,89 @@ public class main {
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
-        org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+
+        org.apache.logging.log4j.core.LoggerContext context =
+            (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
         context.stop();
         LogManager.shutdown();
+
         long flush_time = System.currentTimeMillis();
         System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
     public static void main(String[] args) throws Exception {
         System.out.println("Please input the number of threads which will write log simultaneously:");
         int thread_count = 0;
-        Scanner scanner = new Scanner(System.in);
-        try {
+
+        try (Scanner scanner = new Scanner(System.in)) {
             thread_count = scanner.nextInt();
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return;
-        }finally {
-            scanner.close();
         }
-        System.out.println("Is Aysnc:" + AsyncLoggerContextSelector.isSelected());
 
-        //这两个函数只能分别测试,因为Log4j2的强制刷新之后，整个日志对象就失效了。要测试一个的时候，就注释掉另外一个
+        System.out.println("Is Async:" + AsyncLoggerContextSelector.isSelected());
+
+        // These two tests need to run separately, because LoggerContext is no longer available after force stop.
         test_text_multi_param(thread_count);
-        //test_text_no_param(thread_count);
+        // test_text_no_param(thread_count);
     }
 
 }
-
 ```
 
-### 5. Benchmark Results
+### 5. Benchmark results
 
-Values are in milliseconds; the lower the value, the less time taken, indicating higher performance. As observed, BqLog's TextFileAppender format shows an average improvement of around 300% compared to Log4j2. The CompressedFileAppender format shows an improvement of about 800% compared to Log4j2, indicating a significant performance difference.
+All time costs are in milliseconds, smaller values mean higher performance.
+From the results:
 
-#### Total Time Cost with 4 Parameters (in milliseconds)
+- In TextFileAppender scenario, BqLog has about **3 times** performance advantage over Log4j2;
+- In CompressedFileAppender scenario, BqLog has about **10 times or more** performance advantage over Log4j2 text output;
+- Compared with BqLog 1.5 version, 2.x average performance improved by about **40%**.
+
+
+> For clarity, BqLog 1.5 data is not included, you can compare directly with [Benchmark](https://github.com/Tencent/BqLog/blob/stable_1.5/README.md#5-benchmark-results) results in old version documentation. Same hardware and OS environment, same test cases, same Log4j results were used. From results, BqLog 2.x version has about 40% performance improvement over 1.5 version.
+#### Total Time Cost with 4 parameters (ms)
 
 |                         | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
-|-------------------------|----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|------------|
-| BqLog Compress (C++)    | 155      | 250       | 310       | 406       | 515       | 622       | 761       | 885       | 972       | 1007       |
-| BqLog Text (C++)        | 384      | 768       | 1136      | 1716      | 2020      | 2783      | 3578      | 3883      | 4032      | 4383       |
-| BqLog Compress (Java)   | 664      | 782       | 931       | 911       | 989       | 1055      | 1107      | 1229      | 1288      | 1336       |
-| BqLog Text (Java)       | 706      | 993       | 1165      | 1582      | 1912      | 2572      | 2779      | 3275      | 4249      | 4591       |
-| Log4J2 Text             | 1065     | 2583      | 4249      | 4843      | 5068      | 6195      | 6424      | 7943      | 8794      | 9254       |
+|-------------------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|---------|
+| BqLog Compress (C++)    | 110    | 125    | 188    | 256    | 318    | 374    | 449    | 511    | 583    | 642     |
+| BqLog Text (C++)        | 344    | 699    | 1036   | 1401   | 1889   | 2211   | 2701   | 3121   | 3393   | 3561    |
+| BqLog Compress (Java)   | 129    | 141    | 215    | 292    | 359    | 421    | 507    | 568    | 640    | 702     |
+| BqLog Text (Java)       | 351    | 702    | 1052   | 1399   | 1942   | 2301   | 2754   | 3229   | 3506   | 3695    |
+| Log4j2 Text             | 1065   | 2583   | 4249   | 4843   | 5068   | 6195   | 6424   | 7943   | 8794   | 9254    |
 
-<img src="docs/img/benchmark_4_params.png" alt="4 Parameters Results" style="width: 100%;">
+<img src="docs/img/benchmark_4_params.png" alt="Results of 4 params" style="width: 100%;">
 
-#### Total Time Cost without Parameters (in milliseconds)
+#### Total Time Cost without parameters (ms)
 
-Interestingly, in the case of no parameters, Log4j shows lower performance overhead compared to when parameters are present.
+An interesting phenomenon is that in "no parameter" case, Log4j2's time cost is slightly lower than its "with parameter" case, but still significantly slower than BqLog.
 
-| Subject                 | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
-|-------------------------|----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|------------|
-| BqLog Compress (C++)    | 137      | 263       | 262       | 467       | 606       | 617       | 758       | 842       | 892       | 951        |
-| BqLog Text (C++)        | 183      | 384       | 526       | 830       | 1129      | 1323      | 1512      | 1883      | 2020      | 2291       |
-| BqLog Compress (Java)   | 262      | 341       | 393       | 510       | 559       | 618       | 640       | 703       | 792       | 869        |
-| BqLog Text (Java)       | 247      | 422       | 544       | 794       | 933       | 1104      | 1297      | 1686      | 1843      | 2082       |
-| Log4J2 Text             | 3204     | 6489      | 7702      | 8485      | 9640      | 10458     | 11483     | 12853     | 13995     | 14633      |
+|                         | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
+|-------------------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|---------|
+| BqLog Compress (C++)    | 97     | 101    | 155    | 228    | 290    | 341    | 415    | 476    | 541    | 601     |
+| BqLog Text (C++)        | 153    | 351    | 468    | 699    | 916    | 1098   | 1212   | 1498   | 1733   | 1908    |
+| BqLog Compress (Java)   | 109    | 111    | 178    | 240    | 321    | 378    | 449    | 525    | 592    | 670     |
+| BqLog Text (Java)       | 167    | 354    | 491    | 718    | 951    | 1139   | 1278   | 1550   | 1802   | 1985    |
+| Log4j2 Text             | 3204   | 6489   | 7702   | 8485   | 9640   | 10458  | 11483  | 12853  | 13995  | 14633   |
 
-<img src="docs/img/benchmark_no_param.png" alt="No Parameters Results" style="width: 100%;">
+<img src="docs/img/benchmark_no_param.png" alt="Results of no param" style="width: 100%;">
 
+---
 
-## Become a Contributor
-If you want to contribute your code to this repository, please make sure your code can pass the `AutoTest` and `Build` workflows in `Github Action`.
+<a id="how-to-contribute"></a>
+
+## 🤝 How to contribute
+
+If you want to contribute code, please make sure your changes can pass the following workflows under GitHub Actions in the repository:
+
+- `AutoTest`
+- `Build`
+
+It is recommended to run corresponding scripts locally before submitting to ensure both testing and building pass normally.

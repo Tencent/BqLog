@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  * 
@@ -17,7 +17,7 @@ using bq.impl;
 
 namespace bq
 {
-    public class log
+    public class @log
     {
         private static log_category_base default_category_ = new log_category_base();
 
@@ -103,7 +103,7 @@ namespace bq
                 sbyte* version_str = log_invoker.__api_get_log_version();
                 if (null == version_str)
                 {
-                    return null;
+                    return "";
                 }
                 int len = get_str_len(version_str);
                 return new string(version_str, 0, len, System.Text.Encoding.UTF8);
@@ -121,18 +121,33 @@ namespace bq
         }
 
         /// <summary>
-        /// If bqLog is stored in a relative path, it will choose whether the relative path is within the sandbox or not.
+        /// If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
         /// This will return the absolute paths corresponding to both scenarios.
         /// </summary>
-        /// <param name="is_in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <returns></returns>
-        public static string get_file_base_dir(bool is_in_sandbox)
+        public static string get_file_base_dir(int base_dir_type)
         {
             unsafe
             {
-                sbyte* path_str = log_invoker.__api_get_file_base_dir(is_in_sandbox);
+                sbyte* path_str = log_invoker.__api_get_file_base_dir(base_dir_type);
                 int len = get_str_len(path_str);
                 return new string(path_str, 0, len, System.Text.Encoding.UTF8);
+            }
+        }
+
+        /// <summary>
+        /// Reset the base dir
+        /// </summary>
+        /// <param name="base_dir_type"></param>
+        /// <param name="dir"></param>
+        public void reset_base_dir(int base_dir_type, string dir)
+        {
+            unsafe
+            {
+                byte* dir_utf8 = utf8_encoder.alloc_utf8_fixed_str(dir);
+                bq.impl.log_invoker.__api_reset_base_dir(base_dir_type, dir_utf8);
+                utf8_encoder.release_utf8_fixed_str(dir_utf8);
             }
         }
 
@@ -212,34 +227,38 @@ namespace bq
             log_invoker.__api_force_flush(0);
         }
 
-        /// <summary>
-        /// Uninitialize BqLog, please invoke this function before your program exist.
-        /// </summary>
-        public static void uninit()
-        { 
-            log_invoker.__api_uninit(); 
-        }
-
         public delegate void type_console_callback(ulong log_id, int category_idx, bq.def.log_level log_level, string content);
-        private static List<type_console_callback> console_callbacks_ = new List<type_console_callback>();
-        private static System.Threading.ReaderWriterLockSlim console_callbacks_lock_ = new System.Threading.ReaderWriterLockSlim();
+        private static type_console_callback console_callback_ = null;
+        private static type_func_ptr_console_callback _native_callback_keep_alive_ = null;
+
         /// <summary>
         /// Register a callback that will be invoked whenever a console log message is output. 
         /// This can be used for an external system to monitor console log output.
         /// </summary>
         /// <param name="callback"></param>
+        [Obsolete("Avoid using in C# (Mono/IL2CPP) due to potential deadlocks. Use set_console_buffer_enable and fetch_and_remove_console_buffer instead.", false)]
         public static void register_console_callback(type_console_callback callback)
         {
-            console_callbacks_lock_.EnterWriteLock();
-            console_callbacks_.Add(callback);
+            console_callback_ = callback;
             unsafe
             {
-                if(console_callbacks_.Count == 1)
+                if (console_callback_ != null)
                 {
-                    log_invoker.__api_register_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                    if (_native_callback_keep_alive_ == null)
+                    {
+                        _native_callback_keep_alive_ = new type_func_ptr_console_callback(_native_console_callback_wrapper);
+                        log_invoker.__api_register_console_callbacks(_native_callback_keep_alive_);
+                    }
+                }
+                else
+                {
+                    if (_native_callback_keep_alive_ != null)
+                    {
+                        log_invoker.__api_unregister_console_callbacks(_native_callback_keep_alive_);
+                        _native_callback_keep_alive_ = null;
+                    }
                 }
             }
-            console_callbacks_lock_.ExitWriteLock();
         }
 
         /// <summary>
@@ -248,29 +267,37 @@ namespace bq
         /// <param name="callback"></param>
         public static void unregister_console_callback(type_console_callback callback)
         {
-            console_callbacks_lock_.EnterWriteLock();
-            console_callbacks_.Remove(callback);
-            unsafe
+            if(console_callback_ == callback)
             {
-                if (console_callbacks_.Count == 0)
+                console_callback_ = null;
+                unsafe
                 {
-                    log_invoker.__api_unregister_console_callbacks(new type_func_ptr_console_callback(_native_console_callback_wrapper));
+                    if (_native_callback_keep_alive_ != null)
+                    {
+                        log_invoker.__api_unregister_console_callbacks(_native_callback_keep_alive_);
+                        _native_callback_keep_alive_ = null;
+                    }
                 }
             }
-            console_callbacks_lock_.ExitWriteLock();
         }
+
 #if ENABLE_IL2CPP
-        [MonoPInvokeCallback(typeof(type_console_callback))]
+        [AOT.MonoPInvokeCallback(typeof(type_console_callback))]
 #endif
-        private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, int log_level, sbyte* content, int length)
+        private unsafe static void _native_console_callback_wrapper(ulong log_id, int category_idx, bq.def.log_level log_level, sbyte* content, int length)
         {
-            string value = new string(content, 0, length, System.Text.Encoding.UTF8);
-            console_callbacks_lock_.EnterReadLock();
-            for(int i = 0; i < console_callbacks_.Count; ++i)
+            if (console_callback_ != null)
             {
-                console_callbacks_[i](log_id, category_idx, (bq.def.log_level)log_level, value);
+                try
+                {
+                    string value = new string(content, 0, length, System.Text.Encoding.UTF8);
+                    console_callback_(log_id, category_idx, log_level, value);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
             }
-            console_callbacks_lock_.ExitReadLock();
         }
 
         /// <summary>
@@ -288,7 +315,7 @@ namespace bq
         /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner. 
         /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry. 
         /// Please ensure not to output synchronized BQ logs within the callback function.
-        /// IMPORTANT: If you are using this code in an IL2CPP environment, please make sure that the on_console_callback is marked as static unsafe and is decorated with the [MonoPInvokeCallback(typeof(type_console_callback))] attribute.
+        /// IMPORTANT: If you are using this code in an IL2CPP environment, please make sure that the on_console_callback is marked as static unsafe and is decorated with the [AOT.MonoPInvokeCallback(typeof(type_console_callback))] attribute.
         /// </summary>
         /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
         /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
@@ -298,13 +325,13 @@ namespace bq
             return log_invoker.__api_fetch_and_remove_console_buffer(new type_func_ptr_console_buffer_fetch_callback(_native_console_buffer_fetch_callback_wrapper), delegate_ptr);
         }
 #if ENABLE_IL2CPP
-        [MonoPInvokeCallback(typeof(type_console_callback))]
+        [AOT.MonoPInvokeCallback(typeof(type_console_callback))]
 #endif
-        private unsafe static void _native_console_buffer_fetch_callback_wrapper(IntPtr pass_through_param, ulong log_id, int category_idx, int log_level, sbyte* content, int length)
+        private unsafe static void _native_console_buffer_fetch_callback_wrapper(IntPtr pass_through_param, ulong log_id, int category_idx, bq.def.log_level log_level, sbyte* content, int length)
         {
             string value = new string(content, 0, length, System.Text.Encoding.UTF8);
             type_console_callback recover_callback = (type_console_callback)Marshal.GetDelegateForFunctionPointer(pass_through_param, typeof(type_console_callback));
-            recover_callback(log_id, category_idx, (bq.def.log_level)log_level, value);
+            recover_callback(log_id, category_idx, log_level, value);
         }
 
         /// <summary>
@@ -338,7 +365,7 @@ namespace bq
         /// copy constructor
         /// </summary>
         /// <param name="rhs"></param>
-        public log(log rhs)
+        protected log(log rhs)
         {
             unsafe
             {
@@ -386,12 +413,12 @@ namespace bq
         /// </summary>
         /// <param name="appender_name"></param>
         /// <param name="enable"></param>
-        public void set_appenders_enable(string appender_name, bool enable)
+        public void set_appender_enable(string appender_name, bool enable)
         {
             unsafe
             {
                 byte* in_str = utf8_encoder.alloc_utf8_fixed_str(appender_name);
-                log_invoker.__api_set_appenders_enable(log_id_, in_str, enable);
+                log_invoker.__api_set_appender_enable(log_id_, in_str, enable);
                 utf8_encoder.release_utf8_fixed_str(in_str);
             }
         }
@@ -436,14 +463,16 @@ namespace bq
         /// Works only when snapshot is configured.
         /// It will decode the snapshot buffer to text.
         /// </summary>
-        /// <param name="use_gmt_time">Whether the timestamp of each log is GMT time or local time</param>
+        /// <param name="time_zone_config">Use this to specify the time display of log text. such as : "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"</param>
         /// <returns>The decoded snapshot buffer</returns>
-        public string take_snapshot(bool use_gmt_time)
+        public string take_snapshot(string time_zone_config)
         {
             unsafe
             {
                 _api_string_def snapshot_def = new _api_string_def();
-                bq.impl.log_invoker.__api_take_snapshot_string(log_id_, use_gmt_time, &snapshot_def);
+                byte* utf8_time_zone_config_bytes = utf8_encoder.alloc_utf8_fixed_str(time_zone_config);
+                bq.impl.log_invoker.__api_take_snapshot_string(log_id_, utf8_time_zone_config_bytes, &snapshot_def);
+                utf8_encoder.release_utf8_fixed_str(utf8_time_zone_config_bytes);
                 string result = new string(snapshot_def.str, 0, (int)snapshot_def.len, System.Text.Encoding.UTF8);
                 bq.impl.log_invoker.__api_release_snapshot_string(log_id_, &snapshot_def);
                 return result;
@@ -452,11 +481,17 @@ namespace bq
 
         public override bool Equals(object obj)
         {
-            if (obj == null || !(obj is log))
+            if (ReferenceEquals(obj, null))
             {
                 return false;
             }
-            return log_id_ == ((log)obj).get_id();
+
+            var other = obj as log;
+            if (ReferenceEquals(other, null))
+            {
+                return false;
+            }
+            return log_id_ == other.get_id();
         }
 
         public override int GetHashCode()

@@ -1,0 +1,44 @@
+{
+  "apiType": "stageMode",
+  "buildOption": {
+    "externalNativeOptions": {
+      "path": "../../../../../src/CMakeLists.txt",
+      "arguments": "-DTARGET_PLATFORM:STRING=ohos -DOHOS_STL=c++_static -DBUILD_LIB_TYPE=dynamic_lib ",
+      "cppFlags": "",
+      "abiFilters": ["arm64-v8a", "x86_64"],
+    }
+  },
+  "buildOptionSet": [
+    {
+      "name": "release",
+      "arkOptions": {
+        "obfuscation": {
+          "ruleOptions": {
+            "enable": false,
+            "files": [
+              "./obfuscation-rules.txt"
+            ]
+          },
+          "consumerFiles": [
+            "./consumer-rules.txt"
+          ]
+        }
+      },
+      "nativeLib": {
+        "headerPath": "../../../../../artifacts/dynamic_lib/include",
+        "debugSymbol": {
+          "strip": true,
+          "exclude": []
+        }
+      }
+    },
+  ],
+  "targets": [
+    {
+      "name": "default"
+    },
+    {
+      "name": "ohosTest"
+    }
+  ]
+}

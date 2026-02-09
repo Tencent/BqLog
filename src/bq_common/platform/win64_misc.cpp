@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,25 +9,26 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
-#if BQ_WIN
-#include <windows.h>
-#include <shellapi.h>
+#include "bq_common/platform/win64_misc.h"
+#if defined(BQ_WIN)
+#include "bq_common/platform/win64_includes_begin.h"
+#include <winternl.h>
 #include <sys/stat.h>
-#include <errno.h>
 #include <direct.h>
-#include <stdio.h>
 #include <fileapi.h>
-#include <corecrt_io.h>
-#include <stdint.h>
-#include <string.h>
 #include <DbgHelp.h>
 #include <wchar.h>
-#include <inttypes.h>
+#include "bq_common/bq_common.h"
 
+#ifdef BQ_VISUAL_STUDIO
 #pragma comment(lib, "dbghelp.lib")
+#else
+#pragma message("Warning: DbgHelp.a is not linked without MSVC automatically. Please link it manually by -ldbghelp. ")
+#endif
 
 namespace bq {
+    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_)
+    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_)
     namespace platform {
         static bq::u16string trans_to_windows_wide_string(const bq::string utf8_str)
         {
@@ -38,7 +39,7 @@ namespace bq {
             result.fill_uninitialized(utf8_str.size() + 1);
             uint32_t trans_size = bq::util::utf8_to_utf16(utf8_str.c_str(), (uint32_t)utf8_str.size(), &result[0], (uint32_t)result.size());
             assert((trans_size < result.size()) && "trans_to_windows_wide_string error");
-            result.erase(result.begin() + (size_t)trans_size, result.size() - ((size_t)trans_size));
+            result.erase(result.begin() + static_cast<ptrdiff_t>(trans_size), result.size() - ((size_t)trans_size));
             result = result.replace(u"/", u"\\");
             return result;
         }
@@ -48,7 +49,7 @@ namespace bq {
             if (is_absolute(path)) {
                 return path;
             }
-            const bq::string& base_dir = get_base_dir(true);
+            const bq::string& base_dir = get_base_dir(0);
             if (path.begin_with("\\") || path.begin_with("/")) {
                 return base_dir + path.substr(1, path.size() - 1);
             } else {
@@ -56,16 +57,14 @@ namespace bq {
             }
         }
 
-        static bool get_stat_by_path(const bq::string& path, struct __stat64& buf)
+        static bool get_stat_by_path(const bq::string& path, WIN32_FILE_ATTRIBUTE_DATA& buf)
         {
             bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(path)));
-            int32_t result = _wstat64((LPCWSTR)file_path_w.c_str(), &buf);
-            if (result == 0) {
-                return true;
-            }  
-            return false;
+            if (!GetFileAttributesExW((LPCWSTR)file_path_w.c_str(), GetFileExInfoStandard, &buf)) {
+                return false;
+            }
+            return true;
         }
-
 
         // TODO optimize use TSC
         uint64_t high_performance_epoch_ms()
@@ -76,10 +75,10 @@ namespace bq {
             /* Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (ANSI UTC) and copy it
              * to a LARGE_INTEGER structure. */
             GetSystemTimeAsFileTime(&ft);
-            li.LowPart = ft.dwLowDateTime;
-            li.HighPart = ft.dwHighDateTime;
+            li.LowPart = static_cast<decltype(li.LowPart)>(ft.dwLowDateTime);
+            li.HighPart = static_cast<decltype(li.HighPart)>(ft.dwHighDateTime);
 
-            uint64_t ret = li.QuadPart;
+            uint64_t ret = static_cast<uint64_t>(li.QuadPart);
             const uint64_t UNIX_TIME_START = 0x019DB1DED53E8000; // January 1, 1970 (start of Unix epoch) in "ticks", difference from ANSI UTC to Unix Epoch.
             const uint64_t TICKS_PER_SECOND = 10000; // a tick is 100ns
 
@@ -88,26 +87,18 @@ namespace bq {
             return ret;
         }
 
-        struct ___base_dir_initializer {
-            bq::string base_dir;
-
-
-            ___base_dir_initializer()
-            {
-                static_assert(sizeof(char16_t) == sizeof(WCHAR), "WCHAR must be 16bits on WIndows Platform!");
-                const char16_t* wpath = (const char16_t*)_wgetcwd(nullptr, 0);
-                uint32_t wpath_len = (uint32_t)wcslen((LPCWSTR)wpath);
-                base_dir.fill_uninitialized((size_t)wpath_len * 3 + 2);
-                size_t utf8_len = (size_t)bq::util::utf16_to_utf8(wpath, wpath_len, base_dir.begin(), (uint32_t)base_dir.size());
-                assert(utf8_len < base_dir.size() && "base_dir utf16_to_utf8 size error!");
-                base_dir.erase(base_dir.begin() + utf8_len, base_dir.size() - utf8_len);
-            }
-        };
-        const bq::string& get_base_dir(bool is_sandbox)
+        base_dir_initializer::base_dir_initializer()
         {
-            (void)is_sandbox;
-            static ___base_dir_initializer base_dir_init_inst;
-            return base_dir_init_inst.base_dir;
+            static_assert(sizeof(char16_t) == sizeof(WCHAR), "WCHAR must be 16bits on WIndows Platform!");
+            const char16_t* wpath = (const char16_t*)_wgetcwd(nullptr, 0);
+            uint32_t wpath_len = (uint32_t)wcslen((LPCWSTR)wpath);
+            bq::string base_dir;
+            base_dir.fill_uninitialized((size_t)wpath_len * 3 + 2);
+            size_t utf8_len = (size_t)bq::util::utf16_to_utf8(wpath, wpath_len, base_dir.begin(), (uint32_t)base_dir.size());
+            assert(utf8_len < base_dir.size() && "base_dir utf16_to_utf8 size error!");
+            base_dir.erase(base_dir.begin() + static_cast<ptrdiff_t>(utf8_len), base_dir.size() - utf8_len);
+            set_base_dir_0(base_dir);
+            set_base_dir_1(base_dir);
         }
 
         int32_t get_file_size(const char* file_path, size_t& size_ref)
@@ -142,9 +133,9 @@ namespace bq {
 
         bool is_dir(const char* path)
         {
-            struct __stat64 buf;
+            WIN32_FILE_ATTRIBUTE_DATA buf;
             if (get_stat_by_path(path, buf)) {
-                if ((buf.st_mode & _S_IFMT) == _S_IFDIR) {
+                if (buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     return true;
                 }
             }
@@ -153,9 +144,9 @@ namespace bq {
 
         bool is_regular_file(const char* path)
         {
-            struct __stat64 buf;
+            WIN32_FILE_ATTRIBUTE_DATA buf;
             if (get_stat_by_path(path, buf)) {
-                if ((buf.st_mode & _S_IFMT) == _S_IFREG) {
+                if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !(buf.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
                     return true;
                 }
             }
@@ -164,13 +155,13 @@ namespace bq {
 
         static int32_t make_dir_recursive(char16_t* path)
         {
-            constexpr size_t prefix_size = 2; //u"\\\\?\\"
+            constexpr size_t prefix_size = 2; // u"\\\\?\\"
             if ((wcslen((LPCWSTR)path) == prefix_size + 2) && path[prefix_size + 1] == ':') {
                 return 0;
             }
-            struct __stat64 buf;
-            if (0 == _wstat64((LPCWSTR)path, &buf)) {
-                if ((buf.st_mode & _S_IFMT) == _S_IFDIR) {
+            WIN32_FILE_ATTRIBUTE_DATA buf;
+            if (GetFileAttributesExW((LPCWSTR)path, GetFileExInfoStandard, &buf)) {
+                if (buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     return 0;
                 }
             }
@@ -185,6 +176,10 @@ namespace bq {
                 }
             }
             if (_wmkdir((LPCWSTR)path) == 0) {
+                return 0;
+            }
+            if (errno == EEXIST) {
+                // Directory already exists
                 return 0;
             }
             return errno;
@@ -219,7 +214,9 @@ namespace bq {
         {
             bq::string result;
             result.set_capacity(original_path.size());
-            bq::array<bq::string> split = original_path.replace("\\", "/").split("/");
+            bq::string trans_path = original_path.replace("\\", "/");
+            bool end_with_slash = (trans_path.is_empty() ? false : (trans_path[trans_path.size() - 1] == '/'));
+            bq::array<bq::string> split = trans_path.split("/");
             bq::array<bq::string> result_split;
             result_split.set_capacity(split.size());
             for (decltype(split)::size_type i = 0; i < split.size(); ++i) {
@@ -248,6 +245,9 @@ namespace bq {
             if (original_path.size() > 0 && original_path[0] == '/')
                 result = "/" + result;
 
+            if (end_with_slash) {
+                result += "/";
+            }
             return result;
         }
 
@@ -265,16 +265,15 @@ namespace bq {
 
         int32_t remove_dir_or_file_inner(bq::u16string& path)
         {
-            struct __stat64 buf;
-            int32_t stat_result = _wstat64((LPCWSTR)path.c_str(), &buf);
-            if (0 != stat_result) {
-                return errno;
+            WIN32_FILE_ATTRIBUTE_DATA buf;
+            if (!GetFileAttributesExW((LPCWSTR)path.c_str(), GetFileExInfoStandard, &buf)) {
+                DWORD err = GetLastError();
+                return (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) ? ENOENT : EACCES;
             }
 
-            if ((buf.st_mode & _S_IFMT) != _S_IFDIR)
-            {
+            if (!(buf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                 DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
-                attr &= ~FILE_ATTRIBUTE_READONLY;
+                attr &= static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY);
                 SetFileAttributesW((LPCWSTR)path.c_str(), attr);
                 int32_t result = _wremove((LPCWSTR)path.c_str());
                 if (result != 0) {
@@ -288,22 +287,11 @@ namespace bq {
                 WIN32_FIND_DATAW find_data;
                 HANDLE h_file;
                 h_file = FindFirstFileW((LPCWSTR)path.c_str(), &find_data);
-                path.erase(path.end() - 2, 2); //u"\\*"
+                path.erase(path.end() - 2, 2); // u"\\*"
                 if (h_file == INVALID_HANDLE_VALUE) {
                     // it's empty
                 } else {
-                    if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
-                        // ignore
-                    } else {
-                        path.push_back(u'\\');
-                        path += (const char16_t*)find_data.cFileName;
-                        int32_t result = remove_dir_or_file_inner(path);
-                        path.erase(path.begin() + path_init_size, path.size() - path_init_size);
-                        if (result != 0) {
-                            return result;
-                        }
-                    }
-                    while (FindNextFileW(h_file, &find_data)) {
+                    do {
                         if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
                             // ignore
                             continue;
@@ -311,14 +299,16 @@ namespace bq {
                         path.push_back(u'\\');
                         path += (const char16_t*)find_data.cFileName;
                         int32_t result = remove_dir_or_file_inner(path);
-                        path.erase(path.begin() + path_init_size, path.size() - path_init_size);
+                        path.erase(path.begin() + static_cast<ptrdiff_t>(path_init_size), path.size() - path_init_size);
                         if (result != 0) {
+                            FindClose(h_file);
                             return result;
                         }
-                    }
+                    } while (FindNextFileW(h_file, &find_data));
+                    FindClose(h_file);
                 }
                 DWORD attr = GetFileAttributesW((LPCWSTR)path.c_str());
-                attr &= ~FILE_ATTRIBUTE_READONLY;
+                attr &= static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY);
                 SetFileAttributesW((LPCWSTR)path.c_str(), attr);
                 if (!RemoveDirectoryW((LPCWSTR)path.c_str())) {
                     return static_cast<int32_t>(GetLastError());
@@ -330,59 +320,11 @@ namespace bq {
         int32_t remove_dir_or_file(const char* path)
         {
             bq::u16string path_w = trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(path)));
-            if (path_w.is_empty())
-            {
+            if (path_w.is_empty()) {
                 return 0;
             }
             path_w = u"\\\\?\\" + path_w;
             return remove_dir_or_file_inner(path_w);
-        }
-
-        // File exclusive works well across different processes,
-        // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
-        // To eliminate platform compatibility risks, we decided to implement it ourselves.
-        BQ_STRUCT_PACK(struct windows_file_node_info {
-            DWORD volumn;
-            DWORD idx_high;
-            DWORD idx_low;
-            uint64_t hash_code() const
-            {
-                return bq::util::get_hash_64(this, sizeof(windows_file_node_info));
-            }
-            bool operator==(const windows_file_node_info& rhs) const
-            {
-                return volumn == rhs.volumn && idx_high == rhs.idx_high && idx_low == rhs.idx_low;
-            }
-        });
-
-        struct temp_exclusive_cache {
-            bq::hash_map<windows_file_node_info, file_open_mode_enum> file_exclusive_cache;
-            temp_exclusive_cache() { isInit = true; }
-            ~temp_exclusive_cache() { isInit = false; }
-            bool isInit = false;
-        };
-
-        static bq::hash_map<windows_file_node_info, file_open_mode_enum> *get_file_exclusive_cache()
-        {
-            static temp_exclusive_cache temp;
-            if (!temp.isInit)
-                return nullptr;
-            return &temp.file_exclusive_cache;
-        }
-
-        struct temp_exclusive_mutex {
-            bq::platform::mutex file_exclusive_mutex;
-            temp_exclusive_mutex() { isInit = true; }
-            ~temp_exclusive_mutex() { isInit = false; }
-            bool isInit = false;
-        };
-
-        static bq::platform::mutex* get_file_exclusive_mutex()
-        {
-            static temp_exclusive_mutex temp;
-            if (!temp.isInit)
-                return nullptr;
-            return &temp.file_exclusive_mutex;
         }
 
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
@@ -395,19 +337,12 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check GetFileInformationByHandle failed");
                 return false;
             }
-            auto mutex_ptr = get_file_exclusive_mutex();
-            if (!mutex_ptr)
-                return false;
-            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
-            auto cache_ptr = get_file_exclusive_cache();
-            if (!cache_ptr)
-                return false;
-            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            windows_file_node_info node_info;
-            node_info.volumn = file_info.dwVolumeSerialNumber;
-            node_info.idx_high = file_info.nFileIndexHigh;
-            node_info.idx_low = file_info.nFileIndexLow;
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
+            file_node_info node_info;
+            node_info.volumn = static_cast<uint32_t>(file_info.dwVolumeSerialNumber);
+            node_info.idx_high = static_cast<uint32_t>(file_info.nFileIndexHigh);
+            node_info.idx_low = static_cast<uint32_t>(file_info.nFileIndexLow);
             auto iter = file_exclusive_cache.find(node_info);
             if (iter == file_exclusive_cache.end()) {
                 file_exclusive_cache.add(node_info, mode);
@@ -426,19 +361,12 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check GetFileInformationByHandle failed");
                 return;
             }
-            auto mutex_ptr = get_file_exclusive_mutex();
-            if (!mutex_ptr)
-                return;
-            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
-            auto cache_ptr = get_file_exclusive_cache();
-            if (!cache_ptr)
-                return;
-            bq::hash_map<windows_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            windows_file_node_info node_info;
-            node_info.volumn = file_info.dwVolumeSerialNumber;
-            node_info.idx_high = file_info.nFileIndexHigh;
-            node_info.idx_low = file_info.nFileIndexLow;
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
+            file_node_info node_info;
+            node_info.volumn = static_cast<uint32_t>(file_info.dwVolumeSerialNumber);
+            node_info.idx_high = static_cast<uint32_t>(file_info.nFileIndexHigh);
+            node_info.idx_low = static_cast<uint32_t>(file_info.nFileIndexLow);
             file_exclusive_cache.erase(node_info);
         }
 
@@ -491,18 +419,23 @@ namespace bq {
         int32_t write_file(const platform_file_handle& file_handle, const void* src_addr, size_t write_size, size_t& out_real_write_size)
         {
             out_real_write_size = 0;
-            size_t max_size_pertime = static_cast<size_t>(UINT32_MAX);
-            size_t max_write_size_current = 0;
-            while (out_real_write_size < write_size) {
-                size_t need_write_size_this_time = bq::min_value(max_size_pertime, write_size - max_write_size_current);
-                DWORD out_size = 0;
-                bool result = WriteFile(file_handle, src_addr, static_cast<DWORD>(need_write_size_this_time), &out_size, NULL);
+            const char* current_src = static_cast<const char*>(src_addr);
+            size_t remaining = write_size;
+
+            while (remaining > 0) {
+                DWORD chunk_size = static_cast<DWORD>(bq::min_value(remaining, static_cast<size_t>(UINT32_MAX)));
+                DWORD bytes_written = 0;
+                BOOL result = WriteFile(file_handle, current_src, chunk_size, &bytes_written, NULL);
                 if (!result) {
                     return static_cast<int32_t>(GetLastError());
                 }
-                out_real_write_size += static_cast<size_t>(out_size);
-                if (out_size != need_write_size_this_time) {
-                    return 0;
+                out_real_write_size += bytes_written;
+                current_src += bytes_written;
+                remaining -= bytes_written;
+
+                if (bytes_written == 0) {
+                    // Maybe EOF
+                    break;
                 }
             }
             return 0;
@@ -541,6 +474,31 @@ namespace bq {
             return static_cast<int32_t>(GetLastError());
         }
 
+        uint64_t get_file_last_modified_epoch_ms(const char* path)
+        {
+            bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(path)));
+            WIN32_FILE_ATTRIBUTE_DATA attr_data;
+            if (!GetFileAttributesExW((LPCWSTR)file_path_w.c_str(), GetFileExInfoStandard, &attr_data)) {
+                return 0; // Failed to get attributes
+            }
+
+            // Check if file exists and is accessible
+            if (attr_data.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
+                return 0; // File doesn't exist or is inaccessible
+            }
+
+            // Convert FILETIME to epoch milliseconds
+            ULARGE_INTEGER uli;
+            uli.LowPart = attr_data.ftLastWriteTime.dwLowDateTime;
+            uli.HighPart = attr_data.ftLastWriteTime.dwHighDateTime;
+
+            // FILETIME is in 100-nanosecond intervals since Jan 1, 1601 (UTC)
+            // Convert to milliseconds since Unix epoch (Jan 1, 1970)
+            uint64_t epoch_ms = uli.QuadPart / 10000; // Convert to milliseconds
+            epoch_ms -= 11644473600000ULL; // Subtract milliseconds from 1601 to 1970
+            return epoch_ms;
+        }
+
         int32_t truncate_file(const platform_file_handle& file_handle, size_t offset)
         {
             LONG offset_low = (LONG)(static_cast<int64_t>(offset) & 0xFFFFFFFF);
@@ -566,11 +524,7 @@ namespace bq {
             if (h_file == INVALID_HANDLE_VALUE) {
                 // it's empty
             } else {
-                if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
-                    // ignore
-                } else {
-                }
-                while (FindNextFileW(h_file, &find_data)) {
+                do {
                     if (wcscmp(find_data.cFileName, (LPCWSTR)u".") == 0 || wcscmp(find_data.cFileName, (LPCWSTR)u"..") == 0) {
                         // ignore
                         continue;
@@ -580,65 +534,89 @@ namespace bq {
                     assert(trans_len < (uint32_t)sizeof(name_utf8_tmp) && "get_all_sub_names bq::util::utf16_to_utf8 size error");
                     name_utf8_tmp[(size_t)trans_len] = u'\0';
                     list.push_back(name_utf8_tmp);
-                }
+                } while (FindNextFileW(h_file, &find_data));
+                FindClose(h_file);
             }
             return list;
         }
 
-        bool share_file(const char* file_path)
-        {
-            // 使用默认文件浏览器打开文件夹
-            HINSTANCE result = ShellExecute(NULL, "open", file_path, NULL, NULL, SW_SHOWNORMAL);
-            // 检查操作是否成功
-            return reinterpret_cast<int64_t>(result) > 32;
-        }
-
-        static thread_local bq::string stack_trace_current_str_;
-        static thread_local bq::u16string stack_trace_current_str_u16_;
-        static HANDLE stack_trace_process_ = GetCurrentProcess();
-        static bq::platform::atomic<bool> stack_trace_sym_initialized_ = false;
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
+            if (!bq::stack_trace_current_str_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
             const char16_t* u16_str;
             uint32_t u16_str_len;
             get_stack_trace_utf16(skip_frame_count, u16_str, u16_str_len);
-            stack_trace_current_str_.clear();
-            stack_trace_current_str_.fill_uninitialized(((u16_str_len * 3) >> 1) + 1);
-            size_t encoded_size = (size_t)bq::util::utf16_to_utf8(u16_str, u16_str_len, stack_trace_current_str_.begin(), (uint32_t)stack_trace_current_str_.size());
-            assert(encoded_size < stack_trace_current_str_.size());
-            stack_trace_current_str_.erase(stack_trace_current_str_.begin() + encoded_size, stack_trace_current_str_.size() - encoded_size);
-            out_str_ptr = stack_trace_current_str_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_.size();
+            stack_trace_str_ref.clear();
+            stack_trace_str_ref.fill_uninitialized(((u16_str_len * 3) >> 1) + 1);
+            size_t encoded_size = (size_t)bq::util::utf16_to_utf8(u16_str, u16_str_len, stack_trace_str_ref.begin(), (uint32_t)stack_trace_current_str_.get().size());
+            assert(encoded_size < stack_trace_str_ref.size());
+            stack_trace_str_ref.erase(stack_trace_current_str_.get().begin() + static_cast<ptrdiff_t>(encoded_size), stack_trace_str_ref.size() - encoded_size);
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_current_str_.get().size();
         }
 
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count)
         {
+            if (!bq::stack_trace_current_str_u16_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::u16string& stack_trace_str_ref = bq::stack_trace_current_str_u16_.get();
             HANDLE thread = GetCurrentThread();
             CONTEXT context;
 
-            if (!stack_trace_sym_initialized_.exchange(true, bq::platform::memory_order::relaxed)) {
-                SymInitialize(stack_trace_process_, NULL, TRUE);
+            stack_trace_str_ref.clear();
+            bq::platform::scoped_mutex lock(common_global_vars::get().stack_trace_mutex_);
+            if (!common_global_vars::get().stack_trace_sym_initialized_.load(bq::platform::memory_order::relaxed)) {
+                SymInitialize(common_global_vars::get().stack_trace_process_, NULL, TRUE);
+                common_global_vars::get().stack_trace_sym_initialized_.store(true, bq::platform::memory_order::relaxed);
             }
-            stack_trace_current_str_u16_.clear();
-            static bq::platform::mutex* stack_trace_mutex_ = new mutex();//Temporary, Unsafe for multi thread!
-            bq::platform::scoped_mutex lock(*stack_trace_mutex_);
             RtlCaptureContext(&context);
 
             STACKFRAME64 stack;
             memset(&stack, 0, sizeof(STACKFRAME64));
+            DWORD machine_type;
+
+#ifdef BQ_ARM_64
+            machine_type = IMAGE_FILE_MACHINE_ARM64;
+            stack.AddrPC.Offset = context.Pc;
+            stack.AddrPC.Mode = AddrModeFlat;
+            stack.AddrStack.Offset = context.Sp;
+            stack.AddrStack.Mode = AddrModeFlat;
+            stack.AddrFrame.Offset = context.Fp;
+            stack.AddrFrame.Mode = AddrModeFlat;
+#elif defined(BQ_ARM_32)
+            machine_type = IMAGE_FILE_MACHINE_ARM;
+            stack.AddrPC.Offset = context.Pc;
+            stack.AddrPC.Mode = AddrModeFlat;
+            stack.AddrStack.Offset = context.Sp;
+            stack.AddrStack.Mode = AddrModeFlat;
+            stack.AddrFrame.Offset = context.R11;
+            stack.AddrFrame.Mode = AddrModeFlat;
+#elif defined(BQ_X86_64)
+            machine_type = IMAGE_FILE_MACHINE_AMD64;
             stack.AddrPC.Offset = context.Rip;
             stack.AddrPC.Mode = AddrModeFlat;
             stack.AddrStack.Offset = context.Rsp;
             stack.AddrStack.Mode = AddrModeFlat;
             stack.AddrFrame.Offset = context.Rbp;
             stack.AddrFrame.Mode = AddrModeFlat;
+#else
+            static_assert(false, "Unsupported architecture on Windows");
+#endif
 
             bool sym_refreshed = false;
             bool effective_stack_started = false;
             uint32_t current_frame_idx = 0;
             while (StackWalk64(
-                IMAGE_FILE_MACHINE_AMD64,
-                stack_trace_process_,
+                machine_type,
+                common_global_vars::get().stack_trace_process_,
                 thread,
                 &stack,
                 &context,
@@ -654,13 +632,13 @@ namespace bq {
                 symbol->SizeOfStruct = sizeof(SYMBOL_INFOW);
                 symbol->MaxNameLen = MAX_SYM_NAME;
                 DWORD64 displacement64 = 0;
-                bool symbo_found = SymFromAddrW(stack_trace_process_, address, &displacement64, symbol);
+                bool symbo_found = SymFromAddrW(common_global_vars::get().stack_trace_process_, address, &displacement64, symbol);
                 if (!symbo_found && !sym_refreshed) {
-                    int32_t error_code = GetLastError();
+                    int32_t error_code = static_cast<int32_t>(GetLastError());
                     (void)error_code;
                     sym_refreshed = true;
-                    SymRefreshModuleList(stack_trace_process_);
-                    symbo_found = SymFromAddrW(stack_trace_process_, address, &displacement64, symbol);
+                    SymRefreshModuleList(common_global_vars::get().stack_trace_process_);
+                    symbo_found = SymFromAddrW(common_global_vars::get().stack_trace_process_, address, &displacement64, symbol);
                 }
                 if (symbo_found) {
                     if (!effective_stack_started) {
@@ -675,17 +653,17 @@ namespace bq {
                     continue;
                 }
 
-                stack_trace_current_str_u16_.push_back(u'\n');
-                stack_trace_current_str_u16_.fill_uninitialized(16);
+                stack_trace_str_ref.push_back(u'\n');
+                stack_trace_str_ref.fill_uninitialized(16);
                 static_assert(sizeof(wchar_t) == sizeof(WCHAR) && sizeof(WCHAR) == sizeof(char16_t), "windows wchar_t should be 2 bytes");
-                swprintf((wchar_t*)(char16_t*)stack_trace_current_str_u16_.end() - 16, 16 + 1, L"%016" PRIx64 "", (uintptr_t)address);
-                stack_trace_current_str_u16_.push_back(L'\t');
+                swprintf((wchar_t*)(char16_t*)stack_trace_str_ref.end() - 16, 16 + 1, L"%016" PRIx64 "", (uintptr_t)address);
+                stack_trace_str_ref.push_back(L'\t');
 
-                DWORD64 module_base = SymGetModuleBase64(stack_trace_process_, address);
+                DWORD64 module_base = SymGetModuleBase64(common_global_vars::get().stack_trace_process_, address);
                 if (!module_base && !sym_refreshed) {
                     sym_refreshed = true;
-                    SymRefreshModuleList(stack_trace_process_);
-                    module_base = SymGetModuleBase64(stack_trace_process_, address);
+                    SymRefreshModuleList(common_global_vars::get().stack_trace_process_);
+                    module_base = SymGetModuleBase64(common_global_vars::get().stack_trace_process_, address);
                 }
 
                 if (module_base) {
@@ -696,7 +674,7 @@ namespace bq {
                     DWORD get_module_length = GetModuleFileNameW(h_module, module_file_name, default_max_module_name_len);
                     if (!get_module_length && !sym_refreshed) {
                         sym_refreshed = true;
-                        SymRefreshModuleList(stack_trace_process_);
+                        SymRefreshModuleList(common_global_vars::get().stack_trace_process_);
                         get_module_length = GetModuleFileNameW(h_module, module_file_name, default_max_module_name_len);
                     }
                     module_file_name[default_max_module_name_len - 1] = (wchar_t)0;
@@ -705,40 +683,87 @@ namespace bq {
                         if (last_slash != nullptr) {
                             module_file_name_ptr = last_slash + 1;
                         }
-                        stack_trace_current_str_u16_ += (const char16_t*)module_file_name_ptr;
-                        stack_trace_current_str_u16_.push_back(u'\t');
+                        stack_trace_str_ref += (const char16_t*)module_file_name_ptr;
+                        stack_trace_str_ref.push_back(u'\t');
                     }
                 } else {
-                    stack_trace_current_str_u16_ += u"unknown module\t";
+                    stack_trace_str_ref += u"unknown module\t";
                 }
 
                 if (symbo_found) {
-                    stack_trace_current_str_u16_ += (const char16_t*)symbol->Name;
-                    stack_trace_current_str_u16_.push_back(u' ');
+                    stack_trace_str_ref += (const char16_t*)symbol->Name;
+                    stack_trace_str_ref.push_back(u' ');
                     DWORD displacement = 0;
                     IMAGEHLP_LINEW64 line;
                     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-                    if (SymGetLineFromAddrW64(stack_trace_process_, address, &displacement, &line)) {
-                        stack_trace_current_str_u16_.push_back(u'(');
-                        stack_trace_current_str_u16_ += (const char16_t*)line.FileName;
-                        stack_trace_current_str_u16_.push_back(u':');
-                        char16_t tmp[32];
-                        swprintf((wchar_t*)tmp, 32, L"%d", line.LineNumber);
-                        stack_trace_current_str_u16_ += tmp;
-                        stack_trace_current_str_u16_.push_back(u')');
+                    if (SymGetLineFromAddrW64(common_global_vars::get().stack_trace_process_, address, &displacement, &line)) {
+                        stack_trace_str_ref.push_back(u'(');
+                        stack_trace_str_ref += (const char16_t*)line.FileName;
+                        stack_trace_str_ref.push_back(u':');
+                        char tmp[32];
+                        auto num_len = snprintf(tmp, sizeof(tmp), "%" PRIu32, static_cast<uint32_t>(line.LineNumber));
+                        for (decltype(num_len) i = 0; i < num_len; ++i) {
+                            stack_trace_str_ref.push_back(static_cast<char16_t>(tmp[i]));
+                        }
+                        stack_trace_str_ref.push_back(u')');
                     }
                 } else {
-                    stack_trace_current_str_u16_ += u"(unknown function and file)";
+                    stack_trace_str_ref += u"(unknown function and file)";
                 }
             }
-            out_str_ptr = stack_trace_current_str_u16_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 
-        void init_for_file_manager()
+        void* aligned_alloc(size_t alignment, size_t size)
         {
-            get_file_exclusive_mutex();
+            if (alignment < sizeof(void*)) {
+                alignment = sizeof(void*);
+            }
+            return _aligned_malloc(size, alignment);
         }
+        void aligned_free(void* ptr)
+        {
+            _aligned_free(ptr);
+        }
+
+        uint64_t file_node_info::hash_code() const
+        {
+            return bq::util::get_hash_64(this, sizeof(file_node_info));
+        }
+
+        static windows_version_info win_version_info_;
+        const windows_version_info& get_windows_version_info()
+        {
+            bq::platform::scoped_mutex lock(common_global_vars::get().win_api_mutex_);
+            if (win_version_info_.major_version == 0) {
+                NTSTATUS(WINAPI * get_rtl_get_version)(PRTL_OSVERSIONINFOW) = nullptr;
+                get_rtl_get_version = get_sys_api<decltype(get_rtl_get_version)>("ntdll.dll", "RtlGetVersion");
+                if (get_rtl_get_version) {
+                    RTL_OSVERSIONINFOW tmp;
+                    NTSTATUS status = get_rtl_get_version(&tmp);
+                    if (0 == status) {
+                        win_version_info_.major_version = tmp.dwMajorVersion;
+                        win_version_info_.minor_version = tmp.dwMinorVersion;
+                        win_version_info_.build_number = tmp.dwBuildNumber;
+                        return win_version_info_;
+                    }
+                }
+                win_version_info_.major_version = 0;
+            }
+            return win_version_info_;
+        }
+
+        void* get_process_adress(const char* module_name, const char* api_name)
+        {
+            HMODULE module = GetModuleHandleA(module_name);
+            if (module) {
+                return reinterpret_cast<void*>(GetProcAddress(module, api_name));
+            }
+            return nullptr;
+        }
+
     }
 }
+#include "bq_common/platform/win64_includes_end.h"
 #endif

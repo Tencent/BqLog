@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,7 +9,6 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <string.h>
 #include "bq_log/log/decoder/appender_decoder_raw.h"
 #include "bq_log/log/appender/appender_file_raw.h"
 
@@ -29,7 +28,7 @@ bq::appender_decode_result bq::appender_decoder_raw::decode_private()
         bq::util::log_device_console(log_level::error, "decode raw log file failed, read item size failed");
         return appender_decode_result::failed_io_error;
     }
-    uint32_t item_size = *(uint32_t*)read_handle.data();
+    uint32_t item_size = *(const uint32_t*)read_handle.data();
     read_handle = read_with_cache(item_size);
     if (read_handle.len() < (size_t)item_size) {
         bq::util::log_device_console(log_level::error, "decode raw log file failed, read item failed, need read size:%d", item_size);

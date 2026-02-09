@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,13 +9,14 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <stddef.h>
-#include "bq_log/bq_log.h"
+#include "bq_log/api/bq_log_jni_api.h"
 
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include "bq_common/bq_common.h"
-#include "bq_log/api/bq_impl_log_invoker.h"
+#include "bq_log/bq_log.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/log_manager.h"
+#include "bq_log/types/buffer/log_buffer.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,7 +28,7 @@ extern "C" {
  */
 JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1version(JNIEnv* env, jclass)
 {
-    const char* version_code = bq::log::get_version().c_str();
+    const char* version_code = bq::api::__api_get_log_version();
     return env->NewStringUTF(version_code);
 }
 
@@ -86,95 +87,62 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1reset_1config(JNI
     env->ReleaseStringUTFChars(log_config, log_config_c_str);
 }
 
-/*
- * Class:     bq_impl_log_invoker
- * Method:    __api_get_log_ring_buffer
- * Signature: ()Ljava/nio/ByteBuffer;
- */
-JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1ring_1buffer(JNIEnv* env, jclass, jlong log_id)
-{
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    uint8_t* log_ring_buffer_base_addr = const_cast<uint8_t*>(ring_buffer.get_buffer_addr());
-    jlong log_ring_buffer_size = (jlong)(ring_buffer.get_block_size() * ring_buffer.get_total_blocks_count());
-    jobject ring_buffer_java_obj = env->NewDirectByteBuffer(log_ring_buffer_base_addr, log_ring_buffer_size);
-    return ring_buffer_java_obj;
-}
+static BQ_TLS struct {
+    bq::_api_log_write_handle write_handle_;
+    bq::java_buffer_info java_info_;
+} tls_write_handle_;
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_log_buffer_alloc
- * Signature: (J[J)Z
+ * Method:    __api_log_write_begin
+ * Signature: (JBJJLjava/lang/String;JZ)[Ljava/nio/ByteBuffer;
  */
-JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JNIEnv* env, jclass, jlong log_id, jlong length, jshort level, jlong category_index, jstring format_content, jlong utf16_str_bytes_len)
+JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1begin(JNIEnv* env, jclass, jlong log_id, jbyte log_level, jlong category_index, jlong format_str_bytes_len, jstring format_str_data, jlong args_data_bytes_len, jboolean finished)
 {
-    auto handle = bq::api::__api_log_buffer_alloc(log_id, (uint32_t)length);
+    auto& handle = tls_write_handle_.write_handle_;
+    handle = bq::api::__api_log_write_begin(static_cast<uint64_t>(log_id), static_cast<uint8_t>(log_level), static_cast<uint32_t>(category_index), static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type), static_cast<uint32_t>(format_str_bytes_len), nullptr, static_cast<uint32_t>(args_data_bytes_len));
     if (handle.result != bq::enum_buffer_result_code::success) {
-        return -1;
+        return nullptr;
     }
-
-    bq::_log_entry_head_def* head = (bq::_log_entry_head_def*)handle.data_addr;
-    head->category_idx = static_cast<uint32_t>(category_index);
-    head->level = (uint8_t)level;
-    head->log_format_str_type = static_cast<uint16_t>(bq::log_arg_type_enum::string_utf16_type);
-
-    jboolean is_cpy = false;
-    bq::tools::size_seq<false, const char16_t*> seq;
-    seq.get_element().value = sizeof(uint32_t) + (size_t)utf16_str_bytes_len;
-    assert(sizeof(bq::_log_entry_head_def) + seq.get_total() <= UINT16_MAX && "log format string too long");
-    head->log_args_offset = static_cast<uint16_t>(sizeof(bq::_log_entry_head_def) + seq.get_total());
-    uint8_t* log_format_content_addr = handle.data_addr + sizeof(bq::_log_entry_head_def);
-    const char16_t* format_str = (const char16_t*)env->GetStringCritical(format_content, &is_cpy);
-    bq::impl::_do_log_args_fill<false>(log_format_content_addr, seq, format_str);
-    env->ReleaseStringCritical(format_content, (const jchar*)format_str);
-
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    return ((jlong)((uint8_t*)handle.data_addr - ring_buffer.get_buffer_addr()) << 32) | (jlong)head->log_args_offset;
+    env->GetStringRegion(format_str_data, static_cast<jsize>(0), static_cast<jsize>(format_str_bytes_len >> 1), reinterpret_cast<jchar*>(handle.format_data_addr));
+    bq::log_imp* log = bq::log_manager::get_log_by_id(static_cast<uint64_t>(log_id));
+    bq::log_buffer_write_handle inner_handle;
+    inner_handle.data_addr = handle.format_data_addr - sizeof(bq::_log_entry_head_def);
+    inner_handle.result = handle.result;
+    if (log) {
+        if (log->get_thread_mode() == bq::log_thread_mode::sync) {
+            tls_write_handle_.java_info_ = log->get_sync_java_buffer_info(env, inner_handle);
+        } else {
+            tls_write_handle_.java_info_ = log->get_buffer().get_java_buffer_info(env, inner_handle);
+        }
+    }
+    bq::log_entry_handle log_entry_handle_obj(inner_handle.data_addr, 0); // 0 for dummy
+    *tls_write_handle_.java_info_.offset_store_ += static_cast<int32_t>(log_entry_handle_obj.get_log_args_offset());
+    if (finished) {
+        bq::api::__api_log_write_finish(static_cast<uint64_t>(log_id), tls_write_handle_.write_handle_);
+    }
+    return tls_write_handle_.java_info_.buffer_array_obj_;
 }
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_log_arg_push_utf16_string
- * Signature: (JLjava/lang/String;J)V
+ * Method:    __api_log_write_finish
+ * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_1string(JNIEnv* env, jclass, jlong log_id, jlong offset, jstring arg_str, jlong arg_utf16_bytes_len)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1finish(JNIEnv*, jclass, jlong log_id)
 {
-    bq::tools::size_seq<true, const char16_t*> seq;
-    seq.get_element().value = sizeof(uint32_t) + sizeof(uint32_t) + (size_t)arg_utf16_bytes_len;
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    uint8_t* log_format_content_addr = const_cast<uint8_t*>(ring_buffer.get_buffer_addr()) + (ptrdiff_t)offset;
-    jboolean is_cpy = false;
-    const char16_t* str = (const char16_t*)env->GetStringCritical(arg_str, &is_cpy);
-    bq::impl::_do_log_args_fill<true>(log_format_content_addr, seq, str);
-    env->ReleaseStringCritical(arg_str, (const jchar*)str);
+    bq::api::__api_log_write_finish(static_cast<uint64_t>(log_id), tls_write_handle_.write_handle_);
 }
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_log_buffer_commit
- * Signature: ([J)V
- */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit(JNIEnv*, jclass, jlong log_id, jlong offset)
-{
-    bq::_api_ring_buffer_chunk_write_handle handle = {};
-    handle.result = bq::enum_buffer_result_code::success;
-    bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
-    bq::ring_buffer& ring_buffer = log->get_ring_buffer();
-    handle.data_addr = const_cast<uint8_t*>(ring_buffer.get_buffer_addr()) + (ptrdiff_t)(offset >> 32);
-    bq::api::__api_log_buffer_commit(log_id, handle);
-}
-
-/*
- * Class:     bq_impl_log_invoker
- * Method:    __api_set_appenders_enable
+ * Method:    __api_set_appender_enable
  * Signature: (ILjava/lang/String;Z)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1appenders_1enable(JNIEnv* env, jclass, jlong log_id, jstring appender_name, jboolean enable)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1appender_1enable(JNIEnv* env, jclass, jlong log_id, jstring appender_name, jboolean enable)
 {
     const char* name = env->GetStringUTFChars(appender_name, NULL);
-    bq::api::__api_set_appenders_enable((uint64_t)log_id, name, (bool)enable);
+    bq::api::__api_set_appender_enable((uint64_t)log_id, name, (bool)enable);
     env->ReleaseStringUTFChars(appender_name, name);
 }
 
@@ -245,7 +213,7 @@ JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
 JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1merged_1log_1level_1bitmap_1by_1log_1id(JNIEnv* env, jclass, jlong log_id)
 {
     const uint32_t* bitmap_ptr = bq::api::__api_get_log_merged_log_level_bitmap_by_log_id((uint64_t)log_id);
-    jobject buffer = env->NewDirectByteBuffer(const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t));
+    jobject buffer = bq::platform::create_new_direct_byte_buffer(env, const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t), false);
     return buffer;
 }
 
@@ -258,7 +226,7 @@ JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
 {
     uint32_t count = bq::api::__api_get_log_categories_count((uint64_t)log_id);
     const uint8_t* mask_array_ptr = bq::api::__api_get_log_category_masks_array_by_log_id((uint64_t)log_id);
-    jobject buffer = env->NewDirectByteBuffer(const_cast<uint8_t*>(mask_array_ptr), count * sizeof(uint8_t));
+    jobject buffer = bq::platform::create_new_direct_byte_buffer(env, const_cast<uint8_t*>(mask_array_ptr), count * sizeof(uint8_t), false);
     return buffer;
 }
 
@@ -270,7 +238,7 @@ JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
 JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1print_1stack_1level_1bitmap_1by_1log_1id(JNIEnv* env, jclass, jlong log_id)
 {
     const uint32_t* bitmap_ptr = bq::api::__api_get_log_print_stack_level_bitmap_by_log_id((uint64_t)log_id);
-    jobject buffer = env->NewDirectByteBuffer(const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t));
+    jobject buffer = bq::platform::create_new_direct_byte_buffer(env, const_cast<uint32_t*>(bitmap_ptr), sizeof(uint32_t), false);
     return buffer;
 }
 
@@ -300,25 +268,27 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1force_1flush(JNIEnv*, 
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_get_file_base_dir
- * Signature: (Z)Ljava/lang/String;
+ * Signature: (I)Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1dir(JNIEnv* env, jclass, jboolean in_sand_box)
+JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1dir(JNIEnv* env, jclass, jint base_dir_type)
 {
-    const char* path = bq::api::__api_get_file_base_dir(in_sand_box);
+    const char* path = bq::api::__api_get_file_base_dir(static_cast<int32_t>(base_dir_type));
     return env->NewStringUTF(path);
 }
 
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_decoder_create
- * Signature: (Ljava/lang/String;)J
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)J
  */
-JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1create(JNIEnv* env, jclass, jstring path)
+JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1create(JNIEnv* env, jclass, jstring path, jstring priv_key)
 {
     uint32_t handle = 0;
     const char* path_c_str = env->GetStringUTFChars(path, NULL);
-    auto result = bq::api::__api_log_decoder_create(path_c_str, &handle);
+    const char* priv_key_c_str = env->GetStringUTFChars(priv_key, NULL);
+    auto result = bq::api::__api_log_decoder_create(path_c_str, priv_key_c_str, &handle);
     env->ReleaseStringUTFChars(path, path_c_str);
+    env->ReleaseStringUTFChars(priv_key, priv_key_c_str);
     if (result != bq::appender_decode_result::success) {
         return (jlong)(result) * (-1);
     } else {
@@ -361,45 +331,67 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1destroy(
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_decode
- * Signature: (Ljava/lang/String;Ljava/lang/String;)V
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
  */
-JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv* env, jclass, jstring in_path, jstring out_path)
+JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv* env, jclass, jstring in_path, jstring out_path, jstring priv_key)
 {
-    jboolean re = JNI_FALSE;
+    jboolean ret = JNI_FALSE;
     const char* in_path_ = env->GetStringUTFChars(in_path, NULL);
     const char* out_path_ = env->GetStringUTFChars(out_path, NULL);
-    if (bq::api::__api_log_decode(in_path_, out_path_))
-        re = JNI_TRUE;
+    const char* priv_key_c_str = env->GetStringUTFChars(priv_key, NULL);
+
+    if (bq::api::__api_log_decode(in_path_, out_path_, priv_key_c_str)) {
+        ret = JNI_TRUE;
+    }
     env->ReleaseStringUTFChars(in_path, in_path_);
     env->ReleaseStringUTFChars(out_path, out_path_);
-    return re;
+    env->ReleaseStringUTFChars(priv_key, priv_key_c_str);
+    return ret;
 }
 
-JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jboolean use_gmt_time)
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_take_snapshot_string
+ * Signature: (JLjava/lang/String;)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv* env, jclass, jlong log_id, jstring time_zone_config)
 {
     bq::_api_string_def snapshot_str_def;
-    bq::api::__api_take_snapshot_string((uint64_t)log_id, use_gmt_time, &snapshot_str_def);
+    const char* time_zone_config_str = env->GetStringUTFChars(time_zone_config, NULL);
+    bq::api::__api_take_snapshot_string((uint64_t)log_id, time_zone_config_str, &snapshot_str_def);
+    env->ReleaseStringUTFChars(time_zone_config, time_zone_config_str);
     jstring snapshot_str = env->NewStringUTF(snapshot_str_def.str);
     bq::api::__api_release_snapshot_string((uint64_t)log_id, &snapshot_str_def);
     return snapshot_str;
 }
 
-static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+static void BQ_STDCALL jni_console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
 {
     (void)length;
 
     bq::platform::jni_env env_holder;
     JNIEnv* env = env_holder.env;
-    static jclass cls = env->FindClass("bq/log");
-    if (!cls) {
+    if (!env) {
+        bq::util::_default_console_output(log_level, content);
         return;
     }
-    static jmethodID mid = env->GetStaticMethodID(cls, "native_console_callbck", "(JIILjava/lang/String;)V");
+    jclass cls = bq::log_global_vars::get().cls_bq_log_;
+    if (!cls) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log class is not find in JVM");
+        return;
+    }
+    jmethodID mid = bq::log_global_vars::get().mid_native_console_callback_;
     if (!mid) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log.native_console_callback method is not find in JVM");
         return;
     }
     jstring message = env->NewStringUTF(content);
-    env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int)log_level, message);
+    env->CallStaticVoidMethod(cls, mid, log_id, category_idx, (int32_t)log_level, message);
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
+    env->DeleteLocalRef(message);
 }
 /*
  * Class:     bq_impl_log_invoker
@@ -425,22 +417,44 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1
     bq::log::set_console_buffer_enable(enable);
 }
 
-static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+/*
+ * Class:     bq_impl_log_invoker
+ * Method:    __api_reset_base_dir
+ * Signature: (ILjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir(JNIEnv* env, jclass, jint base_dir_type, jstring dir)
+{
+    const char* dir_c_str = env->GetStringUTFChars(dir, NULL);
+    bq::api::__api_reset_base_dir(static_cast<int32_t>(base_dir_type), dir_c_str);
+    env->ReleaseStringUTFChars(dir, dir_c_str);
+}
+
+static void BQ_STDCALL jni_console_buffer_fetch_callback(void* pass_through_param, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
 {
     jobject callback_obj = (jobject)pass_through_param;
     (void)length;
     bq::platform::jni_env env_holder;
     JNIEnv* env = env_holder.env;
-    static jclass cls = env->FindClass("bq/log");
-    if (!cls) {
+    if (!env) {
         return;
     }
-    static jmethodID mid = env->GetStaticMethodID(cls, "native_console_buffer_fetch_and_remove_callbck", "(Lbq/log$console_callbck_delegate;JIILjava/lang/String;)V");
+    jclass cls = bq::log_global_vars::get().cls_bq_log_;
+    if (!cls) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log class is not find in JVM");
+        return;
+    }
+    jmethodID mid = bq::log_global_vars::get().mid_native_console_buffer_fetch_and_remove_callback_;
     if (!mid) {
+        bq::util::log_device_console(bq::log_level::error, "bq.log.native_console_buffer_fetch_and_remove_callback method is not find in JVM");
         return;
     }
     jstring message = env->NewStringUTF(content);
-    env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, (int)log_level, message);
+    env->CallStaticVoidMethod(cls, mid, callback_obj, log_id, category_idx, static_cast<int32_t>(log_level), message);
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
+    env->DeleteLocalRef(message);
 }
 /*
  * Class:     bq_impl_log_invoker
@@ -451,14 +465,16 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove
 {
     return bq::api::__api_fetch_and_remove_console_buffer(jni_console_buffer_fetch_callback, callback_obj);
 }
+
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_uninit
+ * Method:    __api_mark_jvm_destroyed
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1uninit(JNIEnv*, jclass)
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1mark_1jvm_1destroyed(JNIEnv*, jclass)
 {
-    bq::api::__api_uninit();
+    bq::common_global_vars::get().mark_jvm_destroyed();
+    bq::util::log_device_console(bq::log_level::info, "JVM is destroying");
 }
 
 #ifdef __cplusplus

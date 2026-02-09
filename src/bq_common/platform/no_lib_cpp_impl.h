@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -25,13 +25,17 @@
  * \author pippocao
  * \date 2022/09/21
  */
-#include "bq_common/platform/macros.h"
-#include "bq_common/misc/assert.h"
+
+#include "bq_common/bq_common_public_include.h"
 #if defined(BQ_NO_LIBCPP)
-#include <limits.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdint.h>
+
+namespace std {
+    enum class align_val_t : size_t { };
+    struct nothrow_t {
+    };
+    extern const nothrow_t nothrow;
+    using size_t = ::size_t;
+}
 
 inline void* operator new(size_t, void* p) noexcept { return p; }
 inline void* operator new[](size_t, void* p) noexcept { return p; }
@@ -42,6 +46,24 @@ void* operator new(size_t size);
 void* operator new[](size_t size);
 void operator delete(void* ptr) noexcept;
 void operator delete[](void* ptr) noexcept;
+
+void* operator new(size_t size, std::align_val_t alignment);
+void* operator new[](size_t size, std::align_val_t alignment);
+void operator delete(void* ptr, std::align_val_t alignment) noexcept;
+void operator delete[](void* ptr, std::align_val_t alignment) noexcept;
+void operator delete(void* ptr, std::size_t sz) noexcept;
+void operator delete[](void* ptr, std::size_t sz) noexcept;
+void operator delete(void* ptr, std::size_t sz, std::align_val_t al) noexcept;
+
+void* operator new(size_t size, const std::nothrow_t&) noexcept;
+void* operator new[](size_t size, const std::nothrow_t&) noexcept;
+void* operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept;
+void* operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept;
+
+void operator delete(void* ptr, const std::nothrow_t&) noexcept;
+void operator delete[](void* ptr, const std::nothrow_t&) noexcept;
+void operator delete(void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept;
+void operator delete[](void* ptr, std::align_val_t alignment, const std::nothrow_t&) noexcept;
 #else
 #include <new>
 #endif

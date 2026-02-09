@@ -227,9 +227,9 @@ unsigned int kfifo_in_concurrent(struct kfifo *fifo, const void *buf, unsigned i
 
 #### BqLog的优化实现
 
-`BqLog`的消息队列`bq::ring_buffer`通过自创的一种算法实现了固定开销实现内存分配，该算法用`fetch_add`替代`CAS`，并且设计了一个空间不足时候的回滚算法，确保在高并发的情况下，生产者和消费者都能够在固定的步骤内完成日志的写入和读取。其代码实现可以参考  
-[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.h](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.h)  
-[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.cpp](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/ring_buffer.cpp)  
+`BqLog`的消息队列`bq::miso_ring_buffer`通过自创的一种算法实现了固定开销实现内存分配，该算法用`fetch_add`替代`CAS`，并且设计了一个空间不足时候的回滚算法，确保在高并发的情况下，生产者和消费者都能够在固定的步骤内完成日志的写入和读取。其代码实现可以参考  
+[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.h](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.h)  
+[https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.cpp](https://github.com/Tencent/BqLog/blob/main/src/bq_log/types/miso_ring_buffer.cpp)  
 
 #### `fetch_add`和优势
 
@@ -293,10 +293,10 @@ unsigned int allocated_C = kfifo_in_concurrent(&fifo, buf, 15);//从线程C调�
 
 反观`CAS`就不会有这个问题，因为每一次最后申请的时候，必须是没有其他线程申请过内存，`in`的值和之前判断剩余空间时完全一致，才算申请成功。
 
-为了解决这个问题，既要固定步骤完成内存分配，又要结果正确，`bq::ring_buffer`发明了一种回滚机制，当发生空间不足的时候，可以做一次Rollback。然后返回空间不足的错误。其内存申请的伪码如下：
+为了解决这个问题，既要固定步骤完成内存分配，又要结果正确，`bq::miso_ring_buffer`发明了一种回滚机制，当发生空间不足的时候，可以做一次Rollback。然后返回空间不足的错误。其内存申请的伪码如下：
 
 ```c
-void* bq::ring_buffer::alloc(size_t len)
+void* bq::miso_ring_buffer::alloc(size_t len)
 {
     // 1. 计算ring_buffer剩余的可用空间
     size_t free_space = this->size_ - (this->in_ - this->out_);
@@ -326,7 +326,7 @@ void* bq::ring_buffer::alloc(size_t len)
 
 ```
 
-这段代码不仅演示了`bq::ring_buffer`是如何做到用`fetch_add`分配内存的，还演示了当空间不足时候的回滚算法。可能大家会有质疑，觉得这个回滚算法性能好像很差。但是我们需要知道，当回滚逻辑发生的时候，说明消息队列的空间已经不足了，这个时候系统的性能瓶颈将变成业务需要对消息队列扩容，或者阻塞等待消费者线程取走数据，腾出空间。这种时候，这个`CAS`性能消耗反而变得无足轻重了。
+这段代码不仅演示了`bq::miso_ring_buffer`是如何做到用`fetch_add`分配内存的，还演示了当空间不足时候的回滚算法。可能大家会有质疑，觉得这个回滚算法性能好像很差。但是我们需要知道，当回滚逻辑发生的时候，说明消息队列的空间已经不足了，这个时候系统的性能瓶颈将变成业务需要对消息队列扩容，或者阻塞等待消费者线程取走数据，腾出空间。这种时候，这个`CAS`性能消耗反而变得无足轻重了。
 
 接下来重点说一下回滚算法的思路。为什么回滚算法需要是`CAS`的，而不是直接fetch_add(this->in_, -len)这样把自己加上去的数值减掉。我们要知道回退的难度在于当`in`在`fetch_add`超标之后，每个生产者线程都不知道应该将`in`回退到多少最合适，会不会回退过多，会不会回退过少。
 

@@ -1,6 +1,6 @@
 package bq.impl;
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  * 
@@ -21,15 +21,11 @@ public class log_invoker {
 
 	public static native void __api_log_reset_config(String log_name,String config_content);
 	
-	public static native java.nio.ByteBuffer __api_get_log_ring_buffer(long log_id);
+	public static native ByteBuffer[] __api_log_write_begin(long log_id, byte log_level, long category_index, long format_str_bytes_len, String format_str_data, long args_data_bytes_len, boolean finished);
 	
-	public static native long __api_log_buffer_alloc(long log_id, long length, short level, long category_index, String fmt_string, long string_utf16_byte_len);
+	public static native void __api_log_write_finish(long log_id);
 	
-	public static native void __api_log_arg_push_utf16_string(long log_id, long offset, String str, long string_utf16_byte_len);
-	
-	public static native void __api_log_buffer_commit(long log_id, long handle);
-	
-	public static native void __api_set_appenders_enable(long log_id, String appender_name, boolean enable);
+	public static native void __api_set_appender_enable(long log_id, String appender_name, boolean enable);
 	
 	public static native long __api_get_logs_count();
 	
@@ -51,23 +47,25 @@ public class log_invoker {
 	
 	public static native void __api_force_flush(long log_id);
 	
-	public static native String __api_get_file_base_dir(boolean is_in_sandbox);
+	public static native String __api_get_file_base_dir(int base_dir_type);
 
-	public static native long __api_log_decoder_create(String log_file_path);
+	public static native long __api_log_decoder_create(String log_file_path, String priv_key);
 
 	public static native int __api_log_decoder_decode(long handle, bq.def.string_holder out_decoded_text);
 
 	public static native void __api_log_decoder_destroy(long handle);
 	
-	public static native boolean __api_log_decode(String in_file_path, String out_file_path);
+	public static native boolean __api_log_decode(String in_file_path, String out_file_path, String priv_key);
 	
-	public static native String __api_take_snapshot_string(long log_id, boolean use_gmt_time);
+	public static native String __api_take_snapshot_string(long log_id, String time_zone_config);
 
 	public static native void __api_set_console_callback(boolean enable);
 	
 	public static native void __api_set_console_buffer_enable(boolean enable);
 	
+	public static native void __api_reset_base_dir(int base_dir_type, String dir);
+	
 	public static native boolean __api_fetch_and_remove_console_buffer(Object callback);
 	
-	public static native void __api_uninit();
+	public static native void __api_mark_jvm_destroyed();
 }

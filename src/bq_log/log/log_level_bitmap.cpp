@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,7 +9,6 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
 #include "bq_log/log/log_level_bitmap.h"
 
 namespace bq {
@@ -41,7 +40,7 @@ namespace bq {
 
     void log_level_bitmap::add_level(bq::log_level level)
     {
-        bitmap_ |= (1 << (int32_t)level);
+        bitmap_ = static_cast<uint32_t>(bitmap_ | static_cast<uint32_t>(1 << (int32_t)level));
     }
 
     void log_level_bitmap::add_level(const bq::string& level_string)
@@ -69,12 +68,7 @@ namespace bq {
 
     void log_level_bitmap::del_level(bq::log_level level)
     {
-        bitmap_ &= ~(1 << (int32_t)level);
-    }
-
-    bool log_level_bitmap::have_level(bq::log_level level)
-    {
-        return (bitmap_ & (1 << (int32_t)level)) != 0;
+        bitmap_ &= ~(1U << static_cast<uint32_t>(level));
     }
 
     uint32_t* log_level_bitmap::get_bitmap_ptr()

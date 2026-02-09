@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -17,7 +17,7 @@ namespace bq {
         friend class appender_decoder_raw;
 
     public:
-        static constexpr uint32_t format_version = 5;
+        static constexpr uint32_t format_version = 6;
 
     protected:
         virtual void log_impl(const log_entry_handle& handle) override;

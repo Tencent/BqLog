@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -17,11 +17,24 @@
 //  Created by Yu Cao on 2022/8/31.
 //
 
+// Basic includes
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <limits.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <ctype.h>
+#include <math.h>
+#include <time.h>
+
 #include "bq_common/misc/assert.h"
 #include "bq_common/platform/macros.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"  // some pragma is not valid for all GCC versions
+#pragma GCC diagnostic ignored "-Wpragmas" // some pragma is not valid for all GCC versions
 #pragma GCC diagnostic ignored "-Wstringop-overflow" // GCC warning check
 #pragma GCC diagnostic ignored "-Warray-bounds" // GCC warning check
 #pragma GCC diagnostic ignored "-Wrestrict" // GCC error check

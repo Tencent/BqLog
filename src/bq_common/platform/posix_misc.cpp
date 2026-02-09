@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,23 +9,34 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
-#if BQ_POSIX
+/*
+ * Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#include "bq_common/platform/posix_misc.h"
+#if defined(BQ_POSIX)
 #include <pthread.h>
-#include <sys/stat.h>
-#include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS)
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
+#include <cxxabi.h>
 #include <execinfo.h>
+namespace bq {
+    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_)
+    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_)
+}
 #endif
+#include "bq_common/bq_common.h"
 
 namespace bq {
     namespace platform {
@@ -47,11 +58,29 @@ namespace bq {
                     closedir(dp);
                 }
             }
+            posix_dir_stack_holder(const posix_dir_stack_holder&) = delete;
+            posix_dir_stack_holder& operator=(const posix_dir_stack_holder&) = delete;
+            posix_dir_stack_holder(posix_dir_stack_holder&& rhs) noexcept
+                : dp(rhs.dp)
+            {
+                rhs.dp = nullptr;
+            }
+            posix_dir_stack_holder& operator=(posix_dir_stack_holder&& rhs) noexcept
+            {
+                if (this != &rhs) {
+                    if (dp) {
+                        closedir(dp);
+                    }
+                    dp = rhs.dp;
+                    rhs.dp = nullptr;
+                }
+                return *this;
+            }
             operator bool() const
             {
                 return dp != nullptr;
             }
-            DIR* operator&()
+            DIR* get_dp()
             {
                 return dp;
             }
@@ -137,6 +166,10 @@ namespace bq {
             if (mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
                 return 0;
             }
+            if (errno == EEXIST) {
+                // Directory already exists
+                return 0;
+            }
             return errno;
         }
 
@@ -190,6 +223,7 @@ namespace bq {
         {
             bq::string result;
             result.set_capacity(original_path.size());
+            bool end_with_slash = (original_path.is_empty() ? false : (original_path[original_path.size() - 1] == '/'));
             bq::array<bq::string> split = original_path.split("/");
             bq::array<bq::string> result_split;
             result_split.set_capacity(split.size());
@@ -238,7 +272,7 @@ namespace bq {
                     bq::string username = (slash_index == bq::string::npos) ? result.substr(1) : result.substr(1, (slash_index - 1));
                     struct passwd* pw = getpwnam(username.c_str());
                     if (!pw) {
-                        bq::util::log_device_console(log_level::error, "unkown user:%s, when parsing path:%s", username.c_str(), original_path.c_str());
+                        bq::util::log_device_console(log_level::error, "unknown user:%s, when parsing path:%s", username.c_str(), original_path.c_str());
                     } else if (slash_index == bq::string::npos) {
                         result = pw->pw_dir;
                     } else {
@@ -252,6 +286,9 @@ namespace bq {
                 }
             }
 #endif
+            if (end_with_slash) {
+                result += "/";
+            }
             return result;
         }
 
@@ -268,7 +305,6 @@ namespace bq {
             }
             return errno;
         }
-
 
         int32_t remove_dir_or_file_inner(bq::string& path)
         {
@@ -288,7 +324,7 @@ namespace bq {
                     return errno;
                 }
                 dirent* dirp;
-                while ((dirp = readdir(&dp)) != NULL) {
+                while ((dirp = readdir(dp.get_dp())) != NULL) {
                     if (strcmp(dirp->d_name, ".") == 0 || strcmp(dirp->d_name, "..") == 0) {
                         continue;
                     }
@@ -296,7 +332,7 @@ namespace bq {
                     path.push_back('/');
                     path += dirp->d_name;
                     int32_t result = remove_dir_or_file_inner(path);
-                    path.erase(path.begin() + path_init_size, path.size() - path_init_size);
+                    path.erase(path.begin() + static_cast<bq::string::difference_type>(path_init_size), path.size() - path_init_size);
                     if (result != 0) {
                         return result;
                     }
@@ -318,48 +354,9 @@ namespace bq {
             return remove_dir_or_file_inner(path_str);
         }
 
-        // File exclusive works well across different processes,
-        // but mutual exclusion within the same process is not explicitly documented to function reliably across different system platforms.
-        // To eliminate platform compatibility risks, we decided to implement it ourselves.
-        BQ_STRUCT_PACK(struct posix_file_node_info {
-            decltype(bq::declval<struct stat>().st_ino) ino;
-            uint64_t hash_code() const
-            {
-                return bq::util::get_hash_64(this, sizeof(posix_file_node_info));
-            }
-            bool operator==(const posix_file_node_info& rhs) const
-            {
-                return ino == rhs.ino;
-            }
-        });
-
-        struct temp_exclusive_cache {
-            bq::hash_map<posix_file_node_info, file_open_mode_enum> file_exclusive_cache;
-            temp_exclusive_cache() { isInit = true; }
-            ~temp_exclusive_cache() { isInit = false; }
-            bool isInit = false;
-        };
-
-        static bq::hash_map<posix_file_node_info, file_open_mode_enum>* get_file_exclusive_cache()
+        uint64_t file_node_info::hash_code() const
         {
-            static temp_exclusive_cache temp;
-            if (!temp.isInit)
-                return nullptr;
-            return &temp.file_exclusive_cache;
-        }
-        struct temp_exclusive_mutex {
-            bq::platform::mutex file_exclusive_mutex;
-            temp_exclusive_mutex() { isInit = true; }
-            ~temp_exclusive_mutex() { isInit = false; }
-            bool isInit = false;
-        };
-
-        static bq::platform::mutex* get_file_exclusive_mutex()
-        {
-            static temp_exclusive_mutex tem;
-            if (!tem.isInit)
-                return nullptr;
-            return &tem.file_exclusive_mutex;
+            return bq::util::get_hash_64(this, sizeof(file_node_info));
         }
 
         static bool add_file_execlusive_check(const platform_file_handle& file_handle, file_open_mode_enum mode)
@@ -383,16 +380,9 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return false;
             }
-            auto mutex_ptr = get_file_exclusive_mutex();
-            if (!mutex_ptr)
-                return false;
-            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
-            auto cache_ptr = get_file_exclusive_cache();
-            if (!cache_ptr)
-                return false;
-            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            posix_file_node_info node_info;
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
+            file_node_info node_info;
             node_info.ino = file_info.st_ino;
             auto iter = file_exclusive_cache.find(node_info);
             if (iter == file_exclusive_cache.end()) {
@@ -412,16 +402,9 @@ namespace bq {
                 bq::util::log_device_console(log_level::error, "remove_file_execlusive_check fstat failed, fd:%d, error code:%d", file_handle, errno);
                 return;
             }
-            auto mutex_ptr = get_file_exclusive_mutex();
-            if (!mutex_ptr)
-                return;
-            bq::platform::mutex& file_exclusive_mutex = *mutex_ptr;
-            auto cache_ptr = get_file_exclusive_cache();
-            if (!cache_ptr)
-                return;
-            bq::hash_map<posix_file_node_info, file_open_mode_enum>& file_exclusive_cache = *cache_ptr;
-            bq::platform::scoped_mutex lock(file_exclusive_mutex);
-            posix_file_node_info node_info;
+            auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
+            file_node_info node_info;
             node_info.ino = file_info.st_ino;
             file_exclusive_cache.erase(node_info);
         }
@@ -485,19 +468,26 @@ namespace bq {
 
         int32_t write_file(const platform_file_handle& file_handle, const void* src_addr, size_t write_size, size_t& out_real_write_size)
         {
-
             out_real_write_size = 0;
-            size_t max_size_pertime = static_cast<size_t>(SSIZE_MAX);
-            size_t max_write_size_current = 0;
-            while (out_real_write_size < write_size) {
-                size_t need_write_size_this_time = bq::min_value(max_size_pertime, write_size - max_write_size_current);
-                ssize_t out_size = write(file_handle, src_addr, need_write_size_this_time);
-                if (out_size < 0) {
+            const char* current_src = static_cast<const char*>(src_addr);
+            size_t remaining = write_size;
+
+            while (remaining > 0) {
+                size_t chunk_size = bq::min_value(remaining, static_cast<size_t>(SSIZE_MAX));
+                ssize_t written = write(file_handle, current_src, chunk_size);
+                if (written < 0) {
+                    if (errno == EINTR) {
+                        continue;
+                    }
                     return errno;
                 }
-                out_real_write_size += static_cast<size_t>(out_size);
-                if (out_size < static_cast<ssize_t>(need_write_size_this_time)) {
-                    return 0;
+                out_real_write_size += static_cast<size_t>(written);
+                current_src += static_cast<size_t>(written);
+                remaining -= static_cast<size_t>(written);
+
+                if (written == 0) {
+                    // Maybe EOF
+                    break;
                 }
             }
             return 0;
@@ -530,14 +520,23 @@ namespace bq {
         {
 #if defined(BQ_IOS) || defined(BQ_MAC)
             if (fsync(file_handle) == 0) {
-                return 0;
-            }
 #else
             if (fdatasync(file_handle) == 0) {
+#endif
                 return 0;
             }
-#endif
             return errno;
+        }
+
+        uint64_t get_file_last_modified_epoch_ms(const char* path)
+        {
+            bq::string abs_path = get_lexically_path(path);
+            struct stat buf;
+            int32_t result = stat(abs_path.c_str(), &buf);
+            if (result == 0) {
+                return (uint64_t)buf.st_mtime * 1000;
+            }
+            return (uint64_t)0;
         }
 
         bq::array<bq::string> get_all_sub_names(const char* path)
@@ -555,7 +554,7 @@ namespace bq {
                 return result;
             }
             dirent* dirp;
-            while ((dirp = readdir(&dp)) != NULL) {
+            while ((dirp = readdir(dp.get_dp())) != NULL) {
                 if (strcmp(dirp->d_name, ".") == 0 || strcmp(dirp->d_name, "..") == 0) {
                     continue;
                 }
@@ -566,22 +565,23 @@ namespace bq {
 #endif
         }
 
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS)
-        static thread_local bq::string stack_trace_current_str_;
-        static thread_local bq::u16string stack_trace_current_str_u16_;
-        static constexpr size_t max_stack_size_ = 128;
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
-            stack_trace_current_str_.clear();
-            int32_t stack_count;
-            void* buffer[max_stack_size_];
+            if (!bq::stack_trace_current_str_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
+            stack_trace_str_ref.clear();
+            void* buffer[128];
             char** stacks;
-
-            stack_count = backtrace(buffer, max_stack_size_);
+            auto stack_count = backtrace(buffer, 128);
             stacks = backtrace_symbols(buffer, stack_count);
             uint32_t valid_frame_count = 0;
             if (stacks) {
-                for (int32_t i = 0; i < stack_count; i++) {
+                for (decltype(stack_count) i = 0; i < stack_count; i++) {
                     if (valid_frame_count == 0) {
                         if (strstr(stacks[i], "get_stack_trace")) {
                             continue;
@@ -591,34 +591,75 @@ namespace bq {
                     if (valid_frame_count++ <= skip_frame_count) {
                         continue;
                     }
-                    auto str_len = strlen(stacks[i]);
-                    stack_trace_current_str_.push_back('\n');
-                    stack_trace_current_str_.insert_batch(stack_trace_current_str_.end(), stacks[i], (size_t)str_len);
+                    stack_trace_str_ref.push_back('\n');
+                    char* demangled_str = nullptr;
+                    demangled_str = strstr(stacks[i], "_Z");
+                    if (demangled_str) {
+                        auto tail_mark = strchr(demangled_str, ' ');
+                        if (tail_mark) {
+                            tail_mark[0] = '\0';
+                        }
+                        tail_mark = strchr(demangled_str, '+');
+                        if (tail_mark) {
+                            tail_mark[0] = '\0';
+                        }
+                        int32_t status;
+                        char* demangled = abi::__cxa_demangle(demangled_str, nullptr, nullptr, &status);
+                        if (status == 0 && demangled) {
+                            auto str_len = strlen(demangled);
+                            stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], static_cast<size_t>(demangled_str - stacks[i]));
+                            stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), demangled, (size_t)str_len);
+                            free(demangled);
+                        } else {
+                            demangled_str = nullptr;
+                        }
+                    }
+                    if (!demangled_str) {
+                        auto str_len = strlen(stacks[i]);
+                        stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), stacks[i], (size_t)str_len);
+                    }
                 }
             }
             free(stacks);
-            out_str_ptr = stack_trace_current_str_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_.size();
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count)
         {
+            if (!bq::stack_trace_current_str_u16_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::u16string& stack_trace_str_ref = bq::stack_trace_current_str_u16_.get();
             const char* u8_str;
             uint32_t u8_char_count;
             get_stack_trace(skip_frame_count, u8_str, u8_char_count);
-            stack_trace_current_str_u16_.clear();
-            stack_trace_current_str_u16_.fill_uninitialized((u8_char_count << 1) + 1);
-            size_t encoded_size = (size_t)bq::util::utf8_to_utf16(u8_str, u8_char_count, stack_trace_current_str_u16_.begin(), (uint32_t)stack_trace_current_str_u16_.size());
-            assert(encoded_size < stack_trace_current_str_u16_.size());
-            stack_trace_current_str_u16_.erase(stack_trace_current_str_u16_.begin() + encoded_size, stack_trace_current_str_u16_.size() - encoded_size);
-            out_str_ptr = stack_trace_current_str_u16_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
+            stack_trace_str_ref.clear();
+            stack_trace_str_ref.fill_uninitialized((u8_char_count << 1) + 1);
+            size_t encoded_size = (size_t)bq::util::utf8_to_utf16(u8_str, u8_char_count, stack_trace_str_ref.begin(), (uint32_t)stack_trace_str_ref.size());
+            assert(encoded_size < stack_trace_str_ref.size());
+            stack_trace_str_ref.erase(stack_trace_str_ref.begin() + static_cast<bq::u16string::difference_type>(encoded_size), stack_trace_str_ref.size() - encoded_size);
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 #endif
 
-        void init_for_file_manager()
+        void* aligned_alloc(size_t alignment, size_t size)
         {
-            get_file_exclusive_mutex();
+            if (alignment < sizeof(void*)) {
+                alignment = sizeof(void*);
+            }
+            void* p = nullptr;
+            if (posix_memalign(&p, alignment, size) != 0) {
+                return nullptr;
+            }
+            return p;
+        }
+        void aligned_free(void* ptr)
+        {
+            free(ptr);
         }
     }
 }

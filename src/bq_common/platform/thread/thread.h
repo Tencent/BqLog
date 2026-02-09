@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -22,11 +22,9 @@
  * inherent thread class and implement the virtual callback functions.
  * call start to begin thread.
  */
-#include "bq_common/platform/macros.h"
-#include <stdint.h>
-#include "bq_common/types/string.h"
+#include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
-#if BQ_JAVA
+#if defined(BQ_JAVA)
 #include <jni.h>
 #endif
 
@@ -38,6 +36,7 @@ namespace bq {
             pendding_cancel, // has received cancel command, and waiting thread exit by self.
             finished,
             released,
+            detached,
             error
         };
 
@@ -58,11 +57,6 @@ namespace bq {
 
             thread(thread&& rhs) = delete;
 
-#if BQ_JAVA
-            void attach_to_jvm();
-            JNIEnv* get_jni_env();
-#endif
-
             thread& operator=(const thread& rhs) = delete;
 
             thread& operator=(thread&& rhs) = delete;
@@ -74,7 +68,9 @@ namespace bq {
 
             void join();
 
-            void cancel();
+            void detach();
+
+            bool cancel();
 
             bool is_cancelled();
 

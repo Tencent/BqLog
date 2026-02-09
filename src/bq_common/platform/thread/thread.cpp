@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,14 +9,16 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "bq_common/platform/thread/thread.h"
 #include "bq_common/bq_common.h"
-void bq::platform::thread::cancel()
+bool bq::platform::thread::cancel()
 {
     enum_thread_status running_status = enum_thread_status::running;
     if (!status_.compare_exchange_strong(running_status, enum_thread_status::pendding_cancel)) {
-        bq::util::log_device_console(log_level::warning, "you're trying to cancel a thread which is not in running status, status enum:%d", status_.load());
-        return;
+        bq::util::log_device_console(log_level::warning, "you're trying to cancel a thread which is not in running status, status enum:%" PRId32 "", static_cast<int32_t>(status_.load()));
+        return false;
     }
+    return true;
 }
 
 bool bq::platform::thread::is_cancelled()

@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -15,7 +15,7 @@
 // write_data() and take_snapshot() can not be called in the same time
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_def.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/buffer/siso_ring_buffer.h"
 #include "bq_log/log/layout.h"
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_level_bitmap.h"
@@ -33,14 +33,20 @@ namespace bq {
 
         void write_data(const bq::log_entry_handle& log_entry);
 
-        const bq::string& take_snapshot_string(bool use_gmt_time);
+        const bq::string& take_snapshot_string(const bq::string& time_zone_config);
 
         // take_snapshot_string and release_snapshot_string must be called in pair, or the lock will not be released
         void release_snapshot_string();
 
+        bq_forceinline bool is_enable() const
+        {
+            return (bool)snapshot_buffer_;
+        }
+
     private:
         uint32_t buffer_size_;
-        ring_buffer* snapshot_buffer_;
+        siso_ring_buffer* snapshot_buffer_;
+        uint8_t* buffer_data_;
         bq::string snapshot_text_[2];
         uint32_t snapshot_text_index_;
         bool snapshot_text_continuous_;

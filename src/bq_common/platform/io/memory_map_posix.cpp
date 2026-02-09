@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,23 +9,21 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
-#if BQ_POSIX
-#include <stdio.h>
+#include "bq_common/platform/io/memory_map_posix.h"
+#if defined(BQ_POSIX)
 #include <unistd.h>
 #include <sys/mman.h>
 
 namespace bq {
     static size_t get_memory_map_size_unit()
     {
-        return (size_t)getpagesize();
+        return common_global_vars::get().page_size_;
     }
-
 
     bool memory_map::is_platform_support()
     {
         static_assert(sizeof(size_t) <= sizeof(memory_map_handle::platform_data_), "memory_map_handle::platform_data_ size not enough");
-#if BQ_ANDROID || BQ_APPLE || BQ_LINUX || BQ_UNIX
+#if defined(BQ_ANDROID) || defined(BQ_APPLE) || defined(BQ_LINUX) || defined(BQ_UNIX)
         return true;
 #else
         return false;
@@ -62,7 +60,7 @@ namespace bq {
             }
         }
 
-        result.real_data_ = mmap(NULL, real_mapping_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, real_mapping_offset);
+        result.real_data_ = mmap(NULL, real_mapping_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, static_cast<off_t>(real_mapping_offset));
 
         if (MAP_FAILED == result.real_data_) {
             result.error_code_ = errno;
@@ -82,7 +80,7 @@ namespace bq {
 #ifndef NDEBUG
         assert(handle.has_been_mapped() && "flush_memory_map can not be called without create_memory_map and map_to_memory");
 #endif
-        if (0 != msync(handle.real_data_, *(size_t*)handle.platform_data_, MS_SYNC)) {
+        if (0 != msync(handle.real_data_, *(const size_t*)handle.platform_data_, MS_SYNC)) {
             bq::util::log_device_console(log_level::error, "flush_memory_map file failed, error_code:%d", errno);
         }
     }
@@ -92,7 +90,7 @@ namespace bq {
         if (!handle.has_been_mapped()) {
             return;
         }
-        if (0 != munmap(handle.real_data_, *(size_t*)handle.platform_data_)) {
+        if (0 != munmap(handle.real_data_, *(const size_t*)handle.platform_data_)) {
             bq::util::log_device_console(log_level::error, "release_memory_map file failed, error_code:%d", errno);
         }
         handle.file_.invalid();

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include "bq_common/platform/macros.h"
 #include "bq_common/types/type_traits.h"
+#include "bq_common/types/allocator.h"
 
 namespace bq {
     template <typename T, typename ARRAY>
@@ -28,10 +29,10 @@ namespace bq {
     public:
         template <typename V, typename V_ARRAY>
         friend class BQ_ARRAY_ITER_CLS_NAME;
-        template <typename V, size_t CB>
+        template <typename V, typename Allocator, size_t CB>
         friend class BQ_ARRAY_CLS_NAME;
         typedef typename bq::remove_reference<T>::type value_type;
-        typedef ptrdiff_t diff_type;
+        typedef ptrdiff_t difference_type;
         typedef typename ARRAY::size_type size_type;
 
     private:
@@ -61,20 +62,16 @@ namespace bq {
         template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
         friend bool operator>=(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
         template <typename T1, typename T2, typename V_ARRAY1, typename V_ARRAY2>
-        friend typename BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>::diff_type operator-(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
+        friend typename BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>::difference_type operator-(const BQ_ARRAY_ITER_CLS_NAME<T1, V_ARRAY1>& array1, const BQ_ARRAY_ITER_CLS_NAME<T2, V_ARRAY2>& array2);
 
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator++();
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator++(int32_t);
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator--();
         BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator--(int32_t);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(size_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(size_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(size_type value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(int32_t value);
-        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(size_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator+=(difference_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator+(difference_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>& operator-=(difference_type value);
+        BQ_ARRAY_ITER_CLS_NAME<T, ARRAY> operator-(difference_type value);
 
         value_type& operator*() const;
 
@@ -83,23 +80,26 @@ namespace bq {
         operator value_type*() const;
     };
 
-    template <typename T, size_t TAIL_BUFFER_SIZE = 0>
+    template <typename T, typename Allocator = bq::default_allocator<T>, size_t TAIL_BUFFER_SIZE = 0>
     class BQ_ARRAY_CLS_NAME {
     public:
         using value_type = typename bq::decay<T>::type;
         using size_type = size_t;
-        using iterator = BQ_ARRAY_ITER_CLS_NAME<value_type, BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>>;
-        using const_iterator = BQ_ARRAY_ITER_CLS_NAME<const value_type, BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>>;
+        using iterator = BQ_ARRAY_ITER_CLS_NAME<value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
+        using difference_type = typename iterator::difference_type;
+        using const_iterator = BQ_ARRAY_ITER_CLS_NAME<const value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
+        using allocator_type = Allocator;
 
-        template <typename V, size_t TAIL_BUFFER_SIZE_V>
+        template <typename V, typename Allocator_V, size_t TAIL_BUFFER_SIZE_V>
         friend class BQ_ARRAY_CLS_NAME;
-        friend class BQ_ARRAY_ITER_CLS_NAME<value_type, BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>>;
-        friend class BQ_ARRAY_ITER_CLS_NAME<const value_type, BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>>;
+        friend class BQ_ARRAY_ITER_CLS_NAME<value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
+        friend class BQ_ARRAY_ITER_CLS_NAME<const value_type, BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>>;
 
     protected:
         value_type* data_;
         size_type size_;
         size_type capacity_;
+        allocator_type allocator_;
 
     public:
         BQ_ARRAY_CLS_NAME();
@@ -113,9 +113,9 @@ namespace bq {
 
         BQ_ARRAY_CLS_NAME(T&& rhs) noexcept;
 
-        BQ_ARRAY_CLS_NAME(const BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& rhs);
+        BQ_ARRAY_CLS_NAME(const BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>& rhs);
 
-        BQ_ARRAY_CLS_NAME(BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>&& rhs) noexcept;
+        BQ_ARRAY_CLS_NAME(BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>&& rhs) noexcept;
 
         size_type size() const;
 
@@ -123,19 +123,21 @@ namespace bq {
 
         bool is_empty() const;
 
-        value_type& operator[](size_type idx);
+        template <typename IDX_TYPE>
+        value_type& operator[](IDX_TYPE idx);
 
-        const value_type& operator[](size_type idx) const;
+        template <typename IDX_TYPE>
+        const value_type& operator[](IDX_TYPE idx) const;
 
-        template <typename T1, typename T2, size_t S1, size_t S2>
-        friend bool operator==(const BQ_ARRAY_CLS_NAME<T1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, S2>& array2);
+        template <typename T1, typename T2, typename Allocator1, typename Allocator2, size_t S1, size_t S2>
+        friend bool operator==(const BQ_ARRAY_CLS_NAME<T1, Allocator1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, Allocator2, S2>& array2);
 
-        template <typename T1, typename T2, size_t S1, size_t S2>
-        friend bool operator!=(const BQ_ARRAY_CLS_NAME<T1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, S2>& array2);
+        template <typename T1, typename T2, typename Allocator1, typename Allocator2, size_t S1, size_t S2>
+        friend bool operator!=(const BQ_ARRAY_CLS_NAME<T1, Allocator1, S1>& array1, const BQ_ARRAY_CLS_NAME<T2, Allocator2, S2>& array2);
 
-        BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& operator=(const BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& rhs);
+        BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>& operator=(const BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>& rhs);
 
-        BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>& operator=(BQ_ARRAY_CLS_NAME<T, TAIL_BUFFER_SIZE>&& rhs) noexcept;
+        BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>& operator=(BQ_ARRAY_CLS_NAME<T, Allocator, TAIL_BUFFER_SIZE>&& rhs) noexcept;
 
         template <typename... V>
         void insert(iterator dest_it, V&&... args);
@@ -187,12 +189,13 @@ namespace bq {
 
         const_iterator find(const value_type& value, bool reverse_find = false) const;
 
+        template <typename Predicate>
+        iterator find_if(Predicate predicate, bool reverse_find = false);
+
+        template <typename Predicate>
+        const_iterator find_if(Predicate predicate, bool reverse_find = false) const;
+
     protected:
-        template <typename... V>
-        void construct(iterator iter, V&&... args);
-
-        void destruct(iterator iter);
-
         template <typename First>
         void inner_args_insert(First&& first);
 

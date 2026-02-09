@@ -1,4 +1,26 @@
 # Changelog
+
+## [v2.1.0] - 2026-02-08
+
+**BqLog 2.x is a brand-new major version, rebuilt from the ground up to deliver better performance, broader platform coverage, and more robust features.**
+
+### 🌟 Major Changes from 1.x to 2.x
+- **HarmonyOS support**: Added native HarmonyOS support, including ArkTS and C++.
+- **Node.js support**: Added Node.js support (CJS and ESM).
+- **Cross-platform improvements**: Improved cross-platform compatibility, stability and generality; supports more Unix systems.
+- **Performance boost**: Average performance improved by ~80% for UTF-8, and by >500% for UTF-16 environments (C#, Unreal, Unity).
+- **Android standalone C++**: Android no longer must be used together with Java.
+- **Configuration changes**: Removed the `is_in_sandbox` config and replaced it with `base_dir_type`; added filters for snapshots and support for opening a new log file on each startup.
+- **Hybrid asymmetric encryption**: Added high-performance hybrid asymmetric encryption with almost zero overhead.
+- **Game engine plugins**: Provides Unity, Tuanjie Engine, and Unreal Engine plugins, making it easy to use in game engines; provides ConsoleAppender redirection to game-engine editors and Blueprint support for Unreal.
+- **Binary distribution**: The repository no longer ships binaries. From 2.x on, please download platform- and language-specific packages from the [Releases page](https://github.com/Tencent/BqLog/releases).
+- **Unlimited single log size**: The size of a single log entry is no longer limited by `log.buffer_size`.
+- **Manual timezone**: The timezone can now be specified manually.
+- **Deprecated raw_file appender**: The `raw_file` appender is deprecated and no longer maintained in 2.x; please use the `compressed_file` appender instead.
+- **Recovery promoted to stable**: The Recovery feature's reliability has been improved and it has been promoted from experimental (beta) to stable (release).
+
+---
+
 ## [v1.5.0] - 2025-09-22
 - Changed the company entity of the open source License from "THL A29 Limited" to "Tencent"
 - Android binary artifacts now support 16 KB page sizes
@@ -6,14 +28,10 @@
 - **Bug fix**: [Help: After initializing on Android as per the documentation, is_valid always returns false, but logging is unaffected. The documentation mentions checking is_valid before use or there may be risks. How should I troubleshoot this?](https://github.com/Tencent/BqLog/issues/43).
 - **Bug fix**: [The program crashed on exit, please help check the cause](https://github.com/Tencent/BqLog/issues/46), temporarily fixed in the current version. Will be completely resolved in the new 2.x version.
 - **Pull Request**: [Retain local variables and other information in jar files for easier source code reading](https://github.com/Tencent/BqLog/pull/52).
-**v1.5.0 will be the final stable version before the 2.x series.** 
+  **v1.5.0 will be the final stable version before the 2.x series.**
 
-# Changelog
 ## [v1.4.9] - 2025-05-29
 - **Bug fix**: [能帮忙看一下这个crash是怎么回事吗？libsystem_kernel.dylib ___pthread_kill](https://github.com/Tencent/BqLog/issues/43), crash fix: crash caused by array overflow.
-
-## [v1.4.8] - 2024-12-30
-- **Bug fix**: [Support for multi-byte character paths on Windows and long paths across platforms](https://github.com/Tencent/BqLog/issues/37), resolving issues with paths exceeding 256 bytes on all platforms.
 
 ## [v1.4.7] - 2024-11-15
 - **Bug fix**: [Enabling mmap on Android Devices May Cause Freezes or Crashes](https://github.com/Tencent/BqLog/issues/34), mmap recover feature is reopen.

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,16 +9,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <stdlib.h>
-#include <inttypes.h>
-#include "bq_common/bq_common.h"
-#include "bq_log/bq_log.h"
+
 #include "bq_log/log/log_manager.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/log_worker.h"
 
 namespace bq {
-    log_manager* log_manager::static_inst_cache_ = nullptr;
-
     log_manager::log_manager()
     {
         phase_ = phase::invalid;
@@ -30,20 +26,9 @@ namespace bq {
         bq::util::log_device_console(log_level::info, "log_manager is constructed");
     }
 
-    log_manager& log_manager::scoped_static_instance()
-    {
-        static log_manager inst_;
-        return inst_;
-    }
-
     log_manager& log_manager::instance()
     {
-        if (!static_inst_cache_) {
-            // make sure file_manager's lifecycle can wrap that of log_manager.
-            bq::file_manager::instance();
-            static_inst_cache_ = &scoped_static_instance();
-        }
-        return *static_inst_cache_;
+        return log_global_vars::get().log_manager_inst_;
     }
 
     log_manager::~log_manager()
@@ -70,7 +55,7 @@ namespace bq {
             break;
         case phase::working:
             break;
-        case phase::uninited:
+        case phase::uninitialized:
             util::log_device_console(bq::log_level::error, "you can not create log after BqLog is uninited!");
             return 0;
             break;
@@ -111,7 +96,7 @@ namespace bq {
         if (log_name.is_empty()) {
             // assign a new log_name
             while (true) {
-                auto new_seq = automatic_log_name_seq_.add_fetch(1);
+                auto new_seq = automatic_log_name_seq_.add_fetch_relaxed(1);
                 char tmp[64];
                 snprintf(tmp, sizeof(tmp), "AutoBqLog_%d", new_seq);
                 bq::string random_log_name = tmp;
@@ -125,12 +110,12 @@ namespace bq {
             }
         }
 
-        bq::scoped_obj<log_imp> log(new log_imp());
+        bq::unique_ptr<log_imp> log = bq::make_unique<log_imp>();
         if (!log->init(log_name, config_obj, category_names)) {
             return 0;
         }
         log->set_config(config_content);
-        log_imp_list_.push_back(log.transfer());
+        log_imp_list_.push_back(bq::move(log));
         return log_imp_list_[log_imp_list_.size() - 1].get()->id();
     }
 
@@ -156,7 +141,7 @@ namespace bq {
             break;
         case phase::working:
             break;
-        case phase::uninited:
+        case phase::uninitialized:
             util::log_device_console(bq::log_level::error, "you can not reset log config after BqLog is uninited!");
             return 0;
             break;
@@ -194,56 +179,64 @@ namespace bq {
 
     void log_manager::force_flush_all()
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
-        public_worker_.awake_and_wait_begin();
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        scoped_thread_check_disable disable_helper;
+        (void)disable_helper;
         for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
             auto& log_impl = log_imp_list_[i];
-            if (log_impl->get_thread_mode() == log_thread_mode::independent) {
-                log_imp_list_[i]->worker_.awake_and_wait_begin();
-            }
-        }
-        public_worker_.awake_and_wait_join();
-        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
-            auto& log_impl = log_imp_list_[i];
-            if (log_impl->get_thread_mode() == log_thread_mode::independent) {
-                log_imp_list_[i]->worker_.awake_and_wait_join();
+            if (log_impl->get_thread_mode() != log_thread_mode::sync) {
+                log_impl->process(true);
             }
         }
     }
 
+    bool log_manager::try_flush_all()
+    {
+        bq::platform::scoped_try_spin_lock_write_crazy scoped_lock(logs_lock_);
+        if (!scoped_lock.owns_lock()) {
+            return false;
+        }
+        scoped_thread_check_disable disable_helper;
+        (void)disable_helper;
+        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
+            auto& log_impl = log_imp_list_[i];
+            if (log_impl->get_thread_mode() != log_thread_mode::sync) {
+                log_impl->process(true);
+            }
+        }
+        return true;
+    }
+
     void log_manager::force_flush(uint64_t log_id)
     {
-        bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
         log_imp* log = get_log_by_id(log_id);
         if (!log) {
             return;
         }
         switch (log->get_thread_mode()) {
         case log_thread_mode::sync:
+            // do nothing
             break;
         case log_thread_mode::async:
-            public_worker_.awake_and_wait_begin(log);
-            public_worker_.awake_and_wait_join();
-            break;
-        case log_thread_mode::independent:
-            log->worker_.awake_and_wait_begin();
-            log->worker_.awake_and_wait_join();
-            break;
+        case log_thread_mode::independent: {
+            bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+            scoped_thread_check_disable disable_helper;
+            (void)disable_helper;
+            log->process(true);
+        } break;
         default:
             break;
         }
     }
 
-    void log_manager::awake_worker()
-    {
-        public_worker_.awake();
-    }
-
     void log_manager::uninit()
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
+        bq::platform::scoped_spin_lock scoped_lock_uninit(uninit_lock_);
+        // avoid worker thread call console callback which may cause dead lock when main thread is calling this method(for example, in Unity)
+        appender_console::register_console_callback(nullptr);
         phase expected_phase = phase::working;
-        if (!phase_.compare_exchange_strong(expected_phase, phase::uninited)) {
+        if (!phase_.compare_exchange_strong(expected_phase, phase::uninitialized)) {
             return;
         }
         public_worker_.cancel();
@@ -266,6 +259,24 @@ namespace bq {
     bq::layout& log_manager::get_public_layout()
     {
         return public_layout_;
+    }
+
+    void log_manager::try_restart_worker(log_worker* worker_ptr)
+    {
+        if (phase_.load(bq::platform::memory_order::acquire) != phase::working) {
+            return;
+        }
+        bq::platform::scoped_spin_lock scoped_lock(uninit_lock_);
+        if (phase_.load(bq::platform::memory_order::acquire) != phase::working) {
+            return;
+        }
+        bq::util::log_device_console(bq::log_level::warning, "thread id:%" PRIu64 ", name:%s was terminated, try restart it!", worker_ptr->get_thread_id(), worker_ptr->get_thread_name().c_str());
+        auto thread_mode = worker_ptr->get_thread_mode();
+        auto target_log = worker_ptr->get_log_target();
+        bq::object_destructor<log_worker>::destruct(worker_ptr);
+        bq::object_constructor<log_worker>::construct(worker_ptr);
+        worker_ptr->init(thread_mode, target_log);
+        worker_ptr->start();
     }
 
     uint32_t log_manager::get_logs_count() const

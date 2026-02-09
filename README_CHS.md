@@ -1,512 +1,705 @@
-# BqLog(扁鹊日志)(V 1.5.0)  ([ChangeLog](/CHANGELOG.md))
-[![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](https://github.com/Tencent/BqLog/blob/main/LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-1.5.0-red.svg)](https://github.com/Tencent/BqLog/releases)  
-> BqLog是一个轻量级，高性能日志系统，应用于《Honor Of Kings》等项目，已经上线并良好运行  
-> ***BqLog的2.x版本正在路上，BqLog源自移动客户端，在桌面和服务器设备上，该新版本BqLog可以通过放开部分内存使用限制达到成倍以上的性能提高。***   
-> **v1.5.0将是2.x版本之前的最终稳定版本** 
-## 支持平台
-- Windows 64 bit
-- MacOS
-- Linux
-- iOS
-- Android(X86_64, arm64-v8a、armeabi-v7a)(支持16KB分页)
-- Unix(在FreeBSD通过测试)
+# BqLog (扁鹊日志) V 2.1.0
+[![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
+[![Release Version](https://img.shields.io/badge/release-2.1.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.1.0-orange.svg?style=flat)](CHANGELOG.md)
+[![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS-lightgrey.svg?style=flat)]()
+[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript-blue.svg?style=flat)]()
 
-## 支持编程语言
- - C++
- - Java
- - Kotlin
- - C#
+> BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。  
+> **BqLog 2.1.0 版本正式发布！带来了纯血鸿蒙支持、Node.js 支持、更强的并发性能以及高强度的非对称混合加密能力。**
 
-## 特点
-- 对比现有开源日志库有巨大的性能优势（见[Benchmark](#5-benchmark结果)），不仅适用于服务器，客户端，也非常适合移动端设备
-- 内存消耗少，在[Benchmark](#benchmark)的用例中，10线程20000000条日志，BqLog本身内存消耗在1M以内。
-- 提供高性能高压缩比的实时压缩日志格式
-- 可以在游戏引擎（`Unity`， `Unreal`）中正常使用，其中对[Unreal提供了常用类型的支持](#6-在unreal中使用bqlog)
-- 支持`utf8`, `utf16`, `utf32`的字符和字符串，支持bool,float,double，各种长度和类型的整数等常用参数类型
-- 支持`C++20`的`format`规范
-- 异步日志支持Crash复盘，避免丢失数据（灵感来自XLog）
-- 尺寸极小，Android编译后动态库仅有200k左右
-- 在Java和C#上可以不额外产生Heap Alloc，不会随着运行不停new对象。
-- 仅依赖标准C语言库和平台API，可以在安卓的`ANDROID_STL = none`的模式下通过编译
-- 支持`C++11`及以后的编译标准，可以在-Wall -Wextra -pedantic -Werror的严格要求下通过编译
-- 编译模块基于`Cmake`，并提供不同平台的编译脚本，使用方便
-- 支持自定义参数类型
-- 对代码提示非常友好
+> [English Document](./README.md)
 
-## 技术文章
- - **[为何BqLog如此快 - 高性能实时压缩日志格式](/docs/文章1_为何BqLog如此快%20-%20高性能实时压缩日志格式.MD)**
- - **[为何BqLog如此快 - 高性能环形队列](/docs/文章2_为何BqLog如此快%20-%20高并发环形队列.MD)**
+---
 
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.1.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases/tag/Release_2.1.0)
 
-## 目录
-**[将BqLog引入您的项目](#将bqlog引入您的项目)**  
-**[简单的Demo](#简单的demo)**  
+## 💡 如果您有以下困扰，可以尝试 BqLog
+
+- 如果您的客户端产品（尤其是游戏）希望同时满足以下「不可能三角」：
+  - 方便追溯问题（日志应写尽写）
+  - 性能足够好（日志要少写）
+  - 节约存储空间（日志最好就别写）
+- 如果您是后台服务开发者，现有日志库在**高并发场景**下性能不足，导致日志丢失或程序阻塞。
+- 如果您的编程语言是 C++、Java、C#、Kotlin、TypeScript、JavaScript 之一，或者同时使用多种语言，希望有一套**统一的跨语言日志解决方案**。
+
+---
+
+## 🖥️ 支持操作系统和平台
+
+- Windows 64-bit
+- macOS
+- Linux（包含嵌入式 Linux）
+- iOS（包括 iPhone、iPad、Apple Vision、Apple Watch 等所有苹果设备及模拟器）
+- Android
+- HarmonyOS（包括手机、平板、智慧屏等所有鸿蒙设备及模拟器）
+- Unix（已在 FreeBSD、NetBSD、OpenBSD、Solaris、DragonFly、OmniOS 等上通过测试）
+
+---
+
+## 🌐 支持编程语言及开发环境
+
+- C++（C++11 及以上，支持 MSVC、Clang、GCC、MinGW-GCC、MinGW-Clang）
+- Java / Kotlin（Android & Server）
+- C#（Unity、团结引擎、.NET）
+- **ArkTS / C++（HarmonyOS）**
+- **JavaScript / TypeScript（Node.js，支持 CJS 与 ESM）**
+- **Unreal Engine（UE4 & UE5）**
+
+---
+
+## 🔧 支持的硬件架构
+
+- x86
+- x86_64
+- ARM32
+- ARM64
+
+---
+
+## 📦 支持的引入方式
+
+- 动态库
+- 静态库
+- 源代码
+
+---
+
+## ✨ 特点
+
+- 相比常见开源日志库有显著性能优势（详见 [Benchmark](#benchmark)），不仅适用于服务器和客户端，也非常适合移动端设备。
+- 内存消耗少：在 [Benchmark](#benchmark) 用例中，10 线程、2,000 万条日志，BqLog 自身内存消耗约为 1 MB。
+- 提供高性能、高压缩比的实时压缩日志格式。
+- 以小于 10% 的性能损耗为代价，提供高强度的非对称混合加密日志，保护日志内容安全（可选）。
+- 可在游戏引擎（`Unity`、`Unreal` 等）中正常使用，对 [Unreal 提供蓝图和常用类型的支持](#5-在-unreal-中使用-bqlog)。
+- 支持 `utf8`、`utf16`、`utf32` 字符及字符串，支持 bool、float、double、各种长度与类型的整数等常用参数类型。
+- 支持 `C++20` 的 `std::format` 规范（不含排序序号与时间格式化）。
+- 异步日志支持 Crash 复盘机制，尽量避免日志数据丢失。
+- 在 Java、C#、TypeScript 上可以做到「零额外 Heap Alloc」（或极少），不会随着运行不断 new 对象。
+- 仅依赖标准 C 语言库与平台 API，可在 Android 的 `ANDROID_STL = none` 模式下编译通过。
+- 支持 `C++11` 及之后的标准，可在极其严格的编译选项下工作。
+- 编译系统基于 `CMake`，并提供多平台编译脚本，集成简单。
+- 支持自定义参数类型。
+- 对代码提示非常友好。
+
+---
+
+## 📑 目录
+
+**[从 1.x 版本升级到 2.x 版本的变化](#从-1x-版本升级到-2x-版本的变化)**  
+**[将 BqLog 引入您的项目](#将-bqlog-引入您的项目)**  
+**[简单的 Demo](#简单的-demo)**  
 **[架构介绍](#架构介绍)**  
-**[主流程API使用说明](#主流程API使用说明)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1-创建log对象](#1-创建log对象)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2-获取log对象](#2-获取log对象)  
-[&nbsp;&nbsp;&nbsp;&nbsp;3-写日志](#3-写日志)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4-其他api](#4-其他api)   
+**[主流程 API 使用说明](#主流程-api-使用说明)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. 创建 Log 对象](#1-创建-log-对象)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. 获取 Log 对象](#2-获取-log-对象)  
+[&nbsp;&nbsp;&nbsp;&nbsp;3. 写日志](#3-写日志)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4. 其他 API](#4-其他-api)  
 **[同步日志和异步日志](#同步日志和异步日志)**  
 [&nbsp;&nbsp;&nbsp;&nbsp;1. 异步日志的线程安全性说明](#异步日志的线程安全性说明)  
-**[Appender介绍](#appender介绍)**  
+**[Appender 介绍](#appender-介绍)**  
 [&nbsp;&nbsp;&nbsp;&nbsp;1. ConsoleAppender](#consoleappender)  
 [&nbsp;&nbsp;&nbsp;&nbsp;2. TextFileAppender](#textfileappender)  
 [&nbsp;&nbsp;&nbsp;&nbsp;3. （重点推荐）CompressedFileAppender](#compressedfileappender)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. RawFileAppender](#rawfileappender)  
 **[配置说明](#配置说明)**  
 [&nbsp;&nbsp;&nbsp;&nbsp;1. 完整示例](#1-完整示例)  
 [&nbsp;&nbsp;&nbsp;&nbsp;2. 详细解释](#2-详细解释)  
-**[离线解码二进制格式的Appender](#离线解码二进制格式的appender)**  
+**[离线解码二进制格式的 Appender](#离线解码二进制格式的-appender)**  
 **[构建说明](#构建说明)**  
 [&nbsp;&nbsp;&nbsp;&nbsp;1. 库构建](#1-库构建)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2. Demo构建和运行](#2-demo构建和运行)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. Demo 构建和运行](#2-demo-构建和运行)  
 [&nbsp;&nbsp;&nbsp;&nbsp;3. 自动测试运行说明](#3-自动测试运行说明)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. Benchmark运行说明](#4-benchmark运行说明)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4. Benchmark 运行说明](#4-benchmark-运行说明)  
 **[高级使用话题](#高级使用话题)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1. 无Heap Alloc](#1-无heap-alloc)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2. 支持分类（Category）的Log对象](#2-支持分类category的log对象)  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. 无 Heap Alloc](#1-无-heap-alloc)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. 支持分类（Category）的 Log 对象](#2-支持分类category的-log-对象)  
 [&nbsp;&nbsp;&nbsp;&nbsp;3. 程序异常退出的数据保护](#3-程序异常退出的数据保护)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. 关于NDK和ANDROID_STL = none相关](#4-关于ndk和android_stlnone相关)  
-[&nbsp;&nbsp;&nbsp;&nbsp;5. 自定义参数类型](#5-自定义参数类型)  
-[&nbsp;&nbsp;&nbsp;&nbsp;6. 在Unreal中使用BqLog](#6-在unreal中使用bqlog) 
+[&nbsp;&nbsp;&nbsp;&nbsp;4. 自定义参数类型](#4-自定义参数类型)  
+[&nbsp;&nbsp;&nbsp;&nbsp;5. 在 Unreal 中使用 BqLog](#5-在-unreal-中使用-bqlog)  
+[&nbsp;&nbsp;&nbsp;&nbsp;6. 日志加密和解密](#6-日志加密和解密)  
 **[Benchmark](#benchmark)**  
-[&nbsp;&nbsp;&nbsp;&nbsp;1. Benchmark说明](#1-benchmark说明)  
-[&nbsp;&nbsp;&nbsp;&nbsp;2. BqLog C++ Benchmark代码](#2-bqlog-c-benchmark-代码)  
-[&nbsp;&nbsp;&nbsp;&nbsp;3. BqLog Java Benchmark代码](#3-bqlog-java-benchmark-代码)  
-[&nbsp;&nbsp;&nbsp;&nbsp;4. Log4j Benchmark代码](#4-log4j-benchmark代码)  
-[&nbsp;&nbsp;&nbsp;&nbsp;5. Benchmark结果](#5-benchmark结果)  
-**[如何贡献代码](#如何贡献代码)**  
+[&nbsp;&nbsp;&nbsp;&nbsp;1. Benchmark 说明](#1-benchmark-说明)  
+[&nbsp;&nbsp;&nbsp;&nbsp;2. BqLog C++ Benchmark 代码](#2-bqlog-c-benchmark-代码)  
+[&nbsp;&nbsp;&nbsp;&nbsp;3. BqLog Java Benchmark 代码](#3-bqlog-java-benchmark-代码)  
+[&nbsp;&nbsp;&nbsp;&nbsp;4. Log4j Benchmark 代码](#4-log4j-benchmark-代码)  
+[&nbsp;&nbsp;&nbsp;&nbsp;5. Benchmark 结果](#5-benchmark-结果)  
+**[如何贡献代码](#如何贡献代码)**
 
+---
 
+<a id="从-1x-版本升级到-2x-版本的变化"></a>
 
-## 将BqLog引入您的项目
-BqLog可以用多种形式引入您的项目。其中C++支持动态库，静态库和源文件三种形式。 Java和C#支持的都是动态库+Wrapper源代码的方式。具体可以看下面的方式列表：  
+## 🔄 从 1.x 版本升级到 2.x 版本的变化
 
-### C++(动态库)
-代码仓库已经附带了预先编译好的动态库文件，位于/dist/dynamic_lib/下。要将BqLog通过库文件的形式引入自己的工程，需要做以下两件事：
-- 选取自己平台对应的动态库文件加入自己工程的编译系统
-- 将/dist/dynamic_lib/include目录拷贝进自己的工程并添加到include的目录列表中。(如果您使用的XCode的.framework库，则可以忽略这一步，因为.framework文件中已经包含了include的头文件)
+1. 增加对鸿蒙系统的支持，包括 ArkTS 和 C++ 两种语言。
+2. 增加对 Node.js 的支持（CJS 和 ESM）。
+3. 增强跨平台兼容性、稳定性与通用性，支持更多 Unix 系统。
+4. utf8编码下性能平均提升约 80%，utf16编码环境（C#，Unreal，Unity）提升超过500%。
+5. Android 不再强制要求与 Java 一起使用。
+6. 移除 `is_in_sandbox` 配置，改用 `base_dir_type`；对 snapshot 增加过滤配置，支持每次启动新开日志文件。详见 [配置说明](#配置说明)。
+7. 支持高性能非对称混合加密，几乎无额外性能损耗，详见 [6. 日志加密和解密](#6-日志加密和解密)。
+8. 提供 Unity、团结引擎、Unreal 引擎插件，方便在游戏引擎中使用；提供 ConsoleAppender 对游戏引擎编辑器日志输出重定向，提供 Unreal 蓝图支持。详见 [5. 在 Unreal 中使用 BqLog](#5-在-unreal-中使用-bqlog)。
+9. 仓库不再包含二进制产物，从 2.x 版本起请从 [Releases 页面](https://github.com/Tencent/BqLog/releases)下载对应平台和语言的二进制包。
+10. 单条日志长度不再受log.buffer_size限制
+11. 可以精确手动设置时区
+12. `raw_file`类型的appender不再维护，标记为`废弃`，请用`compressed_file`类型替代。
+13. 复盘能力增加可靠性，从实验性功能变成正式能力。见[程序异常退出的数据保护](#3-程序异常退出的数据保护)。
 
-### C++(静态库)
-代码仓库已经附带了预先编译好的静态库文件，位于/dist/static_lib/下。要将BqLog通过库文件的形式引入自己的工程，需要做以下两件事：
-- 选取自己平台对应的静态库文件加入自己工程的编译系统
-- 将/dist/static_lib/include目录拷贝进自己的工程并添加到include的目录列表中。(如果您使用的XCode的.framework库，则可以忽略这一步，因为.framework文件中已经包含了include的头文件)
+---
 
-### C++（源代码）
-BqLog也支持直接把源代码加入自己的工程进行编译，要将BqLog通过源代码的方式引入自己的工程，需要做以下工作：
-- 将/src目录拷贝进自己的项目作为源代码引用
-- 将/include目录拷贝进自己的项目，并分别添加到include的目录列表中
-- 如果是在Visual Studio编译Windows版本，请在编译选项里加入 /Zc:__cplusplus，不然编译的时候无法正确判断当前C++编译器的标准支持情况
-- 如果是在android的NDK中引入源代码使用，请一定参考[4. 关于NDK和ANDROID_STL = none相关](#4-关于ndk和android_stlnone相关)  注意事项
+<a id="将-bqlog-引入您的项目"></a>
 
-### C#
-BqLog在c#中可以通过native动态库 + C# Wrapper的方式进行使用，支持Mono，微软CLR和Unity引擎等，其中Unity能够兼容Mono和IL2CPP模式，要想在C#中使用BqLog，您需要做以下两件事：
-- 在/dist/dynamic_lib/下选取自己平台对应的动态库文件加入自己工程 (Unity请参考[ Unity Import and configure plug-ins](https://docs.unity3d.com/Manual/PluginInspector.html))
-- 将/wrapper/csharp/src中的源代码文件拷贝进自己的工程
+## 🚀 将 BqLog 引入您的项目
 
-### Java
-BqLog在Java中可以通过native动态库 + Java Wrapper的方式进行使用，支持常见的JVM环境和Android环境。要想在JVM中引入BqLog，您需要做以下的事情：
-- 在/dist/dynamic_lib/下选取自己平台对应的动态库文件加入自己工程
-- 将/wrapper/java/src中的源代码文件拷贝进自己的工程
-- 将/dist/dynamic_lib/include目录拷贝进自己的工程并添加到include的目录列表中。(可选，如果您想要在NDK中调用BqLog)
+> 以下示例假定您已在 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载对应版本的二进制包或源码。
 
-<br><br>
+### C++（动态库 / 静态库 / 源码）
 
-## 简单的Demo
-下面的代码会在您的控制台（如果是android就是ADB Logcat日志）输出1000多条日志。
+- **动态库**  
+  下载 `dynamic_lib_{version}` 压缩包：
+  - 将 `dynamic_lib/include` 目录添加到头文件搜索路径；
+  - 链接 `dynamic_lib/lib` 中对应平台的动态库文件。
+
+- **静态库**  
+  下载 `static_lib_{version}` 压缩包：
+  - 将 `static_lib/include` 目录添加到头文件搜索路径；
+  - 链接 `static_lib/lib` 中对应平台的静态库文件。
+
+- **源码集成**
+  - 将仓库下的 `/src` 目录加入工程源码编译；
+  - 将 `/include` 目录添加到头文件搜索路径。
+  - Windows + Visual Studio：请添加编译选项 `/Zc:__cplusplus`。
+  - Android 模式下支持 `ANDROID_STL = none`。
+  - 如需启用 Java / NAPI（Node.js / HarmonyOS ArkTS）支持，以及系统链接库与部分宏定义，请参考 `/src/CMakeLists.txt`（如果觉得难以理解，建议求助AI提炼）。
+  - 当存在 NAPI 环境（Node.js 或 HarmonyOS ArkTS）或需要 Java / C# 调用时，不推荐以「纯 C++ 源码」直接集成，因为需要手动处理初始化和库加载流程；更推荐使用预编译包及对应 wrapper。
+
+### C#（Unity / 团结引擎 / .NET）
+
+- **Unity**
+  - 下载 `unity_package_{version}`；
+  - 解压后在 Unity Package Manager 中选择「从 tarball 安装」，指向其中的 `.tar` 文件导入；
+  - 官方 Unity 暂不支持鸿蒙，如需鸿蒙支持可按需自行集成。
+
+- **团结引擎**
+  - 下载 `tuanjie_package_{version}`；
+  - 解压后同样通过 Unity Package Manager 以 tarball 方式导入；
+  - 与 Unity 的主要差异是已集成鸿蒙相关支持。
+
+- **.NET**
+  - 下载对应平台的动态库包 `{os}_{arch}_libs_{version}`，引入其中动态库；
+  - 将 C# wrapper 源码加入工程 —— 可以直接使用仓库下 `/wrapper/csharp/src`，也可以从 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 `c#_wrapper_{version}` 预打包的源码包。
+
+### Java / Kotlin（Android / Server）
+
+- **Android**
+  - 下载 `android_libs_{version}`；
+  - 可以直接引入其中的 `.aar` 包(AAR 基于 AGP 标准打包，内含 Prefab Native 头文件及动态库），或手动引入仓库下 `/src` 和 `/wrapper/java/src` 源码。
+
+- **Server**
+  - 下载对应平台动态库 `{os}_{arch}_libs_{version}` 并引入；
+  - 再下载 `java_wrapper_{version}`，引入 jar 包或直接加入仓库下 `/wrapper/java/src` 源码。
+
+### HarmonyOS（ArkTS / C++）
+
+- 下载 `harmony_os_libs_{version}`；
+- 引入 `har` 包，或直接引入其中的 `.so` + 仓库下 `/wrapper/typescript/src` 源码（可选）；
+- 支持在 ArkTS 侧直接调用，也支持在 Native C++ 侧调用。
+
+### Node.js
+
+- 支持 CommonJS 与 ES Module。
+- 从 Releases 下载 `nodejs_npm_{version}` 包，解压后找到其中的 `bqlog-{version}.tgz`，通过 npm 安装：
+
+```bash
+npm install ./bqlog-{version}.tgz
+```
+
+可参考仓库下 `/demo/nodejs` 目录。
+
+### Unreal Engine
+
+- **预编译版（Prebuilt）**
+  - 从 Releases 下载 `unreal_plugin_prebuilt_{version}`；
+  - 解压后根据自己的引擎版本，选择对应压缩包，解压到游戏项目的 `Plugins` 目录下。
+
+- **源码版（Source）**
+  - 从 Releases 下载 `unreal_plugin_source_{version}`；
+  - 解压后根据自己的引擎版本，选择对应压缩包，解压到游戏项目的 `Plugins` 目录下，由引擎进行二次编译。
+
+---
+
+<a id="简单的-demo"></a>
+
+## 📝 简单的 Demo
+
 ### C++
+
 ```cpp
-#if defined(WIN32)
-#include <windows.h>
-#endif
 #include <string>
 #include <bq_log/bq_log.h>
-int main()
-{
-#if defined(WIN32)
-    //将windows的命令行窗口切到utf-8，因为BqLog所有的最终输出文本都是utf-8编码的，这样可以避免显式乱码
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-#endif
-    //这个字符串是日志的配置，这里配置了日志有一个Appender（输出目标），叫appender_0，他的类型是输出到控制台
-    std::string config = R"(
-            #这个Appender的输出目标是控制台
-            appenders_config.appender_0.type=console           
-            #这个Appender的时间采用当地时区
-            appenders_config.appender_0.time_zone=default local time   
-            #这个Appender会输出这6种等级的日志，注意中间不要有空格
-            appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
 
-        )";
-    bq::log log = bq::log::create_log("my_first_log", config);   //用config创建一个log对象
-    for(int i = 0; i < 1024; ++i)
-    {
-        log.info("这是一条info测试日志, format字符串是utf-8的, param int:{}, param bool :{}, param string8:{}, param string16:{}, param string32:{}, param float:{}", i, true, "utf8-string", u"utf16-string", U"utf32-string", 4.3464f);  
-    }
-    log.error(U"这是一条error测试日志，format字符串是utf-32的");  
-    bq::log::force_flush_all_logs();   //BqLog默认是异步输出的，为了在程序退出之前能看到输出，所以这里用了force_flush强制同步输出一次日志
+int main() {
+    // 配置：输出到控制台
+    std::string config = R"(
+        appenders_config.appender_console.type=console
+        appenders_config.appender_console.levels=[all]
+    )";
+    auto log = bq::log::create_log("main_log", config);
+
+    log.info("Hello BqLog 2.0! int:{}, float:{}", 123, 3.14f);
+    log.force_flush(); // 强制刷新（通常用于程序退出前）
+
     return 0;
 }
 ```
 
+更多示例可参考仓库下的 `/demo/cpp` 目录。
+
+### Typescript (Node.js, 鸿蒙ArkTS)
+
+```javascript
+import { bq } from "bqlog"; // ESM 写法
+// const { bq } = require("bqlog"); // CommonJS 写法
+
+const config = `
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+`;
+const log = bq.log.create_log("node_log", config);
+
+log.info("Hello from Node.js! params: {}, {}", "text", 123);
+bq.log.force_flush_all_logs();
+```
+
+更多示例可参考仓库下的 `/demo/nodejs` 目录。
+
 ### C#
+
 ```csharp
-using System.Text;
-using System;
-
-public class demo_main {
-
-    public static void Main(string[] args) {
-        Console.OutputEncoding = Encoding.UTF8;
-        Console.InputEncoding = Encoding.UTF8;
-        string config = @"
-                #这个Appender的输出目标是控制台
-                appenders_config.appender_0.type=console           
-                #这个Appender的时间采用当地时区
-                appenders_config.appender_0.time_zone=default local time   
-                #这个Appender会输出这6种等级的日志，注意中间不要有空格
-                appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-            ";
-        bq.log log = bq.log.create_log("my_first_log", config);   //用config创建一个log对象
-        for (int i = 0; i < 1024; ++i)
-        {
-            log.info("这是一条info测试日志, format字符串是utf-16的, param int:{}, param bool :{}, param string:{}, param float:{}", i, true, "String Text", 4.3464f);
-        }
-
-
-        bq.log.force_flush_all_logs();
-        Console.ReadKey();
-    }
-
-}
+string config = @"
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+";
+var log = bq.log.create_log("cs_log", config);
+log.info("Hello C#! value:{}", 42);
 ```
 
-### Java#
+更多示例可参考仓库下的 `/demo/csharp` 目录。
+
+### Java（Android / Server）
+
 ```java
-public class demo_main {
-
-    public static void main(String[] args) {
-        // TODO Auto-generated method stub
-        String config = """
-                #这个Appender的输出目标是控制台
-                appenders_config.appender_0.type=console           
-                #这个Appender的时间采用当地时区
-                appenders_config.appender_0.time_zone=default local time   
-                #这个Appender会输出这6种等级的日志，注意中间不要有空格
-                appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal] 
-        """;
-        bq.log log = bq.log.create_log("my_first_log", config);   //用config创建一个log对象
-        for (int i = 0; i < 1024; ++i)
-        {
-            log.info("这是一条info测试日志, format字符串是utf-16的, param int:{}, param bool :{}, param string:{}, param float:{}", i, true, "String Text", 4.3464f);
-        }
-        bq.log.force_flush_all_logs();
-    }
-}
-
+String config = """
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+""";
+bq.log.Log log = bq.log.Log.createLog("java_log", config);
+log.info("Hello Java! value: {}", 3.14);
 ```
 
-<br><br>
+更多示例可参考仓库下的 `/demo/java` 目录。
 
+---
 
-## 架构介绍
+<a id="架构介绍"></a>
 
-![基础结构](docs/img/log_structure.png)  
-  
+## 🏗️ 架构介绍
 
-上图能够清晰为您介绍BqLog的基本结构。图中右边部分是BqLog库内部实现，左边是您的程序和代码。您的程序可以通过BqLog提供的wrapper（可以理解成给不同语言用的面向对象的API）来调用BqLog。
-图中总共创建了两个Log，一个的名字叫做“Log A”，一个的名字叫做“Log B”，每个Log后面都挂载了一个或者多个Appender。Appender可以理解为日志内容的输出目标，可以是控制台（Android对应ADB Logcat日志），文本文件，也能是一些特殊格式的文件，比如压缩日志文件，和普通二进制日志格式文件。
+![基础结构](docs/img/log_structure.png)
 
-**同一个进程内，不同语言的wrapper可以访问同一个Log对象，比如Java创建了一个叫Log A的Log对象，也可以在c++侧通过Log A这个名字获取到这个Log对象进行使用**  
-在一些极限的情况下，比如一个Unity开发的游戏，运行在Android系统上，会在一个APP内同时涉及到Java、Kotlin，C#和C++语言。他们完全可以共享同一个Log对象。您可以在Java侧调用create_log创建它，然后在其他语言调用get_log_by_name来获取这个Log对象使用。
+上图展示了 BqLog 的整体架构。图右侧为 `BqLog Core Engine`（BqLog 核心引擎），图左侧为您的业务程序与各语言 Wrapper。  
+您的程序通过 BqLog 提供的 `BqLog Wrapper`（如 C++、Java、C#、TypeScript 等）来访问核心引擎。
 
+- 由用户程序创建多个 Log 对象，如 `Log A`、`Log B`、`Log C`；
+- 每个 Log 对象可挂载一个或多个 Appender，可理解为日志内容的「输出目标」（控制台 / 文本文件 / 压缩文件等）；
+- Log 对象负责「接收日志 + 写入缓冲（环形队列）」；Appender 负责「实际输出到终端或文件」。
 
-<br><br>
+**同一进程内，不同语言的 Wrapper 可以访问同一个 Log 对象。**  
+例如：Android 应用在 Java 侧创建名为 `Log A` 的 Log 对象，NDK C++ 侧可以通过 `"Log A"` 这个名字拿到同一个 Log 对象并写日志。
 
-## 主流程API使用说明
+在极端情况下，例如一个 Unity 游戏运行在 Android 上，同时涉及 Java/Kotlin、C#、C++，它们都可以共享同一个 Log 对象，统一日志输出。
 
-**注意，以下API都声明在bq::log(或者bq.log)类里面。为了节约篇幅，就只列C++的API，Java和C#都有一模一样的API，就不重复浪费篇幅了**  
-**C++这里的`bq::string`是bqLog库里的utf8字符串类型，也可以传入char*这样的c-style string或者是`std::string`和`std::string_view`，都能完成自动的隐式转换。**
+---
 
-### 1. 创建Log对象
-log对象可以通过create_log这个静态函数进行创建。其声明如下：
+<a id="主流程-api-使用说明"></a>
+
+## 🔑 主流程 API 使用说明
+
+> 说明：以下 API 均声明在 `bq::log`（C++）或 `bq.log`（其他语言 Wrapper）类中。  
+> 为节约篇幅，这里仅列出 C++ API，其它语言 Wrapper 拥有一致的接口命名与语义。
+
+C++ 中出现的 `bq::string` 是 BqLog 内部定义的 UTF-8 字符串类型。大多数情况下，您可以直接传入 `char*`、`std::string`、`std::string_view` 等，BqLog 会做隐式转换。
+
+### 1. 创建 Log 对象
+
+通过 `create_log` 静态函数创建 Log：
 
 ```cpp
-//C++版本API
-    /// <summary>
-    /// Create a log object
-    /// </summary>
-    /// <param name="log_name">If the log name is an empty string, bqLog will automatically assign you a unique log name. If the log name already exists, it will return the previously existing log object and overwrite the previous configuration with the new config.</param>
-    /// <param name="config_content">Log config string</param>
-    /// <returns>A log object, if create failed, the is_valid() method of it will return false</returns>
-    static log create_log(const bq::string& log_name, const bq::string& config_content);
+/// <summary>
+/// Create a log object
+/// </summary>
+/// <param name="log_name">
+/// If the log name is an empty string, bqLog will automatically assign you a unique log name.
+/// If the log name already exists, it will return the previously existing log object and
+/// update its configuration (with some fields not modifiable).
+/// </param>
+/// <param name="config_content">Log config string</param>
+/// <returns>A log object, if create failed, the is_valid() method of it will return false</returns>
+static log create_log(const bq::string& log_name, const bq::string& config_content);
 ```
 
-代码通过传入一个log对象的名称和一个配置字符串，完成了一个日志的创建。其中日志的配置可以参考[配置说明](#配置说明)
-这里要关注几个点：
-1. 不管是C#还是Java，返回的log对象永远不会是null，但是有可能由于配置错误等原因，会生成一个无效的log对象，所以针对返回对象，要用is_valid()函数进行一次判断。如果是无效的对象，对其进行操作可能会造成程序崩溃。
-2. 如果log名称传入空字符串，那么bqLog会自动给他生成一个不重复的日志名，类似"AutoBqLog_1"这种。
-3. 如果对一个已经存在的重名的log对象调用create_log，并不会创建新的log对象，而是会用新的config去覆盖之前的config，但是中间有些参数是无法被修改的，详细见[配置说明](#配置说明)
-4. 除了在NDK中使用之外（参考[关于NDK和ANDROID_STL = none相关](#4-关于ndk和android_stlnone相关)  ），其他情况下，都可以在全局变量或者静态变量中直接通过该API初始化log对象
+要点：
 
+1. 无论在 C# 或 Java 中，`create_log` 的返回值都**不会为 null**。如配置有误等原因导致创建失败，可通过 `is_valid()` 判断。
+2. 若 `log_name` 为空字符串，则 BqLog 会自动分配一个不重复的名称，如 `"AutoBqLog_1"`。
+3. 若对已存在的同名 Log 调用 `create_log`，不会创建新对象，而是复用原对象并覆盖其配置（部分字段不可修改，例如 `buffer_size` 等，详见配置章节）。
+4. 可以在全局变量或静态变量中直接通过该 API 初始化 Log 对象，无需担心静态初始化顺序（Static Initialization Order Fiasco）、析构顺序或多线程问题。
 
-### 2. 获取Log对象
-如果log对象是在其他地方已经创建过了，可以直接通过get_log_by_name函数获得已经创建的log对象
+### 2. 获取 Log 对象
+
+如果某个 Log 对象已经在其他地方创建过，可以通过名称直接获取：
+
 ```cpp
-//C++版本API
-    /// <summary>
-    /// Get a log object by it's name
-    /// </summary>
-    /// <param name="log_name">Name of the log object you want to find</param>
-    /// <returns>A log object, if the log object with specific name was not found, the is_valid() method of it will return false</returns>
-    static log get_log_by_name(const bq::string& log_name);
+// C++ API
+/// <summary>
+/// Get a log object by its name
+/// </summary>
+/// <param name="log_name">Name of the log object you want to find</param>
+/// <returns>
+/// A log object. If the log object with specific name was not found,
+/// the is_valid() method of it will return false.
+/// </returns>
+static log get_log_by_name(const bq::string& log_name);
 ```
-同样可以在全局变量或者静态函数中采用该函数初始化一个log对象，不过要注意一点。请务必保证该名称的log对象已经存在，否则返回的log对象将不可用，其is_valid()会返回false。
 
+同样可以在全局变量或静态变量中使用该函数初始化 Log 对象。  
+需要注意：请务必保证该名称的 Log 对象已经通过 `create_log` 创建过，否则返回对象将为 `!is_valid()` 状态。
 
 ### 3. 写日志
+
 ```cpp
-    ///Core log functions, there are 6 log levels:
-    ///verbose, debug, info, warning, error, fatal
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_format_content, const Args&... args) const;
-    template<typename STR>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_content) const;
-    template<typename STR, typename...Args>
-    bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_format_content, const Args&... args) const;
+/// Core log functions, there are 6 log levels:
+/// verbose, debug, info, warning, error, fatal
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> verbose(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> debug(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> info(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> warning(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> error(const STR& log_format_content, const Args&... args) const;
+
+template<typename STR>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_content) const;
+template<typename STR, typename...Args>
+bq::enable_if_t<is_bq_log_str<STR>::value, bool> fatal(const STR& log_format_content, const Args&... args) const;
 ```
-写日志要注意三个个关键点。
-#### 1. 日志等级  
-可以看到，我们的日志成分成了verbose，debug，info，warning，error和fatal总共六个等级，和安卓一致。其重要程度依次递增。同时如果在console中输出，会表现为不同的颜色。  
-![日志等级](docs/img/log_level.png)  
-#### 2. format字符串（STR参数） 
-STR参数类似于printf的第一个参数，其类型是各种常用类型的字符串。包含：
-- Java中的java.lang.String 
-- C#的string
-- C++中的c style string和`std::string`的各种编码（`char*`, `char16_t*`, `char32_t*`, `wchar_t*`, `std::string`, `std::u8string`, `std::u16string`, `std::u32string`, `std::wstring`, `std::string_view`, `std::u16string_view`, `std::u32string_view`, `std::wstring_view`甚至是你自定义的字符串类型，自定义的字符串类型参考[自定义参数类型](#5-自定义参数类型) )
 
-#### 3. format参数  
-可以在STR后面接各种参数，这些参数会被格式化到STR中指定的地方，其规则基本上和C++ 20的std::format一致（除了不支持排序序号和时间格式化等）。如只用一个{}就代表一个参数的默认格式化方式，{.2f}代表浮点数的格式化精度等。  
-**请尽量用format参数的形式去输出日志，而不要自己去拼接字符串，这样对于性能和压缩格式存储是最优解**  
-目前支持的参数类型包含  
-- 空指针（输出null)
-- 指针（输出0x开头的16进制地址）
-- bool
-- 单字节字符(char)
-- 双字节字符(char16_t,wchar_t，C#的char， Java的char)
-- 四字节字符(char32_t或wchar_t)
-- 8位整数
-- 8位无符号整数
-- 16位整数
-- 16位无符号整数
-- 32位整数
-- 32位无符号整数
-- 64位整数
-- 64位无符号整数
-- 32位浮点数
-- 64位浮点数
-- C++其他不认识的POD类型（但是尺寸只能是1,2,4,8字节，会被当成int8，int16，int32和int64处理）
-- 字符串，和上面[STR参数](#2-format字符串str参数)一样的各种字符串类型
-- C#和Java的任何类和对象(会输出他们的ToString()字符串)
-- 自定义参数类型，参考[自定义参数类型](#5-自定义参数类型) 
+写日志需重点关注三个方面：
 
-### 4. 其他API  
-还有一些常用API，可以完成一些特殊的作用，具体可以参考bq_log/bq_log.h，以及Java和C#的bq.log类，里面都有详细的API说明。  
-这里对一些重点需要介绍的API做一个说明  
+#### 1. 日志等级
 
-#### 反初始化BqLog
-```cpp
-    /// <summary>
-    /// Uninitialize BqLog, please invoke this function before your program exist.
-    /// </summary>
-    static void uninit();
-```
-在退出程序或者卸载用了BqLog的自实现动态库之前，最好执行一下`uninit()`，不然在有的特定情况下，可能会在程序退出的时候卡死
+日志分为 6 个等级：`verbose`、`debug`、`info`、`warning`、`error`、`fatal`，与 Android 的日志等级一致，重要性依次递增。  
+在控制台输出时，不同等级会用不同颜色进行区分（ConsoleAppender 下）。
+
+![日志等级](docs/img/log_level.png)
+
+#### 2. format 字符串（`STR` 参数）
+
+`STR` 类似 `printf` 的第一个参数，用于描述日志格式，支持不同语言下的常见字符串类型，例如：
+
+- Java 中的 `java.lang.String`
+- C# 中的 `string`
+- Unreal 中的 `FName`、`FString`、`FText` 等
+- C++ 中的常见字符串形式：
+  - C 风格字符串：`char*`、`char16_t*`、`char32_t*`、`wchar_t*`
+  - 标准库字符串：`std::string`、`std::u8string`、`std::u16string`、`std::u32string`、`std::wstring` 等
+
+BqLog 内部会统一将它们编码为适合存储和输出的 UTF 编码格式。
+
+#### 3. format 参数
+
+`STR` 后面可以跟任意数量的参数，这些参数会按 `C++20 std::format` 的规则格式化到 `{}` 位置（不支持排序序号与时间格式化）。
+
+**强烈建议使用 format 参数方式输出日志，而不要手动拼接字符串。**  
+这样可以显著提升性能，并让压缩格式得到最优效果。
+
+当前支持的参数类型包括：
+
+- 空指针（输出 `null`）
+- 指针（输出 `0x` 开头的 16 进制地址）
+- `bool`
+- 单字节字符（`char`）
+- 双字节字符（`char16_t`、`wchar_t`、C# 的 `char`、Java 的 `char`）
+- 四字节字符（`char32_t` 或部分平台上的 `wchar_t`）
+- 8/16/32/64 位整数与无符号整数
+- 32 位与 64 位浮点数
+- C++ 其他 POD 类型（尺寸为 1、2、4、8 字节，会按 `int8`/`int16`/`int32`/`int64` 处理）
+- 上述 [STR 参数](#2-format-字符串str-参数) 中提到的所有字符串类型
+- C# 和 Java 中任意对象（通过 `ToString()` 结果输出）
+- 自定义参数类型（详见 [自定义参数类型](#4-自定义参数类型)）
+
+### 4. 其他 API
+
+更多细节请参考头文件 `bq_log/bq_log.h`，以及 Java / C# / TypeScript 等 Wrapper 中的 `bq.log` 类注释。  
+这里重点介绍若干常用能力。
 
 #### 异常退出保护
+
 ```cpp
-    /// <summary>
-    /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
-    /// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
-    /// this functionality does not guarantee success, and only support POSIX systems.
-    /// </summary>
-    static void enable_auto_crash_handle();
+/// <summary>
+/// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk.
+/// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer
+/// in the event of a crash. However, this functionality does not guarantee success,
+/// and only supports POSIX systems.
+/// </summary>
+static void enable_auto_crash_handle();
 ```
-详细介绍见[程序异常退出的数据保护](#3-程序异常退出的数据保护)  
-  
+
+详细介绍见 [程序异常退出的数据保护](#3-程序异常退出的数据保护)。
+
 #### 强制刷新缓冲
-```cpp
-    /// <summary>
-    /// Synchronously flush the buffer of all log objects
-    /// to ensure that all data in the buffer is processed after the call.
-    /// </summary>
-    static void force_flush_all_logs();
-    /// <summary>
-    /// Synchronously flush the buffer of this log object
-    /// to ensure that all data in the buffer is processed after the call.
-    /// </summary>
-    void force_flush();
-```
-由于bqLog默认情况下是异步日志，所以有时候想要立即同步输出所有日志需要强制调用一次force_flush()。  
-  
-#### 拦截console输出
-```cpp
-    /// <summary>
-    /// Register a callback that will be invoked whenever a console log message is output. 
-    /// This can be used for an external system to monitor console log output.
-    /// </summary>
-    /// <param name="callback"></param>
-    static void register_console_callback(bq::type_func_ptr_console_callback callback);
 
-    /// <summary>
-    /// Unregister a console callback.
-    /// </summary>
-    /// <param name="callback"></param>
-    static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
-```
-[ConsoleAppender](#consoleappender)的输出是控制台，在android是ADB Logcat日志，但是这些无法涵盖所有的情况。比如自研游戏引擎，自研IDE等，这里提供了一种机制，可以让每一条console日志输出都调用一次参数里的回调，你可以在自己的程序里任意地方重新处理和输出这个控制台日志。  
-***注意:*** 不要在console callback中再去输出任何同步的扁鹊日志，不然很容易造成死锁 
+```cpp
+/// <summary>
+/// Synchronously flush the buffer of all log objects
+/// to ensure that all data in the buffer is processed after the call.
+/// </summary>
+static void force_flush_all_logs();
 
-#### 主动获取console的输出
-```cpp
-    /// <summary>
-    /// Enable or disable the console appender buffer.
-    /// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke callbacks from a native thread,
-    /// we can enable this option. This way, all console outputs will be saved in the buffer until we fetch them.
-    /// </summary>
-    /// <param name="enable"></param>
-    /// <returns></returns>
-    static void set_console_buffer_enable(bool enable);
+/// <summary>
+/// Synchronously flush the buffer of this log object
+/// to ensure that all data in the buffer is processed after the call.
+/// </summary>
+void force_flush();
+```
 
-    /// <summary>
-    /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
-    /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry.
-    /// Please ensure not to output synchronized BQ logs within the callback function.
-    /// </summary>
-    /// <param name="on_console_callback">A callback function to be invoked for the fetched log entry if the console appender buffer is not empty</param>
-    /// <returns>True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.</returns>
-    static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
-```
-除了用console callback去拦截console的输出之外，还可以通过主动调用去获取日志的console输出。有的时候，我们并不希望这个console的日志输出是通过callback调用过来的，因为你并不知道callback会通过什么线程过来（比如在C#的一些虚拟机，或者JVM中，console callback调用过来的时候，VM正在做GC，可能会发生卡死或者crash）。  
-这里采用的方法是通过`set_console_buffer_enable`先启用console的缓冲功能，每一条console日志输出都会被留在内存中，直到我们主动调用`fetch_and_remove_console_buffer`将它取出来。所以如果使用这种方法，请一定记得及时去获取和清理日志，不然内存会无法释放。  
-***注意:*** 不要在console callback中再去输出任何同步的扁鹊日志，不然很容易造成死锁  
-***注意:*** 如果您是在IL2CPP的环境中使用这个代码，请保证on_console_callback 是static unsafe的，并且加上了[MonoPInvokeCallback(typeof(type_console_callback))]这样的Attribute。   
+BqLog 默认使用异步日志。有时需要确保某些关键日志「立刻落盘」，可在关键路径或程序退出前调用 `force_flush` / `force_flush_all_logs()`。
 
-  
-#### 修改log的配置
+#### 拦截 Console 输出
+
 ```cpp
-    /// <summary>
-    /// Modify the log configuration, but some fields, such as buffer_size, cannot be modified.
-    /// </summary>
-    /// <param name="config_content"></param>
-    /// <returns></returns>
-    bool reset_config(const bq::string& config_content);
+/// <summary>
+/// Register a callback that will be invoked whenever a console log message is output.
+/// This can be used for an external system to monitor console log output.
+/// </summary>
+/// <param name="callback"></param>
+static void register_console_callback(bq::type_func_ptr_console_callback callback);
+
+/// <summary>
+/// Unregister a console callback.
+/// </summary>
+/// <param name="callback"></param>
+static void unregister_console_callback(bq::type_func_ptr_console_callback callback);
 ```
-有时候希望在程序中对一个log的配置做一些修改，除了重新创建这个log对象去覆盖配置之外（参考[创建log对象](#1-创建log对象))，也可以调用这个reset接口，但是要注意，不是所有的配置内容都能被修改的，详细见[配置说明](#配置说明)  
-  
-#### 临时禁用和启用某些Appender
+
+[ConsoleAppender](#consoleappender) 默认输出到终端（Android 为 ADB Logcat），但这不能覆盖所有情况（如自研游戏引擎、自研 IDE 等）。  
+通过注册回调，可以把 console 输出转发到自研系统中。
+
+**注意：**
+
+1. 不要在 console callback 中再调用任何「同步刷新的 BqLog 日志函数」，否则极易造成死锁。
+2. 使用 Unity / 团结引擎 / Unreal 插件时，无需手动调用此接口，插件已将 ConsoleAppender 输出自动重定向到编辑器日志窗口。
+
+#### 主动获取 Console 输出
+
 ```cpp
-    /// <summary>
-    /// Temporarily disable or enable a specific Appender.
-    /// </summary>
-    /// <param name="appender_name"></param>
-    /// <param name="enable"></param>
-    void set_appenders_enable(const bq::string& appender_name, bool enable);
+/// <summary>
+/// Enable or disable the console appender buffer.
+/// Since our wrapper may run in both C# and Java virtual machines, and we do not want to directly invoke
+/// callbacks from a native thread, we can enable this option.
+/// This way, all console outputs will be saved in the buffer until we fetch them.
+/// </summary>
+static void set_console_buffer_enable(bool enable);
+
+/// <summary>
+/// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
+/// If the console appender buffer is not empty, the on_console_callback function will be invoked
+/// for this log entry. Please ensure not to output synchronized BQ logs within the callback function.
+/// </summary>
+/// <param name="on_console_callback">
+/// A callback function to be invoked for the fetched log entry if the console appender buffer is not empty
+/// </param>
+/// <returns>
+/// True if the console appender buffer is not empty and a log entry is fetched; otherwise False is returned.
+/// </returns>
+static bool fetch_and_remove_console_buffer(bq::type_func_ptr_console_callback on_console_callback);
 ```
-默认情况下配置中的Appender都是会生效的，但是这里提供了一种机制可以临时禁用和重新启用它们。  
-  
-#### 输出快照
+
+当不适合用回调方式直接从原生线程回调到虚拟机（尤其是Mono,NodeJs等从原生线程调用托管函数可能触发GC卡死的环境）时，可以改用「主动拉取」：
+
+- `set_console_buffer_enable(true)`：启用 console 缓存(启用之后，`register_console_callback`的回调将会失效，默认的console输出也会停止)；
+- `fetch_and_remove_console_buffer(...)`：在业务线程中主动读取并消费缓存中的 console 日志，***一定要不停调用，不然console输出会占用越来越多的内存***。
+
+**注意（IL2CPP 环境）：**
+
+- 请确保 `on_console_callback` 为 `static unsafe` 方法；
+- 并添加 `[MonoPInvokeCallback(typeof(type_console_callback))]` 属性，确保回调不会被 GC 回收。
+
+#### 修改 Log 配置
+
 ```cpp
-    /// <summary>
-    /// Works only when snapshot is configured.
-    /// It will decode the snapshot buffer to text.
-    /// </summary>
-    /// <param name="use_gmt_time">whether the timestamp of each log is GMT time or local time</param>
-    /// <returns>the decoded snapshot buffer</returns>
-    bq::string take_snapshot(bool use_gmt_time) const;
+/// <summary>
+/// Modify the log configuration, but some fields, such as buffer_size, cannot be modified.
+/// </summary>
+/// <param name="config_content"></param>
+/// <returns></returns>
+bool reset_config(const bq::string& config_content);
 ```
-有时候有些特殊的功能，需要输出最后的一部分日志，就可以用到这个快照功能  
-要启用这个功能，首先需要在日志的配置中启用snapshot，并且设置最大的缓冲大小，单位字节。 还有快照需要筛选的日志等级和category（可选） ，具体配置请参考[snapshot配置](#snapshot)。
-当需要快照的时候，调用一下take_snapshot()，就会返回格式化好的快照缓冲区里存储的最后的日志内容字符串。C++里的类型是`bq::string`，可以被隐式转换为`std::string`。  
+
+如需在运行时调整部分配置，可调用 `reset_config`。  
+部分字段（如 `buffer_size`、`thread_mode` 等）出于安全与实现复杂度考虑，不允许在运行时修改，详见配置章节对应表格。
+
+#### 临时禁用或启用某些 Appender
+
+```cpp
+/// <summary>
+/// Temporarily disable or enable a specific Appender.
+/// </summary>
+/// <param name="appender_name"></param>
+/// <param name="enable"></param>
+void set_appender_enable(const bq::string& appender_name, bool enable);
+```
+
+默认情况下，配置中声明的 Appender 全部启用。  
+通过该 API，可以在运行中按需临时关闭 / 打开某些 Appender（例如临时关闭某个文件输出）。
+
+#### 输出快照（Snapshot）
+
+```cpp
+/// <summary>
+/// Works only when snapshot is configured.
+/// It will decode the snapshot buffer to text.
+/// </summary>
+/// <param name="time_zone_config">
+/// Use this to specify the time display of log text.
+/// such as: "localtime", "gmt", "Z", "UTC", "UTC+8", "UTC-11", "utc+11:30"
+/// </param>
+/// <returns>the decoded snapshot buffer</returns>
+bq::string take_snapshot(const bq::string& time_zone_config) const;
+```
+
+某些场景（如异常检测、关键事件上报）需要获取「最近一段时间」的日志快照，可通过此功能实现：
+
+1. 在配置中开启 `snapshot`（见 [snapshot](#snapshot) 配置节），并设置缓冲大小、等级与 category 过滤；
+2. 需要快照时调用 `take_snapshot()`，即可获得格式化后的最近日志字符串。  
+   C++ 中返回类型为 `bq::string`，可隐式转换为 `std::string` 或 C 风格字符串。
 
 #### 解码二进制日志文件
-```cpp
-namespace bq{
-    namespace tools {
-        //This is a utility class for decoding binary log formats. 
-        //To use it, first create a log_decoder object, 
-        //then call its decode function to decode. 
-        //After each successful call, 
-        //you can use get_last_decoded_log_entry() to retrieve the decoded result. 
-        //Each call decodes one log entry.
-        struct log_decoder
-        {
-        private:
-            bq::string decode_text_;
-            bq::appender_decode_result result_ = bq::appender_decode_result::success;
-            uint32_t handle_ = 0;
-        public:
-            /// <summary>
-            /// Create a log_decoder object, with each log_decoder object corresponding to a binary log file.
-            /// </summary>
-            /// <param name="log_file_path">the path of a binary log file, is can be relative path or absolute path</param>
-            log_decoder(const bq::string& log_file_path);
-            ~log_decoder();
-            /// <summary>
-            /// Decode a log entry. each call of this function will decode only 1 log entry
-            /// </summary>
-            /// <returns>decode result, appender_decode_result::eof means the whole log file was decoded</returns>
-            bq::appender_decode_result decode();
-            /// <summary>
-            /// get the last decode result
-            /// </summary>
-            /// <returns></returns>
-            bq::appender_decode_result get_last_decode_result() const;
-            /// <summary>
-            /// get the last decode log entry content
-            /// </summary>
-            /// <returns></returns>
-            const bq::string& get_last_decoded_log_entry() const;
-        };
-    }
-}
-```
-这是一个工具类，可以在运行时解码二进制类的Appender输出的日志文件，比如[CompressedFileAppender](#compressedfileappender)和[RawFileAppender](#rawfileappender)。  
-使用方式是先创建一个log_decoder对象，然后每调用一次decode()函数可以按顺序解码一条日志，如果返回结果是bq::appender_decode_result::success，则可以继续调用get_last_decoded_log_entry()返回最后解码的那条日志格式化后的文本内容。  
-如果返回是bq::appender_decode_result::eof，则代表日志已经全部读取完成  
-  
-<br><br>
 
-## 同步日志和异步日志
-BqLog可以通过配置的方式来确定一个日志对象是同步日志还是异步日志，具体配置方式参考[thread_mode](#logthread_mode)。两者主要区别如下：  
-|                 | 同步日志                                                        | 异步日志                                                  |
-|-----------------|----------------------------------------------------------------|----------------------------------------------------------|
-|     行为        |  调用日志函数之后，日志马上会保证输出到对应Appender                   | 调用对应日志函数之后，日志不会立刻输出，而是交给worker线程定期处理 |
-|     性能        | 低，输出日志的线程需要阻塞等待日志输出到对应Appender之后才会从日志函数返回 | 高，输出日志的线程不用等待日志实际输出就会返回                  |
-|   线程安全性     | 较高，但是要保证日志的参数在调用日志函数期间不会被修改                   | 较高，但是要保证日志的参数在调用日志函数期间不会被修改            ｜
+```cpp
+namespace bq {
+namespace tools {
+
+    // This is a utility class for decoding binary log formats.
+    // To use it, first create a log_decoder object,
+    // then call its decode function to decode.
+    // After each successful call,
+    // you can use get_last_decoded_log_entry() to retrieve the decoded result.
+    // Each call decodes one log entry.
+    struct log_decoder {
+    private:
+        bq::string decode_text_;
+        bq::appender_decode_result result_ = bq::appender_decode_result::success;
+        uint32_t handle_ = 0;
+
+    public:
+        /// <summary>
+        /// Create a log_decoder object, with each log_decoder object corresponding to a binary log file.
+        /// </summary>
+        /// <param name="log_file_path">
+        /// the path of a binary log file, it can be a relative path or absolute path
+        /// </param>
+        /// <param name="priv_key">
+        /// private key generated by "ssh-keygen" to decrypt encrypted log file,
+        /// leave it empty when log file is not encrypted.
+        /// </param>
+        log_decoder(const bq::string& log_file_path, const bq::string& priv_key = "");
+
+        ~log_decoder();
+
+        /// <summary>
+        /// Decode a log entry. Each call of this function will decode only 1 log entry.
+        /// </summary>
+        /// <returns>
+        /// decode result, appender_decode_result::eof means the whole log file was decoded
+        /// </returns>
+        bq::appender_decode_result decode();
+
+        /// <summary>
+        /// get the last decode result
+        /// </summary>
+        bq::appender_decode_result get_last_decode_result() const;
+
+        /// <summary>
+        /// get the last decoded log entry content
+        /// </summary>
+        const bq::string& get_last_decoded_log_entry() const;
+
+        /// <summary>
+        /// Directly decode a log file to a text file.
+        /// </summary>
+        /// <param name="log_file_path"></param>
+        /// <param name="output_file"></param>
+        /// <param name="priv_key">
+        /// private key generated by "ssh-keygen" to decrypt encrypted log file,
+        /// leave it empty when log file is not encrypted.
+        /// </param>
+        /// <returns>success or not</returns>
+        static bool decode_file(const bq::string& log_file_path,
+                                const bq::string& output_file,
+                                const bq::string& priv_key = "");
+    };
+
+} // namespace tools
+} // namespace bq
+```
+
+该工具类用于在运行时解码二进制 Appender（如 [CompressedFileAppender](#compressedfileappender)）输出的日志文件。
+
+- 创建 `log_decoder` 对象；
+- 反复调用 `decode()`，每次解码一条日志：
+  - 若返回 `bq::appender_decode_result::success`，则可以调用 `get_last_decoded_log_entry()` 获取文本；
+  - 若返回 `bq::appender_decode_result::eof`，表示已解码到文件末尾；
+- 如日志启用了加密，构造 `log_decoder` 或调用 `decode_file` 时需传入私钥字符串（详见后文「日志加密和解密」）。
+
+---
+
+<a id="同步日志和异步日志"></a>
+
+## ⚡ 同步日志和异步日志
+
+BqLog 通过配置项 `log.thread_mode` 决定日志对象采用同步还是异步模式。两者的区别如下：
+
+|                    | **同步日志（Synchronous Logging）**                                                                 | **异步日志（Asynchronous Logging）**                                                                 |
+|:------------------:|------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| **行为（Behavior）**    | 调用日志函数后，日志会立刻同步输出到对应 Appender，函数返回时保证这条日志已被处理。                                  | 调用日志函数后，日志被写入缓冲区，由 worker 线程异步处理，写日志的线程很快返回。                                |
+| **性能（Performance）** | 性能较低，调用线程需要阻塞等待 Appender 输出完成。                                                              | 性能较高，调用线程无需等待实际输出。                                                                 |
+| **线程安全性（Thread Safety）** | 在「调用期间参数不被修改」前提下线程安全；多线程下性能受限于串行输出。                                                | 在「调用期间参数不被修改」前提下线程安全；内部通过高并发环形队列与工作线程进行调度以提升扩展性。                       |
 
 ### 异步日志的线程安全性说明
-异步日志给人最大的误解是认为其线程安全性较差，使用者担心实际worker进行处理的时候，对应的参数已经被回收了。比如下面的情况：
+
+异步日志常见的顾虑是：**worker 线程真正处理日志时，参数已经失效（生命周期结束）**。例如：
+
 ```cpp
 {
     const char str_array[5] = {'T', 'E', 'S', 'T', '\0'};
@@ -514,523 +707,736 @@ BqLog可以通过配置的方式来确定一个日志对象是同步日志还是
     log_obj.info("This is test param :{}, {}", str_array, str_ptr);
 }
 ```
-上面用例`str_array`是保存在栈上的，当从作用域中退出的时候，其内存就已经变得没有意义了。所以用户会担心如果是异步日志，等worker线程实际处理的时候，`str_array`和`str_ptr`实际上已经是一个无效变量了。  
-其实这样的情况是不会发生的，因为BqLog会在`info`函数被调用的过程中，就将所有的参数内容全部拷贝到内部的`ring_buffer`中，只要从`info`函数返回，就再也不需要`str_array`或者`str_ptr`这样的外部变量了。而且`ring_buffer`上保存的也不会是一个`const char*`的指针地址，而总是会将整个字符串保存在`ring_buffer`中。  
 
-实际上可能出现问题的是这样的情况。
+`str_array` 为栈变量，离开作用域后内存已经无效。  
+担心点在于：如果 worker 线程稍后才处理，会不会读到悬垂指针？
+
+**在 BqLog 中不会发生这种情况：**
+
+- 在 `info`（或其他日志函数）调用期间，BqLog 就会把所有参数内容完整拷贝到内部环形缓冲区；
+- 一旦日志函数返回，意味着该条日志所需数据已经安全存放在 BqLog 的内部缓存中；
+- 后续 worker 线程只读内部缓存，不会再访问调用方栈上的数据。
+
+**真正可能出问题的情形是「调用期间参数内容被其他线程修改」：**
+
 ```cpp
-static std::string global_str = "hello world";   //这是一个全局变量，有多个线程在同时修改它。
+static std::string global_str = "hello world";   // 这是一个全局变量，有多个线程在同时修改它。
 
 void thread_a()
 {
     log_obj.info("This is test param :{}", global_str);
 }
 ```
-如果在调用info函数的过程中，global_str的内容发生了改变，那么最后可能会出现未定义的情况。BqLog已经尽可能保证了不会发生程序崩溃，但是最后输出的内容正确性却无法保证。
 
-<br><br>
+如果在 `info` 函数的入参处理至缓冲写入的过程里，其他线程修改了 `global_str` 内容，会造成输出内容未定义（虽然 BqLog 会尽量保证不崩溃）。  
+结论是：**请保证单条日志调用中传入的参数在调用期间不被修改**，与是否同步/异步无关。
 
-## Appender介绍  
-Appender代表日志的输出目标，这里Appender的概念和Log4j的Appender概念基本是一致的。目前bqLog提供以下几种Appender
+---
+
+<a id="appender-介绍"></a>
+
+## 📂 Appender 介绍
+
+Appender 表示日志的最终输出目标，其概念与 Log4j 中的 Appender 基本一致。  
+目前 BqLog 提供以下几种 Appender：
+
 ### ConsoleAppender
-该Appender的输出目标是控制台，Android的ADB，以及iOS对应的控制台，其文本编码为UTF-8
+
+- 输出目标：控制台 / 终端；
+- 在 Android 上输出到 ADB Logcat；
+- 输出编码：UTF-8 文本。
+
 ### TextFileAppender
-该Appender会直接用UTF-8的文本格式输出日志文件。
+
+- 以 UTF-8 文本格式直接输出日志文件；
+- 日志文件人类可读，适合快速排查。
+
 ### CompressedFileAppender
-该Appender会用压缩后的格式输出日志文件，是`bqLog重点推荐的格式`。其性能是所有Appender中最高的，同时输出的文件也是最小的。不过最终文件的读取需要解码。可以在[运行时解码](#解码二进制日志文件)，以及[离线解码](#离线解码二进制格式的appender)。
-### RawFileAppender
-该Appender会直接将内存中的二进制日志内容输出到文件，其性能比TextFileAppender高，但是存储空间比TextFileAppender大。最终文件的读取需要解码。可以在[运行时解码](#解码二进制日志文件)，以及[离线解码](#离线解码二进制格式的appender)。不推荐使用该Appender  
-  
-下面是几种Appender的综合对比
 
-| 名称                    | 输出目标 | 能否直接读取 | 输出性能 | 输出尺寸 |
-|-------------------------|---------|--------------|----------|----------|
-| ConsoleAppender         | 控制台   | ✔           | 低       | -        |
-| TextFileAppender        | 文件     | ✔           | 低       | 大       |
-| CompressedFileAppender  | 文件     | ✘           | 高       | 小       |
-| RawFileAppender         | 文件     | ✘           | 中       | 大       |
+- 用高性能压缩格式输出日志文件；
+- 是 **BqLog 推荐的默认文件输出格式**；
+- 在所有 Appender 中性能最高，输出文件体积最小；
+- 读取需通过 BqLog 自带解码工具或 `bq::tools::log_decoder`；
+- 支持加密（基于 RSA2048 + AES256 的混合加密）。
 
+综合对比如下：
 
+| 名称                     | 输出目标 | 是否明文可读 | 输出性能 | 输出尺寸 | 是否支持加密 |
+|--------------------------|---------|-------------|----------|----------|-------------|
+| ConsoleAppender          | 控制台   | ✔           | 低       | -        | ✘           |
+| TextFileAppender         | 文件     | ✔           | 低       | 大       | ✘           |
+| CompressedFileAppender   | 文件     | ✘           | 高       | 小       | ✔           |
 
-<br><br>
+> 注：文中提及的「加密」仅指 CompressedFileAppender 支持使用「RSA2048 公钥 + AES256 对称密钥」的混合加密格式。  
+> 加密格式基于 OpenSSH 风格的 `ssh-rsa` 公钥文本（PEM），私钥需由 `ssh-keygen` 生成，详见 [日志加密和解密](#7-日志加密和解密)。
 
-## 配置说明
-所谓配置就是create_log和reset_config函数中的config字符串，该字符串采用properties文件的格式，支持#注释符号（但是记得要单开一行并且用#开头）
+---
+
+<a id="配置说明"></a>
+
+## ⚙️ 配置说明
+
+所谓「配置」，即 `create_log` 和 `reset_config` 函数中的 `config` 字符串。  
+该字符串采用 **properties 文件格式**，支持 `#` 单行注释（需独立成行并以 `#` 开头）。
+
 ### 1. 完整示例
-以下是一个完整的案例
+
 ```ini
-    #这个配置给log对象配置了整整5个Appender，其中有两个TextFileAppender，会输出到两个不同的文件
+# 这个配置给 log 对象配置了 5 个 Appender，其中有两个 TextFileAppender，会输出到不同的文件。
 
-    #第一个Appender名叫appender_0，他的类型是ConsoleAppender
-    appenders_config.appender_0.type=console
-    #appender_0对应的时区是系统当地时间
-    appenders_config.appender_0.time_zone=default local time
-    #appender_0会输出所有6个等级的日志（注意，每个日志等级之间千万不要有空格，不然会解析失败）
-    appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal]
-            
-    #第二个Appender名叫appender_1，他的类型是TextFileAppender
-    appenders_config.appender_1.type=text_file
-    #appender_1对应的时区是GMT时间，也就是utc0
-    appenders_config.appender_1.time_zone=gmt
-    #appender_1只输出info和以上的四个等级日志，其他的会被忽略
-    appenders_config.appender_1.levels=[info,warning,error,fatal]
-    #appender_1保存的路径会是在程序的相对路径bqLog目录下，文件名用normal开头，后面会跟上日期和.log扩展名
-    #如果是iOS，则会保存在/var/mobile/Containers/Data/Application/[APP]/Library/Caches/bqLog下
-    #如果是Android，则会保存在[android.content.Context.getExternalFilesDir()]/bqLog下
-    appenders_config.appender_1.file_name=bqLog/normal
-    #文件的最大尺寸是10000000字节，如果超过了，则会新开一个文件
-    appenders_config.appender_1.max_file_size=10000000
-    #超过十天的文件则会被清理
-    appenders_config.appender_1.expire_time_days=10
-    #该Appender的输出总尺寸超过了100000000字节则会从按日期从最早的开始清理
-    appenders_config.appender_1.capacity_limit=100000000
-    
-    #第三个Appender名叫appender_2，他的类型是TextFileAppender
-    appenders_config.appender_2.type=text_file
-    #appender_2会输出所有等级的日志
-    appenders_config.appender_2.levels=[all]
-    #appender_2保存的路径会是在程序的相对路径bqLog目录下，文件名用new_normal开头，后面会跟上日期和.log扩展名
-    appenders_config.appender_2.file_name=bqLog/new_normal
-    #该选项只针对Android生效，会将日志保存在internal storage目录下，也就是[android.content.Context.getFilesDir()]/bqLog下
-    appenders_config.appender_2.is_in_sandbox=true
-    
-    
-    #第四个Appender名叫appender_3，他的类型是CompressedFileAppender
-    appenders_config.appender_3.type=compressed_file
-    #appender_3会输出所有等级的日志
-    appenders_config.appender_3.levels=[all]
-    #appender_3保存的路径会是在程序的绝对路径~/bqLog目录下，文件名用compress_log开头，后面会跟上日期和.logcompr扩展名
-    appenders_config.appender_3.file_name=~/bqLog/compress_log
-    
-    
-    #第五个Appender名叫appender_4，他的类型是RawFileAppender
-    appenders_config.appender_4.type=raw_file
-    #appender_4默认是禁用的，后续可以通过set_appenders_enable启用
-    appenders_config.appender_4.enable=false
-    #appender_4会输出所有等级的日志
-    appenders_config.appender_4.levels=[all]
-    #appender_4保存的路径会是在程序的相对路径bqLog目录下，文件名用raw_log开头，后面会跟上日期和.lograw扩展名
-    appenders_config.appender_4.file_name=bqLog/raw_log
-    #只有当日志的category是ModuleA,ModuleB.SystemC开头的时候，才会被处理，否则全部忽略，具体见后文详细解释（Category的概念会在后面的高级使用话题）
-    appenders_config.appender_4.categories_mask=[ModuleA,ModuleB.SystemC]
+# 第一个 Appender 名叫 appender_0，类型为 ConsoleAppender
+appenders_config.appender_0.type=console
+# appender_0 使用系统当地时间
+appenders_config.appender_0.time_zone=localtime
+# appender_0 会输出所有 6 个等级的日志（注意：不同日志等级之间不要有空格，否则解析失败）
+appenders_config.appender_0.levels=[verbose,debug,info,warning,error,fatal]
 
-    #总的异步缓存的buffer size为65535字节，具体意义看后文详细解释
-    log.buffer_size=65535
-    #日志的可靠等级为normal，具体意义看后文详细解释
-    log.reliable_level=normal
-    #只有当日志的category符合下面这三种通配符的时候，才会被处理，否则全部忽略，具体见后文详细解释（Category的概念会在后面的高级使用话题）
-    log.categories_mask=[*default,ModuleA,ModuleB.SystemC]
-    #这是一个异步日志，异步日志是性能最高的日志，也是推荐的日志类型
-    log.thread_mode=async
-    #如果日志等级是error和fatal的话，在每一条日志后面带上调用栈信息
-    log.print_stack_levels=[error,fatal]
+# 第二个 Appender 名叫 appender_1，类型为 TextFileAppender
+appenders_config.appender_1.type=text_file
+# 使用 GMT 时间（UTC0）
+appenders_config.appender_1.time_zone=gmt
+# 只输出 info 及以上四个等级日志，其余等级会被忽略
+appenders_config.appender_1.levels=[info,warning,error,fatal]
+# base_dir_type 决定相对路径的基准目录，这里为 1：
+# iOS：/var/mobile/Containers/Data/Application/[APP]/Documents
+# Android：[android.content.Context.getExternalFilesDir()]
+# HarmonyOS：/data/storage/el2/base/cache
+# 其他平台：当前工作目录
+appenders_config.appender_1.base_dir_type=1
+# appender_1 保存的路径为相对路径 bqLog/normal，采用滚动文件：
+# 文件名形如 normal_YYYYMMDD_xxx.log，具体见后文「路径与滚动策略」。
+appenders_config.appender_1.file_name=bqLog/normal
+# 每个文件最大 10,000,000 字节，超过则新开文件
+appenders_config.appender_1.max_file_size=10000000
+# 超过 10 天的旧文件会自动清理
+appenders_config.appender_1.expire_time_days=10
+# 同一输出目录下，该 Appender 所有文件总大小超过 100,000,000 字节时，
+# 会按日期从最早文件开始清理
+appenders_config.appender_1.capacity_limit=100000000
 
-    #启用快照功能，快照缓存64K
-    snapshot.buffer_size=65536
-    #只有info和error等级的日志才会被快照记录
-    snapshot.levels=[info,error]
-    #只有当日志的category是ModuleA,ModuleB.SystemC开头的时候，才会被快照记录，否则全部忽略
-    snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
+# 第三个 Appender 名叫 appender_2，类型为 TextFileAppender
+appenders_config.appender_2.type=text_file
+# 输出所有等级日志
+appenders_config.appender_2.levels=[all]
+# base_dir_type 为 0：
+# iOS：/var/mobile/Containers/Data/Application/[APP]/Library/Application Support
+# Android：[android.content.Context.getFilesDir()]
+# HarmonyOS：/data/storage/el2/base/files
+# 其他平台：当前工作目录
+appenders_config.appender_2.base_dir_type=0
+# 路径为 bqLog/new_normal，文件名形如 new_normal_YYYYMMDD_xxx.log
+appenders_config.appender_2.file_name=bqLog/new_normal
+
+# 第四个 Appender 名叫 appender_3，类型为 CompressedFileAppender
+appenders_config.appender_3.type=compressed_file
+# 输出所有等级日志
+appenders_config.appender_3.levels=[all]
+# 保存路径为 ~/bqLog/compress_log，文件名形如 compress_log_YYYYMMDD_xxx.logcompr
+appenders_config.appender_3.file_name=~/bqLog/compress_log
+# appender_3 输出内容将使用下方 RSA2048 公钥进行混合加密
+appenders_config.appender_3.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+Fo........rest of your rsa2048 public key...... user@hostname
+
+# 第五个 Appender 名叫 appender_4，类型为 ConsoleAppender
+appenders_config.appender_4.type=console
+# appender_4 默认禁用，后续可通过 set_appender_enable 启用
+appenders_config.appender_4.enable=false
+# 输出所有等级日志
+appenders_config.appender_4.levels=[all]
+# 仅当 Category 以 ModuleA 或 ModuleB.SystemC 开头时才输出日志，其余忽略
+# （Category 的概念见后文「支持分类（Category）的 Log 对象」）
+appenders_config.appender_4.categories_mask=[ModuleA,ModuleB.SystemC]
+
+# 整体异步缓冲区大小为 65535 字节，具体含义见后文
+log.buffer_size=65535
+# 开启日志 Crash 复盘功能，详见「程序异常退出的数据保护」
+log.recovery=true
+# 仅当日志 Category 匹配以下任一通配符时才处理日志，其余忽略
+log.categories_mask=[*default,ModuleA,ModuleB.SystemC]
+# 使用异步日志模式（推荐）
+log.thread_mode=async
+# 当日志等级为 error 或 fatal 时，在每条日志后附带调用栈
+log.print_stack_levels=[error,fatal]
+
+# 启用快照功能，快照缓冲区大小为 64KB
+snapshot.buffer_size=65536
+# 仅记录 info 和 error 等级的日志到快照
+snapshot.levels=[info,error]
+# 仅当 Category 为 ModuleA.SystemA.ClassA 或以 ModuleB 开头时，才记录到快照
+snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 ```
 
 ### 2. 详细解释
 
-### appenders_config  
-appenders_config是一组关于Appender的配置。其中后面接的第一个参数就是Appender的名字，所有相同名字的Appender共用一组配置。
+#### `appenders_config`
 
-| 名称                | 是否必须 | 可配置值                     | 默认值     | 适用于ConsoleAppender | 适用于TextFileAppender | 适用于CompressedFileAppender | 适用于RawFileAppender |
-|---------------------|----------|-----------------------------|------------|-----------------------|------------------------|-----------------------------|-----------------------|
-| type                | ✔        | console, text_file, compressed_file, raw_file |            | ✔                     | ✔                      | ✔                           | ✔                     |
-| enable              | ✘        | Appender是否默认启用        |   true      | ✔                     | ✔                      | ✔                           | ✔                     |
-| levels              | ✘        | 日志等级的任意组合数组       |    [all]    | ✔                     | ✔                      | ✔                           | ✔                     |
-| time_zone           | ✘        | gmt或者其他任意字符串        | 当地时间   | ✔                     | ✔                      | ✔                           | ✔                     |
-| file_name           | ✔        | 相对路径或者绝对路径         |            | ✘                     | ✔                      | ✔                           | ✔                     |
-| is_in_sandbox       | ✘        | true, false                 | false      | ✘                     | ✔                      | ✔                           | ✔                     |
-| max_file_size       | ✘        | 正整数或者0                 | 0          | ✘                     | ✔                      | ✔                           | ✔                     |
-| expire_time_days    | ✘        | 正整数或者0                 | 0          | ✘                     | ✔                      | ✔                           | ✔                     |
-| capacity_limit      | ✘        | 正整数或者0                 | 0          | ✘                     | ✔                      | ✔                           | ✔                     |
-| categories_mask     | ✘        | []包围的字符串数组          | 空          |              ✔        | ✔                      | ✔                           | ✔                     |
+`appenders_config` 是一组关于 Appender 的配置。  
+`appenders_config.<name>.xxx` 中 `<name>` 即 Appender 名称，相同 `<name>` 的配置共同作用于同一个 Appender 实例。
+
+| 名称                         | 是否必须 | 可配置值                                | 默认值               | ConsoleAppender | TextFileAppender | CompressedFileAppender |
+|------------------------------|---------|-----------------------------------------|-------------------|-----------------|------------------|------------------------|
+| `type`                       | ✔       | `console` / `text_file` / `compressed_file` / `raw_file` | -                 | ✔               | ✔                | ✔（加密需此类型）      |
+| `enable`                     | ✘       | `true` / `false`                        | `true`            | ✔               | ✔                | ✔                      |
+| `levels`                     | ✘       | 日志等级数组（`[verbose,...]` 或 `[all]`） | `[all]`           | ✔               | ✔                | ✔                      |
+| `time_zone`                  | ✘       | `gmt` / `localtime` / `Z` / `UTC` / `utc+8` / `utc-2` / `utc+11:30` 等 | `localtime`（当地时间） | ✔               | ✔                | ✔（影响滚动日期）      |
+| `file_name`                  | ✔（文件类） | 相对或绝对路径（不含扩展名）                | -                 | ✘               | ✔                | ✔                      |
+| `base_dir_type`             | ✘       | `0` / `1`                               | `0`               | ✘               | ✔                | ✔                      |
+| `max_file_size`             | ✘       | 正整数或 `0`                            | `0`（不限制）          | ✘               | ✔                | ✔                      |
+| `expire_time_seconds`       | ✘       | 正整数或 `0`                            | `0`（不清理）          | ✘               | ✔                | ✔                      |
+| `expire_time_days`          | ✘       | 正整数或 `0`                            | `0`（不清理）          | ✘               | ✔                | ✔                      |
+| `capacity_limit`            | ✘       | 正整数或 `0`                            | `0`（不限制）          | ✘               | ✔                | ✔                      |
+| `categories_mask`           | ✘       | 字符串数组（`[]`）                       | 空（不过滤）            | ✔               | ✔                | ✔                      |
+| `always_create_new_file`    | ✘       | `true` / `false`                        | `false`           | ✘               | ✔                | ✔                      |
+| `enable_rolling_log_file`    | ✘       | `true` / `false`                        | `true`            | ✘               | ✔                | ✔                      |
+| `pub_key`                   | ✘       | RSA2048 公钥（OpenSSH `ssh-rsa` 文本）  | 空（不加密）            | ✘               | ✘                | ✔（启用混合加密）      |
+
+##### (1) `appenders_config.xxx.type`
+
+指定 Appender 类型：
+
+- `console` → [ConsoleAppender](#consoleappender)
+- `text_file` → [TextFileAppender](#textfileappender)
+- `compressed_file` → [CompressedFileAppender](#compressedfileappender)
+
+##### (2)`appenders_config.xxx.enable`
+
+是否默认启用该 Appender，默认为 `true`。  
+如为 `false`，Appenders 会在初始化时被创建但不实际输出，可在运行时通过 `set_appender_enable` 切换。
+
+##### (3)`appenders_config.xxx.levels`
+
+使用 `[]` 包裹的数组，内容为：
+
+- 任意组合：`[verbose,debug,info,warning,error,fatal]`
+- 或特殊值 `[all]`，表示所有等级均输出。
 
 
-#### appenders_config.xxx.type  
-决定了该Appender的类型。  
-- `console代表`[ConsoleAppender](#consoleappender)
-- `text_file代表`[TextFileAppender](#textfileappender)
-- `compressed_file代表`[CompressedFileAppender](#compressedfileappender)
-- `raw_file代表`[RawFileAppender](#rawfileappender)
-#### appenders_config.xxx.enable  
-默认为true，如果填false的话，那么这个Appender默认是不会生效的，直到用户调用set_appenders_enable后启用。
-#### appenders_config.xxx.levels  
-这是一个用[]包起来的数组，里面可以填入verbose,debug,info,warning,error,fatal这六个等级的任意组合，也可以直接填[all]代表所有等级都接受。**注意！不同等级之间不能有空格符号，不然会解析失败**
-#### appenders_config.xxx.time_zone  
-代表日志的时区，gmt代表使用UTC0的格林威治时间（GMT），其他任意字符串或者留空不填都代表使用本机当地时区。时区有两个作用  
-- 格式化出来的文本的时间显式会受到时区影响（适用于ConsoleAppender和TextFileAppender)
-- 每次越过对应时区的午夜0点的时候，都会新开一个日志文件，适用于(TextFileAppender，CompressedFileAppender和RawFileAppender)。
-#### appenders_config.xxx.file_name  
-保存文件的路径以及文件名前缀。其中路径可以是绝对路径（安卓和iOS最好不要用绝对路径），也可以是相对路径。最终输出的文件是用这个路径和名字再加上日期和文件的编号和对应Appender的扩展名。
-#### appenders_config.xxx.is_in_sandbox  
-只有Android下有意义，具体意义如下：  
-- `true` : 文件默认存储在Internal Storage目录下，也就是android.content.Context.getFilesDir()的路径下，如果这个路径不可用，则保存在External Storage目录下，也就是android.content.Context.getExternalFilesDir()，如果这个路径依然不可用，则保存在Cache目录下，也就是android.content.Context.getCacheDir()目录下。
-- `false`: 文件默认存储在External Storage目录下，也就是android.content.Context.getExternalFilesDir()的路径下，如果这个路径不可用，则保存在Internal Storage目录下，也就是android.content.Context.getFilesDir()，如果这个路径依然不可用，则保存在Cache目录下，也就是android.content.Context.getCacheDir()目录下。
-#### appenders_config.xxx.max_file_size  
-最大文件尺寸，单位字节，当保存的文件超过这个尺寸的时候，就会生成一个新的日志文件。文件编号依次递增。0代表关闭该功能。
-#### appenders_config.xxx.expire_time_days  
-文件保存的最大天数，超出天数的文件将会被自动删除。0代表关闭该功能。
-#### appenders_config.xxx.capacity_limit  
-该输出目录下，该Appender所输出的文件的最大总尺寸，如果超出了这个尺寸，则从最早的文件开始删除，直到总大小到尺寸之内。0代表关闭该功能。
-#### appenders_config.xxx.categories_mask  
-如果日志对象是[支持分类（Category）的Log对象](#2-支持分类category的log对象) ，可以用来做树状categories列表的过滤。当数组不为空的时候，该能力会生效。比如[*default,ModuleA,ModuleB.SystemC]这样的配置，代表着默认category(就是没有传递category参数的日志调用)的日志能被该Appender处理，ModulesA这个category和他下面的所有子category的日志都能被该Appender处理，同样还有ModuleB.SystemC这个category和他下面的所有子category的日志，其他所有的category日志都会被该Appender处理忽略。一个Appender的categories_mask生效的范围是Appender上的categories_mask和log对象上的全局[log.categories_mask](#logcategories_mask)的并集。如果您的日志是异步模式的（参考[log.thread_mode](#logthread_mode)），这个选项生效会有一点点延迟性。
-<br>
+##### (4)`appenders_config.xxx.time_zone`
 
-### log
-log配置是针对整个log对象的。有以下配置：
-| 名称               | 是否必须 | 可配置值                  | 默认值 | 是否可以在reset_config中修改 |
-|--------------------|---------|---------------------------|-------|-----------------------------|
-| thread_mode        | ✘      | sync, async, independent  | async | ✘                          |
-| buffer_size        | ✘      | 32位正整数                 | 65536 | ✘                          |
-| reliable_level     | ✘      | low, normal, high         | normal| ✔                          |
-| categories_mask    | ✘      | []包围的字符串数组         | 空   | ✔                          |
-| print_stack_levels | ✘      | 日志等级的任意组合数组     | 空   | ✔                          |
+指定时间戳格式化使用的时区，同时也影响按日期滚动文件的「日期边界」：
 
-#### log.thread_mode  
-日志的线程模式，用户调用日志接口写入的日志会先写到日志缓存中，这里的配置代表这些缓存中的数据将在哪个线程被处理。
-- `sync`，这些数据就会在当前写日志的线程被同步处理，也就是说，当您调用info一类的函数，当函数返回的时候，日志数据已经被处理完成了。
-- `async`（默认），当前写日志线程不做处理立刻返回，等待工作线程去处理缓存中的日志数据。整个进程只有一个工作线程，这个工作线程会负责所有async日志的处理。
-- `independent`, 当前写日志线程不做处理立刻返回，而是会开启一个专属线程专门处理这个日志对象的数据，当有很多个日志对象，而日志对象日志量又特别大的时候，可以用这个选项分担工作线程的负担。
-#### log.buffer_size
-日志的缓存大小，单位字节。
-#### log.reliable_level
-主要是针对异步日志模式。可以为以下三个值  
--`low` 如果日志缓存已经满了，异步模式下，写入的日志数据就会直接被丢弃掉，保证不阻塞程序
--`normal` 日过日志缓存已经满了，异步模式下，写入日志的线程就会阻塞并等待日志缓存有足够空间写入，然后写入日志再返回。（工作线程会定期去处理缓存，如果缓存写入非常快，工作线程也会减少休眠，更快去处理，所以这里不用担心多等）。具有程序异常退出（crash，断电，杀进程等）后，下次重启程序，会把上次没处理完的日志数据重新处理的能力。该功能基于类似mmap的能力，支持Windows, Linux, Android, MacOS, iOS等平台，但是不一定能百分百成功，这个要依赖于操作系统的实现。
--`high` 除了normal所拥有的功能之外，会有更大把握保证数据实时落地，不过会造成性能较大下降，接近于同步日志。
-#### log.categories_mask
-逻辑和Appender上的[appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask)一致，不过是作用于整个log对象的。如果您的日志是异步模式的（参考[log.thread_mode](#logthread_mode)），这个选项生效会有一点点延迟性。
-#### log.print_stack_levels
-配置方式跟[appenders_config.levels](#appenders_configxxxlevels) 里的一样，匹配等级的每一条日志都会在后面带上调用栈的信息，但是请一定注意，最好只在Debug环境使用这个功能，正式环境最多是针对`error`和`fatal`这样的错误日志开启，因为它不仅会带来性能的明显下降，还会给Java和C#带来GC。目前`Java`, `C#`, `Win64`的栈信息显示比较清晰友好，其他平台相对较难以阅读，在没有符号表的情况下，只有地址信息。
-<br><br>
+- `"gmt"`、`"Z"`、`"UTC"`：使用 UTC0（格林威治时间）；
+- `"localtime"`：使用系统当地时间；
+- `"utc+8"`、`"utc-2"`、`"utc+11:30"` 等：明确指定偏移。
 
-### snapshot
-snapshot配置是针对整个log的快照设置，有时候有些特殊的场景，比如检测到异常的时候，需要截取一个log对象最后的一部分日志进行上报，就可以用到这个快照功能。
-有以下配置：
-| 名称               | 是否必须 | 可配置值                  | 默认值 | 是否可以在reset_config中修改 |
-|--------------------|---------|---------------------------|-------|----------------------------|
-| buffer_size        | ✘      | 32位正整数                 | 0     | ✔                          |
-| levels             | ✘      | 日志等级的任意组合数组      | [all]  | ✔                          |
-| categories_mask    | ✘      | []包围的字符串数组          | 空    | ✔                          |
+影响：
 
-#### snapshot.buffer_size  
-快照缓存的大小，如果为0或者没配置这一项，快照功能就会被关闭
-#### snapshot.levels
-只有被配置在里面的日志等级的日志才会被快照记录，如果不配置，则默认是all，这一点和前面的不一样
-#### snapshot.categories_mask
-逻辑和Appender上的[appenders_config.xxx.categories_mask](#appenders_configxxxcategories_mask)一致，只有匹配的category，才会被快照机会，如果没有配置该选项，则全部的category都会被记录。
-<br><br>
+- ConsoleAppender / TextFileAppender：决定日志文本中时间字段的显示；
+- TextFileAppender / CompressedFileAppender / RawFileAppender：决定文件按日期滚动的切分点（每天 0 点）。
 
-## 离线解码二进制格式的Appender
-在程序执行之外，bqLog也提供了预编译好的二进制文件解码命令行工具，目录在：
-| 平台               |         路径        |      可执行程序名    |
-|--------------------|--------------------|---------------------|
-| mac                | /bin/tools/mac     |   BqLog_LogDecoder  |
-| windows            | /bin/tools/win64   | BqLog_LogDecoder.exe|
-| linux              | /bin/tools/linux   |   BqLog_LogDecoder  |
-| unix               | /build/tools       | 需要手动构建二进制文件|
+##### (5)`appenders_config.xxx.base_dir_type`
 
-用法是
-```cpp
-./BqLog_LogDecoder 要解码的文件 [输出文件]  
+指定当 `file_name` 为相对路径时的基准目录：
+
+- `0`
+  - Android：依次尝试
+    - `android.content.Context.getFilesDir()`
+    - `android.content.Context.getExternalFilesDir()`
+    - `android.content.Context.getCacheDir()`
+  - iOS：`/var/mobile/Containers/Data/Application/[APP]/Library/Application Support`
+  - HarmonyOS：`/data/storage/el2/base/files`
+  - 其他平台：进程当前工作目录
+- `1`
+  - Android：依次尝试
+    - `android.content.Context.getExternalFilesDir()`
+    - `android.content.Context.getFilesDir()`
+    - `android.content.Context.getCacheDir()`
+  - iOS：`/var/mobile/Containers/Data/Application/[APP]/Documents`
+  - HarmonyOS：`/data/storage/el2/base/cache`
+  - 其他平台：进程当前工作目录
+
+##### (6)`appenders_config.xxx.file_name`
+
+指定日志文件的路径与文件名前缀，示例：
+
+```ini
+appenders_config.appender_3.file_name=~/bqLog/compress_log
 ```
-其中输出文件目录可以不填，就会直接将解码出来的文本输出在当前命令行窗口中（**标准输出流**)
-**注意，不同版本的bqLog之间的二进制文件可能会不兼容**
-<br><br>
 
-## 构建说明
-针对需要自己做修改和编译的用户：  
-BqLog所有的构建脚本都在/build目录下，分为  
-/build  
-├── demo // demo构建  
-├── lib // native的静态库和动态库构建  
-├── test // 测试工程构建  
-├── tools // 工具工程构建  
-└── wrapper // wrappers工程，Java和C#  
-  
+最终实际文件名会由 BqLog 按日期与滚动编号自动补全，例如：
+
+- `compress_log_20250101_0001.logcompr`（CompressedFileAppender）
+- `normal_20250101_0001.log`（TextFileAppender）
+
+若是相对路径，则基于 `base_dir_type` 对应的目录。
+
+##### 其他字段简要说明
+
+- `max_file_size`：单个文件最大字节数，超过则新建文件；`0` 表示不按大小切分。
+- `expire_time_seconds`：按秒数清理超时文件；`0` 关闭该功能。
+- `expire_time_days`：按天清理超时文件；`0` 关闭该功能。
+- `capacity_limit`：限制该 Appender 输出的文件的总大小，超过时按时间从旧文件开始删除。
+- `categories_mask`：仅当日志 Category 匹配该数组中的前缀时，才会输出日志（参见 [支持分类（Category）的 Log 对象](#2-支持分类category的-log-对象)）。
+- `always_create_new_file`：`true` 时，即使同一天内，每次进程重启也新开一个文件；默认 `false` 为追加写。
+- `enable_rolling_log_file`：是否启用按日期滚动文件，默认 `true`。
+- `pub_key`：为 CompressedFileAppender 提供加密公钥，字符串内容应完整拷贝自 `ssh-keygen` 生成的 `.pub` 文件，且以 `ssh-rsa ` 开头。 详情见 [日志加密和解密](#6-日志加密和解密)。
+
+---
+
+### `log` 配置
+
+`log.xxx` 配置作用于整个 Log 对象。
+
+| 名称                                      | 是否必须 | 可配置值                               | 默认值                                                         | 是否可通过 `reset_config` 修改 |
+|-------------------------------------------|---------|----------------------------------------|----------------------------------------------------------------|--------------------------------|
+| `log.thread_mode`                         | ✘       | `sync` / `async` / `independent`       | `async`                                                        | ✘                              |
+| `log.buffer_size`                         | ✘       | 32 位正整数                            | 桌面/服务器：`65536`；移动设备：`32768`                         | ✘                              |
+| `log.recovery`                            | ✘       | `true` / `false`                       | `false`                                                        | ✘                              |
+| `log.categories_mask`                     | ✘       | 字符串数组（`[]`）                      | 空（不过滤）                                                   | ✔                              |
+| `log.print_stack_levels`                  | ✘       | 日志等级数组                           | 空（不打印调用栈）                                             | ✔                              |
+| `log.buffer_policy_when_full`             | ✘       | `discard` / `block` / `expand`         | `block`                                                        | ✘                              |
+| `log.high_perform_mode_freq_threshold_per_second` | ✘ | 64 位正整数                            | `1000`                                                         | ✘                              |
+
+#### `log.thread_mode`
+
+决定缓冲区中的数据由哪个线程处理：
+
+- `sync`：同步日志模式。写日志的线程直接负责处理和输出日志，调用结束即完成输出；（性能低，不推荐）
+- `async`（默认）：异步模式。写日志线程只写缓冲区，由全局 worker 线程统一处理所有异步 log 对象的输出；
+- `independent`：独立异步模式。为该 Log 对象单独创建一个专属 worker 线程。适合单个 Log 写入量极大、希望完全与其他 Log 解耦的场景。
+
+#### `log.buffer_size`
+
+日志缓冲区大小（字节）。  
+缓冲越大，可承受的突发写入峰值越大，但内存占用也会增加。
+
+#### `log.recovery`
+
+- `true`  
+  当异步日志（log.thread _mode为`async`或者`independent`)遇到程序异常退出时，缓冲区中还未落盘的数据会在下次启动后重新写入日志文件。
+- `false`  
+  进程异常退出且未调用 `force_flush()` 时，缓冲中的日志数据将丢失。
+
+具体行为详见 [程序异常退出的数据保护](#3-程序异常退出的数据保护)。
+
+#### `log.categories_mask`
+
+行为与 `appenders_config.xxx.categories_mask` 一致，但作用范围为整个 Log 对象。
+
+- 对同步日志：在调用线程就进行过滤；
+- 对异步日志：在写入缓冲时进行过滤，减少不必要的数据进出。
+
+详见 [支持分类（Category）的 Log 对象](#2-支持分类category的-log-对象)。
+
+#### `log.print_stack_levels`
+
+配置方式类似 `appenders_config.xxx.levels`，用于指定哪些日志等级需要自动附带调用栈。例如：
+
+```ini
+log.print_stack_levels=[error,fatal]
+```
+
+建议仅在 Debug / 测试环境启用，避免对线上性能造成明显影响。
+
+#### `log.buffer_policy_when_full`
+
+当缓冲区写满后的行为：
+
+- `discard`：丢弃新写入的日志，直到缓冲区有足够空间；
+- `block`（推荐默认）：写日志的线程会阻塞等待缓冲区有空间；
+- `expand`（不推荐）：缓冲区会动态扩容为原来两倍，直到可写。  
+  可能显著增加内存占用，虽然 BqLog 通过良好的线程调度减少了扩容次数，但仍建议谨慎使用。
+
+#### `log.high_perform_mode_freq_threshold_per_second`
+
+该配置项用于控制「高性能模式」触发阈值：
+
+- 当单个线程在一秒内记录的日志条数超过该值时，该线程将自动进入高性能模式；
+- 高性能模式下，会为该线程分配更适合高频写入的内部资源；
+- 当写入频率下降时，会自动退出高性能模式并释放相关资源。
+
+默认值为 `1000`（条/秒）。  
+配置为 `0` 表示关闭该功能。
+
+为减少内存碎片，物理内存的分配通常以「若干个高速缓存」为一组进行批量申请（桌面平台为 16 个，高端移动平台通常为 2 个）。因此即使只有一个线程进入高性能模式，也会额外占用一组缓存的空间。
+
+---
+
+### `snapshot` 配置
+
+`snapshot.xxx` 用于配置该 Log 对象的日志快照功能。  
+适用于：检测到异常后需要上报该 Log 的「最近一段时间」日志。
+
+| 名称                   | 是否必须 | 可配置值       | 默认值 | 是否可通过 `reset_config` 修改 |
+|------------------------|---------|----------------|--------|--------------------------------|
+| `snapshot.buffer_size` | ✘       | 32 位正整数    | `0`    | ✔                              |
+| `snapshot.levels`      | ✘       | 日志等级数组   | `[all]`| ✔                              |
+| `snapshot.categories_mask` | ✘   | 字符串数组     | 空     | ✔                              |
+
+- `snapshot.buffer_size`：快照缓冲大小（字节），为 `0` 或未配置时，快照功能关闭；
+- `snapshot.levels`：仅配置中的等级会被写入快照；若不配置则默认为 `[all]`（与前文 `levels` 默认行为略有不同）；
+- `snapshot.categories_mask`：行为与 `appenders_config.xxx.categories_mask` 一致，仅匹配的 Category 会被写入快照；未配置则不过滤所有 Category。
+
+---
+
+<a id="离线解码二进制格式的-appender"></a>
+
+## 🔍 离线解码二进制格式的 Appender
+
+在程序之外，BqLog 提供了预编译的命令行工具用于解码压缩二进制日志文件。  
+从 Releases 下载对应操作系统与架构的工具包 `{os}_{arch}_tools_{version}`，解压后可找到：
+
+- `BqLog_LogDecoder`
+
+用法：
+
+```bash
+./BqLog_LogDecoder 要解码的文件 [-o 输出文件] [-k 私钥文件]
+```
+
+- 未指定 `-o` 时，解码结果直接输出到标准输出；
+- 如日志文件是加密格式，需要通过 `-k` 指定私钥文件路径（详见 [日志加密和解密](#7-日志加密和解密)）；
+- **注意：不同版本的 BqLog 之间二进制格式可能不兼容**，请使用匹配版本的解码器。
+
+---
+
+<a id="构建说明"></a>
+
+## 🛠️ 构建说明
+
+对于需要自行修改与编译 BqLog 的用户，所有构建脚本位于 `/build` 目录：
+
+```text
+/build
+├── demo       # Demo 构建
+├── lib        # Native 静态库与动态库构建
+├── test       # 测试工程构建
+├── tools      # 工具工程构建（包含 LogDecoder、CategoryLogGenerator 等）
+├── wrapper    # 各语言 Wrapper 工程（Java / C# 等）
+├── benchmark  # Benchmark 工程构建
+└── plugin     # 游戏引擎插件构建（Unity / 团结引擎 / Unreal）
+```
+
 ### 1. 库构建
-里面有不同平台构件库的脚本，要注意一下，运行之前设置一下环境变量（对应你构建的环境可能需要）：
-- `ANDROID_NDK_ROOT` ： Android NDK的路径，编译Android库需要
-- `VS_PATH`  ： Visual Studio的路径，要包含“devenv.com”这个可执行文件的路径（Windows库才需要）
-- `JAVA_HOME` : JDK的路径，基本上所有的平台都需要（如果你确认你不用Java Wrapper，可以自己在相关脚本中删除-DJAVA_SUPPORT=ON 这个配置
 
-### 2. Demo构建和运行
-这里要注意的是C#和Java的Demo，需要自己把相关平台的动态库放到可以被程序加载的路径去
+不同平台的构建脚本位于 `/build/lib` 下。构建前请确保设置好必要环境变量：
+
+- `ANDROID_NDK_ROOT`：Android NDK 的路径（编译 Android 库必需）；
+- `JAVA_HOME`：JDK 路径（大多数脚本默认开启 Java Wrapper，如您不需要，可自行在 CMake 或脚本中去掉 `-DJAVA_SUPPORT=ON`）。
+
+### 2. Demo 构建和运行
+
+Demo 工程的构建脚本位于 `/build/demo`。  
+注意：C# 和 Java 的 Demo 需要手动将对应平台的动态库放置到运行时可搜索到的路径中（或通过配置环境变量 / 运行参数指定）。
 
 ### 3. 自动测试运行说明
-测试用例有生成工程的脚本和对应的直接生成+运行的脚本。
 
-### 4. Benchmark运行说明
-Benchmark有生成工程的脚本和对应的直接生成+运行的脚本。
+测试工程的生成脚本与「生成 + 运行」脚本位于 `/build/test`。  
+建议在提交前确保所有测试用例通过。
 
-<br><br>
+### 4. Benchmark 运行说明
 
+Benchmark 工程脚本位于 `/build/benchmark`。  
+同样包含生成工程脚本与直接运行脚本，可用于评估不同平台和配置下的性能表现。
 
-## 高级使用话题  
-### 1. 无Heap Alloc  
-在Java和C#这类运行环境中，一般的日志库随着日志越来越多，每条日志都难免会产生少量的Heap Alloc，最终带来GC和性能下降。而BqLog在C#和Java都几乎避免了这一点。一般来说Heap Alloc主要来自于以下两点：
-- **函数内部的对象生成**  
-  一般函数内部都会做一些字符串处理，对象的创建等，但是类似的操作在BqLog中是不存在的。
-- **对象的装箱和拆箱操作**  
-  装箱和拆箱操作主要会出在传递日志的格式化参数的时候，比如传递int, float等Primitive Type参数的时候。在BqLog的C# Wrapper中，如果参数个数在12个以内的时候，都不会产生装箱拆箱，只有参数超过12个的时候，才会产生。在BqLog的Java Wrapper中，没有12个限制，但是要通过一些手动的代码来避免装箱拆箱操作，比如：
+---
+
+<a id="高级使用话题"></a>
+
+## 🧩 高级使用话题
+
+### 1. 无 Heap Alloc
+
+在 Java、C#、TypeScript 等运行时中，通常日志库在每条日志写入时都会产生少量 Heap 分配，随着时间推移会触发 GC 并影响性能。  
+BqLog 在这些平台上通过以下方式尽力做到「零或极低 Heap Alloc」：
+
+- **内部避免在日志路径创建临时对象与字符串**；
+- **避免可变参数带来的额外数组分配**（C# 中通过多态重载规避）；
+- **减少装箱/拆箱（boxing/unboxing）**：
+
+  - 在 C# Wrapper 中，当参数个数 ≤ 12 时，不会产生装箱拆箱操作，超过 12 个参数才会退化为装箱；
+  - TypeScript 通过 NAPI 直接传递参数，避免了多层装箱；
+  - Java Wrapper 中采用特殊工具方法手动避免装箱，例如：
+
 ```java
-//Java
-//用bq.utils.param.no_boxing包裹起来的bool变量false就不会产生装箱拆箱操作，而裸传递的primitive type参数5.3245f就会产生装箱，带来GC。
-import static bq.utils.param.no_boxing；
-my_demo_log.info(my_demo_log.cat.node_2.node_5, "Demo Log Test Log, {}, {}", no_boxing(false), 5.3245f);
+// Java
+// 使用 bq.utils.param.no_boxing 包裹的 primitive 参数不会产生装箱，
+// 裸传的 5.3245f 则会产生装箱，触发 GC 风险上升。
+import static bq.utils.param.no_boxing;
+
+my_demo_log.info(
+    my_demo_log.cat.node_2.node_5,
+    "Demo Log Test Log, {}, {}",
+    no_boxing(false),
+    5.3245f
+);
 ```
 
-### 2. 支持分类（Category）的Log对象  
-#### Category 日志概念和使用  
-在Unreal引擎里面的日志，有Category的概念。但是对代码提示很不友好，代码书写比较麻烦。  
-在BqLog里面，Category代表分类的概念，用于区分一条日志属于什么模块什么功能。同时Category是有层级的，每一个Category可以有子Category。举例来说，下面就是一个典型的Category层级：
+合理使用上述 API，可显著减少 GC 干扰，获得稳定的高性能日志行为。
 
-```cpp
-/*default  
+---
+
+### 2. 支持分类（Category）的 Log 对象
+
+#### Category 概念与使用
+
+在 Unreal 引擎中，日志有 Category（类别）概念，但原生接口对代码提示不够友好。  
+在 BqLog 中，Category 用于标识「某条日志属于哪个模块 / 子系统」，并支持多级层次结构。
+
+例如，我们定义一个业务日志对象，其 Category 树大致为：
+
+```text
+*default
 ├── Shop 
-    ├── Manager 
-    ├── Seller 
+│   ├── Manager 
+│   └── Seller 
 ├── Factory
-    ├── People 
-        ├── Manager 
-        ├── Worker 
-    ├── Machine 
-    ├── House 
-├── Transport 
+│   ├── People 
+│   │   ├── Manager 
+│   │   └── Worker 
+│   ├── Machine 
+│   └── House 
+└── Transport 
     ├── Vehicles
-        ├── Driver
-        ├── Maintenance
-    ├── Trains
+    │   ├── Driver
+    │   └── Maintenance
+    └── Trains
 ```
 
-这是一个关于销售的日志对象，里面分了很多很多日志分类(Category)，下面用一个例子来说明如何使用这样的日志系统。
+使用方式（C++ 示例）：
 
 ```cpp
-my_category_log.info("Log0");  //这条日志的分类(Category)是默认分类，*default
-my_category_log.info(my_category_log.cat.Shop, "Log1");  //这条日志的分类(Category)是Shop
-my_category_log.info(my_category_log.cat.Shop.Seller, "Log2"); //这条日志的分类(Category)是Shop.Seller
-my_category_log.info(my_category_log.cat.Transport.Vehicles.Driver, "Log3"); //这条日志的分类(Category)是Transport.Vehicles.Driver
-my_category_log.info(my_category_log.cat.Factory, "Log4"); //这条日志的分类(Category)是Factory
-my_category_log.info(my_category_log.cat.Factory.People, "Log5"); //这条日志的分类(Category)是Factory.People
+my_category_log.info("Log0");  // Category = *default
+my_category_log.info(my_category_log.cat.Shop, "Log1");  // Category = Shop
+my_category_log.info(my_category_log.cat.Shop.Seller, "Log2"); // Category = Shop.Seller
+my_category_log.info(my_category_log.cat.Transport.Vehicles.Driver, "Log3"); // Category = Transport.Vehicles.Driver
+my_category_log.info(my_category_log.cat.Factory, "Log4"); // Category = Factory
+my_category_log.info(my_category_log.cat.Factory.People, "Log5"); // Category = Factory.People
 ```
 
-最后输出的内容是
-```cpp
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     Log0
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Shop] Log1
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Shop.Seller] Log2
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Transport.Vehicles.Driver] Log3
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Factory] Log4
-[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ]      [I]     [Factory.People] Log5
+输出示例：
+
+```text
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] Log0
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Shop] Log1
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Shop.Seller] Log2
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Transport.Vehicles.Driver] Log3
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Factory] Log4
+[CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Factory.People] Log5
 ```
 
-配合前面的配置里的[category_mask](#logcategories_mask)，可以给输出做过滤。
-同时，如果你用[ConsoleCallback拦截](#拦截console输出)，回调里会有该条日志的Category Index，用这个参数可以配合log对象的
-```cpp
-        /// <summary>
-        /// get log categories count
-        /// </summary>
-        /// <returns></returns>
-        decltype(categories_name_array_)::size_type get_categories_count() const;
+配合前文配置中的 `categories_mask`，可以在输出侧进行灵活过滤。  
+结合 [Console 回调](#拦截console输出)，您可以通过 `category_idx` + 下述 API 获取 Category 名称列表：
 
-        /// <summary>
-        /// get names of all categories
-        /// </summary>
-        /// <returns></returns>
-        const bq::array<bq::string>& get_categories_name_array() const;
-```
-这两个函数，去获得对应的Category的内容，可以在一些自定义的界面上做一些复杂的过滤功能。
-
-#### Category 日志类生成  
-支持分类(Category)的类不是默认的`bq::log`或者`bq.log`，是需要生成的。生成方式是使用bqLog自带的工具。  
-首先，您需要准备一个文本文件把您关于所有的分类(Category)都配置好，比如这样一个文件   
-##### BussinessCategories.txt
 ```cpp
-//这个配置文件支持用双斜杠来进行注释
-Shop.Manager  //您不需要单独给Shop列一行，只要这样就会自动生成Shop和Shop.Manager两个Category
-Shop.Seller
-Factory.People.Manager
-Factory.People.Worker
-Factory.Machine
-Factory.House
-Transport.Vehicles.Driver
-Transport.Vehicles.Maintenance
-Transport.Trains
+/// <summary>
+/// get log categories count
+/// </summary>
+decltype(categories_name_array_)::size_type get_categories_count() const;
+
+/// <summary>
+/// get names of all categories
+/// </summary>
+const bq::array<bq::string>& get_categories_name_array() const;
 ```
 
-接下来，您需要用BqLog提供的命令行工具来生成对应的支持分类(Category)的日志类，工具存放在
-| 平台               |         路径        |           可执行程序名         |
-|--------------------|--------------------|-------------------------------|
-| mac                | /bin/tools/mac     |   BqLog_CategoryLogGenerator  |
-| windows            | /bin/tools/win64   | BqLog_CategoryLogGenerator.exe|
-| linux              | /bin/tools/linux   |   BqLog_CategoryLogGenerator  |
-| unix               | /build/tools       | 需要手动构建二进制文件          |
+这常用于在自定义 UI 中展示多维过滤器。
 
-使用方式为
+#### Category 日志类生成
+
+支持 Category 的 Log 类并不是默认的 `bq::log` / `bq.log`，而是需要由工具生成的专用类。  
+生成步骤如下：
+
+1. 准备一个文本配置文件，定义所有 Category：
+
+   **BussinessCategories.txt**
+
+   ```text
+   // 该配置文件支持用双斜杠进行注释
+   Shop.Manager      // 不必单独列出 Shop，这一行会自动生成 Shop 和 Shop.Manager
+   Shop.Seller
+   Factory.People.Manager
+   Factory.People.Worker
+   Factory.Machine
+   Factory.House
+   Transport.Vehicles.Driver
+   Transport.Vehicles.Maintenance
+   Transport.Trains
+   ```
+
+2. 使用 BqLog 自带命令行工具生成对应类：  
+   在 Releases 中下载 `{os}_{arch}_tools_{version}`，解压后找到：
+
+  - `BqLog_CategoryLogGenerator`
+
+3. 使用方式：
+
+   ```bash
+   ./BqLog_CategoryLogGenerator 要生成的类名 Category配置文件 [输出目录，默认当前目录]
+   ```
+
+   示例：
+
+   ```bash
+   ./BqLog_CategoryLogGenerator business_log /path/to/BussinessCategories.txt ./
+   ```
+
+   将在当前目录下生成 5 个文件：
+
+  - `business_log.h`（C++ header wrapper）
+  - `business_log.java`（Java wrapper）
+  - `business_log.cs`（C# wrapper）
+  - `business_log.ts`（TypeScript wrapper）
+  - `business_log_for_UE.h`（配合 UE 工程，可在蓝图中引用 Category）
+
+4. 在工程中引入这些文件，即可使用带 Category 的日志类。  
+   例如 C++：
+
+   ```cpp
+   bq::business_log my_log = bq::business_log::create_log("MyLog", config);
+   ```
+
+   或获取已创建的同名 Log 对象：
+
+   ```cpp
+   bq::business_log my_log = bq::business_log::get_log_by_name("MyLog");
+   ```
+
+   对 `my_log.cat` 使用 `.` 补全，即可获得事先定义好的 Category 列表。  
+   如不传递 Category 参数，则默认使用 `*default`。
+
+---
+
+### 3. 程序异常退出的数据保护
+
+当 BqLog 使用异步模式时，如果程序非正常退出（崩溃等），可能造成缓冲中的日志尚未来得及落盘。  
+BqLog 提供了两种机制尽力减少损失：
+
+#### 1）异常信号处理机制（POSIX）
+
 ```cpp
-./BqLog_CategoryLogGenerator 要生成的类名 配置文件 [生成的目标目录，不填就是当前目录]  
+/// <summary>
+/// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk.
+/// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash.
+/// However, this functionality does not guarantee success, and only supports POSIX systems.
+/// </summary>
+static void enable_auto_crash_handle();
 ```
 
-在本例中，如果执行
+调用 `bq::log::enable_auto_crash_handle()` 后，BqLog 会在 POSIX 系统上注册若干信号处理器：
+
+- 当进程收到如 `SIGABRT`、`SIGSEGV`、`SIGBUS` 等异常信号时，尝试在信号处理回调中强制刷新缓冲区（`force_flush_all_logs`）；
+- 内部通过 `sigaction` 实现，并且在注册前会保存旧的信号处理句柄，在自身处理结束后再调用原有处理逻辑，尽量降低对宿主程序的影响。
+
+不过需要注意：
+
+- 该机制本质上是「紧急补救」，**不能保证 100% 成功**——如果内存本身已严重破坏，任何操作都可能失败；
+- 该机制仅作用于 POSIX 平台，Windows 上不会生效。
+
+#### 2）复盘机制（Recovery）
+
+参考配置项 [`log.recovery`](#logrecovery)。  
+当该项为 `true` 时，BqLog 在部分平台上会尝试使用平台特性，尽量保证异步缓冲区中的内容在磁盘上有临时存根；下一次启动时，可以进行「复盘」，尽量恢复未完全落盘的日志。
+
+具体实现细节依赖操作系统能力，会在未来版本中持续增强。
+
+---
+
+### 4. 自定义参数类型
+
+在前文 [format 参数](#3-format参数) 中已说明，默认支持大量常见类型。  
+若需扩展自定义类型，有两种方式：
+
+> **重要提示：**  
+> 请务必在 `bq_log.h` 或生成的 Category 头文件之前先 `#include` 您的自定义类和相关函数声明。  
+> 部分编译器（尤其是 Clang）在 include 顺序不正确时可能编译失败。
+
+#### 方法一：在类中实现 `bq_log_format_str_size()` 与 `bq_log_format_str_chars()`
+
 ```cpp
-./BqLog_CategoryLogGenerator business_log (your dir)/BussinessCategories.txt ./
-```
-
-就会在当前目录下生成三个文件
-- business_log.h
-- business_log.java
-- business_log.cs
-
-三个文件分别是用C++， Java和C#的wapper用的。将其引入自己的工程，就能创建对应的log对象了。以C++为例
-```cpp
-    bq::business_log my_log = bq::business_log::create_log("MyLog", config); 
-```
-或者直接获取已经创建的对象
-```cpp
-    bq::business_log my_log = bq::business_log::get_log_by_name("MyLog"); 
-```
-
-这个`my_log.cat`之后再接.符号，如果有代码提示的话，就会出现你预先配置的分类(Category)可以选择了，或者你也可以选择不用这个参数，日志就会输出为默认的空分类(Category)。
-
-
-  
-### 3. 程序异常退出的数据保护  
-BqLog如果是异步日志的话，难免会遇到程序在运行时发生非正常退出，而内存中的数据还没来得及输出到文件的情况。
-BqLog提供了两种机制共同来保护这种情况，尽可能减少异常退出带来的损失。
-#### 异常信号处理机制
-```cpp
-    /// <summary>
-    /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk. 
-    /// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However, 
-    /// this functionality does not guarantee success, and only support POSIX systems.
-    /// </summary>
-    static void enable_auto_crash_handle();
-```
-bq::Log的这个API，一旦调用之后就会启用本机制。不过该机制只支持非Windows平台。该API的作用是当程序发生异常信号时，比如SIGABORT， SIGSEGV, SIGBUS这一类的Crash的时候，会在程序推出前紧急强制把日志缓存中的数据全部处理完。  
-这里有两个关键点：  
-- 该机制底层是用的`sigaction`，如果您的程序也用了`sigaction`，不用担心，BqLog的`sigaction`注册之前记录了上一个信号处理句柄，当他自己处理完之后，会继续重新调用之前的信号处理回调，而不会导致之前的信号处理回调被覆盖。您需要担心的是您自己的`sigaction`没有这种机制，而把BqLog的异常处理程序给覆盖掉了。
-- 这是一种紧急处理机制，不敢保证百分百成功。毕竟当这个问题发生的时候，可能您的内存或者其他地方已经被写坏了。
-
-#### 复盘机制
-参考配置章节的[log.reliable_level](#logreliable_level)，当该配置为`high`的时候，在支持的系统上，操作系统会尽量保证日志缓存中的数据会在硬盘上有存档。下一次启动日志系统的时候会优先恢复硬盘上的未处理的存档内容。依赖于操作系统行为，该机制也不敢百分百保证成功。
-  
-### 4. 关于NDK和ANDROID_STL=none相关  
-如果您是在NDK内使用BqLog，有三个点需要注意：
-- **在Java或Kotlin显式提前调用bq.log或者加载动态库**:  
-  一定要在Java或者Kotlin中先显式调用`bq.log`或者生成的带分类(Category)的日志类，或者显式调用`System.LoadLibrary`加载动态库，然后才能在C++中使用BqLog的功能。因为Android系统需要获取各种存储路径，这些数据只能在`JNI_Onload`之后才能获取到。而`JNI_Onload`是依赖于在Java侧去加载动态库来触发的。如果您是直接使用的BqLog的动态库，您只要在Java或者Kotlin中任意引用一下`bq.log`或者生成的带分类(Category)的日志类，就会在`bq.log`的`static代码块`中完成这个操作。而如果您是通过将BqLog的C++代码整合入自己的动态库中去一起编译的，就请您一定要提前显式在Java或者Kotlin侧调用`System.LoadLibrary`加载动态库。然后您才能在Java，Kotlin和C++侧使用BqLog的功能。
-- **如何混合C++源码编译，请不要在C++全局或者静态变量初始化log对象**:  
-  如果您直接把BqLog的C++源代码和您的NDK代码一起编译，不要在C++全局变量或者静态变量初始化log对象。和前面的理由一样，因为全局变量和静态变量初始化的时候，`JNI_Onload`还没有被触发。这个时候访问BqLog的一些API，就会触发程序崩溃。但是如果您的库是独立的`so`，那么请在LoadLibrary加载您的库之前，先在Java或者Kotlin侧保证BqLog的库已经被加载。参考上面一条。
-- **关于ANDROID_STL = none**:  
-  如果您直接把BqLog的C++源代码和您的NDK代码一起编译，而您又需要设置`ANDROID_STL = none`，那么这里你有两种情况:
-  1. **您自己没有用到`new`或者`scoped static`一类的特性**，那么请给您的编译选项增加`BQ_NO_LIBCPP`这个宏。
-  2. **您用到了`new`或者`scoped static`**，那么相信您一定已经有了自己的实现版本，那么您可以在代码里搜索`BQ_NO_LIBCPP`宏相关的实现，把跟您实现冲突的地方注释掉就行。
-  
-
-### 5. 自定义参数类型
-在[format](#3-format参数)提到了支持的参数类型，可以看出，C++默认支持的只有常见的参数类型。不过BqLog也支持两种方式来实现自定义类型的参数化。  
-___________________________________________________________________________________________________________________
-*请一定注意，请你在bq_log.h或者生成的分类(Category)头文件的前面include你相关的自定义类和函数声明，这样才能保证兼容各种编译器，不然那就看命了*  
-*根据我的实测，这里的方法二在clang下，如果顺序不对，可能编译不过*
-___________________________________________________________________________________________________________________
-
-#### 方法一：让类实现bq_log_format_str_size()和bq_log_format_str_chars接口
-```cpp
-// "custom_bq_log_type.h"
+// custom_bq_log_type.h
 class A {
 private:
     bool value_;
 
 public:
-    A(bool value):value_(value){}
+    explicit A(bool value) : value_(value) {}
 
-    // 这里返回的是字符的个数，不是字节的个数，一定记得返回类型是size_t
-    size_t bq_log_format_str_size() const
-    {
-        if (value_) {
-            return strlen("true");
-        } else {
-            return strlen("false");
-        }
+    // 返回「字符个数」而非「字节数」，返回类型必须是 size_t
+    size_t bq_log_format_str_size() const {
+        return value_ ? strlen("true") : strlen("false");
     }
-    // 返回实际的字符串的首字符地址，可以是char*, char16_t*, char32_t* 和wchar_t*
-    const char* bq_log_format_str_chars() const
-    {
-        if (value_) {
-            return "true";
-        } else {
-            return "false";
-        }
+
+    // 返回实际字符串首字符地址，可以是 char* / char16_t* / char32_t* / wchar_t*
+    const char* bq_log_format_str_chars() const {
+        return value_ ? "true" : "false";
     }
 };
 ```
 
+使用示例：
+
 ```cpp
 #include "custom_bq_log_type.h"
 #include "bq_log/bq_log.h"
+
 void output(const bq::log& log_obj)
 {
     log_obj.info("This should be Class A1:{}, A2:{}", A(true), A(false));
 }
 ```
 
-#### 方法二：实现全局的bq_log_format_str_size()和bq_log_format_str_chars()函数
-有时候，可能要自定义的参数是别人写的类型我们无法更改（比如Unreal的`FString`和`FName`），或者干脆是某些不支持的`primitive`类型，我们也可以用全局函数的方式进行自定义。只要保证下面的函数声明在你调用该类型参数之前被include就行
-由于自定义类型的优先级高于内置类型，所以你甚至可以用该方法去覆盖bqLog对于常规类型的输出。比如让`int32_t`类型大于零输出"PLUS"，负数输出"MINUS"，零输出"ZERO"
+#### 方法二：实现全局的 `bq_log_format_str_size()` 与 `bq_log_format_str_chars()`
+
+适用于无法改动类型定义的情况（如 Unreal 的 `FString`、`FName` 等），或希望覆盖内置类型的默认输出方式。
+
+由于自定义类型的优先级高于内置类型，您甚至可以重定义 `int32_t` 的输出，例如：
+
 ```cpp
-//custom_bq_log_type.h
+// custom_bq_log_type.h
 #pragma once
 #include <map>
 #include <cinttypes>
-//覆盖int32_t作为参数的默认输出
+#include <cstring>
+
+// 覆盖 int32_t 默认输出行为
 size_t bq_log_format_str_size(const int32_t& param);
 const char* bq_log_format_str_chars(const int32_t& param);
 
-// 让std::map能作为参数被传入
+// 让 std::map 能作为参数被传入
 template <typename KEY, typename VALUE>
 size_t bq_log_format_str_size(const std::map<KEY, VALUE>& param);
+
 template <typename KEY, typename VALUE>
 const char16_t* bq_log_format_str_chars(const std::map<KEY, VALUE>& param);
 
+// 实现
 template <typename KEY, typename VALUE>
 size_t bq_log_format_str_size(const std::map<KEY, VALUE>& param)
 {
-    if (param.size() == 0) {
+    if (param.empty()) {
         return strlen("empty");
     } else {
         return strlen("full");
     }
 }
 
-//这个版本可以用utf16编码
+// 使用 UTF-16 编码
 template <typename KEY, typename VALUE>
 const char16_t* bq_log_format_str_chars(const std::map<KEY, VALUE>& param)
 {
-    if (param.size() == 0) {
+    if (param.empty()) {
         return u"empty";
     } else {
         return u"full";
     }
 }
 ```
+
 ```cpp
-//custom_bq_log_type.cpp
+// custom_bq_log_type.cpp
 #include "custom_bq_log_type.h"
+
 size_t bq_log_format_str_size(const int32_t& param)
 {
     if (param > 0) {
         return strlen("PLUS");
-    } else if(param < 0){
+    } else if (param < 0) {
         return strlen("MINUS");
     } else {
         return strlen("ZERO");
     }
 }
+
 const char* bq_log_format_str_chars(const int32_t& param)
 {
     if (param > 0) {
@@ -1043,31 +1449,42 @@ const char* bq_log_format_str_chars(const int32_t& param)
 }
 ```
 
+使用示例：
 
 ```cpp
-#include "custom_bq_log_type.h"
-//保证自定义的全局函数能够出现在bq_log.h前面
+#include "custom_bq_log_type.h"   // 确保在 bq_log.h 之前
 #include "bq_log/bq_log.h"
-void output(const bq::log& log_obj)
+
+void output(const bq::log& my_category_log)
 {
     std::map<int, bool> param0;
     std::map<int, bool> param1;
     param0[5] = false;
-    my_category_log.info("This should be full:{}", param0); // 输出This should be full:full
-    my_category_log.info("This should be empty:{}", param1); // 输出This should be empty:empty
-    my_category_log.info("This should be PLUS:{}", 5); // 输出This should be PLUS:PLUS
-    my_category_log.info("This should be MINUS:{}", -1); // 输出This should be MINUS:MINUS
-    my_category_log.info(param0); // 输出Full
+
+    my_category_log.info("This should be full:{}", param0);   // 输出 full
+    my_category_log.info("This should be empty:{}", param1);  // 输出 empty
+    my_category_log.info("This should be PLUS:{}", 5);        // 输出 PLUS
+    my_category_log.info("This should be MINUS:{}", -1);      // 输出 MINUS
+    my_category_log.info(param0);                             // 输出 full
 }
 ```
-<br><br>
 
+---
 
-### 6. 在Unreal中使用BqLog
-#### 1. 对FName, FString, FText的支持
-`FString`，`FName`和`FText`是`Unreal`中常见的字符串类型，BqLog已经自带了adapter，在`Unreal`环境下会自动生效，兼容`Unreal 4`和`Unreal 5`。您可以直接使用以下代码：
+### 5. 在 Unreal 中使用 BqLog
+
+#### 1）对 `FName` / `FString` / `FText` 的支持
+
+在 Unreal 环境中，BqLog 内置了适配器：
+
+- 自动支持 `FString`、`FName`、`FText` 作为 format 字符串和参数；
+- 兼容 UE4 与 UE5。
+
+示例：
+
 ```cpp
-bq::log log_my = bq::log::create_log("AAA", config);   //config省略
+bq::log log_my = bq::log::create_log("AAA", config);   // config 省略
+
 FString fstring_1 = TEXT("这是一个测试的FString{}");
 FString fstring_2 = TEXT("这也是一个测试的FString");
 log_my.error(fstring_1, fstring_2);
@@ -1078,14 +1495,21 @@ log_my.error(fstring_1, text1);
 log_my.error(fstring_1, name1);
 ```
 
-可以看到`FString`，`FName`和`FText`既可以直接作为format参数传入，也能作为可变参数传入。如果您希望自己定义自己版本的adapter，请在您的工程里定义全局宏`BQ_LOG_DISABLE_ADAPTER_FOR_UE`，这样的话这些adapter都会失效，您可以再定义一个您自己的版本。具体方法参见[上文](#方法二实现全局的bq_log_format_str_size和bq_log_format_str_chars函数)。
+如果希望自定义适配行为，也可使用前文「方法二（全局函数）」的方式，自行定义 `bq_log_format_str_size` 与 `bq_log_format_str_chars`。
 
+#### 2）将 BqLog 的输出转接到 Unreal 日志窗口
 
-#### 2. 将BqLog的输出转接到Unreal的日志输出界面
-BqLog自带Consle Appender，但是那是针对的系统的标准输出流，在Unreal这一类的环境中，是看不到的，所以我们要利用前面提到的[拦截Console输出](#拦截console输出)中的办法，将Console的输出转到UE的日志输出中来。以下是例子：
+如果已按 [Unreal Engine 集成说明](#unreal-engine) 引入 Unreal 插件，BqLog 日志会自动转接到 Unreal 的 Output Log 中。  
+若未使用插件，而是直接在 C++ 级别集成 BqLog，可以自行使用 console 回调进行转发：
+
 ```cpp
-//事实上，你可以针对不同的category_idx，log_id，拿到对应的log对象名字，category的名字（见前面api），输出到UE_LOG不同的CategoryName中去
-static void on_bq_log(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+// 你可以根据不同的 category_idx / log_id 获取 Log 名称与 Category 名称，
+// 将它们转发到不同的 UE_LOG Category 中。
+static void on_bq_log(uint64_t log_id,
+                      int32_t category_idx,
+                      int32_t log_level,
+                      const char* content,
+                      int32_t length)
 {
     switch (log_level)
     {
@@ -1112,25 +1536,150 @@ static void on_bq_log(uint64_t log_id, int32_t category_idx, int32_t log_level, 
     }
 }
 
-void call_this_on_your_game_start()
+void CallThisOnYourGameStart()
 {
     bq::log::register_console_callback(&on_bq_log);
 }
 ```
 
-## Benchmark
+#### 3）在蓝图中使用 BqLog
 
-### 1. Benchmark说明
-测试环境如下：
-- **CPU**: 13th Gen Intel(R) Core(TM) i9-13900K   3.00 GHz
-- **Memory**: 128 GB
-- **OS**: Windows 11
+已按 [Unreal Engine 集成说明](#unreal-engine) 引入插件后，可在蓝图中直接调用 BqLog：
 
+1. **创建日志 Data Asset**
 
-测试用例是用1-10个线程去同时写日志，每个线程写2000000条日志。有带四个参数版本的，有不带参数版本的。最后同步等待所有日志都落地到硬盘上之后计算时间。这里只和Log2j做了对比。因为通过实测，其他所有的日志库，包括Java任何一个比较有名的开源日志库，C++的spdlog，还有C#的Log4net，都远不如Log2j + LMAX Disruptor的组合。所以我们直接和Log4j对比就行了。
-  
+  - 在 Unreal 工程中创建 Data Asset，类型选择 BqLog：
+    - 默认 Log 类型（不带 Category）：  
+      <img src="docs/img/ue_pick_data_asset_1.png" alt="默认Log创建" style="width: 455px">
+    - 若按 [Category 日志类生成](#category-日志类生成) 生成了带 Category 的日志类，并将 `{category}.h` 与 `{category}_for_UE.h` 加入工程：  
+      <img src="docs/img/ue_pick_data_asset_2.png" alt="Category Log创建" style="width: 455px">
 
-### 2. BqLog C++ benchmark 代码
+2. **配置日志参数**
+
+  - 双击打开 Data Asset，配置日志对象名与创建方式：
+    - `Create New Log`：在运行时新建一个 Log 对象：  
+      <img src="docs/img/ue_create_log_config_1.png" alt="配置Log参数 Create New Log" style="width: 455px">
+    - `Get Log By Name`：仅获取其他地方已经创建的同名 Log：  
+      <img src="docs/img/ue_create_log_config_2.png" alt="配置Log参数 Get Log By Name" style="width: 455px">
+
+3. **在蓝图中调用日志节点**
+
+   <img src="docs/img/ue_print_log.png" alt="蓝图调用Log" style="width: 655px">
+
+  - 区域 1：添加日志参数；
+  - 区域 2：新增的日志参数节点，可通过右键菜单（Remove ArgX）删除；
+  - 区域 3：选择日志对象（即刚才创建的 Data Asset）；
+  - 区域 4：仅当日志对象带 Category 时显示，可选择日志 Category。
+
+4. **测试**
+
+  - 运行蓝图，如配置正确且有 ConsoleAppender 输出，可在 Log 窗口看到类似输出：
+
+    ```text
+    LogBqLog: Display: [Bussiness_Log_Obj] UTC+7 2025-11-27 14:49:19.381[tid-27732 ] [I] [Factory.People.Manager] Test Log Arg0:String Arg, Arg1:TRUE, Arg2:1.000000,0.000000,0.000000|2.999996,0.00[...]
+    ```
+
+---
+
+### 6. 日志加密和解密
+
+对于外发客户端（尤其是互联网游戏和 App），日志加密是重要需求。  
+在 1.x 版本中，BqLog 的二进制日志中仍有大量明文。自 2.x 起，引入了完整的日志加密方案。  
+该方案性能极高，几乎无感知开销，且安全性良好。
+
+#### 1）加密算法说明
+
+BqLog 使用 **RSA2048 + AES256** 的混合加密：
+
+- 仅适用于 `CompressedFileAppender`；
+- 使用 `ssh-keygen` 生成的 RSA2048 密钥对：
+  - 公钥：OpenSSH `ssh-rsa ...` 文本（本质为 PKCS#8 公钥的 OpenSSH 表达形式）；
+  - 私钥：PEM 格式，`-----BEGIN RSA PRIVATE KEY-----` 或 `-----BEGIN OPENSSH PRIVATE KEY-----` 块（兼容 PKCS#1/PKCS#8 私钥表示）；
+- 日志写入时：
+  - 使用公钥对随机生成的 AES256 对称密钥加密；
+  - 实际日志内容通过 AES256 加密；
+  - 整体编码为 BqLog 自定义的加密压缩格式。
+
+因此，从密码学与标准格式角度看：
+
+- **公钥**：OpenSSH `ssh-rsa` 文本，底层为 PKCS#8 兼容 RSA 公钥；
+- **私钥**：PEM 编码的 RSA 私钥（PKCS#1 或 PKCS#8），BqLog 工具在解析时兼容 `ssh-keygen` 默认输出。
+
+#### 2）配置加密
+
+在终端执行：
+
+```bash
+ssh-keygen -t rsa -b 2048 -m PEM -N "" -f "你的密钥文件路径"
+```
+
+将生成两份文件：
+
+- `<你的密钥文件路径>`：私钥文件，如 `id_rsa`，通常以 `-----BEGIN RSA PRIVATE KEY-----` 开头；
+- `<你的密钥文件路径>.pub`：公钥文件，如 `id_rsa.pub`，以 `ssh-rsa ` 开头。
+
+请确保：
+
+- 公钥内容以 `ssh-rsa ` 开头；
+- 私钥内容为标准 PEM 块。
+
+在对应的 CompressedFileAppender 配置中加入：
+
+```properties
+appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+Fo........rest of your rsa2048 public key...... user@hostname
+```
+
+其中 value 即公钥文件中的整行内容（可去掉末尾换行，但不要破坏中间空格）。
+
+这样，该 Appender 输出的日志内容即为使用上述 RSA2048 公钥 + AES256 对称密钥进行混合加密的格式。
+
+#### 3）解密日志
+
+解密加密日志时，需要私钥文件。推荐使用 BqLog 自带命令行工具 `BqLog_LogDecoder`：
+
+- 使用方法参见 [离线解码二进制格式的 Appender](#离线解码二进制格式的appender)。
+
+示例：
+
+```bash
+./BqLog_LogDecoder 要解码的文件 -o 输出文件 -k "./你的私钥文件路径"
+```
+
+其中：
+
+- `要解码的文件`：压缩加密日志文件路径；
+- `-o 输出文件`：可选，指定解码后的文本保存路径，不填则输出到标准输出；
+- `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件（PEM），支持常见 PKCS#1 / PKCS#8 形式。
+
+---
+
+<a id="benchmark"></a>
+
+## 📊 Benchmark
+
+### 1. Benchmark 说明
+
+测试环境：
+
+- **CPU**：13th Gen Intel(R) Core(TM) i9-13900K @ 3.00 GHz
+- **Memory**：128 GB
+- **OS**：Windows 11
+
+测试用例如下：
+
+- 使用 1～10 个线程同时写日志；
+- 每个线程写入 2,000,000 条日志：
+  - 一种为带 4 个参数的格式化日志；
+  - 一种为不带参数的纯文本日志；
+- 等待所有线程结束，再调用 `force_flush_all_logs()`，统计从开始写入到所有日志落盘的总耗时。
+
+对比对象：
+
+- BqLog 2.x（C++ / Java，TextFileAppender 与 CompressedFileAppender）
+- Log4j2（仅 TextFileAppender，**不使用滚动时 gzip 压缩**，因为其压缩是在滚动时对已存在文本文件再做 gzip，性能模型不同，无法公平对比）
+
+### 2. BqLog C++ Benchmark 代码
+
 ```cpp
 #if defined(WIN32)
 #include <windows.h>
@@ -1143,41 +1692,45 @@ void call_this_on_your_game_start()
 #include <iostream>
 #include <vector>
 
-
 void test_compress_multi_param(int32_t thread_count)
 {
     std::cout << "============================================================" << std::endl;
     std::cout << "=========Begin Compressed File Log Test 1, 4 params=========" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([idx, &log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
-                log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
-                    , i
-                    , 2.4232f
-                    , true);
+                log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                    idx, i, 2.4232f, true);
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
 
@@ -1186,35 +1739,40 @@ void test_text_multi_param(int32_t thread_count)
     std::cout << "============================================================" << std::endl;
     std::cout << "============Begin Text File Log Test 2, 4 params============" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("text");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([idx, &log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
-                log_obj.info("idx:{}, num:{}, This test, {}, {}", idx
-                    , i
-                    , 2.4232f
-                    , true);
+                log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                    idx, i, 2.4232f, true);
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
 
@@ -1223,33 +1781,39 @@ void test_compress_no_param(int32_t thread_count)
     std::cout << "============================================================" << std::endl;
     std::cout << "=========Begin Compressed File Log Test 3, no param=========" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
-    bq::platform::atomic<int32_t> count(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([&log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
                 log_obj.info("Empty Log, No Param");
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
 
@@ -1258,36 +1822,41 @@ void test_text_no_param(int32_t thread_count)
     std::cout << "============================================================" << std::endl;
     std::cout << "============Begin Text File Log Test 4, no param============" << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("text");
-    std::vector<std::thread*> threads;
-    threads.resize(thread_count);
-    bq::platform::atomic<int32_t> count(thread_count);
+    std::vector<std::thread*> threads(thread_count);
+
     uint64_t start_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
-        std::thread* st = new std::thread([idx, &log_obj]() {
+        threads[idx] = new std::thread([&log_obj]() {
             for (int i = 0; i < 2000000; ++i)
             {
                 log_obj.info("Empty Log, No Param");
             }
-            });
-        threads[idx] = st;
+        });
     }
+
     for (int32_t idx = 0; idx < thread_count; ++idx)
     {
         threads[idx]->join();
         delete threads[idx];
     }
+
     bq::log::force_flush_all_logs();
+
     uint64_t flush_time =
-        std::chrono::system_clock::now().time_since_epoch() /
-        std::chrono::milliseconds(1);
-    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+
+    std::cout << "Time Cost:" << (flush_time - start_time) << std::endl;
     std::cout << "============================================================" << std::endl << std::endl;
 }
-
 
 int main()
 {
@@ -1298,23 +1867,26 @@ int main()
     bq::log compressed_log = bq::log::create_log("compress", R"(
         appenders_config.appender_3.type=compressed_file
         appenders_config.appender_3.levels=[all]
-        appenders_config.appender_3.file_name= benchmark_output/compress_
-        appenders_config.appender_3.capacity_limit= 1
+        appenders_config.appender_3.file_name=benchmark_output/compress_
+        appenders_config.appender_3.capacity_limit=1
     )");
+
     bq::log text_log = bq::log::create_log("text", R"(
         appenders_config.appender_3.type=text_file
         appenders_config.appender_3.levels=[all]
-        appenders_config.appender_3.file_name= benchmark_output/text_
-        appenders_config.appender_3.capacity_limit= 1
+        appenders_config.appender_3.file_name=benchmark_output/text_
+        appenders_config.appender_3.capacity_limit=1
     )");
+
     std::cout << "Please input the number of threads which will write log simultaneously:" << std::endl;
-    int32_t thread_count;
+    int32_t thread_count = 0;
     std::cin >> thread_count;
 
+    // 用一条日志触发 capacity_limit，确保旧日志文件被清理
     compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
     text_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
     bq::log::force_flush_all_logs();
-    
+
     test_compress_multi_param(thread_count);
     test_text_multi_param(thread_count);
     test_compress_no_param(thread_count);
@@ -1322,34 +1894,28 @@ int main()
 
     return 0;
 }
-
 ```
 
-### 3. BqLog Java benchmark 代码
+### 3. BqLog Java Benchmark 代码
+
 ```java
-import java.io.IOException;
-import java.util.*;
+import java.util.Scanner;
 
 /**
- * @author pippocao
- *
- *    Please copy dynamic native library to your classpath before you run this benchmark.
- *  Or set the Native Library Location to the directory of the dynamic libraries for the current platform under `(ProjectRoot)/dist`. 
- *  Otherwise, you may encounter an `UnsatisfiedLinkError`.
+ * 请在运行前确保当前平台对应的动态库已在 java.library.path 内，
+ * 或在 IDE 中配置 Native Library Location 指向 (ProjectRoot)/dist 下的动态库目录。
+ * 否则可能遇到 UnsatisfiedLinkError。
  */
 public class benchmark_main {
-    
-    static abstract class benchmark_thread implements Runnable
-    {
+
+    static abstract class benchmark_thread implements Runnable {
         protected int idx;
-        public benchmark_thread(int idx)
-        {
+        public benchmark_thread(int idx) {
             this.idx = idx;
         }
     }
-    
-    private static void test_compress_multi_param(int thread_count) throws Exception
-    {
+
+    private static void test_compress_multi_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("=========Begin Compressed File Log Test 1, 4 params=========");
         bq.log log_obj = bq.log.get_log_by_name("compress");
@@ -1357,37 +1923,37 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
-                        log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
-                            , bq.utils.param.no_boxing(i)
-                            , bq.utils.param.no_boxing(2.4232f)
-                            , bq.utils.param.no_boxing(true));
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                            bq.utils.param.no_boxing(idx),
+                            bq.utils.param.no_boxing(i),
+                            bq.utils.param.no_boxing(2.4232f),
+                            bq.utils.param.no_boxing(true));
                     }
                 }
             };
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_text_multi_param(int thread_count) throws Exception
-    {
+    private static void test_text_multi_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 2, 4 params============");
         bq.log log_obj = bq.log.get_log_by_name("text");
@@ -1395,37 +1961,37 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
-                        log_obj.info("idx:{}, num:{}, This test, {}, {}", bq.utils.param.no_boxing(idx)
-                            , bq.utils.param.no_boxing(i)
-                            , bq.utils.param.no_boxing(2.4232f)
-                            , bq.utils.param.no_boxing(true));
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                            bq.utils.param.no_boxing(idx),
+                            bq.utils.param.no_boxing(i),
+                            bq.utils.param.no_boxing(2.4232f),
+                            bq.utils.param.no_boxing(true));
                     }
                 }
             };
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_compress_no_param(int thread_count) throws Exception
-    {
+    private static void test_compress_no_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("=========Begin Compressed File Log Test 3, no param=========");
         bq.log log_obj = bq.log.get_log_by_name("compress");
@@ -1433,14 +1999,12 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
                         log_obj.info("Empty Log, No Param");
                     }
                 }
@@ -1448,19 +2012,20 @@ public class benchmark_main {
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_text_no_param(int thread_count) throws Exception
-    {
+    private static void test_text_no_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 4, no param============");
         bq.log log_obj = bq.log.get_log_by_name("text");
@@ -1468,14 +2033,12 @@ public class benchmark_main {
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
                         log_obj.info("Empty Log, No Param");
                     }
                 }
@@ -1483,46 +2046,42 @@ public class benchmark_main {
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
+
         bq.log.force_flush_all_logs();
+
         long flush_time = System.currentTimeMillis();
-        System.out.println("\"Time Cost:" + (flush_time - start_time));
+        System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
-    
 
     public static void main(String[] args) throws Exception {
-        // TODO Auto-generated method stub
         bq.log compressed_log =  bq.log.create_log("compress", """
-                appenders_config.appender_3.type=compressed_file
-                appenders_config.appender_3.levels=[all]
-                appenders_config.appender_3.file_name= benchmark_output/compress_
-                appenders_config.appender_3.capacity_limit= 1
-            """);
+            appenders_config.appender_3.type=compressed_file
+            appenders_config.appender_3.levels=[all]
+            appenders_config.appender_3.file_name=benchmark_output/compress_
+            appenders_config.appender_3.capacity_limit=1
+        """);
 
         bq.log text_log =  bq.log.create_log("text", """
-                appenders_config.appender_3.type=text_file
-                appenders_config.appender_3.levels=[all]
-                appenders_config.appender_3.file_name= benchmark_output/text_
-                appenders_config.appender_3.capacity_limit= 1
-            """);
-        
+            appenders_config.appender_3.type=text_file
+            appenders_config.appender_3.levels=[all]
+            appenders_config.appender_3.file_name=benchmark_output/text_
+            appenders_config.appender_3.capacity_limit=1
+        """);
 
         System.out.println("Please input the number of threads which will write log simultaneously:");
         int thread_count = 0;
-        Scanner scanner = new Scanner(System.in);
-        try {
+
+        try (Scanner scanner = new Scanner(System.in)) {
             thread_count = scanner.nextInt();
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return;
-        }finally {
-            scanner.close();
         }
 
         compressed_log.verbose("use this log to trigger capacity_limit make sure old log files is deleted");
@@ -1538,151 +2097,153 @@ public class benchmark_main {
 }
 ```
 
+### 4. Log4j Benchmark 代码
 
-### 4. Log4j benchmark代码
+Log4j2 部分只测试了文本输出格式，因为其 gzip 压缩是在「滚动时对已有文本文件重新 gzip 压缩」，这与 BqLog 实时压缩模式的性能模型完全不同，无法直接对标。
 
-Log4j只测试了文本格式，因为他的gzip压缩是在滚动的时候重新启用gzip压缩格式做一遍压缩，要额外耗费性能，和BqLog的CompressedFileAppender没有可比性。  
+**依赖：**
 
-这里附上Log4j2的配置相关
 ```xml
-  <!-- pom.xml -->
-  <dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-api</artifactId>
-    <version>2.23.1</version>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-core</artifactId>
-    <version>2.23.1</version>
-  </dependency>
-  <dependency>
-    <groupId>com.lmax</groupId>
-    <artifactId>disruptor</artifactId>
-    <version>3.4.2</version>
-  </dependency>
+<!-- pom.xml -->
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-api</artifactId>
+  <version>2.23.1</version>
+</dependency>
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-core</artifactId>
+  <version>2.23.1</version>
+</dependency>
+<dependency>
+  <groupId>com.lmax</groupId>
+  <artifactId>disruptor</artifactId>
+  <version>3.4.2</version>
+</dependency>
 ```
 
-```cpp
-#log4j2.component.properties
+启用 AsyncLogger：
+
+```properties
+# log4j2.component.properties
 log4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector
 ```
+
+Log4j2 配置：
 
 ```xml
 <!-- log4j2.xml -->
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
-    <Appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </Console>
-        <!-- RollingFile Appender for gzip compressed files -->
-        <RollingRandomAccessFile  name="my_appender" fileName="logs/compress.log" filePattern="logs/compress-%d{yyyy-MM-dd}-%i.log" immediateFlush="false">
-            <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n</Pattern>
-            </PatternLayout>
-            <Policies>
-                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
-            </Policies>
-            <DefaultRolloverStrategy max="5"/>
-        </RollingRandomAccessFile >
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </Console>
 
-        <!-- Async Appender wrapping the other appenders -->
-        <Async name="Async" includeLocation="false" bufferSize="262144">
-            <!-- <AppenderRef ref="Console"/>-->
-            <AppenderRef ref="my_appender"/>
-        </Async>
-    </Appenders>
+    <!-- RollingRandomAccessFile，用于演示文本输出 -->
+    <RollingRandomAccessFile name="my_appender"
+                             fileName="logs/compress.log"
+                             filePattern="logs/compress-%d{yyyy-MM-dd}-%i.log"
+                             immediateFlush="false">
+      <PatternLayout>
+        <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+      </Policies>
+      <DefaultRolloverStrategy max="5"/>
+    </RollingRandomAccessFile>
 
-    <Loggers>
-        <Root level="info">
-            <AppenderRef ref="Async"/>
-        </Root>
-    </Loggers>
+    <!-- Async Appender -->
+    <Async name="Async" includeLocation="false" bufferSize="262144">
+      <!-- <AppenderRef ref="Console"/> -->
+      <AppenderRef ref="my_appender"/>
+    </Async>
+  </Appenders>
+
+  <Loggers>
+    <Root level="info">
+      <AppenderRef ref="Async"/>
+    </Root>
+  </Loggers>
 </Configuration>
-
 ```
 
-这里是源代码
+源代码：
 
 ```java
 package bq.benchmark.log4j;
 
-import java.util.*;
+import java.util.Scanner;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.async.AsyncLoggerContextSelector;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.async.AsyncLoggerContextSelector;
+
 import static org.apache.logging.log4j.util.Unbox.box;
 
 public class main {
+
     public static final Logger log_obj = LogManager.getLogger(main.class);
-    
-    static abstract class benchmark_thread implements Runnable
-    {
+
+    static abstract class benchmark_thread implements Runnable {
         protected int idx;
         protected Logger log_obj;
-        public benchmark_thread(int idx, Logger log_obj)
-        {
+        public benchmark_thread(int idx, Logger log_obj) {
             this.idx = idx;
             this.log_obj = log_obj;
         }
     }
 
-    private static void test_text_multi_param(int thread_count) throws Exception
-    {
+    private static void test_text_multi_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 1, 4 params============");
         Thread[] threads = new Thread[thread_count];
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx, log_obj) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
-                        log_obj.info("idx:{}, num:{}, This test, {}, {}", box(idx)
-                            , box(i)
-                            , box(2.4232f)
-                            , box(true));
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
+                        log_obj.info("idx:{}, num:{}, This test, {}, {}",
+                            box(idx), box(i), box(2.4232f), box(true));
                     }
                 }
             };
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
-        org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+
+        org.apache.logging.log4j.core.LoggerContext context =
+            (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
         context.stop();
         LogManager.shutdown();
+
         long flush_time = System.currentTimeMillis();
         System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
-    private static void test_text_no_param(int thread_count) throws Exception
-    {
+    private static void test_text_no_param(int thread_count) throws Exception {
         System.out.println("============================================================");
         System.out.println("============Begin Text File Log Test 1, no param============");
         Thread[] threads = new Thread[thread_count];
 
         long start_time = System.currentTimeMillis();
         System.out.println("Now Begin, each thread will write 2000000 log entries, please wait the result...");
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             Runnable r = new benchmark_thread(idx, log_obj) {
                 @Override
-                public void run()
-                {
-                    for (int i = 0; i < 2000000; ++i)
-                    {
+                public void run() {
+                    for (int i = 0; i < 2000000; ++i) {
                         log_obj.info("Empty Log, No Param");
                     }
                 }
@@ -1690,74 +2251,89 @@ public class main {
             threads[idx] = new Thread(r);
             threads[idx].start();
         }
-        for (int idx = 0; idx < thread_count; ++idx)
-        {
+
+        for (int idx = 0; idx < thread_count; ++idx) {
             threads[idx].join();
         }
-        org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+
+        org.apache.logging.log4j.core.LoggerContext context =
+            (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
         context.stop();
         LogManager.shutdown();
+
         long flush_time = System.currentTimeMillis();
         System.out.println("Time Cost:" + (flush_time - start_time));
         System.out.println("============================================================");
-        System.out.println("");
+        System.out.println();
     }
 
     public static void main(String[] args) throws Exception {
         System.out.println("Please input the number of threads which will write log simultaneously:");
         int thread_count = 0;
-        Scanner scanner = new Scanner(System.in);
-        try {
+
+        try (Scanner scanner = new Scanner(System.in)) {
             thread_count = scanner.nextInt();
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return;
-        }finally {
-            scanner.close();
         }
-        System.out.println("Is Aysnc:" + AsyncLoggerContextSelector.isSelected());
 
-        //这两个函数只能分别测试,因为Log4j2的强制刷新之后，整个日志对象就失效了。要测试一个的时候，就注释掉另外一个
+        System.out.println("Is Async:" + AsyncLoggerContextSelector.isSelected());
+
+        // 这两个测试需分开运行，因为强制关闭后 LoggerContext 不再可用。
         test_text_multi_param(thread_count);
-        //test_text_no_param(thread_count);
+        // test_text_no_param(thread_count);
     }
 
 }
-
 ```
 
+### 5. Benchmark 结果
 
-### 5. Benchmark结果
+所有耗时单位为毫秒，数值越小代表性能越高。  
+从结果可见：
 
-数值为毫秒，值越少，代表耗时越少，性能越高。可以看出，TextFileAppender格式BqLog对比Log4j2有平均300%左右的提升。CompressedFileAppender格式对比Log4j2有800%左右提升。有数量级的差异。
+- 在 TextFileAppender 场景下，BqLog 相比 Log4j2 有约 **3 倍** 性能优势；
+- 在 CompressedFileAppender 场景下，BqLog 相比 Log4j2 文本输出有约 **10 倍以上** 性能优势；
+- 若与 BqLog 1.5 版本相比，2.x 平均性能提升约 **40%**。
 
-#### 4个参数的总耗时（单位毫秒）
 
-|                         | 1线程 | 2线程 | 3线程 | 4线程 | 5线程 | 6线程 | 7线程 | 8线程 | 9线程 | 10线程 |
-|-------------------------|-------|-------|-------|-------|-------|-------|-------|-------|-------|--------|
-| BqLog Compress(C++)     | 155   | 250   | 310   | 406   | 515   | 622   | 761   | 885   | 972   | 1007   |
-| BqLog Text(C++)         | 384   | 768   | 1136  | 1716  | 2020  | 2783  | 3578  | 3883  | 4032  | 4383   |
-| BqLog Compress(Java)    | 664   | 782   | 931   | 911   | 989   | 1055  | 1107  | 1229  | 1288  | 1336   |
-| BqLog Text(Java)        | 706   | 993   | 1165  | 1582  | 1912  | 2572  | 2779  | 3275  | 4249  | 4591   |
-| Log4J2 Text             | 1065  | 2583  | 4249  | 4843  | 5068  | 6195  | 6424  | 7943  | 8794  | 9254   |
+> 为了排版清晰，没有加入BqLog1.5的数据，可以直接和旧版本的文档的[Benchmark](https://github.com/Tencent/BqLog/blob/stable_1.5/README_CHS.md#5-benchmark%E7%BB%93%E6%9E%9C)结果对比。采取了一样的硬件和操作系统环境，相同的测试用例，相同的Log4j的结果。 从结果上看BqLog 2.x版本对比1.5版本大约有40%左右的性能提升。
+#### 带 4 个参数的总耗时（毫秒）
 
+|                         | 1 线程 | 2 线程 | 3 线程 | 4 线程 | 5 线程 | 6 线程 | 7 线程 | 8 线程 | 9 线程 | 10 线程 |
+|-------------------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|---------|
+| BqLog Compress (C++)    | 110    | 125    | 188    | 256    | 318    | 374    | 449    | 511    | 583    | 642     |
+| BqLog Text (C++)        | 344    | 699    | 1036   | 1401   | 1889   | 2211   | 2701   | 3121   | 3393   | 3561    |
+| BqLog Compress (Java)   | 129    | 141    | 215    | 292    | 359    | 421    | 507    | 568    | 640    | 702     |
+| BqLog Text (Java)       | 351    | 702    | 1052   | 1399   | 1942   | 2301   | 2754   | 3229   | 3506   | 3695    |
+| Log4j2 Text             | 1065   | 2583   | 4249   | 4843   | 5068   | 6195   | 6424   | 7943   | 8794   | 9254    |
 
 <img src="docs/img/benchmark_4_params.png" alt="4个参数的结果" style="width: 100%;">
 
-#### 不带参数的总耗时（单位毫秒）
-评测结果奇怪的是，不带参数的性能消耗上，Log4j表现得比带参数还要低不少。
+#### 不带参数的总耗时（毫秒）
 
-| 科目                    | 1线程 | 2线程 | 3线程 | 4线程 | 5线程 | 6线程 | 7线程 | 8线程 | 9线程 | 10线程 |
-|-------------------------|-------|-------|-------|-------|-------|-------|-------|-------|-------|--------|
-| BqLog Compress(C++)     | 137   | 263   | 262   | 467   | 606   | 617   | 758   | 842   | 892   | 951    |
-| BqLog Text(C++)         | 183   | 384   | 526   | 830   | 1129  | 1323  | 1512  | 1883  | 2020  | 2291   |
-| BqLog Compress(Java)    | 262   | 341   | 393   | 510   | 559   | 618   | 640   | 703   | 792   | 869    |
-| BqLog Text(Java)        | 247   | 422   | 544   | 794   | 933   | 1104  | 1297  | 1686  | 1843  | 2082   |
-| Log4J2 Text             | 3204  | 6489  | 7702  | 8485  | 9640  | 10458 | 11483 | 12853 | 13995 | 14633  |
+一个有趣现象是，在「无参数」情况下，Log4j2 的耗时相对其「带参数」情况略低，但仍明显慢于 BqLog。
+
+|                         | 1 线程 | 2 线程 | 3 线程 | 4 线程 | 5 线程 | 6 线程 | 7 线程 | 8 线程 | 9 线程 | 10 线程 |
+|-------------------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|---------|
+| BqLog Compress (C++)    | 97     | 101    | 155    | 228    | 290    | 341    | 415    | 476    | 541    | 601     |
+| BqLog Text (C++)        | 153    | 351    | 468    | 699    | 916    | 1098   | 1212   | 1498   | 1733   | 1908    |
+| BqLog Compress (Java)   | 109    | 111    | 178    | 240    | 321    | 378    | 449    | 525    | 592    | 670     |
+| BqLog Text (Java)       | 167    | 354    | 491    | 718    | 951    | 1139   | 1278   | 1550   | 1802   | 1985    |
+| Log4j2 Text             | 3204   | 6489   | 7702   | 8485   | 9640   | 10458  | 11483  | 12853  | 13995  | 14633   |
 
 <img src="docs/img/benchmark_no_param.png" alt="不带参数的结果" style="width: 100%;">
 
+---
 
-## 如何贡献代码
-如果您希望贡献您的代码，请确保您的代码可以正确执行`Github Action`下面的`AutoTest`和`Build`两个Action。
+<a id="如何贡献代码"></a>
+
+## 🤝 如何贡献代码
+
+若您希望贡献代码，请确保您的改动能通过仓库中 GitHub Actions 下的以下工作流：
+
+- `AutoTest`
+- `Build`
+
+建议在提交前本地运行对应脚本，确保测试与构建均正常通过。

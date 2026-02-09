@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-  <Type Name="bq::string_base&lt;char&gt;">
+  <Type Name="bq::_string_base&lt;char,*&gt;">
     <DisplayString Condition="size_==0">Empty</DisplayString>
     <DisplayString Condition="size_>0">{{ size={size_} : {data_}}}</DisplayString>
     <Expand>
@@ -10,7 +10,7 @@
       </ArrayItems>
     </Expand>
   </Type>
-  <Type Name="bq::string_base&lt;char16_t&gt;">
+  <Type Name="bq::_string_base&lt;char16_t,*&gt;">
     <DisplayString Condition="size_==0">Empty</DisplayString>
     <DisplayString Condition="size_>0">{{ size={size_} : {(wchar_t*)data_,su}}}</DisplayString>
     <Expand>
@@ -20,7 +20,17 @@
       </ArrayItems>
     </Expand>
   </Type>
-  <Type Name="bq::array&lt;*&gt;">
+  <Type Name="bq::_string_base&lt;char32_t,*&gt;">
+    <DisplayString Condition="size_==0">Empty</DisplayString>
+    <DisplayString Condition="size_>0">{{ size={size_} : {(wchar_t*)data_,su}}}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>size_</Size>
+        <ValuePointer>data_</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="bq::array&lt;*,*,*&gt;">
     <DisplayString>{{ size={size_} }}</DisplayString>
     <Expand>
         <Item Name="[size]" ExcludeView="simple">size_</Item>
@@ -31,7 +41,7 @@
         </ArrayItems>
     </Expand>
   </Type>
-  <Type Name="bq::array_inline&lt;*&gt;">
+  <Type Name="bq::array_inline&lt;*,*,*&gt;">
     <DisplayString>{{ size={size_} }}</DisplayString>
     <Expand>
       <Item Name="[size]" ExcludeView="simple">size_</Item>
@@ -49,7 +59,7 @@
     </Expand>
   </Type>
 
-  <Type Name="bq::hash_map&lt;*,*&gt;::value_node_buffer_head&lt;*&gt;">
+  <Type Name="bq::hash_map&lt;*,*,*&gt;::value_node_buffer_head&lt;*&gt;">
     <DisplayString>{{ size={size_} }}</DisplayString>
     <Expand>
       <ArrayItems>
@@ -59,7 +69,7 @@
     </Expand>
   </Type>
 
-  <Type Name="bq::hash_map&lt;*,*&gt;">
+  <Type Name="bq::hash_map&lt;*,*,*&gt;">
     <DisplayString>{{ sizes={size_} }}</DisplayString>
     <Expand>
       <Item Name="[buckets_size]">buckets_.size_</Item>
@@ -87,7 +97,7 @@
     </Expand>
   </Type>
 
-  <Type Name="bq::hash_map_inline&lt;*,*&gt;::value_node_buffer_head&lt;*&gt;">
+  <Type Name="bq::hash_map_inline&lt;*,*,*&gt;::value_node_buffer_head&lt;*&gt;">
     <DisplayString>{{ size={size_} }}</DisplayString>
     <Expand>
       <ArrayItems>
@@ -97,7 +107,7 @@
     </Expand>
   </Type>
 
-  <Type Name="bq::hash_map_inline&lt;*,*&gt;">
+  <Type Name="bq::hash_map_inline&lt;*,*,*&gt;">
     <DisplayString>{{ sizes={size_} }}</DisplayString>
     <Expand>
       <Item Name="[buckets_size]">buckets_.size_</Item>

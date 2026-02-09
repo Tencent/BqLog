@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -19,7 +19,6 @@
  *
  */
 #include "bq_common/bq_common.h"
-#include "bq_common/utils/file_manager.h"
 namespace bq {
     struct file_handle;
     class memory_map_handle {
@@ -47,7 +46,7 @@ namespace bq {
         }
         inline bool has_been_mapped() const
         {
-            return mapped_data_;
+            return (bool)mapped_data_;
         }
     };
 
@@ -78,6 +77,7 @@ namespace bq {
             real_mapping_size -= (real_mapping_size % get_memory_map_alignedment());
             return real_mapping_size;
         }
+
     public:
         static size_t get_min_size_of_memory_map_file(size_t offset, size_t size)
         {

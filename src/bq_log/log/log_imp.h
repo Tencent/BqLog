@@ -1,6 +1,6 @@
 #pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -15,7 +15,7 @@
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_level_bitmap.h"
 #include "bq_log/log/log_worker.h"
-#include "bq_log/types/ring_buffer.h"
+#include "bq_log/types/buffer/log_buffer.h"
 
 namespace bq {
     constexpr uint64_t log_id_magic_number = 0x24FE284C23EA5821;
@@ -32,7 +32,7 @@ namespace bq {
         bool reset_config(const property_value& config);
         void log(const log_entry_handle& handle);
 
-        const bq::string& take_snapshot_string(bool use_gmt_time);
+        const bq::string& take_snapshot_string(const bq::string& time_zone_config);
         void release_snapshot_string();
 
         const bq::string& get_name() const;
@@ -40,26 +40,39 @@ namespace bq {
         const bq::string& get_category_name_by_index(uint32_t index) const;
         const bq::array<bq::string>& get_categories_name() const;
 
-        void set_appenders_enable(const bq::string& appender_name, bool enable);
+        void set_appender_enable(const bq::string& appender_name, bool enable);
 
-        inline ring_buffer& get_ring_buffer() const
+        bq_forceinline log_buffer& get_buffer()
         {
-            return *ring_buffer_;
+            if (buffer_) {
+                return *buffer_;
+            }
+            assert(false && "null log buffer");
+            return *reinterpret_cast<log_buffer*>(this);
         }
 
-        inline bq::log_reliable_level get_reliable_level() const
+        bq_forceinline const log_buffer& get_buffer() const
         {
-            return reliable_level_;
+            if (buffer_) {
+                return *buffer_;
+            }
+            assert(false && "null log buffer");
+            return *reinterpret_cast<const log_buffer*>(this);
         }
 
-        inline uint64_t id() const
+        bq_forceinline uint64_t id() const
         {
             return id_;
         }
 
-        inline log_thread_mode get_thread_mode() const
+        bq_forceinline log_thread_mode get_thread_mode() const
         {
             return thread_mode_;
+        }
+
+        bq_forceinline log_worker& get_worker()
+        {
+            return worker_;
         }
 
         void set_config(const bq::string& config);
@@ -68,18 +81,40 @@ namespace bq {
 
         void process(bool is_force_flush);
 
-        void sync_process();
+        void sync_process(bool is_force_flush);
+
+        uint8_t* get_sync_buffer(uint32_t data_size);
+
+#if defined(BQ_JAVA)
+        java_buffer_info get_sync_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
+#endif
 
         const layout& get_layout() const;
+
+        bq_forceinline bool is_enable_for(uint32_t category_index, bq::log_level level) const
+        {
+            return merged_log_level_bitmap_.have_level(level) && categories_mask_array_[category_index];
+        }
+
+        bq_forceinline bool is_stack_trace_enable_for(bq::log_level level) const
+        {
+            return print_stack_level_bitmap_.have_level(level);
+        }
 
     private:
         bool add_appender(const string& name, const bq::property_value& jobj);
         void refresh_merged_log_level_bitmap();
-        void set_thread_mode(log_thread_mode thread_mode);
         void flush_appenders_cache();
         void flush_appenders_io();
         void clear();
         void process_log_chunk(bq::log_entry_handle& read_handle);
+
+    private:
+        enum class recover_status_enum {
+            not_started, // not started recovery or no recovery data found
+            in_recovering, // in recovering
+            recovered, // recovered finished
+        };
 
     private:
         uint64_t id_;
@@ -90,12 +125,12 @@ namespace bq {
         bq::platform::spin_lock spin_lock_;
         log_level_bitmap merged_log_level_bitmap_;
         log_level_bitmap print_stack_level_bitmap_;
-        bq::log_reliable_level reliable_level_;
-        ring_buffer* ring_buffer_;
+        log_buffer* buffer_;
         class log_snapshot* snapshot_;
         uint64_t last_log_entry_epoch_ms_;
         uint64_t last_flush_io_epoch_ms_;
-        bq::array_inline<appender_base*> appenders_list_;
+        recover_status_enum recover_status_;
+        bq::array_inline<bq::unique_ptr<appender_base>> appenders_list_;
         bq::array<bq::string> categories_name_array_;
         bq::array_inline<uint8_t> categories_mask_array_;
 

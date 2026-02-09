@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidPlugin>
+    <!-- BqLog prebuilt Android deployment: aar for distribution, .so files consumed only during compilation -->
+    <resourceCopies>
+        <copyFile src="$S(PluginDir)/bqlog.aar" dst="$S(BuildDir)/libs/bqlog.aar" />
+    </resourceCopies>
+
+    <buildGradleAdditions>
+        <insert>
+            dependencies {
+            def bq = file("src/main/libs/bqlog.aar")
+            if (bq.exists()) {
+            implementation(files(bq))
+            }
+            }
+        </insert>
+    </buildGradleAdditions>
+</androidPlugin>

@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -10,27 +10,18 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#if BQ_JAVA
+
+#include "bq_common/bq_common_public_include.h"
+#if defined(BQ_JAVA)
 #include <jni.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include "bq_common/platform/macros.h"
-#include "bq_common/types/array.h"
-#include "bq_common/types/string.h"
 
 namespace bq {
     namespace platform {
         // Whenever you need to use a JNIEnv* object, declare this type of object on the stack,
         // and you will get a JNIEnv* that is already attached to the Java Virtual Machine.
         // Moreover, you don't need to worry about when to detach,
-        // because it will handle this for you when its lifecycle ends.
-        // It is smart enough to deal with nested declarations
-        // and also knows whether it was called from the Java side (in which case no detachment is necessary).
+        // because it will handle this for you when thread ends.
         struct jni_env {
-        private:
-            bool attached_in_init = false;
-
         public:
             JNIEnv* env = NULL;
 
@@ -43,8 +34,16 @@ namespace bq {
         };
 
         JavaVM* get_jvm();
-        const bq::string& get_android_id();
-        const bq::string& get_package_name();
+
+        jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian);
+
+        jint jni_init(JavaVM* vm, void* reserved);
+
+        void try_to_detach_thread();
+
+        // Sometimes, you need remove global-ref in TLS variable destructor when thread is exiting.
+        //  This function can help you do that in an async way to avoid JVM errors.
+        void remove_global_ref_async(jobject recycle_obj);
     }
 }
 #endif

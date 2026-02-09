@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -47,7 +47,7 @@ namespace bq {
         /// <param name="category_count">categories count</param>
         /// <param name="category_names_array_utf8">category names in utf8 encoding, it's char* array</param>
         /// <returns>log id, 0 means create failed</returns>
-        BQ_API uint64_t __api_create_log(const char* log_name_utf8, const char* config_content_utf8, uint32_t category_count, const char** category_names_array_utf8);
+        BQ_API uint64_t __api_create_log(const char* log_name_utf8, const char* config_content_utf8, uint32_t category_count, const char* const* category_names_array_utf8);
 
         /// <summary>
         /// 0 means reset failed
@@ -57,18 +57,31 @@ namespace bq {
         BQ_API bool __api_log_reset_config(const char* log_name_utf8, const char* config_content_utf8);
 
         /// <summary>
-        /// alloc log write memory chunk
+        /// Initiates a log write operation and allocates the necessary buffer space.
         /// </summary>
-        /// <param name="lengsh"></param>
-        /// <returns>chunk handle, please check result code first</returns>
-        BQ_API _api_ring_buffer_chunk_write_handle __api_log_buffer_alloc(uint64_t log_id, uint32_t length);
+        /// <remarks>
+        /// If manual population is required, the starting address for argument data is calculated as:
+        /// <code>handle.format_data_addr + align4(format_str_bytes_len)</code>
+        /// </remarks>
+        /// <param name="log_id">The unique identifier for the log entry.</param>
+        /// <param name="log_level">The severity level of the log.</param>
+        /// <param name="category_index">The index of the log category.</param>
+        /// <param name="format_string_type">The character encoding type of the format string (e.g., log_arg_type_enum::string_utf16_type).</param>
+        /// <param name="format_str_bytes_len">The length of the format string in bytes.</param>
+        /// <param name="format_str_data">
+        /// Pointer to the format string data.
+        /// If NULL, indicates a zero-copy scenario where the caller must manually write data to the allocated buffer.
+        /// </param>
+        /// <param name="args_data_bytes_len">The length of the variable arguments data in bytes.</param>
+        /// <returns>A handle to the allocated log buffer chunk.</returns>
+        BQ_API _api_log_write_handle __api_log_write_begin(uint64_t log_id, uint8_t log_level, uint32_t category_index, uint8_t format_string_type, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_data_bytes_len);
 
         /// <summary>
-        /// commit write handle after you finished writing log data
+        /// Finalizes the log write operation and commits the data to the ring buffer.
         /// </summary>
-        /// <param name="write_handle"></param>
-        /// <returns></returns>
-        BQ_API void __api_log_buffer_commit(uint64_t log_id, bq::_api_ring_buffer_chunk_write_handle write_handle);
+        /// <param name="log_id">The unique identifier for the log entry.</param>
+        /// <param name="write_handle">The handle returned by <see cref="__api_log_write_begin"/>.</param>
+        BQ_API void __api_log_write_finish(uint64_t log_id, bq::_api_log_write_handle write_handle);
 
         /// <summary>
         /// toggle of all console appenders,
@@ -76,7 +89,7 @@ namespace bq {
         /// </summary>
         /// <param name="enable"></param>
         /// <returns></returns>
-        BQ_API void __api_set_appenders_enable(uint64_t log_id, const char* appender_name, bool enable);
+        BQ_API void __api_set_appender_enable(uint64_t log_id, const char* appender_name, bool enable);
 
         /// <summary>
         /// get the current logs count
@@ -157,19 +170,20 @@ namespace bq {
 
         /// <summary>
         /// get file base dir
-        /// android storage path is distinguished by "is_in_sandbox"(internal storage or external storage)
+        /// android, iOS, harmonyOS storage path is distinguished by "base_dir_type"(internal storage or external storage)
         /// </summary>
-        /// <param name="is_in_sandbox"></param>
+        /// <param name="base_dir_type"></param>
         /// <returns></returns>
-        BQ_API const char* __api_get_file_base_dir(bool is_in_sandbox);
+        BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type);
 
         /// <summary>
         /// create a decoder to decode binary log file
         /// </summary>
         /// <param name="log_file_path"></param>
+        /// <param name="priv_key"></param>
         /// <param name="out_handle">will be used in __api_log_decoder_decode and __api_log_decoder_destroy</param>
         /// <returns></returns>
-        BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, uint32_t* out_handle);
+        BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, const char* priv_key, uint32_t* out_handle);
 
         /// <summary>
         /// decode binary log file
@@ -187,11 +201,13 @@ namespace bq {
         BQ_API void __api_log_decoder_destroy(uint32_t handle);
 
         /// <summary>
-        /// parsing interface for log raw
+        /// Directly decode a log file to a text file.
         /// </summary>
-        /// <param name="handle"></param>
+        /// <param name="in_file_path"></param>
+        /// <param name="out_file_path"></param>
+        /// <param name="priv_key"></param>
         /// <returns></returns>
-        BQ_API bool __api_log_decode(const char* in_file_path, const char* out_file_path);
+        BQ_API bool __api_log_decode(const char* in_file_path, const char* out_file_path, const char* priv_key);
 
         /// <summary>
         /// Register a callback which will be invoked when each log entry was written to Console
@@ -215,6 +231,14 @@ namespace bq {
         BQ_API void __api_set_console_buffer_enable(bool enable);
 
         /// <summary>
+        /// reset the base dir in runtime
+        /// </summary>
+        /// <param name="base_dir_type"></param>
+        /// <param name="dir"></param>
+        /// <returns></returns>
+        BQ_API void __api_reset_base_dir(int32_t base_dir_type, const char* dir);
+
+        /// <summary>
         /// Fetch and remove a log entry from the console appender buffer in a thread-safe manner.
         /// If the console appender buffer is not empty, the on_console_callback function will be invoked for this log entry.
         /// Please ensure not to output synchronized BQ logs within the callback function.
@@ -228,10 +252,10 @@ namespace bq {
         /// Note: if snapshot is not enabled, this API will return empty snapshot string.
         /// </summary>
         /// <param name="log_id"></param>
-        /// <param name="use_gmt_time"></param>
+        /// <param name="time_zone_config_utf8"></param>
         /// <param name="out_snapshot_string"></param>
         /// <returns></returns>
-        BQ_API void __api_take_snapshot_string(uint64_t log_id, bool use_gmt_time, bq::_api_string_def* out_snapshot_string);
+        BQ_API void __api_take_snapshot_string(uint64_t log_id, const char* time_zone_config_utf8, bq::_api_string_def* out_snapshot_string);
 
         /// <summary>
         /// The functions __api_take_snapshot_string and __api_release_snapshot_string must be called in pairs.
@@ -254,11 +278,5 @@ namespace bq {
         BQ_API void __api_get_stack_trace(bq::_api_string_def* out_name_ptr, uint32_t skip_frame_count);
         BQ_API void __api_get_stack_trace_utf16(bq::_api_u16string_def* out_name_ptr, uint32_t skip_frame_count);
 
-        /// <summary>
-        /// Uninitialize BqLog, please invoke this function before your program exist.
-        /// </summary>
-        /// <returns></returns>
-        BQ_API void __api_uninit();
-        /////////////////////////////////////////////////////////////DYNAMIC LIB APIS END///////////////////////////////////////////////////////
     }
 }

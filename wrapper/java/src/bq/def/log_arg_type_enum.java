@@ -1,6 +1,6 @@
 package bq.def;
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  * 
@@ -30,5 +30,7 @@ public enum log_arg_type_enum {
     float_type,
     double_type,
     string_utf8_type,
-    string_utf16_type
+    string_utf16_type,
+    string_utf32_type,
+    string_utf_mixed_type
 }

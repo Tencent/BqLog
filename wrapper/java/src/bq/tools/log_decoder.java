@@ -1,6 +1,6 @@
 package bq.tools;
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  * 
@@ -33,7 +33,20 @@ public class log_decoder implements AutoCloseable {
 
     public log_decoder(String log_file_absolute_path)
     {
-        long create_result = log_invoker.__api_log_decoder_create(log_file_absolute_path);
+        long create_result = log_invoker.__api_log_decoder_create(log_file_absolute_path, "");
+        if(create_result >= 0)
+        {
+            handle_ = create_result;
+            result_ = appender_decode_result.success;
+        }else{
+            handle_ = 0xFFFFFFFF;
+            result_ = appender_decode_result.from_int(-1 * (int)create_result);
+        }
+    }
+
+    public log_decoder(String log_file_absolute_path, String priv_key)
+    {
+        long create_result = log_invoker.__api_log_decoder_create(log_file_absolute_path, (priv_key == null) ? "" : priv_key);
         if(create_result >= 0)
         {
             handle_ = create_result;
@@ -47,16 +60,6 @@ public class log_decoder implements AutoCloseable {
     @Override
     public void close() {
         log_invoker.__api_log_decoder_destroy(handle_);
-    }
-
-    @SuppressWarnings("deprecation")
-	@Override
-    protected void finalize() throws Throwable {
-        try {
-            log_invoker.__api_log_decoder_destroy(handle_);
-        } finally {
-            super.finalize();
-        }
     }
 
     public appender_decode_result decode()
@@ -83,5 +86,15 @@ public class log_decoder implements AutoCloseable {
         }else{
             return "";
         }
+    }
+    
+    public static boolean decode_file(String log_file_path, String output_filey)
+    {
+    	return log_invoker.__api_log_decode(log_file_path, log_file_path, "");
+    }
+    
+    public static boolean decode_file(String log_file_path, String output_file, String priv_key)
+    {
+    	return log_invoker.__api_log_decode(log_file_path, log_file_path, priv_key);
     }
 }

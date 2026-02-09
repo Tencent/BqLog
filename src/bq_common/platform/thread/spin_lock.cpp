@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -17,19 +17,10 @@
  *
  *
  */
+#include "bq_common/platform/thread/spin_lock.h"
 #include "bq_common/bq_common.h"
 
 namespace bq {
     namespace platform {
-
-        void spin_lock::yield()
-        {
-            bq::platform::thread::cpu_relax();
-        }
-
-        void spin_lock_rw_crazy::yield()
-        {
-            bq::platform::thread::cpu_relax();
-        }
     }
 }

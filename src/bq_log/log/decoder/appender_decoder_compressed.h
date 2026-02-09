@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -38,7 +38,7 @@ namespace bq {
 
         appender_decode_result parse_log_entry(const appender_decoder_base::read_with_cache_handle& read_handle);
 
-        appender_decode_result parse_formate_template(const appender_decoder_base::read_with_cache_handle& read_handle);
+        appender_decode_result parse_formate_template(const appender_decoder_base::read_with_cache_handle& read_handle, appender_file_compressed::template_sub_type sub_type);
 
         appender_decode_result parse_thread_info_template(const appender_decoder_base::read_with_cache_handle& read_handle);
 

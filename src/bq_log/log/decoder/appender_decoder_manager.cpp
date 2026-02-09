@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -10,13 +10,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_log/log/decoder/appender_decoder_manager.h"
+
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/decoder/appender_decoder_raw.h"
 #include "bq_log/log/decoder/appender_decoder_compressed.h"
 #include "bq_log/log/appender/appender_file_binary.h"
 
 bq::appender_decoder_manager::appender_decoder_manager()
     :
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
     mutex_(true)
     ,
 #endif
@@ -30,26 +32,24 @@ bq::appender_decoder_manager::~appender_decoder_manager()
 
 bq::appender_decoder_manager& bq::appender_decoder_manager::instance()
 {
-    bq::file_manager::instance();
-    static appender_decoder_manager inst;
-    return inst;
+    return log_global_vars::get().appender_decoder_manager_inst_;
 }
 
-bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq::string& path, uint32_t& out_handle)
+bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq::string& path, const bq::string& private_key_str, uint32_t& out_handle)
 {
-    string path_tmp = TO_ABSOLUTE_PATH(path, false);
+    string path_tmp = TO_ABSOLUTE_PATH(path, 1);
     auto handle = bq::file_manager::instance().open_file(path_tmp, file_open_mode_enum::read);
     if (!handle.is_valid()) {
         bq::util::log_device_console(log_level::error, "decode log file :%s open failed, error code:%d", path.c_str(), bq::file_manager::get_and_clear_last_file_error());
         return appender_decode_result::failed_io_error;
     }
-    bq::appender_file_binary::_binary_appender_head_def head;
+    bq::appender_file_binary::appender_file_header head;
     auto read_size = bq::file_manager::instance().read_file(handle, &head, sizeof(head), file_manager::seek_option::begin, 0);
     if (read_size != sizeof(head)) {
         bq::util::log_device_console(log_level::error, "decode log file :%s failed, size less than appender head", path.c_str());
         return appender_decode_result::failed_decode_error;
     }
-    bq::unique_ptr<appender_decoder_base> decoder = nullptr;
+    bq::unique_ptr<appender_decoder_base> decoder;
     if (head.format == bq::appender_file_binary::appender_format_type::raw) {
         decoder = bq::make_unique<bq::appender_decoder_raw>();
     } else if (head.format == bq::appender_file_binary::appender_format_type::compressed) {
@@ -58,12 +58,12 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
         bq::util::log_device_console(log_level::error, "decode log file :%s failed, unrecognized format", path.c_str());
         return appender_decode_result::failed_decode_error;
     }
-    bq::appender_decode_result result = decoder->init(handle);
+    bq::appender_decode_result result = decoder->init(handle, private_key_str);
     if (result != appender_decode_result::success) {
         return result;
     }
-    out_handle = idx_seq_.add_fetch(1);
-#if !BQ_TOOLS
+    out_handle = idx_seq_.add_fetch_seq_cst(1);
+#if !defined(BQ_TOOLS)
     bq::platform::scoped_mutex lock(mutex_);
 #endif
     decoders_map_.add(out_handle, bq::move(decoder));
@@ -73,7 +73,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
 
 void bq::appender_decoder_manager::destroy_decoder(uint32_t handle)
 {
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
     bq::platform::scoped_mutex lock(mutex_);
 #endif
     decoders_map_.erase(handle);
@@ -81,7 +81,7 @@ void bq::appender_decoder_manager::destroy_decoder(uint32_t handle)
 
 bq::appender_decode_result bq::appender_decoder_manager::decode_single_item(uint32_t handle, const bq::string*& out_decoded_log_text)
 {
-#if !BQ_TOOLS
+#if !defined(BQ_TOOLS)
     bq::platform::scoped_mutex lock(mutex_);
 #endif
     auto iter = decoders_map_.find(handle);

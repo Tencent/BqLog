@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -12,21 +12,19 @@
  */
 // author: eggdai
 
-#include <string.h>
-#include <inttypes.h>
-#include <stddef.h>
-#include "bq_common/bq_common.h"
+#include "bq_common/bq_common_public_include.h"
+#include "bq_common/utils/utility_types.h"
 
 namespace bq {
     enum class enum_property_value_type {
-        boolean,
-        decimal,
-        integral,
-        string,
-        array,
-        object,
-        null,
-        invalid
+        boolean_type,
+        decimal_type,
+        integral_type,
+        string_type,
+        array_type,
+        object_type,
+        null_type,
+        invalid_type
     };
 
     class property_value {
@@ -51,7 +49,7 @@ namespace bq {
                 || bq::is_same<decay_type, double>::value;
 
         public:
-            constexpr static enum_property_value_type value = bq::condition_value<bq::is_same<decay_type, bool>::value, enum_property_value_type, enum_property_value_type::boolean, bq::condition_value<is_integer, enum_property_value_type, enum_property_value_type::integral, bq::condition_value<is_decimal, enum_property_value_type, enum_property_value_type::decimal, bq::condition_value<bq::is_same<decay_type, bq::string>::value, enum_property_value_type, enum_property_value_type::string, bq::condition_value<bq::is_null_pointer<decay_type>::value, enum_property_value_type, enum_property_value_type::null, enum_property_value_type::invalid>::value>::value>::value>::value>::value;
+            constexpr static enum_property_value_type value = bq::condition_value<bq::is_same<decay_type, bool>::value, enum_property_value_type, enum_property_value_type::boolean_type, bq::condition_value<is_integer, enum_property_value_type, enum_property_value_type::integral_type, bq::condition_value<is_decimal, enum_property_value_type, enum_property_value_type::decimal_type, bq::condition_value<bq::is_same<decay_type, bq::string>::value, enum_property_value_type, enum_property_value_type::string_type, bq::condition_value<bq::is_null_pointer<decay_type>::value, enum_property_value_type, enum_property_value_type::null_type, enum_property_value_type::invalid_type>::value>::value>::value>::value>::value;
         };
 
     public:
@@ -84,46 +82,88 @@ namespace bq {
         bq::aligned_type<char[size_], 8> data_;
 
 #ifndef NDEBUG
-        bool* _bool_ptr_debug;
-        decimal_type* _decimal_ptr_debug;
-        int64_t* _integral_ptr_debug;
-        string_type* _string_ptr_debug;
-        array_type* _array_ptr_debug;
-        object_type* _object_ptr_debug;
+        const bool* _bool_ptr_debug;
+        const decimal_type* _decimal_ptr_debug;
+        const int64_t* _integral_ptr_debug;
+        const string_type* _string_ptr_debug;
+        const array_type* _array_ptr_debug;
+        const object_type* _object_ptr_debug;
 #endif
     private:
         void clear_data();
         void copy_data_from(const property_value& rhs);
         void copy_data_from(property_value&& rhs);
 
-        bool_type& as_bool(bool skip_check_type = false) const
+        const bool_type& as_bool(bool skip_check_type = false) const
         {
-            assert(skip_check_type || type_ == enum_property_value_type::boolean);
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::boolean_type);
+            return *(const bool_type*)(data_.get());
+        }
+        bool_type& as_bool(bool skip_check_type = false)
+        {
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::boolean_type);
             return *(bool_type*)(data_.get());
         }
-        decimal_type& as_decimal(bool skip_check_type = false) const
+        const decimal_type& as_decimal(bool skip_check_type = false) const
         {
-            assert(skip_check_type || type_ == enum_property_value_type::decimal);
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::decimal_type);
+            return *(const decimal_type*)(data_.get());
+        }
+        decimal_type& as_decimal(bool skip_check_type = false)
+        {
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::decimal_type);
             return *(decimal_type*)(data_.get());
         }
-        int64_t& as_integral(bool skip_check_type = false) const
+        const int64_t& as_integral(bool skip_check_type = false) const
         {
-            assert(skip_check_type || type_ == enum_property_value_type::integral);
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::integral_type);
+            return *(const int64_t*)(data_.get());
+        }
+        int64_t& as_integral(bool skip_check_type = false)
+        {
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::integral_type);
             return *(int64_t*)(data_.get());
         }
-        string_type& as_string(bool skip_check_type = false) const
+        const string_type& as_string(bool skip_check_type = false) const
         {
-            assert(skip_check_type || type_ == enum_property_value_type::string);
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::string_type);
+            return *(const string_type*)(data_.get());
+        }
+        string_type& as_string(bool skip_check_type = false)
+        {
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::string_type);
             return *(string_type*)(data_.get());
         }
-        array_type& as_array(bool skip_check_type = false) const
+        const array_type& as_array(bool skip_check_type = false) const
         {
-            assert(skip_check_type || type_ == enum_property_value_type::array);
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::array_type);
+            return *(const array_type*)(data_.get());
+        }
+        array_type& as_array(bool skip_check_type = false)
+        {
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::array_type);
             return *(array_type*)(data_.get());
         }
-        object_type& as_object(bool skip_check_type = false) const
+        const object_type& as_object(bool skip_check_type = false) const
         {
-            assert(skip_check_type || type_ == enum_property_value_type::object);
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::object_type);
+            return *(const object_type*)(data_.get());
+        }
+        object_type& as_object(bool skip_check_type = false)
+        {
+            (void)skip_check_type; // avoid unused warning in release mode
+            assert(skip_check_type || type_ == enum_property_value_type::object_type);
             return *(object_type*)(data_.get());
         }
 
@@ -160,7 +200,7 @@ namespace bq {
     public:
         static property_value create_from_string(const bq::string& property_string);
 
-        property_value(enum_property_value_type value_type = enum_property_value_type::null);
+        property_value(enum_property_value_type value_type = enum_property_value_type::null_type);
 
         property_value(const property_value& rhs);
 
@@ -179,37 +219,37 @@ namespace bq {
 
         bool is_null() const
         {
-            return get_type() == enum_property_value_type::null;
+            return get_type() == enum_property_value_type::null_type;
         }
 
         bool is_bool() const
         {
-            return get_type() == enum_property_value_type::boolean;
+            return get_type() == enum_property_value_type::boolean_type;
         }
 
         bool is_decimal() const
         {
-            return get_type() == enum_property_value_type::decimal;
+            return get_type() == enum_property_value_type::decimal_type;
         }
 
         bool is_integral() const
         {
-            return get_type() == enum_property_value_type::integral;
+            return get_type() == enum_property_value_type::integral_type;
         }
 
         bool is_string() const
         {
-            return get_type() == enum_property_value_type::string;
+            return get_type() == enum_property_value_type::string_type;
         }
 
         bool is_array() const
         {
-            return get_type() == enum_property_value_type::array;
+            return get_type() == enum_property_value_type::array_type;
         }
 
         bool is_object() const
         {
-            return get_type() == enum_property_value_type::object;
+            return get_type() == enum_property_value_type::object_type;
         }
 
         operator string_type() const;
@@ -235,15 +275,15 @@ namespace bq {
         property_value& operator[](const typename array_type::size_type idx);
 
         template <typename T>
-        bq::enable_if_t<property_value_trait<T>::value == enum_property_value_type::null, bq::property_value&> operator=(T value)
+        bq::enable_if_t<property_value_trait<T>::value == enum_property_value_type::null_type, bq::property_value&> operator=(T value)
         {
             (void)value;
             clear_data();
-            type_ = enum_property_value_type::null;
+            type_ = enum_property_value_type::null_type;
         }
 
         template <typename T>
-            bq::enable_if_t < property_value_trait<T>::value<enum_property_value_type::invalid, bq::property_value&> add_array_item(T&& value)
+            bq::enable_if_t < property_value_trait<T>::value<enum_property_value_type::invalid_type, bq::property_value&> add_array_item(T&& value)
         {
             auto& new_item = add_null_array_item();
             new_item = bq::forward<T>(value);
@@ -258,7 +298,7 @@ namespace bq {
         }
 
         template <typename T>
-            bq::enable_if_t < property_value_trait<T>::value<enum_property_value_type::invalid, bq::property_value&> add_array_item(const bq::string& key, T&& value)
+            bq::enable_if_t < property_value_trait<T>::value<enum_property_value_type::invalid_type, bq::property_value&> add_array_item(const bq::string& key, T&& value)
         {
             auto& obj = (*this)[key];
             obj.add_array_item(value);
@@ -279,7 +319,7 @@ namespace bq {
         void clear_array_item();
 
         template <typename T>
-            bq::enable_if_t < property_value_trait<T>::value<enum_property_value_type::invalid, bq::property_value&> add_object_item(const bq::string& key, T&& value)
+            bq::enable_if_t < property_value_trait<T>::value<enum_property_value_type::invalid_type, bq::property_value&> add_object_item(const bq::string& key, T&& value)
         {
             auto& new_item = add_null_object_item(key);
             new_item = bq::forward<T>(value);

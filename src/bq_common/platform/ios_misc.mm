@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  * 
@@ -9,15 +9,18 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "bq_common/bq_common.h"
-#if BQ_IOS
+#include "bq_common/platform/ios_misc.h"
+#if defined(BQ_IOS)
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
+#include "bq_common/bq_common.h"
 namespace bq {
+    BQ_TLS_NON_POD(bq::string, stack_trace_current_str_);
+    BQ_TLS_NON_POD(bq::u16string, stack_trace_current_str_u16_);
 	namespace platform {
         //According to test result
         //gettimeofday has higher performance than "mach_absolute_time"
@@ -27,24 +30,19 @@ namespace bq {
         {
             struct timeval tv;
             gettimeofday(&tv, NULL);
-            uint64_t ret = tv.tv_usec;
+            uint64_t ret = static_cast<uint64_t>(tv.tv_usec);
             ret /= 1000;
             ret += ((uint64_t)tv.tv_sec * 1000);
             return ret;
         }
-    
-		static bq::string base_dir;
 
-		const bq::string& get_base_dir(bool is_sandbox)
-		{
-			(void)is_sandbox;
-			if(base_dir.is_empty())
-			{
-				NSString* cache_path = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
-				base_dir = [cache_path UTF8String];
-			}
-			return base_dir;
-		}
+        base_dir_initializer::base_dir_initializer()
+        {
+            NSString *app_support_path = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
+            NSString *documents_path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+            set_base_dir_0([app_support_path UTF8String]);
+            set_base_dir_1([documents_path UTF8String]);
+        }
     
         bq::string get_programe_home_path()
         {
@@ -52,23 +50,22 @@ namespace bq {
             return [home_directory UTF8String];
         }
 
-		void ios_vprintf(const char* __restrict format, va_list args)
-		{
-			NSLogv([NSString stringWithUTF8String : format], args);
-		}
-
 		void ios_print(const char* __restrict content)
 		{
-            NSLog(@"%@", [NSString stringWithUTF8String : content]);
+            NSLog(@"[Bq]%@", [NSString stringWithUTF8String : content]);
 		}
-    
-        static thread_local bq::string stack_trace_current_str_;
-        static thread_local bq::u16string stack_trace_current_str_u16_;
+
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
-            stack_trace_current_str_.clear();
+            if (!bq::stack_trace_current_str_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::string& stack_trace_str_ref = bq::stack_trace_current_str_.get();
+            stack_trace_str_ref.clear();
             NSArray *symbols = [NSThread callStackSymbols];
-            
+
             uint32_t valid_frame_count = 0;
             if (symbols) {
                 for (NSString *trace in symbols)
@@ -87,26 +84,32 @@ namespace bq {
                         continue;
                     }
                     auto str_len = strlen(trace_str);
-                    stack_trace_current_str_.push_back('\n');
-                    stack_trace_current_str_.insert_batch(stack_trace_current_str_.end(), trace_str, (size_t)str_len);
+                    stack_trace_str_ref.push_back('\n');
+                    stack_trace_str_ref.insert_batch(stack_trace_str_ref.end(), trace_str, (size_t)str_len);
                 }
             }
-            out_str_ptr = stack_trace_current_str_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_.size();
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count)
         {
+            if (!bq::stack_trace_current_str_u16_) {
+                out_str_ptr = nullptr;
+                out_char_count = 0;
+                return; // This occurs when program exit in Main thread.
+            }
+            bq::u16string& stack_trace_str_ref = bq::stack_trace_current_str_u16_.get();
             const char* u8_str;
             uint32_t u8_char_count;
             get_stack_trace(skip_frame_count, u8_str, u8_char_count);
-            stack_trace_current_str_u16_.clear();
-            stack_trace_current_str_u16_.fill_uninitialized((u8_char_count << 1) + 1);
-            size_t encoded_size = (size_t)bq::util::utf8_to_utf16(u8_str, u8_char_count, stack_trace_current_str_u16_.begin(), (uint32_t)stack_trace_current_str_u16_.size());
-            assert(encoded_size < stack_trace_current_str_u16_.size());
-            stack_trace_current_str_u16_.erase(stack_trace_current_str_u16_.begin() + encoded_size, stack_trace_current_str_u16_.size() - encoded_size);
-            out_str_ptr = stack_trace_current_str_u16_.begin();
-            out_char_count = (uint32_t)stack_trace_current_str_u16_.size();
+            stack_trace_str_ref.clear();
+            stack_trace_str_ref.fill_uninitialized((u8_char_count << 1) + 1);
+            size_t encoded_size = (size_t)bq::util::utf8_to_utf16(u8_str, u8_char_count, stack_trace_str_ref.begin(), (uint32_t)stack_trace_str_ref.size());
+            assert(encoded_size < stack_trace_str_ref.size());
+            stack_trace_str_ref.erase(stack_trace_str_ref.begin() + static_cast<ptrdiff_t>(encoded_size), stack_trace_str_ref.size() - encoded_size);
+            out_str_ptr = stack_trace_str_ref.begin();
+            out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
 	}
 }

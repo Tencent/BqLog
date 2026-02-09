@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -34,7 +34,7 @@ inline void* operator new[](size_t, void* p, bq::enum_new_dummy) noexcept { retu
 inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept { }
 inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept { }
 
-#ifdef _MSC_VER
+#ifdef BQ_VISUAL_STUDIO
 #define EBCO __declspec(empty_bases) // in some MSVC compilers, EBCO(empty base class optimization) is not enabled by default
 #else
 #define EBCO
@@ -90,6 +90,9 @@ namespace bq {
     template <bool COND, typename T, T TRUE_VALUE, T FALSE_VALUE>
     constexpr T condition_value_v = condition_value<COND, T, TRUE_VALUE, FALSE_VALUE>::value;
 #endif
+
+    using size_t_to_int_t = bq::condition_type<sizeof(size_t) == sizeof(int32_t), int32_t, int64_t>::type;
+    using size_t_to_uint_t = bq::condition_type<sizeof(size_t) == sizeof(uint32_t), uint32_t, uint64_t>::type;
 
     inline constexpr size_t align_4(size_t n)
     {
@@ -173,6 +176,16 @@ namespace bq {
     };
 
     template <typename T>
+    struct object_constructor {
+    public:
+        template <typename... Args>
+        static inline void construct(T* _ptr, Args&&... _args)
+        {
+            new (_ptr, bq::enum_new_dummy::dummy) T(bq::forward<Args>(_args)...);
+        }
+    };
+
+    template <typename T>
     struct object_destructor {
     private:
         struct trivial_destructor_type { };
@@ -183,9 +196,8 @@ namespace bq {
 
         template <typename U>
         struct destructor_impl<U, trivial_destructor_type> {
-            static inline void destruct(U* _ptr)
+            static inline void destruct(U*)
             {
-                (void)_ptr;
             }
         };
 
@@ -221,10 +233,8 @@ namespace bq {
 
         template <typename U>
         struct destructor_impl<U, trivial_destructor_type> {
-            static inline void destruct(U* _ptr, size_t _count)
+            static inline void destruct(U*, size_t)
             {
-                (void)_ptr;
-                (void)_count;
             }
         };
 
@@ -401,6 +411,16 @@ namespace bq {
         return static_cast<const ValueType&&>(static_cast<const ElementValueType&>(input_tuple).get());
     }
 
+    template <typename Tuple>
+    struct tuple_size {
+        static constexpr size_t value = 0;
+    };
+
+    template <typename... Types>
+    struct tuple_size<tuple<Types...>> {
+        static constexpr size_t value = sizeof...(Types);
+    };
+
     template <typename... Types>
     inline tuple<typename bq::decay<Types>::type...> make_tuple(Types&&... args)
     {
@@ -423,6 +443,20 @@ namespace bq {
     struct function_argument_type<Ret (ClassType::*)(Args...) const, Index> {
         using type = tuple_element_t<Index, tuple<Args...>>;
     };
+#if defined(BQ_CPP_17)
+    template <typename Ret, typename... Args, size_t Index>
+    struct function_argument_type<Ret (*)(Args...) noexcept, Index> {
+        using type = tuple_element_t<Index, tuple<Args...>>;
+    };
+    template <typename Ret, typename ClassType, typename... Args, size_t Index>
+    struct function_argument_type<Ret (ClassType::*)(Args...) noexcept, Index> {
+        using type = tuple_element_t<Index, tuple<Args...>>;
+    };
+    template <typename Ret, typename ClassType, typename... Args, size_t Index>
+    struct function_argument_type<Ret (ClassType::*)(Args...) const noexcept, Index> {
+        using type = tuple_element_t<Index, tuple<Args...>>;
+    };
+#endif
     template <typename FuncType, size_t Index>
     using function_argument_type_t = typename function_argument_type<FuncType, Index>::type;
 
@@ -433,9 +467,62 @@ namespace bq {
         using type = Ret;
     };
     template <typename Ret, typename ClassType, typename... Args>
+    struct function_return_type<Ret (ClassType::*)(Args...)> {
+        using type = Ret;
+    };
+    template <typename Ret, typename ClassType, typename... Args>
     struct function_return_type<Ret (ClassType::*)(Args...) const> {
         using type = Ret;
     };
+#if defined(BQ_CPP_17)
+    template <typename Ret, typename ClassType, typename... Args>
+    struct function_return_type<Ret (ClassType::*)(Args...) noexcept> {
+        using type = Ret;
+    };
+    template <typename Ret, typename ClassType, typename... Args>
+    struct function_return_type<Ret (ClassType::*)(Args...) const noexcept> {
+        using type = Ret;
+    };
+#endif
     template <typename FuncType>
     using function_return_type_t = typename function_return_type<FuncType>::type;
+
+    template <typename T>
+    bq_forceinline T* launder(T* p) noexcept
+    {
+#if defined(BQ_MSVC)
+#if defined(BQ_CPP_17)
+        return __builtin_launder(p);
+#else
+        T* result = p;
+        _ReadWriteBarrier();
+        return result;
+#endif
+#elif BQ_GCC_CLANG_BUILTIN(__builtin_launder)
+        return __builtin_launder(p);
+#elif defined(BQ_GCC)
+        T* result = p;
+        __asm__ __volatile__("" : "+r"(result) : : "memory");
+        return result;
+#else
+        T* result = p;
+        __asm__ __volatile__("" : "+r"(result) : : "memory");
+        return result;
+#endif
+    }
+
+    // Template function used to isolate the casting operation for better code optimization and maintainability.
+    // We avoid performing reinterpret_cast directly in the macro to allow the compiler to potentially inline and optimize
+    // the code more effectively, rather than embedding the cast in a less predictable macro expansion.
+    template <typename TO>
+    bq_forceinline TO& __bq_macro_force_cast_ignore_alignment_warning(const char* from)
+    {
+        return *reinterpret_cast<TO*>(const_cast<char*>(from));
+    }
 }
+
+// Macro designed to generate high-performance code by accessing a variable Var through a forced cast.
+// CAUTION: Use carefully! This bypasses alignment checks for `speed ensure` Var is properly aligned for its type,
+// as misalignment can cause undefined behavior. No alignment verification is performed here.
+#define BQ_PACK_ACCESS_BY_TYPE(Var, Type) bq::__bq_macro_force_cast_ignore_alignment_warning<Type>((const char*)&Var)
+#define BQ_PACK_ACCESS(Var) bq::__bq_macro_force_cast_ignore_alignment_warning<decltype(Var)>((const char*)&Var)

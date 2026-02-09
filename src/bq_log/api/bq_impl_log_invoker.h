@@ -37,38 +37,24 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1reset_1config(JNI
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_get_log_ring_buffer
- * Signature: (J)Ljava/nio/ByteBuffer;
+ * Method:    __api_log_write_begin
+ * Signature: (JBJJLjava/lang/String;JZ)[Ljava/nio/ByteBuffer;
  */
-JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1ring_1buffer(JNIEnv*, jclass, jlong);
+JNIEXPORT jobjectArray JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1begin(JNIEnv*, jclass, jlong, jbyte, jlong, jlong, jstring, jlong, jboolean);
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_log_buffer_alloc
- * Signature: (JJSJLjava/lang/String;J)J
+ * Method:    __api_log_write_finish
+ * Signature: (J)V
  */
-JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1alloc(JNIEnv*, jclass, jlong, jlong, jshort, jlong, jstring, jlong);
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1write_1finish(JNIEnv*, jclass, jlong);
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_log_arg_push_utf16_string
- * Signature: (JJLjava/lang/String;J)V
- */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1arg_1push_1utf16_1string(JNIEnv*, jclass, jlong, jlong, jstring, jlong);
-
-/*
- * Class:     bq_impl_log_invoker
- * Method:    __api_log_buffer_commit
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1buffer_1commit(JNIEnv*, jclass, jlong, jlong);
-
-/*
- * Class:     bq_impl_log_invoker
- * Method:    __api_set_appenders_enable
+ * Method:    __api_set_appender_enable
  * Signature: (JLjava/lang/String;Z)V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1appenders_1enable(JNIEnv*, jclass, jlong, jstring, jboolean);
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1appender_1enable(JNIEnv*, jclass, jlong, jstring, jboolean);
 
 /*
  * Class:     bq_impl_log_invoker
@@ -143,16 +129,16 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1force_1flush(JNIEnv*, 
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_get_file_base_dir
- * Signature: (Z)Ljava/lang/String;
+ * Signature: (I)Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1dir(JNIEnv*, jclass, jboolean);
+JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1file_1base_1dir(JNIEnv*, jclass, jint);
 
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_decoder_create
- * Signature: (Ljava/lang/String;)J
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)J
  */
-JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1create(JNIEnv*, jclass, jstring);
+JNIEXPORT jlong JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1create(JNIEnv*, jclass, jstring, jstring);
 
 /*
  * Class:     bq_impl_log_invoker
@@ -171,16 +157,16 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decoder_1destroy(
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_log_decode
- * Signature: (Ljava/lang/String;Ljava/lang/String;)Z
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
  */
-JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv*, jclass, jstring, jstring);
+JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1log_1decode(JNIEnv*, jclass, jstring, jstring, jstring);
 
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_take_snapshot_string
- * Signature: (JZ)Ljava/lang/String;
+ * Signature: (JLjava/lang/String;)Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv*, jclass, jlong, jboolean);
+JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1take_1snapshot_1string(JNIEnv*, jclass, jlong, jstring);
 
 /*
  * Class:     bq_impl_log_invoker
@@ -198,6 +184,13 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1set_1console_1buffer_1
 
 /*
  * Class:     bq_impl_log_invoker
+ * Method:    __api_reset_base_dir
+ * Signature: (ILjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1reset_1base_1dir(JNIEnv*, jclass, jint, jstring);
+
+/*
+ * Class:     bq_impl_log_invoker
  * Method:    __api_fetch_and_remove_console_buffer
  * Signature: (Ljava/lang/Object;)Z
  */
@@ -205,10 +198,10 @@ JNIEXPORT jboolean JNICALL Java_bq_impl_log_1invoker__1_1api_1fetch_1and_1remove
 
 /*
  * Class:     bq_impl_log_invoker
- * Method:    __api_uninit
+ * Method:    __api_mark_jvm_destroyed
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1uninit(JNIEnv*, jclass);
+JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1mark_1jvm_1destroyed(JNIEnv*, jclass);
 
 #ifdef __cplusplus
 }

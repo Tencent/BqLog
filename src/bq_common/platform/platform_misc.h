@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -10,14 +10,14 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdint.h>
-#include "bq_common/platform/macros.h"
-#include "bq_common/types/array.h"
-#include "bq_common/types/string.h"
 
+#include "bq_common/bq_common_public_include.h"
+#if defined(BQ_POSIX)
+#include "bq_common/platform/posix_misc.h"
+#endif
+#if defined(BQ_NAPI)
+#include "bq_common/platform/napi_misc.h"
+#endif
 #if defined(BQ_JAVA)
 #include "bq_common/platform/java_misc.h"
 #endif
@@ -42,8 +42,8 @@
 #if defined(BQ_PS)
 #include "bq_common/platform/ps_misc.h"
 #endif
-#if defined(BQ_POSIX)
-#include "bq_common/platform/posix_misc.h"
+#if defined(BQ_OHOS)
+#include "bq_common/platform/ohos_misc.h"
 #endif
 
 namespace bq {
@@ -69,13 +69,25 @@ namespace bq {
             return static_cast<file_open_mode_enum>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
         }
 
-        //to avoid Static Initialization Order Fiasco
-        void init_for_file_manager();
+        struct base_dir_initializer {
+        private:
+            bq::string base_dir_0_;
+            bq::string base_dir_1_;
+
+        public:
+            const bq::string& get_base_dir_0() const { return base_dir_0_; }
+            const bq::string& get_base_dir_1() const { return base_dir_1_; }
+
+            void set_base_dir_0(const bq::string& dir);
+            void set_base_dir_1(const bq::string& dir);
+
+            base_dir_initializer();
+        };
 
         // TODO optimize use TSC
         uint64_t high_performance_epoch_ms();
 
-        const bq::string& get_base_dir(bool is_sandbox);
+        bq::string get_base_dir(int32_t base_dir_type);
 
         int32_t get_file_size(const char* file_path, size_t& size_ref);
 
@@ -101,6 +113,8 @@ namespace bq {
 
         int32_t flush_file(const platform_file_handle& file_handle);
 
+        uint64_t get_file_last_modified_epoch_ms(const char* path);
+
         bq::array<bq::string> get_all_sub_names(const char* path);
 
         bool lock_file(const platform_file_handle& file_handle); // make file write exclusive
@@ -120,5 +134,8 @@ namespace bq {
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count);
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count);
+
+        void* aligned_alloc(size_t alignment, size_t size);
+        void aligned_free(void* ptr);
     }
 }

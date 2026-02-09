@@ -1,0 +1,49 @@
+/*
+ * Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+ 
+ /*
+ * Node ESM loader wrapper.
+ * - Uses createRequire + fileURLToPath to sync auto-load at module init.
+ * - Not imported on CJS builds.
+ * Not exported publicly; used only inside the package.
+ */
+
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { load_node_sync_core, native_binding } from "./lib_loader_core";
+
+let native_mod_: native_binding | null = null;
+
+export function native_export(name: string): any {
+    const mod = native_mod_;
+    if (!mod) throw new Error("native module not loaded");
+    const fn = (mod as any)[`__bq_napi_${name}`];
+    if (typeof fn !== "function") throw new Error(`native export not found: __bq_napi_${name}`);
+    return fn;
+}
+
+// auto-load at module initialization (sync)
+(function auto_load() {
+    try {
+        const req = createRequire(import.meta.url);
+        const here_dir = path.dirname(fileURLToPath(import.meta.url));
+        const base_dir = path.resolve(here_dir, "../../../");
+        native_mod_ = load_node_sync_core(req, base_dir);
+    } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error("failed to load native module (esm)");
+        // eslint-disable-next-line no-console
+        console.error((e as Error)?.message ?? String(e));
+    }
+})();

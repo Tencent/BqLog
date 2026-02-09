@@ -1,0 +1,9 @@
+leak:libjvm
+leak:libjli
+leak:libnode
+leak:node
+leak:mono
+leak:System_
+leak:uv_
+leak:_dl_
+leak:_start

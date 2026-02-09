@@ -1,6 +1,6 @@
 ﻿#pragma once
 /*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -15,15 +15,29 @@
 
 inline void output_config_file_format(std::ostream& stream)
 {
-    stream << "format of category_config_file:" << std::endl;
-    stream << "####################config file start#################" << std::endl;
-    stream << "\tModuleA //comment" << std::endl;
-    stream << "\tModuleA.SystemA " << std::endl;
-    stream << "\tModuleA.SystemB.functionC //comment " << std::endl;
-    stream << "\tModuleC //comment" << std::endl;
-    stream << "\tModuleD //comment" << std::endl;
-    stream << "####################config file end#################" << std::endl;
-    stream << "important: only character, digit and _ is allowed for category parts, category parts was split by ., and first character of each part must be an English letter, just like variable name" << std::endl;
+    stream << "CategoryConfigFile format:\n"
+           << "  - One category path per line.\n"
+           << "  - Hierarchy separator: a dot (\".\").\n"
+           << "  - Parent categories are auto-generated; you do NOT need to list them explicitly.\n"
+           << "    For example: \"Shop.Manager\" automatically creates both \"Shop\" and \"Shop.Manager\".\n"
+           << "  - Comments start with // anywhere on the line (inline or full-line comments).\n"
+           << "  - Blank lines and leading/trailing spaces are ignored.\n"
+           << "  - Duplicate entries are allowed; duplicates are de-duplicated.\n"
+           << "  - Encoding is expected to be UTF-8.\n\n"
+           << "Example CategoryConfigFile content:\n"
+           << "// This configuration file supports comments using double slashes\n"
+           << "Shop.Manager  // You don't need to list Shop separately; this will automatically generate both Shop and Shop.Manager categories\n"
+           << "Shop.Seller\n"
+           << "Factory.People.Manager\n"
+           << "Factory.People.Worker\n"
+           << "Factory.Machine\n"
+           << "Factory.House\n"
+           << "Transport.Vehicles.Driver\n"
+           << "Transport.Vehicles.Maintenance\n"
+           << "Transport.Trains\n\n"
+           << "Notes:\n"
+           << "  - Use simple dot-separated identifiers (e.g., Name or Name.Sub). Avoid empty segments such as \"A..B\".\n"
+           << "  - The order of lines does not affect the result; the tool builds the full tree from the paths.\n\n";
 }
 
 struct category_node {

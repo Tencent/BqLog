@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 Tencent.
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  * 
@@ -264,15 +264,21 @@ namespace bq.impl
             return param;
         }
 
+        /// <summary>
+        /// Deprecated: Converting to Enum causes boxing and leads to GC allocation. Please convert it
+        /// to an int or String manually before passing it.
+        /// </summary>
+        
         public unsafe static implicit operator param_wrapper(System.Enum obj)
         {
             param_wrapper param = new param_wrapper();
-            param.type_ = log_arg_type_enum.int32_type;
-            int* pod_ptr = (int*)&param.pod_value_;
-            *pod_ptr = obj.GetHashCode();
-            param.storage_size_ = 8;
+            param.type_ = log_arg_type_enum.uint64_type;
+            long* pod_ptr = (long*)&param.pod_value_;
+            *pod_ptr = Convert.ToInt64(obj);
+            param.storage_size_ = 12;
             param.aligned_size_ = param.storage_size_;
             return param;
         }
+        
     }
 }

@@ -1,5 +1,5 @@
-﻿/*
- * Copyright (C) 2024 Tencent.
+/*
+ * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
@@ -9,89 +9,324 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <assert.h>
-#include <float.h>
-#include <math.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <time.h>
+#include "bq_log/log/layout.h"
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_wrapper_tools.h"
-#include "bq_log/log/layout.h"
+
+#include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
 
 namespace bq {
-    static const bq::string _log_level_str[] = {
-        "[V]", // VERBOSE
-        "[D]", // DEBUG
-        "[I]", // INFO
-        "[W]", // WARN
-        "[E]", // ERROR
-        "[F]" // FATAL
-    };
 
-    static struct _time_zone_str_initer {
-        const char time_zone_str_[32] = { 0 };
-        const int32_t time_zone_str_len = 0;
-        const char* utc_time_zone_str_ = "UTC0 ";
-        const int32_t utc_time_zone_str_len = (int32_t)strlen(utc_time_zone_str_);
-        _time_zone_str_initer()
-        {
-            uint64_t epoch = bq::platform::high_performance_epoch_ms();
-            struct tm local;
-            if (!bq::util::get_local_time_by_epoch(epoch, local)) {
-                const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
-            time_t local_time = mktime(const_cast<struct tm*>(&local));
-            if (local_time == (time_t)(-1)) {
-                const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
+    // =================================================================================================
+    // Internal SIMD Helpers for Layout
+    // =================================================================================================
 
-            struct tm utc0;
-            if (!bq::util::get_gmt_time_by_epoch(epoch, utc0)) {
-                const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
-            time_t utc_time = mktime(const_cast<struct tm*>(&utc0));
-            if (utc_time == (time_t)(-1)) {
-                const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "%s", "UNKNOWN TIMEZONE");
-                return;
-            }
+    // -------------------------------------------------------------------------------------------------
+    // find_brace_and_copy (UTF-8 / ASCII)
+    // Scans the source buffer for braces '{' or '}' and copies content to the destination buffer.
+    // Stops upon encountering a brace or reaching the specified length.
+    // Returns the number of bytes processed.
+    // The 'found_brace' output parameter is set to true if the scan stopped due to a brace.
+    // -------------------------------------------------------------------------------------------------
 
-            double timezone_offset = difftime(local_time, utc_time);
-            int32_t offset_hours = (int32_t)timezone_offset / 3600;
-            const_cast<int32_t&>(time_zone_str_len) = snprintf(const_cast<char*>(time_zone_str_), sizeof(time_zone_str_), "UTC%+03d", offset_hours);
+    bq_forceinline uint32_t _impl_find_brace_and_copy_sw(const char* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace)
+    {
+        const char* start = src;
+        const char* end = src + len;
+        while (src < end) {
+            char c = *src;
+            if (c == '{' || c == '}') {
+                found_brace = true;
+                return static_cast<uint32_t>(src - start);
+            }
+            *dst++ = c;
+            src++;
         }
-    } _time_zone_str_initer_inst_;
+        found_brace = false;
+        return len;
+    }
 
-    static struct _digit_str_initer {
-        const char digit3_array[3000 + 16] = {};
-        _digit_str_initer()
-        {
-            for (uint32_t i = 0; i < 1000; ++i) {
-                // 16 may overflow, it only make compilers ignore warning.
-                snprintf(const_cast<char*>(digit3_array) + i * 3, 16, "%03d", i);
+#if defined(BQ_X86)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_find_brace_and_copy_avx2(const char* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace)
+    {
+        const char* start = src;
+        const char* end = src + len;
+
+        const __m256i brace_l = _mm256_set1_epi8('{'); // 0x7B
+        const __m256i brace_r = _mm256_set1_epi8('}'); // 0x7D
+
+        while (src + 32 <= end) {
+            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src));
+            __m256i cmp_l = _mm256_cmpeq_epi8(chunk, brace_l);
+            __m256i cmp_r = _mm256_cmpeq_epi8(chunk, brace_r);
+            __m256i mask_v = _mm256_or_si256(cmp_l, cmp_r);
+
+            int32_t mask = _mm256_movemask_epi8(mask_v);
+            if (mask != 0) {
+                // Found brace
+                uint32_t idx = 0;
+#if defined(BQ_MSVC)
+                unsigned long index;
+                _BitScanForward(&index, static_cast<unsigned long>(mask));
+                idx = static_cast<uint32_t>(index);
+#else
+                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<uint32_t>(mask)));
+#endif
+                // Copy up to idx
+                memcpy(dst, src, idx);
+                found_brace = true;
+                return static_cast<uint32_t>(src - start) + idx;
             }
+
+            _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), chunk);
+            src += 32;
+            dst += 32;
         }
-    } _digit_str_initer_;
+
+        return static_cast<uint32_t>(src - start) + _impl_find_brace_and_copy_sw(src, static_cast<uint32_t>(end - src), dst, found_brace);
+    }
+
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_find_brace_and_copy_sse(const char* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace)
+    {
+        const char* start = src;
+        const char* end = src + len;
+
+        const __m128i brace_l = _mm_set1_epi8('{');
+        const __m128i brace_r = _mm_set1_epi8('}');
+
+        while (src + 16 <= end) {
+            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
+            __m128i cmp_l = _mm_cmpeq_epi8(chunk, brace_l);
+            __m128i cmp_r = _mm_cmpeq_epi8(chunk, brace_r);
+            __m128i mask_v = _mm_or_si128(cmp_l, cmp_r);
+
+            int32_t mask = _mm_movemask_epi8(mask_v);
+            if (mask != 0) {
+                uint32_t idx = 0;
+#if defined(BQ_MSVC)
+                unsigned long index;
+                _BitScanForward(&index, static_cast<unsigned long>(mask));
+                idx = static_cast<uint32_t>(index);
+#else
+                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<uint32_t>(mask)));
+#endif
+                memcpy(dst, src, idx);
+                found_brace = true;
+                return static_cast<uint32_t>(src - start) + idx;
+            }
+
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), chunk);
+            src += 16;
+            dst += 16;
+        }
+        return static_cast<uint32_t>(src - start) + _impl_find_brace_and_copy_sw(src, static_cast<uint32_t>(end - src), dst, found_brace);
+    }
+#elif defined(BQ_ARM_NEON)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_find_brace_and_copy_neon(const char* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace)
+    {
+        const char* start = src;
+        const char* end = src + len;
+
+        const uint8x16_t brace_l = vdupq_n_u8('{');
+        const uint8x16_t brace_r = vdupq_n_u8('}');
+
+        while (src + 16 <= end) {
+            uint8x16_t chunk = vld1q_u8(reinterpret_cast<const uint8_t*>(src));
+            uint8x16_t cmp_l = vceqq_u8(chunk, brace_l);
+            uint8x16_t cmp_r = vceqq_u8(chunk, brace_r);
+            uint8x16_t mask_v = vorrq_u8(cmp_l, cmp_r);
+
+            if (bq_vmaxvq_u8(mask_v) != 0) {
+                break;
+            }
+
+            vst1q_u8(reinterpret_cast<uint8_t*>(dst), chunk);
+            src += 16;
+            dst += 16;
+        }
+        return static_cast<uint32_t>(src - start) + _impl_find_brace_and_copy_sw(src, static_cast<uint32_t>(end - src), dst, found_brace);
+    }
+#endif
+
+    bq_forceinline uint32_t find_brace_and_copy(const char* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace)
+    {
+#if defined(BQ_X86)
+        if (_bq_avx2_supported_) {
+            return _impl_find_brace_and_copy_avx2(src, len, dst, found_brace);
+        } else {
+            return _impl_find_brace_and_copy_sse(src, len, dst, found_brace);
+        }
+#elif defined(BQ_ARM_NEON)
+        return _impl_find_brace_and_copy_neon(src, len, dst, found_brace);
+#else
+        return _impl_find_brace_and_copy_sw(src, len, dst, found_brace);
+#endif
+    }
+
+    // -------------------------------------------------------------------------------------------------
+    // find_brace_and_convert_utf16_to_utf8
+    // Converts from UTF-16 to UTF-8 until '{', '}', end, OR non-ASCII char.
+    // NOTE: This implementation is "Optimistic ASCII". It stops at ANY non-ASCII char or brace.
+    // The caller is expected to loop and handle the non-ASCII fallback or brace handling.
+    // -------------------------------------------------------------------------------------------------
+
+    bq_forceinline uint32_t _impl_find_brace_and_convert_u16_sw(const char16_t* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace, bool& non_ascii)
+    {
+        const char16_t* start = src;
+        const char16_t* end = src + len;
+
+        while (src < end) {
+            char16_t c = *src;
+            if (c >= 0x80) {
+                non_ascii = true;
+                found_brace = false;
+                return static_cast<uint32_t>(src - start);
+            }
+            if (c == u'{' || c == u'}') {
+                found_brace = true;
+                non_ascii = false;
+                return static_cast<uint32_t>(src - start);
+            }
+            *dst++ = static_cast<char>(c);
+            src++;
+        }
+        found_brace = false;
+        non_ascii = false;
+        return len;
+    }
+
+#if defined(BQ_X86)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_find_brace_and_convert_u16_avx2(const char16_t* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace, bool& non_ascii)
+    {
+        const char16_t* start = src;
+        const char16_t* end = src + len;
+
+        const __m256i brace_l = _mm256_set1_epi16(u'{');
+        const __m256i brace_r = _mm256_set1_epi16(u'}');
+        const __m256i ascii_mask = _mm256_set1_epi16(static_cast<int16_t>(0xFF80u)); // Check for high byte or bit 7
+
+        // Process 16 chars (32 bytes) at a time
+        while (src + 16 <= end) {
+            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src));
+
+            // Check non-ASCII
+            if (!_mm256_testz_si256(chunk, ascii_mask)) {
+                // Found non-ASCII (or potentially garbage high bytes if bad input, but we assume valid U16 or stop)
+                non_ascii = true; // Potentially, but let SW verify exact position
+                break;
+            }
+
+            // Check braces
+            __m256i cmp_l = _mm256_cmpeq_epi16(chunk, brace_l);
+            __m256i cmp_r = _mm256_cmpeq_epi16(chunk, brace_r);
+            if (!_mm256_testz_si256(_mm256_or_si256(cmp_l, cmp_r), _mm256_set1_epi16(-1))) {
+                // Found brace
+                break;
+            }
+
+            // Safe to pack and store
+            __m256i compressed = _mm256_packus_epi16(chunk, chunk);
+            __m256i permuted = _mm256_permute4x64_epi64(compressed, 0xD8);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm256_castsi256_si128(permuted));
+
+            src += 16;
+            dst += 16;
+        }
+
+        return static_cast<uint32_t>(src - start) + _impl_find_brace_and_convert_u16_sw(src, static_cast<uint32_t>(end - src), dst, found_brace, non_ascii);
+    }
+
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_SSE_TARGET uint32_t _impl_find_brace_and_convert_u16_sse(const char16_t* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace, bool& non_ascii)
+    {
+        const char16_t* start = src;
+        const char16_t* end = src + len;
+
+        const __m128i brace_l = _mm_set1_epi16(u'{');
+        const __m128i brace_r = _mm_set1_epi16(u'}');
+        const __m128i ascii_mask = _mm_set1_epi16(static_cast<int16_t>(0xFF80u));
+
+        while (src + 8 <= end) {
+            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
+
+            if (!_mm_testz_si128(chunk, ascii_mask)) {
+                non_ascii = true;
+                break;
+            }
+
+            __m128i cmp_l = _mm_cmpeq_epi16(chunk, brace_l);
+            __m128i cmp_r = _mm_cmpeq_epi16(chunk, brace_r);
+            if (!_mm_testz_si128(_mm_or_si128(cmp_l, cmp_r), _mm_set1_epi16(-1))) {
+                break;
+            }
+
+            __m128i compressed = _mm_packus_epi16(chunk, chunk);
+            _mm_storel_epi64(reinterpret_cast<__m128i*>(dst), compressed);
+
+            src += 8;
+            dst += 8;
+        }
+        return static_cast<uint32_t>(src - start) + _impl_find_brace_and_convert_u16_sw(src, static_cast<uint32_t>(end - src), dst, found_brace, non_ascii);
+    }
+
+#elif defined(BQ_ARM_NEON)
+    BQ_SIMD_HW_INLINE BQ_HW_SIMD_TARGET uint32_t _impl_find_brace_and_convert_u16_neon(const char16_t* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace, bool& non_ascii)
+    {
+        const char16_t* start = src;
+        const char16_t* end = src + len;
+
+        const uint16x8_t brace_l = vdupq_n_u16(u'{');
+        const uint16x8_t brace_r = vdupq_n_u16(u'}');
+
+        while (src + 8 <= end) {
+            uint16x8_t chunk = vld1q_u16(reinterpret_cast<const uint16_t*>(src));
+
+            // Check non-ASCII (any >= 0x80)
+            if (bq_vmaxvq_u16(chunk) >= 0x80) {
+                non_ascii = true;
+                break;
+            }
+
+            uint16x8_t cmp_l = vceqq_u16(chunk, brace_l);
+            uint16x8_t cmp_r = vceqq_u16(chunk, brace_r);
+            if (bq_vmaxvq_u16(vorrq_u16(cmp_l, cmp_r)) != 0) {
+                break;
+            }
+
+            vst1_u8(reinterpret_cast<uint8_t*>(dst), vmovn_u16(chunk));
+            src += 8;
+            dst += 8;
+        }
+        return static_cast<uint32_t>(src - start) + _impl_find_brace_and_convert_u16_sw(src, static_cast<uint32_t>(end - src), dst, found_brace, non_ascii);
+    }
+#endif
+
+    bq_forceinline uint32_t find_brace_and_convert_u16(const char16_t* BQ_RESTRICT src, uint32_t len, char* BQ_RESTRICT dst, bool& found_brace, bool& non_ascii)
+    {
+#if defined(BQ_X86)
+        if (_bq_avx2_supported_) {
+            return _impl_find_brace_and_convert_u16_avx2(src, len, dst, found_brace, non_ascii);
+        } else {
+            return _impl_find_brace_and_convert_u16_sse(src, len, dst, found_brace, non_ascii);
+        }
+#elif defined(BQ_ARM_NEON)
+        return _impl_find_brace_and_convert_u16_neon(src, len, dst, found_brace, non_ascii);
+#else
+        return _impl_find_brace_and_convert_u16_sw(src, len, dst, found_brace, non_ascii);
+#endif
+    }
 
     layout::layout()
-        : is_gmt_time_(false)
-        , time_cache_ { 0 }
-        , time_cache_len_(0)
-        , last_time_epoch_cache_(0)
+        : time_zone_ptr_(nullptr)
         , categories_name_array_ptr_(nullptr)
         , format_content_cursor(0)
     {
         thread_names_cache_.set_expand_rate(4);
     }
 
-    layout::enum_layout_result layout::do_layout(const bq::log_entry_handle& log_entry, bool gmt_time, const bq::array<bq::string>* categories_name_array_ptr)
+    layout::enum_layout_result layout::do_layout(const bq::log_entry_handle& log_entry, time_zone& input_time_zone, const bq::array<bq::string>* categories_name_array_ptr)
     {
-        is_gmt_time_ = gmt_time;
+        time_zone_ptr_ = &input_time_zone;
         categories_name_array_ptr_ = categories_name_array_ptr;
         format_content_cursor = 0;
         expand_format_content_buff_size(1024);
@@ -108,23 +343,23 @@ namespace bq {
         const auto& head = log_entry.get_log_head();
         auto result = insert_time(log_entry);
         if (result != enum_layout_result::finished) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_time", "");
+            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_time, result:%" PRId32, static_cast<int32_t>(result));
             return result;
         }
 
         result = insert_thread_info(log_entry);
         if (result != enum_layout_result::finished) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_thread_info", "");
+            bq::util::log_device_console(log_level::error, "layout_prefix error, insert_thread_info, result:%" PRId32, static_cast<int32_t>(result));
             return result;
         }
 
         auto level = log_entry.get_level();
         if (level < log_level::verbose || level > log_level::fatal) {
-            bq::util::log_device_console(log_level::error, "layout_prefix error, log_level %d, maybe header file or struct mismatch in include", level);
+            bq::util::log_device_console(log_level::error, "layout_prefix error, log_level %" PRId32 ", maybe header file or struct mismatch in include", static_cast<int32_t>(level));
             return enum_layout_result::parse_error;
         }
-        const auto& level_str = _log_level_str[(int32_t)log_entry.get_level()];
-        insert_str_utf8(level_str.c_str(), (uint32_t)level_str.size());
+        const auto& level_str = log_global_vars::get().log_level_str_[static_cast<int32_t>(log_entry.get_level())];
+        insert_str_utf8(level_str, sizeof(level_str));
         insert_char('\t');
 
         if (head.category_idx >= categories_name_array_ptr_->size()) {
@@ -135,32 +370,21 @@ namespace bq {
         if (!category_str_ptr->is_empty()) {
             insert_char('[');
             insert_str_utf8(category_str_ptr->c_str(), static_cast<uint32_t>(category_str_ptr->size()));
-            insert_str_utf8("]\t", (uint32_t)2);
+            insert_str_utf8("]\t", static_cast<uint32_t>(2));
         }
         return enum_layout_result::finished;
     }
 
     layout::enum_layout_result layout::insert_time(const bq::log_entry_handle& log_entry)
     {
-        expand_format_content_buff_size(format_content_cursor + MAX_TIME_STR_LEN + 3);
-        uint64_t epoch = log_entry.get_log_head().timestamp_epoch;
+        expand_format_content_buff_size(format_content_cursor + time_zone::MAX_TIME_STR_LEN + 3);
+        uint64_t epoch_ms = log_entry.get_log_head().timestamp_epoch;
+        time_zone_ptr_->refresh_time_string_cache(epoch_ms);
+        memcpy(&format_content[format_content_cursor], time_zone_ptr_->get_time_string_cache(), time_zone_ptr_->get_time_string_cache_len());
+        format_content_cursor += static_cast<uint32_t>(time_zone_ptr_->get_time_string_cache_len());
 
-        if (epoch != last_time_epoch_cache_) {
-            struct tm time_st;
-            if (is_gmt_time_) {
-                bq::util::get_gmt_time_by_epoch(epoch, time_st);
-            } else {
-                bq::util::get_local_time_by_epoch(epoch, time_st);
-            }
-            time_cache_len_ = snprintf(time_cache_, sizeof(time_cache_),
-                "%s %d-%02d-%02d %02d:%02d:%02d.", is_gmt_time_ ? _time_zone_str_initer_inst_.utc_time_zone_str_ : _time_zone_str_initer_inst_.time_zone_str_, time_st.tm_year + 1900, time_st.tm_mon + 1, time_st.tm_mday, time_st.tm_hour, time_st.tm_min, time_st.tm_sec);
-            last_time_epoch_cache_ = epoch;
-        }
-        memcpy(&format_content[format_content_cursor], time_cache_, time_cache_len_);
-        format_content_cursor += (uint32_t)time_cache_len_;
-
-        int32_t millsec = static_cast<int32_t>(epoch % 1000);
-        const char* ms_src = &_digit_str_initer_.digit3_array[millsec * 3];
+        auto m_sec = static_cast<int32_t>(epoch_ms % 1000);
+        const char* ms_src = &log_global_vars::get().digit3_array[m_sec * 3];
         char* ms_dest = &format_content[format_content_cursor];
         ms_dest[0] = ms_src[0];
         ms_dest[1] = ms_src[1];
@@ -172,18 +396,18 @@ namespace bq {
     bq::layout::enum_layout_result layout::insert_thread_info(const bq::log_entry_handle& log_entry)
     {
         const auto& ext_info = log_entry.get_ext_head();
-        auto iter = thread_names_cache_.find(ext_info.thread_id_);
+        auto iter = thread_names_cache_.find(log_entry.get_log_head().log_thread_id);
         if (iter == thread_names_cache_.end()) {
             char tmp[256];
-            uint32_t cursor = snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", ext_info.thread_id_);
-            memcpy(tmp + cursor, (uint8_t*)&ext_info + sizeof(ext_log_entry_info_head), ext_info.thread_name_len_);
+            uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", log_entry.get_log_head().log_thread_id));
+            memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), ext_info.thread_name_len_);
             cursor += ext_info.thread_name_len_;
             tmp[cursor++] = ']';
             tmp[cursor++] = '\t';
             assert(cursor < 256);
             tmp[cursor] = '\0';
             bq::string thread_name = tmp;
-            iter = thread_names_cache_.add(ext_info.thread_id_, bq::move(thread_name));
+            iter = thread_names_cache_.add(log_entry.get_log_head().log_thread_id, bq::move(thread_name));
         }
         if (iter->value().size() > 0) {
             expand_format_content_buff_size(format_content_cursor + (uint32_t)iter->value().size());
@@ -204,7 +428,7 @@ namespace bq {
         if (style[0] != ':')
             return fi;
 
-        int index = 0;
+        int32_t index = 0;
         bool precision = false;
         bool align = false;
         bool fill = false;
@@ -217,13 +441,13 @@ namespace bq {
                 fi.width = 0;
                 break;
             }
-            char c = (char)style[index];
+            char c = static_cast<char>(style[index]);
             if (c == '{') {
                 fi.offset = 0;
                 fi.width = 0;
                 break;
             } else if (c == '}') {
-                fi.offset = index;
+                fi.offset = static_cast<uint32_t>(index);
                 break;
             }
             // Dynamic width not currently supported
@@ -280,7 +504,7 @@ namespace bq {
                 break;
             case '.':
                 precision = true;
-                fi.width = atoi(width);
+                fi.width = static_cast<uint32_t>(atoi(width));
                 width[0] = '0';
                 width[1] = 0;
                 break;
@@ -290,7 +514,7 @@ namespace bq {
                     if (fi.align == '^' || fi.align == '<')
                         fi.fill = ' ';
                 } else {
-                    if (isdigit((int32_t)(uint8_t)c)) {
+                    if (isdigit(static_cast<int32_t>(static_cast<uint8_t>(c)))) {
                         fill = true;
                         if (width[0] == '0')
                             width[0] = c;
@@ -302,9 +526,9 @@ namespace bq {
             }
         }
         if (precision) {
-            fi.precision = atoi(width);
+            fi.precision = static_cast<uint32_t>(atoi(width));
         } else {
-            fi.width = atoi(width);
+            fi.width = static_cast<uint32_t>(atoi(width));
         }
         if (fi.type == ' ')
             fi.type = 'd';
@@ -322,7 +546,7 @@ namespace bq {
             uint32_t fill_count = format_info_.width - dis;
             // alignment right
             if (format_info_.align == '>') {
-                int32_t ignore = 0;
+                uint32_t ignore = 0;
                 uint32_t ignore_index = 0;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
@@ -389,19 +613,19 @@ namespace bq {
         }
     }
 
-    void layout::fill_e_style(uint32_t eCount, uint32_t begin_cursor)
+    void layout::fill_e_style(uint32_t e_count, uint32_t begin_cursor)
     {
-        int32_t bitcount = 0;
-        auto temp = eCount;
+        uint32_t bitcount = 0;
+        auto temp = e_count;
         do {
             temp /= 10;
             bitcount++;
         } while (temp != 0);
         expand_format_content_buff_size(format_content_cursor + bitcount + 3); // 3->e+0
         // 1.000000 -> 1.0000
-        int32_t jump = format_content_cursor - (begin_cursor + format_info_.width - bitcount - 2); // 2->e+
+        int32_t jump = static_cast<int32_t>(format_content_cursor) - (static_cast<int32_t>(begin_cursor + format_info_.width - bitcount) - 2); // 2->e+
         if (jump > 0) {
-            format_content_cursor -= jump;
+            format_content_cursor -= static_cast<uint32_t>(jump);
             if (format_content_cursor == begin_cursor)
                 format_content_cursor++;
         }
@@ -412,13 +636,13 @@ namespace bq {
             format_content[format_content_cursor++] = 'e';
         format_content[format_content_cursor++] = '+';
         begin_cursor = format_content_cursor;
-        temp = eCount;
+        temp = e_count;
         // 1.0000e+ -> 1.0000e+60
         do {
-            int32_t digit = eCount % 10;
-            format_content[format_content_cursor++] = '0' + (char)digit;
-            eCount /= 10;
-        } while (eCount != 0);
+            int32_t digit = static_cast<int32_t>(e_count % 10);
+            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
+            e_count /= 10;
+        } while (e_count != 0);
         if (temp <= 9)
             format_content[format_content_cursor++] = '0';
         // 1.0000e+60 -> 1.0000e+06
@@ -427,7 +651,7 @@ namespace bq {
 
     void layout::python_style_format_content(const bq::log_entry_handle& log_entry)
     {
-        if (log_entry.get_log_head().log_format_str_type == (uint16_t)log_arg_type_enum::string_utf8_type) {
+        if (log_entry.get_log_head().log_format_str_type == static_cast<uint16_t>(log_arg_type_enum::string_utf8_type)) {
             python_style_format_content_utf8(log_entry);
         } else {
             python_style_format_content_utf16(log_entry);
@@ -442,8 +666,7 @@ namespace bq {
         const uint8_t* args_data_ptr = log_entry.get_log_args_data();
         uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char* format_data_ptr = log_entry.get_format_string_data();
-        uint32_t format_data_len = *((uint32_t*)format_data_ptr);
-        format_data_ptr += sizeof(uint32_t);
+        uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
 
         if (args_data_len == 0) {
             expand_format_content_buff_size(format_content_cursor + format_data_len);
@@ -452,152 +675,189 @@ namespace bq {
             return;
         }
 
+        // Pre-allocate buffer to ensure sufficient space.
+        // Although this might allocate slightly more than necessary, it ensures safety and avoids frequent reallocations.
+        expand_format_content_buff_size(format_content_cursor + format_data_len);
+
         uint32_t i = 0;
-        bool is_arg = false;
-        uint32_t last_left_brace_index = 0;
         uint32_t args_data_cursor = 0;
 
-        // maybe waste, but safe
-        uint32_t safe_buff_size = format_content_cursor + format_data_len;
-        expand_format_content_buff_size(safe_buff_size);
-        while (++i <= format_data_len) {
-            uint32_t cursor = i - 1;
-            char c = format_data_ptr[cursor];
-            if (c == '{') {
-                last_left_brace_index = format_content_cursor;
-                is_arg = true;
-                if (format_info_.used)
-                    format_info_.reset();
-            } else if (c == '}') {
-                bool temp_arg = is_arg;
-                is_arg = false;
-                if (temp_arg && args_data_cursor < args_data_len) {
-                    auto write_begin_pos = format_content_cursor - 1;
-                    format_content_cursor = last_left_brace_index;
-                    uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
-                    bq::log_arg_type_enum type_info = (bq::log_arg_type_enum)(type_info_i);
-                    switch (type_info) {
-                    case bq::log_arg_type_enum::unsupported_type:
-                        bq::util::log_device_console(bq::log_level::warning, "non_primitivi_type is not supported yet");
-                        break;
-                    case bq::log_arg_type_enum::null_type:
-                        assert(sizeof(void*) >= 4);
-                        insert_str_utf8("null", (uint32_t)(sizeof("null") - 1));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::pointer_type:
-                        assert(sizeof(void*) >= 4);
-                        {
-                            const void* arg_data_ptr = *((const void**)(args_data_ptr + args_data_cursor + 4));
-                            insert_pointer(arg_data_ptr);
-                            args_data_cursor += 4 + sizeof(uint64_t); // use 64bit pointer for serialize
-                        }
-                        break;
-                    case bq::log_arg_type_enum::bool_type:
-                        insert_bool(*(const bool*)(args_data_ptr + args_data_cursor + 2));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::char_type:
-                        insert_char(*(const char*)(args_data_ptr + args_data_cursor + 2));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::char16_type:
-                        insert_char16(*(const char16_t*)(args_data_ptr + args_data_cursor + 2));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::char32_type:
-                        insert_char32(*(const char32_t*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += 8;
-                        break;
-                    case bq::log_arg_type_enum::int8_type:
-                        insert_integral_signed(*(const int8_t*)(args_data_ptr + args_data_cursor + 2));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::uint8_type:
-                        insert_integral_unsigned(*(const uint8_t*)(args_data_ptr + args_data_cursor + 2));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::int16_type:
-                        insert_integral_signed(*(const int16_t*)(args_data_ptr + args_data_cursor + 2));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::uint16_type:
-                        insert_integral_unsigned(*(const uint16_t*)(args_data_ptr + args_data_cursor + 2));
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::int32_type:
-                        insert_integral_signed(*(const int32_t*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += 8;
-                        break;
-                    case bq::log_arg_type_enum::uint32_type:
-                        insert_integral_unsigned(*(const uint32_t*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += 8;
-                        break;
-                    case bq::log_arg_type_enum::int64_type:
-                        insert_integral_signed(*(const int64_t*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += 12;
-                        break;
-                    case bq::log_arg_type_enum::uint64_type:
-                        insert_integral_unsigned(*(const uint64_t*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += 12;
-                        break;
-                    case bq::log_arg_type_enum::float_type:
-                        insert_decimal(*(const float*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += (4 + sizeof(float));
-                        break;
-                    case bq::log_arg_type_enum::double_type:
-                        insert_decimal(*(const double*)(args_data_ptr + args_data_cursor + 4));
-                        args_data_cursor += (4 + sizeof(double));
-                        break;
-                    case bq::log_arg_type_enum::string_utf8_type: {
-                        const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
-                        const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
-                        uint32_t str_len = *len_ptr;
-                        insert_str_utf8(str, str_len);
-                        args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
-                    } break;
-                    case bq::log_arg_type_enum::string_utf16_type: {
-                        const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
-                        const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
-                        uint32_t str_len = *len_ptr;
-                        insert_str_utf16(str, str_len);
-                        args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+        while (i < format_data_len) {
+            bool found_brace = false;
+            // Step 1: Utilize SIMD-accelerated search to copy content until a brace is encountered.
+            uint32_t remaining = format_data_len - i;
+            uint32_t copied = find_brace_and_copy(format_data_ptr + i, remaining, &format_content[format_content_cursor], found_brace);
 
-                    } break;
-                    default:
-                        break;
-                    }
+            i += copied;
+            format_content_cursor += copied;
 
-                    assert(args_data_cursor <= args_data_len);
-                    fill_and_alignment(write_begin_pos);
-                    uint32_t written_len = format_content_cursor - last_left_brace_index;
-                    safe_buff_size += written_len;
-                    expand_format_content_buff_size(safe_buff_size);
+            if (found_brace) {
+                // Ensure space for potential next characters.
 
-                    if (args_data_cursor == args_data_len) {
-                        if (format_data_len > i) {
-                            expand_format_content_buff_size(format_content_cursor + format_data_len - i);
-                            memcpy((char*)&format_content[format_content_cursor], format_data_ptr + i, format_data_len - i);
-                            format_content_cursor += (format_data_len - i);
-                        }
-                        return;
-                    }
-                    continue;
-                }
-            } else if (is_arg) {
-                if (args_data_cursor < args_data_len) {
-                    format_info_ = c20_format(&format_data_ptr[cursor], format_data_len - cursor);
-                    if (format_info_.offset == 0) {
-                        if (!isdigit((int32_t)(uint8_t)c) && !isspace((int32_t)(uint8_t)c)) {
-                            is_arg = false;
-                        }
-                    } else {
-                        i += (format_info_.offset - 1);
+                char c = format_data_ptr[i]; // Expecting '{' or '}'
+                i++; // Advance past the brace
+
+                if (i < format_data_len) {
+                    char next_c = format_data_ptr[i];
+                    // Only handle "}}" as escape. "{{" is handled by nested brace detection logic.
+                    if (c == '}' && next_c == '}') {
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = '}';
+                        i++;
                         continue;
                     }
                 }
+
+                if (c == '}') { // Handle unbalanced '}', treating it as a literal character.
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '}';
+                    continue;
+                }
+
+                if (format_info_.used)
+                    format_info_.reset();
+
+                // Parse format string (e.g. "{:.2f}")
+                if (args_data_cursor < args_data_len) {
+                    // Look ahead for the closing brace '}' to determine the length of the format specifier.
+                    int32_t format_spec_len = 0;
+                    bool format_spec_closed = false;
+                    for (uint32_t k = i; k < format_data_len && k < i + 20; ++k) { // Limit lookahead to avoid excessive scanning.
+                        char c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            // Nested brace found (including {{), treat the starting brace as literal
+                            format_spec_closed = false;
+                            break;
+                        }
+                        format_spec_len++;
+                    }
+
+                    if (format_spec_closed) {
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1); // advance past format spec and '}'
+                        } else {
+                            i += static_cast<uint32_t>(format_spec_len + 1); // advance past content and '}'
+                        }
+
+                        auto write_begin_pos = format_content_cursor;
+                        uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
+                        bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
+
+                        switch (type_info) {
+                        case bq::log_arg_type_enum::unsupported_type:
+                            bq::util::log_device_console(bq::log_level::warning, "non_primitivi_type is not supported yet");
+                            break;
+                        case bq::log_arg_type_enum::null_type:
+                            assert(sizeof(void*) >= 4);
+                            insert_str_utf8("null", static_cast<uint32_t>(sizeof("null") - 1));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::pointer_type:
+                            assert(sizeof(void*) >= 4);
+                            {
+                                const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
+                                insert_pointer(arg_data_ptr);
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); // use 64bit pointer for serialize
+                            }
+                            break;
+                        case bq::log_arg_type_enum::bool_type:
+                            insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char_type:
+                            insert_char(*reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char16_type:
+                            insert_char16(*reinterpret_cast<const char16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char32_type:
+                            insert_char32(*reinterpret_cast<const char32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 8;
+                            break;
+                        case bq::log_arg_type_enum::int8_type:
+                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::uint8_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::int16_type:
+                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::uint16_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::int32_type:
+                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 8;
+                            break;
+                        case bq::log_arg_type_enum::uint32_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 8;
+                            break;
+                        case bq::log_arg_type_enum::int64_type:
+                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 12;
+                            break;
+                        case bq::log_arg_type_enum::uint64_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 12;
+                            break;
+                        case bq::log_arg_type_enum::float_type:
+                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
+                            break;
+                        case bq::log_arg_type_enum::double_type:
+                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
+                            break;
+                        case bq::log_arg_type_enum::string_utf8_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf8(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        case bq::log_arg_type_enum::string_utf16_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf16(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        default:
+                            break;
+                        }
+
+                        assert(args_data_cursor <= args_data_len);
+                        fill_and_alignment(write_begin_pos);
+
+                        // Check buffer size after insertion (insert functions handle it, but good to be safe)
+                        uint32_t safe_buff_size = format_content_cursor + (format_data_len - i); // Approx remaining
+                        expand_format_content_buff_size(safe_buff_size);
+
+                    } else {
+                        // Unclosed brace or complex parsing failure, treat as literal '{'
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = '{';
+                        // i was already incremented past '{'
+                    }
+                } else {
+                    // No more args, treat as literal '{'
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '{';
+                }
             }
-            format_content[format_content_cursor++] = c;
         }
     }
 
@@ -606,150 +866,216 @@ namespace bq {
         const uint8_t* args_data_ptr = log_entry.get_log_args_data();
         uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char16_t* format_data_ptr = (const char16_t*)log_entry.get_format_string_data();
-        uint32_t format_data_len = *((uint32_t*)format_data_ptr);
-        format_data_ptr += sizeof(uint32_t) / sizeof(char16_t);
+        uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
 
-        // (* 3 / 2 + 1) make sure enough space, maybe waste
         uint32_t safe_buff_size = format_content_cursor + (uint32_t)(((size_t)format_data_len * 3) >> 1);
         expand_format_content_buff_size(safe_buff_size);
         uint32_t wchar_len = format_data_len >> 1;
 
         uint32_t i = 0;
-        bool is_arg = false;
-        uint32_t last_left_brace_index = 0;
         uint32_t args_data_cursor = 0;
 
-        uint32_t codepoint = 0;
-        uint32_t surrogate = 0;
+        while (i < wchar_len) {
+            bool found_brace = false;
+            bool non_ascii = false;
 
-        while (++i <= wchar_len) {
-            uint32_t cursor = i - 1;
-            char16_t c = format_data_ptr[cursor];
+            // Step 1: Attempt Optimistic Conversion and Copy utilizing SIMD.
+            // This process stops at the first non-ASCII character or brace.
+            uint32_t remaining = wchar_len - i;
+            uint32_t processed = find_brace_and_convert_u16(format_data_ptr + i, remaining, &format_content[format_content_cursor], found_brace, non_ascii);
 
-            if (surrogate) {
-                if (c >= 0xDC00 && c <= 0xDFFF) {
-                    codepoint = 0x10000 + (c - 0xDC00) + ((surrogate - 0xD800) << 10);
-                    surrogate = 0;
-                } else {
-                    surrogate = 0;
-                    continue;
+            i += processed;
+            format_content_cursor += processed;
+
+            if (non_ascii) {
+                // Fallback to scalar char conversion for the current character.
+                if (i < wchar_len) {
+                    char16_t c = format_data_ptr[i];
+                    i++;
+
+                    if (c < 0x80) {
+                        format_content[format_content_cursor++] = (char)c;
+                    } else if (c < 0x800) {
+                        expand_format_content_buff_size(format_content_cursor + 2);
+                        format_content[format_content_cursor++] = (char)(0xC0 | (c >> 6));
+                        format_content[format_content_cursor++] = (char)(0x80 | (c & 0x3F));
+                    } else if (c >= 0xD800 && c <= 0xDBFF) {
+                        // Handle High Surrogate
+                        if (i < wchar_len) {
+                            char16_t c2 = format_data_ptr[i];
+                            if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
+                                i++;
+                                uint32_t codepoint = static_cast<uint32_t>(0x10000) + (static_cast<uint32_t>(c) - 0xD800) * 0x400 + (static_cast<uint32_t>(c2) - 0xDC00);
+                                expand_format_content_buff_size(format_content_cursor + 4);
+                                format_content[format_content_cursor++] = (char)(0xF0 | (codepoint >> 18));
+                                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
+                                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+                                format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
+                            }
+                        }
+                    } else if (c >= 0xDC00 && c <= 0xDFFF) {
+                        // Orphan low surrogate, ignore.
+                    } else {
+                        // Basic Multilingual Plane (BMP) character
+                        expand_format_content_buff_size(format_content_cursor + 3);
+                        format_content[format_content_cursor++] = (char)(0xE0 | (c >> 12));
+                        format_content[format_content_cursor++] = (char)(0x80 | ((c >> 6) & 0x3F));
+                        format_content[format_content_cursor++] = (char)(0x80 | (c & 0x3F));
+                    }
                 }
-            } else {
-                if (c < 0x80) {
-                    codepoint = c;
-                } else if (c >= 0xD800 && c <= 0xDBFF) {
-                    surrogate = c;
-                } else if (c >= 0xDC00 && c <= 0xDFFF) {
-                    continue;
-                } else {
-                    codepoint = c;
-                }
+                continue;
             }
 
-            if (surrogate != 0)
-                continue;
+            if (found_brace) {
+                char16_t c = format_data_ptr[i];
+                i++;
 
-            if (codepoint < 0x80) {
-                if (args_data_cursor >= args_data_len) {
-                } else if (c == ('{')) {
-                    last_left_brace_index = format_content_cursor;
-                    is_arg = true;
-                    if (format_info_.used)
-                        format_info_.reset();
-                } else if (c == '}') {
-                    bool temp_arg = is_arg;
-                    is_arg = false;
-                    if (temp_arg && args_data_cursor < args_data_len) {
-                        auto write_begin_pos = format_content_cursor - 1;
-                        format_content_cursor = last_left_brace_index;
+                if (i < wchar_len) {
+                    char16_t next_c = format_data_ptr[i];
+                    // Only handle "}}" as escape. "{{" is handled by nested brace detection logic.
+                    if (c == '}' && next_c == '}') {
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = static_cast<char>('}');
+                        i++;
+                        continue;
+                    }
+                }
+
+                if (c == '}') {
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '}';
+                    continue;
+                }
+
+                if (format_info_.used)
+                    format_info_.reset();
+
+                // Parse format string (simple scan in U16)
+                if (args_data_cursor < args_data_len) {
+
+                    int32_t format_spec_len = 0;
+                    bool format_spec_closed = false;
+                    for (uint32_t k = i; k < wchar_len && k < i + 20; ++k) {
+                        char16_t c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            bool is_escaped = false;
+                            if (k + 1 < wchar_len && format_data_ptr[k + 1] == '{') {
+                                is_escaped = true;
+                            }
+
+                            if (!is_escaped) {
+                                format_spec_closed = false;
+                                break;
+                            } else {
+                                k++;
+                                format_spec_len++;
+                            }
+                        }
+                        format_spec_len++;
+                    }
+
+                    if (format_spec_closed) {
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1);
+                        } else {
+                            i += static_cast<uint32_t>(format_spec_len + 1);
+                        }
+
+                        auto write_begin_pos = format_content_cursor;
                         uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
-                        bq::log_arg_type_enum type_info = (bq::log_arg_type_enum)(type_info_i);
+                        bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
+
                         switch (type_info) {
                         case bq::log_arg_type_enum::unsupported_type:
                             bq::util::log_device_console(bq::log_level::warning, "non_primitivi_type is not supported yet");
                             break;
                         case bq::log_arg_type_enum::null_type:
                             assert(sizeof(void*) >= 4);
-                            insert_str_utf8("null", (uint32_t)(sizeof("null") - 1));
+                            insert_str_utf8("null", static_cast<uint32_t>(sizeof("null") - 1));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
                             {
-                                const void* ptr_data = *((const void**)(args_data_ptr + args_data_cursor + 4));
+                                const void* ptr_data = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
                                 insert_pointer(ptr_data);
-                                args_data_cursor += 4 + sizeof(uint64_t); // use 64bit pointer for serialize
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             }
                             break;
                         case bq::log_arg_type_enum::bool_type:
-                            insert_bool(*(const bool*)(args_data_ptr + args_data_cursor + 2));
+                            insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::char_type:
-                            insert_char(*(const char*)(args_data_ptr + args_data_cursor + 2));
+                            insert_char(*reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 2));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::char16_type:
-                            insert_char16(*(const char16_t*)(args_data_ptr + args_data_cursor + 2));
+                            insert_char16(*reinterpret_cast<const char16_t*>(args_data_ptr + args_data_cursor + 2));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::char32_type:
-                            insert_char32(*(const char32_t*)(args_data_ptr + args_data_cursor + 4));
+                            insert_char32(*reinterpret_cast<const char32_t*>(args_data_ptr + args_data_cursor + 4));
                             args_data_cursor += 8;
                             break;
                         case bq::log_arg_type_enum::int8_type:
-                            insert_integral_signed(*(const int8_t*)(args_data_ptr + args_data_cursor + 2));
+                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args_data_ptr + args_data_cursor + 2));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::uint8_type:
-                            insert_integral_unsigned(*(const uint8_t*)(args_data_ptr + args_data_cursor + 2));
+                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args_data_ptr + args_data_cursor + 2));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::int16_type:
-                            insert_integral_signed(*(const int16_t*)(args_data_ptr + args_data_cursor + 2));
+                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args_data_ptr + args_data_cursor + 2));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::uint16_type:
-                            insert_integral_unsigned(*(const uint16_t*)(args_data_ptr + args_data_cursor + 2));
+                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args_data_ptr + args_data_cursor + 2));
                             args_data_cursor += 4;
                             break;
                         case bq::log_arg_type_enum::int32_type:
-                            insert_integral_signed(*(const int32_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(int32_t));
+                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int32_t));
                             break;
                         case bq::log_arg_type_enum::uint32_type:
-                            insert_integral_unsigned(*(const uint32_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(uint32_t));
+                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint32_t));
                             break;
                         case bq::log_arg_type_enum::int64_type:
-                            insert_integral_signed(*(const int64_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(int64_t));
+                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int64_t));
                             break;
                         case bq::log_arg_type_enum::uint64_type:
-                            insert_integral_unsigned(*(const uint64_t*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(uint64_t));
+                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             break;
                         case bq::log_arg_type_enum::float_type:
-                            insert_decimal(*(const float*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(float));
+                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
                             break;
                         case bq::log_arg_type_enum::double_type:
-                            insert_decimal(*(const double*)(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += (4 + sizeof(double));
+                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {
-                            const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
-                            const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf8(str, str_len);
-                            args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                         } break;
                         case bq::log_arg_type_enum::string_utf16_type: {
-                            const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
-                            const char* str = (const char*)args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t);
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf16(str, str_len);
-                            args_data_cursor += 4 + sizeof(uint32_t) + (uint32_t)bq::align_4(str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
                         } break;
                         default:
                             break;
@@ -757,44 +1083,19 @@ namespace bq {
 
                         assert(args_data_cursor <= args_data_len);
                         fill_and_alignment(write_begin_pos);
-                        uint32_t written_len = format_content_cursor - last_left_brace_index;
-                        safe_buff_size += written_len;
+
+                        safe_buff_size = format_content_cursor + (uint32_t)((wchar_len - i) * 3 / 2);
                         expand_format_content_buff_size(safe_buff_size);
-                        continue;
+                    } else {
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = '{';
                     }
-                } else if (is_arg) {
-                    if (args_data_cursor < args_data_len) {
-                        format_info_ = c20_format(&format_data_ptr[cursor], format_data_len - cursor);
-                        if (format_info_.offset == 0) {
-                            if (!isdigit((int32_t)(uint8_t)c) && !isspace((int32_t)(uint8_t)c)) {
-                                is_arg = false;
-                            }
-                        } else {
-                            i += (format_info_.offset - 1);
-                            continue;
-                        }
-                    }
+                } else {
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '{';
                 }
-                format_content[format_content_cursor++] = (char)codepoint;
-            } else if (codepoint < 0x0800) {
-                format_content[format_content_cursor++] = (char)(0xC0 | (codepoint >> 6));
-                format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
-            } else if (codepoint < 0x10000) {
-                format_content[format_content_cursor++] = (char)(0xE0 | (codepoint >> 12));
-                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-                format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
-            } else {
-                format_content[format_content_cursor++] = (char)(0xF0 | (codepoint >> 18));
-                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
-                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-                format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
             }
         }
-    }
-
-    void layout::clear_format_content()
-    {
-        format_content_cursor = 0;
     }
 
     void layout::expand_format_content_buff_size(uint32_t new_size)
@@ -820,64 +1121,12 @@ namespace bq {
     uint32_t layout::insert_str_utf16(const char* str, const uint32_t len)
     {
         // (* 3 / 2 + 1) make sure enough space, maybe waste
-        expand_format_content_buff_size(format_content_cursor + (len * 3 / 2 + 1));
-        uint32_t codepoint = 0;
-        uint32_t surrogate = 0;
-
-        uint32_t wchar_len = len >> 1;
-
-        const char16_t* s = (const char16_t*)(str);
-        const char16_t* p = s;
-
-        char16_t c;
-        while ((uint32_t)(p - s) < wchar_len && (c = *p++) != 0) {
-            if (surrogate) {
-                if (c >= 0xDC00 && c <= 0xDFFF) {
-                    codepoint = 0x10000 + (c - 0xDC00) + ((surrogate - 0xD800) << 10);
-                    surrogate = 0;
-                } else {
-                    surrogate = 0;
-                    continue;
-                }
-            } else {
-                if (c < 0x80) {
-                    format_content[format_content_cursor++] = (char)c;
-
-                    while ((uint32_t)(p - s) < wchar_len && *p && *p < 0x80) {
-                        format_content[format_content_cursor++] = (char)*p++;
-                    }
-
-                    continue;
-                } else if (c >= 0xD800 && c <= 0xDBFF) {
-                    surrogate = c;
-                } else if (c >= 0xDC00 && c <= 0xDFFF) {
-                    continue;
-                } else {
-                    codepoint = c;
-                }
-            }
-
-            if (surrogate != 0)
-                continue;
-
-            if (codepoint < 0x80) {
-                format_content[format_content_cursor++] = (char)codepoint;
-            } else if (codepoint < 0x0800) {
-                format_content[format_content_cursor++] = (char)(0xC0 | (codepoint >> 6));
-                format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
-            } else if (codepoint < 0x10000) {
-                format_content[format_content_cursor++] = (char)(0xE0 | (codepoint >> 12));
-                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-                format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
-            } else {
-                format_content[format_content_cursor++] = (char)(0xF0 | (codepoint >> 18));
-                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
-                format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-                format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
-            }
-        }
+        uint32_t max_bytes_len = (len * 3 / 2 + 1);
+        expand_format_content_buff_size(format_content_cursor + max_bytes_len);
+        auto write_size = bq::util::utf16_to_utf8(reinterpret_cast<const char16_t*>(str), len >> 1, &format_content[format_content_cursor], max_bytes_len);
+        format_content_cursor += write_size;
         assert(format_content_cursor <= format_content.size());
-        return len;
+        return write_size;
     }
 
     void layout::insert_pointer(const void* ptr)
@@ -913,7 +1162,7 @@ namespace bq {
 
     void layout::insert_char(char value)
     {
-        expand_format_content_buff_size(format_content_cursor + sizeof(char));
+        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(sizeof(char)));
         format_content[format_content_cursor] = value;
         ++format_content_cursor;
     }
@@ -978,21 +1227,21 @@ namespace bq {
         }
 
         auto begin_cursor = format_content_cursor;
-        int32_t eCount = 0;
+        uint32_t e_count = 0;
         do {
-            int32_t digit = value % base;
+            int32_t digit = static_cast<int32_t>(value % base);
             if (digit < 0xA) {
-                format_content[format_content_cursor] = '0' + (char)digit;
+                format_content[format_content_cursor] = static_cast<char>('0' + digit);
             } else {
                 if (format_info_.upper)
-                    format_content[format_content_cursor] = 'A' + (char)digit - (char)0xA;
+                    format_content[format_content_cursor] = static_cast<char>('A' + digit - 0xA);
                 else
-                    format_content[format_content_cursor] = 'a' + (char)digit - (char)0xA;
+                    format_content[format_content_cursor] = static_cast<char>('a' + digit - 0xA);
             }
             value /= base;
             ++format_content_cursor;
             if (value > base)
-                eCount++;
+                e_count++;
         } while (value != 0);
 
         if (format_info_.type == 'e') {
@@ -1004,7 +1253,7 @@ namespace bq {
             // 000000.1 -> 1.000000
             reverse(begin_cursor, format_content_cursor - 1);
 
-            fill_e_style(eCount, begin_cursor);
+            fill_e_style(e_count, begin_cursor);
         } else
             reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
@@ -1032,7 +1281,7 @@ namespace bq {
         } else {
             expand_format_content_buff_size(format_content_cursor + 64);
         }
-        //+- fill
+        //+-
         if (value < 0) {
             format_content[format_content_cursor++] = '-';
         } else {
@@ -1060,20 +1309,20 @@ namespace bq {
 
         auto begin_cursor = format_content_cursor;
         // Scientific Counting Check
-        int32_t eCount = 0;
+        uint32_t e_count = 0;
         do {
-            char digit = static_cast<char>(abs((int32_t)(value % base)));
+            char digit = static_cast<char>(abs(static_cast<int32_t>(value % static_cast<int32_t>(base))));
             if (digit < 0xA) {
-                format_content[format_content_cursor] = '0' + digit;
+                format_content[format_content_cursor] = static_cast<char>('0' + digit);
             } else {
                 if (format_info_.upper)
-                    format_content[format_content_cursor] = 'A' + digit - 0xA;
+                    format_content[format_content_cursor] = static_cast<char>('A' + digit - 0xA);
                 else
-                    format_content[format_content_cursor] = 'a' + digit - 0xA;
+                    format_content[format_content_cursor] = static_cast<char>('a' + digit - 0xA);
             }
             value /= base;
             if (value > base)
-                eCount++; // Counting
+                e_count++; // Counting
             ++format_content_cursor;
         } while (value != 0);
         if (format_info_.type == 'e') {
@@ -1085,7 +1334,7 @@ namespace bq {
             // 000000.1 -> 1.000000
             reverse(begin_cursor, format_content_cursor - 1);
 
-            fill_e_style(eCount, begin_cursor);
+            fill_e_style(e_count, begin_cursor);
         } else
             reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
@@ -1095,7 +1344,7 @@ namespace bq {
     {
         if (format_info_.type == 'e')
             format_info_.type = 'Z';
-        int int_width = 0;
+        uint32_t int_width = 0;
         auto precision = (int32_t)((format_info_.precision != 0xFFFFFFFF) ? format_info_.precision : 7);
         auto begin_cursor = format_content_cursor;
         if (value >= 0) {
@@ -1107,12 +1356,12 @@ namespace bq {
             int_width = insert_integral_signed(i_part, 10);
             value -= static_cast<float>(i_part);
         }
-        if (format_info_.width > 0 && format_info_.width < (uint32_t)precision + 1 + int_width) {
-            precision = (format_info_.width - int_width - 1);
+        if (format_info_.width > 0 && format_info_.width < static_cast<uint32_t>(precision) + 1 + int_width) {
+            precision = static_cast<int32_t>(format_info_.width - int_width - 1);
         }
 
         value = fabsf(value);
-        expand_format_content_buff_size(format_content_cursor + precision + 5); // more 5 maybe use in e style
+        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(precision) + 5); // more 5 maybe use in e style
         uint32_t point_index = 0;
         if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
             point_index = format_content_cursor;
@@ -1120,10 +1369,10 @@ namespace bq {
         }
         while (precision > 0) {
             value *= 10;
-            int32_t digit = (int32_t)value;
-            value -= (float)(digit);
+            int32_t digit = static_cast<int32_t>(value);
+            value -= static_cast<float>(digit);
             --precision;
-            format_content[format_content_cursor++] = '0' + (char)digit;
+            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
         }
 
         if (format_info_.type == 'Z') {
@@ -1150,7 +1399,7 @@ namespace bq {
     {
         if (format_info_.type == 'e')
             format_info_.type = 'Z';
-        int int_width = 0;
+        uint32_t int_width = 0;
         auto precision = (int32_t)((format_info_.precision != 0xFFFFFFFF) ? format_info_.precision : 15);
         auto begin_cursor = format_content_cursor;
         if (value >= 0) {
@@ -1162,14 +1411,14 @@ namespace bq {
             int_width = insert_integral_signed(i_part, 10);
             value -= static_cast<double>(i_part);
         }
-        if (format_info_.width > 0 && format_info_.width < (uint32_t)precision + 1 + int_width) {
-            precision = (format_info_.width - int_width - 1);
+        if (format_info_.width > 0 && format_info_.width < static_cast<uint32_t>(precision) + 1 + int_width) {
+            precision = (static_cast<int32_t>(format_info_.width) - static_cast<int32_t>(int_width) - 1);
             if (precision < 0)
                 precision = 0;
         }
 
         value = fabs(value);
-        expand_format_content_buff_size(format_content_cursor + precision + 5); // more 5 maybe use for e-style
+        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(precision) + 5); // more 5 maybe use for e-style
         uint32_t point_index = 0;
         if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
             point_index = format_content_cursor;
@@ -1178,10 +1427,10 @@ namespace bq {
         auto temp_precision = precision;
         while (temp_precision > 0) {
             value *= 10;
-            int32_t digit = (int32_t)value;
-            value -= (double)(digit);
+            int32_t digit = static_cast<int32_t>(value);
+            value -= static_cast<double>(digit);
             --temp_precision;
-            format_content[format_content_cursor++] = '0' + (char)digit;
+            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
         }
         if (format_info_.type == 'Z') {
             format_info_.type = 'e';
@@ -1212,4 +1461,481 @@ namespace bq {
             --end_cursor;
         }
     }
+
+#ifdef BQ_UNIT_TEST
+    uint32_t layout::test_find_brace_and_copy_sw(const char* src, uint32_t len, char* dst, bool& found_brace)
+    {
+        return _impl_find_brace_and_copy_sw(src, len, dst, found_brace);
+    }
+    uint32_t layout::test_find_brace_and_convert_u16_sw(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii)
+    {
+        return _impl_find_brace_and_convert_u16_sw(src, len, dst, found_brace, non_ascii);
+    }
+#if defined(BQ_X86)
+    uint32_t layout::test_find_brace_and_copy_avx2(const char* src, uint32_t len, char* dst, bool& found_brace)
+    {
+        return _impl_find_brace_and_copy_avx2(src, len, dst, found_brace);
+    }
+    uint32_t layout::test_find_brace_and_copy_sse(const char* src, uint32_t len, char* dst, bool& found_brace)
+    {
+        return _impl_find_brace_and_copy_sse(src, len, dst, found_brace);
+    }
+    uint32_t layout::test_find_brace_and_convert_u16_avx2(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii)
+    {
+        return _impl_find_brace_and_convert_u16_avx2(src, len, dst, found_brace, non_ascii);
+    }
+    uint32_t layout::test_find_brace_and_convert_u16_sse(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii)
+    {
+        return _impl_find_brace_and_convert_u16_sse(src, len, dst, found_brace, non_ascii);
+    }
+#elif defined(BQ_ARM_NEON)
+    uint32_t layout::test_find_brace_and_copy_neon(const char* src, uint32_t len, char* dst, bool& found_brace)
+    {
+        return _impl_find_brace_and_copy_neon(src, len, dst, found_brace);
+    }
+    uint32_t layout::test_find_brace_and_convert_u16_neon(const char16_t* src, uint32_t len, char* dst, bool& found_brace, bool& non_ascii)
+    {
+        return _impl_find_brace_and_convert_u16_neon(src, len, dst, found_brace, non_ascii);
+    }
+#endif
+
+    void layout::python_style_format_content_legacy(const bq::log_entry_handle& log_entry)
+    {
+        if (log_entry.get_log_head().log_format_str_type == static_cast<uint16_t>(log_arg_type_enum::string_utf8_type)) {
+            python_style_format_content_utf8_legacy(log_entry);
+        } else {
+            python_style_format_content_utf16_legacy(log_entry);
+        }
+        expand_format_content_buff_size(format_content_cursor + 1);
+        format_content[format_content_cursor] = '\0';
+        assert(format_content_cursor < format_content.size());
+    }
+
+    void layout::python_style_format_content_utf8_legacy(const bq::log_entry_handle& log_entry)
+    {
+        const uint8_t* args_data_ptr = log_entry.get_log_args_data();
+        uint32_t args_data_len = log_entry.get_log_args_data_size();
+        const char* format_data_ptr = log_entry.get_format_string_data();
+        uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
+
+        expand_format_content_buff_size(format_content_cursor + format_data_len);
+
+        uint32_t i = 0;
+        uint32_t args_data_cursor = 0;
+
+        while (i < format_data_len) {
+            bool found_brace = false;
+
+            // Legacy slow copy
+            while (i < format_data_len) {
+                char c = format_data_ptr[i];
+                if (c == '{' || c == '}') {
+                    found_brace = true;
+                    break;
+                }
+                expand_format_content_buff_size(format_content_cursor + 1);
+                format_content[format_content_cursor++] = c;
+                i++;
+            }
+
+            if (found_brace) {
+                char c = format_data_ptr[i];
+                i++;
+
+                if (i < format_data_len) {
+                    char next_c = format_data_ptr[i];
+                    if (c == '}' && next_c == '}') {
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = '}';
+                        i++;
+                        continue;
+                    }
+                }
+
+                if (c == '}') {
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '}';
+                    continue;
+                }
+
+                if (format_info_.used)
+                    format_info_.reset();
+
+                if (args_data_cursor < args_data_len) {
+                    int32_t format_spec_len = 0;
+                    bool format_spec_closed = false;
+                    for (uint32_t k = i; k < format_data_len && k < i + 20; ++k) {
+                        char c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            format_spec_closed = false;
+                            break;
+                        }
+                        format_spec_len++;
+                    }
+
+                    if (format_spec_closed) {
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1);
+                        } else {
+                            i += static_cast<uint32_t>(format_spec_len + 1);
+                        }
+
+                        auto write_begin_pos = format_content_cursor;
+                        uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
+                        bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
+
+                        switch (type_info) {
+                        case bq::log_arg_type_enum::unsupported_type:
+                            bq::util::log_device_console(bq::log_level::warning, "non_primitivi_type is not supported yet");
+                            break;
+                        case bq::log_arg_type_enum::null_type:
+                            assert(sizeof(void*) >= 4);
+                            insert_str_utf8("null", static_cast<uint32_t>(sizeof("null") - 1));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::pointer_type:
+                            assert(sizeof(void*) >= 4);
+                            {
+                                const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
+                                insert_pointer(arg_data_ptr);
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
+                            }
+                            break;
+                        case bq::log_arg_type_enum::bool_type:
+                            insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char_type:
+                            insert_char(*reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char16_type:
+                            insert_char16(*reinterpret_cast<const char16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char32_type:
+                            insert_char32(*reinterpret_cast<const char32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 8;
+                            break;
+                        case bq::log_arg_type_enum::int8_type:
+                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::uint8_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::int16_type:
+                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::uint16_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::int32_type:
+                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 8;
+                            break;
+                        case bq::log_arg_type_enum::uint32_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 8;
+                            break;
+                        case bq::log_arg_type_enum::int64_type:
+                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 12;
+                            break;
+                        case bq::log_arg_type_enum::uint64_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 12;
+                            break;
+                        case bq::log_arg_type_enum::float_type:
+                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
+                            break;
+                        case bq::log_arg_type_enum::double_type:
+                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
+                            break;
+                        case bq::log_arg_type_enum::string_utf8_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf8(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        case bq::log_arg_type_enum::string_utf16_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf16(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        default:
+                            break;
+                        }
+
+                        assert(args_data_cursor <= args_data_len);
+                        fill_and_alignment(write_begin_pos);
+
+                        expand_format_content_buff_size(format_content_cursor + (format_data_len - i));
+
+                    } else {
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = '{';
+                    }
+                } else {
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '{';
+                }
+            }
+        }
+    }
+
+    void layout::python_style_format_content_utf16_legacy(const bq::log_entry_handle& log_entry)
+    {
+        const uint8_t* args_data_ptr = log_entry.get_log_args_data();
+        uint32_t args_data_len = log_entry.get_log_args_data_size();
+        const char16_t* format_data_ptr = (const char16_t*)log_entry.get_format_string_data();
+        uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
+
+        uint32_t safe_buff_size = format_content_cursor + (uint32_t)(((size_t)format_data_len * 3) >> 1);
+        expand_format_content_buff_size(safe_buff_size);
+        uint32_t wchar_len = format_data_len >> 1;
+
+        uint32_t i = 0;
+        uint32_t args_data_cursor = 0;
+
+        while (i < wchar_len) {
+            bool found_brace = false;
+
+            // Legacy slow copy
+            while (i < wchar_len) {
+                char16_t c = format_data_ptr[i];
+                if (c == u'{' || c == u'}') {
+                    found_brace = true;
+                    break;
+                }
+
+                // Legacy scalar utf16->utf8 conversion
+                if (c < 0x80) {
+                    format_content[format_content_cursor++] = (char)c;
+                } else if (c < 0x800) {
+                    expand_format_content_buff_size(format_content_cursor + 2);
+                    format_content[format_content_cursor++] = (char)(0xC0 | (c >> 6));
+                    format_content[format_content_cursor++] = (char)(0x80 | (c & 0x3F));
+                } else if (c >= 0xD800 && c <= 0xDBFF) {
+                    if (i + 1 < wchar_len) {
+                        char16_t c2 = format_data_ptr[i + 1];
+                        if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
+                            i++; // consume extra char
+                            uint32_t codepoint = static_cast<uint32_t>(0x10000) + (static_cast<uint32_t>(c) - 0xD800) * 0x400 + (static_cast<uint32_t>(c2) - 0xDC00);
+                            expand_format_content_buff_size(format_content_cursor + 4);
+                            format_content[format_content_cursor++] = (char)(0xF0 | (codepoint >> 18));
+                            format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
+                            format_content[format_content_cursor++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+                            format_content[format_content_cursor++] = (char)(0x80 | (codepoint & 0x3F));
+                        }
+                    }
+                } else if (c >= 0xDC00 && c <= 0xDFFF) {
+                    // ignore
+                } else {
+                    expand_format_content_buff_size(format_content_cursor + 3);
+                    format_content[format_content_cursor++] = (char)(0xE0 | (c >> 12));
+                    format_content[format_content_cursor++] = (char)(0x80 | ((c >> 6) & 0x3F));
+                    format_content[format_content_cursor++] = (char)(0x80 | (c & 0x3F));
+                }
+
+                i++;
+            }
+
+            if (found_brace) {
+                char16_t c = format_data_ptr[i];
+                i++;
+
+                if (i < wchar_len) {
+                    char16_t next_c = format_data_ptr[i];
+                    if (c == '}' && next_c == '}') {
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = '}';
+                        i++;
+                        continue;
+                    }
+                }
+
+                if (c == '}') {
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '}';
+                    continue;
+                }
+
+                if (format_info_.used)
+                    format_info_.reset();
+
+                if (args_data_cursor < args_data_len) {
+                    int32_t format_spec_len = 0;
+                    bool format_spec_closed = false;
+                    for (uint32_t k = i; k < wchar_len && k < i + 20; ++k) {
+                        char16_t c_scan = format_data_ptr[k];
+                        if (c_scan == '}') {
+                            format_spec_closed = true;
+                            break;
+                        }
+                        if (c_scan == '{') {
+                            format_spec_closed = false;
+                            break;
+                        }
+                        format_spec_len++;
+                    }
+
+                    if (format_spec_closed) {
+                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                        if (format_info_.offset != 0) {
+                            i += (format_info_.offset + 1);
+                        } else {
+                            i += (uint32_t)(format_spec_len + 1);
+                        }
+
+                        auto write_begin_pos = format_content_cursor;
+                        uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
+                        bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
+
+                        switch (type_info) {
+                        case bq::log_arg_type_enum::unsupported_type:
+                            bq::util::log_device_console(bq::log_level::warning, "non_primitivi_type is not supported yet");
+                            break;
+                        case bq::log_arg_type_enum::null_type:
+                            assert(sizeof(void*) >= 4);
+                            insert_str_utf8("null", static_cast<uint32_t>(sizeof("null") - 1));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::pointer_type:
+                            assert(sizeof(void*) >= 4);
+                            {
+                                const void* ptr_data = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
+                                insert_pointer(ptr_data);
+                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
+                            }
+                            break;
+                        case bq::log_arg_type_enum::bool_type:
+                            insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char_type:
+                            insert_char(*reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char16_type:
+                            insert_char16(*reinterpret_cast<const char16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::char32_type:
+                            insert_char32(*reinterpret_cast<const char32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += 8;
+                            break;
+                        case bq::log_arg_type_enum::int8_type:
+                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::uint8_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::int16_type:
+                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::uint16_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args_data_ptr + args_data_cursor + 2));
+                            args_data_cursor += 4;
+                            break;
+                        case bq::log_arg_type_enum::int32_type:
+                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int32_t));
+                            break;
+                        case bq::log_arg_type_enum::uint32_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint32_t));
+                            break;
+                        case bq::log_arg_type_enum::int64_type:
+                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int64_t));
+                            break;
+                        case bq::log_arg_type_enum::uint64_type:
+                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
+                            break;
+                        case bq::log_arg_type_enum::float_type:
+                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
+                            break;
+                        case bq::log_arg_type_enum::double_type:
+                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
+                            break;
+                        case bq::log_arg_type_enum::string_utf8_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf8(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        case bq::log_arg_type_enum::string_utf16_type: {
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
+                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            uint32_t str_len = *len_ptr;
+                            insert_str_utf16(str, str_len);
+                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                        } break;
+                        default:
+                            break;
+                        }
+
+                        assert(args_data_cursor <= args_data_len);
+                        fill_and_alignment(write_begin_pos);
+
+                        safe_buff_size = format_content_cursor + (uint32_t)((wchar_len - i) * 3 / 2);
+                        expand_format_content_buff_size(safe_buff_size);
+                    } else {
+                        expand_format_content_buff_size(format_content_cursor + 1);
+                        format_content[format_content_cursor++] = '{';
+                    }
+                } else {
+                    expand_format_content_buff_size(format_content_cursor + 1);
+                    format_content[format_content_cursor++] = '{';
+                }
+            }
+        }
+    }
+
+    void layout::test_python_style_format_content_legacy(const bq::log_entry_handle& log_entry)
+    {
+        format_content_cursor = 0;
+        python_style_format_content_legacy(log_entry);
+    }
+
+    void layout::test_python_style_format_content_sw(const bq::log_entry_handle& log_entry)
+    {
+        format_content_cursor = 0;
+#if defined(BQ_X86)
+        bool old_avx = _bq_avx2_supported_;
+        _bq_avx2_supported_ = false;
+#endif
+        python_style_format_content(log_entry);
+#if defined(BQ_X86)
+        _bq_avx2_supported_ = old_avx;
+#endif
+    }
+
+    void layout::test_python_style_format_content_simd(const bq::log_entry_handle& log_entry)
+    {
+        format_content_cursor = 0;
+        python_style_format_content(log_entry);
+    }
+#endif
 }
