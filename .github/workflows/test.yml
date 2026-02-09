@@ -827,13 +827,25 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      - name: Resolve pkg.omnios.org on host
+        run: |
+          PKG_IP=$(dig +short pkg.omnios.org A | grep -E '^[0-9]+\.' | head -1)
+          echo "PKG_OMNIOS_IP=$PKG_IP" >> "$GITHUB_ENV"
+          echo "Resolved pkg.omnios.org -> $PKG_IP"
+
       - name: Run in OmnisOS（Attempt 1）
         uses: vmactions/omnios-vm@v1
         continue-on-error: true
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+            fi
             for i in 1 2 3 4 5; do
               (
                 set -e
@@ -900,9 +912,15 @@ jobs:
         if: steps.CheckRetry.outputs.retry == 'true'
         uses: vmactions/omnios-vm@v1
         with:
+          envs: 'PKG_OMNIOS_IP'
           usesh: true
           mem: 8192
           prepare: |
+            echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+            if [ -n "$PKG_OMNIOS_IP" ]; then
+              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
+            fi
             for i in 1 2 3 4 5; do
               (
                 set -e
