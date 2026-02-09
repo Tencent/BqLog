@@ -68,45 +68,25 @@ jobs:
           set -euo pipefail
           mkdir -p release_assets
 
-          # Known archive extensions, collect directly
-          ARCHIVE_EXTS="zip tar.gz tgz tar.bz2 tar.xz aar har tgz"
-
           for artifact_dir in downloaded_artifacts/*/; do
             name="$(basename "$artifact_dir")"
             echo "=== Processing artifact: $name ==="
 
-            # Collect existing archives and sha256 files from this artifact into release_assets
-            found_archive=false
-            while IFS= read -r -d '' f; do
-              fname="$(basename "$f")"
-              case "$fname" in
-                *.zip|*.tar.gz|*.tgz|*.tar.bz2|*.tar.xz)
-                  cp -f "$f" "release_assets/$fname"
-                  echo "  Collected archive: $fname"
-                  found_archive=true
-                  ;;
-                *.sha256)
-                  cp -f "$f" "release_assets/$fname"
-                  echo "  Collected checksum: $fname"
-                  ;;
-              esac
-            done < <(find "$artifact_dir" -type f -print0)
-
-            # If no archive found in this artifact, it contains loose files that need to be packed
-            if [[ "$found_archive" == "false" ]]; then
-              # Check if there are actual files (skip empty directories)
-              file_count=$(find "$artifact_dir" -type f | wc -l)
-              if (( file_count == 0 )); then
-                echo "  Skipped (empty)"
-                continue
-              fi
-
-              archive_name="${name}.zip"
-              echo "  No archive found, packing as: $archive_name"
-              (cd "$artifact_dir" && zip -qry "$OLDPWD/release_assets/$archive_name" .)
-              (cd release_assets && sha256sum "$archive_name" > "$archive_name.sha256")
+            file_count=$(find "$artifact_dir" -type f | wc -l)
+            if (( file_count == 0 )); then
+              echo "  Skipped (empty)"
+              continue
             fi
+
+            archive_name="${name}.zip"
+            (cd "$artifact_dir" && zip -qry "$OLDPWD/release_assets/$archive_name" .)
+            echo "  Packed: $archive_name"
+
+            (cd release_assets && sha256sum "$archive_name" > "$archive_name.sha256")
+            echo "  Checksum: $archive_name.sha256"
           done
+
+          rm -rf downloaded_artifacts/
 
       - name: Verify SHA-256 checksums
         run: |
