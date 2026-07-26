@@ -15,12 +15,75 @@
 #include "bq_common/platform/win64_includes_begin.h"
 #include <timezoneapi.h>
 #endif
+#if defined(BQ_SWITCH_NN)
+#include <nn/time.h>
+#endif
 
 namespace bq {
+
+#if defined(BQ_SWITCH_NN)
+    // The official SDK libc has no usable localtime/gmtime; civil time is
+    // converted through nn::time instead. time_t is plain seconds since the
+    // Unix epoch here.
+    static void nx_calendar_to_tm(const nn::time::CalendarTime& cal, int32_t day_of_week, int32_t day_of_year, struct tm& out)
+    {
+        memset(&out, 0, sizeof(out));
+        out.tm_year = cal.year - 1900;
+        out.tm_mon = cal.month - 1;
+        out.tm_mday = cal.day;
+        out.tm_hour = cal.hour;
+        out.tm_min = cal.minute;
+        out.tm_sec = cal.second;
+        out.tm_wday = day_of_week; // nn::time::DayOfTheWeek: Sunday == 0, same as struct tm
+        out.tm_yday = day_of_year;
+        out.tm_isdst = -1;
+    }
+
+    static bool nx_localtime(struct tm* dst, const time_t* tptr)
+    {
+        nn::time::PosixTime posix_time;
+        posix_time.time = static_cast<u64>(*tptr);
+        nn::time::CalendarTime cal;
+        nn::time::CalendarAdditionalInfo additional;
+        if (nn::time::ToCalendarTime(&cal, &additional, posix_time).IsFailure()) {
+            return false;
+        }
+        nx_calendar_to_tm(cal, static_cast<int32_t>(additional.dayOfTheWeek), additional.dayofYear, *dst);
+        return true;
+    }
+
+    static bool nx_gmtime(struct tm* dst, const time_t* tptr)
+    {
+        nn::time::PosixTime posix_time;
+        posix_time.time = static_cast<u64>(*tptr);
+        nn::time::CalendarTime cal = nn::time::ToCalendarTimeInUtc(posix_time);
+        nx_calendar_to_tm(cal, 0, 0, *dst);
+        return true;
+    }
+
+    static bool nx_get_local_time_and_utc_offset(time_t& out_now, int32_t& out_utc_offset_sec)
+    {
+        out_utc_offset_sec = 0;
+        nn::time::PosixTime posix_time;
+        if (nn::time::StandardUserSystemClock::GetCurrentTime(&posix_time).IsFailure()) {
+            return false;
+        }
+        out_now = static_cast<time_t>(posix_time.time);
+        nn::time::CalendarTime cal;
+        nn::time::CalendarAdditionalInfo additional;
+        if (nn::time::ToCalendarTime(&cal, &additional, posix_time).IsSuccess()) {
+            out_utc_offset_sec = additional.timeZone.utcOffset;
+        }
+        return true;
+    }
+#endif
 
 #if defined(BQ_WIN)
 #define BQ_LOCALTIME(dst, tptr) (localtime_s((dst), (tptr)) == 0)
 #define BQ_GMTIME(dst, tptr) (gmtime_s((dst), (tptr)) == 0)
+#elif defined(BQ_SWITCH_NN)
+#define BQ_LOCALTIME(dst, tptr) nx_localtime((dst), (tptr))
+#define BQ_GMTIME(dst, tptr) nx_gmtime((dst), (tptr))
 #else
 #define BQ_LOCALTIME(dst, tptr) (localtime_r((tptr), (dst)) != NULL)
 #define BQ_GMTIME(dst, tptr) (gmtime_r((tptr), (dst)) != NULL)
@@ -116,6 +179,15 @@ namespace bq {
         // generate time_zone_str_ and time_zone_diff_to_gmt_ms_;
         if (use_local_time_) {
             time_zone_str_ = get_local_timezone_name();
+#if defined(BQ_SWITCH_NN)
+            time_t now;
+            int32_t utc_offset_sec;
+            if (!nx_get_local_time_and_utc_offset(now, utc_offset_sec)) {
+                time_zone_diff_to_gmt_ms_ = 0;
+            } else {
+                time_zone_diff_to_gmt_ms_ = utc_offset_sec * 1000;
+            }
+#else
             time_t now = time(NULL);
             struct tm lt;
             struct tm gt;
@@ -128,6 +200,7 @@ namespace bq {
                 double timezone_offset = difftime(local_epoch_sec, utc_epoch_sec);
                 time_zone_diff_to_gmt_ms_ = static_cast<int32_t>((timezone_offset) * 1000);
             }
+#endif
         } else {
             if (gmt_offset_hours_ == 0 && gmt_offset_minutes_ == 0) {
                 time_zone_str_ = "UTC0";
@@ -155,6 +228,10 @@ namespace bq {
 
     bq::string time_zone::get_local_timezone_name()
     {
+#if defined(BQ_SWITCH_NN)
+        // The official SDK exposes no timezone abbreviation; keep the generic name.
+        return "localtime";
+#else
         time_t now = time(NULL);
         struct tm lt;
         if (!BQ_LOCALTIME(&lt, &now)) {
@@ -180,6 +257,7 @@ namespace bq {
         }
 #endif
         return "localtime";
+#endif
     }
 
     bool time_zone::get_tm_by_epoch(uint64_t epoch_ms, struct tm& result) const

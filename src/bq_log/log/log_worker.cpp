@@ -12,7 +12,9 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/global//log_vars.h"
 #include "bq_log/log/log_manager.h"
-#ifdef BQ_POSIX
+// libnx newlib does not export pthread_sigmask and the official SDK has no
+// signals at all, so worker thread signal masking is disabled on Switch.
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
 #include <signal.h>
 #endif
 namespace bq {
@@ -76,10 +78,12 @@ namespace bq {
         assert(thread_mode_ != log_thread_mode::sync && "log_worker started without init");
         tls_log_worker_watch_dog_.get().thread_id_ = bq::platform::thread::get_current_thread_id();
         tls_log_worker_watch_dog_.get().worker_ptr_ = this;
-#ifdef BQ_POSIX
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
         // we need flush ring_buffer in signal handler.
         // but handler can not be called in worker thread.(the flush operation is not re-entrant)
         // so we have to block signals for this thread.
+        // (compiled out on Switch: libnx has no pthread_sigmask, the official
+        // SDK has no signals at all, and crash handlers are disabled there)
         sigset_t forbidden_sigset;
         sigfillset(&forbidden_sigset);
         pthread_sigmask(SIG_BLOCK, &forbidden_sigset, NULL);

@@ -166,6 +166,10 @@ namespace bq {
         SYSTEM_INFO sysInfo;
         GetSystemInfo(&sysInfo);
         page_size_ = static_cast<size_t>(sysInfo.dwPageSize);
+#elif defined(BQ_SWITCH)
+        // Horizon uses 4KiB pages; newlib getpagesize() does not link on
+        // devkitA64 and the official SDK has no sysconf equivalent.
+        page_size_ = static_cast<size_t>(4096);
 #elif defined(BQ_POSIX)
         page_size_ = static_cast<size_t>(getpagesize());
 #endif

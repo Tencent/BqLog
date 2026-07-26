@@ -9,7 +9,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/platform/io/memory_map_posix.h"
-#if defined(BQ_POSIX)
+// Nintendo Switch has no memory-mapped file IO: newlib on devkitA64 ships no
+// <sys/mman.h> at all (see memory_map_switch.cpp for the fallback).
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
 #include <unistd.h>
 #include <sys/mman.h>
 

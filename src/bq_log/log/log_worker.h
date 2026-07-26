@@ -12,7 +12,10 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_types.h"
 
+// See log_worker.cpp for why signals are not masked on Nintendo Switch.
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
 #include <signal.h>
+#endif
 namespace bq {
     class log_manager;
     class log_imp;

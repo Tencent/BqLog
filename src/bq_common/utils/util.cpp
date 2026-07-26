@@ -443,6 +443,12 @@ namespace bq {
 #elif defined(BQ_IOS)
         (void)level;
         bq::platform::ios_print(text ? text : "");
+#elif defined(BQ_SWITCH_NN)
+        // Official Nintendo SDK: stdio exists but is not attached to any
+        // user-visible console. fprintf is the honest minimal fallback; games
+        // normally install real output via util::set_console_output_callback.
+        (void)level;
+        fprintf(stderr, "[Bq] %s\n", text ? text : "");
 #else
         bq::platform::scoped_mutex lock(common_global_vars::get().console_mutex_);
 

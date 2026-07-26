@@ -33,7 +33,7 @@
 #include <dirent.h>
 #define BQ_POSIX_HAS_DIRENT 1
 #endif
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS) && !defined(BQ_PS)
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS) && !defined(BQ_PS) && !defined(BQ_SWITCH)
 #include <cxxabi.h>
 #include <execinfo.h>
 namespace bq {
@@ -42,6 +42,11 @@ namespace bq {
 }
 #endif
 #include "bq_common/bq_common.h"
+
+// newlib on devkitA64 (Nintendo Switch) does not define SSIZE_MAX.
+#if !defined(SSIZE_MAX)
+#define SSIZE_MAX (ssize_t)(SIZE_MAX / 2)
+#endif
 
 namespace bq {
     namespace platform {
@@ -188,6 +193,13 @@ namespace bq {
 
         bool lock_file(const platform_file_handle& file_handle)
         {
+#if defined(BQ_SWITCH)
+            // libnx fcntl(F_SETLK) links but is a devoptab stub and unreliable at
+            // runtime. Horizon titles are single-process, so cross-process file
+            // locking does not apply; in-process write exclusivity is enforced by
+            // file_exclusive_cache_ in open_file().
+            return is_platform_handle_valid(file_handle);
+#else
             if (!is_platform_handle_valid(file_handle)) {
                 return false;
             }
@@ -202,10 +214,15 @@ namespace bq {
                 return false;
             }
             return true;
+#endif
         }
 
         bool unlock_file(const platform_file_handle& file_handle)
         {
+#if defined(BQ_SWITCH)
+            // See lock_file(): file locking is a no-op success on Switch.
+            return is_platform_handle_valid(file_handle);
+#else
             if (!is_platform_handle_valid(file_handle)) {
                 return false;
             }
@@ -220,6 +237,7 @@ namespace bq {
                 return false;
             }
             return true;
+#endif
         }
 
         bq::string get_lexically_path(const bq::string& original_path)
@@ -371,6 +389,10 @@ namespace bq {
                 return true;
             }
             if ((int32_t)(mode & file_open_mode_enum::exclusive)) {
+#if !defined(BQ_SWITCH)
+                // On Switch fcntl(F_SETLK) is an unreliable devoptab stub;
+                // the in-process file_exclusive_cache_ below is sufficient
+                // because Horizon titles are single-process.
                 struct flock lock;
                 memset(&lock, 0, sizeof(lock));
                 lock.l_type = F_WRLCK;
@@ -388,6 +410,7 @@ namespace bq {
                     bq::util::log_device_console(log_level::error, "add_file_execlusive_check fcntl(F_SETLK) failed, fd:%" PRId32 ", errno:%" PRId32, file_handle, err);
                     return false;
                 }
+#endif
             }
             struct stat file_info;
             if (fstat(file_handle, &file_info) < 0) {
@@ -549,7 +572,8 @@ namespace bq {
 
         int32_t flush_file(const platform_file_handle& file_handle)
         {
-#if defined(BQ_IOS) || defined(BQ_MAC)
+#if defined(BQ_IOS) || defined(BQ_MAC) || defined(BQ_SWITCH)
+            // newlib on devkitA64 does not export fdatasync, use fsync on Switch.
             if (fsync(file_handle) == 0) {
 #else
             if (fdatasync(file_handle) == 0) {
@@ -596,7 +620,7 @@ namespace bq {
 #endif
         }
 
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS) && !defined(BQ_PS)
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS) && !defined(BQ_PS) && !defined(BQ_SWITCH)
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
             if (!bq::stack_trace_current_str_) {
@@ -682,11 +706,19 @@ namespace bq {
             if (alignment < sizeof(void*)) {
                 alignment = sizeof(void*);
             }
+#if defined(BQ_SWITCH)
+            // newlib declares posix_memalign but does not export it on
+            // devkitA64; C11 aligned_alloc links and works. C11 requires the
+            // size to be an integral multiple of the alignment, so round up.
+            size = (size + alignment - 1) / alignment * alignment;
+            return ::aligned_alloc(alignment, size);
+#else
             void* p = nullptr;
             if (posix_memalign(&p, alignment, size) != 0) {
                 return nullptr;
             }
             return p;
+#endif
         }
         void aligned_free(void* ptr)
         {

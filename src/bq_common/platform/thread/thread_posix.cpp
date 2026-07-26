@@ -26,7 +26,10 @@
 #if __has_include(<pthread_np.h>)
 #include <pthread_np.h>
 #define BQ_HAVE_PTHREAD_NP_UNIX
-#else
+#elif !defined(BQ_SWITCH)
+// newlib on devkitA64 (Nintendo Switch) declares neither pthread_setname_np
+// nor pthread_getname_np at all; leaving BQ_HAVE_PTHREAD_NP undefined disables
+// every naming probe so the fallback implementations are selected instead.
 #define BQ_HAVE_PTHREAD_NP
 #endif
 #endif

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 set(TARGET_PLATFORM "win64" CACHE STRING "Choose the target platform")
-set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS "win64" "mac" "ios" "android" "linux" "unix" "ps5")
+set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS "win64" "mac" "ios" "android" "linux" "unix" "ps5" "switch")
 
 set(BUILD_LIB_TYPE "static_lib" CACHE STRING "Choose the build type")
 set_property(CACHE BUILD_LIB_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib")
@@ -9,6 +9,11 @@ set_property(CACHE BUILD_LIB_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib")
 # PS5 payloads are always linked statically; the prospero toolchain disables shared libraries.
 if(TARGET_PLATFORM STREQUAL "ps5" AND NOT BUILD_LIB_TYPE STREQUAL "static_lib")
     message(FATAL_ERROR "TARGET_PLATFORM=ps5 supports BUILD_LIB_TYPE=static_lib only")
+endif()
+
+# Nintendo Switch homebrew (devkitPro/libnx) is always linked statically.
+if(TARGET_PLATFORM STREQUAL "switch" AND NOT BUILD_LIB_TYPE STREQUAL "static_lib")
+    message(FATAL_ERROR "TARGET_PLATFORM=switch supports BUILD_LIB_TYPE=static_lib only")
 endif()
 
 if(TARGET_PLATFORM STREQUAL "mac" OR TARGET_PLATFORM STREQUAL "ios")
@@ -318,6 +323,9 @@ elseif(TARGET_PLATFORM STREQUAL "linux")
 elseif(TARGET_PLATFORM STREQUAL "ps5")
     # Static archive only: no libraries to link here. Final executables get
     # crt1.o, libc/libc++ and the Sce stub libs from the prospero-clang wrapper.
+elseif(TARGET_PLATFORM STREQUAL "switch")
+    # Static archive only: no libraries to link here. Final executables get
+    # -lnx -lm from devkitPro's NintendoSwitch platform module automatically.
 elseif(TARGET_PLATFORM STREQUAL "unix")
     target_link_libraries(BqLog PRIVATE pthread)
     find_library(EXECINFO_LIBRARY execinfo)

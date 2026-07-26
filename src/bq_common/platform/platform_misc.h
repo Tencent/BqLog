@@ -41,6 +41,12 @@
 #if defined(BQ_PS)
 #include "bq_common/platform/ps_misc.h"
 #endif
+#if defined(BQ_SWITCH_LIBNX)
+#include "bq_common/platform/switch_misc.h"
+#endif
+#if defined(BQ_SWITCH_NN)
+#include "bq_common/platform/nx_misc.h"
+#endif
 #if defined(BQ_OHOS)
 #include "bq_common/platform/ohos_misc.h"
 #endif

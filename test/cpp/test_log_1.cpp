@@ -52,28 +52,28 @@ namespace bq {
                     {
                         uint64_t i = 0xFFFFFFFFFFFFFFFF;
                         auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
-                        decltype(i) i_decode;
+                        decltype(i) i_decode = 0;
                         auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %" PRId32, i);
                     }
                     {
                         uint64_t i = 0xFF326943FFFFFF;
                         auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
-                        decltype(i) i_decode;
+                        decltype(i) i_decode = 0;
                         auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %" PRId32, i);
                     }
                     {
                         uint64_t i = 0x326943FFFFFF;
                         auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
-                        decltype(i) i_decode;
+                        decltype(i) i_decode = 0;
                         auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %" PRId32, i);
                     }
                     {
                         uint64_t i = 0x6943FFFFFF;
                         auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
-                        decltype(i) i_decode;
+                        decltype(i) i_decode = 0;
                         auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                         result.add_result(i == i_decode && len == len_decode, "vlq test %" PRId32, i);
                     }
@@ -81,21 +81,21 @@ namespace bq {
                 for (uint64_t add = 0; add <= UINT8_MAX; ++add) {
                     uint8_t i = (uint8_t)add;
                     auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
-                    decltype(i) i_decode;
+                    decltype(i) i_decode = 0;
                     auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                     result.add_result(i == i_decode && len == len_decode, "vlq test %" PRId32, i);
                 }
                 for (uint64_t add = 0; add <= UINT16_MAX; ++add) {
                     uint16_t i = (uint16_t)add;
                     auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
-                    decltype(i) i_decode;
+                    decltype(i) i_decode = 0;
                     auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                     result.add_result(i == i_decode && len == len_decode, "vlq test %" PRId32, i);
                 }
                 for (uint64_t add = 0; add <= UINT32_MAX; add += 77) {
                     uint32_t i = (uint32_t)add;
                     auto len = bq::log_utils::vlq::vlq_encode(i, target_data, 16);
-                    decltype(i) i_decode;
+                    decltype(i) i_decode = 0;
                     auto len_decode = bq::log_utils::vlq::vlq_decode(i_decode, target_data);
                     result.add_result(i == i_decode && len == len_decode, "vlq test %" PRId32, i);
                 }
@@ -106,7 +106,7 @@ namespace bq {
                     uint32_t ui = bq::log_utils::zigzag::encode(i);
                     auto len = bq::log_utils::vlq::vlq_encode(ui, target_data, 16);
                     result.add_result(len == 1, "zigzag + vlq test 1");
-                    decltype(ui) ui_decode;
+                    decltype(ui) ui_decode = 0;
                     auto len_decode = bq::log_utils::vlq::vlq_decode(ui_decode, target_data);
                     result.add_result(len == len_decode, "zigzag + vlq test 2");
                     decltype(i) i_decoded = bq::log_utils::zigzag::decode(ui_decode);

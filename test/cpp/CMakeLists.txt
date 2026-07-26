@@ -193,6 +193,9 @@ elseif(TARGET_PLATFORM STREQUAL "linux")
 elseif(TARGET_PLATFORM STREQUAL "ps5")
     # The prospero-clang++ wrapper links crt1.o, libc, libc++, libunwind and
     # the Sce stub libs (-lkernel_web -lSceLibcInternal -lSceNet) automatically.
+elseif(TARGET_PLATFORM STREQUAL "switch")
+    # devkitPro's NintendoSwitch platform module links -lnx -lm into
+    # executables automatically; nothing extra is needed here.
 elseif(TARGET_PLATFORM STREQUAL "unix")
     target_link_libraries(BqLogUnitTest PRIVATE pthread)
     find_library(EXECINFO_LIBRARY execinfo)

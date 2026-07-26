@@ -31,11 +31,11 @@
 #include <locale.h>
 #if defined(BQ_WIN)
 #include <windows.h>
-#elif defined(BQ_POSIX)
+#elif defined(BQ_POSIX) && !defined(BQ_SWITCH)
 #include <signal.h>
 #endif
 
-#ifdef BQ_POSIX
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
 pthread_t main_thread_id = 0;
 #endif
 
@@ -51,7 +51,7 @@ protected:
             }
             if (start_epoch + time_out < bq::platform::high_performance_epoch_ms()) {
                 test_output_dynamic(bq::log_level::error, "test time out, please check your test code!\n");
-#ifdef BQ_POSIX
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
                 pthread_kill(main_thread_id, SIGUSR2);
 #else
                 assert(false && "auto test time out!");
@@ -62,7 +62,7 @@ protected:
     }
 };
 
-#ifdef BQ_POSIX
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
 void sig_handler(int)
 {
     bq::_api_string_def stack_trace_str;
@@ -76,7 +76,7 @@ void sig_handler(int)
 
 int32_t main_logic()
 {
-#ifdef BQ_POSIX
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
     struct sigaction sa = {};
     sa.sa_handler = sig_handler;
     sigemptyset(&sa.sa_mask);

@@ -21,7 +21,11 @@
 #include "bq_log/log/decoder/appender_decoder_helper.h"
 #include "bq_log/types/buffer/log_buffer.h"
 
-#ifdef BQ_POSIX
+// Nintendo Switch has no usable POSIX signal facility on either development
+// environment (libnx newlib's sigaction lacks SA_SIGINFO/sigaltstack and
+// pthread_sigmask does not link; the official SDK has no signals at all),
+// so the crash handler machinery is gated out for BQ_SWITCH.
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
 #include <signal.h>
 #include <unistd.h>
 #if defined(__has_include)
@@ -47,7 +51,7 @@ namespace bq {
             return get_bq_log_version();
         }
 
-#if defined(BQ_POSIX)
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
 
         // compatible to siginfo_t or siginfo
         static struct sigaction tmp_action_static;
@@ -151,7 +155,7 @@ namespace bq {
 
         BQ_API void __api_enable_auto_crash_handler()
         {
-#if defined(BQ_POSIX)
+#if defined(BQ_POSIX) && !defined(BQ_SWITCH)
             log_signal_handler<SIGSEGV>::set_handler(log_crash_handler);
             log_signal_handler<SIGABRT>::set_handler(log_crash_handler);
             log_signal_handler<SIGFPE>::set_handler(log_crash_handler);
