@@ -1387,7 +1387,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           usesh: true
           mem: 8192
           prepare: |
@@ -1414,7 +1414,7 @@ jobs:
         if: steps.RunInOpenBSD.outcome == 'failure'
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           usesh: true
           mem: 8192
           prepare: |
@@ -1459,7 +1459,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           usesh: true
           mem: 8192
           prepare: |
@@ -1487,7 +1487,7 @@ jobs:
         if: steps.RunInOpenBSD.outcome == 'failure'
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           usesh: true
           mem: 8192
           prepare: |
@@ -1534,7 +1534,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -1563,7 +1563,7 @@ jobs:
         if: steps.RunInOpenBSD.outcome == 'failure'
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -1610,7 +1610,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -1640,7 +1640,7 @@ jobs:
         if: steps.RunInOpenBSD.outcome == 'failure'
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -1886,7 +1886,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -1918,7 +1918,7 @@ jobs:
         if: steps.RunInDragonFlyBSDLibs.outcome == 'failure'
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -1968,7 +1968,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -2000,7 +2000,7 @@ jobs:
         if: steps.RunInDragonFlyBSDLibs.outcome == 'failure'
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -2044,7 +2044,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -2076,7 +2076,7 @@ jobs:
         if: steps.RunInDragonFlyBSDTools.outcome == 'failure'
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -2126,7 +2126,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -2158,7 +2158,7 @@ jobs:
         if: steps.RunInDragonFlyBSDTools.outcome == 'failure'
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -4501,7 +4501,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           usesh: true
           mem: 8192
           prepare: |
@@ -4530,7 +4530,7 @@ jobs:
         if: steps.RunInFreeBSD.outcome == 'failure'
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           usesh: true
           mem: 8192
           prepare: |
@@ -4578,7 +4578,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           usesh: true
           mem: 8192
           prepare: |
@@ -4607,7 +4607,7 @@ jobs:
         if: steps.RunInFreeBSD.outcome == 'failure'
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           usesh: true
           mem: 8192
           prepare: |
@@ -4648,7 +4648,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -4677,7 +4677,7 @@ jobs:
         if: steps.RunInFreeBSDArmClang.outcome == 'failure'
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -4724,7 +4724,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -4753,7 +4753,7 @@ jobs:
         if: steps.RunInFreeBSDArmGcc.outcome == 'failure'
         uses: vmactions/freebsd-vm@v1
         with:
-          release: "13.2"
+          release: "13.5"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -4794,7 +4794,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           usesh: true
           mem: 8192
           prepare: |
@@ -4823,7 +4823,7 @@ jobs:
         if: steps.RunInOpenBSDLibsClang.outcome == 'failure'
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           usesh: true
           mem: 8192
           prepare: |
@@ -4870,7 +4870,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -4900,7 +4900,7 @@ jobs:
         if: steps.RunInOpenBSDArmLibsClang.outcome == 'failure'
         uses: vmactions/openbsd-vm@v1
         with:
-          release: "7.3"
+          release: "7.7"
           arch: aarch64
           usesh: true
           mem: 8192
@@ -5240,7 +5240,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -5272,7 +5272,7 @@ jobs:
         if: steps.RunInDragonFlyBSDLibsClang.outcome == 'failure'
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -5322,7 +5322,7 @@ jobs:
         continue-on-error: true
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
@@ -5354,7 +5354,7 @@ jobs:
         if: steps.RunInDragonFlyBSDLibsGcc.outcome == 'failure'
         uses: vmactions/dragonflybsd-vm@v1
         with:
-          release: "6.4.0"
+          release: "6.4.2"
           usesh: true
           mem: 8192
           prepare: |
