@@ -22,13 +22,15 @@
 #include "bq_log/types/buffer/log_buffer.h"
 
 #ifdef BQ_POSIX
-#ifdef BQ_PS
-// TODO
-#else
 #include <signal.h>
-#endif
 #include <unistd.h>
+#if defined(__has_include)
+#if __has_include(<sys/syscall.h>)
 #include <sys/syscall.h>
+#endif
+#else
+#include <sys/syscall.h>
+#endif
 #include <pthread.h>
 #endif
 
@@ -76,16 +78,12 @@ namespace bq {
         private:
             static void on_signal(int32_t sig, siginfo_ptr_type info, void* context)
             {
-#ifdef BQ_PS
-                // TODO
-#else
                 (void)tmp_action_static;
                 struct sigaction tmp;
                 sigaction(SIG, &original_sigaction, &tmp);
                 registered = false;
                 handler(sig, info, context);
                 pthread_kill(pthread_self(), sig);
-#endif
             }
 
 #ifdef BQ_IOS
@@ -100,9 +98,6 @@ namespace bq {
         public:
             static void set_handler(sigaction_func_type func)
             {
-#ifdef BQ_PS
-                // TODO
-#else
 #if BQ_SIGNAL_STACK_SUPPORT
                 stack_t ss;
                 ss.ss_sp = signal_stack_holder.signal_stack;
@@ -131,7 +126,6 @@ namespace bq {
                     registered = true;
                     handler = func;
                 }
-#endif
             }
         };
 

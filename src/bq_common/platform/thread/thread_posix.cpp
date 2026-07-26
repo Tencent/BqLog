@@ -99,7 +99,9 @@ namespace bq {
         // 2) pthread_get_name_np
         template <typename U, typename = void>
         struct get_thread_name_func_sfinae2 : bq::false_type { };
-#if defined(BQ_HAVE_PTHREAD_NP_UNIX)
+        // ps5-payload-sdk declares pthread_get_name_np in pthread_np.h but no
+        // stub library exports it, so it must not be referenced on PlayStation.
+#if defined(BQ_HAVE_PTHREAD_NP_UNIX) && !defined(BQ_PS)
         template <typename U>
         struct get_thread_name_func_sfinae2<U, bq::void_t<bq::enable_if_t<bq::is_same<decltype(accept_getname_param_ver2<U>(&::pthread_get_name_np)), int32_t>::value, int32_t>>> : bq::true_type { };
 #endif
@@ -191,7 +193,10 @@ namespace bq {
         bq::string get_thread_name_impl(U thread_handle)
         {
             char thread_name_buf[64] = { 0 };
-            uint64_t tid = static_cast<uint64_t>(thread_handle);
+            // pthread_t is an arithmetic type on some systems (e.g. glibc) and a
+            // pointer type on others (e.g. FreeBSD, PS5); reinterpret_cast through
+            // uintptr_t is valid for both.
+            uint64_t tid = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(thread_handle));
             snprintf(thread_name_buf, sizeof(thread_name_buf), "pthread_%" PRIu64, tid);
             return thread_name_buf;
         }

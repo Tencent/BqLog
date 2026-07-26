@@ -24,10 +24,16 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
-#ifndef BQ_PS
+#if defined(__has_include)
+#if __has_include(<dirent.h>)
 #include <dirent.h>
+#define BQ_POSIX_HAS_DIRENT 1
 #endif
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
+#else
+#include <dirent.h>
+#define BQ_POSIX_HAS_DIRENT 1
+#endif
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS) && !defined(BQ_PS)
 #include <cxxabi.h>
 #include <execinfo.h>
 namespace bq {
@@ -39,9 +45,7 @@ namespace bq {
 
 namespace bq {
     namespace platform {
-#ifdef BQ_PS
-        // TODO
-#else
+#if defined(BQ_POSIX_HAS_DIRENT)
         class posix_dir_stack_holder {
         private:
             DIR* dp = nullptr;
@@ -307,9 +311,9 @@ namespace bq {
 
         int32_t remove_dir_or_file_inner(bq::string& path)
         {
-#ifdef BQ_PS
-            // TODO
-            return 0;
+#if !defined(BQ_POSIX_HAS_DIRENT)
+            (void)path;
+            return ENOSYS;
 #else
             if (!is_dir(path.c_str())) {
                 if (remove(path.c_str()) == 0) {
@@ -568,11 +572,8 @@ namespace bq {
 
         bq::array<bq::string> get_all_sub_names(const char* path)
         {
-#ifdef BQ_PS
             bq::array<bq::string> result;
-            return result;
-#else
-            bq::array<bq::string> result;
+#if defined(BQ_POSIX_HAS_DIRENT)
             if (!path) {
                 path = "./";
             }
@@ -589,10 +590,13 @@ namespace bq {
                 result.push_back(dp_name);
             }
             return result;
+#else
+            (void)path;
+            return result;
 #endif
         }
 
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
+#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS) && !defined(BQ_PS)
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
             if (!bq::stack_trace_current_str_) {

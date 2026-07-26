@@ -48,12 +48,29 @@
 #endif
 #endif
 #endif
-#elif defined(__ORBIS__)
+#elif defined(__ORBIS__) || defined(__PROSPERO__)
+// PlayStation 4 (__ORBIS__) / PlayStation 5 (__PROSPERO__).
+// __PROSPERO__ is predefined both by Sony's official prospero-clang
+// and by the open ps5-payload-sdk (stock clang, x86_64-sie-ps5 target).
 #define BQ_PS 1
 #define BQ_POSIX 1
-#elif defined(__Prospero__)
-#define BQ_PS 1
+#if defined(__PROSPERO__)
+#define BQ_PS5 1
+#endif
+#elif defined(__SWITCH__)
+// Nintendo Switch, homebrew toolchain (devkitPro devkitA64 + libnx).
+// __SWITCH__ is injected by devkitPro's own build rules
+// (switch_rules Makefiles / Switch.cmake toolchain), never by BqLog.
+#define BQ_SWITCH 1
+#define BQ_SWITCH_LIBNX 1
 #define BQ_POSIX 1
+#elif defined(__NX__) || defined(NN_NINTENDO_SDK) || defined(NN_SDK_BUILD_DEBUG) || defined(NN_SDK_BUILD_RELEASE) || (defined(__has_include) && __has_include(<nn/os.h>))
+// Nintendo Switch, official Nintendo SDK (nn:: APIs).
+// __NX__ is predefined by Nintendo's clang fork; NN_NINTENDO_SDK and
+// NN_SDK_BUILD_* are defined by the SDK's own project files; the
+// __has_include fallback covers SDK setups defining none of them.
+#define BQ_SWITCH 1
+#define BQ_SWITCH_NN 1
 #elif defined(__linux__)
 #define BQ_LINUX 1
 #define BQ_POSIX 1

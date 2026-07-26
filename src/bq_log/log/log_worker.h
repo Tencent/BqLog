@@ -12,11 +12,7 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_types.h"
 
-#ifdef BQ_PS
-// TODO
-#else
 #include <signal.h>
-#endif
 namespace bq {
     class log_manager;
     class log_imp;

@@ -22,7 +22,7 @@ namespace bq {
     bool memory_map::is_platform_support()
     {
         static_assert(sizeof(size_t) <= sizeof(memory_map_handle::platform_data_), "memory_map_handle::platform_data_ size not enough");
-#if defined(BQ_ANDROID) || defined(BQ_APPLE) || defined(BQ_LINUX) || defined(BQ_UNIX)
+#if defined(BQ_ANDROID) || defined(BQ_APPLE) || defined(BQ_LINUX) || defined(BQ_UNIX) || defined(BQ_PS)
         return true;
 #else
         return false;
