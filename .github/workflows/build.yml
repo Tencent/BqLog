@@ -1537,6 +1537,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download OpenBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSD
         continue-on-error: true
@@ -1547,7 +1549,8 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-openbsd-7.7-aarch64.tar.gz" -C /deps
+            TRUSTED_PKG_PATH=/deps pkg_add cmake bash jdk%11
 
           run: |
             set -e -x
@@ -1576,7 +1579,8 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-openbsd-7.7-aarch64.tar.gz" -C /deps
+            TRUSTED_PKG_PATH=/deps pkg_add cmake bash jdk%11
 
           run: |
             set -e -x
@@ -1613,6 +1617,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download OpenBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSD
         continue-on-error: true
@@ -1623,7 +1629,8 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-openbsd-7.7-aarch64.tar.gz" -C /deps
+            TRUSTED_PKG_PATH=/deps pkg_add cmake bash jdk%11
 
           run: |
             set -e -x
@@ -1653,7 +1660,8 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add  cmake bash jdk%11
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-openbsd-7.7-aarch64.tar.gz" -C /deps
+            TRUSTED_PKG_PATH=/deps pkg_add cmake bash jdk%11
 
           run: |
             set -e -x
@@ -4877,6 +4885,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download OpenBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSDArmLibsClang
         continue-on-error: true
@@ -4887,8 +4897,9 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add cmake bash jdk%11
-            pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-openbsd-7.7-aarch64.tar.gz" -C /deps
+            TRUSTED_PKG_PATH=/deps pkg_add cmake bash jdk%11
+            TRUSTED_PKG_PATH=/deps pkg_add node-22.* || TRUSTED_PKG_PATH=/deps pkg_add node-20.* || TRUSTED_PKG_PATH=/deps pkg_add node-18.* || TRUSTED_PKG_PATH=/deps pkg_add node
           run: |
             set -e -x
             test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
@@ -4917,8 +4928,9 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg_add cmake bash jdk%11
-            pkg_add node || pkg_add node-22.* || pkg_add node-20.* || pkg_add node-18.*
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-openbsd-7.7-aarch64.tar.gz" -C /deps
+            TRUSTED_PKG_PATH=/deps pkg_add cmake bash jdk%11
+            TRUSTED_PKG_PATH=/deps pkg_add node-22.* || TRUSTED_PKG_PATH=/deps pkg_add node-20.* || TRUSTED_PKG_PATH=/deps pkg_add node-18.* || TRUSTED_PKG_PATH=/deps pkg_add node
           run: |
             set -e -x
             test -x /usr/local/jdk-11/bin/java || { echo "java not found; did you pkg_add jdk%11?"; exit 1; }
