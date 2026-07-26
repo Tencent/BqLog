@@ -1487,7 +1487,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download OpenBSD dep snapshot (host)
-        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-amd64 deps-openbsd-7.7-amd64.tar.gz
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:openbsd-7.7-amd64 deps-openbsd-7.7-amd64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSD
         continue-on-error: true
@@ -1563,7 +1563,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download OpenBSD dep snapshot (host)
-        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-amd64 deps-openbsd-7.7-amd64.tar.gz
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:openbsd-7.7-amd64 deps-openbsd-7.7-amd64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSD
         continue-on-error: true
@@ -1642,7 +1642,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download OpenBSD dep snapshot (host)
-        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:openbsd-7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSD
         continue-on-error: true
@@ -1722,7 +1722,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download OpenBSD dep snapshot (host)
-        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:openbsd-7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSD
         continue-on-error: true
@@ -4766,7 +4766,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download OpenBSD dep snapshot (host)
-        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-amd64 deps-openbsd-7.7-amd64.tar.gz
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:openbsd-7.7-amd64 deps-openbsd-7.7-amd64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSDLibsClang
         continue-on-error: true
@@ -4846,7 +4846,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download OpenBSD dep snapshot (host)
-        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/openbsd:7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:openbsd-7.7-aarch64 deps-openbsd-7.7-aarch64.tar.gz
       - name: Run in OpenBSD
         id: RunInOpenBSDArmLibsClang
         continue-on-error: true
