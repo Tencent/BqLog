@@ -826,6 +826,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-amd64 deps-freebsd-13-amd64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -835,7 +838,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -860,7 +867,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -894,6 +905,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-amd64 deps-freebsd-13-amd64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -903,7 +917,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -929,7 +947,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -958,6 +980,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-amd64 deps-freebsd-13-amd64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -967,7 +992,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -994,7 +1023,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1030,6 +1063,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-amd64 deps-freebsd-13-amd64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -1039,7 +1075,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1067,7 +1107,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1099,6 +1143,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-aarch64 deps-freebsd-13-aarch64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -1109,7 +1156,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1135,7 +1186,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1169,6 +1224,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-aarch64 deps-freebsd-13-aarch64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -1179,7 +1237,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1206,7 +1268,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1235,6 +1301,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-aarch64 deps-freebsd-13-aarch64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -1245,7 +1314,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1273,7 +1346,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1309,6 +1386,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-aarch64 deps-freebsd-13-aarch64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -1319,7 +1399,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1349,7 +1433,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc
 
           run: |
             set -e -x
@@ -1897,6 +1985,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:dragonflybsd-6.4.2-amd64 deps-dragonflybsd-6.4.2-amd64.tar.gz
+
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibs
         continue-on-error: true
@@ -1906,7 +1997,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             # Java
@@ -1938,7 +2033,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             # Java
@@ -1979,6 +2078,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:dragonflybsd-6.4.2-amd64 deps-dragonflybsd-6.4.2-amd64.tar.gz
+
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibs
         continue-on-error: true
@@ -1988,7 +2090,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             # Java
@@ -2020,7 +2126,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             # Java
@@ -2055,6 +2165,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:dragonflybsd-6.4.2-amd64 deps-dragonflybsd-6.4.2-amd64.tar.gz
+
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDTools
         continue-on-error: true
@@ -2064,7 +2177,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -2096,7 +2213,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -2137,6 +2258,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:dragonflybsd-6.4.2-amd64 deps-dragonflybsd-6.4.2-amd64.tar.gz
+
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDTools
         continue-on-error: true
@@ -2146,7 +2270,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -2178,7 +2306,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -2465,6 +2597,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-amd64 deps-netbsd-10.1-amd64.tar.gz
       - name: Run in NetBSD (Clang, x86_64)
         id: vm_step_1
         continue-on-error: true
@@ -2482,29 +2617,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2535,7 +2653,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2571,29 +2689,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2624,7 +2725,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2660,6 +2761,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-amd64 deps-netbsd-10.1-amd64.tar.gz
       - name: Run in NetBSD (GCC, x86_64)
         id: vm_step_2
         continue-on-error: true
@@ -2677,29 +2781,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2730,7 +2817,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2763,29 +2850,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2816,7 +2886,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2843,6 +2913,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-amd64 deps-netbsd-10.1-amd64.tar.gz
       - name: Run in NetBSD (Clang, x86_64)
         id: vm_step_3
         continue-on-error: true
@@ -2860,29 +2933,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2913,7 +2969,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2948,29 +3004,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3001,7 +3040,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3036,6 +3075,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-amd64 deps-netbsd-10.1-amd64.tar.gz
       - name: Run in NetBSD (GCC, x86_64)
         id: vm_step_4
         continue-on-error: true
@@ -3053,29 +3095,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3106,7 +3131,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3141,29 +3166,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3194,7 +3202,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3224,6 +3232,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-aarch64 deps-netbsd-10.1-aarch64.tar.gz
       - name: Run in NetBSD (Clang, arm64)
         id: vm_step_5
         continue-on-error: true
@@ -3242,29 +3253,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3295,7 +3289,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3329,29 +3323,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3382,7 +3359,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3415,6 +3392,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-aarch64 deps-netbsd-10.1-aarch64.tar.gz
       - name: Run in NetBSD (GCC, arm64)
         id: vm_step_6
         continue-on-error: true
@@ -3433,29 +3413,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3486,7 +3449,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3520,29 +3483,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3573,7 +3519,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3600,6 +3546,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-aarch64 deps-netbsd-10.1-aarch64.tar.gz
       - name: Run in NetBSD (Clang, arm64)
         id: vm_step_7
         continue-on-error: true
@@ -3618,29 +3567,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3671,7 +3603,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3707,29 +3639,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3760,7 +3675,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3795,6 +3710,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-aarch64 deps-netbsd-10.1-aarch64.tar.gz
       - name: Run in NetBSD (GCC, arm64)
         id: vm_step_8
         continue-on-error: true
@@ -3813,29 +3731,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3866,7 +3767,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3902,29 +3803,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3955,7 +3839,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
+            /usr/sbin/pkg_add openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -4512,6 +4396,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-amd64 deps-freebsd-13-amd64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -4521,8 +4408,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -4550,8 +4441,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -4589,6 +4484,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-amd64 deps-freebsd-13-amd64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSD
         continue-on-error: true
@@ -4598,8 +4496,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -4627,8 +4529,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -4659,6 +4565,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-aarch64 deps-freebsd-13-aarch64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSDArmClang
         continue-on-error: true
@@ -4669,8 +4578,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -4698,8 +4611,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -4735,6 +4652,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-aarch64 deps-freebsd-13-aarch64.tar.gz
+
       - name: Run in FreeBSD
         id: RunInFreeBSDArmGcc
         continue-on-error: true
@@ -4745,8 +4665,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -4774,8 +4698,12 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y llvm cmake bash openjdk11 gdb gcc node
-            pkg install -y npm-node22 || pkg install -y npm-node20 || pkg install -y npm
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash openjdk11 gdb gcc node
+            pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node22 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm-node20 || pkg -o REPOS_DIR=/tmp/repoconf install -y npm
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5259,6 +5187,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:dragonflybsd-6.4.2-amd64 deps-dragonflybsd-6.4.2-amd64.tar.gz
+
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibsClang
         continue-on-error: true
@@ -5268,7 +5199,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5300,7 +5235,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5341,6 +5280,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:dragonflybsd-6.4.2-amd64 deps-dragonflybsd-6.4.2-amd64.tar.gz
+
       - name: Run in DragonFlyBSD
         id: RunInDragonFlyBSDLibsGcc
         continue-on-error: true
@@ -5350,7 +5292,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5382,7 +5328,11 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            pkg install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5416,6 +5366,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-amd64 deps-netbsd-10.1-amd64.tar.gz
       - name: Run in NetBSD (Clang, x86_64)
         id: vm_step_9
         continue-on-error: true
@@ -5433,29 +5386,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5486,13 +5422,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5529,29 +5460,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5582,13 +5496,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5625,6 +5534,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-amd64 deps-netbsd-10.1-amd64.tar.gz
       - name: Run in NetBSD (GCC, x86_64)
         id: vm_step_10
         continue-on-error: true
@@ -5642,29 +5554,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5695,13 +5590,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5736,29 +5626,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5789,13 +5662,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5824,6 +5692,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-aarch64 deps-netbsd-10.1-aarch64.tar.gz
       - name: Run in NetBSD (Clang, arm64)
         id: vm_step_11
         continue-on-error: true
@@ -5842,29 +5713,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5895,13 +5749,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5937,29 +5786,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5990,13 +5822,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -6031,6 +5858,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Download BSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:netbsd-10.1-aarch64 deps-netbsd-10.1-aarch64.tar.gz
       - name: Run in NetBSD (GCC, arm64)
         id: vm_step_12
         continue-on-error: true
@@ -6049,29 +5879,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -6102,13 +5915,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -6144,29 +5952,12 @@ jobs:
               evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
               *) PKG_ARCH="$ARCH" ;;
             esac
-            PKG_MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            pkg_installed=0
-            for mirror in $PKG_MIRRORS; do
-              echo "=== Trying package mirror: $mirror ==="
-              export PKG_PATH="$mirror"
-              if /usr/sbin/pkg_add -v pkgin; then
-                echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                pkgin -y update || true
-                pkgin -y install cmake gmake bash gdb || true
-                pkgin -y install clang || true
-                pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10 || true
-                pkg_installed=1
-                break
-              fi
-              echo "Mirror $mirror failed, trying next..."
-            done
-            if [ "$pkg_installed" -ne 1 ]; then
-              echo "WARNING: All package mirrors failed, continuing anyway..." >&2
-            fi
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
+            export PKG_PATH=/deps
+            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
+            /usr/sbin/pkg_add clang
+            /usr/sbin/pkg_add gcc12
 
             URLS=""
             case "$ARCH" in
@@ -6197,13 +5988,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            pkgin -y install openjdk17 || true
-            pkgin -y install nodejs npm || true
-            if ! command -v node >/dev/null 2>&1; then
-              echo "https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.0_2026Q1/All" > /usr/pkg/etc/pkgin/repositories.conf
-              pkgin -y update || true
-              pkgin -y install nodejs || true
-            fi
+            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -7264,6 +7050,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Download FreeBSD dep snapshot (host)
+        run: sh build/ci/ghcr_anonymous_pull.sh ghcr.io/pippocao/bqlog-ci-deps/bsd:freebsd-13-amd64 deps-freebsd-13-amd64.tar.gz
+
       - name: Run in FreeBSD(Attempt 1)
         continue-on-error: true
         uses: vmactions/freebsd-vm@v1
@@ -7272,21 +7061,13 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            for i in 1 2 3 4 5; do
-              if pkg install -y llvm cmake bash python3; then
-                PYVER=$(python3 -c 'import sys; print(f"{sys.version_info[0]}{sys.version_info[1]}")')
-                if pkg install -y "py${PYVER}-pip" "py${PYVER}-setuptools" "py${PYVER}-wheel"; then
-                  exit 0
-                fi
-                echo "py${PYVER}-pip package unavailable, bootstrapping with ensurepip..."
-                if python3 -m ensurepip --upgrade && python3 -m pip install --upgrade pip setuptools wheel; then
-                  exit 0
-                fi
-              fi
-              echo "Install failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash python3
+            PYVER=$(python3 -c 'import sys; print(f"{sys.version_info[0]}{sys.version_info[1]}")')
+            pkg -o REPOS_DIR=/tmp/repoconf install -y "py${PYVER}-pip" "py${PYVER}-setuptools" "py${PYVER}-wheel" || { python3 -m ensurepip --upgrade && python3 -m pip install --upgrade pip setuptools wheel; }
           run: |
             touch BUILD_STARTED
             set -e -x
@@ -7332,21 +7113,13 @@ jobs:
           usesh: true
           mem: 8192
           prepare: |
-            for i in 1 2 3 4 5; do
-              if pkg install -y llvm cmake bash python3; then
-                PYVER=$(python3 -c 'import sys; print(f"{sys.version_info[0]}{sys.version_info[1]}")')
-                if pkg install -y "py${PYVER}-pip" "py${PYVER}-setuptools" "py${PYVER}-wheel"; then
-                  exit 0
-                fi
-                echo "py${PYVER}-pip package unavailable, bootstrapping with ensurepip..."
-                if python3 -m ensurepip --upgrade && python3 -m pip install --upgrade pip setuptools wheel; then
-                  exit 0
-                fi
-              fi
-              echo "Install failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
+            mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            pkg repo /deps
+            mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
+            pkg -o REPOS_DIR=/tmp/repoconf update -f
+            pkg -o REPOS_DIR=/tmp/repoconf install -y llvm cmake bash python3
+            PYVER=$(python3 -c 'import sys; print(f"{sys.version_info[0]}{sys.version_info[1]}")')
+            pkg -o REPOS_DIR=/tmp/repoconf install -y "py${PYVER}-pip" "py${PYVER}-setuptools" "py${PYVER}-wheel" || { python3 -m ensurepip --upgrade && python3 -m pip install --upgrade pip setuptools wheel; }
           run: |
             touch BUILD_STARTED
             set -e -x
