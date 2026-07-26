@@ -88,16 +88,12 @@ dragonflybsd_amd64() {
     base="https://mirror-master.dragonflybsd.org/dports/dragonfly:6.4:x86:64/LATEST"
     mkdir -p "$d/mirror/All"
     mv "$d"/*.pkg "$d/mirror/All/"
-    # Slim meta.conf: the official one also declares data/filesite archives,
-    # and pkg(8) hard-fails `update` when they are absent. Only the
-    # packagesite catalogue is needed.
-    cat > "$d/mirror/meta.conf" << 'MEOF'
-version = 2;
-packing_format = "txz";
-manifests = "packagesite.yaml";
-manifests_archive = "packagesite";
-MEOF
-    curl -fsSL -o "$d/mirror/packagesite.txz" "$base/packagesite.txz"
+    # Ship ALL repo metadata: this pkg(8) version probes the data archive
+    # unconditionally during `update` and fails when it is absent, so a
+    # slim meta.conf is not enough. filesite is not published by dports.
+    for f in meta.conf meta data.txz data.pkg packagesite.pkg packagesite.txz; do
+        curl -fsSL -o "$d/mirror/$f" "$base/$f"
+    done
     pack dragonflybsd-6.4.2-amd64 "$d/mirror"
 }
 
