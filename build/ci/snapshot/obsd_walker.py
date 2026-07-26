@@ -75,7 +75,10 @@ while queue:
         try:
             fetch(BASE + fn, path)
         except Exception as e:
-            print("DOWNLOAD FAIL:", fn, e); missing.append(fn); continue
+            print("DOWNLOAD FAIL:", fn, e)
+            if os.path.exists(path):
+                os.remove(path)  # drop partial download so re-runs refetch it
+            missing.append(fn); continue
     fetched.append(fn)
     r = subprocess.run(["tar", "-xOzf", path, "+CONTENTS"], capture_output=True, text=True)
     for line in r.stdout.splitlines():

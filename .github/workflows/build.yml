@@ -839,6 +839,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -868,6 +869,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -918,6 +920,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -948,6 +951,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -993,6 +997,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1024,6 +1029,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1076,6 +1082,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1108,6 +1115,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1157,6 +1165,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1187,6 +1196,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1238,6 +1248,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1269,6 +1280,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1315,6 +1327,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1347,6 +1360,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1400,6 +1414,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1434,6 +1449,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -1998,6 +2014,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2034,6 +2051,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2091,6 +2109,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2127,6 +2146,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2178,6 +2198,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2214,6 +2235,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2271,6 +2293,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2307,6 +2330,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -2619,10 +2643,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2653,7 +2677,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2691,10 +2715,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2725,7 +2749,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2783,10 +2807,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2817,7 +2841,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2852,10 +2876,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2886,7 +2910,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -2935,10 +2959,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -2969,7 +2993,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3006,10 +3030,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3040,7 +3064,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3097,10 +3121,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3131,7 +3155,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3168,10 +3192,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3202,7 +3226,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3255,10 +3279,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3289,7 +3313,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3325,10 +3349,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3359,7 +3383,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3415,10 +3439,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3449,7 +3473,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3485,10 +3509,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3519,7 +3543,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3569,10 +3593,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3603,7 +3627,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3641,10 +3665,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3675,7 +3699,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3733,10 +3757,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3767,7 +3791,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -3805,10 +3829,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -3839,7 +3863,7 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
+            /usr/sbin/pkg_add -u openjdk17
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -4409,6 +4433,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -4442,6 +4467,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -4497,6 +4523,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -4530,6 +4557,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -4579,6 +4607,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -4612,6 +4641,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -4666,6 +4696,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -4699,6 +4730,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-aarch64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -5200,6 +5232,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -5236,6 +5269,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -5293,6 +5327,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -5329,6 +5364,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-dragonflybsd-6.4.2-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -5388,10 +5424,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5422,8 +5458,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5462,10 +5498,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5496,8 +5532,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5556,10 +5592,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5590,8 +5626,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5628,10 +5664,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5662,8 +5698,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5715,10 +5751,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5749,8 +5785,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5788,10 +5824,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5822,8 +5858,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5881,10 +5917,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5915,8 +5951,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -5954,10 +5990,10 @@ jobs:
             esac
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-netbsd-10.1-${PKG_ARCH}.tar.gz" -C /deps
             export PKG_PATH=/deps
-            /usr/sbin/pkg_add cmake gmake bash
+            /usr/sbin/pkg_add -u cmake gmake bash
             /usr/sbin/pkg_add gdb || echo "gdb unavailable, skipping"
-            /usr/sbin/pkg_add clang
-            /usr/sbin/pkg_add gcc12
+            /usr/sbin/pkg_add -u clang
+            /usr/sbin/pkg_add -u gcc12
 
             URLS=""
             case "$ARCH" in
@@ -5988,8 +6024,8 @@ jobs:
             fi
             ls /usr/X11R7/lib/libX11.so.* >/dev/null 2>&1 || { echo "xbase extracted but libX11 missing"; exit 1; }
 
-            /usr/sbin/pkg_add openjdk17
-            /usr/sbin/pkg_add nodejs
+            /usr/sbin/pkg_add -u openjdk17
+            /usr/sbin/pkg_add -u nodejs
           run: |
             set -e -x
             export JAVA_HOME="/usr/pkg/java/openjdk17"
@@ -7062,6 +7098,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
@@ -7114,6 +7151,7 @@ jobs:
           mem: 8192
           prepare: |
             mkdir -p /deps && tar xzf "$GITHUB_WORKSPACE/deps-freebsd-13-amd64.tar.gz" -C /deps
+            export IGNORE_OSVERSION=yes
             pkg repo /deps
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f

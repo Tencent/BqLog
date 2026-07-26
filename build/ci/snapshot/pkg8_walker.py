@@ -49,7 +49,10 @@ while queue:
         try:
             fetch(repo_base.rstrip("/") + "/" + d["path"], path)
         except Exception as e:
-            print("DOWNLOAD FAIL:", name, e); missing.append(name); continue
+            print("DOWNLOAD FAIL:", name, e)
+            if os.path.exists(path):
+                os.remove(path)  # drop partial download so re-runs refetch it
+            missing.append(name); continue
     for dep in (d.get("deps") or {}):
         if dep not in seen:
             queue.append(dep)

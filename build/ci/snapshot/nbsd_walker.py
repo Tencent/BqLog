@@ -124,7 +124,10 @@ while queue:
                 urllib.request.urlretrieve(base + fn, path); break
             except Exception as e:
                 if attempt == 3:
-                    print("DOWNLOAD FAIL:", fn, e); missing.append(fn)
+                    print("DOWNLOAD FAIL:", fn, e)
+                    if os.path.exists(path):
+                        os.remove(path)  # drop partial download so re-runs refetch it
+                    missing.append(fn)
     if fn in missing: continue
     r = subprocess.run(["tar", "-xOf", path, "+CONTENTS"], capture_output=True, text=True)
     for line in r.stdout.splitlines():
