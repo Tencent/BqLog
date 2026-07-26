@@ -1,0 +1,50 @@
+name: BSD Deps Snapshot
+
+# Produces self-hosted dependency snapshots for BSD build jobs.
+# Upstream BSD package repos delete packages for EOL releases (e.g. all
+# OpenBSD < 7.7 packages are already gone from every mirror), which breaks
+# CI pins over time. This workflow boots each BSD VM at the pinned release,
+# lets the package manager download the full dependency closure of the
+# build toolchain, and packs it as a tarball. The tarball is then pushed
+# to GHCR (oras) so build jobs can install from a local, immutable source.
+#
+# Currently manual only: run it when a snapshot needs to be (re)created.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  openbsd_7_7_amd64:
+    name: snapshot_openbsd_7.7_amd64
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Build dependency snapshot in OpenBSD 7.7 VM
+        uses: vmactions/openbsd-vm@v1
+        with:
+          release: "7.7"
+          usesh: true
+          mem: 8192
+          run: |
+            set -e -x
+            mkdir -p /deps
+            # PKG_CACHE makes pkg_add copy every downloaded package
+            # (the full dependency closure) into /deps while installing.
+            PKG_CACHE=/deps pkg_add cmake bash jdk%11
+            # node is needed by the nodejs_* jobs; try newest branch first.
+            PKG_CACHE=/deps pkg_add node-22.* || PKG_CACHE=/deps pkg_add node-20.* || PKG_CACHE=/deps pkg_add node-18.* || PKG_CACHE=/deps pkg_add node
+            cd /deps
+            ls -l
+            tar czf "$GITHUB_WORKSPACE/openbsd-7.7-amd64-deps.tar.gz" .
+            cd "$GITHUB_WORKSPACE"
+            sha256 openbsd-7.7-amd64-deps.tar.gz | tee openbsd-7.7-amd64-deps.tar.gz.sha256
+
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: openbsd-7.7-amd64-deps
+          path: |
+            openbsd-7.7-amd64-deps.tar.gz
+            openbsd-7.7-amd64-deps.tar.gz.sha256
