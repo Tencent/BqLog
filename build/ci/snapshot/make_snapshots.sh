@@ -77,11 +77,20 @@ netbsd_aarch64() {
     pack netbsd-10.1-aarch64 "$d"
 }
 
+# NOTE: DragonFly's base pkg(8) cannot create a repository catalogue from
+# zstd-compressed packages ("zstd is supported, but not builtin"), so the
+# snapshot is laid out as a ready-made partial mirror (meta.conf +
+# packagesite.txz + All/*.pkg) and consumers skip `pkg repo` entirely.
 dragonflybsd_amd64() {
     d=work-dragonflybsd-6.4.2-amd64/deps; mkdir -p "$d"
     python3 pkg8_walker.py "https://mirror-master.dragonflybsd.org/dports/dragonfly:6.4:x86:64/LATEST" "$d" \
         cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
-    pack dragonflybsd-6.4.2-amd64 "$d"
+    base="https://mirror-master.dragonflybsd.org/dports/dragonfly:6.4:x86:64/LATEST"
+    mkdir -p "$d/mirror/All"
+    mv "$d"/*.pkg "$d/mirror/All/"
+    curl -fsSL -o "$d/mirror/meta.conf" "$base/meta.conf"
+    curl -fsSL -o "$d/mirror/packagesite.txz" "$base/packagesite.txz"
+    pack dragonflybsd-6.4.2-amd64 "$d/mirror"
 }
 
 if [ $# -gt 0 ]; then
