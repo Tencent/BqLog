@@ -791,12 +791,8 @@ jobs:
           cd build/lib/ps5
           chmod +x *.sh
           ./build_all_and_pack.sh
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: ps5_libs_${{ needs.extract_version.outputs.version }}
-          path: ${{ github.workspace }}/dist
+      # PS5 is released as source only: this job verifies the build
+      # (all 4 configs + pack), no binaries are uploaded or released.
 
   #Switch
   build_switch_lib:
@@ -813,12 +809,8 @@ jobs:
           cd build/lib/switch
           chmod +x *.sh
           ./build_all_and_pack.sh
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: switch_libs_${{ needs.extract_version.outputs.version }}
-          path: ${{ github.workspace }}/dist
+      # Switch is released as source only: this job verifies the build
+      # (all 4 configs + pack), no binaries are uploaded or released.
 
   #Mac
   build_mac_lib:
