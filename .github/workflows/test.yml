@@ -320,6 +320,51 @@ jobs:
           chmod +x *.sh
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
+  #PS5 (compile+link only; binaries require real hardware)
+  ps5:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/debian:ps5-sdk
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build for PS5
+        run: |
+          cd build/test/ps5
+          chmod +x *.sh
+          ./run_test.sh 17
+
+  #Switch (devkitPro/libnx; compile+link only, binaries require real hardware)
+  switch:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/debian:switch-devkita64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build for Switch
+        run: |
+          cd build/test/switch
+          chmod +x *.sh
+          ./run_test.sh 17
+
+  #Switch (official Nintendo SDK nn:: syntax check against public nnheaders)
+  switch_official_sdk_syntax:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pippocao/bqlog/debian:switch-devkita64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Run official SDK (nn) syntax check
+        run: |
+          cd build/test/switch_nn
+          chmod +x *.sh
+          ./run_syntax_check.sh
+
   #Mac
   mac_silicon:
     name: mac_silicon(arm64 cpp${{matrix.cpp_ver}} ${{ matrix.asan.label != ' ' && ', ' || '' }}${{ matrix.asan.label }})

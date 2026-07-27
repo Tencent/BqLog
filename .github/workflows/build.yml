@@ -776,6 +776,50 @@ jobs:
           ./build_all_and_pack_gcc.sh 
 
 
+  #PS5
+  build_ps5_lib:
+    runs-on: ubuntu-22.04
+    needs: extract_version
+    container:
+      image: ghcr.io/pippocao/bqlog/debian:ps5-sdk
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build for PS5
+        run: |
+          cd build/lib/ps5
+          chmod +x *.sh
+          ./build_all_and_pack.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: ps5_libs_${{ needs.extract_version.outputs.version }}
+          path: ${{ github.workspace }}/dist
+
+  #Switch
+  build_switch_lib:
+    runs-on: ubuntu-22.04
+    needs: extract_version
+    container:
+      image: ghcr.io/pippocao/bqlog/debian:switch-devkita64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build for Switch
+        run: |
+          cd build/lib/switch
+          chmod +x *.sh
+          ./build_all_and_pack.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: switch_libs_${{ needs.extract_version.outputs.version }}
+          path: ${{ github.workspace }}/dist
+
   #Mac
   build_mac_lib:
     runs-on: macos-latest
