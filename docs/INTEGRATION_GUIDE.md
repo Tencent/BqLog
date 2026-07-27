@@ -69,6 +69,37 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 ---
 
+## PS5 (C++)
+
+C++ only. Both the Sony official SDK (prospero-clang, detected via the `__PROSPERO__` predefine) and the open ps5-payload-sdk are supported. The platform is auto-detected in `include/bq_common/platform/macros.h`, so no macro definitions are needed.
+
+- **Source integration**: same as the C++ source integration above — add `/src` to your project sources and `/include` to the header search path; the platform is detected automatically from the toolchain.
+- **Standalone library** (static library only):
+
+```bash
+cmake /path/to/BqLog/src -DTARGET_PLATFORM:STRING=ps5 -DCMAKE_TOOLCHAIN_FILE=$PS5_PAYLOAD_SDK/toolchain/prospero.cmake
+```
+
+Or run the script `build/lib/ps5/build_all_and_pack.sh` (requires the `PS5_PAYLOAD_SDK` environment variable).
+
+---
+
+## Nintendo Switch (C++)
+
+C++ only. Both development environments are supported, and the platform is auto-detected in `include/bq_common/platform/macros.h` — no macro definitions are needed:
+
+- **devkitPro devkitA64 + libnx** (homebrew): detected via `__SWITCH__`, which devkitPro's own build rules define. Source integration works, or build the standalone library (static library only):
+
+```bash
+cmake /path/to/BqLog/src -DTARGET_PLATFORM:STRING=switch -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake
+```
+
+Or run the script `build/lib/switch/build_all_and_pack.sh` (requires the `DEVKITPRO` environment variable).
+
+- **Official Nintendo SDK** (`nn::` APIs): detected via `__NX__` / `NN_NINTENDO_SDK` / `__has_include(<nn/os.h>)`. Source integration is the way to go — drop `/src` and `/include` into your game project and detection is automatic.
+
+---
+
 ## Java / Kotlin (Android / Server)
 
 ### Android

@@ -69,6 +69,37 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 ---
 
+## PS5（C++）
+
+仅支持 C++。Sony 官方 SDK（prospero-clang，通过预定义宏 `__PROSPERO__` 检测）与开源 ps5-payload-sdk 均已支持。平台在 `include/bq_common/platform/macros.h` 中自动识别，无需定义任何宏。
+
+- **源码集成**：与上文 C++ 源码集成方式相同 —— 将 `/src` 加入工程源码编译、`/include` 加入头文件搜索路径即可，平台会根据工具链自动识别。
+- **独立库编译**（仅支持静态库）：
+
+```bash
+cmake /path/to/BqLog/src -DTARGET_PLATFORM:STRING=ps5 -DCMAKE_TOOLCHAIN_FILE=$PS5_PAYLOAD_SDK/toolchain/prospero.cmake
+```
+
+或运行脚本 `build/lib/ps5/build_all_and_pack.sh`（需要 `PS5_PAYLOAD_SDK` 环境变量）。
+
+---
+
+## Nintendo Switch（C++）
+
+仅支持 C++。两种开发环境均已支持，平台在 `include/bq_common/platform/macros.h` 中自动识别，无需定义任何宏：
+
+- **devkitPro devkitA64 + libnx**（Homebrew）：通过 devkitPro 构建规则自带的 `__SWITCH__` 宏检测。可源码集成，也可编译独立库（仅支持静态库）：
+
+```bash
+cmake /path/to/BqLog/src -DTARGET_PLATFORM:STRING=switch -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake
+```
+
+或运行脚本 `build/lib/switch/build_all_and_pack.sh`（需要 `DEVKITPRO` 环境变量）。
+
+- **Nintendo 官方 SDK**（`nn::` API）：通过 `__NX__` / `NN_NINTENDO_SDK` / `__has_include(<nn/os.h>)` 检测。推荐源码集成 —— 将 `/src` 与 `/include` 放入游戏工程即可自动完成平台检测。
+
+---
+
 ## Java / Kotlin（Android / Server）
 
 ### Android
