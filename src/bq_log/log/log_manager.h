@@ -36,7 +36,7 @@ namespace bq {
 
         bool reset_config(const bq::string& log_name, const bq::string& config_content);
 
-        void process_by_worker(log_imp* target_log, bool is_force_flush);
+        bool process_by_worker(log_imp* target_log, bool is_force_flush);
 
         uint32_t get_logs_count() const;
 

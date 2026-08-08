@@ -119,6 +119,11 @@ namespace bq {
         new_block.to_chunk_head().data_size = size;
 
         handle.low_space_flag = ((aligned_blocks_count_ - left_space) << 1) >= aligned_blocks_count_;
+        if (handle.low_space_flag) {
+            head_->wt_reading_cursor_cache_ = head_->reading_cursor().load_acquire();
+            left_space = static_cast<uint32_t>(head_->wt_reading_cursor_cache_ + aligned_blocks_count_ - head_->wt_writing_cursor_cache_);
+            handle.low_space_flag = ((aligned_blocks_count_ - left_space) << 1) >= aligned_blocks_count_;
+        }
         handle.result = enum_buffer_result_code::success;
 #if defined(BQ_LOG_BUFFER_DEBUG)
         ++result_code_statistics_[(int32_t)enum_buffer_result_code::success];

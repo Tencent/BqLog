@@ -160,22 +160,24 @@ namespace bq {
         return false;
     }
 
-    void log_manager::process_by_worker(log_imp* target_log, bool is_force_flush)
+    bool log_manager::process_by_worker(log_imp* target_log, bool is_force_flush)
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
         if (phase::working != phase_.load(bq::platform::memory_order::relaxed)) {
-            return;
+            return false;
         }
+        bool did_work = false;
         if (target_log) {
-            target_log->process(is_force_flush);
+            did_work = target_log->process(is_force_flush);
         } else {
             for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
                 auto& log_impl = log_imp_list_[i];
                 if (log_impl->get_thread_mode() == log_thread_mode::async) {
-                    log_imp_list_[i]->process(is_force_flush);
+                    did_work = log_imp_list_[i]->process(is_force_flush) || did_work;
                 }
             }
         }
+        return did_work;
     }
 
     void log_manager::force_flush_all()

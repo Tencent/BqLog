@@ -99,7 +99,13 @@ namespace bq {
             }
             // normal process
             else {
-                manager_->process_by_worker((thread_mode_ == log_thread_mode::async) ? nullptr : log_target_, false);
+                bool did_work = manager_->process_by_worker((thread_mode_ == log_thread_mode::async) ? nullptr : log_target_, false);
+                if (did_work) {
+                    if (is_cancelled()) {
+                        break;
+                    }
+                    continue;
+                }
             }
             if (is_cancelled()) {
                 break;

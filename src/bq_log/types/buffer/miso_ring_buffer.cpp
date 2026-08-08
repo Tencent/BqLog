@@ -211,6 +211,11 @@ namespace bq {
             handle.data_addr = new_block.chunk_head.data;
             used_blocks_count += need_block_count;
             handle.low_space_flag = ((used_blocks_count << 1) >= aligned_blocks_count_);
+            if (handle.low_space_flag) {
+                read_cursor_ref = cursors_.read_cursor_.load_acquire();
+                used_blocks_count = static_cast<uint32_t>(current_write_cursor + need_block_count - read_cursor_ref);
+                handle.low_space_flag = ((used_blocks_count << 1) >= aligned_blocks_count_);
+            }
 #if defined(BQ_LOG_BUFFER_DEBUG)
             ++result_code_statistics_[(int32_t)enum_buffer_result_code::success];
 #endif

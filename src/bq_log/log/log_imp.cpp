@@ -487,14 +487,16 @@ namespace bq {
         merged_log_level_bitmap_ = tmp;
     }
 
-    void log_imp::process(bool is_force_flush)
+    bool log_imp::process(bool is_force_flush)
     {
         constexpr uint64_t flush_io_min_interval_ms = 100;
         uint64_t current_epoch_ms = 0;
+        bool did_work = false;
         while (true) {
             auto read_chunk = buffer_->read_chunk();
             scoped_log_buffer_handle<log_buffer> scoped_read_chunk(*buffer_, read_chunk);
             if (read_chunk.result == enum_buffer_result_code::success) {
+                did_work = true;
                 bq::log_entry_handle log_item(read_chunk.data_addr, read_chunk.data_size);
                 current_epoch_ms = log_item.get_log_head().timestamp_epoch;
                 process_log_chunk(log_item);
@@ -514,6 +516,7 @@ namespace bq {
                 last_flush_io_epoch_ms_ = current_epoch_ms;
             }
         }
+        return did_work;
     }
 
     void log_imp::sync_process(bool is_force_flush)

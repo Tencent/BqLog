@@ -78,7 +78,7 @@ namespace bq {
 
         bq::string& get_config();
 
-        void process(bool is_force_flush);
+        bool process(bool is_force_flush);
 
         void sync_process(bool is_force_flush);
 
