@@ -47,29 +47,15 @@ if not exist "%LIB_OUT%" (
     )
 )
 
-echo ===== Staging native library for cgo =====
-rem -lbqlog resolves libbqlog.dll at link time; the loader looks up the DLL's
-rem original internal name at runtime, so both names are staged.
-if not exist "%WRAPPER_DIR%\lib" md "%WRAPPER_DIR%\lib"
-if exist "%LIB_OUT%\BqLog.dll" (
-    copy /y "%LIB_OUT%\BqLog.dll" "%WRAPPER_DIR%\lib\libbqlog.dll" >nul || exit /b 1
-    copy /y "%LIB_OUT%\BqLog.dll" "%WRAPPER_DIR%\lib\BqLog.dll" >nul || exit /b 1
-) else if exist "%LIB_OUT%\libBqLog.dll" (
-    copy /y "%LIB_OUT%\libBqLog.dll" "%WRAPPER_DIR%\lib\libbqlog.dll" >nul || exit /b 1
-    copy /y "%LIB_OUT%\libBqLog.dll" "%WRAPPER_DIR%\lib\libBqLog.dll" >nul || exit /b 1
-) else (
-    echo Error: BqLog dll not found in %LIB_OUT%
-    exit /b 1
-)
-
 echo ===== Building and Running Go Test =====
-pushd "%WRAPPER_DIR%"
+rem cgo links against the freshly built artifacts directly via CGO_LDFLAGS
 set "CGO_ENABLED=1"
+set "CGO_LDFLAGS=-L%LIB_OUT:\=/%"
+pushd "%WRAPPER_DIR%"
 go vet ./... || exit /b 1
 popd
 pushd "%TEST_SRC_DIR%"
-set "PATH=%WRAPPER_DIR%\lib;%PATH%"
-set "CGO_ENABLED=1"
+set "PATH=%LIB_OUT%;%PATH%"
 if exist bqlog_go_test.exe del /q bqlog_go_test.exe
 go build -o bqlog_go_test.exe ./src/bq/test || exit /b 1
 .\bqlog_go_test.exe

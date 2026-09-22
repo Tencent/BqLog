@@ -11,9 +11,8 @@
 package impl
 
 /*
-#cgo windows LDFLAGS: -L${SRCDIR}/../../../lib -lbqlog -static-libgcc
-#cgo linux LDFLAGS: -L${SRCDIR}/../../../lib -lbqlog
-#cgo darwin LDFLAGS: -L${SRCDIR}/../../../lib -lbqlog
+#cgo LDFLAGS: -lBqLog
+#cgo windows LDFLAGS: -static-libgcc
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>

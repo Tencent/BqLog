@@ -2441,19 +2441,34 @@ jobs:
         with:
           go-version: '1.21.x'
 
-      - name: Install CMake (Windows)
+      - name: Install CMake
         if: runner.os == 'Windows'
         uses: lukka/get-cmake@latest
 
-      - name: Install MSYS2 (Windows, gcc for cgo)
+      - name: Install MSYS2 (Attempt 1)
         if: runner.os == 'Windows'
+        continue-on-error: true
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           release: true
           path-type: inherit
           update: true
-          install: mingw-w64-x86_64-gcc
+
+      - name: Ensure MSYS2 packages (Attempt 2)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc
+          which gcc
+      - name: Ensure MSYS2 packages (Attempt 3)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc
+          which gcc
 
       - name: Run Go Tests
         shell: bash

@@ -32,18 +32,15 @@ if [ ! -d "$LIB_OUT" ]; then
     fi
 fi
 
-echo "===== Staging native library for cgo ====="
-mkdir -p "$WRAPPER_DIR/lib"
-cp -f "$LIB_OUT"/libBqLog.so "$WRAPPER_DIR/lib/libbqlog.so"
-cp -f "$LIB_OUT"/libBqLog.so "$WRAPPER_DIR/lib/libBqLog.so"
-
 echo "===== Building and Running Go Test ====="
-pushd "$WRAPPER_DIR" > /dev/null
+# cgo links against the freshly built artifacts directly via CGO_LDFLAGS
 export CGO_ENABLED=1
+export CGO_LDFLAGS="-L$LIB_OUT"
+pushd "$WRAPPER_DIR" > /dev/null
 go vet ./...
 popd > /dev/null
 pushd "$TEST_SRC_DIR" > /dev/null
-export LD_LIBRARY_PATH="$WRAPPER_DIR/lib:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH="$LIB_OUT:${LD_LIBRARY_PATH:-}"
 go build -o bqlog_go_test ./src/bq/test
 ./bqlog_go_test
 popd > /dev/null

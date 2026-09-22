@@ -1,6 +1,6 @@
 #!/bin/bash
-# Build the Go wrapper: native library (GO_SUPPORT=ON) staged into
-# wrapper/go/lib, then go vet + go build + run tests.
+# Build the Go wrapper: native library (GO_SUPPORT=ON), then go vet +
+# go build + run tests against the freshly built artifacts.
 # Go packages are distributed as source via go modules, so there is no
 # binary packing step here.
 # Usage: build_all_and_pack.sh [gcc|clang] [CONFIG]
