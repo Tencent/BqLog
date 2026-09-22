@@ -88,6 +88,344 @@ public class demo_category_log extends category_log{
     }
     
 
+    //log methods for param count 0
+    public boolean verbose(demo_category_log_category_base category, String log_format_content)
+    {
+        return do_log(category, log_level.verbose, log_format_content);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content)
+    {
+        return do_log(category, log_level.debug, log_format_content);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content)
+    {
+        return do_log(category, log_level.info, log_format_content);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content)
+    {
+        return do_log(category, log_level.warning, log_format_content);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content)
+    {
+        return do_log(category, log_level.error, log_format_content);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content)
+    {
+        return do_log(category, log_level.fatal, log_format_content);
+    }
+
+    //log methods for param count 1
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1)
+    {
+        return do_log(category, log_level.info, log_format_content, p1);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1)
+    {
+        return do_log(category, log_level.error, log_format_content, p1);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1);
+    }
+
+    //log methods for param count 2
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2);
+    }
+
+    //log methods for param count 3
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3);
+    }
+
+    //log methods for param count 4
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4);
+    }
+
+    //log methods for param count 5
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5);
+    }
+
+    //log methods for param count 6
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+
+    //log methods for param count 7
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+
+    //log methods for param count 8
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+
+    //log methods for param count 9
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+
+    //log methods for param count 10
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+
+    //log methods for param count 11
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+
+    //log methods for param count 12
+    public boolean verbose(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean debug(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean info(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean warning(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean error(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean fatal(demo_category_log_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+
     ///Core log functions with category param, there are 6 log levels:
     ///verbose, debug, info, warning, error, fatal
     public boolean verbose(demo_category_log_category_base category, String log_format_content, Object... args)
@@ -185,7 +523,6 @@ public class demo_category_log extends category_log{
         }
         public demo_category_log_node_4 node_4 = new demo_category_log_node_4();     //node_4
     }
-
     
     public final demo_category_log_category_root cat = new demo_category_log_category_root();
 }

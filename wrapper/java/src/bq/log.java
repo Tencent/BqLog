@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 import bq.def.*;
 import bq.impl.*;
 
@@ -184,42 +185,6 @@ public class log {
         return true;
     }
 
-    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object... args)
-    {
-        if(!is_enable_for(category, level))
-        {
-            return false;
-        }
-        long param_storage_size = 0;
-        for(Object o : args)
-        {
-        	param_storage_size += context_.get_param_storage_size_no_optimized(o);
-        }
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
-        {
-        	StringBuffer sb = new StringBuffer(log_format_content);
-        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
-            for(int i = 2; i < stack_trace_elements.length; ++i)
-            {
-            	sb.append('\n');
-            	sb.append(stack_trace_elements[i]);
-            }
-            log_format_content = sb.toString();
-        }
-    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
-        if(null == ring_buffer)
-        {
-            return false;
-        }
-        if(param_storage_size > 0) {
-            for (Object o : args)
-            {
-            	context_.add_param_no_optimized(ring_buffer, o);
-            }
-            context_.end_copy(this);
-        }
-        return true;
-    }
     
     /**
      * Get bqLog lib version
@@ -501,18 +466,36 @@ public class log {
     }
 
 
-	///Core log functions, there are 6 log levels:
-	///verbose, debug, info, warning, error, fatal
-	///
+    //log methods for param count 0
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content)
+    {
+        if(!is_enable_for(category, level))
+        {
+            return false;
+        }
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, 0);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        return true;
+    }
+
     public boolean verbose(String log_format_content)
     {
         return do_log(default_category_, log_level.verbose, log_format_content);
     }
-    public boolean verbose(String log_format_content, Object... args)
-    {
-        return do_log(default_category_, log_level.verbose, log_format_content, args);
-    }
-    
     /**
      * Writes a debug log without format arguments.
      * @param log_format_content The log content.
@@ -522,44 +505,1120 @@ public class log {
     {
         return do_log(default_category_, log_level.debug, log_format_content);
     }
-    public boolean debug(String log_format_content, Object... args)
-    {
-        return do_log(default_category_, log_level.debug, log_format_content, args);
-    }
-
     public boolean info(String log_format_content)
     {
         return do_log(default_category_, log_level.info, log_format_content);
+    }
+    public boolean warning(String log_format_content)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content);
+    }
+    public boolean error(String log_format_content)
+    {
+        return do_log(default_category_, log_level.error, log_format_content);
+    } 
+    public boolean fatal(String log_format_content)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content);
+    }
+
+    //log methods for param count 1
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1);
+    }
+    public boolean debug(String log_format_content, Object p1)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1);
+    }
+    public boolean info(String log_format_content, Object p1)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1);
+    }
+    public boolean warning(String log_format_content, Object p1)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1);
+    }
+    public boolean error(String log_format_content, Object p1)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1);
+    }
+    public boolean fatal(String log_format_content, Object p1)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1);
+    }
+
+    //log methods for param count 2
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2);
+    }
+
+    //log methods for param count 3
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3);
+    }
+
+    //log methods for param count 4
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4);
+    }
+
+    //log methods for param count 5
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5);
+    }
+
+    //log methods for param count 6
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            if(null != p6 && p6.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p6);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.add_param_no_optimized(ring_buffer, p6);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6);
+    }
+
+    //log methods for param count 7
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            if(null != p6 && p6.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p6);
+            }
+            if(null != p7 && p7.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p7);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.add_param_no_optimized(ring_buffer, p6);
+        context_.add_param_no_optimized(ring_buffer, p7);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7);
+    }
+
+    //log methods for param count 8
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            if(null != p6 && p6.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p6);
+            }
+            if(null != p7 && p7.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p7);
+            }
+            if(null != p8 && p8.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p8);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.add_param_no_optimized(ring_buffer, p6);
+        context_.add_param_no_optimized(ring_buffer, p7);
+        context_.add_param_no_optimized(ring_buffer, p8);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+
+    //log methods for param count 9
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            if(null != p6 && p6.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p6);
+            }
+            if(null != p7 && p7.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p7);
+            }
+            if(null != p8 && p8.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p8);
+            }
+            if(null != p9 && p9.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p9);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.add_param_no_optimized(ring_buffer, p6);
+        context_.add_param_no_optimized(ring_buffer, p7);
+        context_.add_param_no_optimized(ring_buffer, p8);
+        context_.add_param_no_optimized(ring_buffer, p9);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+    }
+
+    //log methods for param count 10
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            if(null != p6 && p6.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p6);
+            }
+            if(null != p7 && p7.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p7);
+            }
+            if(null != p8 && p8.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p8);
+            }
+            if(null != p9 && p9.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p9);
+            }
+            if(null != p10 && p10.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p10);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9) + context_.get_param_storage_size_no_optimized(p10);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.add_param_no_optimized(ring_buffer, p6);
+        context_.add_param_no_optimized(ring_buffer, p7);
+        context_.add_param_no_optimized(ring_buffer, p8);
+        context_.add_param_no_optimized(ring_buffer, p9);
+        context_.add_param_no_optimized(ring_buffer, p10);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    }
+
+    //log methods for param count 11
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            if(null != p6 && p6.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p6);
+            }
+            if(null != p7 && p7.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p7);
+            }
+            if(null != p8 && p8.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p8);
+            }
+            if(null != p9 && p9.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p9);
+            }
+            if(null != p10 && p10.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p10);
+            }
+            if(null != p11 && p11.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p11);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9) + context_.get_param_storage_size_no_optimized(p10) + context_.get_param_storage_size_no_optimized(p11);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.add_param_no_optimized(ring_buffer, p6);
+        context_.add_param_no_optimized(ring_buffer, p7);
+        context_.add_param_no_optimized(ring_buffer, p8);
+        context_.add_param_no_optimized(ring_buffer, p9);
+        context_.add_param_no_optimized(ring_buffer, p10);
+        context_.add_param_no_optimized(ring_buffer, p11);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+    }
+
+    //log methods for param count 12
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        if(!is_enable_for(category, level))
+        {
+            if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p1);
+            }
+            if(null != p2 && p2.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p2);
+            }
+            if(null != p3 && p3.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p3);
+            }
+            if(null != p4 && p4.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p4);
+            }
+            if(null != p5 && p5.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p5);
+            }
+            if(null != p6 && p6.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p6);
+            }
+            if(null != p7 && p7.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p7);
+            }
+            if(null != p8 && p8.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p8);
+            }
+            if(null != p9 && p9.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p9);
+            }
+            if(null != p10 && p10.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p10);
+            }
+            if(null != p11 && p11.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p11);
+            }
+            if(null != p12 && p12.getClass() == constants.cls_param_wrapper)
+            {
+                bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)p12);
+            }
+            return false;
+        }
+        long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9) + context_.get_param_storage_size_no_optimized(p10) + context_.get_param_storage_size_no_optimized(p11) + context_.get_param_storage_size_no_optimized(p12);
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        context_.add_param_no_optimized(ring_buffer, p1);
+        context_.add_param_no_optimized(ring_buffer, p2);
+        context_.add_param_no_optimized(ring_buffer, p3);
+        context_.add_param_no_optimized(ring_buffer, p4);
+        context_.add_param_no_optimized(ring_buffer, p5);
+        context_.add_param_no_optimized(ring_buffer, p6);
+        context_.add_param_no_optimized(ring_buffer, p7);
+        context_.add_param_no_optimized(ring_buffer, p8);
+        context_.add_param_no_optimized(ring_buffer, p9);
+        context_.add_param_no_optimized(ring_buffer, p10);
+        context_.add_param_no_optimized(ring_buffer, p11);
+        context_.add_param_no_optimized(ring_buffer, p12);
+        context_.end_copy(this);
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+    public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
+    {
+        return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
+    }
+
+	///Core log functions, there are 6 log levels:
+	///verbose, debug, info, warning, error, fatal
+	///
+    //log methods for variable param count
+    @SuppressWarnings("unchecked")
+    protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object... args)
+    {
+        if(!is_enable_for(category, level))
+        {
+            for(Object o : args)
+            {
+                if(null != o && o.getClass() == constants.cls_param_wrapper)
+                {
+                    bq.utils.param.return_param_wrapper_to_pool((Map.Entry<int[], long[]>)o);
+                }
+            }
+            return false;
+        }
+        long param_storage_size = 0;
+        for(Object o : args)
+        {
+        	param_storage_size += context_.get_param_storage_size_no_optimized(o);
+        }
+        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        {
+        	StringBuffer sb = new StringBuffer(log_format_content);
+        	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
+            for(int i = 2; i < stack_trace_elements.length; ++i)
+            {
+            	sb.append('\n');
+            	sb.append(stack_trace_elements[i]);
+            }
+            log_format_content = sb.toString();
+        }
+    	ByteBuffer ring_buffer = context_.begin_copy(this, category, level, log_format_content, param_storage_size);
+        if(null == ring_buffer)
+        {
+            return false;
+        }
+        if(param_storage_size > 0) {
+            for (Object o : args)
+            {
+            	context_.add_param_no_optimized(ring_buffer, o);
+            }
+            context_.end_copy(this);
+        }
+        return true;
+    }
+    public boolean verbose(String log_format_content, Object... args)
+    {
+        return do_log(default_category_, log_level.verbose, log_format_content, args);
+    }
+    public boolean debug(String log_format_content, Object... args)
+    {
+        return do_log(default_category_, log_level.debug, log_format_content, args);
     }
     public boolean info(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.info, log_format_content, args);
     }
-    
-    public boolean warning(String log_format_content)
-    {
-        return do_log(default_category_, log_level.warning, log_format_content);
-    }
     public boolean warning(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.warning, log_format_content, args);
     }
-    
-    public boolean error(String log_format_content)
-    {
-        return do_log(default_category_, log_level.error, log_format_content);
-    } 
     public boolean error(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.error, log_format_content, args);
-    }
-    
-    public boolean fatal(String log_format_content)
-    {
-        return do_log(default_category_, log_level.fatal, log_format_content);
     }
     public boolean fatal(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, args);
     }
+
 }
