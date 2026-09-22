@@ -2413,3 +2413,89 @@ jobs:
               exit $EXIT_CODE
             fi
 
+  go_wrapper_tests:
+    name: go_wrapper (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            script_path: build/test/go/run_linux.sh
+            label: "ubuntu-latest"
+          - os: ubuntu-24.04-arm
+            script_path: build/test/go/run_linux.sh
+            label: "ubuntu-24.04-arm"
+          - os: macos-latest
+            script_path: build/test/go/run_mac.sh
+            label: "macos-latest"
+          - os: windows-latest
+            script_path: build/test/go/run_win.bat
+            label: "windows-latest"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+
+      - name: Install CMake (Windows)
+        if: runner.os == 'Windows'
+        uses: lukka/get-cmake@latest
+
+      - name: Install MSYS2 (Windows, gcc for cgo)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          release: true
+          path-type: inherit
+          update: true
+          install: mingw-w64-x86_64-gcc
+
+      - name: Run Go Tests
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            ./${{ matrix.script_path }}
+          else
+            chmod +x ${{ matrix.script_path }}
+            ./${{ matrix.script_path }}
+          fi
+
+  go_wrapper_freebsd_x86_64:
+    name: go_wrapper (freebsd_x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Run in FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            for i in 1 2 3 4 5; do
+              if pkg install -y llvm cmake bash go; then
+                exit 0
+              fi
+              echo "Install failed, retrying in 60s... ($i/5)"
+              sleep 60
+            done
+            exit 1
+          run: |
+            set +e
+            export CC=clang
+            cd build/test/go
+            chmod +x run_unix.sh
+            bash run_unix.sh clang
+            EXIT_CODE=$?
+            set -e
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Test failed with exit code $EXIT_CODE"
+              exit $EXIT_CODE
+            fi
+

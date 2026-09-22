@@ -23,6 +23,7 @@
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 
 namespace bq {
+    BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN();
     BQ_PACK_BEGIN
     class alignas(8) block_node_head {
     public:
@@ -326,4 +327,5 @@ namespace bq {
             return true;
         }
     } BQ_PACK_END static_assert(sizeof(block_list) == BQ_CACHE_LINE_SIZE, "invalid block_list size");
+    BQ_SUPPRESS_MAYBE_UNINITIALIZED_END();
 }

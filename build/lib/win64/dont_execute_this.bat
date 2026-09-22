@@ -18,6 +18,7 @@ rem Normalized values:
 rem   arch         : x86_64 | x86 | arm64 | native
 rem   compiler     : msvc | clang | mingw
 rem   java,node,python : ON | OFF
+rem   go           : ON | OFF (optional 8th param, default OFF)
 rem   lib type     : static_lib | dynamic_lib
 rem   all lib type : dynamic_lib | static_lib | both  (default: both)
 rem ------------------------------------------------------------
@@ -31,6 +32,7 @@ set "ARG3=%~4"
 set "ARG4=%~5"
 set "ARG5=%~6"
 set "ARG6=%~7"
+set "ARG7=%~8"
 
 if /I "%ACTION%"=="dynamic_lib" (
   set "BUILD_LIB_TYPE=dynamic_lib"
@@ -48,6 +50,8 @@ call :normalize_compiler "%ARG2%" COMPILER_TYPE
 call :normalize_onoff "%ARG3%" JAVA_SUPPORT
 call :normalize_onoff "%ARG4%" NODE_API_SUPPORT
 call :normalize_onoff "%ARG5%" PYTHON_SUPPORT
+call :normalize_onoff "%ARG7%" GO_SUPPORT
+if not defined GO_SUPPORT set "GO_SUPPORT=OFF"
 call :normalize_build_lib_type "%ARG6%" BUILD_LIB_TYPE
 
 if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
@@ -228,6 +232,7 @@ echo   COMPILER            : %COMPILER_TYPE%
 echo   JAVA_SUPPORT        : %JAVA_SUPPORT%
 echo   NODE_API_SUPPORT    : %NODE_API_SUPPORT%
 echo   PYTHON_SUPPORT      : %PYTHON_SUPPORT%
+echo   GO_SUPPORT          : %GO_SUPPORT%
 echo   CMake -A            : %VS_GEN_PLATFORM_ARG%
 echo   USER_DEF_ARCH       : %USER_DEF_ARCH%
 echo =================================
@@ -264,6 +269,7 @@ if /I "%COMPILER_TYPE%"=="mingw" (
       -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% ^
       -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% ^
       -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% ^
+      -DGO_SUPPORT:BOOL=%GO_SUPPORT% ^
       -DCMAKE_BUILD_TYPE=!CUR_CFG! ^
       -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_RC_COMPILER=llvm-rc ^
       -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld ^
@@ -275,9 +281,9 @@ if /I "%COMPILER_TYPE%"=="mingw" (
   )
 ) else (
   if /I "%COMPILER_TYPE%"=="clang" (
-    cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE_ARG% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% -T ClangCl || exit /b 1
+    cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE_ARG% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% -DGO_SUPPORT:BOOL=%GO_SUPPORT% -T ClangCl || exit /b 1
   ) else (
-    cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE_ARG% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% || exit /b 1
+    cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE_ARG% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% -DGO_SUPPORT:BOOL=%GO_SUPPORT% || exit /b 1
   )
 
   for %%c in (%CONFIGS%) do (
@@ -328,9 +334,9 @@ cd "VSProj" || exit /b 1
 
 set "SRC_DIR=..\..\..\..\src"
 if /I "%COMPILER_TYPE%"=="clang" (
-  cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% -T ClangCl || exit /b 1
+  cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% -DGO_SUPPORT:BOOL=%GO_SUPPORT% -T ClangCl || exit /b 1
 ) else (
-  cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% || exit /b 1
+  cmake "!SRC_DIR!" -DTARGET_PLATFORM:STRING=win64 %VS_GEN_PLATFORM_ARG% -DBUILD_LIB_TYPE=%BUILD_LIB_TYPE% -DJAVA_SUPPORT:BOOL=%JAVA_SUPPORT% -DNODE_API_SUPPORT:BOOL=%NODE_API_SUPPORT% -DPYTHON_SUPPORT:BOOL=%PYTHON_SUPPORT% -DGO_SUPPORT:BOOL=%GO_SUPPORT% || exit /b 1
 )
 
 cd ..

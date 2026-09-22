@@ -235,6 +235,24 @@ namespace bq {
 #define BQ_SUPPRESS_NULL_DEREF_END()
 #endif
 
+#if defined(BQ_GCC)
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN() \
+    _Pragma("GCC diagnostic push")              \
+        _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END() \
+    _Pragma("GCC diagnostic pop")
+#elif defined(BQ_MSVC)
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN()                                                              \
+    __pragma(warning(push))                                                                                  \
+        __pragma(warning(disable : 4700)) /* C4700: Uninitialized Local Variable Used */                     \
+        __pragma(warning(disable : 4701)) /* C4701: Potentially Uninitialized Local Variable Used */
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END() \
+    __pragma(warning(pop))
+#else
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN()
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END()
+#endif
+
 #if (defined(BQ_CLANG) || defined(BQ_GCC)) && defined(__has_builtin)
 #define BQ_GCC_CLANG_BUILTIN(X) __has_builtin(X)
 #else

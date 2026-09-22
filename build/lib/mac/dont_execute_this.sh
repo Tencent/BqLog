@@ -1,9 +1,9 @@
 #!/bin/zsh
 #
 # Usage (all parameters optional; missing ones will be prompted):
-#   dont_execute_this.sh all  [java] [node] [python] [dynamic_lib|static_lib|both]
-#   dont_execute_this.sh build [java] [node] [python] [dynamic_lib|static_lib|both] [framework|dylib|a]
-#   dont_execute_this.sh gen-vsproj [java] [node] [python] [dynamic_lib|static_lib|both] [framework|dylib|a]
+#   dont_execute_this.sh all  [java] [node] [python] [dynamic_lib|static_lib|both] [go]
+#   dont_execute_this.sh build [java] [node] [python] [dynamic_lib|static_lib|both] [framework|dylib|a] [go]
+#   dont_execute_this.sh gen-vsproj [java] [node] [python] [dynamic_lib|static_lib|both] [framework|dylib|a] [go]
 #   dont_execute_this.sh pack
 #
 # Normalized values:
@@ -33,10 +33,12 @@ ARG2="${3:-}"  # node
 ARG3="${4:-}"  # python
 ARG4="${5:-}"  # build_lib_type
 ARG5="${6:-}"  # format (framework|dylib|a)
+ARG6="${7:-}"  # go
 
 JAVA_SUPPORT=""
 NODE_API_SUPPORT=""
 PYTHON_SUPPORT=""
+GO_SUPPORT=""
 BUILD_LIB_TYPE=""
 APPLE_LIB_FORMAT=""
 
@@ -147,6 +149,8 @@ determine_generator() {
 JAVA_SUPPORT="$(normalize_onoff "$ARG1")"
 NODE_API_SUPPORT="$(normalize_onoff "$ARG2")"
 PYTHON_SUPPORT="$(normalize_onoff "$ARG3")"
+GO_SUPPORT="$(normalize_onoff "$ARG6")"
+[[ -z "${GO_SUPPORT}" ]] && GO_SUPPORT="OFF"
 BUILD_LIB_TYPE="$(normalize_build_lib_type "$ARG4")"
 APPLE_LIB_FORMAT="$(normalize_format "$ARG5")"
 
@@ -193,7 +197,7 @@ build_one_pair() {
       -DBUILD_LIB_TYPE="${build_lib_type}" \
       -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
       -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
-      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" \
+      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
       -DAPPLE_LIB_FORMAT:STRING="${apple_format}" \
       -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install" \
       "${ARCH_ARGS[@]}"
@@ -213,7 +217,7 @@ build_one_pair() {
         -DBUILD_LIB_TYPE="${build_lib_type}" \
         -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
         -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
-      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" \
+      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
         -DCMAKE_BUILD_TYPE="${cfg}" \
         -DAPPLE_LIB_FORMAT:STRING="${apple_format}" \
         -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install" \
@@ -257,7 +261,7 @@ gen_project_one() {
       -DBUILD_LIB_TYPE="${build_lib_type}" \
       -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
       -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
-      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" \
+      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
       -DAPPLE_LIB_FORMAT:STRING="${apple_format}" \
       "${ARCH_ARGS[@]}"
   else
@@ -266,7 +270,7 @@ gen_project_one() {
       -DBUILD_LIB_TYPE="${build_lib_type}" \
       -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
       -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
-      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" \
+      -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
       -DCMAKE_BUILD_TYPE=Debug \
       -DAPPLE_LIB_FORMAT:STRING="${apple_format}" \
       "${ARCH_ARGS[@]}"

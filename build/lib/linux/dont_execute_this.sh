@@ -4,7 +4,7 @@ set -euo pipefail
 # Unified build/generate/pack driver for Linux
 #
 # Usage (all parameters optional; missing ones will be prompted):
-#   dont_execute_this.sh all [arch] [compiler] [java] [node] [python] [dynamic_lib|static_lib|both]
+#   dont_execute_this.sh all [arch] [compiler] [java] [node] [python] [dynamic_lib|static_lib|both] [go]
 #   dont_execute_this.sh build [arch] [compiler] [java] [node] [dynamic_lib|static_lib|both]
 #   dont_execute_this.sh gen-vsproj [arch] [compiler] [java] [node] [dynamic_lib|static_lib|both]
 #   dont_execute_this.sh pack [arch]
@@ -39,12 +39,14 @@ ARG3="${4:-}"
 ARG4="${5:-}"
 ARG5="${6:-}"
 ARG6="${7:-}"
+ARG7="${8:-}"
 
 ARCH_PARAM=""
 COMPILER_TYPE=""
 JAVA_SUPPORT=""
 NODE_API_SUPPORT=""
 PYTHON_SUPPORT=""
+GO_SUPPORT=""
 BUILD_LIB_TYPE=""
 
 to_upper() { echo "$1" | tr '[:lower:]' '[:upper:]'; }
@@ -179,6 +181,8 @@ COMPILER_TYPE="$(normalize_compiler "$ARG2")"
 JAVA_SUPPORT="$(normalize_onoff "$ARG3")"
 NODE_API_SUPPORT="$(normalize_onoff "$ARG4")"
 PYTHON_SUPPORT="$(normalize_onoff "$ARG5")"
+GO_SUPPORT="$(normalize_onoff "$ARG7")"
+[[ -z "${GO_SUPPORT}" ]] && GO_SUPPORT="OFF"
 BUILD_LIB_TYPE="$(normalize_build_lib_type "$ARG6")"
 
 # Echo parsed params summary so "no output" never happens
@@ -189,6 +193,7 @@ echo "  COMPILER_TYPE: ${COMPILER_TYPE:-<unset>}"
 echo "  JAVA_SUPPORT:  ${JAVA_SUPPORT:-<unset>}"
 echo "  NODE_API:      ${NODE_API_SUPPORT:-<unset>}"
 echo "  PYTHON:        ${PYTHON_SUPPORT:-<unset>}"
+echo "  GO:            ${GO_SUPPORT:-<unset>}"
 echo "  BUILD_LIB_TYPE:${BUILD_LIB_TYPE:-<unset>}"
 
 # Resolve C++ compiler and CMake cross arguments + set USER_DEF_ARCH
@@ -336,6 +341,7 @@ build_one() {
       -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
       -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
       -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" \
+      -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
       -DCMAKE_BUILD_TYPE="${cfg}" \
       -DBUILD_SHARED_LIBS="${SHARED}" \
       -DCMAKE_CXX_COMPILER="${RESOLVED_CXX_BIN}" \
@@ -383,6 +389,7 @@ gen_vsproj() {
     -DBUILD_LIB_TYPE="${BUILD_LIB_TYPE}" \
     -DJAVA_SUPPORT:BOOL="${JAVA_SUPPORT}" \
     -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
+    -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
     -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_SHARED_LIBS="${SHARED}" \
     -DCMAKE_CXX_COMPILER="${RESOLVED_CXX_BIN}" \

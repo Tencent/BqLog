@@ -46,7 +46,9 @@ namespace bq {
 
     static bool parse_number_value(double& out, const char* str)
     {
-
+        if (!str) {
+            return false;
+        }
         switch (*str) {
         case '0':
         case '1':
