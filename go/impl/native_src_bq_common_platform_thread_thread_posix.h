@@ -1,0 +1,25 @@
+/* Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#pragma once
+/*!
+ * \file thread_posix.h
+ *
+ * \author pippocao
+ * \date 2022/09/15
+ *
+ * simple substitute of std::thread.
+ * we exclude STL and libc++ to reduce the final executable and library file size
+ *
+ * inherent thread class and implement the virtual callback functions.
+ * call start to begin thread.
+ */
+
+#include "native_src_bq_common_platform_thread_thread.h"

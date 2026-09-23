@@ -1,0 +1,23 @@
+/* Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#pragma once
+
+#include "native_include_bq_common_bq_common_public_include.h"
+#if defined(BQ_IOS)
+
+namespace bq {
+    namespace platform {
+        void ios_print(const char* __restrict content);
+        // get the read only programe home path: /var/mobile/Containers/Data/Application/XXXXXX/
+        bq::string get_programe_home_path();
+    }
+}
+#endif

@@ -1,0 +1,343 @@
+/* Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#pragma once
+#include <stddef.h>
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#define BQ_WIN 1
+#ifdef _WIN64
+#define BQ_WIN64 1
+#else
+#define BQ_WIN64 0
+#endif
+#elif defined(__APPLE__)
+#include <TargetConditionals.h>
+#define BQ_POSIX 1
+#define BQ_APPLE 1
+#if defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR != 0
+#define BQ_IOS 1
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE != 0
+#define BQ_IOS 1
+#elif defined(TARGET_OS_MAC) && TARGET_OS_MAC != 0
+#define BQ_MAC 1
+#elif defined(TARGET_OS_MACCATALYST) && TARGET_OS_MACCATALYST != 0
+// Mac's Catalyst (ports iOS API into Mac, like UIKit).
+#else
+#endif
+#elif defined(__OHOS__)
+#define BQ_OHOS 1
+#define BQ_POSIX 1
+#ifndef BQ_UNIT_TEST
+#define BQ_NAPI 1
+#endif
+#elif defined(__ANDROID__)
+#define BQ_ANDROID 1
+#define BQ_POSIX 1
+#define BQ_JAVA 1
+#ifndef BQ_UNIT_TEST
+#if defined(__has_include)
+#if !__has_include(<vector>)
+#define BQ_NO_LIBCPP 1
+#endif
+#endif
+#endif
+#elif defined(__ORBIS__)
+#define BQ_PS 1
+#define BQ_POSIX 1
+#elif defined(__Prospero__)
+#define BQ_PS 1
+#define BQ_POSIX 1
+#elif defined(__linux__)
+#define BQ_LINUX 1
+#define BQ_POSIX 1
+#elif defined(__unix__)
+#define BQ_POSIX 1
+#define BQ_UNIX 1
+#elif defined(_POSIX_VERSION)
+#define BQ_POSIX 1
+#else
+
+#endif
+
+#ifdef __clang__
+#define BQ_CLANG 1
+#elif defined(_MSC_VER)
+#define BQ_MSVC 1
+#elif defined(__GNUC__)
+#define BQ_GCC 1
+#endif
+
+#if defined(_MSC_VER) // compiler detection, also true for clang-cl
+#define BQ_VISUAL_STUDIO 1
+#endif
+
+#if defined(_M_ARM64) || defined(__aarch64__)
+#define BQ_ARM 1
+#define BQ_ARM_64 1
+#define BQ_ARM_V8 1 // ARMv8-A
+#elif defined(_M_ARM) || defined(__arm__)
+#define BQ_ARM 1
+#define BQ_ARM_32 1
+#if defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7__)
+#define BQ_ARM_V7 1
+#elif defined(__ARM_ARCH_6__)
+#define BQ_ARM_V6 1
+#else
+#define BQ_ARM_UNKNOWN 1
+#endif
+#elif defined(_M_IX86) || defined(__i386__)
+#define BQ_X86 1
+#define BQ_X86_32 1
+#elif defined(_M_X64) || defined(__amd64__) || defined(__x86_64__)
+#define BQ_X86 1
+#define BQ_X86_64 1
+#else
+#define BQ_UNKNOWN_ARCH 1
+#endif
+
+#if defined(BQ_ARM) && defined(__ARM_NEON)
+#define BQ_ARM_NEON 1
+#endif
+
+#ifdef BQ_MSVC
+#define bq_forceinline __forceinline
+#elif defined(BQ_GCC) || defined(BQ_CLANG)
+#define bq_forceinline __inline__ __attribute__((always_inline))
+#else
+#define bq_forceinline inline
+#endif
+
+#include "native_include_bq_common_platform_build_type.h"
+
+#if defined(__cplusplus)
+#define BQ_EXTERN_C_BEGIN extern "C" {
+#define BQ_EXTERN_C_END }
+#define BQ_EXTERN_C extern "C"
+#else
+#define BQ_EXTERN_C_BEGIN
+#define BQ_EXTERN_C_END
+#define BQ_EXTERN_C
+#endif
+
+#if defined(BQ_MSVC) || defined(BQ_VISUAL_STUDIO)
+#define BQ_API_EXPORT BQ_EXTERN_C __declspec(dllexport)
+#define BQ_API_IMPORT BQ_EXTERN_C __declspec(dllimport)
+#else
+#define BQ_API_EXPORT BQ_EXTERN_C __attribute__((visibility("default")))
+#define BQ_API_IMPORT BQ_EXTERN_C __attribute__((visibility("default")))
+#endif
+
+#if defined(BQ_DYNAMIC_LIB)
+#define BQ_API BQ_API_EXPORT
+#elif defined(BQ_DYNAMIC_LIB_IMPORT)
+#define BQ_API BQ_API_IMPORT
+#else
+#define BQ_API BQ_API_EXPORT
+#endif
+
+#if defined(BQ_WIN)
+#define BQ_STDCALL __stdcall
+#else
+#define BQ_STDCALL
+#endif
+#if defined(BQ_MSVC) || defined(BQ_VISUAL_STUDIO)
+#define BQ_TLS __declspec(thread)
+#else
+#define BQ_TLS __thread
+#endif
+
+// thread_local has use-after-free issue on MinGW GCC
+// use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
+#define BQ_TLS_CONCAT_INNER(a, b) a##b
+#define BQ_TLS_CONCAT(a, b) BQ_TLS_CONCAT_INNER(a, b)
+#define BQ_TLS_DEFINE(Type, Name)                                                \
+    BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                        \
+    BQ_TLS bool ____BQ_TSL_##Name##_recycled;                                    \
+    struct BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) {               \
+        BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__)()                  \
+        {                                                                        \
+        }                                                                        \
+        ~BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__)()                 \
+        {                                                                        \
+            if (____BQ_TLS_##Name##_ptr) {                                       \
+                delete ____BQ_TLS_##Name##_ptr;                                  \
+                ____BQ_TLS_##Name##_ptr = nullptr;                               \
+                ____BQ_TSL_##Name##_recycled = true;                             \
+            }                                                                    \
+        }                                                                        \
+        bq_forceinline operator bool() { return !____BQ_TSL_##Name##_recycled; } \
+        bq_forceinline Type& get()                                               \
+        {                                                                        \
+            if (!____BQ_TLS_##Name##_ptr) {                                      \
+                ____BQ_TLS_##Name##_ptr = new Type();                            \
+            }                                                                    \
+            return *____BQ_TLS_##Name##_ptr;                                     \
+        }                                                                        \
+    };                                                                           \
+    thread_local BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) Name;     \
+    bq_forceinline Type& BQ_TLS_CONCAT(Name, _get_direct)()                      \
+    {                                                                            \
+        Type* ____p = ____BQ_TLS_##Name##_ptr;                                   \
+        if (____p) {                                                             \
+            return *____p;                                                        \
+        }                                                                        \
+        return Name.get();                                                       \
+    }
+#define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name)
+
+#if defined(BQ_MSVC)
+#define BQ_PACK_BEGIN __pragma(pack(push, 1))
+#define BQ_PACK_END \
+    ;               \
+    __pragma(pack(pop))
+#define BQ_ANONYMOUS_STRUCT_PACK(DECLARATION, NAME)  \
+    __pragma(pack(push, 1)) struct DECLARATION NAME; \
+    __pragma(pack(pop))
+#else
+#define BQ_PACK_BEGIN
+#define BQ_PACK_END __attribute__((__packed__));
+#define BQ_ANONYMOUS_STRUCT_PACK(DECLARATION, NAME) struct DECLARATION __attribute__((__packed__)) NAME
+#endif
+
+#if defined(__cplusplus) && (__cplusplus >= 201402L)
+#define BQ_CPP_14 1
+#define BQ_FUNC_RETURN_CONSTEXPR constexpr
+#else
+#define BQ_FUNC_RETURN_CONSTEXPR
+#endif
+
+#if defined(__cplusplus) && (__cplusplus >= 201703L)
+#define BQ_CPP_17 1
+#define BQ_CONSTEXPR_IF if constexpr
+#else
+#define BQ_CONSTEXPR_IF if
+#endif
+
+#if defined(__cplusplus) && (__cplusplus >= 202002L)
+#define BQ_CPP_20 1
+#endif
+
+#if defined(__cplusplus) && (__cplusplus >= 202302L)
+#define BQ_CPP_23 1
+#endif
+
+#if defined(BQ_GCC) || defined(BQ_CLANG)
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN() \
+    _Pragma("GCC diagnostic push")     \
+        _Pragma("GCC diagnostic ignored \"-Wnull-dereference\"")
+#define BQ_SUPPRESS_NULL_DEREF_END() \
+    _Pragma("GCC diagnostic pop")
+#elif defined(BQ_MSVC)
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN()                                          \
+    __pragma(warning(push))                                                     \
+        __pragma(warning(disable : 6011)) /* C6011: Dereference Null Pointer */ \
+        __pragma(warning(disable : 6387)) /* C6387: 'Maybe NULL' */
+#define BQ_SUPPRESS_NULL_DEREF_END() \
+    __pragma(warning(pop))
+#else
+#define BQ_SUPPRESS_NULL_DEREF_BEGIN()
+#define BQ_SUPPRESS_NULL_DEREF_END()
+#endif
+
+#if defined(BQ_GCC)
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN() \
+    _Pragma("GCC diagnostic push")              \
+        _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END() \
+    _Pragma("GCC diagnostic pop")
+#elif defined(BQ_MSVC)
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN()                                                              \
+    __pragma(warning(push))                                                                                  \
+        __pragma(warning(disable : 4700)) /* C4700: Uninitialized Local Variable Used */                     \
+        __pragma(warning(disable : 4701)) /* C4701: Potentially Uninitialized Local Variable Used */
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END() \
+    __pragma(warning(pop))
+#else
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN()
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END()
+#endif
+
+#if (defined(BQ_CLANG) || defined(BQ_GCC)) && defined(__has_builtin)
+#define BQ_GCC_CLANG_BUILTIN(X) __has_builtin(X)
+#else
+#define BQ_GCC_CLANG_BUILTIN(X) 0
+#endif
+
+#if defined(BQ_CPP_20)
+#define BQ_LIKELY_IF(expr) if (expr) [[likely]]
+#define BQ_UNLIKELY_IF(expr) if (expr) [[unlikely]]
+#define BQ_LIKELY_DEFINED
+#elif defined(BQ_GCC_CLANG_BUILTIN)
+#if BQ_GCC_CLANG_BUILTIN(__builtin_expect)
+#define BQ_LIKELY_IF(expr) if (__builtin_expect(!!(expr), 1))
+#define BQ_UNLIKELY_IF(expr) if (__builtin_expect(!!(expr), 0))
+#define BQ_LIKELY_DEFINED
+#endif
+#endif
+
+#ifndef BQ_LIKELY_DEFINED
+#define BQ_LIKELY_IF(expr) if (expr)
+#define BQ_UNLIKELY_IF(expr) if (expr)
+#endif
+
+#if defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING) || defined(UE_GAME) || defined(UE_EDITOR) || defined(UE_BUILD_SHIPPING_WITH_EDITOR) || defined(UE_BUILD_DOCS)
+#define BQ_IN_UNREAL 1
+#else
+#define BQ_IN_UNREAL 0
+#endif
+
+#if defined(BQ_ANDROID) || defined(BQ_IOS) || defined(BQ_OHOS)
+#define BQ_MOBILE_PLATFORM
+#endif
+
+#if defined(BQ_GCC) || defined(BQ_CLANG)
+#define BQ_RESTRICT __restrict__
+#elif defined(BQ_MSVC)
+#define BQ_RESTRICT __restrict
+#else
+#define BQ_RESTRICT
+#endif
+
+// Target attribute for GCC/Clang to enable specific instruction sets for specific functions.
+#if (defined(BQ_CLANG) || defined(BQ_GCC))
+#if defined(BQ_X86)
+#define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
+#define BQ_HW_SIMD_TARGET __attribute__((target("avx2")))
+#define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))
+#else
+#define BQ_HW_CRC_TARGET
+#define BQ_HW_SIMD_TARGET
+#define BQ_HW_SIMD_SSE_TARGET
+#endif
+#define BQ_CRC_HW_INLINE inline
+#define BQ_SIMD_HW_INLINE inline
+#else
+#define BQ_HW_CRC_TARGET
+#define BQ_HW_SIMD_TARGET
+#define BQ_HW_SIMD_SSE_TARGET
+#define BQ_CRC_HW_INLINE bq_forceinline
+#define BQ_SIMD_HW_INLINE bq_forceinline
+#endif
+
+#if defined(BQ_CLANG)
+#define BQ_NO_ASAN __attribute__((no_sanitize("address")))
+#elif defined(BQ_GCC)
+#define BQ_NO_ASAN __attribute__((no_sanitize_address))
+#elif defined(BQ_MSVC)
+#define BQ_NO_ASAN __declspec(no_sanitize_address)
+#else
+#define BQ_NO_ASAN
+#endif
+
+#if defined(BQ_LATE_BINDING)
+#include "native_include_bq_common_platform_api_dynamic_binding.h"
+#else
+#define BQ_API_DEF(return_type, name, parameters, arguments) BQ_API return_type name parameters
+#endif

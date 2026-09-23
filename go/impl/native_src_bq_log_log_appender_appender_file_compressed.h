@@ -1,0 +1,142 @@
+/* Copyright (C) 2025 Tencent.
+ * BQLOG is licensed under the Apache License, Version 2.0.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#pragma once
+/*!
+ * \class appender_file_compressed
+ * \author pippocao
+ * \
+ *
+ * Appender for compressed log file.
+ * This appender might consume slightly more CPU than the appender_file_raw,
+ * but in most cases, it can significantly reduce the size of log files.
+ *
+ * Most of the time, the same combination of log format, level, and category appears multiple times in a single log file,
+ * with the only difference between different log entries being the parameters that follow.
+ * Therefore, we can create a template for them and use an index to reference them.
+ * Additionally, using VLQ encoding extensively can help reduce the file size.
+ * this appender may be slight
+ *
+ * Structure of compressed log file:
+ * [Common Binary Header][Data Section]
+ *
+ *
+ * 【Data Section 】
+ * The compressed log's data section consists of data items, which can be of two types distinguished by their data_item_header.
+ * Here are the data structures for the two data item types:
+ * 1. Log Template:
+ * 	[data_item_header][data(Log Template)]
+ * 2. Log Entry:
+ * 	[data_item_header][data(Log Entry)]
+ *
+ * The structure of the data_item_header is as follows:   (Final data block length: If data_len_extra (7 bits) is all zeros, then it is VLQ_decode(data_len_base); otherwise, it is VLQ_decode([[0(1 bit), data_len_extra(7 bits)], data_len_base]).)
+ * 	[[type(1 bit), data_len_extra(7 bits)], data_len_base(VLQ (4 bytes max), don't include data_len self)]
+
+ * The data structures for the two types of data are:
+ * 1. data(Log Template):
+ *  [sub type(1 byte][sub type data(see sub types bellow)]
+ *  there are two sub types of Log Template:
+ * 	1.1 Format Template: [level(1 byte), category_idx(VLQ), utf_mixed_fmt_data(str, 0 bytes or more)] (NO HASH stored!)
+ * 	1.2 Thread Info Template: [thread_info_template idx(VLQ), thread_id(VLQ 64bits), thread name str utf-8]
+ * 2. data(Log Entry):
+ * 	(epoch offset milliseconds)(VLQ), [(formate_template idx)(VLQ), (thread_info_template idx)(VLQ), [param_type(1 byte), param(same as raw data, not aligned) ...]]
+
+ */
+#include "native_src_bq_log_log_appender_appender_file_binary.h"
+#include "native_src_bq_log_types_bounded_hash_cache.h"
+
+namespace bq {
+    class appender_file_compressed : public appender_file_binary {
+        friend class appender_decoder_compressed;
+        enum item_type : uint8_t {
+            log_template = 0,
+            log_entry = 128, // 0b10000000
+        };
+        enum template_sub_type : uint8_t {
+            format_template_utf8 = 0,
+            thread_info_template = 1,
+            format_template_utf16 = 2
+        };
+
+    public:
+        static constexpr uint32_t format_version = 10;
+        static constexpr uint32_t DEFAULT_FORMAT_TEMPLATE_CACHE_MAX_ENTRIES = 100000;
+        static constexpr uint32_t DEFAULT_THREAD_INFO_CACHE_MAX_ENTRIES = 2048;
+
+    protected:
+        virtual bool init_impl(const bq::property_value& config_obj) override;
+
+        virtual bool reset_impl(const bq::property_value& config_obj) override;
+
+        virtual bool log_impl(const log_entry_handle& handle) override;
+
+        virtual bool parse_exist_log_file(parse_file_context& context) override;
+
+        virtual void on_file_open(bool is_new_created) override;
+
+        virtual appender_file_binary::appender_format_type get_appender_format() const override
+        {
+            return appender_file_binary::appender_format_type::compressed;
+        }
+
+        virtual bq::string get_file_ext_name() override;
+
+        virtual uint32_t get_binary_format_version() const override;
+
+    private:
+        bq::tuple<bool, appender_file_compressed::item_type, appender_file_base::read_with_cache_handle> read_item_data(parse_file_context& context);
+
+        bool parse_log_entry(parse_file_context& context, const appender_file_base::read_with_cache_handle& data_handle);
+
+        bool parse_formate_template(parse_file_context& context, const appender_file_base::read_with_cache_handle& data_handle, template_sub_type sub_type);
+
+        bool parse_thread_info_template(parse_file_context& context, const appender_file_base::read_with_cache_handle& data_handle);
+
+        void reset();
+
+    private:
+        static constexpr uint32_t CACHE_EMPTY = static_cast<uint32_t>(-1);
+        static constexpr uint32_t FORMAT_L1_SIZE = 256;
+        static constexpr uint32_t THREAD_L1_SIZE = 64;
+        static constexpr uint32_t CACHE_MIN_ENTRIES = 8;
+        static constexpr uint32_t FORMAT_L2_MAX_CONFIG_ENTRIES = 16 * 1024 * 1024;
+        static constexpr uint32_t THREAD_L2_MAX_CONFIG_ENTRIES = 1024 * 1024;
+
+        struct direct_cache_slot {
+            uint64_t key;
+            uint32_t value;
+        };
+
+        direct_cache_slot format_l1_[FORMAT_L1_SIZE];
+        direct_cache_slot thread_l1_[THREAD_L1_SIZE];
+        bounded_hash_cache<FORMAT_L2_MAX_CONFIG_ENTRIES> format_l2_ { DEFAULT_FORMAT_TEMPLATE_CACHE_MAX_ENTRIES };
+        bounded_hash_cache<THREAD_L2_MAX_CONFIG_ENTRIES> thread_l2_ { DEFAULT_THREAD_INFO_CACHE_MAX_ENTRIES };
+        uint32_t format_template_cache_max_entries_ = DEFAULT_FORMAT_TEMPLATE_CACHE_MAX_ENTRIES;
+        uint32_t thread_info_cache_max_entries_ = DEFAULT_THREAD_INFO_CACHE_MAX_ENTRIES;
+        uint64_t last_thread_id_;
+        uint32_t last_thread_info_idx_;
+        uint32_t current_format_template_max_index_;
+        uint32_t current_thread_info_max_index_;
+        uint64_t last_log_entry_epoch_;
+
+#if defined(BQ_UNIT_TEST)
+    public:
+        uint32_t get_format_template_cache_max_entries_for_test() const
+        {
+            return format_template_cache_max_entries_;
+        }
+
+        uint32_t get_thread_info_cache_max_entries_for_test() const
+        {
+            return thread_info_cache_max_entries_;
+        }
+#endif
+    };
+}

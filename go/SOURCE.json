@@ -1,0 +1,735 @@
+{
+  "version": "2.4.1",
+  "module": "github.com/Tencent/BqLog/go/v2",
+  "source_commit": "58bb289358536ecdf6bb24872c034c256792aed1",
+  "sources": [
+    {
+      "path": "include/bq_common/bq_common_public_include.h",
+      "sha256": "6f08aa7a3c34df25030250568e35ba5b067e35c7e28b3f3967678a46d7b574fa"
+    },
+    {
+      "path": "include/bq_common/misc/assert.h",
+      "sha256": "8cc2b8fd164f9b15a223477ce8f261aa42118101cb0b1774bd73966e09993261"
+    },
+    {
+      "path": "include/bq_common/platform/api_dynamic_binding.h",
+      "sha256": "5a5f313e9ca62a49063f687fdf70795dab69b8f123c4ff539e0659656afed49b"
+    },
+    {
+      "path": "include/bq_common/platform/build_type.h",
+      "sha256": "a1aa03be8ced73d5c643582fdd97fffdedd078ffdb28ce285dfdf19d67f22b0b"
+    },
+    {
+      "path": "include/bq_common/platform/build_type_dynamic_lib_import.h",
+      "sha256": "c57a1bbf6dcdda15fa58d8a305548392668900b0de2a56913fcec62177df9227"
+    },
+    {
+      "path": "include/bq_common/platform/macros.h",
+      "sha256": "2134822029c47f08e44e0936aaab8b89b5fd8a4b3dc5326091167096633b9cc1"
+    },
+    {
+      "path": "include/bq_common/types/allocator.h",
+      "sha256": "e5cbbce9eeab9b94f1efdba930aa8b06e53f26e263911ad3a30484b9582c07c7"
+    },
+    {
+      "path": "include/bq_common/types/array.h",
+      "sha256": "ff5432ab1db33f5446bc41c5165fd05a77bc9c7ed4b604094dbf575176d78dfc"
+    },
+    {
+      "path": "include/bq_common/types/array_def.h",
+      "sha256": "ad7ee389c37703d62b6824139eb4c013aef940d68bc6dd190c0c16a4dfa042af"
+    },
+    {
+      "path": "include/bq_common/types/array_impl.h",
+      "sha256": "676815fcc5dda9f56e22ba0b702ae384320c984b8a2398f281c947eb552f111a"
+    },
+    {
+      "path": "include/bq_common/types/basic_types.h",
+      "sha256": "39caf2dfc577d2c93c2822b73038f7c107427458a5aa65e4c52692fbc94d812b"
+    },
+    {
+      "path": "include/bq_common/types/hash_map.h",
+      "sha256": "0be8ab57da297585a817dab9032f21ee7051a006b5b8e08e0f9294636b3460b6"
+    },
+    {
+      "path": "include/bq_common/types/hash_map_def.h",
+      "sha256": "aa36254c83d0de92530b689ca9b0174584a04e096f16711427349fc2e0a506b2"
+    },
+    {
+      "path": "include/bq_common/types/hash_map_impl.h",
+      "sha256": "8e045e29be403174e5170164a2ac420de5cd220edb958dc1cd313bbf61032956"
+    },
+    {
+      "path": "include/bq_common/types/string.h",
+      "sha256": "0bf9b5c4cd344130269dec3f9d939c588173fac446a202d54ba3548519be4733"
+    },
+    {
+      "path": "include/bq_common/types/string_def.h",
+      "sha256": "6b0eab02e8eabbb11c64aeff8dce27fb13f52877250a2a2ce781cb93fb830bf9"
+    },
+    {
+      "path": "include/bq_common/types/string_impl.h",
+      "sha256": "c6196ceb30905261396fba0f8d4eae72ba2fc4620ddb8b4333ee0781b0cbe638"
+    },
+    {
+      "path": "include/bq_common/types/string_tools.h",
+      "sha256": "589b1f669da3e5b8162d3686927c2b7f6f9514177fb35480d986788e18f27e03"
+    },
+    {
+      "path": "include/bq_common/types/type_tools.h",
+      "sha256": "9578cce34123e59f70c3ff62072201fec1bb01849a7bf769b712214e3cde84d9"
+    },
+    {
+      "path": "include/bq_common/types/type_traits.h",
+      "sha256": "1ff7e7e3d6d81c99345775b0a0dbd409ab35cd47908672824c141489b57539c5"
+    },
+    {
+      "path": "include/bq_log/adapters/adapter_unreal.h",
+      "sha256": "54f9418a8e630b8141e87b4359af5d2c9b4e7d754d8865808e606c4d934cd835"
+    },
+    {
+      "path": "include/bq_log/adapters/adapters.h",
+      "sha256": "544c7e64cdc0ded4a95c5306913a9e5bb4eac2e6b151c3dde1c080c3b3b4bdcf"
+    },
+    {
+      "path": "include/bq_log/bq_log.h",
+      "sha256": "fa58115fa40342760bbf837c6775c5e38a74efeaf0eeffd8171ff1e39f2f44fc"
+    },
+    {
+      "path": "include/bq_log/bq_log_entry.h",
+      "sha256": "1128595dea87e75b0a4736503cd0c390c569c9ad7ec6402175ce68f96e3def9a"
+    },
+    {
+      "path": "include/bq_log/misc/bq_log_api.h",
+      "sha256": "143bf543a8c2e1ad4dc5fab168af4bc8f0bb25ad482adf3cd66d94bdf696118e"
+    },
+    {
+      "path": "include/bq_log/misc/bq_log_c_api.h",
+      "sha256": "2a80c872f1d94876bd9b82d92bae1092136fbbe2919b7d6dc7e334b2a9b7447e"
+    },
+    {
+      "path": "include/bq_log/misc/bq_log_c_api.inc",
+      "sha256": "3188502f15d3dfc87780d59fc9ac7412f435e2c3c5ed62f5797d79678e6c2bd7"
+    },
+    {
+      "path": "include/bq_log/misc/bq_log_c_types.h",
+      "sha256": "035a2c6795e1bb6fae8d01c69e3d175ad7d1541b2100bfe38e8fb061aa1ae6c8"
+    },
+    {
+      "path": "include/bq_log/misc/bq_log_def.h",
+      "sha256": "72b9e77270ea1c8e5260f758778e5b268594c2f2a8095c1531f49112602b91da"
+    },
+    {
+      "path": "include/bq_log/misc/bq_log_impl.h",
+      "sha256": "696e27c1908da71e473a3657c418dd59e27f1690cb61058d4423117d71cc2f22"
+    },
+    {
+      "path": "include/bq_log/misc/bq_log_wrapper_tools.h",
+      "sha256": "034642a98e19a6d653391e6df3d7aeced64d4aeae84b24027f4df7eaddc28ec4"
+    },
+    {
+      "path": "src/bq_common/bq_common.h",
+      "sha256": "d7b94e0a0672f362cbdc01e3b032328da9f3342f7defcb8667bba4a1c39a75a3"
+    },
+    {
+      "path": "src/bq_common/encryption/aes.cpp",
+      "sha256": "861121b36c7d4e2b7e5e7f89dbe0b9f73102a88a4ece3fc6e7e1e4ccc31a3c3e"
+    },
+    {
+      "path": "src/bq_common/encryption/aes.h",
+      "sha256": "cec22114acde0443e5cd716121a37212f9116ea0447381c72bf8ee910cff1808"
+    },
+    {
+      "path": "src/bq_common/encryption/rsa.cpp",
+      "sha256": "e4a052765e1c135685da6186d7c504a6e61ead60d140c4008eea77a33219092a"
+    },
+    {
+      "path": "src/bq_common/encryption/rsa.h",
+      "sha256": "54260806a0ad648d2dc4f0aa3aebb843445d0a93d75e1614d3d1f04c7b07ba64"
+    },
+    {
+      "path": "src/bq_common/encryption/vernam.cpp",
+      "sha256": "d0d8d9cd25de5d19129607cf0faf6bdaf8f5bed64170adbeeb1166b70d40de95"
+    },
+    {
+      "path": "src/bq_common/encryption/vernam.h",
+      "sha256": "8b371c12ba6ad2061a3151495654256ec0e5e40069013eda54bb8ae0fac40d32"
+    },
+    {
+      "path": "src/bq_common/global/common_vars.cpp",
+      "sha256": "cece0303636f9a243958b8d28708b106e0c731a1ee85740d4c201cfbe0336d96"
+    },
+    {
+      "path": "src/bq_common/global/common_vars.h",
+      "sha256": "b19d6d22632169f90c4b3642c6d9097c0e913881d5787f84df4916ada8dd7e30"
+    },
+    {
+      "path": "src/bq_common/platform/android_misc.cpp",
+      "sha256": "aa81214f1d610b89c085dff708ed4f8842bae742898e5a687b0fa1efbcb55868"
+    },
+    {
+      "path": "src/bq_common/platform/android_misc.h",
+      "sha256": "3b45c2a59da941ec3e86c8f30fc7df25747c2e0f064ef736c50f01d3deddd1ff"
+    },
+    {
+      "path": "src/bq_common/platform/atomic/_inner_atomic_GNU_C.h",
+      "sha256": "6dbb2417b81ab74d0fcaffd1bd139428aca58699a041a69617293ed381fa3cba"
+    },
+    {
+      "path": "src/bq_common/platform/atomic/_inner_atomic_msvc.h",
+      "sha256": "4920f05556a58e9b52ad020deb9d2bca6089bddd6da5efe81cbf5b6108948cbc"
+    },
+    {
+      "path": "src/bq_common/platform/atomic/atomic.h",
+      "sha256": "11c6932e040970bcfd2336926d3b220aaf9b779a08aa3c33e6f2184e6b8c226e"
+    },
+    {
+      "path": "src/bq_common/platform/io/memory_map.h",
+      "sha256": "225516d19ddbb0394b12caa7d74c464f58ca8a746c196c7a121134d043c60be2"
+    },
+    {
+      "path": "src/bq_common/platform/io/memory_map_posix.cpp",
+      "sha256": "3e792873bdb6b4d3a69fa2d4ec310cc27129a7c0d6dc1f1d2a29b66ec40a663d"
+    },
+    {
+      "path": "src/bq_common/platform/io/memory_map_posix.h",
+      "sha256": "77ae28533d9d18ed30c0f89f551914b8384e99044ec5d2ec8e561446cfca44af"
+    },
+    {
+      "path": "src/bq_common/platform/io/memory_map_win.cpp",
+      "sha256": "28c7cf2d0ae52dd16e069779c1a951346c53b2c74909c8666a72d5e7dd833cbd"
+    },
+    {
+      "path": "src/bq_common/platform/io/memory_map_win.h",
+      "sha256": "f857d2fe7fdc0e28b8bd951184ce042a90190170d326c9f44a9289d64cbd7a59"
+    },
+    {
+      "path": "src/bq_common/platform/ios_misc.h",
+      "sha256": "ad3a97d2d19404ab9f4de53cd5c85a4062f6118bca07d51680e72b4fc81c702b"
+    },
+    {
+      "path": "src/bq_common/platform/java_misc.cpp",
+      "sha256": "040657a40b34db3a124984db0a581db2310b7aabd14a854003f25737c97a4253"
+    },
+    {
+      "path": "src/bq_common/platform/java_misc.h",
+      "sha256": "c68c2b326618d6238d77e44027519dfc3a030ff0a189dd6b240d792bb7dd5332"
+    },
+    {
+      "path": "src/bq_common/platform/linux_misc.cpp",
+      "sha256": "7114bf348ddf2de05e145aaf1f9d0c78ce5ebb85e9ddc204d42f7a9d32317651"
+    },
+    {
+      "path": "src/bq_common/platform/linux_misc.h",
+      "sha256": "c016e3d8d1c275e491b98a8e8148a86544cd4e39c58e8aebe4c0e493966fa169"
+    },
+    {
+      "path": "src/bq_common/platform/mac_misc.h",
+      "sha256": "e87cd2c33524d26f828d93e541e8544d274e4f6dbed480e4f6fd8fbe3eec1568"
+    },
+    {
+      "path": "src/bq_common/platform/mac_misc.mm",
+      "sha256": "32b5462acc046aade72b82f5eb0dcc5c30307e3222e00b04e85c4891de73b45f"
+    },
+    {
+      "path": "src/bq_common/platform/napi_misc.cpp",
+      "sha256": "37b55a71983dccc28d96b551e59b88b471c3384184a9953d4cf6b46ddf5f97e1"
+    },
+    {
+      "path": "src/bq_common/platform/napi_misc.h",
+      "sha256": "06eaeb00c5cc2d9f77967ec3cc228933c07fe7e297d86fa9598d92df000a6de3"
+    },
+    {
+      "path": "src/bq_common/platform/no_lib_cpp_impl.cpp",
+      "sha256": "b4864220438f920e5d696d5d726fa85a330e2350313af8ac9b9d3a004d803b71"
+    },
+    {
+      "path": "src/bq_common/platform/no_lib_cpp_impl.h",
+      "sha256": "27c67cf114c5fa4f59a506fc10e72c626298c800ef4458688f2a70c0b71460a6"
+    },
+    {
+      "path": "src/bq_common/platform/ohos_misc.cpp",
+      "sha256": "ea96d0d045c25fb323f4cb02a65ec8e455a53e13e13fe13abd137c3be772b9e7"
+    },
+    {
+      "path": "src/bq_common/platform/ohos_misc.h",
+      "sha256": "cdfc5583bb8d01e3fc72e0fa5dd9f83a4c9258cd9eaa93ea041ed912c8074118"
+    },
+    {
+      "path": "src/bq_common/platform/platform_misc.cpp",
+      "sha256": "5021de9fc2a9e42dc8496d24a7ca91e395ee547a2d5cf8705bba2632854ac590"
+    },
+    {
+      "path": "src/bq_common/platform/platform_misc.h",
+      "sha256": "8e930e2df893ec2b716f07906f83ebde682878ec77544df7049559b2303ffaed"
+    },
+    {
+      "path": "src/bq_common/platform/posix_misc.cpp",
+      "sha256": "200c59ae695d39a427fe836932133dec7a1e3f546d94b76da2a3c394729bfc78"
+    },
+    {
+      "path": "src/bq_common/platform/posix_misc.h",
+      "sha256": "a4b3689c27ebd4163ed3850b28604800a4278327248be42f7b681e12928c57c6"
+    },
+    {
+      "path": "src/bq_common/platform/ps_misc.cpp",
+      "sha256": "82559bef1f949fe87a82c7cb3229f453d69ebfa957d6da204b4c763941a50279"
+    },
+    {
+      "path": "src/bq_common/platform/ps_misc.h",
+      "sha256": "2d9f81451f3cdbd07ff609d3ba50e11a7be6885e26ed817faf7683b7660ca4c0"
+    },
+    {
+      "path": "src/bq_common/platform/python_misc.cpp",
+      "sha256": "8eda0b3070d192ec90d91f11a95bc1854ab4fbd928a512388bf1f1e609e11e8a"
+    },
+    {
+      "path": "src/bq_common/platform/python_misc.h",
+      "sha256": "5248e204a9027e95988e821933179221a42005861af8c341a4fea885674f33b4"
+    },
+    {
+      "path": "src/bq_common/platform/simd.cpp",
+      "sha256": "622aca06669cf79500f368d45c0e75b52c3983d0be72785393b1a3a7c7473985"
+    },
+    {
+      "path": "src/bq_common/platform/simd.h",
+      "sha256": "dd43e088f630c85fd141e631152db97e13f2c93184881c3ddc589017381d6c6e"
+    },
+    {
+      "path": "src/bq_common/platform/thread/condition_variable.h",
+      "sha256": "11b468c932bfb75222e6d29ba1cc632c53446e4f797a6e1ed2ab06739929294a"
+    },
+    {
+      "path": "src/bq_common/platform/thread/condition_variable_posix.cpp",
+      "sha256": "8ead39ac91909341b076cba46f8d9d37022414f2e17fd5dca53dd664433bbb3c"
+    },
+    {
+      "path": "src/bq_common/platform/thread/condition_variable_posix.h",
+      "sha256": "284c0420c42eb595b54c843b208ce22a869d89a0e7f7b3bf7be1df075b1db6de"
+    },
+    {
+      "path": "src/bq_common/platform/thread/condition_variable_win64.cpp",
+      "sha256": "b55e6ec955c6ba2f0a4d94f49aec15c554442c2cb4ad3da5bfef58ef4399da4b"
+    },
+    {
+      "path": "src/bq_common/platform/thread/condition_variable_win64.h",
+      "sha256": "6d0320757533d7d8ffba4b97d6bb8f927ddcef59b65e312c2f346e0fa67df725"
+    },
+    {
+      "path": "src/bq_common/platform/thread/mutex.h",
+      "sha256": "c3d5cc9bc63dda0d6bc632f4e43b57c61b7ac74c467d95e440194b649f49967f"
+    },
+    {
+      "path": "src/bq_common/platform/thread/mutex_posix.cpp",
+      "sha256": "53973f08104d613f8ba0dddddb6365675305e4efcfc6720a004a16d38b91bc75"
+    },
+    {
+      "path": "src/bq_common/platform/thread/mutex_posix.h",
+      "sha256": "88f6a39225b45c3b860116aa930fb3c1268df4ba7a01b1c37b05217f561a2bd3"
+    },
+    {
+      "path": "src/bq_common/platform/thread/mutex_win64.cpp",
+      "sha256": "fd721231774dc4ec2cb53780aebd10153caa673a883f0ee7a3a9884dd43e9009"
+    },
+    {
+      "path": "src/bq_common/platform/thread/mutex_win64.h",
+      "sha256": "619df92a00c7e725448313a53defb6d014a2cf063f0cd44a8583bd335324717a"
+    },
+    {
+      "path": "src/bq_common/platform/thread/spin_lock.cpp",
+      "sha256": "78f3b41e049395927197bcd5f1e710552d3556dd93f539f90b1209f91e11555d"
+    },
+    {
+      "path": "src/bq_common/platform/thread/spin_lock.h",
+      "sha256": "586b4b0e15c69ee12109f165849dd832615f40023bd9644744473f25a87d4ddf"
+    },
+    {
+      "path": "src/bq_common/platform/thread/thread.cpp",
+      "sha256": "ba9c1b2256cad0567c60e78bbcd14d311c079ffc247def4789d9e9a15ad5f0ec"
+    },
+    {
+      "path": "src/bq_common/platform/thread/thread.h",
+      "sha256": "a50dd1e43cd6ea0bf1715754823b979093ce24b670074a63f5eced387451c153"
+    },
+    {
+      "path": "src/bq_common/platform/thread/thread_posix.cpp",
+      "sha256": "c67133d18395f280c6c807f7b8da5fa12ec4c522a75135391694838a9d0cf62c"
+    },
+    {
+      "path": "src/bq_common/platform/thread/thread_posix.h",
+      "sha256": "5b9b00f5472f9912de3a61d12c43e8c2a132f2c6947960f277856465787aac95"
+    },
+    {
+      "path": "src/bq_common/platform/thread/thread_win64.cpp",
+      "sha256": "3430dba44216ec8927b5c5eb0895afa0ebd03c2c8d376ba1a4f993519f42a407"
+    },
+    {
+      "path": "src/bq_common/platform/thread/thread_win64.h",
+      "sha256": "e8bfc3ba146f2ba3f26f06e107da3598e2d60921a3b0e4f2985954fdd34125b3"
+    },
+    {
+      "path": "src/bq_common/platform/unix_misc.cpp",
+      "sha256": "72425204cf645522efec64768a261761c92ac02f03c30e77e4417c648239728b"
+    },
+    {
+      "path": "src/bq_common/platform/unix_misc.h",
+      "sha256": "a9359fa0d823cb1fe60ac81258430220843e26209e03162bb9b6f836162a626d"
+    },
+    {
+      "path": "src/bq_common/platform/win64_includes_begin.h",
+      "sha256": "b7ec3249f914feb69b4cdf464a02966b788ef56a92ee89e45dc989f7361531e6"
+    },
+    {
+      "path": "src/bq_common/platform/win64_includes_end.h",
+      "sha256": "9afe6b9d43b773e28d8ffc8b508a2e5f8a6ca80b6e95b111c56d0835cbb15ee9"
+    },
+    {
+      "path": "src/bq_common/platform/win64_misc.cpp",
+      "sha256": "7ca914da6d99be7a8ae823ed9f5307617888a58de080737eff9fd50cc17b66a0"
+    },
+    {
+      "path": "src/bq_common/platform/win64_misc.h",
+      "sha256": "51c2f0f45aa9a8c22f876ee587f917d183f58da4f8a4891efa53be0404e304de"
+    },
+    {
+      "path": "src/bq_common/utils/aligned_allocator.cpp",
+      "sha256": "668a83f560dc1369465e63125958ff9b6405b9049a472e290863bee4789e26d8"
+    },
+    {
+      "path": "src/bq_common/utils/aligned_allocator.h",
+      "sha256": "bcb519cf6e031281b607eadc3bfc7c23ee29b090e7e50f391e88a37714ba09de"
+    },
+    {
+      "path": "src/bq_common/utils/file_manager.cpp",
+      "sha256": "ee38378788d0ffc1e2d121092cd487b4140c3c9a3349afc645f536e8470882a3"
+    },
+    {
+      "path": "src/bq_common/utils/file_manager.h",
+      "sha256": "c61151f1ff5ea77f0aa75ea3dd06b2155b96901edaacf226716043234699cea0"
+    },
+    {
+      "path": "src/bq_common/utils/property.cpp",
+      "sha256": "9de97ddf002c28f3825e2e4a52ecc518e7fffd1c7fd3f32bc761b6ed7c450ceb"
+    },
+    {
+      "path": "src/bq_common/utils/property.h",
+      "sha256": "9799043c57d21db0ce565e7de0ab744b3a86188e6149d86e948c5657120494c8"
+    },
+    {
+      "path": "src/bq_common/utils/property_ex.cpp",
+      "sha256": "bda606772eb216571da9e213d749b9ef38fac4c3866111743387089bca3788ca"
+    },
+    {
+      "path": "src/bq_common/utils/property_ex.h",
+      "sha256": "5f11901162c6d4d7eac9bb3779d3ce6bfa5a7649cb812d3beac6203d7ae2f779"
+    },
+    {
+      "path": "src/bq_common/utils/util.cpp",
+      "sha256": "beb335220ef14ff2391dde8c60d115958fb53358188bdac6431369c63daf8c89"
+    },
+    {
+      "path": "src/bq_common/utils/util.h",
+      "sha256": "58aefa2dd1364a9d894bd87223d3245f364d1e3c9b37a5a494a898f7005c0a87"
+    },
+    {
+      "path": "src/bq_common/utils/utility_types.h",
+      "sha256": "872bd609f5b5926766f8b955951194531030f872311d463b096b3abb301f5d23"
+    },
+    {
+      "path": "src/bq_log/api/bq_impl_log_invoker.h",
+      "sha256": "0de671ac38903bf4bfdf1c9e12fd6db45fbd728664d61e7dfaf9254a4c3520c3"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_api.cpp",
+      "sha256": "4a9e19e1e97170a11de9a01f44ffc111353e469ab2a3a9b019cdab4165484b35"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_go.cpp",
+      "sha256": "2352fcdea80336f47189392cd4cdce7217c0a5f7b26ba8807039ec9535d3beaa"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_jni_api.cpp",
+      "sha256": "9cb7dd9aed876b303fbe9f1ec4c3f2c10d8e2ab313c07692616bd6a19cd53e69"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_jni_api.h",
+      "sha256": "1fdf41f0b289d5d715e4434678582088dc02afacdaffd15ec598b22954a0378d"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_napi.cpp",
+      "sha256": "d5d278d4e6365a2bc172f1d4f9e3f4005efcea06eeda36f7e81b0577fab23b98"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_napi.h",
+      "sha256": "b153fb51390294212489f99f945f17ade4a0bced6a490902a552719d4fd2e0c8"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_python_api.cpp",
+      "sha256": "47e738e465c8eb43dbb30cf7def947814c890bc073a903ce67630e38e7ac905a"
+    },
+    {
+      "path": "src/bq_log/api/bq_log_python_api.h",
+      "sha256": "8dd03b8c7d3e0da93cece46355ae4ce85a0745decdbd8a75389c0ab705501cff"
+    },
+    {
+      "path": "src/bq_log/global/log_vars.cpp",
+      "sha256": "2fdb9d4d306181150e03ef570f45bfc366be650433f9fa27dbd7a334fdcff87f"
+    },
+    {
+      "path": "src/bq_log/global/log_vars.h",
+      "sha256": "7e0cd066c36e76cea4935d343ed06501ce726c7de3ad6fa1f181d99fa49a8439"
+    },
+    {
+      "path": "src/bq_log/global/version.cpp",
+      "sha256": "21201056f0406d59d44905e66d6a914d746447a547f35fc3b0fda1a83f217415"
+    },
+    {
+      "path": "src/bq_log/global/version.h",
+      "sha256": "580c4aab3ba5848a162f2cdee618d2a721420552fd1c08c57c23de0fc85c0f11"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_base.cpp",
+      "sha256": "9e44cdef0a182628744a8bed3291bdd7511b0282d9ec1624e9eca66306a45218"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_base.h",
+      "sha256": "60ea667db20892287464b9da4d80e4881482b9fc90693d3e6eb5e463a005c6d7"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_console.cpp",
+      "sha256": "22a1027fa929022606a434f438c1b3673d10cd538758ad47a253fd672c669de7"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_console.h",
+      "sha256": "df8fcaea5a00695cabadeb2439cdeb1a963f1be4bb0f44f7f71686f60723ac3a"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_base.cpp",
+      "sha256": "0e5018ab32cdfb789386a6ba59d25197ec0543cf7713e93f77c7e3113badcb56"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_base.h",
+      "sha256": "539f9478b9ec39732d33b31f1a2da05995feae34c2ca2cf67a054d5c356dba9b"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_binary.cpp",
+      "sha256": "b4a76b691f185feeb38bcd70f0b1ef4511e5470485197c2653afef779739ed8c"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_binary.h",
+      "sha256": "5101dd32968c1c2be71399259f355bdd086a8eed2e18252f33be30567ac55cb5"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_compressed.cpp",
+      "sha256": "0abcb9f00d57bb61793390b876b550966eaabe9c413183a39b3e99f94f957efc"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_compressed.h",
+      "sha256": "d836ceb9f70e3cc258b534b8db22ba9c12bdabf27b84fe95cc3ac73a4d1304db"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_raw.cpp",
+      "sha256": "ff8c555de9c8fa001575abdefc2992870febdc40813b2952240b9096a487b618"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_raw.h",
+      "sha256": "d1ac7adc671298a4d0466023a404918a0c8200d9ea89381e3f0c7de80a8f22cf"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_text.cpp",
+      "sha256": "7f518ca841bb9188c7a945f2125698d42de0556215124b8969499aa3ba102b1a"
+    },
+    {
+      "path": "src/bq_log/log/appender/appender_file_text.h",
+      "sha256": "37793ae3fe1004131c4b0b89abc8aa49c47ba966ef8a1d9143bfc3f764a755b0"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_base.cpp",
+      "sha256": "6ccbcfff61e7ab501c3c72b18dbea33d351e5bfe65789777f183eedb045b713e"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_base.h",
+      "sha256": "a65c0f1938d629d303237f42978b16e1ceb9d1479fe70790c750db48edcf7be1"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_compressed.cpp",
+      "sha256": "a70fb482c91397f4c69cdd98f567dafcaf00a6737c224984f4cca7a51477e8ad"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_compressed.h",
+      "sha256": "5ef756a3575a07db62363552c064109406c24a4c96bda478ff03cac262723d76"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_helper.cpp",
+      "sha256": "13ace644ace3571a2113765951d07e73ca0f98ff7904eeadb93df518bb342c80"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_helper.h",
+      "sha256": "8bf9e069835d14ea10e9af346c712ceebec57dee22da9dd8d31ed0d609671c38"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_manager.cpp",
+      "sha256": "405df0b8178f8759958807f903c089b35beec16d16a39646e2bb55eaf2412bf9"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_manager.h",
+      "sha256": "27d70d0999cf7e541f9ebf42ba338c4e289a1de4499ee2773115af4842cedb92"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_raw.cpp",
+      "sha256": "5d5dce73c1c9b05c386018039d14528cd4043dd73427e177c973f70dd588707a"
+    },
+    {
+      "path": "src/bq_log/log/decoder/appender_decoder_raw.h",
+      "sha256": "42b25a4b1ec742e88dd43dbe21b7527c7ab70e6b1a9b749434f1124226e811c3"
+    },
+    {
+      "path": "src/bq_log/log/layout.cpp",
+      "sha256": "a00cc18818b6083ffc8fab015e503dbf5d90e8389eb50614e38aa32359555db0"
+    },
+    {
+      "path": "src/bq_log/log/layout.h",
+      "sha256": "af9afddec27ee7051a3faf4772c98451a1e404f66663107361a516b738ff6ab8"
+    },
+    {
+      "path": "src/bq_log/log/log_imp.cpp",
+      "sha256": "bccf67cf729d3c7443a64aac0209a4c5fcd4d9c9b684bf177f744f9df4788cff"
+    },
+    {
+      "path": "src/bq_log/log/log_imp.h",
+      "sha256": "ec603d7994c5d387ad483a986b0d57f9e39e9063d1d48431e504f90c90828871"
+    },
+    {
+      "path": "src/bq_log/log/log_level_bitmap.cpp",
+      "sha256": "19dc1de00970935e5ea3191b788d5d118181eeb5a2a864dcb17bd1e74ab7fa19"
+    },
+    {
+      "path": "src/bq_log/log/log_level_bitmap.h",
+      "sha256": "0e93aaadb9dea7b2b698719a65ee67fd9fc958b11c79d44e6ea541a6ed1cc808"
+    },
+    {
+      "path": "src/bq_log/log/log_manager.cpp",
+      "sha256": "77e7702ced6943e2e02b6f82638ff84cbcb0d0494586e5ffc4f2fe26784c34e8"
+    },
+    {
+      "path": "src/bq_log/log/log_manager.h",
+      "sha256": "df5c8ca4823107581f5e0ffcbf846e710750f2b9d0a3aa9f54eee1eee9ac67df"
+    },
+    {
+      "path": "src/bq_log/log/log_snapshot.cpp",
+      "sha256": "6538928bd716da482a737a456f96acd4f75f1ee843b21fe287fba7cfd49f17e5"
+    },
+    {
+      "path": "src/bq_log/log/log_snapshot.h",
+      "sha256": "ca79ff6f97a12fd70fb213eef9e9b3c5984f7503c1035180ab4b6411e55558b0"
+    },
+    {
+      "path": "src/bq_log/log/log_types.cpp",
+      "sha256": "fb20845a8d05e88f3a267817ee9b63a313d800c9e5f4872c3d17203cc5c820e4"
+    },
+    {
+      "path": "src/bq_log/log/log_types.h",
+      "sha256": "906a3c3867945c7c4692628974baf7318e11323b9f14e92bafca2b33586e7805"
+    },
+    {
+      "path": "src/bq_log/log/log_worker.cpp",
+      "sha256": "6c7f1fcbe1178fcc593f669574226aa171b4124f5395465d4679fad26c948546"
+    },
+    {
+      "path": "src/bq_log/log/log_worker.h",
+      "sha256": "4d9ced109884a6154bf5e60f7580c511022472f79ea95c746009acd88b4561d8"
+    },
+    {
+      "path": "src/bq_log/types/bounded_hash_cache.h",
+      "sha256": "88b66bf9f8364630a8b54793af6b93e101325818a86ca32069d61a0b7d9a3acf"
+    },
+    {
+      "path": "src/bq_log/types/buffer/block_list.cpp",
+      "sha256": "13be883261da45d5218bc92b612c2486fe00e3f0e3224e91d81f8c2b700b0c30"
+    },
+    {
+      "path": "src/bq_log/types/buffer/block_list.h",
+      "sha256": "23cbe253bbd0c9c8add6709207efb7a307e1bc26becea4a911090cd2c93ea839"
+    },
+    {
+      "path": "src/bq_log/types/buffer/group_list.cpp",
+      "sha256": "30ad3acc4da6ad9d0878880c66f94cf8b03479639152503eea7ee0506d3fb271"
+    },
+    {
+      "path": "src/bq_log/types/buffer/group_list.h",
+      "sha256": "ef977a5510aa67779579b5bb70ced636ec800f0d42b494d2e7d853b4f5866d1b"
+    },
+    {
+      "path": "src/bq_log/types/buffer/log_buffer.cpp",
+      "sha256": "f9d7e9cc755a94c76b79218449bdd4535b48bf858054bc29c8fb59027a26082b"
+    },
+    {
+      "path": "src/bq_log/types/buffer/log_buffer.h",
+      "sha256": "7d4f569df8dce3228a3b492dcca8f70165d54b9918800dae39f63168272ffeff"
+    },
+    {
+      "path": "src/bq_log/types/buffer/log_buffer_defs.h",
+      "sha256": "f6d88c69a914fbe6b7862511d7dbe6171db4180ff35eb234f9366174530e927e"
+    },
+    {
+      "path": "src/bq_log/types/buffer/memory_pool.h",
+      "sha256": "9198e56d131dd74660ee040e100ff942f0d80d72f92530849df552e969f8436e"
+    },
+    {
+      "path": "src/bq_log/types/buffer/miso_linked_list.h",
+      "sha256": "281239204102b4b6b884116283813a847966d750f2dff35faefffa1749ba0763"
+    },
+    {
+      "path": "src/bq_log/types/buffer/miso_ring_buffer.cpp",
+      "sha256": "dfa5dd1e13a9ba1c4096d5e97d3175c79eed5b980e71f929b494af3760ca4ae4"
+    },
+    {
+      "path": "src/bq_log/types/buffer/miso_ring_buffer.h",
+      "sha256": "abcdcddff1c3212efe95ace0388775212c33c30dcbfcbd2c0371c7a5a85ae0d0"
+    },
+    {
+      "path": "src/bq_log/types/buffer/normal_buffer.cpp",
+      "sha256": "0504cde2d4b08208c1e9ae7e137cf45c2f8ddbfe938cd24d8c304db566e0cb75"
+    },
+    {
+      "path": "src/bq_log/types/buffer/normal_buffer.h",
+      "sha256": "e0037a0be243fe27b26bc0c58ee9911a26b064405a8a77c9147fc32779bca1f5"
+    },
+    {
+      "path": "src/bq_log/types/buffer/oversize_buffer.cpp",
+      "sha256": "902ddadd07025f4c248b5db226933f1ed9d57cd9756c42bda66344523b3861eb"
+    },
+    {
+      "path": "src/bq_log/types/buffer/oversize_buffer.h",
+      "sha256": "2c594ab7181dbcd5db8904665e5ce2cb350da84c378bf7cb06af2561933f3285"
+    },
+    {
+      "path": "src/bq_log/types/buffer/siso_ring_buffer.cpp",
+      "sha256": "b4624d1bccd12d9590fe312da2a940474526bdb2d24ebda91dd32b8d20d418ab"
+    },
+    {
+      "path": "src/bq_log/types/buffer/siso_ring_buffer.h",
+      "sha256": "816aba051348bd1ec3f9551b90c3fa335b2c634a304442853ef9442d9c7560d6"
+    },
+    {
+      "path": "src/bq_log/utils/log_utils.cpp",
+      "sha256": "3368623ca63a361da9a839d8c8295cbafb805ceb5a541e8bda3ec87f29199c96"
+    },
+    {
+      "path": "src/bq_log/utils/log_utils.h",
+      "sha256": "fc698f7ebcf9d3b2ccc789dbe3b8de909fe17ddd6be44b3adfdef42972738736"
+    },
+    {
+      "path": "src/bq_log/utils/proxy.h",
+      "sha256": "d3a0b2e5b23efaf43ac4b53305362708ad8b9e1c39e8fdf6f28a7930cedcc0f3"
+    },
+    {
+      "path": "src/bq_log/utils/time_zone.cpp",
+      "sha256": "f4fc2a464bfc8296682986b686574e4e5bd369b4419ac5ecda12628bd95ad8fa"
+    },
+    {
+      "path": "src/bq_log/utils/time_zone.h",
+      "sha256": "4359e3432467d49e0dec1ea042c8efdea95be8152a289f143304047ac7c01f94"
+    }
+  ]
+}
