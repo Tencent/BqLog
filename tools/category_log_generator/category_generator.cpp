@@ -17,6 +17,7 @@
 #include "template/category_log_template_java.h"
 #include "template/category_log_template_typescript.h"
 #include "template/category_log_template_python.h"
+#include "template/category_log_template_go.h"
 #include "template/category_log_template_unreal.h"
 
 namespace bq {
@@ -117,6 +118,11 @@ namespace bq {
         code = python.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".py"), code);
         bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".py").c_str());
+
+        category_log_template_go go(class_name);
+        code = go.generate(root_node);
+        bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".go"), code);
+        bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".go").c_str());
 
         category_log_template_unreal unreal(class_name);
         code = unreal.generate(root_node);

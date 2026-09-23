@@ -2,6 +2,12 @@ name: Build And Release
 
 on:
   workflow_dispatch:
+    inputs:
+      go_only:
+        description: 'Test and publish only the Go source module; skip all other builds and releases'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   id-token: write  # Required for OIDC
@@ -9,11 +15,13 @@ permissions:
 
 jobs:
   build:
+    if: ${{ !inputs.go_only }}
     uses: ./.github/workflows/build.yml
 
   release:
+    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, validate_go_module]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -185,8 +193,138 @@ jobs:
           prerelease: false
           files: release_assets_fab/*
 
+  # Source-only Go distribution. No other workflow publishes go_dist.
+  prepare_go_module:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ always() && !cancelled() && (inputs.go_only || needs.build.result == 'success') }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.21.x'
+          cache: false
+      - name: Read BqLog release version
+        id: version
+        env:
+          BUILD_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION *= *"\(.*\)".*/\1/p' src/bq_log/global/version.cpp | head -n1)"
+          test -n "$VERSION"
+          if [[ -n "$BUILD_VERSION" && "$VERSION" != "$BUILD_VERSION" ]]; then
+            echo "::error::Go module source version differs from the native build"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Check source packager
+        working-directory: build/wrapper/go/module
+        run: go test ./...
+      - name: Verify generated category fixture
+        env:
+          OUTPUT: ${{ runner.temp }}/go-category
+        run: |
+          cmake -S tools/category_log_generator -B "$RUNNER_TEMP/go-category-build" -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/go-category-build" --parallel 2
+          mkdir -p "$OUTPUT"
+          artifacts/tools/bin/Release/BqLog_CategoryLogGenerator Generated_category wrapper/go/src/bq/testdata/generated_category/categories.txt "$OUTPUT"
+          gofmt -w "$OUTPUT/Generated_category.go"
+          cmp "$OUTPUT/Generated_category.go" wrapper/go/src/bq/testdata/generated_category/generated_category.go
+      - name: Prepare versioned source module
+        working-directory: build/wrapper/go/module
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          OUTPUT: ${{ runner.temp }}/bqlog-go-source
+        run: go run . -repo ../../../.. -out "$OUTPUT" -version "$VERSION" -commit "$SOURCE_COMMIT"
+      - name: Upload Go source module
+        uses: actions/upload-artifact@v6
+        with:
+          name: go_source_module
+          path: ${{ runner.temp }}/bqlog-go-source/
+          if-no-files-found: error
+
+  validate_go_module:
+    needs: prepare_go_module
+    if: ${{ always() && !cancelled() && needs.prepare_go_module.result == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout validation tools
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.21.x'
+          cache: false
+      - name: Set up Windows C++ toolchain
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
+      - name: Add Windows toolchain to PATH
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo 'C:/msys64/mingw64/bin' >> "$GITHUB_PATH"
+      - name: Download source module
+        uses: actions/download-artifact@v8
+        with:
+          name: go_source_module
+          path: ${{ runner.temp }}/bqlog-go-source
+      - name: Test a versioned consumer without native binaries or replace directives
+        working-directory: build/wrapper/go/module
+        shell: bash
+        env:
+          CGO_ENABLED: '1'
+          MODULE_DIRECTORY: ${{ runner.temp }}/bqlog-go-source
+        run: go run . -verify "$MODULE_DIRECTORY"
+
+  publish_go:
+    # A Go-only release still requires every Go check, but no other release.
+    needs: [prepare_go_module, release, validate_go_module]
+    if: ${{ always() && !cancelled() && github.event_name == 'workflow_dispatch' && needs.prepare_go_module.result == 'success' && needs.validate_go_module.result == 'success' && (inputs.go_only || needs.release.result == 'success') }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: bqlog-go-dist-publish
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Download validated source module
+        uses: actions/download-artifact@v8
+        with:
+          name: go_source_module
+          path: ${{ runner.temp }}/bqlog-go-source
+      - name: Publish immutable Go version to go_dist
+        env:
+          VERSION: ${{ needs.prepare_go_module.outputs.version }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          MODULE_DIRECTORY: ${{ runner.temp }}/bqlog-go-source
+        run: bash build/wrapper/go/publish.sh "$GITHUB_WORKSPACE" "$MODULE_DIRECTORY" "$VERSION" "$SOURCE_COMMIT"
+
   # Publish Python wheel to PyPI
   publish_pypi:
+    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     permissions:
@@ -219,6 +357,7 @@ jobs:
 
   # Publish Node.js package to npm (via Trusted Publishing / OIDC)
   publish_npm:
+    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     permissions:
@@ -250,6 +389,7 @@ jobs:
 
   # Publish Java fat JAR to Maven Central
   publish_java_maven:
+    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     steps:
@@ -380,6 +520,7 @@ jobs:
 
   # Publish Android AAR to Maven Central
   publish_android_maven:
+    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     steps:

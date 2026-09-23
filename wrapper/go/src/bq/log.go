@@ -11,7 +11,6 @@
 package bq
 
 import (
-	"sync"
 	"unsafe"
 
 	"github.com/Tencent/BqLog/wrapper/go/src/bq/def"
@@ -23,19 +22,17 @@ import (
 type Log struct {
 	id           uint64
 	level_bitmap *uint32
+	stack_bitmap *uint32
 	masks        *uint8
 	cat_count    uint32
-
-	scratch_mu  sync.Mutex
-	scratch_buf []byte
 }
 
 func (l *Log) refresh(id uint64) {
 	l.id = id
 	l.level_bitmap = impl.Get_log_merged_log_level_bitmap(id)
+	l.stack_bitmap = impl.Get_log_print_stack_level_bitmap(id)
 	l.masks = impl.Get_log_category_masks_array(id)
 	l.cat_count = impl.Get_log_categories_count(id)
-	l.scratch_buf = nil
 }
 
 // Get_version returns the BqLog library version.
@@ -114,50 +111,78 @@ func (l *Log) Get_category_name(index int) string {
 // Is_enable_for reports whether a log with the given level (and category)
 // would actually be written, cheap enough to call before building arguments.
 func (l *Log) Is_enable_for(level def.Log_level, category_index uint32) bool {
-	if !l.Is_valid() {
+	if !l.Is_valid() || level < def.Verbose || level > def.Fatal || category_index >= l.cat_count {
 		return false
 	}
 	if *l.level_bitmap&(1<<uint32(level)) == 0 {
 		return false
 	}
-	if l.cat_count > 0 && category_index < l.cat_count {
-		if *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(l.masks)) + uintptr(category_index))) == 0 {
-			return false
-		}
-	}
-	return true
+	return *(*uint8)(unsafe.Add(unsafe.Pointer(l.masks), category_index)) != 0
 }
 
-// Write is the generic log entry point; the six level methods are shortcuts
-// with category_index 0.
-func (l *Log) Write(level def.Log_level, category_index uint32, format string, args ...Arg) bool {
+// do_log is shared by the level and category methods. It is private to package bq.
+func (l *Log) do_log(level def.Log_level, category_index uint32, format string, args ...Arg) bool {
 	if !l.Is_enable_for(level, category_index) {
+		return false
+	}
+	if *l.stack_bitmap&(1<<uint32(level)) != 0 {
+		format += capture_stack()
+	}
+	// Native entry lengths are uint32_t, including the header and thread name.
+	const max_entry_payload = uint64(1<<32 - 1 - 1024)
+	if uint64(len(format)) > max_entry_payload {
 		return false
 	}
 	var args_data []byte
 	if len(args) > 0 {
-		size := args_size(args)
-		if size <= 4096 {
-			l.scratch_mu.Lock()
-			if cap(l.scratch_buf) < size {
-				l.scratch_buf = make([]byte, 4096)
-			}
-			args_data = l.scratch_buf[:size]
-			defer l.scratch_mu.Unlock()
-		} else {
-			args_data = make([]byte, size)
+		if len(args) <= 4 {
+			return l.write_small(level, category_index, format, args) == 0
 		}
+		size := args_size(args)
+		if size < 0 || uint64(size)+uint64(len(format)) > max_entry_payload {
+			return false
+		}
+		buffer := acquire_args_buffer(size)
+		defer release_args_buffer(buffer)
+		args_data = buffer.data[:size]
 		serialize_args(args_data, args)
 	}
 	return impl.Go_log_write(l.id, uint8(level), category_index, format, args_data) == 0
 }
 
-func (l *Log) Verbose(format string, args ...Arg) bool { return l.Write(def.Verbose, 0, format, args...) }
-func (l *Log) Debug(format string, args ...Arg) bool   { return l.Write(def.Debug, 0, format, args...) }
-func (l *Log) Info(format string, args ...Arg) bool    { return l.Write(def.Info, 0, format, args...) }
-func (l *Log) Warning(format string, args ...Arg) bool { return l.Write(def.Warning, 0, format, args...) }
-func (l *Log) Error(format string, args ...Arg) bool   { return l.Write(def.Error, 0, format, args...) }
-func (l *Log) Fatal(format string, args ...Arg) bool   { return l.Write(def.Fatal, 0, format, args...) }
+// Pass string pointers as individual cgo arguments so the Go runtime pins
+// them for the call. Never pass a Go array containing strings/pointers to C.
+func (l *Log) write_small(level def.Log_level, category_index uint32, format string, args []Arg) uint32 {
+	a0 := args[0]
+	types := uint32(a0.typ)
+	if len(args) == 1 {
+		return impl.Go_log_write_1(l.id, uint8(level), category_index, format, types, a0.pod, a0.str)
+	}
+	a1 := args[1]
+	types |= uint32(a1.typ) << 8
+	if len(args) == 2 {
+		return impl.Go_log_write_2(l.id, uint8(level), category_index, format, types, a0.pod, a0.str, a1.pod, a1.str)
+	}
+	a2 := args[2]
+	var a3 Arg
+	if len(args) == 4 {
+		a3 = args[3]
+	}
+	types |= uint32(a2.typ)<<16 | uint32(a3.typ)<<24
+	return impl.Go_log_write_4(l.id, uint8(level), category_index, format, uint32(len(args)), types,
+		a0.pod, a0.str, a1.pod, a1.str, a2.pod, a2.str, a3.pod, a3.str)
+}
+
+func (l *Log) Verbose(format string, args ...Arg) bool {
+	return l.do_log(def.Verbose, 0, format, args...)
+}
+func (l *Log) Debug(format string, args ...Arg) bool { return l.do_log(def.Debug, 0, format, args...) }
+func (l *Log) Info(format string, args ...Arg) bool  { return l.do_log(def.Info, 0, format, args...) }
+func (l *Log) Warning(format string, args ...Arg) bool {
+	return l.do_log(def.Warning, 0, format, args...)
+}
+func (l *Log) Error(format string, args ...Arg) bool { return l.do_log(def.Error, 0, format, args...) }
+func (l *Log) Fatal(format string, args ...Arg) bool { return l.do_log(def.Fatal, 0, format, args...) }
 
 // Force_flush makes bqLog flush buffered logs of this log object.
 func (l *Log) Force_flush() {

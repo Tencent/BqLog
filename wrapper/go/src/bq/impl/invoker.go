@@ -11,40 +11,35 @@
 package impl
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../../../../include
+#cgo CFLAGS: -I${SRCDIR}/../../../../../include -DBQ_GO
 #cgo LDFLAGS: -lBqLog
 #cgo windows LDFLAGS: -static-libgcc
 #include <stdlib.h>
 #include <bq_log/misc/bq_log_c_api.h>
 
-// fused write entry exported only when the library is built with GO_SUPPORT
-extern uint32_t __api_go_log_write(uint64_t log_id, uint8_t log_level, uint32_t category_index, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_data_bytes_len, const void* args_data);
-
-#if defined(_WIN32)
-#define bq_go_stdcall __stdcall
-#else
-#define bq_go_stdcall
-#endif
-
 extern void bq_go_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, char* content, int32_t length);
-extern void bq_go_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, int32_t log_level, char* content, int32_t length);
+extern void bq_go_console_fetch_callback(uintptr_t param, uint64_t log_id, int32_t category_idx, int32_t log_level, char* content, int32_t length);
 
-static void bq_go_stdcall bq_on_console_callback(uint64_t log_id, int32_t category_idx, log_level log_level_value, const char* content, int32_t length)
+static void BQ_STDCALL bq_on_console_callback(uint64_t log_id, int32_t category_idx, bq_log_level log_level_value, const char* content, int32_t length)
 {
 	bq_go_console_callback(log_id, category_idx, (int32_t)log_level_value, (char*)content, length);
 }
 
-static void bq_go_stdcall bq_on_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, log_level log_level_value, const char* content, int32_t length)
+static void BQ_STDCALL bq_on_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, bq_log_level log_level_value, const char* content, int32_t length)
 {
-	bq_go_console_fetch_callback(param, log_id, category_idx, (int32_t)log_level_value, (char*)content, length);
+	bq_go_console_fetch_callback(*(const uintptr_t*)param, log_id, category_idx, (int32_t)log_level_value, (char*)content, length);
 }
 
-static type_func_ptr_console_callback bq_on_console_callback_ptr(void) { return (type_func_ptr_console_callback)bq_on_console_callback; }
-static type_func_ptr_console_buffer_fetch_callback bq_on_console_fetch_callback_ptr(void) { return (type_func_ptr_console_buffer_fetch_callback)bq_on_console_fetch_callback; }
+static bq_console_callback bq_on_console_callback_ptr(void) { return bq_on_console_callback; }
+static bool bq_fetch_console(uintptr_t handle) {
+	return __api_fetch_and_remove_console_buffer(bq_on_console_fetch_callback, &handle);
+}
 */
 import "C"
 
 import (
+	"runtime"
+	"runtime/cgo"
 	"sync"
 	"unsafe"
 )
@@ -53,20 +48,13 @@ import (
 type Console_callback func(log_id uint64, category_idx int32, level int32, content string)
 
 var (
-	callback_mu    sync.RWMutex
-	console_hook   Console_callback
-	fetch_hook     Console_callback
+	callback_mu  sync.RWMutex
+	console_hook Console_callback
 )
 
 func Set_console_hook(cb Console_callback) {
 	callback_mu.Lock()
 	console_hook = cb
-	callback_mu.Unlock()
-}
-
-func Set_fetch_hook(cb Console_callback) {
-	callback_mu.Lock()
-	fetch_hook = cb
 	callback_mu.Unlock()
 }
 
@@ -81,10 +69,8 @@ func bq_go_console_callback(log_id C.uint64_t, category_idx C.int32_t, log_level
 }
 
 //export bq_go_console_fetch_callback
-func bq_go_console_fetch_callback(_ unsafe.Pointer, log_id C.uint64_t, category_idx C.int32_t, log_level C.int32_t, content *C.char, length C.int32_t) {
-	callback_mu.RLock()
-	cb := fetch_hook
-	callback_mu.RUnlock()
+func bq_go_console_fetch_callback(handle C.uintptr_t, log_id C.uint64_t, category_idx C.int32_t, log_level C.int32_t, content *C.char, length C.int32_t) {
+	cb := cgo.Handle(handle).Value().(Console_callback)
 	if cb != nil {
 		cb(uint64(log_id), int32(category_idx), int32(log_level), C.GoStringN(content, length))
 	}
@@ -143,10 +129,35 @@ func Go_log_write(log_id uint64, level uint8, category_index uint32, format stri
 		C.uint32_t(len(format)), fmt_ptr, C.uint32_t(len(args_data)), args_ptr))
 }
 
+// Go_log_write_1 passes values and string pointers without a temporary Go buffer.
+func Go_log_write_1(log_id uint64, level uint8, category_index uint32, format string, types uint32, value0 uint64, string0 string) uint32 {
+	return uint32(C.__api_go_log_write_1(C.uint64_t(log_id), C.uint8_t(level), C.uint32_t(category_index),
+		C.uint32_t(len(format)), unsafe.Pointer(unsafe.StringData(format)), C.uint32_t(types),
+		C.uint64_t(value0), (*C.char)(unsafe.Pointer(unsafe.StringData(string0)))))
+}
+
+// Go_log_write_2 passes values and string pointers without a temporary Go buffer.
+func Go_log_write_2(log_id uint64, level uint8, category_index uint32, format string, types uint32, value0 uint64, string0 string, value1 uint64, string1 string) uint32 {
+	return uint32(C.__api_go_log_write_2(C.uint64_t(log_id), C.uint8_t(level), C.uint32_t(category_index),
+		C.uint32_t(len(format)), unsafe.Pointer(unsafe.StringData(format)), C.uint32_t(types),
+		C.uint64_t(value0), (*C.char)(unsafe.Pointer(unsafe.StringData(string0))),
+		C.uint64_t(value1), (*C.char)(unsafe.Pointer(unsafe.StringData(string1)))))
+}
+
+// Go_log_write_4 passes values and string pointers without a temporary Go buffer.
+func Go_log_write_4(log_id uint64, level uint8, category_index uint32, format string, count uint32, types uint32, value0 uint64, string0 string, value1 uint64, string1 string, value2 uint64, string2 string, value3 uint64, string3 string) uint32 {
+	return uint32(C.__api_go_log_write_4(C.uint64_t(log_id), C.uint8_t(level), C.uint32_t(category_index),
+		C.uint32_t(len(format)), unsafe.Pointer(unsafe.StringData(format)), C.uint32_t(count), C.uint32_t(types),
+		C.uint64_t(value0), (*C.char)(unsafe.Pointer(unsafe.StringData(string0))),
+		C.uint64_t(value1), (*C.char)(unsafe.Pointer(unsafe.StringData(string1))),
+		C.uint64_t(value2), (*C.char)(unsafe.Pointer(unsafe.StringData(string2))),
+		C.uint64_t(value3), (*C.char)(unsafe.Pointer(unsafe.StringData(string3)))))
+}
+
 func Log_device_console(level int32, content string) {
 	c_content := C.CString(content)
 	defer C.free(unsafe.Pointer(c_content))
-	C.__api_log_device_console(C.log_level(level), c_content)
+	C.__api_log_device_console(C.bq_log_level(level), c_content)
 }
 
 func Force_flush(log_id uint64) {
@@ -172,7 +183,7 @@ func Get_log_id_by_index(index uint32) uint64 {
 }
 
 func Get_log_name_by_id(log_id uint64) (string, bool) {
-	var name_def C._api_string_def
+	var name_def C.bq_api_string_def
 	if C.__api_get_log_name_by_id(C.uint64_t(log_id), &name_def) {
 		return C.GoStringN(name_def.str, C.int(name_def.len)), true
 	}
@@ -184,7 +195,7 @@ func Get_log_categories_count(log_id uint64) uint32 {
 }
 
 func Get_log_category_name_by_index(log_id uint64, category_index uint32) (string, bool) {
-	var name_def C._api_string_def
+	var name_def C.bq_api_string_def
 	if C.__api_get_log_category_name_by_index(C.uint64_t(log_id), C.uint32_t(category_index), &name_def) {
 		return C.GoStringN(name_def.str, C.int(name_def.len)), true
 	}
@@ -206,9 +217,12 @@ func Get_log_category_masks_array(log_id uint64) *uint8 {
 }
 
 func Take_snapshot_string(log_id uint64, time_zone_config string) string {
+	// Native snapshot locks must not outlive the OS-thread affinity of a call.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	c_tz := C.CString(time_zone_config)
 	defer C.free(unsafe.Pointer(c_tz))
-	var snapshot C._api_string_def
+	var snapshot C.bq_api_string_def
 	C.__api_take_snapshot_string(C.uint64_t(log_id), c_tz, &snapshot)
 	if snapshot.str == nil {
 		return ""
@@ -231,7 +245,7 @@ func Log_decoder_create(log_file_path, priv_key string) (uint32, bool) {
 }
 
 func Log_decoder_decode(handle uint32) (string, bool) {
-	var out C._api_string_def
+	var out C.bq_api_string_def
 	rc := C.__api_log_decoder_decode(C.uint32_t(handle), &out)
 	if rc != 0 {
 		return "", false
@@ -268,6 +282,8 @@ func Set_console_buffer_enable(enable bool) {
 	C.__api_set_console_buffer_enable(C.bool(enable))
 }
 
-func Fetch_and_remove_console_buffer() bool {
-	return bool(C.__api_fetch_and_remove_console_buffer(C.bq_on_console_fetch_callback_ptr(), nil))
+func Fetch_and_remove_console_buffer(callback Console_callback) bool {
+	handle := cgo.NewHandle(callback)
+	defer handle.Delete()
+	return bool(C.bq_fetch_console(C.uintptr_t(handle)))
 }

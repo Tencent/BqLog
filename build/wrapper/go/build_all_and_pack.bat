@@ -3,8 +3,8 @@ setlocal EnableDelayedExpansion
 
 rem Build the Go wrapper: native library (GO_SUPPORT=ON), then go vet +
 rem go build against the freshly built artifacts.
-rem Go packages are distributed as source via go modules, so there is no
-rem binary packing step here.
+rem Release CI packages sources with module/ and publishes go_dist.
+rem This development build/test command never publishes.
 rem Usage: build_all_and_pack.bat [CONFIG]
 
 set "DIR=%~dp0"

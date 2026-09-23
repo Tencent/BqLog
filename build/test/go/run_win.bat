@@ -51,11 +51,12 @@ echo ===== Building and Running Go Test =====
 rem cgo links against the freshly built artifacts directly via CGO_LDFLAGS
 set "CGO_ENABLED=1"
 set "CGO_LDFLAGS=-L%LIB_OUT:\=/%"
+set "PATH=%LIB_OUT%;%PATH%"
 pushd "%WRAPPER_DIR%"
 go vet ./... || exit /b 1
+go test -count=1 -timeout 120s ./... || exit /b 1
 popd
 pushd "%TEST_SRC_DIR%"
-set "PATH=%LIB_OUT%;%PATH%"
 if exist bqlog_go_test.exe del /q bqlog_go_test.exe
 go build -o bqlog_go_test.exe ./src/bq/test || exit /b 1
 .\bqlog_go_test.exe

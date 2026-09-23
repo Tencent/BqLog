@@ -14,7 +14,8 @@ import "math"
 
 // Arg is a single log parameter. Use the constructor functions (Str, I64, ...)
 // instead of building it by hand. Concrete typed args (instead of ...any) keep
-// the variadic slice free of boxing so a log call can stay at 0 heap alloc.
+// the variadic slice free of boxing. Up to four arguments are written directly
+// in native code; larger lists use pooled buffers. The zero Arg represents null.
 type Arg struct {
 	typ uint8
 	pod uint64
@@ -23,23 +24,23 @@ type Arg struct {
 
 // values mirror bq::log_arg_type_enum
 const (
-	arg_type_null       uint8 = 1
-	arg_type_pointer    uint8 = 2
-	arg_type_bool       uint8 = 3
-	arg_type_int8       uint8 = 7
-	arg_type_uint8      uint8 = 8
-	arg_type_int16      uint8 = 9
-	arg_type_uint16     uint8 = 10
-	arg_type_int32      uint8 = 11
-	arg_type_uint32     uint8 = 12
-	arg_type_int64      uint8 = 13
-	arg_type_uint64     uint8 = 14
-	arg_type_float      uint8 = 15
-	arg_type_double     uint8 = 16
+	arg_type_null        uint8 = 1
+	arg_type_pointer     uint8 = 2
+	arg_type_bool        uint8 = 3
+	arg_type_int8        uint8 = 7
+	arg_type_uint8       uint8 = 8
+	arg_type_int16       uint8 = 9
+	arg_type_uint16      uint8 = 10
+	arg_type_int32       uint8 = 11
+	arg_type_uint32      uint8 = 12
+	arg_type_int64       uint8 = 13
+	arg_type_uint64      uint8 = 14
+	arg_type_float       uint8 = 15
+	arg_type_double      uint8 = 16
 	arg_type_string_utf8 uint8 = 17
 )
 
-func Nil() Arg        { return Arg{typ: arg_type_null} }
+func Nil() Arg          { return Arg{typ: arg_type_null} }
 func Ptr(v uintptr) Arg { return Arg{typ: arg_type_pointer, pod: uint64(v)} }
 func Bool(v bool) Arg {
 	if v {
@@ -59,7 +60,7 @@ func Int(v int) Arg     { return I64(int64(v)) }
 func Uint(v uint) Arg   { return U64(uint64(v)) }
 func F32(v float32) Arg { return Arg{typ: arg_type_float, pod: uint64(math.Float32bits(v))} }
 func F64(v float64) Arg { return Arg{typ: arg_type_double, pod: math.Float64bits(v)} }
-func Str(v string) Arg  { return Arg{typ: arg_type_string_utf8, str: v} }
+func Str(v string) Arg  { return Arg{typ: arg_type_string_utf8, pod: uint64(len(v)), str: v} }
 
 func align4(n int) int {
 	if n == 0 {
@@ -72,7 +73,7 @@ func align4(n int) int {
 // 1 byte type, payload at offset 2 (<=2 bytes) or 4, strings aligned to 4.
 func (a *Arg) size() int {
 	switch a.typ {
-	case arg_type_null, arg_type_bool, arg_type_int8, arg_type_uint8, arg_type_int16, arg_type_uint16:
+	case 0, arg_type_null, arg_type_bool, arg_type_int8, arg_type_uint8, arg_type_int16, arg_type_uint16:
 		return 4
 	case arg_type_int32, arg_type_uint32, arg_type_float:
 		return 8
@@ -86,14 +87,23 @@ func (a *Arg) size() int {
 func args_size(args []Arg) int {
 	n := 0
 	for i := range args {
-		n += args[i].size()
+		size := args[i].size()
+		if size < 0 || n > int(^uint(0)>>1)-size {
+			return -1
+		}
+		n += size
 	}
 	return n
 }
 
 func (a *Arg) write_to(buf []byte) {
+	// Only clear padding; the payload below overwrites every other byte.
+	// buf is restricted to this argument's serialized size.
+	clear(buf[:4])
 	buf[0] = a.typ
 	switch a.typ {
+	case 0:
+		buf[0] = arg_type_null
 	case arg_type_null:
 	case arg_type_bool, arg_type_int8, arg_type_uint8:
 		buf[2] = byte(a.pod)
@@ -106,14 +116,16 @@ func (a *Arg) write_to(buf []byte) {
 	default: // string
 		le32(buf[4:], uint32(len(a.str)))
 		copy(buf[8:], a.str)
+		clear(buf[8+len(a.str):])
 	}
 }
 
 func serialize_args(dst []byte, args []Arg) {
 	for i := range args {
 		a := &args[i]
-		a.write_to(dst)
-		dst = dst[a.size():]
+		size := a.size()
+		a.write_to(dst[:size])
+		dst = dst[size:]
 	}
 }
 

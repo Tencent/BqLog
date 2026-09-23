@@ -9,20 +9,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-/*!
- * Don't call functions defined in this file!!
- *
- * \brief
- *
- * \author pippocao
- * \date 2022.08.03
- */
-#include "bq_common/bq_common_public_include.h"
+// C++ compatibility facade. The lower-level C-compatible header owns the ABI
+// declarations, preserving bq::api and strongly typed C++ arguments.
 #include "bq_log/misc/bq_log_def.h"
-
-namespace bq {
-    namespace api {
-        /////////////////////////////////////////////////////////////DYNAMIC LIB APIS BEGIN////////////////////////////////////////////////////
-#include "bq_log/misc/bq_log_c_api.inc"
-    }
-}
+#include "bq_log/misc/bq_log_c_api.h"

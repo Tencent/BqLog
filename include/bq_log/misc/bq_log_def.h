@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "bq_common/bq_common_public_include.h"
+#include "bq_log/misc/bq_log_c_types.h"
 
 namespace bq {
     class log;
@@ -29,18 +30,6 @@ namespace bq {
 }
 
 namespace bq {
-    enum class enum_buffer_result_code {
-        success = 0,
-        err_empty_log_buffer, // no valid data to read in log buffer;
-        err_not_enough_space, // not enough space in log buffer to alloc
-        err_wait_and_retry, // need wait and try again
-        err_data_not_contiguous, // data is not contiguous, this error code is only used for internal statistics within the log_buffer and will not be exposed externally.
-        err_alloc_size_invalid, // invalid alloc size, too big or 0.
-        err_buffer_not_inited, // buffer not initialized
-        err_io_failure_drop, // unrecoverable IO failure (e.g. disk-full when creating a recovery-mode mmap-backed oversize buffer); the producer must drop this entry immediately. Waiting is futile - no consumer can ever free disk blocks. This error code MUST NEVER be translated to err_wait_and_retry by any layer.
-        result_code_count
-    };
-
     enum class log_memory_policy {
         discard_when_full, // If the log_buffer is full, incoming logs will be discarded.
         block_when_full, // If the log_buffer is full, the logging thread will be blocked until space becomes available.
@@ -76,30 +65,12 @@ namespace bq {
     static_assert(sizeof(_log_entry_head_def) == 40,
         "_log_entry_head_def's memory layout must be packed!");
 
-    BQ_PACK_BEGIN
-    struct _api_string_def {
-        const char* str;
-        uint32_t len;
-    } BQ_PACK_END static_assert(sizeof(_api_string_def) == sizeof(decltype(_api_string_def::str)) + sizeof(decltype(_api_string_def::len)), "_api_string_def's memory layout must be packed!");
-
-    BQ_PACK_BEGIN
-    struct _api_u16string_def {
-        const char16_t* str;
-        uint32_t len;
-    } BQ_PACK_END static_assert(sizeof(_api_u16string_def) == sizeof(decltype(_api_u16string_def::str)) + sizeof(decltype(_api_u16string_def::len)), "_api_u16string_def's memory layout must be packed!");
-
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN
     struct _api_log_buffer_chunk_read_handle {
         uint8_t* format_data_addr;
         enum_buffer_result_code result;
     } BQ_PACK_END static_assert(sizeof(_api_log_buffer_chunk_read_handle) == sizeof(decltype(_api_log_buffer_chunk_read_handle::format_data_addr)) + sizeof(decltype(_api_log_buffer_chunk_read_handle::result)), "_api_log_buffer_chunk_read_handle's memory layout must be packed!");
-
-    BQ_PACK_BEGIN
-    struct _api_log_write_handle {
-        uint8_t* format_data_addr;
-        enum_buffer_result_code result;
-    } BQ_PACK_END static_assert(sizeof(_api_log_write_handle) == sizeof(decltype(_api_log_write_handle::format_data_addr)) + sizeof(decltype(_api_log_write_handle::result)), "_api_log_buffer_chunk_write_handle's memory layout must be packed!");
 
     struct _log_level_bitmap_def {
         uint32_t bitmap = 0;
@@ -137,22 +108,5 @@ namespace bq {
         string_utf_mixed_type
     };
 
-    enum appender_decode_result {
-        success, // decoding successful, you can call the corresponding function to obtain the decoded log text.
-        eof, // all the content is decoded
-        failed_invalid_handle,
-        failed_decode_error,
-        failed_io_error
-    };
-
-    /// <summary>
-    /// `content` is a C-style string and end with '\0';
-    /// </summary>
-    typedef void(BQ_STDCALL* type_func_ptr_console_callback)(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length);
-
-    /// <summary>
-    /// `content` is a C-style string and end with '\0';
-    /// </summary>
-    typedef void(BQ_STDCALL* type_func_ptr_console_buffer_fetch_callback)(void* pass_through_param, uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length);
 
 }

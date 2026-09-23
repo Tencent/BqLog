@@ -36,11 +36,12 @@ echo "===== Building and Running Go Test ====="
 # cgo links against the freshly built artifacts directly via CGO_LDFLAGS
 export CGO_ENABLED=1
 export CGO_LDFLAGS="-L$LIB_OUT"
+export DYLD_LIBRARY_PATH="$LIB_OUT:${DYLD_LIBRARY_PATH:-}"
 pushd "$WRAPPER_DIR" > /dev/null
 go vet ./...
+go test -count=1 -timeout 120s ./...
 popd > /dev/null
 pushd "$TEST_SRC_DIR" > /dev/null
-export DYLD_LIBRARY_PATH="$LIB_OUT:${DYLD_LIBRARY_PATH:-}"
 go build -o bqlog_go_test ./src/bq/test
 ./bqlog_go_test
 popd > /dev/null

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Build the Go wrapper: native library (GO_SUPPORT=ON), then go vet +
 # go build + run tests against the freshly built artifacts.
-# Go packages are distributed as source via go modules, so there is no
-# binary packing step here.
+# Release CI runs module/ to package sources, then publish.sh to update
+# go_dist. This development build/test command never publishes.
 # Usage: build_all_and_pack.sh [gcc|clang] [CONFIG]
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

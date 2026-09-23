@@ -88,16 +88,18 @@ func test_log_multi_goroutine() *test_result {
 		"appenders_config.Appender1.levels=[all]\n"+
 		"log.thread_mode=sync\n", nil)
 	bq.Set_console_buffer_enable(false)
+	var callback_count atomic.Int32
 	bq.Register_console_callback(func(log_id uint64, category_idx int32, level def.Log_level, content string) {
 		if log_id != 0 {
+			callback_count.Add(1)
 			result.add_result(log_id == log_inst_console.Get_id(), "console callback test 1")
 			result.add_result(level == def.Debug, "console callback test 2")
 			result.add_result(strings.HasSuffix(content, "ConsoleTest"), "console callback test 3")
 		}
 	})
 	log_inst_console.Debug("ConsoleTest")
+	result.add_result(callback_count.Load() == 1, "console callback must run exactly once")
 	bq.Register_console_callback(nil)
 	log_inst_async.Force_flush()
-	result.add_result(true, "")
 	return result
 }

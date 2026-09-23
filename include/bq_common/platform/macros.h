@@ -74,7 +74,7 @@
 #define BQ_GCC 1
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) // compiler detection, also true for clang-cl
 #define BQ_VISUAL_STUDIO 1
 #endif
 
@@ -126,7 +126,7 @@
 #define BQ_EXTERN_C
 #endif
 
-#if defined(_MSC_VER)
+#if defined(BQ_MSVC) || defined(BQ_VISUAL_STUDIO)
 #define BQ_API_EXPORT BQ_EXTERN_C __declspec(dllexport)
 #define BQ_API_IMPORT BQ_EXTERN_C __declspec(dllimport)
 #else
@@ -142,11 +142,14 @@
 #define BQ_API BQ_API_EXPORT
 #endif
 
-#ifdef _MSC_VER
+#if defined(BQ_WIN)
 #define BQ_STDCALL __stdcall
-#define BQ_TLS __declspec(thread)
 #else
 #define BQ_STDCALL
+#endif
+#if defined(BQ_MSVC) || defined(BQ_VISUAL_STUDIO)
+#define BQ_TLS __declspec(thread)
+#else
 #define BQ_TLS __thread
 #endif
 
@@ -189,7 +192,7 @@
     }
 #define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name)
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined(BQ_MSVC)
 #define BQ_PACK_BEGIN __pragma(pack(push, 1))
 #define BQ_PACK_END \
     ;               \

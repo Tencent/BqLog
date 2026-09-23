@@ -50,6 +50,5 @@ func Set_console_buffer_enable(enable bool) {
 // so callers should keep fetching on one goroutine pinned with
 // runtime.LockOSThread.
 func Fetch_and_remove_console_buffer(callback Console_callback) bool {
-	impl.Set_fetch_hook(wrap_console_callback(callback))
-	return impl.Fetch_and_remove_console_buffer()
+	return impl.Fetch_and_remove_console_buffer(wrap_console_callback(callback))
 }
