@@ -116,12 +116,22 @@
 
 #include "bq_common/platform/build_type.h"
 
-#if defined(_MSC_VER)
-#define BQ_API_EXPORT extern "C" __declspec(dllexport)
-#define BQ_API_IMPORT extern "C" __declspec(dllimport)
+#if defined(__cplusplus)
+#define BQ_EXTERN_C_BEGIN extern "C" {
+#define BQ_EXTERN_C_END }
+#define BQ_EXTERN_C extern "C"
 #else
-#define BQ_API_EXPORT extern "C" __attribute__((visibility("default")))
-#define BQ_API_IMPORT extern "C" __attribute__((visibility("default")))
+#define BQ_EXTERN_C_BEGIN
+#define BQ_EXTERN_C_END
+#define BQ_EXTERN_C
+#endif
+
+#if defined(_MSC_VER)
+#define BQ_API_EXPORT BQ_EXTERN_C __declspec(dllexport)
+#define BQ_API_IMPORT BQ_EXTERN_C __declspec(dllimport)
+#else
+#define BQ_API_EXPORT BQ_EXTERN_C __attribute__((visibility("default")))
+#define BQ_API_IMPORT BQ_EXTERN_C __attribute__((visibility("default")))
 #endif
 
 #if defined(BQ_DYNAMIC_LIB)
@@ -142,8 +152,6 @@
 
 // thread_local has use-after-free issue on MinGW GCC
 // use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
-namespace bq {
-}
 #define BQ_TLS_CONCAT_INNER(a, b) a##b
 #define BQ_TLS_CONCAT(a, b) BQ_TLS_CONCAT_INNER(a, b)
 #define BQ_TLS_DEFINE(Type, Name)                                                \
