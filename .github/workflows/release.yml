@@ -315,12 +315,61 @@ jobs:
         with:
           name: go_source_module
           path: ${{ runner.temp }}/bqlog-go-source
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.21.x'
+          cache: false
       - name: Publish immutable Go version to go_dist
         env:
           VERSION: ${{ needs.prepare_go_module.outputs.version }}
           SOURCE_COMMIT: ${{ github.sha }}
           MODULE_DIRECTORY: ${{ runner.temp }}/bqlog-go-source
         run: bash build/wrapper/go/publish.sh "$GITHUB_WORKSPACE" "$MODULE_DIRECTORY" "$VERSION" "$SOURCE_COMMIT"
+      - name: Request Go proxy and pkg.go.dev indexing
+        timeout-minutes: 10
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSION: ${{ needs.prepare_go_module.outputs.version }}
+          MODULE_DIRECTORY: ${{ runner.temp }}/bqlog-go-source
+          GOPROXY: https://proxy.golang.org
+        run: |
+          set -euo pipefail
+          module_path="$(awk '$1 == "module" { print $2; exit }' "$MODULE_DIRECTORY/go.mod")"
+          test -n "$module_path"
+          # pkg.go.dev discovers versions asynchronously through the Go module index.
+          for attempt in 1 2 3; do
+            if go list -m "$module_path@v$VERSION"; then
+              echo "Requested pkg.go.dev indexing for $module_path@v$VERSION"
+              exit 0
+            fi
+            if (( attempt < 3 )); then sleep 30; fi
+          done
+          echo "::error::The Go tag is published, but the official proxy could not fetch it. Rerun this job to retry indexing."
+          exit 1
+      - name: Verify pkg.go.dev documentation
+        timeout-minutes: 20
+        env:
+          VERSION: ${{ needs.prepare_go_module.outputs.version }}
+          MODULE_DIRECTORY: ${{ runner.temp }}/bqlog-go-source
+        run: |
+          set -euo pipefail
+          module_path="$(awk '$1 == "module" { print $2; exit }' "$MODULE_DIRECTORY/go.mod")"
+          test -n "$module_path"
+          page="$RUNNER_TEMP/pkg-go-dev.html"
+          # Indexing is asynchronous; require the exact released version's documentation.
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 \
+                "https://pkg.go.dev/$module_path@v$VERSION" -o "$page" \
+                && grep -Fq 'Documentation-overview' "$page"; then
+              echo "Documentation available: https://pkg.go.dev/$module_path@v$VERSION"
+              exit 0
+            fi
+            echo "Waiting for pkg.go.dev indexing ($attempt/30)..."
+            if (( attempt < 30 )); then sleep 30; fi
+          done
+          echo "::error::The Go module is published, but pkg.go.dev documentation is not available yet. Rerun this job to retry verification."
+          exit 1
 
   # Publish Python wheel to PyPI
   publish_pypi:

@@ -385,6 +385,8 @@ go mod init example.com/myapp
 go get github.com/Tencent/BqLog/go/v2@latest
 ```
 
+Save the following as `main.go`:
+
 ```go
 package main
 
@@ -392,18 +394,23 @@ import bq "github.com/Tencent/BqLog/go/v2"
 
 func main() {
     config := `
-appenders_config.Console.type=console
-appenders_config.Console.levels=[all]
+appenders_config.console.type=console
+appenders_config.console.levels=[all]
 `
-    log := bq.Create_log("app", config, nil)
+    log := bq.Create_log("go_log", config, nil)
     if !log.Is_valid() {
         panic("invalid log config")
     }
     defer log.Force_flush()
 
-    log.Info("ready")
-    log.Info("name={} score={} online={}", "Alice", 42, true)
+    log.Info("Hello from Go! params: {}, {}", "text", 123)
 }
+```
+
+Run the example:
+
+```sh
+go run .
 ```
 
 Logging methods accept zero or any number of arguments. Objects support Go's
@@ -415,6 +422,9 @@ Go has no method overloading, so category methods use the `_c` suffix.
 Use `Info(format, ...)` for ordinary logging and
 `Info_c(category, format, ...)` to specify a category; the other levels follow
 the same pattern. Exported Go methods start with an uppercase letter.
+
+Using the same `config`, replace the logger creation and logging calls inside
+`main` with:
 
 ```go
 log := bq.Create_category_log("game", config,
@@ -431,14 +441,11 @@ handwritten indices.
 
 ### Packages and versions
 
-The module follows the BqLog version. Release CI publishes source to `go_dist`
-with `go/v<version>` tags. Consumers use Go Modules, and `go build` compiles
-the native sources automatically. The release workflow's `go_only` option
-publishes only the Go module.
+The module follows the BqLog version. Go Modules downloads the source, and
+`go build` compiles the native sources automatically.
 
 [pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) provides package
-search, README and API documentation. Go publishes through public repository
-version tags; no separate `npm publish`-style upload is required.
+search, README and API documentation.
 <!-- go-module:end -->
 
 ---

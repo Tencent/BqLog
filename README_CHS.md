@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.4.1
+# BqLog (扁鹊日志) V 2.5.0
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.4.1-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.4.1-orange.svg?style=flat)](CHANGELOG.md)
+[![Release Version](https://img.shields.io/badge/release-2.5.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.5.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -22,21 +22,14 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.4.1-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases/tag/Release_2.4.1)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.5.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📋 v2.4.1 更新亮点
+## 📋 v2.5.0 更新亮点
 
-- **性能优化——“百尺竿头，更进一步”**：常规使用场景下，性能通常提升约 **10%～20%**；实际收益会随线程数、日志格式、参数类型及输出模式而有所不同。
-- **兼容性**——[修复 Linux 产物要求 glibc 2.38+ 的问题（#72）](https://github.com/Tencent/BqLog/issues/72)：全部产物改为在 Ubuntu 22.04（glibc 2.35）、Windows Server 2022 及最低可用 BSD 版本上构建，老发行版和 BSD 系统开箱即用。
-- **构建/CI**——BSD 构建依赖改由自托管不可变快照提供，发布产物可复现，不再受上游软件源删包影响。
+- **性能提升**：优化日志写入，减少无效的工作线程唤醒和 Java 参数分配。
+- **Go 语言支持**：新增 Go wrapper，支持自动参数转换、category 和源码模块分发。
 
-**v2.4.0 更新亮点：**
-
-- **Bug 修复**：[彻底解决了压缩日志内存在某些情况下可能会持续增大的问题（#70）](https://github.com/Tencent/BqLog/issues/70)。
-- **Bug 修复**：修复 `log.buffer_policy_when_full` 的解析错误，`discard`、`block` 和 `expand` 策略现在均可正确生效。
-- **配置扩展**：文件 Appender 新增 `write_cache_size` 配置，可在 64 KiB～4 MiB 范围内调整每个 Appender 的写缓存。
-
-> 完整更新日志 → [CHANGELOG.md](CHANGELOG.md)
+> 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 
 ---
 
@@ -166,6 +159,28 @@ config = """
 my_log = log.create_log("python_log", config)
 my_log.info("Hello from Python! params: {}, {}", "text", 123)
 log.force_flush_all_logs()
+```
+
+### Go
+
+```go
+package main
+
+import bq "github.com/Tencent/BqLog/go/v2"
+
+func main() {
+    config := `
+appenders_config.console.type=console
+appenders_config.console.levels=[all]
+`
+    log := bq.Create_log("go_log", config, nil)
+    if !log.Is_valid() {
+        panic("invalid log config")
+    }
+    defer log.Force_flush()
+
+    log.Info("Hello from Go! params: {}, {}", "text", 123)
+}
 ```
 
 ### TypeScript (鸿蒙 / OpenHarmony ArkTS)

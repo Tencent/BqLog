@@ -76,8 +76,17 @@ func module_readme(guide, module, version, commit string) (string, error) {
 	}
 	chapter := strings.TrimSpace(guide[start+len(start_marker) : end])
 	chapter = strings.ReplaceAll(chapter, "github.com/Tencent/BqLog/go/v2", module)
-	return fmt.Sprintf("# BqLog for Go %s\n\n<!-- Source commit: %s -->\n\n%s\n",
-		version, commit, chapter), nil
+	chapter = strings.Replace(chapter, "## Go\n", "## Quick Start\n", 1)
+	return fmt.Sprintf(`# BqLog for Go %s
+
+**GitHub: [https://github.com/Tencent/BqLog](https://github.com/Tencent/BqLog)**
+
+Go bindings for BqLog, Tencent's lightweight, high-performance logging system.
+
+[Integration Guide](https://github.com/Tencent/BqLog/blob/%s/docs/INTEGRATION_GUIDE.md#go) | [简体中文](https://github.com/Tencent/BqLog/blob/%s/docs/INTEGRATION_GUIDE_CHS.md#go)
+
+%s
+`, version, commit, commit, chapter), nil
 }
 
 func prepare(repo, output, expected_version, commit string) (manifest, error) {

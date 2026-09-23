@@ -8,6 +8,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+
+// Package bq provides Go bindings for BqLog, Tencent's lightweight,
+// high-performance logging system.
 package bq
 
 import (

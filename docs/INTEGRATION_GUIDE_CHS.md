@@ -385,6 +385,8 @@ go mod init example.com/myapp
 go get github.com/Tencent/BqLog/go/v2@latest
 ```
 
+将以下代码保存为 `main.go`：
+
 ```go
 package main
 
@@ -392,18 +394,23 @@ import bq "github.com/Tencent/BqLog/go/v2"
 
 func main() {
     config := `
-appenders_config.Console.type=console
-appenders_config.Console.levels=[all]
+appenders_config.console.type=console
+appenders_config.console.levels=[all]
 `
-    log := bq.Create_log("app", config, nil)
+    log := bq.Create_log("go_log", config, nil)
     if !log.Is_valid() {
         panic("invalid log config")
     }
     defer log.Force_flush()
 
-    log.Info("ready")
-    log.Info("name={} score={} online={}", "Alice", 42, true)
+    log.Info("Hello from Go! params: {}, {}", "text", 123)
 }
+```
+
+运行示例：
+
+```sh
+go run .
 ```
 
 日志方法接受零个或任意数量的参数。对象支持 Go 的 String/Error 方法，
@@ -414,6 +421,8 @@ nil 输出为 null。
 Go 没有方法重载，因此带 category 参数的日志接口使用 `_c` 后缀。
 普通日志调用 `Info(format, ...)`，指定 category 时调用
 `Info_c(category, format, ...)`；其他等级同理。Go 的公开方法以大写开头。
+
+沿用上述 `config`，将 `main` 中创建日志和输出日志的部分替换为：
 
 ```go
 log := bq.Create_category_log("game", config,
@@ -429,13 +438,11 @@ category 索引对应创建时的名称数组。使用 category 生成器时，�
 
 ### 包与版本
 
-模块版本与 BqLog 一致，由 Release CI 发布到 `go_dist` 分支，
-对应标签为 `go/v<版本>`。用户通过 Go Modules 获取源码，
-`go build` 自动编译 native 部分。Release 的 `go_only` 选项可仅发布 Go 模块。
+模块版本与 BqLog 一致。通过 Go Modules 获取源码，
+`go build` 自动编译 native 部分。
 
 [pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) 提供包搜索、
-README 和 API 文档展示。Go 以公开仓库的版本标签发布，
-无需另行执行类似 `npm publish` 的市场上传。
+README 和 API 文档展示。
 
 ---
 
