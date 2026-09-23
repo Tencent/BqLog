@@ -52,18 +52,24 @@ extern bool __api_fetch_and_remove_console_buffer(void* on_console_callback, con
 extern void bq_go_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, char* content, int32_t length);
 extern void bq_go_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, int32_t log_level, char* content, int32_t length);
 
-static void bq_go_console_trampoline(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+#if defined(_WIN32)
+#define bq_go_stdcall __stdcall
+#else
+#define bq_go_stdcall
+#endif
+
+static void bq_go_stdcall on_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
 {
 	bq_go_console_callback(log_id, category_idx, log_level, (char*)content, length);
 }
 
-static void bq_go_console_fetch_trampoline(void* param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+static void bq_go_stdcall on_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
 {
 	bq_go_console_fetch_callback(param, log_id, category_idx, log_level, (char*)content, length);
 }
 
-static void* bq_go_console_trampoline_ptr() { return (void*)&bq_go_console_trampoline; }
-static void* bq_go_console_fetch_trampoline_ptr() { return (void*)&bq_go_console_fetch_trampoline; }
+static void* on_console_callback_ptr() { return (void*)&on_console_callback; }
+static void* on_console_fetch_callback_ptr() { return (void*)&on_console_fetch_callback; }
 */
 import "C"
 
@@ -280,11 +286,11 @@ func Log_decode(in_file_path, out_file_path, priv_key string) bool {
 }
 
 func Register_console_callback() {
-	C.__api_register_console_callbacks(C.bq_go_console_trampoline_ptr())
+	C.__api_register_console_callbacks(C.on_console_callback_ptr())
 }
 
 func Unregister_console_callback() {
-	C.__api_unregister_console_callbacks(C.bq_go_console_trampoline_ptr())
+	C.__api_unregister_console_callbacks(C.on_console_callback_ptr())
 }
 
 func Set_console_buffer_enable(enable bool) {
@@ -292,5 +298,5 @@ func Set_console_buffer_enable(enable bool) {
 }
 
 func Fetch_and_remove_console_buffer() bool {
-	return bool(C.__api_fetch_and_remove_console_buffer(C.bq_go_console_fetch_trampoline_ptr(), nil))
+	return bool(C.__api_fetch_and_remove_console_buffer(C.on_console_fetch_callback_ptr(), nil))
 }
