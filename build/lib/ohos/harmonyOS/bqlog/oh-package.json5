@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "BqLog——工业级超高性能日志引擎，基于C++无锁队列核心，经腾讯亿级用户产品生产验证。支持同步/异步模式、压缩日志、RSA+AES混合加密、崩溃恢复、分类日志，适用于HarmonyOS (ArkTS/C++)及多平台多语言场景。",
   "main": "./src/main/ets/wrapper/index.ts",
-  "author": "pippocao",
+  "author": {
+    "name": "pippocao",
+    "email": "pippocao@tencent.com"
+  },
   "license": "Apache-2.0",
   "keywords": [
     "log",
