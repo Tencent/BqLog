@@ -30,6 +30,11 @@ Comparison Objects:
 
 ### 2. Benchmark results
 
+The BqLog figures below measure the C++ API. Other language wrappers generally
+add runtime, foreign-call and argument-processing overhead. Performance varies
+by language and workload; compare each language's benchmark under matching
+conditions.
+
 All time costs are in milliseconds, smaller values mean higher performance.
 
 #### 2.1 Throughput — Total Time Cost with 4 parameters (ms)

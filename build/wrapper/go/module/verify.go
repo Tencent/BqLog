@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-func escapeModule(path string) string {
+func escape_module(path string) string {
 	var escaped strings.Builder
 	for _, ch := range path {
 		if ch >= 'A' && ch <= 'Z' {
@@ -27,7 +27,7 @@ func escapeModule(path string) string {
 	return escaped.String()
 }
 
-func runGo(dir string, env []string, args ...string) error {
+func run_go(dir string, env []string, args ...string) error {
 	exe := os.Getenv("BQ_GO_EXECUTABLE")
 	if exe == "" {
 		exe = "go"
@@ -44,12 +44,12 @@ func runGo(dir string, env []string, args ...string) error {
 
 // Validate an actual versioned module download without relying on repository
 // relative paths or replace directives. The file proxy is local and disposable.
-func verifyModule(moduleDir string) error {
-	moduleDir, err := filepath.Abs(moduleDir)
+func verify_module(module_dir string) error {
+	module_dir, err := filepath.Abs(module_dir)
 	if err != nil {
 		return err
 	}
-	data, err := os.ReadFile(filepath.Join(moduleDir, "SOURCE.json"))
+	data, err := os.ReadFile(filepath.Join(module_dir, "SOURCE.json"))
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func verifyModule(moduleDir string) error {
 	if err = json.Unmarshal(data, &info); err != nil {
 		return err
 	}
-	if info.Module != modulePath(info.Version) {
+	if info.Module != module_path(info.Version) {
 		return fmt.Errorf("module/version mismatch")
 	}
 	temp, err := os.MkdirTemp("", "bqlog-go-consumer-")
@@ -67,8 +67,8 @@ func verifyModule(moduleDir string) error {
 	defer os.RemoveAll(temp)
 	version := "v" + info.Version
 	proxy := filepath.Join(temp, "proxy")
-	prefix := filepath.ToSlash(filepath.Join(escapeModule(info.Module), "@v"))
-	gomod, err := readText(filepath.Join(moduleDir, "go.mod"))
+	prefix := filepath.ToSlash(filepath.Join(escape_module(info.Module), "@v"))
+	gomod, err := read_text(filepath.Join(module_dir, "go.mod"))
 	if err != nil {
 		return err
 	}
@@ -86,9 +86,9 @@ func verifyModule(moduleDir string) error {
 		return err
 	}
 	writer := zip.NewWriter(archive)
-	err = filepath.WalkDir(moduleDir, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+	err = filepath.WalkDir(module_dir, func(path string, entry fs.DirEntry, walk_err error) error {
+		if walk_err != nil {
+			return walk_err
 		}
 		if entry.IsDir() {
 			return nil
@@ -97,7 +97,7 @@ func verifyModule(moduleDir string) error {
 		if ext == ".exe" || ext == ".dll" || ext == ".so" || ext == ".dylib" || ext == ".a" || ext == ".o" || ext == ".lib" {
 			return fmt.Errorf("binary in source module: %s", path)
 		}
-		relative, _ := filepath.Rel(moduleDir, path)
+		relative, _ := filepath.Rel(module_dir, path)
 		out, err := writer.Create(info.Module + "@" + version + "/" + filepath.ToSlash(relative))
 		if err != nil {
 			return err
@@ -110,22 +110,22 @@ func verifyModule(moduleDir string) error {
 		_, err = io.Copy(out, in)
 		return err
 	})
-	closeErr := writer.Close()
-	archiveErr := archive.Close()
+	close_err := writer.Close()
+	archive_err := archive.Close()
 	if err != nil {
 		return err
 	}
-	if closeErr != nil {
-		return closeErr
+	if close_err != nil {
+		return close_err
 	}
-	if archiveErr != nil {
-		return archiveErr
+	if archive_err != nil {
+		return archive_err
 	}
-	proxyPath := filepath.ToSlash(proxy)
-	if !strings.HasPrefix(proxyPath, "/") {
-		proxyPath = "/" + proxyPath
+	proxy_path := filepath.ToSlash(proxy)
+	if !strings.HasPrefix(proxy_path, "/") {
+		proxy_path = "/" + proxy_path
 	}
-	proxyURL := (&url.URL{Scheme: "file", Path: proxyPath}).String()
+	proxy_url := (&url.URL{Scheme: "file", Path: proxy_path}).String()
 	var env []string
 	for _, variable := range os.Environ() {
 		name, _, _ := strings.Cut(variable, "=")
@@ -135,7 +135,7 @@ func verifyModule(moduleDir string) error {
 		}
 		env = append(env, variable)
 	}
-	env = append(env, "GOPROXY="+proxyURL, "GOSUMDB=off", "GOMODCACHE="+filepath.Join(temp, "modcache"),
+	env = append(env, "GOPROXY="+proxy_url, "GOSUMDB=off", "GOMODCACHE="+filepath.Join(temp, "modcache"),
 		"GOWORK=off", "CGO_ENABLED=1", "GOFLAGS=", "GONOPROXY=", "GONOSUMDB=", "GOPRIVATE=")
 	consumer := filepath.Join(temp, "consumer")
 	if err = put(consumer, "go.mod", "module bqlog-consumer-check\n\ngo 1.21\n"); err != nil {
@@ -150,7 +150,7 @@ import (
 func main() {
     if bq.Get_version() != %q { panic("wrong native version") }
     log := bq.Create_log("consumer", "appenders_config.Console.type=console\nappenders_config.Console.levels=[all]\nlog.thread_mode=sync\nsnapshot.buffer_size=65536\nsnapshot.levels=[all]\n", nil)
-    if !log.Is_valid() || !log.Info("consumer {}", bq.Int(42)) { panic("log failed") }
+    if !log.Is_valid() || !log.Info("consumer {}", 42) { panic("log failed") }
     if !strings.Contains(log.Take_snapshot("gmt"), "consumer 42") { panic("wrong output") }
     log.Force_flush()
     fmt.Println("Standalone versioned source module passed")
@@ -159,14 +159,14 @@ func main() {
 	if err = put(consumer, "main.go", program); err != nil {
 		return err
 	}
-	if err = runGo(consumer, env, "get", info.Module+"@"+version); err != nil {
+	if err = run_go(consumer, env, "get", info.Module+"@"+version); err != nil {
 		return err
 	}
-	if err = runGo(consumer, env, "test", "-count=1", "-timeout=120s", info.Module+"/..."); err != nil {
+	if err = run_go(consumer, env, "test", "-count=1", "-timeout=120s", info.Module+"/..."); err != nil {
 		return err
 	}
-	if err = runGo(consumer, env, "vet", info.Module+"/..."); err != nil {
+	if err = run_go(consumer, env, "vet", info.Module+"/..."); err != nil {
 		return err
 	}
-	return runGo(consumer, env, "run", ".")
+	return run_go(consumer, env, "run", ".")
 }

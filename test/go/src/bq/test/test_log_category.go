@@ -54,7 +54,7 @@ func test_log_category() *test_result {
 			strings.HasSuffix(snapshot2, "Deep Category\n"),
 		"deep category test")
 
-	cat_log.Info_c(cat_module_b, "Param test: {}, {}", bq.Str("hello"), bq.I32(42))
+	cat_log.Info_c(cat_module_b, "Param test: {}, {}", "hello", int32(42))
 	snapshot3 := cat_log.Take_snapshot("gmt")
 	result.add_result(
 		snapshot3 != snapshot2 &&

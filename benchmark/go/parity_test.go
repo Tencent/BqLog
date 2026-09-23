@@ -9,14 +9,14 @@ import (
 	"testing"
 )
 
-func TestCppParity(t *testing.T) {
+func Test_cpp_parity(t *testing.T) {
 	source, err := os.ReadFile("../cpp/main.cpp")
 	if err != nil {
 		t.Fatal(err)
 	}
-	configRE := regexp.MustCompile("(?s)static bq::log \\w+ = bq::log::create_log\\(\"([^\"]+)\", R\"\\((.*?)\\)\"\\);")
+	config_re := regexp.MustCompile("(?s)static bq::log \\w+ = bq::log::create_log\\(\"([^\"]+)\", R\"\\((.*?)\\)\"\\);")
 	configs := make(map[string]string)
-	for _, m := range configRE.FindAllStringSubmatch(string(source), -1) {
+	for _, m := range config_re.FindAllStringSubmatch(string(source), -1) {
 		configs[m[1]] = m[2]
 	}
 	normalize := func(s string) string {
@@ -28,27 +28,27 @@ func TestCppParity(t *testing.T) {
 		}
 		return strings.Join(lines, "\n")
 	}
-	if len(configs) != len(logConfigs) {
-		t.Fatalf("C++ has %d logs; Go has %d", len(configs), len(logConfigs))
+	if len(configs) != len(log_configs) {
+		t.Fatalf("C++ has %d logs; Go has %d", len(configs), len(log_configs))
 	}
-	for _, entry := range logConfigs {
+	for _, entry := range log_configs {
 		if normalize(entry.config) != normalize(configs[entry.name]) {
 			t.Errorf("config differs: %s", entry.name)
 		}
 	}
-	for _, expected := range []string{multiParamFormat, noParamFormat, "logs_count = 2000000", "hot_window_size = 8", "burst_size = 64", "return 50000;"} {
+	for _, expected := range []string{multi_param_format, no_param_format, "logs_count = 2000000", "hot_window_size = 8", "burst_size = 64", "return 50000;"} {
 		if !strings.Contains(string(source), expected) {
 			t.Errorf("C++ workload changed: %s", expected)
 		}
 	}
-	prepareData()
+	prepare_data()
 	header, err := os.ReadFile("../cpp/multi_format_templates.h")
 	if err != nil {
 		t.Fatal(err)
 	}
-	templateRE := regexp.MustCompile("case (\\d+): log_obj.info\\(\"([^\"]+)\", v, (\\d+)\\)")
-	matches := templateRE.FindAllStringSubmatch(string(header), -1)
-	if len(matches) != multiFormatCount {
+	template_re := regexp.MustCompile("case (\\d+): log_obj.info\\(\"([^\"]+)\", v, (\\d+)\\)")
+	matches := template_re.FindAllStringSubmatch(string(header), -1)
+	if len(matches) != multi_format_count {
 		t.Fatalf("C++ template count: %d", len(matches))
 	}
 	for _, m := range matches {

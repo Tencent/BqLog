@@ -13,7 +13,7 @@ import (
 
 // Exercises the real release script against a disposable local bare remote.
 // No network or project Git refs are modified.
-func TestPublishLocalRemote(t *testing.T) {
+func Test_publish_local_remote(t *testing.T) {
 	bash := os.Getenv("BQ_BASH")
 	if bash == "" {
 		if runtime.GOOS == "windows" {
@@ -51,10 +51,10 @@ func TestPublishLocalRemote(t *testing.T) {
 	source := command(checkout, "git", "rev-parse", "HEAD")
 	command(checkout, "git", "remote", "add", "origin", remote)
 	command(checkout, "git", "push", "-u", "origin", "main")
-	writeModule := func(version string) string {
+	write_module := func(version string) string {
 		t.Helper()
 		dir := filepath.Join(temp, "module-"+version)
-		if err := put(dir, "go.mod", "module "+modulePath(version)+"\n\ngo 1.21\n"); err != nil {
+		if err := put(dir, "go.mod", "module "+module_path(version)+"\n\ngo 1.21\n"); err != nil {
 			t.Fatal(err)
 		}
 		if err := put(dir, "SOURCE.json", fmt.Sprintf("{\n  \"version\": %q,\n  \"source_commit\": %q\n}\n", version, source)); err != nil {
@@ -82,34 +82,37 @@ func TestPublishLocalRemote(t *testing.T) {
 		}
 		return nil
 	}
-	first := writeModule("2.4.1")
-	if err := publish(first, "2.4.1", false); err == nil {
+	const first_version = "2.0.1"
+	const next_version = "2.0.2"
+	const older_version = "2.0.0"
+	first := write_module(first_version)
+	if err := publish(first, first_version, false); err == nil {
 		t.Fatal("non-release invocation was allowed")
 	}
-	if err := publish(first, "2.4.1", true); err != nil {
+	if err := publish(first, first_version, true); err != nil {
 		t.Fatal(err)
 	}
-	firstCommit := command(temp, "git", "--git-dir="+remote, "rev-parse", "refs/tags/go/v2.4.1")
-	if branch := command(temp, "git", "--git-dir="+remote, "rev-parse", "refs/heads/go_dist"); branch != firstCommit {
+	first_commit := command(temp, "git", "--git-dir="+remote, "rev-parse", "refs/tags/go/v"+first_version)
+	if branch := command(temp, "git", "--git-dir="+remote, "rev-parse", "refs/heads/go_dist"); branch != first_commit {
 		t.Fatal("branch and tag are not atomic peers")
 	}
-	if err := publish(first, "2.4.1", true); err != nil {
+	if err := publish(first, first_version, true); err != nil {
 		t.Fatalf("idempotent retry: %v", err)
 	}
 	if err := put(first, "changed.txt", "must not overwrite a release"); err != nil {
 		t.Fatal(err)
 	}
-	if err := publish(first, "2.4.1", true); err == nil {
+	if err := publish(first, first_version, true); err == nil {
 		t.Fatal("different source overwrote immutable tag")
 	}
-	second := writeModule("2.4.2")
-	if err := publish(second, "2.4.2", true); err != nil {
+	second := write_module(next_version)
+	if err := publish(second, next_version, true); err != nil {
 		t.Fatal(err)
 	}
-	if parent := command(temp, "git", "--git-dir="+remote, "rev-parse", "refs/heads/go_dist^"); parent != firstCommit {
+	if parent := command(temp, "git", "--git-dir="+remote, "rev-parse", "refs/heads/go_dist^"); parent != first_commit {
 		t.Fatal("generated branch history was not preserved")
 	}
-	if err := publish(writeModule("2.4.0"), "2.4.0", true); err == nil {
+	if err := publish(write_module(older_version), older_version, true); err == nil {
 		t.Fatal("older release rewound distribution branch")
 	}
 	if command(checkout, "git", "rev-parse", "HEAD") != source || command(checkout, "git", "status", "--porcelain") != "" {

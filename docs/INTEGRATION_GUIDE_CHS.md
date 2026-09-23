@@ -375,6 +375,70 @@ log.info("Hello Java! value: {}", 3.14);
 
 ---
 
+## Go
+
+通过 Go Modules 安装：
+
+```sh
+# 已有 go.mod 的项目跳过初始化
+go mod init example.com/myapp
+go get github.com/Tencent/BqLog/go/v2@latest
+```
+
+```go
+package main
+
+import bq "github.com/Tencent/BqLog/go/v2"
+
+func main() {
+    config := `
+appenders_config.Console.type=console
+appenders_config.Console.levels=[all]
+`
+    log := bq.Create_log("app", config, nil)
+    if !log.Is_valid() {
+        panic("invalid log config")
+    }
+    defer log.Force_flush()
+
+    log.Info("ready")
+    log.Info("name={} score={} online={}", "Alice", 42, true)
+}
+```
+
+日志方法接受零个或任意数量的参数。对象支持 Go 的 String/Error 方法，
+nil 输出为 null。
+
+### 带 category 的日志
+
+Go 没有方法重载，因此带 category 参数的日志接口使用 `_c` 后缀。
+普通日志调用 `Info(format, ...)`，指定 category 时调用
+`Info_c(category, format, ...)`；其他等级同理。Go 的公开方法以大写开头。
+
+```go
+log := bq.Create_category_log("game", config,
+    []string{"", "Gameplay", "Network"})
+log.Info("default category")
+log.Info_c(1, "score={}", 42) // Gameplay
+log.Warning_c(2, "connection closed") // Network
+log.Force_flush()
+```
+
+category 索引对应创建时的名称数组。使用 category 生成器时，生成类提供
+带类型的 category 常量和同样的 `Info_c` 等接口，避免手工维护索引。
+
+### 包与版本
+
+模块版本与 BqLog 一致，由 Release CI 发布到 `go_dist` 分支，
+对应标签为 `go/v<版本>`。用户通过 Go Modules 获取源码，
+`go build` 自动编译 native 部分。Release 的 `go_only` 选项可仅发布 Go 模块。
+
+[pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) 提供包搜索、
+README 和 API 文档展示。Go 以公开仓库的版本标签发布，
+无需另行执行类似 `npm publish` 的市场上传。
+
+---
+
 ## 接下来
 
 - [API 参考](./API_REFERENCE_CHS.md) — 创建日志、写日志等核心 API

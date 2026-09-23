@@ -17,31 +17,31 @@ import (
 	"strings"
 )
 
-const developmentImport = "github.com/Tencent/BqLog/wrapper/go/src/bq"
+const development_import = "github.com/Tencent/BqLog/wrapper/go/src/bq"
 
 var (
-	versionPattern = regexp.MustCompile(`BQ_LOG_VERSION\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"`)
-	includePattern = regexp.MustCompile(`(?m)^(\s*#\s*include\s*)[<"]([^>"\r\n]+)[>"]`)
+	version_pattern = regexp.MustCompile(`BQ_LOG_VERSION\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"`)
+	include_pattern = regexp.MustCompile(`(?m)^(\s*#\s*include\s*)[<"]([^>"\r\n]+)[>"]`)
 )
 
-type sourceFile struct {
+type source_file struct {
 	Path   string `json:"path"`
 	SHA256 string `json:"sha256"`
 }
 
 type manifest struct {
-	Version string       `json:"version"`
-	Module  string       `json:"module"`
-	Commit  string       `json:"source_commit"`
-	Sources []sourceFile `json:"sources"`
+	Version string        `json:"version"`
+	Module  string        `json:"module"`
+	Commit  string        `json:"source_commit"`
+	Sources []source_file `json:"sources"`
 }
 
-func readText(path string) (string, error) {
+func read_text(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	return strings.ReplaceAll(strings.TrimPrefix(string(data), "\ufeff"), "\r\n", "\n"), err
 }
 
-func modulePath(version string) string {
+func module_path(version string) string {
 	major := strings.Split(version, ".")[0]
 	if major == "0" || major == "1" {
 		return "github.com/Tencent/BqLog/go"
@@ -57,7 +57,7 @@ func put(root, relative, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-func sourceName(path string) string {
+func source_name(path string) string {
 	name := "native_" + strings.ReplaceAll(path, "/", "_")
 	if strings.HasSuffix(name, ".inc") {
 		// cgo tracks headers in the package directory, including this entry list.
@@ -66,7 +66,21 @@ func sourceName(path string) string {
 	return name
 }
 
-func prepare(repo, output, expectedVersion, commit string) (manifest, error) {
+// Generate the distribution README from the Go section of the integration guide.
+func module_readme(guide, module, version, commit string) (string, error) {
+	const start_marker = "<!-- go-module:start -->"
+	const end_marker = "<!-- go-module:end -->"
+	start, end := strings.Index(guide, start_marker), strings.Index(guide, end_marker)
+	if start < 0 || end <= start || strings.Count(guide, start_marker) != 1 || strings.Count(guide, end_marker) != 1 {
+		return "", fmt.Errorf("integration guide must mark one Go section")
+	}
+	chapter := strings.TrimSpace(guide[start+len(start_marker) : end])
+	chapter = strings.ReplaceAll(chapter, "github.com/Tencent/BqLog/go/v2", module)
+	return fmt.Sprintf("# BqLog for Go %s\n\n<!-- Source commit: %s -->\n\n%s\n",
+		version, commit, chapter), nil
+}
+
+func prepare(repo, output, expected_version, commit string) (manifest, error) {
 	var result manifest
 	repo, err := filepath.Abs(repo)
 	if err != nil {
@@ -79,24 +93,24 @@ func prepare(repo, output, expectedVersion, commit string) (manifest, error) {
 	if _, err := os.Stat(output); !os.IsNotExist(err) {
 		return result, fmt.Errorf("output must be a new directory: %s", output)
 	}
-	versionSource, err := readText(filepath.Join(repo, "src/bq_log/global/version.cpp"))
+	version_source, err := read_text(filepath.Join(repo, "src/bq_log/global/version.cpp"))
 	if err != nil {
 		return result, err
 	}
-	match := versionPattern.FindStringSubmatch(versionSource)
-	if len(match) != 2 || (expectedVersion != "" && match[1] != expectedVersion) {
-		return result, fmt.Errorf("BqLog source version does not match requested release %q", expectedVersion)
+	match := version_pattern.FindStringSubmatch(version_source)
+	if len(match) != 2 || (expected_version != "" && match[1] != expected_version) {
+		return result, fmt.Errorf("BqLog source version does not match requested release %q", expected_version)
 	}
 	version := match[1]
-	result = manifest{Version: version, Module: modulePath(version), Commit: commit}
+	result = manifest{Version: version, Module: module_path(version), Commit: commit}
 
 	// Only source/header files enter the release. Every translation unit remains
 	// separate; the development tree does not acquire forwarding .cc files.
 	native := make(map[string]string)
 	for _, tree := range []string{"include", "src"} {
-		err = filepath.WalkDir(filepath.Join(repo, tree), func(path string, entry fs.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr
+		err = filepath.WalkDir(filepath.Join(repo, tree), func(path string, entry fs.DirEntry, walk_err error) error {
+			if walk_err != nil {
+				return walk_err
 			}
 			if entry.Type()&os.ModeSymlink != 0 {
 				return fmt.Errorf("unexpected source symlink: %s", path)
@@ -110,7 +124,7 @@ func prepare(repo, output, expectedVersion, commit string) (manifest, error) {
 			}
 			relative, _ := filepath.Rel(repo, path)
 			relative = filepath.ToSlash(relative)
-			native[relative] = sourceName(relative)
+			native[relative] = source_name(relative)
 			return nil
 		})
 		if err != nil {
@@ -130,15 +144,15 @@ func prepare(repo, output, expectedVersion, commit string) (manifest, error) {
 	}
 	sort.Strings(paths)
 	for _, path := range paths {
-		content, err := readText(filepath.Join(repo, filepath.FromSlash(path)))
+		content, err := read_text(filepath.Join(repo, filepath.FromSlash(path)))
 		if err != nil {
 			return result, err
 		}
 		hash := sha256.Sum256([]byte(content))
-		result.Sources = append(result.Sources, sourceFile{path, hex.EncodeToString(hash[:])})
+		result.Sources = append(result.Sources, source_file{path, hex.EncodeToString(hash[:])})
 		var unresolved string
-		content = includePattern.ReplaceAllStringFunc(content, func(line string) string {
-			parts := includePattern.FindStringSubmatch(line)
+		content = include_pattern.ReplaceAllStringFunc(content, func(line string) string {
+			parts := include_pattern.FindStringSubmatch(line)
 			target := parts[2]
 			// <string.h> and <assert.h> are system headers even when a local
 			// header has the same basename. Only BqLog angle includes relocate.
@@ -168,20 +182,20 @@ func prepare(repo, output, expectedVersion, commit string) (manifest, error) {
 	}
 
 	wrapper := filepath.Join(repo, "wrapper/go/src/bq")
-	err = filepath.WalkDir(wrapper, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+	err = filepath.WalkDir(wrapper, func(path string, entry fs.DirEntry, walk_err error) error {
+		if walk_err != nil {
+			return walk_err
 		}
 		if entry.IsDir() || (filepath.Ext(path) != ".go" && filepath.Ext(path) != ".txt") {
 			return nil
 		}
-		content, err := readText(path)
+		content, err := read_text(path)
 		if err != nil {
 			return err
 		}
 		relative, _ := filepath.Rel(wrapper, path)
 		relative = filepath.ToSlash(relative)
-		content = strings.ReplaceAll(content, developmentImport, result.Module)
+		content = strings.ReplaceAll(content, development_import, result.Module)
 		if relative == "impl/invoker.go" {
 			original := "#cgo CFLAGS: -I${SRCDIR}/../../../../../include -DBQ_GO"
 			if strings.Count(content, original) != 1 {
@@ -232,21 +246,21 @@ import "C"
 	if err = put(output, "go.mod", "module "+result.Module+"\n\ngo 1.21\n"); err != nil {
 		return result, err
 	}
-	license, err := readText(filepath.Join(repo, "LICENSE.txt"))
+	license, err := read_text(filepath.Join(repo, "LICENSE.txt"))
 	if err != nil {
 		return result, err
 	}
 	if err = put(output, "LICENSE", license); err != nil {
 		return result, err
 	}
-	readme := fmt.Sprintf("# BqLog Go %s\n\nGenerated from Tencent/BqLog commit %s. Do not edit generated sources.\n\n"+
-		"Install: `go get %s@v%s`\n\n"+
-		"Import: `import bq %q`\n\n"+
-		"Requires Go 1.21+, CGO_ENABLED=1, and a C/C++17 compiler. "+
-		"Native source compiles automatically; no prebuilt BqLog DLL/so or CMake step is needed. "+
-		"The native objects link into the Go program. Desktop Windows, Linux, macOS and FreeBSD are supported.\n\n"+
-		"Create a logger with `bq.Create_log(name, config, nil)`, call `log.Info(format, bq.Str(value))`, "+
-		"and flush before exit with `log.Force_flush()`.\n", version, commit, result.Module, version, result.Module)
+	guide, err := read_text(filepath.Join(repo, "docs/INTEGRATION_GUIDE.md"))
+	if err != nil {
+		return result, err
+	}
+	readme, err := module_readme(guide, result.Module, version, commit)
+	if err != nil {
+		return result, err
+	}
 	if err = put(output, "README.md", readme); err != nil {
 		return result, err
 	}
@@ -265,7 +279,7 @@ func main() {
 	verify := flag.String("verify", "", "verify an existing generated module through a local Go proxy")
 	flag.Parse()
 	if *verify != "" {
-		if err := verifyModule(*verify); err != nil {
+		if err := verify_module(*verify); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}

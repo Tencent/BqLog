@@ -16,6 +16,10 @@ UTF-8 strings. The Go writers are goroutines; C++ writers are OS threads.
 C++ literal formats and Go string formats also retain their language-specific
 implementation paths. These are not identical machine-code workloads.
 
+Like other language wrappers, this benchmark includes runtime, foreign-call
+and argument-processing overhead beyond direct C++ calls. Compare repeated
+measurements under the same workload and flush conditions.
+
 ## Build and run
 
 Build the native library with the existing CMake configuration:

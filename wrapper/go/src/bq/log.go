@@ -121,7 +121,7 @@ func (l *Log) Is_enable_for(level def.Log_level, category_index uint32) bool {
 }
 
 // do_log is shared by the level and category methods. It is private to package bq.
-func (l *Log) do_log(level def.Log_level, category_index uint32, format string, args ...Arg) bool {
+func (l *Log) do_log(level def.Log_level, category_index uint32, format string, args ...any) bool {
 	if !l.Is_enable_for(level, category_index) {
 		return false
 	}
@@ -133,56 +133,71 @@ func (l *Log) do_log(level def.Log_level, category_index uint32, format string, 
 	if uint64(len(format)) > max_entry_payload {
 		return false
 	}
-	var args_data []byte
-	if len(args) > 0 {
-		if len(args) <= 4 {
-			return l.write_small(level, category_index, format, args) == 0
-		}
-		size := args_size(args)
-		if size < 0 || uint64(size)+uint64(len(format)) > max_entry_payload {
-			return false
-		}
-		buffer := acquire_args_buffer(size)
-		defer release_args_buffer(buffer)
-		args_data = buffer.data[:size]
-		serialize_args(args_data, args)
+	if len(args) == 0 {
+		return impl.Go_log_write(l.id, uint8(level), category_index, format, nil) == 0
 	}
+	if len(args) <= 4 {
+		return l.write_small(level, category_index, format, args) == 0
+	}
+	return l.write_many(level, category_index, format, args)
+}
+
+func (l *Log) write_many(level def.Log_level, category_index uint32, format string, args []any) bool {
+	// Convert once, including any String/Error methods, before calculating
+	// storage. Isolate this scratch space from the common 0–4 argument path.
+	var local [16]Arg
+	converted := local[:]
+	if len(args) > len(local) {
+		converted = make([]Arg, len(args))
+	}
+	converted = converted[:len(args)]
+	for i := range args {
+		converted[i] = make_arg(args[i])
+	}
+	size := args_size(converted)
+	if size < 0 || uint64(size)+uint64(len(format)) > uint64(1<<32-1-1024) {
+		return false
+	}
+	buffer := acquire_args_buffer(size)
+	defer release_args_buffer(buffer)
+	args_data := buffer.data[:size]
+	serialize_args(args_data, converted)
 	return impl.Go_log_write(l.id, uint8(level), category_index, format, args_data) == 0
 }
 
 // Pass string pointers as individual cgo arguments so the Go runtime pins
 // them for the call. Never pass a Go array containing strings/pointers to C.
-func (l *Log) write_small(level def.Log_level, category_index uint32, format string, args []Arg) uint32 {
-	a0 := args[0]
+func (l *Log) write_small(level def.Log_level, category_index uint32, format string, args []any) uint32 {
+	a0 := make_arg(args[0])
 	types := uint32(a0.typ)
 	if len(args) == 1 {
 		return impl.Go_log_write_1(l.id, uint8(level), category_index, format, types, a0.pod, a0.str)
 	}
-	a1 := args[1]
+	a1 := make_arg(args[1])
 	types |= uint32(a1.typ) << 8
 	if len(args) == 2 {
 		return impl.Go_log_write_2(l.id, uint8(level), category_index, format, types, a0.pod, a0.str, a1.pod, a1.str)
 	}
-	a2 := args[2]
+	a2 := make_arg(args[2])
 	var a3 Arg
 	if len(args) == 4 {
-		a3 = args[3]
+		a3 = make_arg(args[3])
 	}
 	types |= uint32(a2.typ)<<16 | uint32(a3.typ)<<24
 	return impl.Go_log_write_4(l.id, uint8(level), category_index, format, uint32(len(args)), types,
 		a0.pod, a0.str, a1.pod, a1.str, a2.pod, a2.str, a3.pod, a3.str)
 }
 
-func (l *Log) Verbose(format string, args ...Arg) bool {
+func (l *Log) Verbose(format string, args ...any) bool {
 	return l.do_log(def.Verbose, 0, format, args...)
 }
-func (l *Log) Debug(format string, args ...Arg) bool { return l.do_log(def.Debug, 0, format, args...) }
-func (l *Log) Info(format string, args ...Arg) bool  { return l.do_log(def.Info, 0, format, args...) }
-func (l *Log) Warning(format string, args ...Arg) bool {
+func (l *Log) Debug(format string, args ...any) bool { return l.do_log(def.Debug, 0, format, args...) }
+func (l *Log) Info(format string, args ...any) bool  { return l.do_log(def.Info, 0, format, args...) }
+func (l *Log) Warning(format string, args ...any) bool {
 	return l.do_log(def.Warning, 0, format, args...)
 }
-func (l *Log) Error(format string, args ...Arg) bool { return l.do_log(def.Error, 0, format, args...) }
-func (l *Log) Fatal(format string, args ...Arg) bool { return l.do_log(def.Fatal, 0, format, args...) }
+func (l *Log) Error(format string, args ...any) bool { return l.do_log(def.Error, 0, format, args...) }
+func (l *Log) Fatal(format string, args ...any) bool { return l.do_log(def.Fatal, 0, format, args...) }
 
 // Force_flush makes bqLog flush buffered logs of this log object.
 func (l *Log) Force_flush() {

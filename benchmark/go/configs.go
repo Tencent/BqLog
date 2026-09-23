@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Tencent. Licensed under the Apache License, Version 2.0.
 package main
 
-// These configurations match benchmark/cpp/main.cpp; checked by TestCppParity.
-var logConfigs = []struct{ name, config string }{
+// These configurations match benchmark/cpp/main.cpp; checked by Test_cpp_parity.
+var log_configs = []struct{ name, config string }{
 	{"compress", `
 		appenders_config.appender_3.type=compressed_file
 		appenders_config.appender_3.levels=[all]

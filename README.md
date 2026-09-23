@@ -192,6 +192,10 @@ Test: 1–10 threads, each writing 2,000,000 log entries. Environment: MacBook P
 
 Comparison: BqLog (Text / Compress / Compress+Encrypt) vs spdlog 1.17.0, glog 0.7.1, fmtlog, quill 11.1.0, Log4j2 2.23.1.
 
+The BqLog figures below measure the C++ API. Other language wrappers generally
+add runtime and cross-language call overhead; their performance depends on the
+language and workload and should be measured separately.
+
 #### Throughput — Total Time Cost with 4 parameters (ms)
 
 |                              | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
@@ -265,7 +269,7 @@ Comparison: BqLog (Text / Compress / Compress+Encrypt) vs spdlog 1.17.0, glog 0.
 | [API Reference](docs/API_REFERENCE.md) | Core APIs, sync/async logging, Appender overview, build & tools |
 | [Configuration](docs/CONFIGURATION.md) | Full configuration reference (appenders, log, snapshot) |
 | [Advanced Usage](docs/ADVANCED_USAGE.md) | No Heap Alloc, Category, crash recovery, custom types, encryption |
-| [Benchmark](docs/BENCHMARK.md) | Full benchmark code (C++, Java, Log4j) and results |
+| [Benchmark](docs/BENCHMARK.md) | Benchmark code, methodology, and results |
 
 ---
 

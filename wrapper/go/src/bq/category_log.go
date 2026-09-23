@@ -25,21 +25,21 @@ func Create_category_log(name, config string, category_names []string) *Category
 	return &Category_log{Log: l}
 }
 
-func (l *Category_log) Verbose_c(category_index uint32, format string, args ...Arg) bool {
+func (l *Category_log) Verbose_c(category_index uint32, format string, args ...any) bool {
 	return l.do_log(def.Verbose, category_index, format, args...)
 }
-func (l *Category_log) Debug_c(category_index uint32, format string, args ...Arg) bool {
+func (l *Category_log) Debug_c(category_index uint32, format string, args ...any) bool {
 	return l.do_log(def.Debug, category_index, format, args...)
 }
-func (l *Category_log) Info_c(category_index uint32, format string, args ...Arg) bool {
+func (l *Category_log) Info_c(category_index uint32, format string, args ...any) bool {
 	return l.do_log(def.Info, category_index, format, args...)
 }
-func (l *Category_log) Warning_c(category_index uint32, format string, args ...Arg) bool {
+func (l *Category_log) Warning_c(category_index uint32, format string, args ...any) bool {
 	return l.do_log(def.Warning, category_index, format, args...)
 }
-func (l *Category_log) Error_c(category_index uint32, format string, args ...Arg) bool {
+func (l *Category_log) Error_c(category_index uint32, format string, args ...any) bool {
 	return l.do_log(def.Error, category_index, format, args...)
 }
-func (l *Category_log) Fatal_c(category_index uint32, format string, args ...Arg) bool {
+func (l *Category_log) Fatal_c(category_index uint32, format string, args ...any) bool {
 	return l.do_log(def.Fatal, category_index, format, args...)
 }

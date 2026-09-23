@@ -76,22 +76,22 @@ func Get_${CLASS_NAME}_by_name(name string) *${CLASS_NAME} {
     return &${CLASS_NAME}{&bq.Category_log{Log: &bq.Log{}}}
 }
 
-func (l *${CLASS_NAME}) Verbose_c(category ${CLASS_NAME}_Category, format string, args ...bq.Arg) bool {
+func (l *${CLASS_NAME}) Verbose_c(category ${CLASS_NAME}_Category, format string, args ...any) bool {
     return l.Category_log.Verbose_c(uint32(category), format, args...)
 }
-func (l *${CLASS_NAME}) Debug_c(category ${CLASS_NAME}_Category, format string, args ...bq.Arg) bool {
+func (l *${CLASS_NAME}) Debug_c(category ${CLASS_NAME}_Category, format string, args ...any) bool {
     return l.Category_log.Debug_c(uint32(category), format, args...)
 }
-func (l *${CLASS_NAME}) Info_c(category ${CLASS_NAME}_Category, format string, args ...bq.Arg) bool {
+func (l *${CLASS_NAME}) Info_c(category ${CLASS_NAME}_Category, format string, args ...any) bool {
     return l.Category_log.Info_c(uint32(category), format, args...)
 }
-func (l *${CLASS_NAME}) Warning_c(category ${CLASS_NAME}_Category, format string, args ...bq.Arg) bool {
+func (l *${CLASS_NAME}) Warning_c(category ${CLASS_NAME}_Category, format string, args ...any) bool {
     return l.Category_log.Warning_c(uint32(category), format, args...)
 }
-func (l *${CLASS_NAME}) Error_c(category ${CLASS_NAME}_Category, format string, args ...bq.Arg) bool {
+func (l *${CLASS_NAME}) Error_c(category ${CLASS_NAME}_Category, format string, args ...any) bool {
     return l.Category_log.Error_c(uint32(category), format, args...)
 }
-func (l *${CLASS_NAME}) Fatal_c(category ${CLASS_NAME}_Category, format string, args ...bq.Arg) bool {
+func (l *${CLASS_NAME}) Fatal_c(category ${CLASS_NAME}_Category, format string, args ...any) bool {
     return l.Category_log.Fatal_c(uint32(category), format, args...)
 }
 )";

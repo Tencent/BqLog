@@ -193,6 +193,9 @@ bq.log.force_flush_all_logs();
 
 对比：BqLog（Text / Compress / Compress+Encrypt）vs spdlog 1.17.0、glog 0.7.1、fmtlog、quill 11.1.0、Log4j2 2.23.1。
 
+下表 BqLog 数据来自 C++ 接口。其他语言的 wrapper 通常会增加运行时和
+跨语言调用开销，性能随语言和负载而变化，请以对应语言的实测结果为准。
+
 #### 吞吐量 — 带 4 个参数的总耗时（毫秒）
 
 |                              | 1 线程 | 2 线程 | 3 线程 | 4 线程 | 5 线程 | 6 线程 | 7 线程 | 8 线程 | 9 线程 | 10 线程 |
@@ -266,7 +269,7 @@ bq.log.force_flush_all_logs();
 | [API 参考](docs/API_REFERENCE_CHS.md) | 核心 API、同步/异步日志、Appender 介绍、构建与工具 |
 | [配置说明](docs/CONFIGURATION_CHS.md) | 完整配置参考（appenders、log、snapshot） |
 | [高级用法](docs/ADVANCED_USAGE_CHS.md) | 无 Heap Alloc、Category、崩溃恢复、自定义类型、加密 |
-| [Benchmark](docs/BENCHMARK_CHS.md) | 完整 Benchmark 代码（C++、Java、Log4j）和结果 |
+| [Benchmark](docs/BENCHMARK_CHS.md) | Benchmark 代码、测试方法和结果 |
 
 ---
 

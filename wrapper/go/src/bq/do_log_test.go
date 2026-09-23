@@ -7,7 +7,7 @@ import (
 	"github.com/Tencent/BqLog/wrapper/go/src/bq/def"
 )
 
-func TestDoLogRejectsInvalidLevel(t *testing.T) {
+func Test_do_log_rejects_invalid_level(t *testing.T) {
 	log := Create_log("invalid_level_private_test",
 		"appenders_config.Console.type=console\nappenders_config.Console.levels=[all]\nlog.thread_mode=sync\n", nil)
 	if !log.Is_valid() {

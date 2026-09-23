@@ -374,6 +374,75 @@ For more examples, refer to `/demo/java` directory.
 
 ---
 
+<!-- go-module:start -->
+## Go
+
+Install through Go Modules:
+
+```sh
+# Skip initialization if the project already has go.mod
+go mod init example.com/myapp
+go get github.com/Tencent/BqLog/go/v2@latest
+```
+
+```go
+package main
+
+import bq "github.com/Tencent/BqLog/go/v2"
+
+func main() {
+    config := `
+appenders_config.Console.type=console
+appenders_config.Console.levels=[all]
+`
+    log := bq.Create_log("app", config, nil)
+    if !log.Is_valid() {
+        panic("invalid log config")
+    }
+    defer log.Force_flush()
+
+    log.Info("ready")
+    log.Info("name={} score={} online={}", "Alice", 42, true)
+}
+```
+
+Logging methods accept zero or any number of arguments. Objects support Go's
+String/Error methods, and nil is logged as null.
+
+### Category logging
+
+Go has no method overloading, so category methods use the `_c` suffix.
+Use `Info(format, ...)` for ordinary logging and
+`Info_c(category, format, ...)` to specify a category; the other levels follow
+the same pattern. Exported Go methods start with an uppercase letter.
+
+```go
+log := bq.Create_category_log("game", config,
+    []string{"", "Gameplay", "Network"})
+log.Info("default category")
+log.Info_c(1, "score={}", 42) // Gameplay
+log.Warning_c(2, "connection closed") // Network
+log.Force_flush()
+```
+
+Category indices correspond to the names passed at creation. The category
+generator provides typed constants and the same `Info_c` methods, avoiding
+handwritten indices.
+
+### Packages and versions
+
+The module follows the BqLog version. Release CI publishes source to `go_dist`
+with `go/v<version>` tags. Consumers use Go Modules, and `go build` compiles
+the native sources automatically. The release workflow's `go_only` option
+publishes only the Go module.
+
+[pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) provides package
+search, README and API documentation. Go publishes through public repository
+version tags; no separate `npm publish`-style upload is required.
+<!-- go-module:end -->
+
+---
+
 ## Next Steps
 
 - [API Reference](./API_REFERENCE.md) — Core APIs for creating logs, writing logs, and more
