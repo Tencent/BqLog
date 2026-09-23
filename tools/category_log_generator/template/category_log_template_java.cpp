@@ -79,7 +79,8 @@ namespace bq {
 
     bq::string category_log_template_java::get_template_content() const
     {
-        return R"(package bq;
+        // Keep each literal below MSVC's string literal size limit.
+        bq::string content = R"(package bq;
 /*
  * Copyright (C) 2025 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
@@ -273,7 +274,8 @@ public class ${CLASS_NAME} extends category_log{
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3);
     }
 
-    //log methods for param count 4
+)";
+        content += R"(    //log methods for param count 4
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4);
@@ -377,7 +379,8 @@ public class ${CLASS_NAME} extends category_log{
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
 
-    //log methods for param count 8
+)";
+        content += R"(    //log methods for param count 8
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
@@ -481,7 +484,8 @@ public class ${CLASS_NAME} extends category_log{
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
 
-    //log methods for param count 12
+)";
+        content += R"(    //log methods for param count 12
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
@@ -550,5 +554,6 @@ public class ${CLASS_NAME} extends category_log{
     public final ${CLASS_NAME}_category_root cat = new ${CLASS_NAME}_category_root();
 }
 )";
+        return content;
     }
 }
