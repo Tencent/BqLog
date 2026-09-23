@@ -52,21 +52,21 @@ func Get_Generated_category_by_name(name string) *Generated_category {
 	return &Generated_category{&bq.Category_log{Log: &bq.Log{}}}
 }
 
-func (l *Generated_category) Verbose_c(category Generated_category_Category, format string, args ...bq.Arg) bool {
+func (l *Generated_category) Verbose_c(category Generated_category_Category, format string, args ...any) bool {
 	return l.Category_log.Verbose_c(uint32(category), format, args...)
 }
-func (l *Generated_category) Debug_c(category Generated_category_Category, format string, args ...bq.Arg) bool {
+func (l *Generated_category) Debug_c(category Generated_category_Category, format string, args ...any) bool {
 	return l.Category_log.Debug_c(uint32(category), format, args...)
 }
-func (l *Generated_category) Info_c(category Generated_category_Category, format string, args ...bq.Arg) bool {
+func (l *Generated_category) Info_c(category Generated_category_Category, format string, args ...any) bool {
 	return l.Category_log.Info_c(uint32(category), format, args...)
 }
-func (l *Generated_category) Warning_c(category Generated_category_Category, format string, args ...bq.Arg) bool {
+func (l *Generated_category) Warning_c(category Generated_category_Category, format string, args ...any) bool {
 	return l.Category_log.Warning_c(uint32(category), format, args...)
 }
-func (l *Generated_category) Error_c(category Generated_category_Category, format string, args ...bq.Arg) bool {
+func (l *Generated_category) Error_c(category Generated_category_Category, format string, args ...any) bool {
 	return l.Category_log.Error_c(uint32(category), format, args...)
 }
-func (l *Generated_category) Fatal_c(category Generated_category_Category, format string, args ...bq.Arg) bool {
+func (l *Generated_category) Fatal_c(category Generated_category_Category, format string, args ...any) bool {
 	return l.Category_log.Fatal_c(uint32(category), format, args...)
 }

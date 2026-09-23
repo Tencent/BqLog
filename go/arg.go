@@ -8,14 +8,19 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+
 package bq
 
-import "math"
+import (
+	"fmt"
+	"math"
+	"reflect"
+	"unsafe"
+)
 
-// Arg is a single log parameter. Use the constructor functions (Str, I64, ...)
-// instead of building it by hand. Concrete typed args (instead of ...any) keep
-// the variadic slice free of boxing. Up to four arguments are written directly
-// in native code; larger lists use pooled buffers. The zero Arg represents null.
+// Arg is an optional explicit representation of a log parameter. Log methods
+// also accept ordinary Go values, so callers do not need these constructors.
+// The zero Arg represents null.
 type Arg struct {
 	typ uint8
 	pod uint64
@@ -61,6 +66,106 @@ func Uint(v uint) Arg   { return U64(uint64(v)) }
 func F32(v float32) Arg { return Arg{typ: arg_type_float, pod: uint64(math.Float32bits(v))} }
 func F64(v float64) Arg { return Arg{typ: arg_type_double, pod: math.Float64bits(v)} }
 func Str(v string) Arg  { return Arg{typ: arg_type_string_utf8, pod: uint64(len(v)), str: v} }
+
+// Convert each value once, only after level/category filtering. Built-in values
+// retain their native types so BqLog still performs formatting asynchronously.
+func make_arg(value any) Arg {
+	switch v := value.(type) {
+	case nil:
+		return Nil()
+	case Arg:
+		return v
+	case string:
+		return Str(v)
+	case bool:
+		return Bool(v)
+	case int:
+		return Int(v)
+	case int8:
+		return I8(v)
+	case int16:
+		return I16(v)
+	case int32:
+		return I32(v)
+	case int64:
+		return I64(v)
+	case uint:
+		return Uint(v)
+	case uint8:
+		return U8(v)
+	case uint16:
+		return U16(v)
+	case uint32:
+		return U32(v)
+	case uint64:
+		return U64(v)
+	case uintptr:
+		return Ptr(v)
+	case float32:
+		return F32(v)
+	case float64:
+		return F64(v)
+	case unsafe.Pointer:
+		if v == nil {
+			return Nil()
+		}
+		return Ptr(uintptr(v))
+	default:
+		return make_object_arg(value)
+	}
+}
+
+func make_object_arg(value any) Arg {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice, reflect.UnsafePointer:
+		if v.IsNil() {
+			// An interface holding a typed nil must not invoke String/Error.
+			return Nil()
+		}
+	}
+	switch value.(type) {
+	case fmt.Formatter, error, fmt.Stringer:
+		// fmt handles conversion panics using its standard diagnostic text.
+		return Str(fmt.Sprint(value))
+	}
+	// Named scalar types (for example an enum) keep their underlying encoding,
+	// unless the type explicitly supplies its own textual representation above.
+	switch v.Kind() {
+	case reflect.String:
+		return Str(v.String())
+	case reflect.Bool:
+		return Bool(v.Bool())
+	case reflect.Int:
+		return Int(int(v.Int()))
+	case reflect.Int8:
+		return I8(int8(v.Int()))
+	case reflect.Int16:
+		return I16(int16(v.Int()))
+	case reflect.Int32:
+		return I32(int32(v.Int()))
+	case reflect.Int64:
+		return I64(v.Int())
+	case reflect.Uint:
+		return Uint(uint(v.Uint()))
+	case reflect.Uint8:
+		return U8(uint8(v.Uint()))
+	case reflect.Uint16:
+		return U16(uint16(v.Uint()))
+	case reflect.Uint32:
+		return U32(uint32(v.Uint()))
+	case reflect.Uint64:
+		return U64(v.Uint())
+	case reflect.Uintptr:
+		return Ptr(uintptr(v.Uint()))
+	case reflect.Float32:
+		return F32(float32(v.Float()))
+	case reflect.Float64:
+		return F64(v.Float())
+	default:
+		return Str(fmt.Sprint(value))
+	}
+}
 
 func align4(n int) int {
 	if n == 0 {
