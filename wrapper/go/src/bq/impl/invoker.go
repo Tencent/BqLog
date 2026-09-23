@@ -44,10 +44,10 @@ extern int32_t __api_log_decoder_create(const char* log_file_path, const char* p
 extern int32_t __api_log_decoder_decode(uint32_t handle, bq_go_string_def* out_decoded_log_text);
 extern void __api_log_decoder_destroy(uint32_t handle);
 extern bool __api_log_decode(const char* in_file_path, const char* out_file_path, const char* priv_key);
-extern void __api_register_console_callbacks(void* on_console_callback);
-extern void __api_unregister_console_callbacks(void* on_console_callback);
+extern void __api_register_console_callbacks(void* bq_on_console_callback);
+extern void __api_unregister_console_callbacks(void* bq_on_console_callback);
 extern void __api_set_console_buffer_enable(bool enable);
-extern bool __api_fetch_and_remove_console_buffer(void* on_console_callback, const void* pass_through_param);
+extern bool __api_fetch_and_remove_console_buffer(void* bq_on_console_callback, const void* pass_through_param);
 
 extern void bq_go_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, char* content, int32_t length);
 extern void bq_go_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, int32_t log_level, char* content, int32_t length);
@@ -58,18 +58,18 @@ extern void bq_go_console_fetch_callback(void* param, uint64_t log_id, int32_t c
 #define bq_go_stdcall
 #endif
 
-static void bq_go_stdcall on_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+static void bq_go_stdcall bq_on_console_callback(uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
 {
 	bq_go_console_callback(log_id, category_idx, log_level, (char*)content, length);
 }
 
-static void bq_go_stdcall on_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
+static void bq_go_stdcall bq_on_console_fetch_callback(void* param, uint64_t log_id, int32_t category_idx, int32_t log_level, const char* content, int32_t length)
 {
 	bq_go_console_fetch_callback(param, log_id, category_idx, log_level, (char*)content, length);
 }
 
-static void* on_console_callback_ptr() { return (void*)&on_console_callback; }
-static void* on_console_fetch_callback_ptr() { return (void*)&on_console_fetch_callback; }
+static void* bq_on_console_callback_ptr() { return (void*)&bq_on_console_callback; }
+static void* bq_on_console_fetch_callback_ptr() { return (void*)&bq_on_console_fetch_callback; }
 */
 import "C"
 
@@ -286,11 +286,11 @@ func Log_decode(in_file_path, out_file_path, priv_key string) bool {
 }
 
 func Register_console_callback() {
-	C.__api_register_console_callbacks(C.on_console_callback_ptr())
+	C.__api_register_console_callbacks(C.bq_on_console_callback_ptr())
 }
 
 func Unregister_console_callback() {
-	C.__api_unregister_console_callbacks(C.on_console_callback_ptr())
+	C.__api_unregister_console_callbacks(C.bq_on_console_callback_ptr())
 }
 
 func Set_console_buffer_enable(enable bool) {
@@ -298,5 +298,5 @@ func Set_console_buffer_enable(enable bool) {
 }
 
 func Fetch_and_remove_console_buffer() bool {
-	return bool(C.__api_fetch_and_remove_console_buffer(C.on_console_fetch_callback_ptr(), nil))
+	return bool(C.__api_fetch_and_remove_console_buffer(C.bq_on_console_fetch_callback_ptr(), nil))
 }
