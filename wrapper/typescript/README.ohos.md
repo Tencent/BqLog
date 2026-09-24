@@ -152,7 +152,7 @@ BqLog 的性能持续领先于主流日志库。详细基准测试结果请参�
 
 支持所有语言的完整文档和示例：
 
-**C++ | Java | C# | Python | TypeScript | Unreal Engine | Unity | HarmonyOS**
+**C++ | Java | C# | Python | TypeScript | Go | Unreal Engine | Unity | HarmonyOS**
 
 👉 **[github.com/Tencent/BqLog](https://github.com/Tencent/BqLog)**
 

@@ -1,4 +1,4 @@
-﻿artifacts/
+artifacts/
 dist/
 install/
 .vscode/
@@ -7,11 +7,3 @@ install/
 node_modules/
 /package-lock.json
 /package.json
-Output/
-build_py/
-build_python_test/
-CLion_*/
-wrapper/go/lib/
-test/go/bqlog_go_test*
-wrapper/go/src/bq/bench_output/
-build/test/go/proj_mingw/

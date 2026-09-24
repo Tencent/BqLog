@@ -416,26 +416,6 @@ go run .
 日志方法接受零个或任意数量的参数。对象支持 Go 的 String/Error 方法，
 nil 输出为 null。
 
-### 带 category 的日志
-
-Go 没有方法重载，因此带 category 参数的日志接口使用 `_c` 后缀。
-普通日志调用 `Info(format, ...)`，指定 category 时调用
-`Info_c(category, format, ...)`；其他等级同理。Go 的公开方法以大写开头。
-
-沿用上述 `config`，将 `main` 中创建日志和输出日志的部分替换为：
-
-```go
-log := bq.Create_category_log("game", config,
-    []string{"", "Gameplay", "Network"})
-log.Info("default category")
-log.Info_c(1, "score={}", 42) // Gameplay
-log.Warning_c(2, "connection closed") // Network
-log.Force_flush()
-```
-
-category 索引对应创建时的名称数组。使用 category 生成器时，生成类提供
-带类型的 category 常量和同样的 `Info_c` 等接口，避免手工维护索引。
-
 ### 包与版本
 
 模块版本与 BqLog 一致。通过 Go Modules 获取源码，

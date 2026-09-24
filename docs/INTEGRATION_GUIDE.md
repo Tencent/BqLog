@@ -416,29 +416,6 @@ go run .
 Logging methods accept zero or any number of arguments. Objects support Go's
 String/Error methods, and nil is logged as null.
 
-### Category logging
-
-Go has no method overloading, so category methods use the `_c` suffix.
-Use `Info(format, ...)` for ordinary logging and
-`Info_c(category, format, ...)` to specify a category; the other levels follow
-the same pattern. Exported Go methods start with an uppercase letter.
-
-Using the same `config`, replace the logger creation and logging calls inside
-`main` with:
-
-```go
-log := bq.Create_category_log("game", config,
-    []string{"", "Gameplay", "Network"})
-log.Info("default category")
-log.Info_c(1, "score={}", 42) // Gameplay
-log.Warning_c(2, "connection closed") // Network
-log.Force_flush()
-```
-
-Category indices correspond to the names passed at creation. The category
-generator provides typed constants and the same `Info_c` methods, avoiding
-handwritten indices.
-
 ### Packages and versions
 
 The module follows the BqLog version. Go Modules downloads the source, and

@@ -16,6 +16,10 @@ namespace bq {
 
     private:
         bq::string category_names(const category_node& node) const;
-        bq::string category_constants(const category_node& node, uint64_t& index) const;
+        bq::string category_types(const category_node& node, const bq::string& type_name) const;
+        bq::string category_init(const category_node& node, uint64_t& index) const;
+        bq::string field_path(const category_node& node) const;
+        bq::string node_type_name(const category_node& node) const;
+        static bq::string field_name(const bq::string& segment);
     };
 }
