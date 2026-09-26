@@ -76,7 +76,7 @@
 
 ## 📖 Why is BqLog so fast? — a three-part series
 
-BqLog's speed is not magic. This series derives the whole design step by step, with hand-drawn diagrams:
+BqLog's speed is not magic. This series derives the whole design step by step, with diagrams:
 
 1. **[Part 1: High-Performance Realtime Compressed Log Format](<docs/Article 1_Why is BqLog so fast - High Performance Realtime Compressed Log Format.MD>)** — from one line of text to a compressed format: templates, VLQ, UTF-Mixed, segments and encryption
 2. **[Part 2: High Concurrency Ring Buffer](<docs/Article 2_Why is BqLog so fast - High Concurrency Ring Buffer.MD>)** — from kFifo and LMAX Disruptor to BqLog's adaptive bus: fetch_add + rollback, MISO/SISO, lock-free thread management and crash recovery
