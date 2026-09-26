@@ -117,7 +117,7 @@ The VLQ of length 5 is `85`; its first bit is already taken by the length prefix
 
 The decoder's flow is equally direct: take the first bit for the type, then check whether the low 7 bits are all zero. If they are, decode the length from the next byte; otherwise clear the type bit and decode starting from the current byte. Bodies of 128 bytes or more reuse the first byte; short bodies take the explicit-length route. Neither side loses.
 
-The body length is currently a uint32, so an item head actually occupies 2–5 bytes. Note that the length does not include the head itself — this has to stay consistent both when backfilling and when decoding.
+The body length is currently a uint32, so an item head actually occupies 2–5 bytes. The length does not include the head itself — this has to stay consistent both when backfilling and when decoding.
 
 ## 4. Opening up the templates
 
@@ -205,7 +205,7 @@ Can we grab the cheapest win first? That's the idea of UTF-Mixed: narrow the lea
 
 <p align="center"><em>Figure 3: in this scalar-split example, the 10 UTF-16 bytes of <code>abc中x</code> become 8 bytes. The trailing x stays inside the UTF-16 suffix.</em></p>
 
-Note that "remaining" includes any English characters appearing later — we don't flip back and forth just to save one more byte. The SIMD path may also stop before a block containing non-ASCII, so equally legal splits of identical content don't have to match exactly.
+"Remaining" includes any English characters appearing later — we don't flip back and forth just to save one more byte. The SIMD path may also stop before a block containing non-ASCII, so equally legal splits of identical content don't have to match exactly.
 
 Fully converted to UTF-8, this example would take only 7 bytes; UTF-Mixed uses 8. So what's the point? The encoding cost. We were never chasing the smallest file alone: trading one extra byte for a bulk copy of the suffix often beats a full character-by-character conversion.
 
@@ -242,7 +242,7 @@ type/len5  Δt=0 fmt0 thread0 int32(42)
 
 So far we've described one continuous data stream: the program keeps running, the in-memory template tables and encryption state are all there, and you just keep writing. But what about after a restart?
 
-Let's make one premise clear first: **appending to a compressed log requires knowing what was written before.** That's nothing like opening a text file, seeking to the end and writing another line.
+One premise up front: **appending to a compressed log requires knowing what was written before.** That's nothing like opening a text file, seeking to the end and writing another line.
 
 ### 8.1 What appending must restore is more than the file position
 
@@ -262,7 +262,7 @@ Since the old state can't be recovered, build a new one: templates start from sc
 
 This means the file must be able to distinguish different encrypted payloads, rather than assuming one shared encryption state from beginning to end. BqLog describes such a data range with a Segment; each segment has its own header and optional encryption material. There are two levels here, don't mix them up: **re-establishing template state starts a new compressed data stream; generating new encryption material starts a new encryption segment.** They often happen together, but during recovery they can also be handled separately.
 
-In the normal restart flow of 2.5.0, the new compressed data stream goes into a newly numbered file, and the template table and timestamp reset accordingly. The multi-segment structure inside an existing file is responsible for connecting recovered data with new data. Let's look at its layout.
+In the normal restart flow of 2.5.0, the new compressed data stream goes into a newly numbered file, and the template table and timestamp reset accordingly. The multi-segment structure inside an existing file is responsible for connecting recovered data with new data. Its layout:
 
 ![Byte layout of file, segments and heads at each level](img/performance/compressed-file-v10.png)
 

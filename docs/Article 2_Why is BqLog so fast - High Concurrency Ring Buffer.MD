@@ -4,7 +4,7 @@
 
 In part 1 we turned logs from text into templates plus arguments, cutting formatting and storage costs. But how that data travels from business threads to the logging thread decides performance just as much. Picture this: compressing one entry takes a few nanoseconds, yet dozens of threads are all queued up in front of the same lock — everything we saved earlier gets lost right there.
 
-This article is about how that road gets built. We'll start from the simplest ring buffer, add real requirements one at a time — multiple threads, variable-length data, threads coming and going — and end up at BqLog's current adaptive data bus (`log_buffer`). It's not about swapping out one atomic instruction and calling it a day; it's about building different roads for threads with different temperaments.
+This article is about how that road gets built. We'll start from the simplest ring buffer, add real requirements one at a time — multiple threads, variable-length data, threads coming and going — and end up at BqLog's current adaptive data bus (`log_buffer`). Swapping out one atomic instruction won't get you there; the real work is building different roads for threads with different temperaments.
 
 > Written against BqLog 2.5.0. MISO and SISO are the project's naming habits: MISO means multiple producers and a single consumer (Multi In, Single Out — commonly called MPSC); SISO means single producer, single consumer (Single In, Single Out — SPSC). The alignment constant `BQ_CACHE_LINE_SIZE` in the code is 128 bytes, abbreviated as C below. It's the library's own layout choice and does not imply every CPU's hardware cache line is 128 bytes.
 
@@ -107,7 +107,7 @@ Its body is a ring too, but what each slot holds is not the data itself — it's
 
 Its answer to multi-producer writing is `CAS (Compare-And-Swap)`. CAS does three things: check whether the current value of a memory address equals the expected value; if yes, update it to the new value; if not, some other thread beat you to it — this attempt fails, try again.
 
-Let's try retrofitting `kfifo_in` with CAS for concurrent writes:
+Retrofit `kfifo_in` with CAS for concurrent writes and see what happens:
 
 ```c
 unsigned int kfifo_in_concurrent(struct kfifo *fifo, const void *buf, unsigned int len)
@@ -322,6 +322,10 @@ To go one step further, only one direction remains: **high-frequency producers s
 
 Since the root of contention is everyone sharing one write cursor, give every high-frequency thread its own queue: the `siso_ring_buffer`, single producer, single consumer (Single In, Single Out). The write cursor is modified only by that thread, the read cursor only by the consumer — ordinary writes don't involve even one atomic competition.
 
+![The SISO cluster at work](img/performance/siso-cluster.png)
+
+<p align="center"><em>Figure 10: the SISO cluster at work — every high-frequency thread writes into its own queue; the single consumer patrols in rounds and batch-reads each one.</em></p>
+
 The SISO's memory layout also pushes "isolation" to the extreme. Its head has four regions of C bytes each:
 
 1. Consumer-local state: cached read position, known write position and capacity;
@@ -331,7 +335,7 @@ The SISO's memory layout also pushes "isolation" to the extreme. Its head has fo
 
 ![The SISO head's four aligned regions and the data area](img/performance/siso-head.png)
 
-<p align="center"><em>Figure 10: the SISO head separates read-side and write-side state into four C-byte regions; the data area behind it is used in 8-byte units.</em></p>
+<p align="center"><em>Figure 11: the SISO head separates read-side and write-side state into four C-byte regions; the data area behind it is used in 8-byte units.</em></p>
 
 Both sides normally play with their own local caches; only when "out of space" or "out of data" do they read the other side's shared cursor. With only one writer, the SISO doesn't need MISO's status bits either: the chunk head is just 8 bytes (`block_num` and `data_size`, 4 bytes each), and the allocation granularity shrinks from 128 bytes to 8 — writing alone, there's no neighbor to defend against, so no need for a big isolation belt.
 
@@ -350,70 +354,91 @@ High-frequency threads: each "thread × Log" gets its own SISO (called HP, the H
 
 Who decides high vs low frequency? Each thread's TLS records its own write frequency for each Log; by default, writing 1000 entries per second promotes you to HP, and falling below demotes you back to LP. The check is deliberately crude — just count calls over a second. It only needs to answer "is it worth giving this producer a dedicated buffer", not to be precise.
 
-## 6. Why not just one big SISO array?
+## 6. A pile of SISOs — who keeps the ledger?
 
-Now the requirement is clear: one SISO per high-frequency thread. The most naive implementation is one big array, with each thread occupying a slot. BqLog didn't do that; instead it built the seemingly much more complicated structure of Groups and the Free/Stage/Used lists. Why?
+Section 5 ended with a clean idea: every high-frequency thread gets its own queue. But a pile of queues is a management problem of its own: where does a new thread register, how does a leaving one get collected, how does the consumer find them all. That housekeeping is going to drive this whole chapter. Our method is deliberately dumb: try each naive answer for real, watch where it breaks, and let the cause of death write the next requirement.
 
-Imagine the array approach's two fatal weaknesses:
+### 6.1 Question one: why not just one big array?
 
-1. **Threads come and go dynamically.** As a game runs, new threads start logging at any moment, and threads exit at any moment. Inserting or removing a slot in the array — while the consumer thread is in the middle of traversing that array — means locking the whole thing: every new thread arrival makes everyone pause. The more frequently threads change, the more absurd the pauses.
-2. **Memory can't be pre-allocated as a whole.** Growing the array means realloc or moving data, while the producers currently writing are still holding pointers to the old addresses.
+The naive answer is an array (or an `ArrayList`, same idea): slot *i* belongs to thread *i*, and the consumer scans from 0 to n. To be fair — in a benchmark this works flawlessly. All threads are born at the start and die at the end; nobody joins or leaves mid-run.
 
-And there's a deeper constraint: **recovery after a crash.** BqLog can use memory-mapped files (mmap) to keep buffer contents on disk, so logs that never got consumed can be salvaged after a crash and restart. To recover, you need to verify "was this memory left behind by that same Log?", and to discard only the broken parts. With one giant array where all threads are mixed together, there's no way to verify or recycle in pieces.
+Real programs are not benchmarks. Threads come and go: a job system spawns workers, a server pool scales with load, a game starts a loading thread that writes two lines and exits. That one fact kills the array twice.
 
-BqLog's answer is to separate these concerns: **memory is organized in Groups; ownership is managed with linked lists.**
+**Death one: growing means moving.** Appending to a full array is a realloc — new address, old memory gone. But the producers writing right now are holding raw pointers into the old one. You can't move the ground under a running thread. (Pre-allocate a giant fixed array, you say? Then you're paying the memory bill from section 5.2 for threads that don't even exist yet. Dead either way.)
 
-### 6.1 Group: one contiguous piece of mmap memory
+**Death two is the real killer: the lock's scope.** The consumer's daily job is scanning this array and reading every queue. A thread arriving wants to register a slot; a thread leaving wants its slot gone. Both mutate the very thing the consumer is walking through, so both must make the consumer wait. And here's the catch: array traversal walks *indices*, and you can't put a lock on "index 5" — there's no variable there to attach it to. The only choice is one big lock around the whole array.
 
-![The full log_buffer picture: Block, Group, Group List](img/performance/log-buffer-structure.png)
+Now do the accounting. A stalled producer is one thread waiting. **A stalled consumer is everyone's problem** — while it waits, every queue keeps filling, back-pressure fires, and all producers go down with it. The consumer is the one thread that must never stop; yet in the array design, every thread arrival stops it. Thread churn is rare, granted. But BqLog is built for the general case — thread pools, servers, job systems that create workers on demand — so "structural changes must not disturb the consumer" is a hard requirement, not a bonus.
 
-<p align="center"><em>Figure 11: unfolded layer by layer — every block starts with a 128-byte management area (Next index, ABA mark, misc) with a SISO sitting right behind it; a Group holds N blocks managed as Used/Stage/Free lists; Groups are strung into a list that the single consumer thread patrols. The lower half is the complete map of synchronization points: a burst marks wherever inter-thread synchronization happens — CAS on the Free/Stage heads, plus one RW lock on each Group node. You might ask: does CAS still count as lock-free? Yes — nobody waits, nobody holds a lock, a loser just retries on the spot; the real cost is the cache line pinging between cores (the MESI coherence protocol), which is exactly what the burst marks. Other than these, there are no locks.</em></p>
+The array died because indices can't carry locks. A linked list can: every `next` pointer is an independent variable, so every pointer can carry a lock of its own. First requirement collected: **use a list.**
 
-A Group is one contiguous block of memory (usually one mmap file) holding a fixed N blocks — 16 on desktop platforms, 2 on mobile. Each block starts with a C-byte management area (list linkage, list type, misc data), followed in place by a SISO object and its data area. One block is one high-frequency thread's dedicated queue.
+### 6.2 Question two: who is allowed to change the list?
 
-Allocating the whole thing at once pays off immediately:
+A list alone doesn't fix anything — inserting and removing nodes still mutates what the consumer is walking. What keeps it safe is one rule:
 
-- 16 SISOs arrive with a single mmap, instead of every thread asking the system for memory on its own;
-- each Group corresponds to an independent mmap file whose head stores a checksum computed from the Log's configuration. Recovery verifies Group by Group: is this file mine? If yes, pick up the data inside; if not, or it's corrupted, discard just this file — the other good Groups are unaffected. The array approach can't do this "throw away only what's broken".
+> **Producers may only ever insert at the head. Only the consumer may ever unlink a node.**
 
-Groups are then strung into a linked list. Traversal uses **hand-over-hand read-write spin locks**: each node carries one RW lock; you lock a node only while you're on it, and release it as you move on. A new Group is always inserted at the list head, requiring only the head pointer's lock — **a consumer traversing the middle of the list doesn't even notice.** Deleting a Group locks only the predecessor node. That's how "adding or removing a batch of thread resources without pausing the whole world" is achieved.
+Everything else is a corollary. Inserting at the head touches nothing a reader mid-list is looking at — the new node points at the old head, and a consumer standing in the middle either meets it later or never knows it came; both are valid states of the list. And since producers never unlink anything, the consumer's daily patrol takes **no lock at all** — it just walks, and the hot path simply has no locks.
+
+So when do locks ever come out? Every list node carries one read-write spin lock guarding its `next` pointer, and they see action on exactly three occasions:
+
+1. **A producer claiming a queue walks the list with hand-over-hand read locks** — hold the lock on the pointer you're standing on, lock the next one, release the previous. The read lock carries a message to the consumer: I'm standing on this node, don't unlink it under my feet.
+2. **A new node joins**: inserted at the head, under a brief *write* lock on the head pointer alone. A consumer patrolling mid-list doesn't even notice.
+3. **The consumer retires an idle node**: it re-walks up to that node with hand-over-hand *write* locks, double-checks the node is truly empty, and unlinks it. "Idle" is defined strictly — every block it owns is free again — and even then the node isn't freed on the spot: it rests in an object pool for a second, so a thread storm that comes right back finds ready-made memory.
 
 ![Hand-over-hand RW locks on the Group list](img/performance/group-list-rwlock.png)
 
-<p align="center"><em>Figure 12: every Group node carries an RW lock guarding "the next node". In the picture Group 3 is being recycled and unlinked: only its predecessor gets locked; read traversals elsewhere on the list carry on as usual.</em></p>
+<p align="center"><em>Figure 12: every pointer in the Group list carries an RW lock — yet the consumer's daily patrol takes none of them; the locks come out only for head insertion and for unlinking. In the picture Group 3 is being recycled and unlinked: only its predecessor's pointer gets write-locked, nobody else on the list is disturbed.</em></p>
 
-When an entire Group goes idle, it's not freed immediately either — it rests in an object pool first, and only gets deleted after nobody uses it for a second. If a thread's burst passes and it comes back, it can pick up ready-made memory again.
+Notice what happened: the locks are all still there — the rule just leaves them nothing to do.
 
-### 6.2 Three lists: Free, Stage, Used
+Each list node is a **Group**: one contiguous chunk of memory (usually one mmap file) holding a fixed number of blocks. A block starts with a 128-byte management area (list linkage, list type, misc data), followed in place by a SISO object and its data area — one block is one high-frequency thread's dedicated queue.
 
-Inside a Group, the 16 blocks are managed with three linked lists. Note that list nodes need no extra allocation: the blocks are laid out contiguously, and each block's management area stores a **16-bit index** pointing at the next block, with FFFF meaning none. Using indices instead of pointers saves space, and has another benefit prepared for recovery: when an mmap is remapped, the base address changes and pointers are all dead — but indices stay valid.
+![The full log_buffer picture: Block, Group, Group List](img/performance/log-buffer-structure.png)
+
+<p align="center"><em>Figure 13: unfolded layer by layer — every block starts with a 128-byte management area (Next index, ABA mark, misc) with a SISO sitting right behind it; a Group holds N blocks managed as Used/Stage/Free lists; Groups are strung into a list that the single consumer thread patrols. The lower half is the complete map of synchronization points: a burst marks wherever inter-thread synchronization happens — CAS on the Free/Stage heads, plus one RW lock on each Group node. You might ask: does CAS still count as lock-free? Yes — nobody waits, nobody holds a lock, a loser just retries on the spot; the real cost is the cache line pinging between cores (the MESI coherence protocol), which is exactly what the burst marks. Other than these, there are no locks.</em></p>
+
+### 6.3 Question three: inside a Group, how do we tell which blocks are busy?
+
+Next dumb answer: one list, every block carrying a busy flag. Producers scan it to claim a block; the consumer scans it to find data. Same disease as the array, just in a smaller room — two parties scanning and mutating one structure, coordination everywhere.
+
+BqLog instead splits a Group's blocks into three lists, divided by **ownership**:
+
+| List | Producer | Consumer |
+|---|---|---|
+| **Free** | CAS **pop** when claiming | CAS **push** when retiring a block |
+| **Stage** | CAS **push** after initializing | CAS **pop** on patrol |
+| **Used** | never touches the list — only writes into its own SISO and flips its own "removed" mark | owns it exclusively: plain pointer surgery, zero atomics |
+
+Why this split? The consumer is a single thread — **it can never race itself.** So all the fiddly, frequent list surgery — traversal, linking in, unlinking — goes to it, where it's plain single-threaded code without one atomic. Producers keep exactly two one-shot atomic moves: pop Free's head when claiming, push Stage's head after initializing, and only at rare lifecycle moments. Give the conflict-prone chores to the thread that can't conflict with itself, and all that can ever race inside a Group is two atomic head words.
+
+Read that table once, and two design decisions explain themselves. **Free and Stage each have two hands on them** — that's exactly why they must be lock-free stacks with CAS at the head, and why they need the classic ABA guard: the 32-bit head is split into a 16-bit block index plus a 16-bit mark that increments on every operation, so if the head travels from A to B and back to A, the moved mark exposes the trickery. **Used has a single owner**, so it doesn't need even one atomic instruction — the consumer relinks it with plain assignments.
+
+And why does Stage exist at all? Why can't a producer push its freshly initialized block straight into Used? Because the consumer is *walking* Used. Inserting nodes into a list someone is traversing takes nasty coordination; a shelf between the two keeps it clean. The producer only puts things on the shelf; the consumer, on its rounds, takes whatever is on the shelf and links it into Used at its own pace — one block per visit, and the cost is amortized across patrols. One side only writes, the other only moves; neither ever waits for the other.
 
 ![The Free, Stage and Used lists inside a Group](img/performance/group-three-lists.png)
 
-<p align="center"><em>Figure 13: Used is touched by the consumer alone; Stage and Free are lock-free stacks. Any thread claiming a block pops one off Free's head, initializes it and pushes it onto Stage; on patrol the consumer takes the fresh blocks off Stage and links them into Used; retired blocks go back onto Free's head. Mind the note at the bottom right — the Free list must beware of the ABA problem.</em></p>
+<p align="center"><em>Figure 14: Used is touched by the consumer alone; Stage and Free are lock-free stacks. Any thread claiming a block pops one off Free's head, initializes it and pushes it onto Stage; on patrol the consumer takes the fresh blocks off Stage and links them into Used; retired blocks go back onto Free's head. Mind the note at the bottom right — the Free list must beware of the ABA problem.</em></p>
 
-The three lists' division of labor:
+One more detail hides in the linkage: the lists are not connected by pointers but by **16-bit indices**, with FFFF meaning "none". The blocks live contiguously inside the Group, so an index is all you need — it saves space, and it has a payoff prepared for crash recovery: when an mmap file is remapped, the base address changes and every pointer is a wild one, while indices stay valid. Remember this when we get to section 7.3.
 
-- **Free**: ownerless blocks. A producer promoting to HP picks one up here. Multiple threads claim concurrently; it's a lock-free stack with CAS at the head.
-- **Stage**: after a producer claims a block and finishes initializing it, it pushes the block here — "on the shelf". Also a lock-free stack with head CAS.
-- **Used**: the blocks the consumer is polling. **Only the consumer thread ever touches this list**, so it's a perfectly ordinary linked list without even one atomic operation.
+### 6.4 Question four: why does a Group hold sixteen blocks?
 
-Why not cut Stage and let producers insert straight into Used? Because the consumer is traversing Used. A producer inserting nodes while the consumer walks the list would require very complicated coordination to stay safe. With Stage as a hand-over zone, the relationship is clean: **producers only put things on the shelf; the consumer, on its rounds, takes the new blocks off Stage in a batch and links them into Used at its own pace.** One only writes, the other only moves — neither disturbs the other.
+Last dumb answer of this chapter: if Groups are list nodes, why not one node per queue — why bundle sixteen blocks into one? Three reasons:
 
-This is the most elegant part of the whole structure. Look at a thread's lifecycle again:
+- **Syscall amortization**: one mmap brings sixteen queues into being, instead of every thread asking the OS for memory on its own.
+- **Recovery granularity**: each Group is its own mmap file, with a checksum computed from the Log's configuration stored in its head. After a crash, recovery verifies Group by Group — a broken file is thrown away alone, and the good ones are untouched. A monolithic array can't do "discard only what's broken".
+- **Warm memory for bursts**: a fully idle Group rests in the object pool before real deletion, so a workload whose threads arrive in waves keeps recycling the same memory instead of re-mapping files.
 
-- **A new thread arrives**: CAS-pop a block from Free's head, initialize it, CAS-push it onto Stage's head. It never touches anything the consumer is traversing — not a single lock.
-- **A thread exits or gets demoted**: the producer marks its own block; next time the consumer comes around and reads the mark, it finishes consuming the remaining data, unlinks the block from Used and pushes it back onto Free. Removal doesn't lock the whole world either.
+Desktop packs 16 blocks per Group; mobile, where memory is tight, packs 2.
 
-Of course, lock-free stacks have the classic ABA trap: the head goes from A to B and back to A, and CAS sees an unchanged value and lets you through — even though the list was manipulated in between. The fix here splits the 32-bit atomic value in half: the low 16 bits hold the block index, and the high 16 bits hold an ABA mark incremented on every operation. If the value returns to A but the mark moved, the trickery is exposed.
+### 6.5 The punchline: none of this is on the hot path
 
-### 6.3 Don't get me wrong: once a block is claimed, the hot path has nothing
-
-It's worth emphasizing: all the list operations above happen only at **low-frequency moments** — promotion, demotion, exit, recycling. A high-frequency thread that already holds a block spends its daily writes entirely on its own SISO: it touches neither Free/Stage/Used nor anything beyond its own shared cursors. The management complexity is amortized over the buffer's lifecycle, not charged to each log entry. That's how "looks complicated" and "runs fast" can be true at the same time.
+This part is easy to misread: all the list operations above happen only at **low-frequency moments** — promotion, demotion, exit, recycling. A high-frequency thread that already holds its block spends its daily writes entirely on its own SISO: it touches neither Free/Stage/Used nor anything beyond its own cursors. The management complexity is amortized over the buffer's lifecycle, not charged to each log entry. So "looks complicated" and "runs fast" aren't in conflict.
 
 ## 7. Walking through three typical scenarios
 
-The structure is all on the table, but talk is cheap. Let's walk through the three most confusing scenarios from start to finish: how a new thread gets in, what happens when an old thread bounces between high and low frequency, and how recovery works after a crash. After these three walks, all the separate parts above assemble into one machine.
+The structure is all on the table, but talk is cheap — so walk through the three most confusing scenarios end to end: how a new thread gets in, what happens when an old thread bounces between high and low frequency, and how recovery works after a crash. After these three walks, the separate parts above assemble into one machine.
 
 ### 7.1 Scenario one: a new high-frequency thread joins
 
@@ -421,7 +446,7 @@ Some business thread has been logging furiously; the counter in its TLS notices 
 
 ![A new high-frequency thread joining](img/performance/case-new-thread.png)
 
-<p align="center"><em>Figure 14: a new high-frequency thread claiming its block — pop one off Free, initialize it, push it onto Stage; the consumer picks it into Used on patrol.</em></p>
+<p align="center"><em>Figure 15: a new high-frequency thread claiming its block — pop one off Free, initialize it, push it onto Stage; the consumer picks it into Used on patrol.</em></p>
 
 Four steps on the producer side:
 
@@ -442,7 +467,7 @@ Look at this thread's day: first, in its low-frequency phase, it writes log A in
 
 ![The ordering problem when a thread switches between LP and HP](img/performance/case-frequency-switch.png)
 
-<p align="center"><em>Figure 15: one thread writing A, B, C, D across LP/HP/LP — each queue is ordered internally; the cross-queue order is stitched back by the context sequence numbers.</em></p>
+<p align="center"><em>Figure 16: one thread writing A, B, C, D across LP/HP/LP — each queue is ordered internally; the cross-queue order is stitched back by the context sequence numbers.</em></p>
 
 Every queue is internally ordered, but nobody automatically manages order across queues. If the consumer visits the HP block first, B and C jump ahead of A; if it handles the shared queue first, D may slip in front of B and C. Once logs go out of order, investigating a problem becomes hell.
 
@@ -450,7 +475,7 @@ Serialize with locks? That would tear up the road we just built. BqLog's answer 
 
 ![The context's byte structure and the cross-phase sequence number](img/performance/context-order.png)
 
-<p align="center"><em>Figure 16: the 16-byte context, byte by byte; each phase of the same producer carries one sequence number.</em></p>
+<p align="center"><em>Figure 17: the 16-byte context, byte by byte; each phase of the same producer carries one sequence number.</em></p>
 
 The context holds a version, a thread-finished mark, an external-reference mark, a sequence number (seq) and the TLS identity. On the LP path every record carries one; on the HP path each block stores one, shared by all the messages in that block.
 
@@ -460,6 +485,8 @@ The consumer keeps an "expected seq" per thread (TLS), with exactly one rule: if
 
 There's a subtle point that must be kept straight: **"temporarily read empty" and "the producer will never write here again" are two different things.** The consumer reading the B/C block empty at some moment doesn't mean that block is empty for life — the producer might be writing a third message into it right now. So neither demotion nor exit is "pulling the network cable"; it's leaving a note: the producer marks its own block "removed", and a thread exit writes a "finished" mark into the context. On patrol the consumer reads the mark, drains the remaining data, then unlinks the block from Used and pushes it back onto Free. No locks anywhere in promotion or demotion — just marks and conventions. What the consumer needs is not an empty queue, but a clear statement.
 
+One loose end worth tying: what about a thread that lived its whole life on LP and exits — no block, no context to mark? It leaves a note too: on exit it writes a dedicated finish record into the shared LP queue, carrying its own seq. The consumer reads it like any other record, closes that thread's account, and the chain stays unbroken — even for a thread that never once touched HP.
+
 By the way, this also explains a detail from part 1: why log time deltas use ZigZag encoding that allows negatives — data from different threads enters the file interleaved, so timestamps were never strictly increasing to begin with.
 
 ### 7.3 Scenario three: crashed — how do we recover?
@@ -468,13 +495,15 @@ The last scenario is where the Group structure faces its real exam. BqLog can pu
 
 ![The crash-recovery flow](img/performance/case-recovery.png)
 
-<p align="center"><em>Figure 17: crash recovery in three acts — the scene stays in the mmap files, restart verifies each file and voids half-finished pieces, then replays strictly by seq.</em></p>
+<p align="center"><em>Figure 18: crash recovery in three acts — the scene stays in the mmap files, restart verifies each file and voids half-finished pieces, then replays strictly by seq.</em></p>
 
 Three acts.
 
 **The moment of the crash.** The shared MISO is one mmap file; each Group is its own mmap file; oversize logs get their own file too. The in-memory Used/Stage/Free lists, the contexts and the unconsumed data all stay in the files exactly as they were.
 
 **After the restart.** First, checksum every mmap file: if it matches, it was left behind by the previous self; if it doesn't, or the file is broken, throw away just that one file — the others are unaffected. That's the dividend of one file per Group: discard only what's broken. Then bump our own version by one (say 7 to 8) and scan the old data: build a minimum-seq table for each TLS household, and invalidate same-version leftovers (the half-finished writes from the crash instant) on sight. (How many generations back we accept is limited — `MAX_RECOVERY_VERSION_RANGE` is currently 2; anything older is simply not recognized as kin.) One detail shows real craftsmanship: blocks are linked by 16-bit indices, not pointers, because after remapping the base address has changed and every pointer is a wild one, while the indices stay valid; the TLS address stored in the context is likewise used only as the key for "which data stream this was" — never dereferenced.
+
+And one crash-site detail is worth a look. An mmap file's dirty pages hit disk in whatever order the OS pleases — not in program order. So the crash snapshot can catch the block hand-over mid-seam: the consumer had linked a block into Used, but the page recording its removal from Stage never made it to disk, and the restarted world finds the same block sitting on **both** lists. Recovery checks for exactly this and quietly unlinks the duplicate from Stage. A crash can land between any two instructions — and apparently between any two page flushes. The structure has to survive both.
 
 **Replay.** Consume the old data strictly in each thread's seq order and hand it to the Appender's recovery segment — the segmented file structure from part 1, where recovered data goes into its own segment, undisturbed by new logs. Once the old accounts are settled, live writing under version 8 officially begins.
 
@@ -496,7 +525,7 @@ If production outpaces consumption for long enough, any finite buffer fills up e
 - `block`: wake the consumer, producers wait and retry;
 - `expand`: when LP is tight, move to HP; when HP is tight, add blocks — trade more space for time.
 
-Note that expand is not a realloc of a ring in use — the addresses in the two sides' hands never suddenly go invalid; what grows is "threads can switch to another road". So the config item `log.buffer_size` is just one piece of the whole structure, not the process-wide memory ceiling of the logging system; HP count, Group granularity, oversize logs, Appender caches and mmap all count separately.
+Expand here is no realloc of a ring in use — the addresses in the two sides' hands never suddenly go invalid; what grows is "threads can switch to another road". So the config item `log.buffer_size` is just one piece of the whole structure, not the process-wide memory ceiling of the logging system; HP count, Group granularity, oversize logs, Appender caches and mmap all count separately.
 
 And the consumer doesn't get kicked awake for every single message either. Producers only request a wakeup when space is short or running low, and `awake_flag` merges duplicate requests; the background thread works while there's work, and waits on notification or timeout only when idle.
 
