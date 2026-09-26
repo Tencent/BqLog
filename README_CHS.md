@@ -75,6 +75,18 @@
 
 ---
 
+## 📖 为何 BqLog 如此快？—— 三部曲系列文章
+
+BqLog 的快不是变魔术变出来的。这个系列从一行日志出发，配手绘图，把整套设计一步步推导出来：
+
+1. **[之一：高性能实时压缩日志格式](<docs/文章1_为何BqLog如此快 - 高性能实时压缩日志格式.MD>)** —— 从一行文本推导出压缩格式：模板、VLQ、UTF-Mixed、分段与加密
+2. **[之二：高并发环形队列](<docs/文章2_为何BqLog如此快 - 高并发环形队列.MD>)** —— 从 kFifo、LMAX Disruptor 到 BqLog 自适应总线：fetch_add + 回滚、MISO/SISO、无锁增删线程与崩溃复盘
+3. **[之三：压缩日志执行路径优化](<docs/文章3_为何BqLog如此快 - 压缩日志执行路径优化.MD>)** —— 一次内存读取能顺便做多少事：融合拷贝哈希、模板缓存、长度回填、批量 I/O
+
+全部插图和系列目录见 [性能设计](docs/PERFORMANCE_DESIGN_CHS.md)。
+
+---
+
 ## 🏗️ 架构介绍
 
 ![基础结构](docs/img/log_structure.png)
@@ -285,6 +297,7 @@ bq.log.force_flush_all_logs();
 | [配置说明](docs/CONFIGURATION_CHS.md) | 完整配置参考（appenders、log、snapshot） |
 | [高级用法](docs/ADVANCED_USAGE_CHS.md) | 无 Heap Alloc、Category、崩溃恢复、自定义类型、加密 |
 | [Benchmark](docs/BENCHMARK_CHS.md) | Benchmark 代码、测试方法和结果 |
+| [性能设计三篇](docs/PERFORMANCE_DESIGN_CHS.md) | 压缩文件格式、自适应数据总线与写入路径优化 |
 
 ---
 

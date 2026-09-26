@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1030" viewBox="0 0 1280 1030" role="img" aria-labelledby="title desc"><title id="title">SISO memory: separate cursor lanes, compact record units</title><desc id="desc">The SISO object points to a backing allocation with four 128-byte lanes followed by eight-byte data units. The producer publishes a write cursor; the consumer releases a batch.</desc><defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#222b35" stroke-width="1.6"/></marker><pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse"><path d="M-2 2L2 -2M0 9L9 0M7 11L11 7" stroke="#b8bec7" stroke-width="1"/></pattern></defs><style>text{font-family:Arial,'Microsoft YaHei',sans-serif;fill:#222b35}.mono{font-family:Consolas,'Courier New',monospace}.note{fill:#64717e}.cell{stroke:#222b35;stroke-width:1.5}.line{fill:none;stroke:#222b35;stroke-width:1.7}.guide{fill:none;stroke:#8b96a2;stroke-width:1.2;stroke-dasharray:5 5}</style><rect width="1280" height="1030" fill="white"/>
+<text x="28" y="38" font-size="25" text-anchor="start" font-weight="700">SISO memory: separate cursor lanes, compact record units</text>
+<text x="28" y="71" font-size="16" text-anchor="start" class="note">Current alignment constant C = 128 B. Object size itself depends on ABI/build; backing head is exactly 4C.</text>
+<text x="28" y="119" font-size="19" text-anchor="start" font-weight="700">BACKING HEAD · byte offsets from head_</text>
+<text x="35" y="160" font-size="16" text-anchor="start" class="mono">+0</text>
+<rect class="cell" x="140" y="134" width="730" height="77" rx="0" fill="#d3eaff"/>
+<text x="505" y="166.45" font-size="17" text-anchor="middle">Consumer-local caches</text>
+<text x="505" y="190.45" font-size="17" text-anchor="middle">capacity | read cursor cache | cached write cursor</text>
+<rect class="cell" x="870" y="134" width="335" height="77" rx="0" fill="#f2f3f5"/>
+<text x="1037.5" y="166.45" font-size="17" text-anchor="middle">remaining bytes</text>
+<text x="1037.5" y="190.45" font-size="17" text-anchor="middle">padding to 128 B</text>
+<text x="35" y="257" font-size="16" text-anchor="start" class="mono">+128</text>
+<rect class="cell" x="140" y="231" width="730" height="77" rx="0" fill="#ffd4d0"/>
+<text x="505" y="263.45" font-size="17" text-anchor="middle">Producer-local caches</text>
+<text x="505" y="287.45" font-size="17" text-anchor="middle">cached read cursor | write cursor cache</text>
+<rect class="cell" x="870" y="231" width="335" height="77" rx="0" fill="#f2f3f5"/>
+<text x="1037.5" y="263.45" font-size="17" text-anchor="middle">remaining bytes</text>
+<text x="1037.5" y="287.45" font-size="17" text-anchor="middle">padding to 128 B</text>
+<text x="35" y="354" font-size="16" text-anchor="start" class="mono">+256</text>
+<rect class="cell" x="140" y="328" width="730" height="77" rx="0" fill="#d8edd6"/>
+<text x="505" y="360.45" font-size="17" text-anchor="middle">reading_cursor (atomic uint32)</text>
+<text x="505" y="384.45" font-size="17" text-anchor="middle">consumer release-store → producer acquire-refresh</text>
+<rect class="cell" x="870" y="328" width="335" height="77" rx="0" fill="#f2f3f5"/>
+<text x="1037.5" y="360.45" font-size="17" text-anchor="middle">remaining bytes</text>
+<text x="1037.5" y="384.45" font-size="17" text-anchor="middle">padding to 128 B</text>
+<text x="35" y="451" font-size="16" text-anchor="start" class="mono">+384</text>
+<rect class="cell" x="140" y="425" width="730" height="77" rx="0" fill="#fff0b8"/>
+<text x="505" y="457.45" font-size="17" text-anchor="middle">writing_cursor (atomic uint32)</text>
+<text x="505" y="481.45" font-size="17" text-anchor="middle">producer release-store → consumer acquire-refresh</text>
+<rect class="cell" x="870" y="425" width="335" height="77" rx="0" fill="#f2f3f5"/>
+<text x="1037.5" y="457.45" font-size="17" text-anchor="middle">remaining bytes</text>
+<text x="1037.5" y="481.45" font-size="17" text-anchor="middle">padding to 128 B</text>
+<text x="28" y="571" font-size="19" text-anchor="start" font-weight="700">DATA AREA · starts at +512 · allocation units are 8 bytes</text>
+<rect class="cell" x="140" y="605" width="255" height="77" rx="0" fill="#ffd4d0"/>
+<text x="267.5" y="637.45" font-size="17" text-anchor="middle">block_num | data_size</text>
+<text x="267.5" y="661.45" font-size="17" text-anchor="middle">4 B + 4 B</text>
+<rect class="cell" x="395" y="605" width="555" height="77" rx="0" fill="#d3eaff"/>
+<text x="672.5" y="637.45" font-size="17" text-anchor="middle">payload</text>
+<text x="672.5" y="661.45" font-size="17" text-anchor="middle">example: 24 B</text>
+<rect class="cell" x="950" y="605" width="255" height="77" rx="0" fill="#f2f3f5"/>
+<text x="1077.5" y="637.45" font-size="17" text-anchor="middle">next record</text>
+<text x="1077.5" y="661.45" font-size="17" text-anchor="middle">...</text>
+<path d="M140 597H1205" class="line"/>
+<path d="M140 592V603" class="line"/>
+<text x="140" y="587" font-size="14" text-anchor="middle" class="mono">+512</text>
+<path d="M395 592V603" class="line"/>
+<text x="395" y="587" font-size="14" text-anchor="middle" class="mono">+520</text>
+<path d="M950 592V603" class="line"/>
+<text x="950" y="587" font-size="14" text-anchor="middle" class="mono">+544</text>
+<path d="M1205 592V603" class="line"/>
+<text x="1205" y="587" font-size="14" text-anchor="middle" class="mono">...</text>
+<path d="M140 722V714H950V722" class="line"/>
+<text x="545" y="706" font-size="16" text-anchor="middle">Example chunk = 32 B = 4 units; next chunk is 8-byte aligned</text>
+<text x="28" y="782" font-size="19" text-anchor="start" font-weight="700">BATCH READ · one observed end cursor, many local reads</text>
+<rect class="cell" x="140" y="811" width="213" height="64" rx="0" fill="#d3eaff"/>
+<text x="246.5" y="848.95" font-size="17" text-anchor="middle">record A</text>
+<rect class="cell" x="353" y="811" width="213" height="64" rx="0" fill="#d3eaff"/>
+<text x="459.5" y="848.95" font-size="17" text-anchor="middle">record B</text>
+<rect class="cell" x="566" y="811" width="213" height="64" rx="0" fill="#d3eaff"/>
+<text x="672.5" y="848.95" font-size="17" text-anchor="middle">record C</text>
+<rect class="cell" x="779" y="811" width="213" height="64" rx="0" fill="#fff0b8"/>
+<text x="885.5" y="848.95" font-size="17" text-anchor="middle">new data</text>
+<rect class="cell" x="992" y="811" width="213" height="64" rx="0" fill="#f2f3f5"/>
+<text x="1098.5" y="848.95" font-size="17" text-anchor="middle">free</text>
+<path d="M140 930V884" class="line" marker-end="url(#arrow)"/>
+<text x="140" y="962" font-size="16" text-anchor="middle">batch start</text>
+<path d="M779 930V884" class="line" marker-end="url(#arrow)"/>
+<text x="779" y="962" font-size="16" text-anchor="middle">snapshot end</text>
+<text x="28" y="1000" font-size="16" text-anchor="start" class="note">Producer may append beyond snapshot end. Consumer returns one completed batch, then visits another source.</text>
+</svg>

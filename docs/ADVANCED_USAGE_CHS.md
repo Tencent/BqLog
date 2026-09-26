@@ -413,20 +413,22 @@ void CallThisOnYourGameStart()
 
 对于外发客户端（尤其是互联网游戏和 App），日志加密是重要需求。
 在 1.x 版本中，BqLog 的二进制日志中仍有大量明文。自 2.x 起，引入了完整的日志加密方案。
-该方案性能极高，几乎无感知开销，且安全性良好。
+当前格式采用下述自定义 `rsa_aes_xor` 方案，运行成本与安全性质应分别评估。
 
 ### 1）加密算法说明
 
-BqLog 使用 **RSA2048 + AES256** 的混合加密：
+BqLog 当前组合使用 **RSA-2048、AES-256-CBC 和循环 XOR 载荷变换**：
 
 - 仅适用于 `CompressedFileAppender`；
 - 使用 `ssh-keygen` 生成的 RSA2048 密钥对：
-  - 公钥：OpenSSH `ssh-rsa ...` 文本（本质为 PKCS#8 公钥的 OpenSSH 表达形式）；
-  - 私钥：PEM 格式，`-----BEGIN RSA PRIVATE KEY-----` 或 `-----BEGIN OPENSSH PRIVATE KEY-----` 块（兼容 PKCS#1/PKCS#8 私钥表示）；
+  - 公钥：OpenSSH `ssh-rsa ...` 文本；
+  - 与下面示例配套的 PEM RSA 私钥可通过 `ssh-keygen -m PEM` 生成；可接受的私钥容器以解码器说明为准；
 - 日志写入时：
-  - 使用公钥对随机生成的 AES256 对称密钥加密；
-  - 实际日志内容通过 AES256 加密；
-  - 整体编码为 BqLog 自定义的加密压缩格式。
+  - 每个加密段准备 AES-256 密钥和 IV，用 RSA-2048 保护 AES 密钥；
+  - AES-CBC 加密一个 32 KiB 掩码块，随段的密钥材料保存；
+  - payload 按文件位置与该掩码块循环异或，并非每条记录正文直接由 AES 加密。
+
+这个自定义格式没有 AEAD 认证标签。重复使用的掩码不具备一次一密条件，也不能从 RSA/AES 名称推导出标准认证加密的保证。不要据此宣称防篡改或所有负载下开销都可忽略。精确布局与执行路径见[当前文件格式文章](<文章1_为何BqLog如此快 - 高性能实时压缩日志格式.MD>)和 `appender_file_binary.cpp`。
 
 ### 2）配置加密
 
