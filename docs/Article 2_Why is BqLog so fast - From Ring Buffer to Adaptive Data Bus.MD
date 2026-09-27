@@ -1,6 +1,6 @@
 # Why is BqLog so fast? Part 2: From a ring buffer to an adaptive data bus
 
-[简体中文](<文章2_为何BqLog如此快 - 高并发环形队列.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Previous: compressed files](<Article 1_Why is BqLog so fast - High Performance Realtime Compressed Log Format.MD>) · [Next: the execution path](<Article 3_Why is BqLog so fast - Optimizing the Compressed Log Pipeline.MD>)
+[简体中文](<文章2_为何BqLog如此快 - 从环形队列到自适应数据总线.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Previous: compressed files](<Article 1_Why is BqLog so fast - High Performance Realtime Compressed Log Format.MD>) · [Next: the execution path](<Article 3_Why is BqLog so fast - Optimizing the Compressed Log Pipeline.MD>)
 
 In part 1 we turned logs from text into templates plus arguments, cutting formatting and storage costs. But how that data travels from business threads to the logging thread decides performance just as much. Picture this: compressing one entry takes a few nanoseconds, yet dozens of threads are all queued up in front of the same lock — everything we saved earlier gets lost right there.
 
@@ -132,7 +132,7 @@ unsigned int kfifo_in_concurrent(struct kfifo *fifo, const void *buf, unsigned i
     } while (!__sync_bool_compare_and_swap(&fifo->in, old_in, new_in));
 
     // 5. space safely claimed, start writing data
-    write_data_to(fifo->in/*to*/, buf/*from*/, len/*size*/);
+    write_data_to(old_in/*to*/, buf/*from*/, len/*size*/);
 
     return len;
 }
@@ -192,7 +192,7 @@ The order is uncertain, but everyone got an exclusive range, and nobody had to r
 
 ### 3.3 The fatal flaw of fetch_add, and the rollback algorithm
 
-If fetch_add is this simple and fair, why is every message queue on the market still using CAS? Because it has a fatal flaw: it only makes the claiming action atomic — **it doesn't guarantee there's enough capacity.**
+If fetch_add is this simple and fair, why do the classic message queues all stick with CAS? Because it has a fatal flaw: it only makes the claiming action atomic — **it doesn't guarantee there's enough capacity.**
 
 Back to that figure, and this time stare at the middle: the `Limit` sits at 25, but all four threads decide there's room for themselves and `fetch_add` together, driving `In` straight to 40 — everything past 25 (the tail of C and the whole of D) is out of bounds; the red `Overflow!!` is the scene of the accident. The memory the last threads claimed doesn't actually exist.
 
@@ -205,17 +205,20 @@ To keep fetch_add's fixed cost while still getting correct results, `bq::miso_ri
 ```c
 void* bq::miso_ring_buffer::alloc(size_t len)
 {
-    // 1. compute remaining space (using this thread's cached out, which usually avoids touching the shared variable)
-    size_t free_space = this->size_ - (this->in_ - this->out_cache_);
-    if (len > free_space) {
-        return nullptr;  // obviously not enough space, fail fast
+    // 1. check against this thread's cached read cursor first; refresh it once if space looks short
+    size_t in = this->in_.load_relaxed();
+    if (in + len - this->out_cache_ > this->size_) {
+        this->out_cache_ = this->out_.load_acquire();
+        if (in + len - this->out_cache_ > this->size_) {
+            return nullptr;
+        }
     }
 
-    // 2. grab a number first: claim memory; what you get is len bytes starting at from
-    size_t from = __sync_fetch_add(&this->in_, len);
+    // 2. grab a number first: atomically claim [from, from + len)
+    size_t from = this->in_.fetch_add_relaxed(len);
 
-    // 3. check the ticket afterwards: is this claimed range actually valid?
-    while (from + len > this->out_ + this->size_)
+    // 3. other producers may have claimed space after our pre-check, so verify the range we actually got
+    while (from + len > this->out_.load_acquire() + this->size_)
     {
         // 4. genuinely out of bounds; must roll back
         size_t expected_in = from + len;
@@ -300,7 +303,7 @@ At this point MISO has already left traditional queues a street behind. But it's
 
 ## 4. The motive for the second axe: the data storm between CPUs
 
-MISO eliminated locks and CAS retries, yet push the benchmark to dozens of threads and the performance curve still bends down. The bottleneck isn't in the code logic — it's in the CPU's hardware structure.
+MISO eliminated locks and CAS retries, yet push the benchmark to dozens of threads and the performance curve still bends down. This time the bottleneck lives in the CPU's hardware structure.
 
 In a modern multi-core CPU, every core has its own L1 cache, and data moves between cores in units of cache lines. To keep everyone's view of memory consistent, the cores run a cache-coherence protocol (MESI, for example). Skip the protocol details; just remember one consequence: **when multiple cores modify data in the same cache line simultaneously, the "write ownership" of that line gets passed frantically between cores** — you grab it, I grab it back — and every hand-off costs dozens to hundreds of clock cycles. Early CPUs carried these messages on a ring bus; once core counts grew, on-chip networks like 2D-Mesh took over — but however the interconnect evolves, the cost of moving a cache line between cores stays.
 

@@ -1,6 +1,6 @@
 # Why is BqLog so fast? Part 3: How much work can share one memory load?
 
-[简体中文](<文章3_为何BqLog如此快 - 压缩日志执行路径优化.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Previous: the data bus](<文章2_为何BqLog如此快 - 高并发环形队列.MD>)
+[简体中文](<文章3_为何BqLog如此快 - 压缩日志执行路径优化.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Previous: the data bus](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD>)
 
 Parts 1 and 2 solved two big problems: storing less repeated content in the file, and getting messages from producers to the consumer efficiently. With both done, is compressed logging fast enough?
 
@@ -68,7 +68,7 @@ The argument layout follows the same idea: `size_seq` puts the compile-time-dete
 
 Say the arguments are an int32, a double and a string of length n. All we need is: fixed head + a few fixed argument areas + n + alignment cost. Done in one pass. **No building a temporary object chain or temporary byte array per argument, then gluing everything into a bus message at the end.**
 
-This kind of optimization produces no "amazing algorithm" diagram, but it cuts the number of layers a common call must pass through. The core idea is one sentence: **known lengths and known types should travel all the way to the final write position — don't lose them midway and re-guess them one layer down.**
+This kind of optimization produces no "amazing algorithm" diagram, but it cuts the number of layers a common call must pass through. The core idea: **known lengths and known types travel all the way to the final write position**, instead of getting lost midway and re-guessed one layer down.
 
 ## 4. Compute the hash while copying
 

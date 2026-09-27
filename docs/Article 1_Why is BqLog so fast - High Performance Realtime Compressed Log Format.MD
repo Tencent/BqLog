@@ -1,6 +1,6 @@
 # Why is BqLog so fast? Part 1: Deriving a compressed log format from a line of text
 
-[简体中文](<文章1_为何BqLog如此快 - 高性能实时压缩日志格式.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Next: the data bus](<Article 2_Why is BqLog so fast - High Concurrency Ring Buffer.MD>)
+[简体中文](<文章1_为何BqLog如此快 - 高性能实时压缩日志格式.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Next: the data bus](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD>)
 
 For production logging, we want to have our cake and eat it too: complete information, tiny runtime cost, and small files. On mobile devices these three goals fight each other — log too little and you can't chase online issues; log too much and you eat into an already tight performance and storage budget.
 
@@ -103,7 +103,7 @@ The position of the first 1 in the prefix tells the decoder how many bytes the n
 
 For example, 128 is not encoded verbatim in two bytes as 128; it means "the 0th number of the second range" and comes out as `40 00`. 16512 is the 0th number of the third range: `20 00 00`.
 
-A word of caution: this is not LEB128, and you can't decode it with another library just because the name VLQ matches. Range starts, prefix and byte order are defined by [log_utils.h](../src/bq_log/utils/log_utils.h). From a performance point of view, though, the win is already clear: common small numbers cost one byte to read and write, and only big numbers pay for a longer encoding.
+This VLQ is not LEB128 — don't try decoding it with another library just because the name matches. Range starts, prefix and byte order are defined by [log_utils.h](../src/bq_log/utils/log_utils.h).
 
 ### 3.2 The type needs only one bit — why give it a whole byte?
 
@@ -115,7 +115,7 @@ For example, the encoding of length 128 is `40 00`. If this item is a log entry,
 
 The VLQ of length 5 is `85`; its first bit is already taken by the length prefix, so there's nothing to borrow. Only in this case do we write an extra byte: type `80`, length `85`, together `80 85`.
 
-The decoder's flow is equally direct: take the first bit for the type, then check whether the low 7 bits are all zero. If they are, decode the length from the next byte; otherwise clear the type bit and decode starting from the current byte. Bodies of 128 bytes or more reuse the first byte; short bodies take the explicit-length route. Neither side loses.
+The decoder's flow is equally direct: take the first bit for the type, then check whether the low 7 bits are all zero. If they are, decode the length from the next byte; otherwise clear the type bit and decode starting from the current byte. Bodies of 128 bytes or more reuse the first byte; short bodies take the explicit-length route.
 
 The body length is currently a uint32, so an item head actually occupies 2–5 bytes. The length does not include the head itself — this has to stay consistent both when backfilling and when decoding.
 
@@ -133,7 +133,7 @@ subtype (1 B) | level (1 B) | category_index (VLQ) | format bytes
 
 subtype=0 means the format came from UTF-8, subtype=2 means UTF-16, the latter stored as UTF-Mixed in the file (details in section 6). The format string fills the rest of the body, so there's no need to store a string length, nor a terminating zero.
 
-The format template's index isn't written either. The first format template appearing in the file is number 0, the second is number 1, and so on; writer and decoder simply count in the same order. That saves another field, and the decoder can index into a plain array — no hash table needed.
+The format template's index isn't written either. The first format template appearing in the file is number 0, the second is number 1, and so on; writer and decoder simply count in the same order, so the decoder can index templates with a plain array.
 
 The thread template is slightly different:
 

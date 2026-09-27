@@ -7,7 +7,7 @@ BqLog's speed is not magic. These three articles start from a single line of log
 | Article | What it covers |
 |---|---|
 | [1: Deriving a compressed format from a line of text](<Article 1_Why is BqLog so fast - High Performance Realtime Compressed Log Format.MD>) | Squeezing the text: templates, VLQ, UTF-Mixed, segments and encryption |
-| [2: From a ring buffer to an adaptive bus](<Article 2_Why is BqLog so fast - High Concurrency Ring Buffer.MD>) | Dozens of threads without a fight: fetch_add + rollback, MISO/SISO, Groups and crash recovery |
+| [2: From a ring buffer to an adaptive bus](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD>) | Dozens of threads without a fight: fetch_add + rollback, MISO/SISO, Groups and crash recovery |
 | [3: How much work can share one memory load?](<Article 3_Why is BqLog so fast - Optimizing the Compressed Log Pipeline.MD>) | Saving work on the execution path: fused copy+hash, template caches, length backfill, batched I/O |
 
 Read them in order. Part 1 decides what the data looks like, part 2 decides how it travels, and part 3 squeezes out the waste left over along that road.
