@@ -18,7 +18,7 @@
 > BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
 > **BqLog 2.x is officially released!** With native `HarmonyOS NEXT`, `Python` and `Node.js` support, and asymmetric hybrid encryption.
 >
-> 🚀 In [Benchmarks](#-benchmark-results), BqLog's compressed log mode is **2–3x faster than fmtlog**, **3–6x faster than quill**, **3–16x faster than spdlog**, **10–12x faster than Log4j2**, and **25–60x faster than glog**; plain text mode also outperforms all of them.
+> 🚀 In [Benchmarks](#-benchmark-results), BqLog's compressed log mode is **6–14x faster than fmtlog**, **7–18x faster than quill**, **6–65x faster than spdlog (async)**, **9–22x faster than Log4j2**, and **47–252x faster than glog**; plain text mode also outperforms all of them.
 
 ---
 
@@ -47,7 +47,7 @@
 ## ✨ Highlights
 
 - Significant performance advantage over common open-source logging libraries (see [Benchmark](#-benchmark-results)); suitable for server, client, and mobile.
-- Low memory usage: in the Benchmark case (10 threads, 20,000,000 log entries), BqLog itself uses about 2-3 MB of memory. And in mobile platform scenarios, it's generally around 1 MB.
+- Low memory usage: in the Benchmark case (10 threads, 2,000,000 log entries each), BqLog uses only about 2-3 MB of memory even with three appenders active simultaneously. And in mobile platform scenarios, it's generally around 1 MB.
 - Provides a high-performance, high-compression real-time compressed log format.
 - Supports strong hybrid encryption (asymmetric + symmetric) for log content protection with nearly zero performance overhead (optional).
 - Works well inside game engines (`Unity`, `Unreal`, etc.), with UE Blueprint and builtin data type support.
@@ -215,9 +215,9 @@ bq.log.force_flush_all_logs();
 
 ## 📊 Benchmark results
 
-Test: 1–10 threads, each writing 2,000,000 log entries. Environment: MacBook Pro, Apple M4 Pro (14-core: 10P + 4E), 48 GB, macOS.
+Test: 1–10 threads, each writing 2,000,000 log entries. Environment: PC, AMD Ryzen 9 9950X (16 cores / 32 threads), 96 GB, Windows 11 Pro; Java tests on JBR 21.0.9.
 
-Comparison: BqLog (Text / Compress / Compress+Encrypt) vs spdlog 1.17.0, glog 0.7.1, fmtlog, quill 11.1.0, Log4j2 2.23.1.
+Comparison: BqLog (Text / Compress / Compress+Encrypt) vs spdlog 1.17.0 (async), glog 0.7.1, fmtlog, quill 11.1.0, Log4j2 2.23.1.
 
 The BqLog figures below measure the C++ API. Other language wrappers generally
 add runtime and cross-language call overhead; their performance depends on the
@@ -227,43 +227,43 @@ language and workload and should be measured separately.
 
 |                              | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
 |------------------------------|----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|------------|
-| BqLog Compress (C++)         | 79       | 99        | 115       | 170       | 222       | 311       | 324       | 372       | 484       | 759        |
-| BqLog Compress+Encrypt (C++) | 83       | 106       | 134       | 189       | 223       | 328       | 337       | 390       | 532       | 995        |
-| BqLog Text (C++)             | 202      | 417       | 648       | 910       | 1167      | 1425      | 1718      | 1969      | 2281      | 2718       |
-| fmtlog                       | 248      | 489       | 765       | 1059      | 1341      | 1588      | 1906      | 2234      | 2379      | 2818       |
-| quill                        | 425      | 805       | 1222      | 1700      | 2108      | 2592      | 2951      | 3458      | 3957      | 4316       |
-| spdlog                       | 434      | 1366      | 3133      | 4779      | 6228      | 9241      | 10829     | 11348     | 11197     | 12003      |
-| Log4j2 (Java)                | 946      | 1841      | 2422      | 3685      | 5542      | 5245      | 5775      | 5786      | 8048      | 8752       |
-| glog                         | 2138     | 3812      | 7144      | 10446     | 13552     | 21695     | 28806     | 35153     | 40397     | 45162      |
+| BqLog Compress (C++)         | 95       | 144       | 210       | 210       | 226       | 267       | 362       | 395       | 439       | 507        |
+| BqLog Compress+Encrypt (C++) | 102      | 166       | 167       | 190       | 236       | 308       | 350       | 391       | 453       | 493        |
+| BqLog Text (C++)             | 258      | 513       | 777       | 1054      | 1324      | 1587      | 1891      | 2143      | 2465      | 2811       |
+| fmtlog                       | 548      | 1173      | 1665      | 2194      | 2881      | 3440      | 4386      | 5242      | 5888      | 6926       |
+| quill                        | 639      | 1429      | 2232      | 3082      | 3915      | 4726      | 5609      | 6246      | 6957      | 7812       |
+| Log4j2 (Java)                | 873      | 1484      | 2087      | 2727      | 3738      | 4541      | 4889      | 6127      | 9475      | 7192       |
+| spdlog (async)               | 560      | 1649      | 3402      | 5737      | 9069      | 13827     | 21494     | 24518     | 28463     | 32939      |
+| glog                         | 4485     | 8548      | 14875     | 21387     | 28295     | 36060     | 45742     | 62368     | 102370    | 127550     |
 
 #### Peak Memory Usage (MB)
 
-|                              | 1 Thread | 4 Threads | 10 Threads |
-|------------------------------|----------|-----------|------------|
-| BqLog Compress (C++)         | 2.7      | 3.0       | 3.9        |
-| BqLog Compress+Encrypt (C++) | 2.8      | 3.2       | 4.2        |
-| BqLog Text (C++)             | 2.7      | 3.5       | 4.4        |
-| spdlog                       | 2.1      | 2.2       | 2.4        |
-| glog                         | 2.1      | 2.5       | 3.2        |
-| fmtlog                       | 3.9      | 6.1       | 12.7       |
-| quill                        | 272.9    | 1058.5    | 2746.6     |
+|                                          | 1 Thread | 4 Threads | 10 Threads |
+|------------------------------------------|----------|-----------|------------|
+| BqLog (all 3 appenders in one process)   | 12.7     | 13.3      | 14.7       |
+| spdlog (async)                           | 14.4     | 14.4      | 14.7       |
+| glog                                     | 11.9     | 12.1      | 12.4       |
+| fmtlog                                   | 17.1     | 20.2      | 23.3       |
+| quill                                    | 282.1    | 1062.7    | 2714.9     |
+| Log4j2 (Java)                            | 1537.8   | 6884.3    | 4631.5     |
 
 #### Output File Size (1 thread, 4M log entries)
 
 | Library | Format | Size | Compression Ratio |
 |---------|--------|------|-------------------|
-| BqLog Compress | Binary | 45 MB | **6.7x** smaller |
-| BqLog Compress+Encrypt | Encrypted | 45 MB | **6.7x** smaller |
-| BqLog Text | Text | 302 MB | — |
-| spdlog | Text | 293 MB | — |
-| quill | Text | 255 MB | — |
-| fmtlog | Text | 285 MB | — |
-| glog | Text | 348 MB | — |
+| BqLog Compress | Binary | 45 MB | **6.3x** smaller |
+| BqLog Compress+Encrypt | Encrypted | 45 MB | **6.3x** smaller |
+| BqLog Text | Text | 283 MB | — |
+| spdlog (async) | Text | 285 MB | — |
+| quill | Text | 247 MB | — |
+| fmtlog | Text | 270 MB | — |
+| glog | Text | 314 MB | — |
+| Log4j2 | Text | 410 MB (2M entries) | — |
 
-- BqLog Compress: **2–3x faster** than fmtlog, **3–16x** than spdlog, **25–60x** than glog
+- BqLog Compress: **6–14x faster** than fmtlog, **7–18x** than quill, **6–65x** than spdlog (async), **9–22x** than Log4j2, **47–252x** than glog
 - Encryption adds **near-zero overhead**
-- Compressed format is **6.7x smaller** than text
-- BqLog uses only **2.7–4.4 MB** memory across all modes and thread counts
+- Compressed format is **6.3x smaller** than text
+- BqLog uses only **12.7–14.7 MB** memory with all three appenders active
 
 > For full benchmark code, methodology, and feature comparison, see [Benchmark](docs/BENCHMARK.md).
 
