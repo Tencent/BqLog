@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <Appenders>
+    <!-- RollingRandomAccessFile, for text output demo -->
+    <RollingRandomAccessFile name="my_appender"
+                             fileName="output/log4j2.log"
+                             filePattern="output/log4j2-%d{yyyy-MM-dd}-%i.log"
+                             immediateFlush="false">
+      <PatternLayout>
+        <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+      </Policies>
+      <DefaultRolloverStrategy max="5"/>
+    </RollingRandomAccessFile>
+
+    <!-- Async Appender -->
+    <Async name="Async" includeLocation="false" bufferSize="262144">
+      <AppenderRef ref="my_appender"/>
+    </Async>
+  </Appenders>
+
+  <Loggers>
+    <Root level="info">
+      <AppenderRef ref="Async"/>
+    </Root>
+  </Loggers>
+</Configuration>

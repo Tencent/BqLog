@@ -1,0 +1,8 @@
+FILESIZE|bqlog_compress_enc|44.8 MB|11.8 B/entry
+FILESIZE|bqlog_text|283.1 MB|74.2 B/entry
+FILESIZE|bqlog_compress|44.8 MB|11.7 B/entry
+FILESIZE|spdlog|285 MB|74.7 B/entry
+FILESIZE|fmtlog|270 MB|70.8 B/entry
+FILESIZE|quill|246.9 MB|64.7 B/entry
+FILESIZE|glog|313.7 MB|82.2 B/entry
+FILESIZE|log4j2|409.9 MB (2M entries, multi_param only)|214.9 B/entry
