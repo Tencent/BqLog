@@ -18,7 +18,7 @@
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。
 > **BqLog 2.x 正式发布！** 新增`纯血鸿蒙`、`Python` 与 `Node.js` 支持，并带来非对称混合加密能力。
 >
-> 🚀 在 [Benchmark](#-benchmark-结果) 中，BqLog 压缩日志模式比 fmtlog 快 **2–3 倍**、quill 快 **3–6 倍**、spdlog 快 **3–16 倍**、Log4j2 快 **10–12 倍**、glog 快 **25–60 倍**；纯文本模式同样全面领先。
+> 🚀 在 [Benchmark](#-benchmark-结果) 中，BqLog 压缩日志模式比 fmtlog 快 **6-14 倍**、quill 快 **7-18 倍**、spdlog（异步）快 **6-65 倍**、Log4j2 快 **9-22 倍**、glog 快 **47-252 倍**；纯文本模式同样全面领先。
 
 ---
 
@@ -48,7 +48,7 @@
 ## ✨ 特点
 
 - 相比常见开源日志库有显著性能优势（详见 [Benchmark](#-benchmark-结果)），不仅适用于服务器和客户端，也非常适合移动端设备。
-- 内存消耗少：在 Benchmark 用例中，10 线程、2,000 万条日志，BqLog 自身内存消耗约为 2-3 MB。移动平台场景一般在1 MB左右。
+- 内存消耗少：在 Benchmark 用例中（10 线程、每线程 200 万条日志），即使同时挂载三种 appender，BqLog 内存消耗也仅约 2-3 MB。移动平台场景一般在1 MB左右。
 - 提供高性能、高压缩比的实时压缩日志格式。
 - 以接近于0的性能损耗，提供高强度的非对称混合加密日志，保护日志内容安全（可选）。
 - 可在游戏引擎（`Unity`、`Unreal` 等）中正常使用，对 Unreal 提供蓝图和常用类型的支持。
@@ -68,7 +68,7 @@
 
 | 平台 | 语言 |
 |------|------|
-| Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等） | C++（C++11+）、Java / Kotlin、C#（Unity、.NET）、ArkTS / C++（HarmonyOS 与 OpenHarmony 同一份包）、JavaScript / TypeScript（Node.js）、Python 3.7+、Unreal Engine（UE4、UE5 与 UE6 开发版） |
+| Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等） | C++（C++11+）、Java / Kotlin、C#（Unity、.NET）、ArkTS / C++（HarmonyOS 与 OpenHarmony 同一份包）、JavaScript / TypeScript（Node.js）、Python 3.7+、Go、Unreal Engine（UE4、UE5 与 UE6 开发版） |
 
 **硬件架构**：x86、x86_64、ARM32、ARM64
 **引入方式**：动态库、静态库、源代码
@@ -216,9 +216,9 @@ bq.log.force_flush_all_logs();
 
 ## 📊 Benchmark 结果
 
-测试：1-10 线程，每线程写 2,000,000 条日志。环境：MacBook Pro，Apple M4 Pro（14 核：10P + 4E），48 GB，macOS。
+测试：1-10 线程，每线程写 2,000,000 条日志。环境：PC，AMD Ryzen 9 9950X（16 核 / 32 线程），96 GB，Windows 11 专业版；Java 测试使用 JBR 21.0.9。
 
-对比：BqLog（Text / Compress / Compress+Encrypt）vs spdlog 1.17.0、glog 0.7.1、fmtlog、quill 11.1.0、Log4j2 2.23.1。
+对比：BqLog（Text / Compress / Compress+Encrypt）vs spdlog 1.17.0（异步）、glog 0.7.1、fmtlog、quill 11.1.0、Log4j2 2.23.1。
 
 下表 BqLog 数据来自 C++ 接口。其他语言的 wrapper 通常会增加运行时和
 跨语言调用开销，性能随语言和负载而变化，请以对应语言的实测结果为准。
@@ -227,43 +227,43 @@ bq.log.force_flush_all_logs();
 
 |                              | 1 线程 | 2 线程 | 3 线程 | 4 线程 | 5 线程 | 6 线程 | 7 线程 | 8 线程 | 9 线程 | 10 线程 |
 |------------------------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|---------|
-| BqLog Compress (C++)         | 79     | 99     | 115    | 170    | 222    | 311    | 324    | 372    | 484    | 759     |
-| BqLog Compress+Encrypt (C++) | 83     | 106    | 134    | 189    | 223    | 328    | 337    | 390    | 532    | 995     |
-| BqLog Text (C++)             | 202    | 417    | 648    | 910    | 1167   | 1425   | 1718   | 1969   | 2281   | 2718    |
-| fmtlog                       | 248    | 489    | 765    | 1059   | 1341   | 1588   | 1906   | 2234   | 2379   | 2818    |
-| quill                        | 425    | 805    | 1222   | 1700   | 2108   | 2592   | 2951   | 3458   | 3957   | 4316    |
-| spdlog                       | 434    | 1366   | 3133   | 4779   | 6228   | 9241   | 10829  | 11348  | 11197  | 12003   |
-| Log4j2 (Java)                | 946    | 1841   | 2422   | 3685   | 5542   | 5245   | 5775   | 5786   | 8048   | 8752    |
-| glog                         | 2138   | 3812   | 7144   | 10446  | 13552  | 21695  | 28806  | 35153  | 40397  | 45162   |
+| BqLog Compress (C++)         | 95     | 144    | 210    | 210    | 226    | 267    | 362    | 395    | 439    | 507     |
+| BqLog Compress+Encrypt (C++) | 102    | 166    | 167    | 190    | 236    | 308    | 350    | 391    | 453    | 493     |
+| BqLog Text (C++)             | 258    | 513    | 777    | 1054   | 1324   | 1587   | 1891   | 2143   | 2465   | 2811    |
+| fmtlog                       | 548    | 1173   | 1665   | 2194   | 2881   | 3440   | 4386   | 5242   | 5888   | 6926    |
+| quill                        | 639    | 1429   | 2232   | 3082   | 3915   | 4726   | 5609   | 6246   | 6957   | 7812    |
+| Log4j2 (Java)                | 873    | 1484   | 2087   | 2727   | 3738   | 4541   | 4889   | 6127   | 9475   | 7192    |
+| spdlog（异步）               | 560    | 1649   | 3402   | 5737   | 9069   | 13827  | 21494  | 24518  | 28463  | 32939   |
+| glog                         | 4485   | 8548   | 14875  | 21387  | 28295  | 36060  | 45742  | 62368  | 102370 | 127550  |
 
 #### 峰值内存占用（MB）
 
-|                              | 1 线程 | 4 线程 | 10 线程 |
-|------------------------------|--------|--------|---------|
-| BqLog Compress (C++)         | 2.7    | 3.0    | 3.9     |
-| BqLog Compress+Encrypt (C++) | 2.8    | 3.2    | 4.2     |
-| BqLog Text (C++)             | 2.7    | 3.5    | 4.4     |
-| spdlog                       | 2.1    | 2.2    | 2.4     |
-| glog                         | 2.1    | 2.5    | 3.2     |
-| fmtlog                       | 3.9    | 6.1    | 12.7    |
-| quill                        | 272.9  | 1058.5 | 2746.6  |
+|                                          | 1 线程 | 4 线程 | 10 线程 |
+|------------------------------------------|--------|--------|---------|
+| BqLog（单进程内同时挂载 3 种 appender）  | 12.7   | 13.3   | 14.7    |
+| spdlog（异步）                           | 14.4   | 14.4   | 14.7    |
+| glog                                     | 11.9   | 12.1   | 12.4    |
+| fmtlog                                   | 17.1   | 20.2   | 23.3    |
+| quill                                    | 282.1  | 1062.7 | 2714.9  |
+| Log4j2 (Java)                            | 1537.8 | 6884.3 | 4631.5  |
 
 #### 日志文件大小（1 线程，400 万条日志）
 
 | 库 | 格式 | 大小 | 压缩比 |
 |----|------|------|--------|
-| BqLog Compress | 二进制 | 45 MB | 比文本 **小 6.7 倍** |
-| BqLog Compress+Encrypt | 加密 | 45 MB | 比文本 **小 6.7 倍** |
-| BqLog Text | 文本 | 302 MB | — |
-| spdlog | 文本 | 293 MB | — |
-| quill | 文本 | 255 MB | — |
-| fmtlog | 文本 | 285 MB | — |
-| glog | 文本 | 348 MB | — |
+| BqLog Compress | 二进制 | 45 MB | 比文本 **小 6.3 倍** |
+| BqLog Compress+Encrypt | 加密 | 45 MB | 比文本 **小 6.3 倍** |
+| BqLog Text | 文本 | 283 MB | — |
+| spdlog（异步） | 文本 | 285 MB | — |
+| quill | 文本 | 247 MB | — |
+| fmtlog | 文本 | 270 MB | — |
+| glog | 文本 | 314 MB | — |
+| Log4j2 | 文本 | 410 MB（200 万条） | — |
 
-- BqLog Compress 比 fmtlog 快 **2-3 倍**，比 spdlog 快 **3-16 倍**，比 glog 快 **25-60 倍**
+- BqLog Compress 比 fmtlog 快 **6-14 倍**，比 quill 快 **7-18 倍**，比 spdlog（异步）快 **6-65 倍**，比 Log4j2 快 **9-22 倍**，比 glog 快 **47-252 倍**
 - 加密几乎 **零额外开销**
-- 压缩格式比文本 **小 6.7 倍**
-- BqLog 所有模式和线程数下仅使用 **2.7-4.4 MB** 内存
+- 压缩格式比文本 **小 6.3 倍**
+- BqLog 同时挂载三种 appender 时也仅使用 **12.7-14.7 MB** 内存
 
 > 完整 Benchmark 代码、方法论和功能对比请见 [Benchmark](docs/BENCHMARK_CHS.md)。
 
