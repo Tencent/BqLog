@@ -356,7 +356,7 @@ Looking back, the format keeps doing one thing: it finds the repeated work that 
 
 ## 11. Measure the complete file and write path
 
-In the public README's four-million-record size test, BqLog text output is 302 MB and compressed output is 45 MB, less than one sixth of the text size. The ratio depends on the data. Unique formats or large, high-entropy arguments reduce template reuse.
+In the public README's four-million-record size test, BqLog text output is 283 MB and compressed output is 45 MB, less than one sixth of the text size. The ratio depends on the data. Unique formats or large, high-entropy arguments reduce template reuse.
 
 Write benchmarks also need their context: thread count, final flush, segment initialization, and whether the output is text or compressed. The design removes identifiable work; measurements show how much that matters for a particular workload. The benchmark table at the start of part 2 gives one set of measurements of the time saved on the write path.
 

@@ -315,7 +315,7 @@ Setup uses RSA to protect an AES key and AES to process the 32 KiB mask. Subsequ
 
 <p align="center"><em>Figure 6: separating execution counts explains why segment length and batch size affect total cost.</em></p>
 
-The benchmark in part 2 writes two million records per thread: two million at one thread and twenty million at ten. Compressed and encrypted compressed output take 79 and 83 ms at one thread, and 759 and 995 ms at ten. The difference in total-path time changes with concurrency and workload size.
+The benchmark in part 2 writes two million records per thread: two million at one thread and twenty million at ten. Compressed and encrypted compressed output take 95 and 102 ms at one thread, and 507 and 493 ms at ten. The difference in total-path time changes with concurrency and workload size.
 
 The format uses RSA, AES and a repeating mask, without an AEAD authentication tag. Applications requiring tamper detection need additional authentication.
 
@@ -336,7 +336,7 @@ The optimizations so far have all been on the compressed path. The text Appender
 - Time strings are cached per millisecond: records within the same millisecond memcpy the previously formatted result, and the three digits of the millisecond part are assembled from a 1000-entry lookup table, with no division.
 - Thread information is cached per thread ID: once `[tid-xxx name]` has been assembled, later records reuse it directly.
 
-In the ten-thread case, text mode takes 2718 ms, while spdlog with synchronous output takes 12003 ms. The caching on this path is one source of that gap: even without the compressed format, the consumer should not format every log from scratch.
+In the ten-thread case, text mode takes 2811 ms, while spdlog in async mode takes 32939 ms. The caching on this path is one source of that gap: even without the compressed format, the consumer should not format every log from scratch.
 
 ## 14. Measure each change against a specific baseline
 
