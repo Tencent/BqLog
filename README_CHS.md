@@ -68,7 +68,7 @@
 
 | 平台 | 语言 |
 |------|------|
-| Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等） | C++（C++11+）、Java / Kotlin、C#（Unity、.NET）、ArkTS / C++（HarmonyOS 与 OpenHarmony 同一份包）、JavaScript / TypeScript（Node.js）、Python 3.7+、Unreal Engine（UE4、UE5 与 UE6 开发版） |
+| Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等） | C++（C++11+）、Java / Kotlin、C#（Unity、.NET）、ArkTS / C++（HarmonyOS 与 OpenHarmony 同一份包）、JavaScript / TypeScript（Node.js）、Python 3.7+、Go、Unreal Engine（UE4、UE5 与 UE6 开发版） |
 
 **硬件架构**：x86、x86_64、ARM32、ARM64
 **引入方式**：动态库、静态库、源代码

@@ -67,7 +67,7 @@
 
 | Platforms | Languages |
 |-----------|-----------|
-| Windows 64-bit, macOS, Linux (incl. embedded), iOS, Android, HarmonyOS, OpenHarmony, Unix (FreeBSD, NetBSD, OpenBSD, Solaris, etc.) | C++ (C++11+), Java / Kotlin, C# (Unity, .NET), ArkTS / C++ (HarmonyOS & OpenHarmony share the same package), JavaScript / TypeScript (Node.js), Python 3.7+, Unreal Engine (UE4, UE5 & UE6 development builds) |
+| Windows 64-bit, macOS, Linux (incl. embedded), iOS, Android, HarmonyOS, OpenHarmony, Unix (FreeBSD, NetBSD, OpenBSD, Solaris, etc.) | C++ (C++11+), Java / Kotlin, C# (Unity, .NET), ArkTS / C++ (HarmonyOS & OpenHarmony share the same package), JavaScript / TypeScript (Node.js), Python 3.7+, Go, Unreal Engine (UE4, UE5 & UE6 development builds) |
 
 **Hardware architectures**: x86, x86_64, ARM32, ARM64
 **Integration methods**: Dynamic library, Static library, Source code
