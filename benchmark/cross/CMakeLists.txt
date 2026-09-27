@@ -77,8 +77,8 @@ add_executable(bench_glog bench_glog.cpp)
 target_link_libraries(bench_glog PRIVATE glog::glog)
 
 add_executable(bench_fmtlog bench_fmtlog.cpp)
-target_include_directories(bench_fmtlog PRIVATE ${fmtlog_SOURCE_DIR})
-target_link_libraries(bench_fmtlog PRIVATE fmtlog-static)
+target_include_directories(bench_fmtlog PRIVATE ${fmtlog_SOURCE_DIR} ${fmtlog_SOURCE_DIR}/fmt/include)
+target_link_libraries(bench_fmtlog PRIVATE fmtlog-static fmt)
 
 add_executable(bench_quill bench_quill.cpp)
 target_link_libraries(bench_quill PRIVATE quill::quill)

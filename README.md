@@ -21,24 +21,43 @@
 
 benchmark/cross 依赖主仓库的 src/ 和 CMake_utils.txt，先把本分支的 benchmark/ 目录覆盖到一份 develop 检出上。
 
+Windows（MSVC）：
+
 ```
 cmake -S benchmark/cross -B benchmark/cross/build -DTARGET_PLATFORM=win64
 cmake --build benchmark/cross/build --config Release
 ```
 
-第三方库由 CMake FetchContent 自动拉取。每个库一个 exe，统一用脚本跑：
+Linux / macOS：
 
 ```
+cmake -S benchmark/cross -B benchmark/cross/build -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Release   # macOS 用 unix
+cmake --build benchmark/cross/build -j
+```
+
+第三方库由 CMake FetchContent 自动拉取；离线环境可以先自己 clone，再用 `-DFETCHCONTENT_SOURCE_DIR_SPDLOG=` 等参数指向本地目录。每个库一个 exe，统一用脚本跑：
+
+```
+# Windows
 powershell -File benchmark/cross/run_benchmark.ps1 -Lib bqlog      # bqlog/spdlog/glog/fmtlog/quill，1~10 线程
 powershell -File benchmark/cross/measure_memory.ps1 -Lib bqlog -Threads 1,4,10
+
+# Linux / macOS（已在 WSL Ubuntu 24.04 上验证）
+./benchmark/cross/run_benchmark.sh bqlog 1 10
+./benchmark/cross/measure_memory.sh bqlog 1 4 10
 ```
 
 Log4j2 单独跑：
 
 ```
+# Windows
 powershell -File benchmark/cross/log4j/fetch_deps.ps1              # 拉 jar 到 log4j/lib
 javac -cp "lib/*" -d classes src/bq/benchmark/log4j/main.java      # 在 log4j/ 目录下
 powershell -File benchmark/cross/log4j/run_benchmark.ps1
+
+# Linux / macOS
+./benchmark/cross/log4j/fetch_deps.sh
+./benchmark/cross/log4j/run_benchmark.sh 1 10                      # 需要 JDK 17+，脚本会自动编译
 ```
 
 ## 结果
