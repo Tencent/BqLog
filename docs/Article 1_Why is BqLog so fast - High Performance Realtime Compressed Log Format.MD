@@ -2,359 +2,365 @@
 
 [简体中文](<文章1_为何BqLog如此快 - 高性能实时压缩日志格式.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Next: the data bus](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD>)
 
-For production logging, we want to have our cake and eat it too: complete information, tiny runtime cost, and small files. On mobile devices these three goals fight each other — log too little and you can't chase online issues; log too much and you eat into an already tight performance and storage budget.
+Production logs need enough detail to diagnose failures without slowing the application or filling its storage. Mobile devices make these constraints particularly visible.
 
-Some logging systems push this conflict to post-processing: write plain text first, then compress the file with a general-purpose algorithm after it's closed. That saves archival space, but the formatting, string copying, and the first write to disk all happen anyway — and compression has to read the whole file one more time. If our goal is not "cheap archiving" but "detailed logs that are cheap to write in the first place", we need to take one more step forward.
+One common approach writes text first and compresses the closed file later. That saves archive space, but the writer still pays for formatting, copying and the initial file write. BqLog uses the structure of a log call to reduce that work before writing the file.
 
-In this article we start from the most ordinary line of log and derive BqLog's compressed file format step by step: what really deserves to be written, and what only needs to be written once. Multi-segment structure, encryption and recovery are covered along the way, because they all have a real impact on write cost.
+We will start with an ordinary log line, identify its repeated content, and use that to build the file format. The same reasoning leads to the layout for appending, recovery and encryption.
 
-This article is written against BqLog 2.5.0.
+This article describes BqLog 2.5.0.
 
-## 1. What does a text log actually do?
+## 1. The cost of producing a text log
 
-Take an order system as an example. The business code might be:
+Consider an order system:
 
 ```cpp
 log.info("New order, order ID:{}, price:{}, username:{}",
-         32422144, 324.42, "Zhang San");
+         32422144, 324.42, "张三");
 ```
 
-And what lands in the file looks like this:
+The resulting text might be:
 
 ```text
 2026-09-25 12:00:00.001 [Info] [Shop.Order] [Tid-2025 Worker25]
-New order, order ID:32422144, price:324.42, username:Zhang San
+New order, order ID:32422144, price:324.42, username:张三
 ```
 
-To produce this single line, the logging system has to convert a timestamp into a date string, turn an integer and a floating-point number into characters, concatenate several fixed pieces of text with the arguments, and finally write to the file. If the string encodings differ, there's an extra encoding conversion in between. Whether this work happens on the calling thread or a background thread only decides who pays the bill — the work itself doesn't shrink at all.
+In the sample line, the bracketed fields [Info], [Shop.Order] and [Tid-2025 Worker25] are the level, the category and the thread identifier in that order, and the body is assembled from a format string and arguments. Producing this line requires converting the timestamp, integer and floating-point value to text, joining them with the fixed strings, and writing the result. Different string encodings may also require conversion. Moving formatting to a background thread still leaves that work to be done.
 
-Then the next order arrives:
+The next order arrives:
 
 ```text
 2026-09-25 12:00:00.002 [Info] [Shop.Order] [Tid-2025 Worker25]
-New order, order ID:32422145, price:174.45, username:Li Si
+New order, order ID:32422145, price:174.45, username:李四
 ```
 
-The problem is obvious at a glance: except for the timestamp and three arguments, not a single character changed — yet we organized the whole thing again and wrote it out again.
+Only the time and three arguments changed, yet the fixed text was assembled and written again. At ten million records per day, repeating 50 bytes per record accounts for roughly 500 MB. Those bytes also pass through copies and I/O.
 
-With ten million such logs a day, even if only 50 bytes per entry are repeated fixed content, that's about 500 MB written for nothing. Worse, those 500 MB don't just occupy space — every byte went through formatting, copying and I/O.
+The call already supplies a useful boundary: **the format string is fixed; the arguments vary.** The file can preserve that boundary instead of storing the complete sentence each time.
 
-So the first step is not hunting for a fancier compression algorithm. It's exploiting the structure the business already told us: **the format string is fixed; the arguments are what change.**
+## 2. Store templates and arguments
 
-## 2. Don't store the final sentence — store how to assemble it
-
-The most straightforward approach: the first time we see a format string, save it once and assign it a number. Every later occurrence only writes the number plus the arguments:
+When a format first appears, store it and assign an index. Later records can refer to that index:
 
 ```text
 Template 0: New order, order ID:{}, price:{}, username:{}
 
-Log A: Template 0, 32422144, 324.42, Zhang San
-Log B: Template 0, 32422145, 174.45, Li Si
+Record A: template 0, 32422144, 324.42, 张三
+Record B: template 0, 32422145, 174.45, 李四
 ```
 
-You might ask: doesn't this just postpone formatting to read time? Exactly — and that's the point. A huge portion of diagnostic logs are written, kept for a while, and then cleaned up when they expire, without anyone ever reading them. For those logs, the cost of assembling the full text up front is eliminated entirely.
+Formatting moves to the reader. Many diagnostic logs are never opened, so their text never needs to be produced at all. When someone does read them, the decoder combines the template and arguments. That work can run on a developer's machine or in an analysis service, reducing the load on the application device.
 
-Even when someone finally does read them, formatting can happen on a developer's machine or in an analysis environment. The player's device doesn't have to do all the work. This is a shift of when and where work runs, and it's the first performance win of compressed logging.
+Level, category, thread ID and thread name also repeat. However, the same format may be used by many threads. Putting every field in one template would duplicate the format string whenever the thread changed.
 
-But extracting the format string alone is not enough. Log level, category, thread ID and thread name repeat constantly too. Stuffing all of them into one big template looks simpler, but it creates a new problem: if the same business log is emitted by ten threads, do we store ten identical copies of the format string?
+BqLog therefore keeps two template types:
 
-So BqLog splits the stable information into two kinds of templates:
+- **Format template:** level, category index and format string.
+- **Thread template:** thread ID and thread name.
 
-- **Format template**: log level, category index, format string.
-- **Thread info template**: thread ID and thread name.
+Each record references both. Changing the thread can reuse the format template, and changing the format can reuse the thread template.
 
-Each log entry references the two templates separately. When the thread changes, the format is still reused; when the business format changes, the thread info is still reused.
+Categories are known when the Log object (a logger instance) is created, so the file header area can store the category list. Format templates only need a category index. Categories, formats, threads and individual records are thus stored at the frequencies at which they change.
 
-The category names can be lifted out one more level. For a Log object, the category list is fixed at creation, so we store a category table once at the start of the file, and format templates only record a category index. Pushed to its conclusion, the idea is one sentence: **the less frequently something appears and the longer it lives, the further out it belongs.**
+## 3. Distinguishing templates from records
 
-## 3. Templates and logs are mixed together — how does the reader tell them apart?
+New formats and threads can appear at any time, so format templates, thread templates and log records are interleaved in the file.
 
-Now we have three kinds of things: format templates, thread templates, and log entries. The order in which they appear is not fixed: we may write many entries in a row, then suddenly run into a new thread or a new format.
+Separate files would require keeping their relationships consistent. Within one file, how does the reader know where one item ends? Format strings and argument lists have variable sizes. A terminator would require scanning and escaping, since binary arguments can contain any byte. With a length, the decoder knows where the item ends and the next one begins.
 
-If we gave each kind its own file just to tell them apart, we'd have to maintain the correspondence between several files, and handle consistency under rotation and abnormal exits. No need to invite that complexity. The current format strings them into one continuous sequence of **Data Items**: each item has a type and a length up front, followed by its data.
+BqLog stores a sequence of **data items**, each with a type, a length and a body.
 
-![Type bit and variable-length size of a Data Item](img/performance/compressed-item-bits.png)
+![Data item type bit and variable-length length field](img/performance/compressed-item-bits.png)
 
-<p align="center"><em>Figure 1: an item's head and body, with the exact bit layout in both length cases. Boxes adjacent horizontally are adjacent in the file too.</em></p>
+<p align="center"><em>Figure 1: an item header and body, with the bit layouts for two length cases. Adjacent fields are adjacent in the file.</em></p>
 
-Why do we need a length at all? Because neither the format string nor the argument count is fixed. Without a length, you'd have to scan for some terminator — but binary arguments can contain any byte at all, so the terminator would need escaping. With a length, once you've read the head you know the extent of this item, and where the next one starts.
+A fixed four-byte length would be simple, but most records are short. Variable-length integer encoding reduces this overhead.
 
-Just using 4 bytes for the length is certainly the simplest. But log entries tend to be short, and spending a fixed 4 bytes on a body of a few dozen bytes is still wasteful. Enter variable-length integer encoding.
+### 3.1 Small integers use fewer bytes
 
-### 3.1 Small numbers use few bytes
-
-BqLog uses a prefixed VLQ encoding. To see it clearly, consider unsigned integers first:
+BqLog uses a prefix-based VLQ encoding. For unsigned integers, its shape is:
 
 ```text
-1 byte : 1xxxxxxx
+1 byte:  1xxxxxxx
 2 bytes: 01xxxxxx xxxxxxxx
 3 bytes: 001xxxxx xxxxxxxx xxxxxxxx
 ...
 9 bytes: 00000000 + 8 data bytes
 ```
 
-The position of the first 1 in the prefix tells the decoder how many bytes the number occupies in total. And once the encoding gets longer, it doesn't re-represent values the previous length already covered — counting starts directly from the beginning of the new range:
+The position of the first 1 in the prefix identifies the encoded width. Longer encodings start counting from the first value that shorter encodings cannot represent:
 
-| Bytes | Range start | Representable range |
+| Bytes | Starting value | Range |
 |---|---:|---|
 | 1 | 0 | 0–127 |
 | 2 | 128 | 128–16511 |
 | 3 | 16512 | 16512–2113663 |
 
-For example, 128 is not encoded verbatim in two bytes as 128; it means "the 0th number of the second range" and comes out as `40 00`. 16512 is the 0th number of the third range: `20 00 00`.
+For example, 128 is the first value in the two-byte range, so it is encoded as `40 00`. Similarly, 16512 becomes `20 00 00`.
 
-This VLQ is not LEB128 — don't try decoding it with another library just because the name matches. Range starts, prefix and byte order are defined by [log_utils.h](../src/bq_log/utils/log_utils.h).
+This VLQ is not the common LEB128, which stores seven bits per byte with the top bit as a continuation flag. BqLog's prefix layout keeps the first bit of any multi-byte encoding at 0; [section 3.2](#32-reuse-a-length-prefix-bit-for-the-item-type) puts that spare bit to use. The range offsets, prefix and byte order are defined in [log_utils.h](../src/bq_log/utils/log_utils.h).
 
-### 3.2 The type needs only one bit — why give it a whole byte?
+### 3.2 Reuse a length-prefix bit for the item type
 
-At the top level a Data Item only distinguishes "template" from "log entry"; inside templates we further split format and thread. So the top-level type needs just one bit: 0 for template, 1 for log entry.
+At the top level, an item is either a template or a log record. The template body distinguishes format templates from thread templates. The top-level type therefore needs one bit: 0 for a template, 1 for a record.
 
-The conventional approach — one byte for the type, then the length VLQ — looks a bit wasteful, doesn't it? Look back at the prefix above: whenever the VLQ is longer than one byte, its first bit is always 0. That 0 can be lent to the type.
+A separate type byte adds noticeable overhead to short records. A multi-byte VLQ starts with a zero bit, which can hold the type instead.
 
-For example, the encoding of length 128 is `40 00`. If this item is a log entry, set the first bit to 1 and it becomes `C0 00` — type and length together still occupy only two bytes.
+The length 128 is encoded as `40 00`. For a log record, setting its first bit produces `C0 00`; type and length still occupy two bytes.
 
-The VLQ of length 5 is `85`; its first bit is already taken by the length prefix, so there's nothing to borrow. Only in this case do we write an extra byte: type `80`, length `85`, together `80 85`.
+The one-byte length 5 is `85`, whose first bit is already needed by the length prefix. Here the type gets a separate byte: `80` for the record type followed by `85`, giving `80 85`.
 
-The decoder's flow is equally direct: take the first bit for the type, then check whether the low 7 bits are all zero. If they are, decode the length from the next byte; otherwise clear the type bit and decode starting from the current byte. Bodies of 128 bytes or more reuse the first byte; short bodies take the explicit-length route.
+The decoder reads the type from the first bit, then checks the lower seven bits. If they are all zero, the length starts in the next byte. Otherwise it clears the type bit and decodes the length from the current byte. Bodies of at least 128 bytes can share the first byte with the type; shorter bodies use an explicit type byte.
 
-The body length is currently a uint32, so an item head actually occupies 2–5 bytes. The length does not include the head itself — this has to stay consistent both when backfilling and when decoding.
+The current body length is a uint32, so the item header occupies 2–5 bytes. The length excludes the header itself, both during backfilling and decoding.
 
-## 4. Opening up the templates
+## 4. Inside the templates
 
-![Contiguous layout of format template, thread template, log entry and arguments](img/performance/compressed-templates.png)
+![Contiguous layouts of templates, records and arguments](img/performance/compressed-templates.png)
 
-<p align="center"><em>Figure 2: expanding layer by layer from templates down to a single argument. Colors correspond to content kinds; byte counts in fields match the actual encoding.</em></p>
+<p align="center"><em>Figure 2: the layout expands from templates to individual arguments. Colors identify field roles; byte counts describe their encodings.</em></p>
 
-The body of a format template is, in order:
+A format template body contains:
 
 ```text
 subtype (1 B) | level (1 B) | category_index (VLQ) | format bytes
 ```
 
-subtype=0 means the format came from UTF-8, subtype=2 means UTF-16, the latter stored as UTF-Mixed in the file (details in section 6). The format string fills the rest of the body, so there's no need to store a string length, nor a terminating zero.
+Subtype 0 identifies a UTF-8 format; subtype 2 identifies a UTF-16 format stored as UTF-Mixed, discussed in [section 6](#6-utf-16-balancing-encoding-work-and-output-size). The format occupies the rest of the body, so it needs neither a separate string length nor a terminating zero.
 
-The format template's index isn't written either. The first format template appearing in the file is number 0, the second is number 1, and so on; writer and decoder simply count in the same order, so the decoder can index templates with a plain array.
+Format template indices are implicit: the first definition is index 0, the second is index 1, and so on. Writer and decoder assign indices in the same order. The decoder can then access templates by array index.
 
-The thread template is slightly different:
+A thread template has a different layout:
 
 ```text
 subtype=1 (1 B) | thread_template_index (VLQ) | thread_id (VLQ) | thread_name
 ```
 
-Here the index is written explicitly, because thread info may be redefined in a new run. A plain-text file can be opened and appended to many times by the same program, but last run's thread-ID-to-name mapping can't just be carried over. A new thread template may redefine an existing index; the decoder updates the mapping in file order, and later entries reference the new info.
+Its index is explicit because a later run may redefine thread information. An unencrypted file can be reopened and appended to, but the previous run's thread IDs and names cannot simply be reused. A new thread template can replace the definition at an index; the decoder updates its mapping as it reads, and subsequent records use that definition.
 
-One easily confused point: **a template's file index is not the same as its slot in the in-memory cache.** To bound memory usage in long-running processes, the writer's template cache evicts entries. When an evicted format appears again, the writer simply writes another copy of the template and gets a new file index; the old records stay valid. Cache eviction affects the reuse rate and the file size — it never rewrites old file content.
+**A file template index and a slot in the writer's cache are different things.** The cache may evict a mapping. If that format appears again, the writer can emit another template with a new file index. Existing records keep referring to the old index. Eviction affects future reuse and file size.
 
-As for the hash, the file doesn't need it either. The hash exists so the writer can quickly decide whether it has seen a format before; the decoder locates templates by file index. Fields that only speed up runtime work have no business being on disk.
+The format hash serves the writer's lookup. The decoder uses file indices, so the hash is not stored in the file.
 
-## 5. What actually changes per entry can be compressed further
+## 5. Compress the fields that change
 
-Once templates are extracted, the body of a log entry is just:
+After extracting the templates, a record body contains:
 
 ```text
 time delta | format template index | thread template index | arg0 | arg1 | ...
 ```
 
-Both indices start from small numbers, so VLQ is natural. The timestamp and the arguments deserve a closer look.
+Template indices usually begin small, making them suitable for VLQ. Timestamps and arguments have their own encodings.
 
-### 5.1 Timestamps are big, time deltas are small
+### 5.1 Large timestamps, small deltas
 
-A millisecond Epoch timestamp needs 64 bits — that's 8 bytes per entry. Yet consecutive logs are usually a few milliseconds apart, sometimes several within the same millisecond. If the previous timestamp is known, writing only the delta is enough.
+An epoch timestamp in milliseconds needs a 64-bit representation, or eight bytes per record. Consecutive records are often only a few milliseconds apart, and several may share the same millisecond. Once the previous timestamp is known, the next record can store the difference.
 
-Say three entries are at 1000, 1002 and 1001 ms. The deltas are 1000, 2 and -1. The first one is relative to 0; each later one is relative to its predecessor.
+For timestamps 1000, 1002 and 1001 ms, the deltas are 1000, 2 and -1. The first record uses zero as its baseline; subsequent records use the preceding record.
 
-Why can the third be smaller than the second? It's not necessarily a clock reset. Data from multiple producers enters the file as the bus polls each source, so records from different threads can legitimately disagree with wall-clock order (part 2 digs into this). So we can't encode only positive deltas.
+How does the third record come to precede the second? When threads interleave, the order in which records are consumed can differ from the order in which their timestamps were taken; that is part 2's subject. Before encoding, the consumer clamps timestamps to be non-decreasing, which blocks such regressions at the cost of rewriting an out-of-order record's time to the previous value. Within one run, the deltas in the file do not go negative. Clamping cannot help in one case: when an unencrypted file is appended to, the time baseline is recovered from the old file, and a record from the new run that meets a system-clock rollback would precede that baseline. The format must allow negative deltas without letting them take up space.
 
-ZigZag solves the small-negative problem neatly:
+ZigZag maps small signed values to small unsigned values:
 
 ```text
-Original:  0  -1   1  -2   2  -3   3
-Mapped:    0   1   2   3   4   5   6
+signed:    0  -1   1  -2   2  -3   3
+unsigned:  0   1   2   3   4   5   6
 ```
 
-Map the signed value to unsigned, then VLQ-encode it. Both +1 and -1 stay small — instead of ballooning to 8 or 9 bytes because a negative two's-complement value has all its high bits set.
+VLQ then encodes the result. Both +1 and -1 remain small, avoiding the many high bits set in a negative two's-complement value.
 
-### 5.2 Integers needn't become characters, and floats needn't be formatted early
+### 5.2 Preserve numeric values without formatting them
 
-Each argument is preceded by a type byte that tells the decoder how many bytes to read next and whether to decode VLQ:
+Each argument starts with a type byte that tells the decoder how to read its value:
 
 | Argument | Content after the type byte |
 |---|---|
-| null | no content |
-| pointer | always 8 bytes |
+| null | No content |
+| pointer | 8 bytes |
 | bool, char, int8, uint8 | 1 byte |
-| char16, char32, uint16, uint32, uint64 | unsigned VLQ |
+| char16, char32, uint16, uint32, uint64 | Unsigned VLQ |
 | int16, int32, int64 | ZigZag + VLQ |
-| float / double | raw 4 / 8 bytes |
-| UTF-8 string | byte-length VLQ + content |
-| UTF-16 string | converted to UTF-Mixed, then length + content |
+| float / double | Original 4 / 8 bytes |
+| UTF-8 string | Byte length as VLQ + content |
+| UTF-16 string | Length and content after conversion to UTF-Mixed |
 
-Why not turn floats into some variable-length integer too? Because a float's bit pattern and value range are a different beast from integers, and the final text also depends on formatting precision. Storing the raw binary value both skips the decimal formatting now and preserves everything needed to reconstruct the text later.
+Floating-point values retain their four- or eight-byte binary representation. Their bit patterns behave differently from integers, and producing decimal text also involves formatting precision. That conversion can wait until reading.
 
-Then why do small types like bool and int8 stay fixed at one byte? They are one byte to begin with; another encoding scheme wouldn't beat that. Compression design doesn't mean dogmatically applying the same algorithm to everything.
+Types such as bool and int8 already occupy one byte; variable-length encoding would not make them smaller.
 
-Entries don't store an argument count either. Read one argument according to its type, check whether you've reached the end of the item, and you know whether there's more.
+Records also omit the argument count. After reading each typed argument, the decoder checks whether it has reached the end of the item.
 
-## 6. UTF-16: one more trade-off between speed and size
+## 6. UTF-16: balancing encoding work and output size
 
-C#, Java and Unreal often use UTF-16. For ASCII characters the high byte of every character is 0, so spending two bytes on one English letter is indeed wasteful. But unconditionally converting all UTF-16 to UTF-8 means more checks when you hit Chinese characters, surrogate pairs and mixed text — and some characters are longer in UTF-8 anyway.
+C#, Java and Unreal often use UTF-16. An ASCII character has a zero high byte, so storing an English letter in two bytes wastes space. Converting every UTF-16 string to UTF-8, however, requires more decisions for Chinese characters, surrogate pairs and mixed text. Some characters even take more bytes in UTF-8.
 
-Can we grab the cheapest win first? That's the idea of UTF-Mixed: narrow the leading ASCII run down to one byte per character, and once the content is no longer suitable for fast processing, insert an `FF` marker and copy the remaining UTF-16 as one block.
+UTF-Mixed narrows the initial ASCII portion to one byte per character. When the fast conversion stops, it writes an `FF` marker and copies the remaining UTF-16 code units as a suffix.
 
-![Raw bytes vs encoded bytes of UTF-Mixed](img/performance/compressed-utf-mixed.png)
+![Original and encoded bytes of UTF-Mixed](img/performance/compressed-utf-mixed.png)
 
-<p align="center"><em>Figure 3: in this scalar-split example, the 10 UTF-16 bytes of <code>abc中x</code> become 8 bytes. The trailing x stays inside the UTF-16 suffix.</em></p>
+<p align="center"><em>Figure 3: with the scalar split shown here, abc中x shrinks from 10 UTF-16 bytes to 8 bytes. The final x stays in the UTF-16 suffix.</em></p>
 
-"Remaining" includes any English characters appearing later — we don't flip back and forth just to save one more byte. The SIMD path may also stop before a block containing non-ASCII, so equally legal splits of identical content don't have to match exactly.
+That suffix includes any later ASCII characters. The writer does not keep switching back to save individual bytes. A SIMD (single-instruction-multiple-data) implementation may stop before a whole block containing a non-ASCII character, so valid split positions can differ.
 
-Fully converted to UTF-8, this example would take only 7 bytes; UTF-Mixed uses 8. So what's the point? The encoding cost. We were never chasing the smallest file alone: trading one extra byte for a bulk copy of the suffix often beats a full character-by-character conversion.
+The example would occupy only seven bytes in UTF-8, compared with eight in UTF-Mixed. BqLog accepts that extra byte to reduce conversion work: the suffix can be copied in bulk without converting each character.
 
-The decoder looks for `FF` within the known length, copies the prefix as-is, and converts the suffix to UTF-8. The FF here is not a string terminator but an explicit encoding-switch marker. How SIMD accelerates the narrowing part is a part-3 topic.
+Within the known string length, the decoder finds `FF`, copies the prefix and converts the suffix to UTF-8. The marker switches encodings; it does not terminate the string. Part 3 explains the SIMD implementation of the ASCII conversion.
 
-## 7. Why is the same log completely different in memory and in the file?
+## 7. Why the same record has different memory and file layouts
 
-At this point a tempting thought appears: since the file format is so compact, why not have producers build this compact format directly and hand it to the background?
+So far we have looked only at the file format. Now put it back into the full pipeline: BqLog is an asynchronous log. Business threads (producers) do not write files directly; they put records into an in-memory queue, the bus. A background thread (the consumer) takes them out and hands them to an Appender, the component that owns a particular output, for encoding and writing. That channel is part 2's subject.
 
-The problem is that file template indices are allocated by the corresponding Appender, and different outputs may have different template sets. If every producer touched that shared dictionary, the background's state management would leak into the calling threads. And variable-length fields designed to save disk make locating arguments in memory more expensive.
+With such a compact file format, why does the producer not generate it directly?
 
-So BqLog's bus records keep a fixed head and proper alignment; the consumer converts them into the compact file representation. A tiny log entry makes it clearest:
+The Appender assigns file template indices, and different outputs may have different template sets. Encoding file records on producers would require access to those shared dictionaries. Variable-length fields would also make locating arguments in memory more expensive.
+
+BqLog therefore keeps a fixed header and suitable alignment in bus records, then lets the consumer produce the compact file representation. Consider:
 
 ```cpp
 log.info("hp={}", int32_t(42));
 ```
 
-![In-memory vs seven-byte file representation of the same record](img/performance/compressed-record-example.png)
+![The same record in memory and in a seven-byte file item](img/performance/compressed-record-example.png)
 
-<p align="center"><em>Figure 4: format hp={}, thread name Main. The top half is the record inside the bus; the bottom half is the file record when templates already exist and the time delta is 0.</em></p>
+<p align="center"><em>Figure 4: format hp={}, thread name Main. The file representation assumes existing templates and a zero time delta.</em></p>
 
-The in-memory head is 40 bytes: full timestamp, category, thread ID, format hash and length. The 5-byte format content is aligned up to 8 bytes at a 4-byte boundary, the int32 argument occupies the type area and the value area, and there's thread extension info at the end. The internal record of this example totals 61 bytes; on the LP path there's also a context and the ring's block head on top (the protagonists of part 2).
+The memory header is 40 bytes, holding the full timestamp, category, thread ID, format hash and lengths. The five format bytes occupy eight bytes after four-byte alignment. The int32 argument has a type area and a value area, followed by thread extension information. This internal record totals 61 bytes. The LP path adds a context and a ring chunk header — LP is the low-frequency path introduced in part 2, where they are the main subject.
 
-In the file it can be just:
+The file item can be:
 
 ```text
 80 85 | 80 | 80 | 80 | 0B D4
 type/len5  Δt=0 fmt0 thread0 int32(42)
 ```
 
-0B is the int32 type; 42 becomes 84 after ZigZag and is encoded as D4 — the whole item is 7 bytes. The file header and the templates are stored separately, amortized across later records. The division of labor between the two layouts is plain to see: in memory, convenient produce/consume; on disk, as compact as possible.
+`0B` identifies int32. ZigZag maps 42 to 84, encoded as `D4`. The whole item occupies seven bytes. File headers and templates are shared across records. The memory layout supports efficient production and consumption; the file layout reduces stored bytes.
 
-## 8. Beyond one data stream: why a multi-segment structure?
+## 8. Why the file needs segments
 
-So far we've described one continuous data stream: the program keeps running, the in-memory template tables and encryption state are all there, and you just keep writing. But what about after a restart?
+A restart loses the template tables and encryption state that live in memory. Without append support, one crash of an encrypted log would lose its unfinished data, or reopening would mean decrypting and rewriting the whole old file; both cost far more than the segment structure.
 
-One premise up front: **appending to a compressed log requires knowing what was written before.** That's nothing like opening a text file, seeking to the end and writing another line.
+**Appending compressed records requires the existing template indices and time baseline.** Seeking to the end of the file is only part of the operation.
 
-### 8.1 What appending must restore is more than the file position
+### 8.1 Restore the state needed for appending
 
-Suppose the old file already has three format templates, numbered 0, 1, 2. If a new log uses one of those formats, we need to find its original number; if a new format arrives, we need to know the next number starts from 3. Entries store time deltas, so the last entry's timestamp has to be restored too.
+Suppose an old file defines format templates 0, 1 and 2. Reusing one requires finding its existing index; a new format must start at index 3. Since records store time deltas, the writer also needs the last timestamp.
 
-If we skipped reading the existing content entirely and restarted template numbering from 0 while the decoder kept using the old dictionary, the same number would have two meanings. Which format the following arguments should be substituted into would be anyone's guess.
+Restarting numbering at zero without reading the file would make the decoder interpret new indices using old definitions, potentially selecting the wrong format.
 
-For a plain compressed file, the solution is direct: on open, scan the existing items once, restore the format template table, the next template number and the last timestamp, then continue writing. Thread info is rebuilt for the current run. UTF-16 formats are stored as UTF-Mixed in the file, so scanning also has to restore the hash of their original representation before lookups and reuse can continue.
+For an unencrypted compressed file, the writer scans the existing items on open, restores format mappings, the next format index and the last timestamp, then appends. Thread information is rebuilt for the current run. UTF-16 formats are stored as UTF-Mixed, so scanning must also recover their original representation to reconstruct the lookup hash.
 
-### 8.2 The problem with encrypted files: the writer doesn't hold the private key
+### 8.2 An encrypted writer has no private key
 
-In encrypted mode, the client is configured with only the public key. The private key is neither distributed with the client nor stored in the log file. The public key can protect freshly generated encryption material, but it cannot decrypt the old file's content.
+In encrypted mode, the client is configured with a public key. The private key is neither distributed with the client nor stored in the log file. The public key protects new encryption material but cannot decrypt old content.
 
-So the "scan the old file" step from above hits a wall: **if you can't read the old templates, you don't know which numbers were used; if you can't read the last entry, you can't restore the time baseline.** Likewise, the encryption material used by the old payload can't be recovered with just the public key.
+The writer therefore cannot scan old templates, recover the last timestamp or retrieve old encryption material as it does for an unencrypted file.
 
-Since the old state can't be recovered, build a new one: templates start from scratch, the time baseline restarts, fresh encryption material is generated, and a new payload is written. The writer never needs the private key, and it certainly doesn't need to decrypt and rewrite the entire old file just to append a few entries.
+It starts a fresh compressed stream with new templates, a new time baseline and new encryption material. This requires no private key on the writer and no decryption and rewriting of the old file.
 
-This means the file must be able to distinguish different encrypted payloads, rather than assuming one shared encryption state from beginning to end. BqLog describes such a data range with a Segment; each segment has its own header and optional encryption material. There are two levels here, don't mix them up: **re-establishing template state starts a new compressed data stream; generating new encryption material starts a new encryption segment.** They often happen together, but during recovery they can also be handled separately.
+Segments describe data ranges with their own headers and optional encryption material. The segment header tells the decoder how to decrypt that range; template indices belong to the compressed stream. For example, a later segment can still reference template 7 defined earlier, while using new encryption material.
 
-In the normal restart flow of 2.5.0, the new compressed data stream goes into a newly numbered file, and the template table and timestamp reset accordingly. The multi-segment structure inside an existing file is responsible for connecting recovered data with new data. Its layout:
+Segments within one file can reuse the templates written before them; the encrypted-restart flow is a different scenario. In the encrypted restart path of 2.5.0, the new compressed stream goes into a newly numbered file. The template table and timestamp reset with it. Segments within an existing file connect recovered data to that file's stream.
 
-![Byte layout of file, segments and heads at each level](img/performance/compressed-file-v10.png)
+![File, segment and header byte layouts](img/performance/compressed-file-v10.png)
 
-<p align="center"><em>Figure 5: the first bar continues into the second and third; line breaks are only for display. S0, S1, S2 are absolute file offsets, not memory pointers.</em></p>
+<p align="center"><em>Figure 5: the three bars form one continuous file. S0, S1 and S2 are absolute file offsets.</em></p>
 
-The outer File Header is a fixed 8 bytes: 4 bytes of version, 1 byte of file format, 3 bytes of padding. The compressed format is currently version=10, format=2.
+The file header occupies eight bytes: four for version, one for format and three for padding. The compressed format currently uses version=10 and format=2.
 
-Each segment starts with a 12-byte Segment Header:
+Each segment begins with a 12-byte header:
 
 ```text
 next_seg_pos: 8 B | seg_type: 1 B | enc_type: 1 B | padding: 2 B
 ```
 
-`next_seg_pos` points to the next segment's absolute offset in the file, and the last segment uses UINT64_MAX. This way the decoder doesn't have to scan every item of the current segment to know where it ends; reading the cache by the current segment's range also prevents one read from crossing a segment head or misusing the next segment's encryption state.
+`next_seg_pos` is the absolute offset of the next segment, or UINT64_MAX for the last one. The decoder can determine the range without scanning every item. Restricting reads to that range also prevents crossing a segment header with the wrong encryption state.
 
-`seg_type` distinguishes normal data, Appender cache recovery, and bus recovery. Rather than repeating a source field in every log entry's head, it's recorded once when the whole phase changes. The first segment's payload also stores 52 bytes of metadata and the category definitions; later segments don't repeat this file-level information.
+`seg_type` distinguishes normal data, Appender cache recovery and data bus recovery. A whole range gets its source designation once. The first segment's payload also stores 52 bytes of metadata and the category definitions; later segments reuse that file-level information.
 
-Segment headers neither repeat the file-level category table nor automatically clear the template dictionary. So during recovery, a batch of data can get fresh encryption material while continuing to use templates written earlier.
+A segment header does not automatically clear the template dictionary. Recovery can thus give a batch fresh encryption material while retaining its references to earlier templates.
 
-### 8.3 Append the new segment first, then point the previous one at it
+### 8.3 Append a segment, then link it
 
-When appending a segment at the end of the file, the current implementation first checks that the segment chain is valid, then writes the new segment header and the necessary encryption material, and only then modifies the old last segment's `next_seg_pos`. The main log data isn't moved around at all — what changes is the linkage.
+The writer checks the segment chain, writes the new segment header and encryption material at the end, then updates the previous last segment's `next_seg_pos`. The existing payload stays in place.
 
-It's much like linking the tail of a singly linked list, except the nodes are expressed as file offsets. Absolute offsets still make sense after the program is closed and reopened, and don't depend on which virtual address it got mapped to this time.
+This resembles appending to a singly linked list, with file offsets taking the place of memory pointers. The offsets remain meaningful after reopening the file, regardless of virtual addresses.
 
-Appending a segment involves checking the chain, writing the head and key material, and doing the corresponding I/O. That cost is paid once at file creation, recovery or state switch, and amortized by the mass of logs that follow — no per-entry repetition.
+Chain checks, header writes and the associated I/O happen at file creation, recovery or state transitions. Subsequent records share that setup cost.
 
-### 8.4 Why does recovered data need its own segment?
+### 8.4 Recover each representation where it belongs
 
-When the program exits abnormally, logs may be parked at different stages: some are still in the data bus, not yet encoded; some have already become compressed items sitting in the Appender's mapped cache, not yet fully written to the file.
+At a crash, some logs may still be raw records in the bus. Others may already be compressed items in the Appender's write cache, waiting to finish reaching the file. This cache is backed by a memory-mapped file (mmap), so its contents can still be inspected after a crash; [section 7.3](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD#73-recovery-after-a-crash>) of part 2 builds on this property.
 
-The already-encoded cache contains template numbers and time deltas belonging to the original data stream. To recover those bytes, there's no need to decrypt the old file and re-encode everything: append a recovery segment after the verified original file, generate new encryption material, and write the cache content in. The decoder holds the private key; having read the old segments in order, it has already built the template and time state, and after switching encryption material at the new segment it can keep interpreting those items.
+Suppose the old file defines format template 7, and a cached record references it. That record's time delta also uses the preceding record as its baseline. These bytes belong to the old stream and must retain those meanings.
 
-Records still in the bus that were never encoded are different: they retain the raw format and arguments, so they can be handed to a new compressed output to rebuild templates. In the encrypted-restart scenario this path uses a new file; once recovery is done, normal writing resumes.
+Recovery appends a segment to the verified original file, prepares new encryption material and writes the complete cached items. The decoder has the private key and learns template 7 and the time baseline from the old segments. At the new segment, it switches encryption material and continues. The writer does not need to decrypt the old file or re-encode the cached records.
 
-So a new segment does not necessarily mean a new dictionary. Segmentation spells out the relationship between encryption state, data provenance and template state, so that recovery can directly process the data already in hand — no unnecessary whole-file reads and rewrites.
+A bus record still contains the original format and arguments. The same order log here has no dependency on file template 7 yet. On an encrypted restart, it can enter a new file and receive a new template index starting at zero. The consumer processes recovered records before records from the current run.
 
-## 9. How to place encryption so it doesn't spend the time we just saved
+![Preserving old template indices or building a new stream during recovery](img/performance/recovery-streams.png)
 
-With encryption, saying "we use RSA and AES" is not the end of the story, because the two kinds of operations have very different costs and purposes. Running a public-key operation for every small log entry would repeat a fixed cost endlessly; copying out a whole second buffer for encryption would add another full round of memory traffic for free.
+<p align="center"><em>Figure 6: cached items referencing template 7 return to the old file; raw bus records can be re-encoded with template 0 in a new file.</em></p>
 
-The current implementation splits encryption into two layers:
+Segments preserve encoding work already completed. The template state to use depends on whether the log stopped in the bus or in the Appender cache.
 
-1. At segment creation, generate an AES-256 key and IV, protect the AES key with RSA-2048, and encrypt a 32 KiB mask block with AES-CBC.
-2. During steady writing, the payload sits in the Appender's batch cache and is XORed with the mask block cyclically, by file position.
+## 9. Pay encryption setup costs per segment
 
-![Per-segment encryption material and per-batch payload layout](img/performance/encryption-segments.png)
+Running a public-key operation for every log would multiply its fixed cost by the record count. Copying an entire buffer before encrypting it would add another read and write of the payload.
 
-<p align="center"><em>Figure 6: the upper half is the per-segment one-time preparation; the lower half is the routine payload processing. Note how completely different their execution frequencies are.</em></p>
+The current implementation separates preparation from payload processing:
 
-The encryption material occupies 33048 bytes: 8 bytes of public-key fingerprint, 256 bytes of RSA ciphertext, 16 bytes of IV, 32768 bytes of mask ciphertext. If a segment holds only 1 KiB of content, this fixed material is bigger than the payload; with tens of MiB per segment, it amortizes away. So judging the encryption format by per-byte speed alone is wrong — segment creation frequency and data scale are part of the picture.
+1. At segment creation, generate an AES-256 key and IV (initialization vector), protect the key with RSA-2048, and encrypt a 32 KiB mask with AES-CBC.
+2. During writing, XOR the payload in the Appender's batch buffer with the repeating mask, indexed by file position.
 
-The payload path is computed from file offsets:
+![Per-segment preparation and per-batch payload processing](img/performance/encryption-segments.png)
+
+<p align="center"><em>Figure 7: the upper section runs once per segment; the lower section transforms each payload batch in place.</em></p>
+
+Encryption material occupies 33048 bytes: an eight-byte public-key fingerprint, 256 bytes of RSA ciphertext, a 16-byte IV and 32768 bytes of encrypted mask. For a 1 KiB payload, this fixed material exceeds the payload itself. With tens of MiB per segment, it is shared across much more data. Segment creation frequency therefore matters alongside processing cost per byte.
+
+The payload uses absolute file offsets:
 
 ```text
 mask_index = file_offset & (32768 - 1)
 data[i] ^= mask[(file_offset + i) & (32768 - 1)]
 ```
 
-32768 is a power of two, so the modulo is a bitwise AND. Each batch starts from its own absolute file position — no implicit "where did we stop in the mask last time" state to thread through. Block-wise processing can use SSE, AVX2 or NEON: load data and mask, XOR, store.
+Since 32768 is a power of two, a bitwise AND implements the modulo. Each batch derives its position independently. SSE, AVX2 or NEON can load data and mask blocks, XOR them and store the result.
 
-The Appender also adjusts cache padding so that data addresses and mask positions stay relatively aligned, reducing the pain of unaligned handling. When a write is incomplete, the unwritten part of the cache has to be restored to a continuable state — the next flush must not treat already-transformed content as plain text again.
+The Appender adjusts write-cache padding to keep the data address and mask position relatively aligned. After an incomplete write, the unwritten cache portion must be restored to a state that can be processed again; the next flush must not mistake transformed bytes for plaintext.
 
-This hot path is cheap because it's a bulk XOR loop. It uses a repeating mask and has no AEAD authentication tag; scenarios needing tamper-proof authentication need a separate mechanism.
+The main work of per-batch processing is the XOR loop. The protection level is limited: this is an obfuscation layer that stops the logs from being read directly. The payload does not go through AES batch by batch; it is XORed with an AES-protected mask that repeats every 32 KiB, so known plaintext can reveal a mask segment. The format has no AEAD (authenticated encryption) tag: it does not detect tampering and cannot stop a motivated attacker. Applications needing those guarantees must add a mechanism.
 
-## 10. Where the write side and the read side spend their money
+## 10. Where writing and reading do their work
 
-Stringing the previous steps together, when a new log arrives at the compressed Appender it roughly goes through:
+A record reaching the compressed Appender follows this path:
 
 ```text
-take format hash, level, category
-  → look up format template; on miss, write a new template
-  → look up thread template; on miss, write the thread definition
-  → time delta ZigZag / VLQ
+format hash, level, category
+  → look up format template; emit a definition on a miss
+  → look up thread template; emit a definition on a miss
+  → encode time delta with ZigZag / VLQ
   → encode template indices and arguments
-  → backfill the item length
-  → mark this record as completely written into the cache
+  → backfill item length
+  → mark the record complete in the write cache
 ```
 
-Why is the length backfilled? Because the resulting length of UTF-Mixed and variable-length integers is only known after writing. Measuring everything precisely first and then writing for real would do the work twice; so we estimate the maximum space, write, and backfill. Part 3 shows how this step avoids moving the body that was just written.
+UTF-Mixed and variable-length integers get their final sizes during encoding. Reserving space, writing the body and backfilling the length avoids a separate exact-measurement pass. Part 3 examines this step.
 
-Reading runs in reverse: open the container, restore segment state, load the category table; on a format template, append it to the array; on a thread template, update the mapping; on a record, restore the time and arguments, then call the common layout to produce text. Formatting moved here — the frequently-writing side no longer builds the full text entry by entry.
+Reading reverses the process: open the container, restore segment state and load categories; append format definitions to an array and update thread mappings; reconstruct record times and arguments, then use the common layout code to produce text. The frequent write path no longer builds a complete text line for every call.
 
-Of course, the cost moved to the reader along with it: binary content can't be viewed with plain text tools, and starting from the middle of a file doesn't necessarily give you a dictionary or a time baseline. The writer's cache has an upper bound, but that doesn't mean the decoder's historical templates have the same bound. File rotation controls disk usage, and it also affects open and decode cost.
+The reader takes on the corresponding costs. Binary files require a decoder, and starting in the middle may leave the dictionary or time baseline unavailable. The writer's cache can evict entries, but the file's template history keeps growing; the decoder needs that history. File rotation affects both disk use and the cost of opening and decoding logs.
 
-## 11. When reading results, count the whole file and the whole pipeline
+Looking back, the format keeps doing one thing: it finds the repeated work that no log record can avoid and moves it to where it happens rarely. Formatting moved to read time, encryption preparation to segment creation, and state reconstruction to opening the file.
 
-In the public README's 4-million-entry size case, BqLog text is 302 MB and compressed is 45 MB — about one sixth. That's the result for that particular content, not a fixed ratio the format promises. If every entry's template is different, or the arguments are already high-entropy blobs, the win from template reuse naturally changes.
+## 11. Measure the complete file and write path
 
-The same goes for write benchmarks: how many threads, whether the final flush is counted, whether encryption segment initialization is included, and whether the comparison is text or compressed — all of it has to be looked at together. The value of the design is that it removes repeated work; how much is removed is a question for real content and real measurement.
+In the public README's four-million-record size test, BqLog text output is 302 MB and compressed output is 45 MB, less than one sixth of the text size. The ratio depends on the data. Unique formats or large, high-entropy arguments reduce template reuse.
 
-This article covered the on-disk representation. The next one goes back into memory: how do a crowd of producers hand logs to the consumer without turning the formatting cost we just saved into another kind of thread contention?
+Write benchmarks also need their context: thread count, final flush, segment initialization, and whether the output is text or compressed. The design removes identifiable work; measurements show how much that matters for a particular workload. The benchmark table at the start of part 2 gives one set of measurements of the time saved on the write path.
+
+Part 2 returns to memory: how multiple producers deliver these records to the consumer.
 
 ## Continue with the source
 
