@@ -105,6 +105,7 @@ Your program accesses the core engine through `BqLog Wrapper` (C++, Java, C#, Ty
 > Before calling any API, you need to integrate BqLog into your project first:
 > - **Standard environments** (C++, Java, C#, Python, Node.js, etc.) → [Integration Guide](docs/INTEGRATION_GUIDE.md)
 > - **Game engines** (Unity, Tuanjie Engine, Unreal Engine) → [Game Engine Integration Guide](docs/ENGINE_INTEGRATION.md)
+> - **Anything else** → [FAQ](docs/FAQ.md)
 
 ### C++
 
@@ -291,6 +292,7 @@ language and workload and should be measured separately.
 
 | Document | Description |
 |----------|-------------|
+| [FAQ](docs/FAQ.md) | Common questions: comparisons, platforms, distribution channels, crash recovery |
 | [Integration Guide](docs/INTEGRATION_GUIDE.md) | Full integration steps for all platforms + all language demos |
 | [Game Engine Integration](docs/ENGINE_INTEGRATION.md) | Unity, Tuanjie Engine, Unreal Engine plugins and Blueprint usage |
 | [API Reference](docs/API_REFERENCE.md) | Core APIs, sync/async logging, Appender overview, build & tools |

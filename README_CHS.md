@@ -106,6 +106,7 @@ BqLog 的快不是变魔术变出来的。这个系列从一行日志出发，�
 > 调用 API 前，请先将 BqLog 集成到您的项目：
 > - **常规编程环境**（C++、Java、C#、Python、Node.js 等）→ [集成指南](docs/INTEGRATION_GUIDE_CHS.md)
 > - **游戏引擎**（Unity、团结引擎、Unreal Engine）→ [游戏引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)
+> - **其他问题** → [常见问题（FAQ）](docs/FAQ_CHS.md)
 
 ### C++
 
@@ -291,6 +292,7 @@ bq.log.force_flush_all_logs();
 
 | 文档 | 说明 |
 |------|------|
+| [常见问题（FAQ）](docs/FAQ_CHS.md) | 常见问题：对比、平台与语言、发布渠道、崩溃恢复 |
 | [集成指南](docs/INTEGRATION_GUIDE_CHS.md) | 所有平台完整集成步骤 + 各语言 Demo |
 | [游戏引擎集成](docs/ENGINE_INTEGRATION_CHS.md) | Unity、团结引擎、Unreal Engine 插件与蓝图使用 |
 | [API 参考](docs/API_REFERENCE_CHS.md) | 核心 API、同步/异步日志、Appender 介绍、构建与工具 |

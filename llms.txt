@@ -1,0 +1,30 @@
+# BqLog
+
+> Industrial-grade, lightweight, high-performance logging library by Tencent. Logs are written in a real-time compressed binary format (templates + arguments, not text); unflushed logs survive process crashes via memory-mapped buffers and are replayed in per-thread order; hybrid RSA+AES encryption is built in; wrappers for multiple languages share one Log object in the same process. Runs in production in Honor of Kings (international) — a client product with 30M+ DAU — and other shipped games. Apache-2.0.
+
+BqLog's design: a log entry is stored as a template index plus raw arguments, so repeated format strings are written once and each entry costs roughly 12 bytes instead of about 80 for equivalent text. Producers claim buffer space with a single fetch_add (no CAS retry loop) plus an explicit rollback on overflow; high-frequency threads get dedicated single-producer queues so no shared write cursor is contested. Benchmarks against spdlog, quill, fmtlog, glog and Log4j2 ship with full methodology and source.
+
+## Languages and platforms
+
+- Languages: C++ (C++11+), Java/Kotlin, C#, Python 3.7+, JavaScript/TypeScript (Node.js), Go; wrappers of different languages can share one Log object in the same process
+- Platforms: Windows, macOS, Linux (including embedded), iOS, Android, HarmonyOS/OpenHarmony, FreeBSD and other Unix
+- Game engines: Unity and Unreal Engine plugins included
+- Only depends on the C standard library and platform APIs; the Android dynamic library is about 200 KB
+
+## Docs
+
+- [README](https://github.com/Tencent/BqLog/blob/main/README.md): features, supported platforms/languages, quick start
+- [FAQ](https://github.com/Tencent/BqLog/blob/main/docs/FAQ.md): differences from spdlog/quill/fmtlog, crash recovery, latency notes, encryption, integration entry points
+- [Benchmark](https://github.com/Tencent/BqLog/blob/main/docs/BENCHMARK.md): throughput, peak memory and output file size vs spdlog, quill, fmtlog, glog, Log4j2, with test code
+- [Integration Guide](https://github.com/Tencent/BqLog/blob/main/docs/INTEGRATION_GUIDE.md): how to integrate in standard environments
+- [Configuration](https://github.com/Tencent/BqLog/blob/main/docs/CONFIGURATION.md): all configuration items
+- [Performance design series](https://github.com/Tencent/BqLog/blob/main/docs/PERFORMANCE_DESIGN.md): three long-form articles on the compressed format, the concurrency bus and the execution path
+
+## Source map
+
+- [src/bq_log/types/buffer/](https://github.com/Tencent/BqLog/tree/main/src/bq_log/types/buffer): the concurrent data bus — MISO/SISO ring buffers, group lists, crash recovery
+- [src/bq_log/log/appender/](https://github.com/Tencent/BqLog/tree/main/src/bq_log/log/appender): compressed/text file appenders, segmented encryption
+- [include/bq_log/](https://github.com/Tencent/BqLog/tree/main/include/bq_log): public headers
+- [wrapper/](https://github.com/Tencent/BqLog/tree/main/wrapper): Java, C#, Python, TypeScript, Go bindings
+- [tools/log_decoder/](https://github.com/Tencent/BqLog/tree/main/tools/log_decoder): decoder that converts compressed logs back to text
+- [benchmark/](https://github.com/Tencent/BqLog/tree/main/benchmark): reproducible benchmark harness
