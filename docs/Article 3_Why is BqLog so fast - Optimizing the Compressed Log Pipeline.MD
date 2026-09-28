@@ -2,110 +2,40 @@
 
 [简体中文](<文章3_为何BqLog如此快 - 压缩日志执行路径优化.MD>) · [Series](PERFORMANCE_DESIGN.md) · [Previous: the data bus](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD>)
 
-Parts 1 and 2 described the compressed file and the producer-to-consumer data bus. We can now follow a record through the write path and look for repeated work: scanning its format string again, probing the same hash-table slots twice, or moving encoded content to fit a length field.
+> Written against BqLog 2.5.0. The simplified pseudocode explains the ideas; the source files listed at the end hold the real branches.
 
-Note that none of these three wastes sits inside a single step; each sits at the handoff between two steps, where the next step computes again what the previous step already produced. Small costs accumulate across millions of records. This article follows the application thread into the Appender, examining both work that can be removed and dependencies that make the CPU wait.
+Part 1 settled what a log looks like on disk; part 2 settled how data travels from business threads to the consumer. The road doesn't end there. Once the consumer picks up a record it still has to look up templates, encode, and hit the disk — and on the producer side, copying and hashing happen too. Each of these little jobs is cheap on its own, but every single log entry pays them all. So in this one we follow a log entry down the road and watch where the CPU time actually goes — and which of it can simply not be spent.
 
-> This article describes BqLog 2.5.0. Pseudocode explains the design; the source files listed at the end contain the full branches.
-
-## 1. Following one record
-
-Suppose the application calls:
+Start with a step nobody gets to skip. An async logger lives with a hard constraint: the caller's format string can die at any moment, so it must be copied into the bus. And copying isn't the end of it — the compressed format has to answer "have I seen this format before?", which means hashing the string. The plain way to write it:
 
 ```cpp
-log.info("player {} enters level {}", player_id, level_id);
+memcpy(destination, source, length);  // copy from the producer thread into the bus
+hash = hash_bytes(destination, length); // consumer reads it back out and hashes it
 ```
 
-The asynchronous compressed path has two sides:
+See the problem? The same memory gets read **twice**, front to back. The second pass will probably hit the CPU cache — but a cache hit still issues load instructions and pushes the bytes back into registers. This article starts from "can we skip one of those passes?" and keeps asking from there.
 
-```text
-Application thread:
-check level and category
-compute storage for the format and arguments
-reserve bus memory
-copy the format and arguments
-commit the record
+## 1. Hash while you copy
 
-Consumer thread:
-look up format and thread templates
-encode time delta, indices and arguments into the write cache
-process and write batches
-```
+Can the second pass be avoided? Of course: **load once, use twice.** The string's bytes have to pass through registers anyway on their way to the destination — so while they're sitting there, feed them to the hash.
 
-Part 2 explained the handoff. The application thread should return quickly, while the consumer must keep up with its queues. The Appender owns the template tables on the consumer side, so producers do not compete to update them.
-
-Copying the format string already loads its characters. Hashing can use those loaded values. A failed template lookup already finds an empty slot; insertion can reuse its position.
-
-Instruction count also leaves part of the cost unexplained. An instruction may wait for the preceding result, or for data to arrive in a CPU cache. CRC (a cyclic redundancy check, detailed in [§4](#4-compute-the-hash-while-copying)) and template lookup illustrate these two sources of waiting.
-
-## 2. Filter before serialization
-
-If a level or category is disabled, calculating lengths and allocating a record only to discard it would waste work.
-
-The C++ wrapper first checks a level bitmap and a category mask. The level bitmap combines the configured Appender levels: a level accepted by none can be skipped immediately. Categories disabled at the Log level are also filtered here. Individual Appender enable states, categories and other conditions are checked later on the consumer side.
-
-C++ evaluates argument expressions before entering a function:
-
-```cpp
-log.debug("state={}", build_expensive_state_string());
-```
-
-Even if debug is filtered, `build_expensive_state_string()` has already executed. An expensive argument needs a caller-side enabled check before construction. Filtering inside the wrapper saves serialization and submission work after function entry. This is the only step on the whole path where the savings depend on the caller; the savings of every later step are guaranteed by the library itself.
-
-## 3. Carry known lengths into serialization
-
-The sizes of int32, double and bool follow from their types. No content scan is needed.
-
-Strings have several sources: an object may carry its size, a pointer may require scanning to a terminator, and an array may expose its extent to the compiler. Reducing all of these to `strlen` would discard existing information.
-
-For UTF-8 and UTF-16 inputs that need no transcoding, the wrapper can use array or object lengths. A zero-terminated pointer requires a scan. UTF-32 is converted to the bus's UTF-16 representation, so its content must still be examined to determine the output size. A known source character count does not always give the destination byte count.
-
-Reservation needs the total size; writing each argument needs its individual size. `size_seq` (the argument size sequence) combines compile-time sizes with runtime results so both operations can use the same information.
-
-For an int32, a double and a string containing n bytes, the required space is the fixed header, argument areas, n content bytes and alignment padding. The 61-byte record in part 1's figure 4 was added up in exactly this way. The wrapper can write directly into the bus record without assembling a temporary argument array.
-
-These are bus-layout sizes: integers still occupy fixed widths, with suitable alignment. Section 9 concerns lengths after file encoding, where the same integer may occupy fewer bytes as VLQ. Each stage reuses lengths within its own representation.
-
-### 3.1 Java and C# write arguments into the bus
-
-Creating a temporary byte array in Java, filling it, then asking native code to copy it would still allocate objects and intermediate storage per record. BqLog first reserves a bus record, then lets the wrapper fill that memory.
-
-Java accesses the native ring through a direct ByteBuffer, with views reused on the applicable paths. C# keeps the write handle in a value-type `log_context` and fills arguments through the destination address. A final commit makes the complete record available to the consumer.
-
-![Wrappers fill a reserved bus record directly](img/performance/wrapper-direct-write.png)
-
-<p align="center"><em>Figure 1: obtain the destination region, write arguments, then commit; no intermediate serialization buffer is required.</em></p>
-
-Java overloads for fixed argument counts also avoid a varargs array. For primitive values that would otherwise be boxed, `bq.utils.param.no_boxing(...)` borrows a parameter wrapper from a thread-local pool and returns it after serialization. Pool initialization and growth still allocate, and caller-created strings or stack traces have their own costs. Direct writes and object reuse work together to reduce allocation on the routine path.
-
-## 4. Compute the hash while copying
-
-An asynchronous consumer may run after the caller's format storage is gone, so the format must be copied into the bus. The compressed Appender also needs a hash to find matching templates.
-
-A straightforward implementation would be:
-
-```cpp
-memcpy(destination, source, length);
-hash = hash_bytes(destination, length);
-```
-
-Moving hashing to the consumer still reads the string a second time. That pass may hit a CPU cache, but it still issues loads to bring the bytes into registers. Fusing the operations removes that repeated work.
-
-For UTF-8 and UTF-16 format strings with a direct address, `__api_log_write_begin` uses:
+For UTF-8/UTF-16 format strings with a direct address, `__api_log_write_begin` calls exactly that fused function:
 
 ```cpp
 head->format_hash = bq::util::bq_memcpy_with_hash(
     handle.format_data_addr, format_str_data, format_str_bytes_len);
 ```
 
-The loop shows how the two operations share data:
+Watch the loads and stores in the loop and you can see the two jobs sharing one piece of data:
 
-![Loaded values feeding stores and CRC updates](img/performance/fused-copy-hash.png)
+![The fused copy-hash: loads, register values and stores](img/performance/fused-copy-hash.png)
 
-<p align="center"><em>Figure 2: the 32-byte main loop loads four 64-bit values for both copying and CRC updates. The lower example shows the tail overlap for length 45.</em></p>
+<p align="center"><em>Figure 1: the 32-byte main loop gets four 64-bit values per round; each value is both stored to the destination and folded into the CRC. Below: the tail overlap at length 45.</em></p>
+
+The main body boils down to this:
 
 ```cpp
-// Illustration; production code also handles lengths, hardware and tails.
+// sketch: the real thing has length branches, hardware selection and tail handling
 load_8_bytes(v0, source + 0);
 load_8_bytes(v1, source + 8);
 load_8_bytes(v2, source + 16);
@@ -122,11 +52,15 @@ h2 = crc_update(h2, v2);
 h3 = crc_update(h3, v3);
 ```
 
-The same `v0..v3` values feed the stores and the CRC states. CRC is originally a cyclic redundancy check; modern CPUs provide a single instruction for it, and BqLog borrows that instruction to compute its hash. One update is one instruction, and its execution characteristics directly determine how fast the hash is, as the next section explains. The hashing part therefore needs no separate set of loads over the whole string. A fixed eight-byte `memcpy` usually compiles into loads and stores while avoiding unaligned typed-pointer dereferences in the source.
+The four loaded values `v0..v3` get stored to the destination and folded into CRC state — so the hash side never issues its own round of loads for the string. CRC was born as an error-detecting code, but modern CPUs give it a single instruction, and BqLog borrows that instruction as its hash: one update, one instruction.
 
-### 4.1 Why use four CRC states?
+A fixed-size 8-byte `memcpy` is usually expanded by the compiler into plain load/store instructions, which also keeps the source from dereferencing unaligned pointers directly.
 
-Updating one state for every word gives:
+So the second read is gone. Don't celebrate yet: those eight `crc_update` instructions still take time. The copy came for free; the hash didn't — and how that bill gets paid is the next section.
+
+## 2. Why one CRC accumulator can't keep the CPU fed
+
+The natural way to hash is one accumulator, start to finish:
 
 ```text
 h = crc(h, v0)
@@ -135,244 +69,115 @@ h = crc(h, v2)
 h = crc(h, v3)
 ```
 
-The second update needs the first result, and the third needs the second. Even an out-of-order CPU must wait until an instruction's inputs are ready.
+The trouble is dependency. The second update needs the new `h` from the first; the third needs the second's. An out-of-order CPU can do many things, but it can't start an instruction whose input doesn't exist yet — the four updates have to queue up single file.
 
-Instruction latency and throughput are different. A CRC instruction can take several pipeline stages to produce its result while the execution unit accepts another independent CRC before that result is ready.
+This is where two ideas people constantly mix up need separating: **latency** and **throughput**. A CRC instruction may take several pipeline stages from entry to result — that's latency; say 3 cycles. But the execution unit doesn't wait for the previous instruction to finish before accepting the next one — as long as the new instruction doesn't depend on it, it can accept one every cycle. That's throughput.
 
-Suppose latency is three cycles and the pipeline can accept one CRC per cycle. A single state allows four updates to start at cycles 0, 3, 6 and 9. Four independent states can start at 0, 1, 2 and 3. These illustrative numbers show the effect of the dependency.
+Now the arithmetic. One `h`: fire the first update at cycle 0; the second needs its result, so it waits for `h` to come out at (our assumed) cycle 3 — the four updates fire at cycles 0, 3, 6, 9, and every issue slot in between idles. With four independent states `h0..h3`: nobody waits for anybody, and the four updates enter the pipeline at cycles 0, 1, 2, 3. The numbers are made up; the difference is real — and it's why the code in the previous section spells out four variables instead of one: one long dependency chain becomes four short ones. Each chain still has dependencies inside it, but the chains don't slow each other down, and the out-of-order scheduler can slip ready loads and stores into the gaps. Instruction-level parallelism, one core, no extra threads.
 
-BqLog splits the long dependency chain into four. Updates within each chain remain dependent, but the chains can advance independently. The out-of-order scheduler can also interleave ready loads and stores. This is instruction-level parallelism on one core and needs no extra threads.
+After the loop, the four states are combined with rotates and XORs into the 64-bit hash. So this hash is not what a single accumulator running standard CRC over all the bytes would produce — which is fine. It's only an internal key for template lookup, as long as the fused-copy path and the pure-hash path follow the same definition.
 
-After the loop, rotations and XORs combine the states into a 64-bit hash. This defines BqLog's template-lookup hash; it does not equal the standard CRC of the entire string processed with one accumulator. Fused copying and hash-only processing use the same algorithm and return matching hashes.
+One small tail to settle: the main loop eats 32 bytes a round — what about the remainder? You can branch down through 16, 8, 4, 2, 1 bytes, but branches cost money too. The implementation instead takes the last 32 bytes from the end of the string: at length 45, the body covers [0,32), the tail covers [13,45), and [13,32) gets read twice. Same destination offsets, so the copy is identical, and the hash algorithm is defined with that overlap built in. A few re-read bytes in exchange for zero tail branches — same stingy thinking as "a little extra memory for one less load pass". Inputs shorter than 32 bytes take a separate short-string path.
 
-### 4.2 A little overlap simplifies the tail
+## 3. Who spends the hash: the template table's L1 and L2
 
-For inputs of at least 32 bytes, the main loop processes 32-byte blocks. A remainder could be handled in 16-, 8-, 4-, 2- and 1-byte pieces, each with another decision. Instead, the implementation processes the final 32 bytes of the input. Shorter inputs have separate paths.
+The hash is computed — who uses it? First, don't waste it: the producer writes it into the `format_hash` field of the 40-byte log head (the same header from part 1's figure 4), and it rides along with the record to the consumer. A non-zero `format_hash` is used directly; a zero falls back to recomputing on the spot with the pure-hash path (call-stack concatenation, wrapper-filled formats, and other paths that can't offer a string address, plus the unlucky case of a hash that's actually zero) — no log is ever dropped over this. The 64-bit value is a runtime key only and never touches the file.
 
-At length 45, the main block is [0,32) and the final block is [13,45), so [13,32) is read again. The repeated stores target the same offsets, leaving the copy unchanged. The hash definition includes this overlap.
+And what does the consumer need it for? Template lookup. Part 1 pulled repeated formats out into templates so each log only stores a template index — which means every record that arrives asks the same question: **which index does this format map to?**
 
-The three choices address different costs: fusion removes the extra full traversal, independent CRC chains reduce dependency stalls, and overlapping tail handling reduces branches.
+Pick the data structure after you understand the access pattern. Logging has fierce temporal locality: a program keeps executing the same set of log statements, so a format used a moment ago will probably be used again. That's why the Appender puts a tiny direct-mapped table in front of the big one: 256 slots for formats (about 4 KiB), 64 for threads (about 1 KiB). Each key maps to exactly one candidate slot; compare the full key, and a hit ends the search — not one extra probe.
 
-### 4.3 Pass the hash to the consumer
+These **L1 and L2 are two levels of software cache maintained by the Appender itself**, borrowing the idea of CPU cache hierarchies: keep hot data close. A small table's working set stays concentrated, so it's more likely to stay in the CPU's data cache; an L1 hit saves both the big-table lookup and the trip to a larger memory region. The names rhyme with hardware L1/L2, but the two tables are not pinned to any particular level of the processor's cache.
 
-The producer stores the result in the `format_hash` field of the 40-byte record header (the 40-byte memory header in part 1's figure 4), and it travels with the record to the consumer; otherwise the consumer would have to recompute it. The consumer uses a nonzero value directly and computes a hash when it is zero.
+When two keys land on the same L1 slot, the newcomer replaces the old entry; a later miss goes to L2, and the result is refilled into L1. Hot formats take the short path, cold ones still have the big table. The thread template has an even cheaper shortcut: part 2's SISO batch reads make one thread's records arrive back to back, so if this thread ID equals the previous one, last time's template index is reused — even slot selection is skipped.
 
-Stack-trace concatenation, wrapper-filled formats and some encoding conversions may not provide a format address at the begin call. Go's fused native interface does pass that address; JNI and NAPI coverage depends on how each obtains the string data. A hash that happens to be zero also causes recomputation.
+L2 uses open addressing with linear probing: entries sit in array slots, and an occupied home slot means probing forward. No pointer-chasing between nodes — and since the CPU fetches memory in cache lines, the neighbors of the slot you just read often arrive with it, so probing forward is frequently free. That's spatial locality, teaming up with the temporal kind above. Layout matters too: a key is 8 bytes and a value 4, so a struct would get padded to 16 bytes per entry; split into separate `keys[]` and `values[]` arrays and each slot costs 12 — the whole table shrinks by a quarter and the same cache holds more of it.
 
-The runtime hash is not stored in the file. The decoder follows file template indices without reproducing the writer's hash.
+One more instruction-saving design in this table: **when a lookup fails, remember where the empty slot was.** Say a key starts probing at slot 3; slots 3 and 4 are taken, slot 5 is empty — the search stops there. But if the interface is just `find` and `insert`, then after the Appender finishes writing the new template, inserting it means probing 3, 4, 5 all over again. Here, a missing `find` returns an `insert_token` holding the slot index and the table's `table_revision`: if the table hasn't changed, `insert` uses that slot directly; if the revision moved (say, a resize relocated everything), it probes honestly from scratch. The re-probe's hashing, emptiness checks and comparisons all get skipped, instructions and all.
 
-## 5. Choose the template cache for its access pattern
+One more trap worth naming: picking a slot really means masking off some bits of the key. But the input might be an aligned thread ID (whose low bits are all identical) or carry the category in the high bits (leaving the low bits nearly frozen) — mask the low bits directly and some inputs pile into one small patch of the table, and probe runs get longer and longer. So before choosing a slot, the key goes through a bit mixer (Murmur3's fmix64), and the mixed *high* bits are used — every bit of the original key gets a say in where it starts.
 
-Part 1 removed repeated formats from file records, leaving each record with an index. The Appender now has to find that index for every format it consumes.
-
-Average O(1) lookup says little about memory latency. A node-based table may load a pointer before it can load the target node; cache misses turn those steps into waits. Fewer probes and a smaller frequently accessed region can shorten the path.
-
-Log formats have temporal locality: the application repeatedly executes the same logging statements. BqLog places a small direct-mapped L1 before the larger table: 256 slots for formats and 64 for threads. Each key has one candidate slot. Comparing the full key yields an index immediately on a hit.
-
-**L1 and L2 here are software caches maintained by the Appender.** With common 64-bit layouts, the format and thread L1 tables occupy about 4 KiB and 1 KiB. Repeated accesses to this small region are more likely to remain in CPU data caches. A software L1 hit avoids the larger table; the names do not bind either table to a specific hardware cache level.
-
-L2 retains more mappings. Two keys mapping to the same L1 slot replace one another there. A subsequent L1 miss checks L2 and fills L1 with the result.
-
-Producers cache thread IDs and names in TLS to reduce repeated system queries. On the consumer side, thread lookup starts with an even shorter check: if the ID matches the preceding record, reuse its template index. SISO batch reads from part 2 produce consecutive records from one thread, making this reuse useful before even consulting L1.
-
-The format key includes category and level:
+The format key itself stitches the string hash together with category and level:
 
 ```cpp
 key = format_hash ^ ((uint64_t(category_index) << 32) | level);
 ```
 
-The same string used with another category or level requires another template, so both fields participate in the key.
+The same format string under a different category or level is a different template, so the key has to carry all those fields. Two kinds of collision to keep apart: two keys choosing the same slot — just probe on; two different formats producing the exact same 64-bit key — the fast path never re-checks the original string and will treat them as one template. That's the price of letting 64 bits do all the talking. And when the table fills up: L2 admits only 1 in 64 new insertions, so one-off formats can't evict the hot set; a format that isn't admitted is still written to the file — next time it misses, the template is simply written again. The file grows a little; decoding is unaffected.
 
-![Software cache lookup, contiguous storage and reusable probe positions](img/performance/template-cache.png)
+![Two cache levels, split arrays and the insert token](img/performance/template-cache.png)
 
-<p align="center"><em>Figure 3: L1 hits return immediately. Misses proceed to L2; an empty slot found there can be reused by insertion.</em></p>
+<p align="center"><em>Figure 2: the 256-slot direct-mapped L1 on top; L2 below with keys and values in two separate contiguous arrays. The empty slot found during a lookup can be handed to the insert that follows.</em></p>
 
-## 6. Reduce L2 memory traffic and repeated probes
+## 4. UTF-Mixed: stop treating every character like the hardest one
 
-### 6.1 Separate keys and values
+Template found; now encode the arguments. The string arguments have their own trick waiting.
 
-L2 uses open addressing with linear probing. Entries occupy array slots; when the candidate slot belongs to another key, lookup examines the next one. This avoids per-entry node allocations and pointer chasing.
+Part 1 introduced the UTF-Mixed format: ASCII characters narrow to single bytes, and once content shows up that doesn't suit fast handling, the whole remaining suffix is stored as raw UTF-16. Why not just convert everything to UTF-8 properly? Because a full conversion asks of every character "how many bytes do you need?" and then assembles the multibyte sequences one by one — expensive. UTF-Mixed's bargain: simple characters take the fast lane, complicated content gets packed up wholesale, no questions asked.
 
-CPUs fetch cache lines containing adjacent bytes. Probing neighboring slots can therefore reuse data loaded by an earlier probe. This spatial locality complements the temporal locality of repeatedly used formats.
-
-Each key occupies eight bytes and each value four. On common 64-bit layouts, a struct containing both occupies 16 bytes because of alignment. Separate `keys[]` and `values[]` arrays need 12 bytes per slot in total, reducing their storage by a quarter. The same amount of CPU cache can hold more table data.
-
-A probe still reads `values[]` to detect an empty slot and `keys[]` to compare the key. The split removes padding and shrinks the table; it does not eliminate one of these reads.
-
-With the default limit of 100000 format entries and roughly 50% load factor, a power-of-two capacity can reach 262144 slots, about 3 MiB for the arrays. L1, allocator overhead, old and new arrays during growth, and other Logs add to total memory.
-
-### 6.2 Keep the empty slot found by a miss
-
-Suppose a lookup starts at slot 3:
-
-```text
-slot 3: occupied by another key
-slot 4: occupied by another key
-slot 5: empty
-```
-
-The miss already found an insertion position. Separate `find(key)` and `insert(key, value)` calls could probe 3, 4 and 5 again after the Appender writes the new template.
-
-BqLog's `find` returns an `insert_token` containing the slot and `table_revision`. If the table remains unchanged, insertion reuses that position. A changed revision requires another lookup.
-
-Resizing, for example, can change a key's position and invalidate the token. With a stable table, the token saves the repeated calculations, empty checks and comparisons even when all those slots would hit a CPU cache.
-
-### 6.3 Mix the key again for slot selection
-
-A format hash and a slot-selection hash serve different purposes. A key may contain an aligned thread ID or category bits high in the word. Masking raw low bits can concentrate such keys in a small part of the table.
-
-Concentrated starting positions create long probe runs and more reads and comparisons. BqLog applies a common bit-mixing function (Murmur3's fmix64 finalizer) and selects from the mixed high bits, distributing the effect of the input bits across slot positions.
-
-Different keys choosing the same slot are handled by comparison and probing. Different formats producing the same complete 64-bit key get no re-check against the original strings: if that really happens, the writer treats the two formats as one template. That is the cost of relying entirely on a 64-bit key to distinguish formats.
-
-## 7. Limit replacement when the cache is full
-
-A bounded L2 limits memory, but it must also decide which new formats to admit.
-
-Imagine 101 templates repeatedly passing through a cache that holds 100. Replacing an old entry on every miss can evict the one needed next. A stream of one-off dynamic formats can similarly displace a useful working set.
-
-Once full, L2 admits **one out of every 64 new insertion attempts** and selects a victim with a rotating position. It does not count each format's frequency. Slower replacement reduces disruption from incoming formats and performs fewer eviction and insertion operations.
-
-A rejected admission only means the mapping is not kept in L2. The template and record still enter the file, and L1 may retain the mapping. If a later lookup misses both levels, the writer emits another template and gives the record a new index. Repeated misses can therefore increase file size while records remain decodable. This is exactly the trade-off announced in [section 4](<Article 1_Why is BqLog so fast - High Performance Realtime Compressed Log Format.MD#4-inside-the-templates>) of part 1: cache eviction affects only reuse rate and file size.
-
-When growing the table, the implementation allocates new arrays, migrates entries, then releases the old arrays. Allocation failure leaves the old table in use. Peak-memory estimates must include both arrays during migration.
-
-## 8. Fast conversion of the ASCII prefix
-
-Part 1 introduced UTF-Mixed: narrow the initial ASCII content, then retain a UTF-16 suffix. Here is how the fast portion runs.
-
-ASCII code points lie in `0x0000..0x007F`. Their UTF-16 code units have nine zero high bits, allowing the high byte to be removed.
-
-The scalar implementation loads four UTF-16 code units into a 64-bit value and checks them together:
+The fast lane's key question is "is this character ASCII?" In UTF-16, ASCII values live in `0x0000..0x007F` — the top 9 bits are all zero. The scalar version reads four UTF-16 code units into one 64-bit value and checks all four groups of top-9-bits with a single mask:
 
 ```text
 v & 0xFF80FF80FF80FF80
 ```
 
-A zero result means all four can be narrowed. The code extracts and packs their low bytes, using the loaded value for both the test and conversion.
+If the result is zero, all four characters are ASCII — extract the low bytes and pack them. One load, and the checking and encoding finish together. My favorite line in the whole article.
 
-SIMD checks larger batches. If an entire block is ASCII, it narrows and stores the block. A block containing non-ASCII ends the fast conversion: the encoder writes `FF` and copies the remaining UTF-16 suffix. It avoids deciding how many UTF-8 bytes each remaining character needs and generating those sequences.
+SIMD scales the same idea to whole blocks: once a block is confirmed all-ASCII, narrow and store it in one go; a block containing anything non-ASCII ends the fast conversion — write an `FF` marker and keep the rest as raw UTF-16. Checking by the block means a few ASCII characters right before the boundary may stay in UTF-16 too — a few extra bytes in exchange for never hunting the exact boundary character by character. Same trade as the CRC tail's overlapping re-read; the aesthetic is identical.
 
-The split may leave a few ASCII characters in that suffix. This slightly larger output avoids searching character by character for the exact boundary.
+![The byte-level trade of UTF-Mixed](img/performance/compressed-utf-mixed.png)
 
-![UTF-Mixed conversion and byte counts](img/performance/compressed-utf-mixed.png)
+<p align="center"><em>Figure 3: <code>u"abc中x"</code> encoded as UTF-Mixed — ASCII narrows to single bytes, an <code>FF</code> marker, then the CJK characters stay as UTF-16. A full UTF-8 conversion would take 7 bytes; UTF-Mixed takes 8, and that extra byte buys freedom from per-character transcoding.</em></p>
 
-<p align="center"><em>Figure 4: encoding cost and output size both matter when choosing whether to transcode the entire string.</em></p>
+Once a template hits, the same format never gets converted again; only the per-call argument strings travel this path. When appending to an old file, the UTF-Mixed content must first be restored into a temporary buffer to recover the original format's hash — but that extra read happens at file-open time, not on the per-record path.
 
-A long ASCII prefix gives this path more content to narrow. An early non-ASCII block leaves a longer UTF-16 suffix. Template hits avoid reconverting the same format; changing string arguments still require their own conversion.
+## 5. Amortizing fixed costs: batched writes and segmented encryption
 
-Reopening an existing file requires restoring UTF-Mixed formats to temporary UTF-16 storage before reconstructing their hashes. This extra pass belongs to opening and scanning the file, rather than routine record writes.
+These last two optimizations look different but play the same game: find an operation with a fixed cost, and let a batch of data split the bill.
 
-## 9. Write the body, then backfill lengths
+The first is batched output. One log entry is a few dozen bytes; calling the file-write interface per record pays the syscall's fixed cost every time. So the Appender encodes records into a write cache back to back and flushes in batches. `write_cache_size` targets 64 KiB–4 MiB, rounded to a power of two — a bigger cache means fewer write calls, at the price of more memory and more unflushed data. An oversized record may temporarily exceed the target, so it's not an absolute memory ceiling. The encrypted path's batched XOR adds one more wrinkle: data and mask have to be loaded together, so the two addresses had better cooperate with SIMD. Take 32-byte alignment: if both addresses have the same remainder mod 32, handling the head fragment first brings both onto whole-block boundaries and the AVX2 loop can run flat out; different remainders and they'll never line up. The mask's position is fixed by the absolute file offset, so setting the write cache's leading padding to the matching value keeps the relative alignment for a whole segment. The Appender adjusts that padding once at segment creation or after a flush (which may take a `memmove` of the cached data), and every record in the batch benefits.
 
-Bus records identify where arguments reside. Their file sizes change when integers become VLQ and UTF-16 becomes UTF-Mixed. Measuring before encoding would repeat the conversion decisions.
-
-The Appender reserves write-cache space, leaves room for a header, and writes the body. The final pointer difference gives the actual size. Two distinct length fields are involved.
-
-### 9.1 The outer item header
-
-Part 1 showed two layouts: a separate type byte, or a type bit merged into the first byte of a multi-byte VLQ. BqLog uses them to keep the reserved header width fixed. If the encoded length fits the anticipated width, the type stays separate. If the length needs one extra byte, the type shares its first byte. The body stays in place in both cases.
-
-For a two-byte reservation, body length 5 gives `80 85`: one type byte and one length byte. Body length 128 gives `C0 00`: type merged into a two-byte length. Both headers occupy two bytes. Why not always reserve the five-byte maximum? Because short items are the majority, and header width is itself space worth saving. Format templates have a separate reservation check and may cancel and retry with the measured length when it does not fit.
-
-### 9.2 A UTF-Mixed argument's string length
-
-A string argument has its own length field inside the body. If two bytes were reserved but the length only needs one, the encoder leaves a `00` placeholder after the length and keeps the string in place. The placeholder counts toward the outer body size but not the string length. The UTF-Mixed argument decoder skips it.
-
-![Outer header backfill and inner string-length padding](img/performance/write-cache-backfill.png)
-
-<p align="center"><em>Figure 5: the outer header keeps its width by sharing a type bit; the lower 00 belongs inside a string argument.</em></p>
-
-The current decoder recognizes the placeholder by checking whether the first byte after the length is `00`. A string whose content really begins with 0x00 would be misread as having a placeholder, so strings beginning with NUL are a boundary that needs separate verification; this rule alone does not establish unambiguous handling of all binary string contents.
-
-Only after a record and its required new templates are encoded does `mark_write_finished()` advance the complete-record boundary. The temporary write position can run ahead, while flush and recovery use only the completed prefix.
-
-## 10. SIMD alignment and batched I/O in the write cache
-
-The next three sections apply one technique in three places: find an operation with a fixed cost and let a batch of data share it. The first is batched output. Writing each small record through a file API would repeatedly pay the call's fixed overhead. The Appender encodes records contiguously in its write cache and writes batches.
-
-The `write_cache_size` target range is 64 KiB–4 MiB, rounded to a power of two. Larger buffers can reduce write calls while increasing memory and queued output. An unusually large record may exceed the target allocation, so it is not an absolute memory ceiling. This buffer is also separate from the LP and HP capacities in part 2.
-
-The Appender write cache is an output buffer, distinct from the CPU caches discussed earlier. Its data address must also work well with the mask address used by SIMD XOR.
-
-For 32-byte alignment, suppose both addresses have remainder 5. Processing 27 bytes brings both to aligned boundaries, after which AVX2 can process full blocks. Different remainders cannot both be corrected by advancing the two addresses equally.
-
-The Appender adjusts leading padding according to file position to maintain this relative alignment. Adjustment may require `memmove`, so it is concentrated at boundaries such as segment creation and flushing. A subsequent batch shares the result.
-
-## 11. Encryption cost depends on segments and batches
-
-Part 1 introduced segmented encryption, the second application of sharing a fixed cost across a batch: RSA and AES preparation happens at segment creation, and the payload is processed in batches. Its cost can be approximated as:
+The second is segmented encryption. Part 1 covered the structure; here we count costs:
 
 ```text
-total cost ≈ segment count × setup cost per segment
-           + payload bytes × transformation cost per byte
-           + batch count × fixed I/O cost per batch
+total cost ≈ segments × per-segment init cost
+           + payload bytes × steady transform cost
+           + batches × per-batch I/O cost
 ```
 
-Setup uses RSA to protect an AES key and AES to process the 32 KiB mask. Subsequent payload batches undergo repeating XOR in place. Longer segments share setup across more records; short segments pay it more frequently.
+Segment init — wrapping the AES key with RSA and processing the 32 KiB mask with AES — happens once per segment; the payload is then XORed in place, batch after batch. The longer the segment, the more logs share that init. Measured on part 2's scenario: one thread writing 2 million entries takes 95 ms compressed and 102 ms compressed+encrypted; ten threads writing 20 million take 507 ms vs 493 ms. So encryption's share of the bill moves with concurrency and volume — it's not a fixed tax. One honest note: this scheme has no AEAD authentication tag, so if you need proof the logs weren't tampered with, that mechanism has to come from elsewhere.
 
-![Per-segment setup and repeated payload processing](img/performance/encryption-segments.png)
+![Fixed cost vs per-batch cost of segmented encryption](img/performance/encryption-segments.png)
 
-<p align="center"><em>Figure 6: separating execution counts explains why segment length and batch size affect total cost.</em></p>
+<p align="center"><em>Figure 4: the cost structure of segmented encryption — each segment opens with a one-time RSA key wrap and AES mask generation, then the payload is XORed cyclically by file offset. Longer segments spread the init thinner.</em></p>
 
-The benchmark in part 2 writes two million records per thread: two million at one thread and twenty million at ten. Compressed and encrypted compressed output take 95 and 102 ms at one thread, and 507 and 493 ms at ten. The difference in total-path time changes with concurrency and workload size.
+## 6. Wrapping up
 
-The format uses RSA, AES and a repeating mask, without an AEAD authentication tag. Applications requiring tamper detection need additional authentication.
+Taken one by one, none of these tricks is deep magic: hash while you copy, keep a few extra accumulators, remember an empty slot, check four characters with one mask. All small things you could do on any afternoon. But logs come in volume — the same path runs tens of thousands of times a second, and every little saving along it shows up in the performance you measure.
 
-## 12. Merge consumer wakeup requests
+That's the execution path for now. This series isn't finished — when the next good topic shows up, we'll keep going.
 
-The third application is the fixed cost of notification. Notifying the consumer after every record would make producers repeatedly contend on notification state and a mutex. A consumer already processing data does not need those notifications.
+## Appendix: how to tell an optimization actually works, instead of just looking clever
 
-The API requests a wakeup when capacity is insufficient or running low. Before waiting, the consumer sets `awake_flag` to true. The first request atomically exchanges it to false, then takes the mutex and condition-variable notification path. Later requests see false and return without repeating the notification.
+These changes reduce work, but you can't extrapolate total time from "one less traversal" or "wider instructions". To measure a single factor's gain, the control group may only change that factor:
 
-The background thread continues while work is available and waits for notification or timeout when idle. The flag controls notification; queue commit and release/acquire operations still publish the record data.
-
-Fewer notifications help frequent writes, while an infrequent record may wait for the consumer to wake and then for the Appender to flush. Both waits contribute to delivery latency.
-
-## 13. Caching on the text path
-
-The optimizations so far have all been on the compressed path. The text Appender (the BqLog Text row in the benchmark) writes no VLQ and no templates, but it has its own repeated work to save, again through caching:
-
-- Time strings are cached per millisecond: records within the same millisecond memcpy the previously formatted result, and the three digits of the millisecond part are assembled from a 1000-entry lookup table, with no division.
-- Thread information is cached per thread ID: once `[tid-xxx name]` has been assembled, later records reuse it directly.
-
-In the ten-thread case, text mode takes 2811 ms, while spdlog in async mode takes 32939 ms. The caching on this path is one source of that gap: even without the compressed format, the consumer should not format every log from scratch.
-
-## 14. Measure each change against a specific baseline
-
-A removed traversal or wider SIMD operation does not by itself predict total runtime. A useful comparison changes one factor at a time.
-
-| Change | Comparison | Also check |
+| What you want to verify | Control setup | Also check |
 |---|---|---|
-| Fused copy and hash | Same hash algorithm, fused versus copy followed by hash | Data, lengths, alignment, warm and cold caches |
-| Four CRC chains | Same input length and CRC update count, different state dependencies | Assembly and cycles per byte; the two hash definitions differ |
-| Software L1 | Same L2 and input, enable versus bypass L1 | Software hit rate, CPU cache misses, lookup time |
-| L2 layout | Same capacity, probing and admission policy, struct array versus split arrays | Probe counts, CPU cache misses, memory |
-| Insert token | Same miss sequence, reuse versus repeat the lookup | Correct invalidation after table changes |
-| UTF-Mixed format | Same UTF-16 input, full UTF-8 conversion versus UTF-Mixed | Time and size for ASCII, Chinese and mixed text; identical decoded content |
-| ASCII fast conversion | Scalar versus SIMD on identical input | Conversion time; split positions may differ, decoded content must agree |
-| Batch size | Same output and discard policy (part 2, [section 8.2](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD#82-when-the-consumer-falls-behind>)'s discard, block and expand), vary the write cache | I/O calls, RSS, call latency and final flush time |
+| Fused copy-hash | Same hash algorithm, fused vs copy-then-hash | Identical data, lengths, alignment, hot/cold cache |
+| Four CRC chains | Fixed input length and CRC update count; vary only the state dependency | Inspect assembly and cycles per byte; this is an instruction-dependency experiment and the two hashes differ by definition |
+| Software L1 | Same L2 and input; L1 enabled vs bypassed | Software hit rate, CPU cache misses, lookup latency |
+| L2 layout and token | Same capacity and admission policy, struct array vs split arrays; same miss sequence, reuse probe position or not | Probe counts, cache misses; token correctly invalidated after resize |
+| UTF-Mixed and SIMD | Same UTF-16 input; full UTF-8 vs scalar UTF-Mixed vs SIMD UTF-Mixed | Time and size for mixed EN/CJK content; split points may differ, decoded output must match |
+| Batched output | Same output and same full-buffer policy (part 2 [§8.2](<Article 2_Why is BqLog so fast - From Ring Buffer to Adaptive Data Bus.MD#82-when-the-consumer-falls-behind>)); vary cache size | I/O, RSS, call latency and flush time |
 
-End-to-end tests must also count the records successfully decoded. Comparing a dropping configuration's call speed with a blocking configuration can otherwise reward missing output.
+End-to-end benchmarks must also count how many logs finally decode. If one configuration drops on a full buffer while another blocks, comparing call speed alone flatters the dropper.
 
-`test_utils.h` checks copying and hash consistency across lengths and offsets. `test_bounded_hash_cache.h` covers token invalidation, capacity and allocation failure. `test_compressed_cache.h` checks cache behavior and decodable output. The repository's benchmark also ships with multi-format template cases (`test_compress_multi_format_*` in benchmark/cpp/main.cpp), which can be used directly for comparative measurement of the template cache. Isolating performance contributions requires the comparisons above.
-
-## 15. Carry each result into the next step
-
-Many savings occur between adjacent operations: computed lengths reach serialization, loaded characters feed hashing, a failed lookup supplies the insertion position, and encoding supplies the length to backfill. Batch output shares an I/O call across records.
-
-The remaining work can also be scheduled and stored more effectively. Independent CRC chains keep the pipeline occupied, small tables and contiguous arrays concentrate frequently used data, and SISO batches make the preceding thread index useful again.
-
-The three articles now connect: the format extracts repeated content, the bus assigns shared or dedicated queues according to write frequency, and the execution path reuses data and intermediate results. These specific relationships account for the work BqLog saves.
+`test_utils.h` checks copy/hash consistency across lengths and offsets; `test_bounded_hash_cache.h` covers token invalidation, capacity and allocation failure; `test_compressed_cache.h` checks cache behavior against decodable output. The repo's benchmark ships multi-format template cases (`test_compress_multi_format_*` in benchmark/cpp/main.cpp), ready to use for template-cache measurements.
 
 ## Continue with the source
 
-- [Java log_context](../wrapper/java/src/bq/impl/log_context.java), [Java param](../wrapper/java/src/bq/utils/param.java), [C# log_context](../wrapper/csharp/src/bq/impl/log_context.cs): direct bus writes, parameter reuse and commit.
-
-- [bq_log_impl.h](../include/bq_log/misc/bq_log_impl.h), [bq_log_wrapper_tools.h](../include/bq_log/misc/bq_log_wrapper_tools.h): early filtering, length and argument layout.
-- [layout.cpp](../src/bq_log/log/layout.cpp), [time_zone.h](../src/bq_log/utils/time_zone.h): time-string and thread-name caching on the text path.
-- [util.cpp](../src/bq_common/utils/util.cpp): fused copy-hash, CRC multi-chains and UTF-Mixed.
-- [bq_log_api.cpp](../src/bq_log/api/bq_log_api.cpp), [bq_log_go.cpp](../src/bq_log/api/bq_log_go.cpp): format_hash, native calls and bus commit.
-- [appender_file_compressed.cpp](../src/bq_log/log/appender/appender_file_compressed.cpp), [bounded_hash_cache.h](../src/bq_log/types/bounded_hash_cache.h): cache, token, encoding and backfill.
-- [appender_file_base.cpp](../src/bq_log/log/appender/appender_file_base.cpp), [appender_file_binary.cpp](../src/bq_log/log/appender/appender_file_binary.cpp): write cache, relative alignment, segmentation and encryption.
+- [util.cpp](../src/bq_common/utils/util.cpp): fused copy-hash, the CRC chains and UTF-Mixed.
+- [bq_log_api.cpp](../src/bq_log/api/bq_log_api.cpp), [bq_log_go.cpp](../src/bq_log/api/bq_log_go.cpp): format_hash, native calls and bus commits.
+- [appender_file_compressed.cpp](../src/bq_log/log/appender/appender_file_compressed.cpp), [bounded_hash_cache.h](../src/bq_log/types/bounded_hash_cache.h): template cache, token, encoding.
+- [appender_file_base.cpp](../src/bq_log/log/appender/appender_file_base.cpp), [appender_file_binary.cpp](../src/bq_log/log/appender/appender_file_binary.cpp): write cache, relative alignment, segments and encryption.
 - [test_utils.h](../test/cpp/bq_common_test/test_utils.h), [test_bounded_hash_cache.h](../test/cpp/test_bounded_hash_cache.h), [test_compressed_cache.h](../test/cpp/test_compressed_cache.h): the corresponding correctness checks.
