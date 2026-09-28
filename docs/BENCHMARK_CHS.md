@@ -25,7 +25,7 @@
 
 对比对象：
 
-- BqLog 2.4.0（C++，TextFileAppender、CompressedFileAppender、CompressedFileAppender + 加密）
+- BqLog 2.5.0（C++，TextFileAppender、CompressedFileAppender、CompressedFileAppender + 加密）
 - spdlog 1.17.0（**异步**文件日志：8192 槽位队列 + 1 个后台线程，溢出策略为阻塞——不丢日志；计时在 `spdlog::shutdown()` 排空队列并落盘后才结束）
 - glog 0.7.1（同步文件日志，流式 API——**glog 没有异步模式**，见下方说明）
 - fmtlog（异步文件日志，编译时启用 `FMTLOG_BLOCK=1` 防止静默丢日志）

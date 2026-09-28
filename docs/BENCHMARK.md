@@ -25,7 +25,7 @@ Test Cases:
 
 Comparison Objects:
 
-- BqLog 2.4.0 (C++, TextFileAppender, CompressedFileAppender, and CompressedFileAppender with Encryption)
+- BqLog 2.5.0 (C++, TextFileAppender, CompressedFileAppender, and CompressedFileAppender with Encryption)
 - spdlog 1.17.0 (**async** file logger: 8192-slot queue, 1 backend thread, blocking overflow policy — no log dropping; timing ends after `spdlog::shutdown()` has drained the queue and flushed to disk)
 - glog 0.7.1 (synchronous file logger, stream-based API — **glog has no async mode**, see the note below)
 - fmtlog (async file logger, compiled with `FMTLOG_BLOCK=1` to prevent log dropping)
