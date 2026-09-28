@@ -64,4 +64,4 @@ powershell -File benchmark/cross/log4j/run_benchmark.ps1
 
 Raw data measured on 2026-09-27 lives in benchmark/cross/run/ (csv files and filesizes.txt). The summary tables are in the main repo's docs/BENCHMARK.md (and its Chinese version).
 
-Note: fmtlog's setLogFile races with its polling thread, so its two test cases run in separate processes (second argument mp/np).
+Note: fmtlog's setLogFile races with its polling thread, so its two test cases run in separate processes (second argument mp/np). Also, poll() must not run concurrently with the polling thread: the final flush stops the thread first, then drains in a poll(true) loop — otherwise the tail of the log is silently lost (about 0.76% in this workload). verify_counts.py checks that every library lands exactly 2M x thread_count entries per test.

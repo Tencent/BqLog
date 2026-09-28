@@ -39,11 +39,17 @@ int main(int argc, char* argv[])
             });
         }
         for (auto& th : threads) th.join();
-        fmtlog::poll(true);
+        // fmtlog::poll is NOT thread-safe with the polling thread: stop it first,
+        // then drain synchronously. A single poll can leave the tail unwritten
+        // (it only processes entries older than the rdtsc taken at poll entry).
+        fmtlog::stopPollingThread();
+        for (int drain = 0; drain < 10; ++drain) {
+            fmtlog::poll(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         std::cout << "RESULT|fmtlog|multi_param|" << thread_count << "|" << ms << std::endl;
-        fmtlog::stopPollingThread();
     }
 
     if (strcmp(which, "mp") != 0) {
@@ -60,11 +66,14 @@ int main(int argc, char* argv[])
             });
         }
         for (auto& th : threads) th.join();
-        fmtlog::poll(true);
+        fmtlog::stopPollingThread();
+        for (int drain = 0; drain < 10; ++drain) {
+            fmtlog::poll(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         std::cout << "RESULT|fmtlog|no_param|" << thread_count << "|" << ms << std::endl;
-        fmtlog::stopPollingThread();
     }
 
     _exit(0); // fmtlog has cleanup issues, use _exit
