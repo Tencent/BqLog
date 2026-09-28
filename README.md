@@ -18,7 +18,7 @@
 > BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
 > **BqLog 2.x is officially released!** With native `HarmonyOS NEXT`, `Python` and `Node.js` support, and asymmetric hybrid encryption.
 >
-> 🚀 In [Benchmarks](#-benchmark-results), BqLog's compressed log mode is **6–14x faster than fmtlog**, **7–18x faster than quill**, **6–65x faster than spdlog (async)**, **9–22x faster than Log4j2**, and **47–252x faster than glog**; plain text mode also outperforms all of them.
+> 🚀 In [Benchmarks](#-benchmark-results), BqLog's compressed log mode is **7–16x faster than fmtlog**, **7–18x faster than quill**, **6–65x faster than spdlog (async)**, **9–22x faster than Log4j2**, and **47–252x faster than glog**; plain text mode also outperforms all of them.
 
 ---
 
@@ -230,7 +230,7 @@ language and workload and should be measured separately.
 | BqLog Compress (C++)         | 95       | 144       | 210       | 210       | 226       | 267       | 362       | 395       | 439       | 507        |
 | BqLog Compress+Encrypt (C++) | 102      | 166       | 167       | 190       | 236       | 308       | 350       | 391       | 453       | 493        |
 | BqLog Text (C++)             | 258      | 513       | 777       | 1054      | 1324      | 1587      | 1891      | 2143      | 2465      | 2811       |
-| fmtlog                       | 548      | 1173      | 1665      | 2194      | 2881      | 3440      | 4386      | 5242      | 5888      | 6926       |
+| fmtlog                       | 672      | 1219      | 1766      | 2428      | 3024      | 3923      | 4612      | 5935      | 6293      | 7934       |
 | quill                        | 639      | 1429      | 2232      | 3082      | 3915      | 4726      | 5609      | 6246      | 6957      | 7812       |
 | Log4j2 (Java)                | 873      | 1484      | 2087      | 2727      | 3738      | 4541      | 4889      | 6127      | 9475      | 7192       |
 | spdlog (async)               | 560      | 1649      | 3402      | 5737      | 9069      | 13827     | 21494     | 24518     | 28463     | 32939      |
@@ -260,7 +260,7 @@ language and workload and should be measured separately.
 | glog | Text | 314 MB | — |
 | Log4j2 | Text | 410 MB (2M entries) | — |
 
-- BqLog Compress: **6–14x faster** than fmtlog, **7–18x** than quill, **6–65x** than spdlog (async), **9–22x** than Log4j2, **47–252x** than glog
+- BqLog Compress: **7–16x faster** than fmtlog, **7–18x** than quill, **6–65x** than spdlog (async), **9–22x** than Log4j2, **47–252x** than glog
 - Encryption adds **near-zero overhead**
 - Compressed format is **6.3x smaller** than text
 - BqLog uses only **12.7–14.7 MB** memory with all three appenders active

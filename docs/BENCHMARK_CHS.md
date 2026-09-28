@@ -49,7 +49,7 @@ benchmark 在相同条件下比较。
 | BqLog Compress (C++)         | 95     | 144    | 210    | 210    | 226    | 267    | 362    | 395    | 439    | 507     |
 | BqLog Compress+Encrypt (C++) | 102    | 166    | 167    | 190    | 236    | 308    | 350    | 391    | 453    | 493     |
 | BqLog Text (C++)             | 258    | 513    | 777    | 1054   | 1324   | 1587   | 1891   | 2143   | 2465   | 2811    |
-| fmtlog                       | 548    | 1173   | 1665   | 2194   | 2881   | 3440   | 4386   | 5242   | 5888   | 6926    |
+| fmtlog                       | 672    | 1219   | 1766   | 2428   | 3024   | 3923   | 4612   | 5935   | 6293   | 7934    |
 | quill                        | 639    | 1429   | 2232   | 3082   | 3915   | 4726   | 5609   | 6246   | 6957   | 7812    |
 | Log4j2 (Java)                | 873    | 1484   | 2087   | 2727   | 3738   | 4541   | 4889   | 6127   | 9475   | 7192    |
 | spdlog（异步）               | 560    | 1649   | 3402   | 5737   | 9069   | 13827  | 21494  | 24518  | 28463  | 32939   |
@@ -85,8 +85,8 @@ benchmark 在相同条件下比较。
 
 #### 2.4 总结
 
-- **BqLog Compress** 吞吐量最高 — 比 fmtlog 快 **6-14 倍**，比 Log4j2 快 **9-22 倍**，比 spdlog（异步）快 **6-65 倍**，比 glog 快 **47-252 倍**
-- 即使是 **BqLog Text** 模式，在所有线程数下也优于所有其他文本日志库（比最快的对手 fmtlog 快 **2.1-2.5 倍**）
+- **BqLog Compress** 吞吐量最高 — 比 fmtlog 快 **7-16 倍**，比 Log4j2 快 **9-22 倍**，比 spdlog（异步）快 **6-65 倍**，比 glog 快 **47-252 倍**
+- 即使是 **BqLog Text** 模式，在所有线程数下也优于所有其他文本日志库（比最快的对手 fmtlog 快 **2.3-2.8 倍**）
 - **加密几乎零额外开销** — BqLog Compress 与 Compress+Encrypt 性能几乎相同
 - **内存高效** — 即使同时挂载三种 appender，BqLog 峰值工作集也仅 **12.7-14.7 MB**
 - **压缩格式比文本小 6.3 倍**，大幅节省存储和 I/O 成本
@@ -94,7 +94,7 @@ benchmark 在相同条件下比较。
 > 公平性说明：
 > - **spdlog** 以其**异步模式**（`async_logger` + 线程池）参与测试，这是它官方推荐的高吞吐配置。队列使用默认的阻塞溢出策略，不丢任何日志；计时区间在 `spdlog::shutdown()` 排空队列并落盘后才结束——与其他库「全部落盘」的口径一致。
 > - **glog** 的同步是其**架构本质**：该库没有异步模式，因此其成绩天然反映调用线程内同步格式化、同步写盘的特征。它也不支持 `{fmt}` 格式化参数，有参数测试使用其标准的流式 `operator<<` API。
-> - **fmtlog** 编译时启用了 `FMTLOG_BLOCK=1` 以防止静默丢日志（其默认行为）。**quill** 按照其官方 benchmark 配置使用 busy-spin 后端以获得最佳性能。
+> - **fmtlog** 编译时启用了 `FMTLOG_BLOCK=1` 以防止静默丢日志（其默认行为）。收尾时先停轮询线程再同步循环 `poll(true)` 排空——`poll()` 与轮询线程并发调用不安全，会丢尾部日志。每次运行都校验过落盘条数恰好为 2,000,000 × 线程数。**quill** 按照其官方 benchmark 配置使用 busy-spin 后端以获得最佳性能。
 
 ### 3. 功能对比
 
@@ -352,11 +352,14 @@ int main(int argc, char* argv[])
             });
         }
         for (auto& th : threads) th.join();
-        fmtlog::poll(true);
+        fmtlog::stopPollingThread();
+        for (int drain = 0; drain < 10; ++drain) {
+            fmtlog::poll(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         std::cout << "RESULT|fmtlog|multi_param|" << thread_count << "|" << ms << std::endl;
-        fmtlog::stopPollingThread();
     }
 
     if (strcmp(which, "mp") != 0) {  // no_param
@@ -373,11 +376,14 @@ int main(int argc, char* argv[])
             });
         }
         for (auto& th : threads) th.join();
-        fmtlog::poll(true);
+        fmtlog::stopPollingThread();
+        for (int drain = 0; drain < 10; ++drain) {
+            fmtlog::poll(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         std::cout << "RESULT|fmtlog|no_param|" << thread_count << "|" << ms << std::endl;
-        fmtlog::stopPollingThread();
     }
 
     _exit(0);  // fmtlog has cleanup issues, use _exit

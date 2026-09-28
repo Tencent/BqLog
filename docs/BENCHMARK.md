@@ -50,7 +50,7 @@ All time costs are in milliseconds, smaller values mean higher performance.
 | BqLog Compress (C++)         | 95       | 144       | 210       | 210       | 226       | 267       | 362       | 395       | 439       | 507        |
 | BqLog Compress+Encrypt (C++) | 102      | 166       | 167       | 190       | 236       | 308       | 350       | 391       | 453       | 493        |
 | BqLog Text (C++)             | 258      | 513       | 777       | 1054      | 1324      | 1587      | 1891      | 2143      | 2465      | 2811       |
-| fmtlog                       | 548      | 1173      | 1665      | 2194      | 2881      | 3440      | 4386      | 5242      | 5888      | 6926       |
+| fmtlog                       | 672      | 1219      | 1766      | 2428      | 3024      | 3923      | 4612      | 5935      | 6293      | 7934       |
 | quill                        | 639      | 1429      | 2232      | 3082      | 3915      | 4726      | 5609      | 6246      | 6957      | 7812       |
 | Log4j2 (Java)                | 873      | 1484      | 2087      | 2727      | 3738      | 4541      | 4889      | 6127      | 9475      | 7192       |
 | spdlog (async)               | 560      | 1649      | 3402      | 5737      | 9069      | 13827     | 21494     | 24518     | 28463     | 32939      |
@@ -86,8 +86,8 @@ Measured as the Windows process peak working set, sampled every 5 ms for the who
 
 #### 2.4 Summary
 
-- **BqLog Compress** achieves the highest throughput — **6–14x faster than fmtlog**, **9–22x faster than Log4j2**, **6–65x faster than spdlog (async)**, **47–252x faster than glog**
-- Even **BqLog Text** outperforms all other text-based loggers at every thread count (**2.1–2.5x faster than fmtlog**, the fastest competitor)
+- **BqLog Compress** achieves the highest throughput — **7–16x faster than fmtlog**, **9–22x faster than Log4j2**, **6–65x faster than spdlog (async)**, **47–252x faster than glog**
+- Even **BqLog Text** outperforms all other text-based loggers at every thread count (**2.3–2.8x faster than fmtlog**, the fastest competitor)
 - **Encryption adds near-zero overhead** — BqLog Compress vs Compress+Encrypt performance is nearly identical
 - **Memory efficient** — BqLog uses only **12.7–14.7 MB** peak working set even with three appenders active simultaneously
 - **Compressed format is 6.3x smaller** than text output, reducing storage and I/O costs
@@ -95,7 +95,7 @@ Measured as the Windows process peak working set, sampled every 5 ms for the who
 > Notes on fairness:
 > - **spdlog** is benchmarked in its **async mode** (`async_logger` + thread pool), its recommended high-throughput configuration. The queue uses the default blocking overflow policy, so no log entry is ever dropped, and the timed region ends only after `spdlog::shutdown()` has drained the queue and flushed the file — the same "everything on disk" semantics as the other libraries.
 > - **glog** is synchronous **by design**: the library offers no async mode, so its numbers inherently reflect synchronous, in-thread formatting and writing. It also does not support `{fmt}`-style formatting; the parameterized test uses its standard stream-based `operator<<` API.
-> - **fmtlog** was compiled with `FMTLOG_BLOCK=1` to prevent silent log dropping (its default behavior). **quill** was configured per its official benchmark with a busy-spin backend for maximum performance.
+> - **fmtlog** was compiled with `FMTLOG_BLOCK=1` to prevent silent log dropping (its default behavior). The final flush stops the polling thread first and then drains synchronously in a `poll(true)` loop — calling `poll()` concurrently with the polling thread is unsafe and loses the tail. Every run was verified to land exactly 2,000,000 × thread_count entries on disk. **quill** was configured per its official benchmark with a busy-spin backend for maximum performance.
 
 ### 3. Feature Comparison
 
@@ -354,11 +354,14 @@ int main(int argc, char* argv[])
             });
         }
         for (auto& th : threads) th.join();
-        fmtlog::poll(true);
+        fmtlog::stopPollingThread();
+        for (int drain = 0; drain < 10; ++drain) {
+            fmtlog::poll(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         std::cout << "RESULT|fmtlog|multi_param|" << thread_count << "|" << ms << std::endl;
-        fmtlog::stopPollingThread();
     }
 
     if (strcmp(which, "mp") != 0) {  // no_param
@@ -375,11 +378,14 @@ int main(int argc, char* argv[])
             });
         }
         for (auto& th : threads) th.join();
-        fmtlog::poll(true);
+        fmtlog::stopPollingThread();
+        for (int drain = 0; drain < 10; ++drain) {
+            fmtlog::poll(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         std::cout << "RESULT|fmtlog|no_param|" << thread_count << "|" << ms << std::endl;
-        fmtlog::stopPollingThread();
     }
 
     _exit(0);  // fmtlog has cleanup issues, use _exit
