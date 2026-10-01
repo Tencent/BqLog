@@ -536,11 +536,11 @@ namespace bq {
 
     //'format_content' may be more suitable as a parameter
     //@param format_content
-    //@paramwirte_begin_pos
-    void layout::fill_and_alignment(uint32_t wirte_begin_pos)
+    //@paramwrite_begin_pos
+    void layout::fill_and_alignment(uint32_t write_begin_pos)
     {
         // fill and alignment
-        uint32_t dis = format_content_cursor - wirte_begin_pos;
+        uint32_t dis = format_content_cursor - write_begin_pos;
         if (dis < format_info_.width) {
             uint32_t fill_count = format_info_.width - dis;
             // alignment right
@@ -549,8 +549,8 @@ namespace bq {
                 uint32_t ignore_index = 0;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
-                    uint32_t opt_index = wirte_begin_pos + format_info_.width - i;
-                    uint32_t move_index = wirte_begin_pos + (dis - i);
+                    uint32_t opt_index = write_begin_pos + format_info_.width - i;
+                    uint32_t move_index = write_begin_pos + (dis - i);
 
                     // keep the sign in front
                     if ((format_content[move_index] == '+' || format_content[move_index] == '-') && format_info_.fill != ' ') {
@@ -574,7 +574,7 @@ namespace bq {
                 }
                 // fill
                 for (uint32_t i = ignore; i < fill_count; i++) {
-                    uint32_t opt_index = wirte_begin_pos + i;
+                    uint32_t opt_index = write_begin_pos + i;
                     format_content[opt_index] = format_info_.fill;
                 }
             }
@@ -592,18 +592,18 @@ namespace bq {
                 uint32_t front = fill_count - end;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
-                    uint32_t opt_index = wirte_begin_pos + format_info_.width - i - end;
-                    uint32_t move_index = wirte_begin_pos + (dis - i);
+                    uint32_t opt_index = write_begin_pos + format_info_.width - i - end;
+                    uint32_t move_index = write_begin_pos + (dis - i);
                     format_content[opt_index] = format_content[move_index];
                 }
                 // fill front
                 for (uint32_t i = 0; i < front; i++) {
-                    uint32_t opt_index = wirte_begin_pos + i;
+                    uint32_t opt_index = write_begin_pos + i;
                     format_content[opt_index] = format_info_.fill;
                 }
                 // fill end
                 for (uint32_t i = 0; i < end; i++) {
-                    uint32_t opt_index = front + wirte_begin_pos + dis + i;
+                    uint32_t opt_index = front + write_begin_pos + dis + i;
                     format_content[opt_index] = format_info_.fill;
                 }
             }
