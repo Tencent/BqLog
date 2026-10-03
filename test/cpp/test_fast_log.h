@@ -17,6 +17,16 @@
 namespace bq {
     namespace test {
         class test_fast_log : public test_base {
+            // abort() rather than assert: GCC's -Wnull-dereference needs a non-null path in release builds too.
+            static bq::log_buffer& buffer_of(const bq::log& log)
+            {
+                bq::log_imp* imp = bq::log_manager::get_log_by_id(log.get_id());
+                if (!imp) {
+                    abort();
+                }
+                return imp->get_buffer();
+            }
+
             static void write_fast(const bq::log& log, int32_t value)
             {
                 BQ_LOG_FAST_INFO(log, "fast {}", value);
@@ -70,7 +80,7 @@ namespace bq {
 
                 void run() override
                 {
-                    const auto& info = bq::log_manager::get_log_by_id(log_.get_id())->get_buffer().get_buffer_info_for_this_thread();
+                    const auto& info = buffer_of(log_).get_buffer_info_for_this_thread();
                     for (int32_t i = 0; i < 2000000 && !info.cur_block_; ++i) {
                         log_.info("named warmup {}", i);
                     }
@@ -373,12 +383,12 @@ namespace bq {
                     {
                         for (int32_t i = 0; i < 2000000; ++i) {
                             log_.info("hp by normal {}", i);
-                            if (bq::log_manager::get_log_by_id(log_.get_id())->get_buffer().get_buffer_info_for_this_thread().cur_block_) {
+                            if (buffer_of(log_).get_buffer_info_for_this_thread().cur_block_) {
                                 break;
                             }
                         }
                         write_fast(log_, 3000);
-                        const auto& info = bq::log_manager::get_log_by_id(log_.get_id())->get_buffer().get_buffer_info_for_this_thread();
+                        const auto& info = buffer_of(log_).get_buffer_info_for_this_thread();
                         thread_info_after_slow_ = info.cur_block_
                             && info.cur_block_->get_misc_data<bq::log_buffer::block_misc_data>().thread_info_.thread_id_ == bq::platform::thread::get_current_thread_id();
                         block_after_slow_ = info.cur_block_ != nullptr && info.fast_mode_;
@@ -398,7 +408,7 @@ namespace bq {
 
                 // the pushed thread state describes the block the library sees as current
                 write_fast(log, 3001);
-                auto& buffer = bq::log_manager::get_log_by_id(log.get_id())->get_buffer();
+                auto& buffer = buffer_of(log);
                 const auto& info = buffer.get_buffer_info_for_this_thread();
                 const auto& state = bq::fast_inline::get_thread_slot().state;
                 auto expect_state_matches = [&](const char* when) {
@@ -480,7 +490,7 @@ namespace bq {
                     write_fast(log, 4000 + i);
                     BQ_LOG_FAST_INFO(log2, "second {}", 4000 + i);
                 }
-                auto& buffer2 = bq::log_manager::get_log_by_id(log2.get_id())->get_buffer();
+                auto& buffer2 = buffer_of(log2);
                 result.add_result(&buffer2.get_buffer_info_for_this_thread() != &buffer.get_buffer_info_for_this_thread(), "two logs keep separate tls state");
                 result.add_result(buffer2.get_buffer_info_for_this_thread().cur_block_ != nullptr
                         && buffer2.get_buffer_info_for_this_thread().cur_block_ != buffer.get_buffer_info_for_this_thread().cur_block_,
@@ -573,7 +583,7 @@ namespace bq {
                     write_fast(log, i);
                     log.info("normal {}", i);
                 }
-                auto& buffer = bq::log_manager::get_log_by_id(log.get_id())->get_buffer();
+                auto& buffer = buffer_of(log);
                 bq::platform::thread::sleep(1100);
                 log.info("normal after idle {}", int32_t(42));
                 result.add_result(buffer.get_buffer_info_for_this_thread().cur_block_ != nullptr
