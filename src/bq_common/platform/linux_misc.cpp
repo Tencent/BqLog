@@ -20,7 +20,7 @@ namespace bq {
         // According to test result, benifit from VDSO.
         //"CLOCK_REALTIME_COARSE clock_gettime"  has higher performance
         //  than "gettimeofday" and event "TSC" on Android and Linux.
-        uint64_t high_performance_epoch_ms()
+        uint64_t system_epoch_ms()
         {
             struct timespec ts;
             clock_gettime(CLOCK_REALTIME_COARSE, &ts);

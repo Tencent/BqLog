@@ -70,7 +70,7 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 | Name                         | Mandatory | Configurable Values                                | Default Value             | ConsoleAppender | TextFileAppender | CompressedFileAppender |
 |------------------------------|---------|-----------------------------------------|--------------------|-----------------|------------------|------------------------|
-| `type`                       | Yes       | `console` / `text_file` / `compressed_file` / `raw_file` | -                  | Yes               | Yes                | Yes      |
+| `type`                       | Yes       | `console` / `text_file` / `compressed_file` | -                  | Yes               | Yes                | Yes      |
 | `enable`                     | No       | `true` / `false`                        | `true`             | Yes               | Yes                | Yes                      |
 | `levels`                     | No       | Log level array (`[verbose,...]` or `[all]`) | `[all]`            | Yes               | Yes                | Yes                      |
 | `time_zone`                  | No       | `gmt` / `localtime` / `Z` / `UTC` / `utc+8` / `utc-2` / `utc+11:30` etc. | `localtime` | Yes               | Yes                | Yes (Affects rolling date)      |
@@ -116,7 +116,7 @@ Specify timezone used for timestamp formatting, also affects "date boundary" for
 
 Effect:
 - ConsoleAppender / TextFileAppender: Determine display of time field in log text;
-- TextFileAppender / CompressedFileAppender / RawFileAppender: Determine cut-off point for file rolling by date (0 o'clock every day).
+- TextFileAppender / CompressedFileAppender: Determine cut-off point for file rolling by date (0 o'clock every day).
 
 #### `appenders_config.xxx.base_dir_type`
 

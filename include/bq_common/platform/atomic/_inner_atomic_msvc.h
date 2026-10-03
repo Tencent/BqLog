@@ -23,6 +23,24 @@
 #include <intrin.h>
 namespace bq {
     namespace platform {
+        bq_forceinline void atomic_thread_fence_acquire() noexcept
+        {
+#if defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
+            __dmb(_ARM64_BARRIER_ISHLD);
+#else
+            _ReadWriteBarrier();
+#endif
+        }
+
+        bq_forceinline void atomic_thread_fence_release() noexcept
+        {
+#if defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
+            __dmb(_ARM64_BARRIER_ISH);
+#else
+            _ReadWriteBarrier();
+#endif
+        }
+
         template <typename T, size_t N>
         class alignas(8) _atomic_base {
         public:

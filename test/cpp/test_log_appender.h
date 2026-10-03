@@ -18,7 +18,7 @@
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/appender/appender_file_base.h"
 #include "bq_log/log/appender/appender_file_binary.h"
-#include "bq_log/log/appender/appender_file_raw.h"
+#include "bq_log/log/appender/appender_file_compressed.h"
 #include "bq_log/log/decoder/appender_decoder_base.h"
 
 namespace bq {
@@ -72,7 +72,7 @@ namespace bq {
             }
             virtual appender_file_binary::appender_format_type get_appender_format() const override
             {
-                return appender_format_type::raw;
+                return appender_format_type::compressed;
             }
             virtual uint32_t get_binary_format_version() const override
             {
@@ -131,7 +131,7 @@ namespace bq {
             }
             virtual appender_file_binary::appender_format_type get_appender_format() const override
             {
-                return appender_format_type::raw;
+                return appender_format_type::compressed;
             }
             virtual uint32_t get_binary_format_version() const override
             {
@@ -167,11 +167,11 @@ namespace bq {
                 return get_pendding_flush_written_size() == 0;
             }
         };
-        class appender_file_raw_mmap_for_test : public appender_file_raw {
+        class appender_file_compressed_mmap_for_test : public appender_file_compressed {
         protected:
             virtual bool init_impl(const bq::property_value& config_obj) override
             {
-                if (!appender_file_raw::init_impl(config_obj)) {
+                if (!appender_file_compressed::init_impl(config_obj)) {
                     return false;
                 }
                 set_flush_when_destruct(false);
@@ -469,7 +469,7 @@ namespace bq {
                 bq::string config = "log.thread_mode=async\n"
                                     "log.recovery=true\n"
                                     "log.buffer_size=4096\n"
-                                    "appenders_config.appender.type=raw_file\n"
+                                    "appenders_config.appender.type=compressed_file\n"
                                     "appenders_config.appender.levels=[all]\n"
                                     "appenders_config.appender.file_name="
                     + file_name + "\n"
@@ -568,14 +568,15 @@ namespace bq {
                 log_obj.init("appender_reset_encryption_test", log_config, categories);
 
                 bq::property_value encrypted_config = bq::property_value::create_from_string(
-                    "type=raw_file\n"
+                    "type=compressed_file\n"
                     "levels=[all]\n"
                     "file_name=appender_test/reset_encryption\n"
                     "base_dir_type=0\n"
                     "enable_rolling_log_file=false\n"
-                    "pub_key=" + pub_key);
+                    "pub_key="
+                    + pub_key);
                 bq::property_value plaintext_config = bq::property_value::create_from_string(R"(
-                    type=raw_file
+                    type=compressed_file
                     levels=[all]
                     file_name=appender_test/reset_encryption
                     base_dir_type=0
@@ -721,9 +722,7 @@ namespace bq {
                         && segment_heads.size() == segment_count;
                     for (uint32_t i = 0; i < segment_count && case_ok; ++i) {
                         const bool encrypted = (mask & (1U << i)) != 0;
-                        case_ok = segment_heads[i].enc_type == (encrypted
-                                      ? appender_file_binary::appender_encryption_type::rsa_aes_xor
-                                      : appender_file_binary::appender_encryption_type::plaintext)
+                        case_ok = segment_heads[i].enc_type == (encrypted ? appender_file_binary::appender_encryption_type::rsa_aes_xor : appender_file_binary::appender_encryption_type::plaintext)
                             && fingerprints[i] == (encrypted ? expected_fingerprint : 0);
                         if (encrypted) {
                             for (uint32_t j = 0; j < i; ++j) {
@@ -905,7 +904,7 @@ namespace bq {
 
             static bq::property_value make_binary_recovery_test_config(const bq::string& file_name, const bq::string& pub_key)
             {
-                bq::string config = "type=raw_file\n"
+                bq::string config = "type=compressed_file\n"
                                     "levels=[all]\n"
                                     "file_name="
                     + file_name + "\n"
@@ -923,8 +922,8 @@ namespace bq {
                 snprintf(case_id, sizeof(case_id), "%" PRIu32, case_index);
                 const bq::string log_name = bq::string("binary_recovery_mmap_") + case_id;
                 const bq::string file_name = "appender_test/" + log_name;
-                const bq::string source_file_path = TO_ABSOLUTE_PATH(file_name + "_1.lograw", 0);
-                const bq::string target_file_path = TO_ABSOLUTE_PATH(file_name + "_2.lograw", 0);
+                const bq::string source_file_path = TO_ABSOLUTE_PATH(file_name + "_1.logcompr", 0);
+                const bq::string target_file_path = TO_ABSOLUTE_PATH(file_name + "_2.logcompr", 0);
                 const bq::string source_pub_key = get_recovery_pub_key(source_mode, pub_key_a, pub_key_b);
                 const bq::string target_pub_key = get_recovery_pub_key(target_mode, pub_key_a, pub_key_b);
                 bq::array<bq::string> categories;
@@ -938,7 +937,7 @@ namespace bq {
                 {
                     log_imp parent_log;
                     source_appender_ok = parent_log.init(log_name, make_recovery_parent_log_config(), categories);
-                    appender_file_raw_mmap_for_test source_appender;
+                    appender_file_compressed_mmap_for_test source_appender;
                     source_appender_ok = source_appender_ok
                         && source_appender.init("appender", make_binary_recovery_test_config(file_name, source_pub_key), &parent_log)
                         && source_appender.log(log_entry_handle(source_entry.begin(), static_cast<uint32_t>(source_entry.size())));

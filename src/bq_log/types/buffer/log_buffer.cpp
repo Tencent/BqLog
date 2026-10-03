@@ -20,6 +20,26 @@
 #include "bq_log/global/log_vars.h"
 
 namespace bq {
+    BQ_TLS log_thread_info log_thread_info_tls_;
+
+    void init_log_thread_info(log_thread_info& info)
+    {
+        bq::string thread_name = bq::platform::thread::get_current_thread_name();
+        info.thread_name_len_ = static_cast<uint8_t>(bq::min_value(static_cast<size_t>(log_thread_info::MAX_THREAD_NAME_LEN), thread_name.size()));
+        if (info.thread_name_len_ > 0) {
+            memcpy(info.thread_name_, thread_name.c_str(), info.thread_name_len_);
+        }
+        info.thread_id_ = bq::platform::thread::get_current_thread_id();
+    }
+
+    static const bool fast_state_no_reallocate = false;
+
+    static void clear_fast_state(_api_fast_log_thread_state& state)
+    {
+        state.buffer_key = 0;
+        state.need_reallocate = &fast_state_no_reallocate;
+    }
+
     bq_forceinline static void mark_block_removed(block_node_head* block, bool removed)
     {
         block->get_misc_data<log_buffer::block_misc_data>().is_removed().store_release(removed);
@@ -70,6 +90,12 @@ namespace bq {
 
     log_buffer::log_tls_info::~log_tls_info()
     {
+        // first, so a late log from another thread_local destructor takes the exported slow path
+        if (fast_state_) {
+            clear_fast_state(*fast_state_);
+            fast_state_ = nullptr;
+            fast_state_buffer_id_ = 0;
+        }
         if (log_map_) {
             for (auto pair : *log_map_) {
                 bq::shared_ptr<destruction_mark> destruction_protector = pair.value()->destruction_mark_;
@@ -122,7 +148,28 @@ namespace bq {
         cur_buffer_info_ = nullptr;
     }
 
-    BQ_TLS_NON_POD(log_buffer::log_tls_info, log_tls_info_)
+    BQ_TLS_NON_POD_INLINE_IMPL(log_buffer::log_tls_info, log_tls_info_)
+
+    void log_buffer::log_tls_info::bind_fast_state(_api_fast_log_thread_state* state)
+    {
+        fast_state_ = state;
+        fast_state_buffer_id_ = cur_log_buffer_id_;
+        publish_fast_state(cur_buffer_info_ ? cur_buffer_info_->cur_block_ : nullptr);
+    }
+
+    void log_buffer::log_tls_info::publish_fast_state(block_node_head* block)
+    {
+        if (!fast_state_) {
+            return;
+        }
+        if (!block) {
+            clear_fast_state(*fast_state_);
+            return;
+        }
+        block->get_buffer().fill_fast_log_thread_state(*fast_state_);
+        fast_state_->need_reallocate = &block->get_misc_data<block_misc_data>().need_reallocate_;
+        fast_state_->buffer_key = ~fast_state_buffer_id_;
+    }
 
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
@@ -131,11 +178,12 @@ namespace bq {
         , hp_buffer_max_alloc_size_(UINT32_MAX)
         , version_(config_.need_recovery ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
         , destruction_mark_(bq::make_shared<destruction_mark>())
+        , fast_meta_ptr_(nullptr)
         , current_oversize_buffer_index_(0)
     {
         static bq::platform::atomic<uint64_t> id_generator(0);
         id_ = id_generator.add_fetch_relaxed(1);
-        const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * bq::BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
+        const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
         if (config.need_recovery) {
             rt_cache_.current_reading_.version_ = static_cast<uint16_t>(version_ - MAX_RECOVERY_VERSION_RANGE);
             prepare_and_fix_recovery_data();
@@ -159,7 +207,7 @@ namespace bq {
         destruction_mark_->is_destructed_ = true;
     }
 
-    log_buffer_write_handle log_buffer::alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
+    log_buffer_write_handle log_buffer::alloc_write_chunk(uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms)
     {
         auto& tls_buffer = log_tls_info__get_direct().get_buffer_info(this);
 
@@ -168,10 +216,10 @@ namespace bq {
         uint64_t& thread_update_times = tls_buffer.update_times_;
 
         // frequency check
-        bool is_high_frequency = (bool)block_cache;
+        bool is_high_frequency = (bool)block_cache || tls_buffer.fast_mode_;
         BQ_UNLIKELY_IF(current_epoch_ms >= thread_last_update_epoch_ms + HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL)
         {
-            if (thread_update_times < config_.high_frequency_threshold_per_second) {
+            if (thread_update_times < config_.high_frequency_threshold_per_second && !tls_buffer.fast_mode_) {
                 is_high_frequency = false;
             }
             thread_last_update_epoch_ms = current_epoch_ms;
@@ -188,21 +236,22 @@ namespace bq {
             if (is_high_frequency) {
                 BQ_UNLIKELY_IF(!block_cache)
                 {
-                    block_cache = alloc_new_hp_block();
+                    set_cur_block(tls_buffer, alloc_new_hp_block());
                 }
                 else BQ_UNLIKELY_IF(is_block_need_reallocate(block_cache))
                 {
                     mark_block_removed(block_cache, true); // mark removed
-                    block_cache = alloc_new_hp_block();
+                    set_cur_block(tls_buffer, alloc_new_hp_block());
                 }
                 result = block_cache->get_buffer().alloc_write_chunk(size);
+                result.ext_info_reserved = false;
                 if (enum_buffer_result_code::err_not_enough_space == result.result) {
                     switch (config_.policy) {
                     case log_memory_policy::auto_expand_when_full:
                         // discard result and switch to high frequency mode and try again
                         block_cache->get_buffer().commit_write_chunk(result);
                         mark_block_removed(block_cache, true); // mark removed
-                        block_cache = alloc_new_hp_block();
+                        set_cur_block(tls_buffer, alloc_new_hp_block());
                         continue;
                         break;
                     case log_memory_policy::block_when_full:
@@ -214,7 +263,7 @@ namespace bq {
                 }
                 break;
             } else {
-                result = lp_buffer_.alloc_write_chunk(size + static_cast<uint32_t>(sizeof(context_head)));
+                result = lp_buffer_.alloc_write_chunk(size + ext_info_size + static_cast<uint32_t>(sizeof(context_head)));
                 if (enum_buffer_result_code::success == result.result) {
                     auto* context = reinterpret_cast<context_head*>(result.data_addr);
                     context->version_ = version_;
@@ -242,7 +291,7 @@ namespace bq {
                 }
                 if (block_cache) {
                     mark_block_removed(block_cache, true); // mark removed;
-                    block_cache = nullptr;
+                    set_cur_block(tls_buffer, nullptr);
                 }
                 break;
             }
@@ -251,7 +300,7 @@ namespace bq {
         // For chunks larger than lp_buffer size and hp_buffer size.
         BQ_UNLIKELY_IF((is_invalid_hp_size || enum_buffer_result_code::err_alloc_size_invalid == result.result) && size > 0)
         {
-            return wt_alloc_oversize_write_chunk(size, current_epoch_ms);
+            return wt_alloc_oversize_write_chunk(size + ext_info_size, current_epoch_ms);
         }
         return result;
     }
@@ -281,6 +330,34 @@ namespace bq {
                 lp_buffer_.commit_write_chunk(handle);
             }
         }
+    }
+
+    fast_meta_store* log_buffer::get_fast_meta_store()
+    {
+        auto* store = fast_meta_ptr_.load_acquire();
+        if (!store) {
+            bq::platform::scoped_spin_lock guard(fast_meta_lock_);
+            store = fast_meta_ptr_.load_acquire();
+            if (!store) {
+                fast_meta_store_ = bq::make_unique<fast_meta_store>(config_, version_);
+                store = fast_meta_store_.operator->();
+                fast_meta_ptr_.store_release(store);
+            }
+        }
+        return store;
+    }
+
+    const fast_format_meta* log_buffer::register_fast_log_format(const char* format, uint32_t format_size,
+        uint8_t level, uint32_t category_idx, uint8_t format_type,
+        const uint8_t* arg_types, uint16_t arg_count)
+    {
+        return get_fast_meta_store()->register_format(format, format_size, level, category_idx,
+            format_type, arg_types, arg_count);
+    }
+
+    const fast_meta_head* log_buffer::resolve_fast_log_meta(uint16_t version, uint64_t old_addr)
+    {
+        return get_fast_meta_store()->resolve(version, old_addr);
     }
 
 #if defined(BQ_LOG_BUFFER_DEBUG)
@@ -490,11 +567,29 @@ namespace bq {
         misc_data.context_.version_ = version_;
         misc_data.context_.is_thread_finished_ = false;
         misc_data.context_.seq_ = tls_buffer_info.wt_data_.current_write_seq_++;
+        misc_data.thread_info_ = get_log_thread_info();
         auto new_node = hp_buffer_.alloc_new_block(&misc_data, sizeof(block_misc_data));
         if (hp_buffer_max_alloc_size_ == UINT32_MAX) {
             hp_buffer_max_alloc_size_ = new_node->get_buffer().get_max_alloc_size();
         }
+        // first-touch page faults would otherwise land on the producer's hot path for the whole first lap
+        new_node->get_buffer().prefault();
         return new_node;
+    }
+
+    bq::block_node_head* log_buffer::ensure_fast_hp_block(log_tls_buffer_info& tls_buffer_info)
+    {
+        block_node_head* block_cache = tls_buffer_info.cur_block_;
+        BQ_UNLIKELY_IF(!block_cache)
+        {
+            set_cur_block(tls_buffer_info, alloc_new_hp_block());
+        }
+        else BQ_UNLIKELY_IF(is_block_need_reallocate(block_cache))
+        {
+            mark_block_removed(block_cache, true);
+            set_cur_block(tls_buffer_info, alloc_new_hp_block());
+        }
+        return tls_buffer_info.cur_block_;
     }
 
     log_buffer::context_verify_result log_buffer::verify_context(const context_head& context)
@@ -784,6 +879,7 @@ namespace bq {
     void log_buffer::rt_try_traverse_to_next_version()
     {
         auto& rt_reading = rt_cache_.current_reading_;
+        const uint16_t completed_version = rt_reading.version_;
         auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)];
         recover_map.clear();
 #ifdef BQ_UNIT_TEST
@@ -791,6 +887,18 @@ namespace bq {
 #endif
         ++rt_reading.version_;
         rt_reading.is_in_recovery_reading_ = (rt_reading.version_ != version_);
+        if (!fast_meta_ptr_.load_acquire() && !rt_reading.is_in_recovery_reading_ && config_.need_recovery) {
+            const bq::string folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/fast_meta", 0);
+            if (bq::file_manager::is_dir(folder)) {
+                get_fast_meta_store();
+            }
+        }
+        if (auto* store = fast_meta_ptr_.load_acquire()) {
+            store->release_version(completed_version);
+            if (!rt_reading.is_in_recovery_reading_) {
+                store->release_recovered_versions();
+            }
+        }
     }
 
     void log_buffer::refresh_traverse_end_mark()
@@ -810,10 +918,9 @@ namespace bq {
     log_buffer_write_handle log_buffer::wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms)
     {
         auto& tls_buffer = log_tls_info__get_direct().get_buffer_info(this);
-        auto& block_cache = tls_buffer.cur_block_;
-        if (block_cache) {
-            mark_block_removed(block_cache, true); // mark removed;
-            block_cache = nullptr;
+        if (tls_buffer.cur_block_) {
+            mark_block_removed(tls_buffer.cur_block_, true); // mark removed;
+            set_cur_block(tls_buffer, nullptr);
         }
         auto parent_result = lp_buffer_.alloc_write_chunk(sizeof(context_head));
         if (enum_buffer_result_code::success != parent_result.result) {
@@ -824,6 +931,9 @@ namespace bq {
                     || config_.policy == log_memory_policy::block_when_full)
                 && parent_result.result == enum_buffer_result_code::err_not_enough_space) {
                 parent_result.result = enum_buffer_result_code::err_wait_and_retry;
+            }
+            if (tls_buffer.fast_mode_) {
+                set_cur_block(tls_buffer, alloc_new_hp_block());
             }
             return parent_result;
         }
@@ -934,6 +1044,9 @@ namespace bq {
             lp_buffer_.commit_write_chunk(parent_result);
             log_buffer_write_handle fail;
             fail.result = enum_buffer_result_code::err_io_failure_drop;
+            if (tls_buffer.fast_mode_) {
+                set_cur_block(tls_buffer, alloc_new_hp_block());
+            }
             return fail;
         }
 
@@ -955,6 +1068,9 @@ namespace bq {
         tls_buffer_info.oversize_target_buffer_->buffer_lock_.read_unlock();
         tls_buffer_info.oversize_target_buffer_ = nullptr;
         lp_buffer_.commit_write_chunk(tls_buffer_info.oversize_parent_handle_);
+        if (tls_buffer_info.fast_mode_) {
+            set_cur_block(tls_buffer_info, alloc_new_hp_block());
+        }
     }
 
     BQ_TLS_NON_POD(log_buffer_read_handle, rt_oversize_parent_handle_)

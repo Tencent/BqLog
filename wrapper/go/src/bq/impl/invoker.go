@@ -212,6 +212,12 @@ func Get_log_print_stack_level_bitmap(log_id uint64) *uint32 {
 	return (*uint32)(unsafe.Pointer(C.__api_get_log_print_stack_level_bitmap_by_log_id(C.uint64_t(log_id))))
 }
 
+// Get_log_category_level_words returns one uint32 per category: bit (1 << level) set when that level is enabled without
+// stack trace. nil when the log is not found.
+func Get_log_category_level_words(log_id uint64) *uint32 {
+	return (*uint32)(unsafe.Pointer(C.__api_get_log_category_level_words_by_log_id(C.uint64_t(log_id))))
+}
+
 func Get_log_category_masks_array(log_id uint64) *uint8 {
 	return (*uint8)(unsafe.Pointer(C.__api_get_log_category_masks_array_by_log_id(C.uint64_t(log_id))))
 }

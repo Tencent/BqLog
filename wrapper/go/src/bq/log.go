@@ -27,6 +27,7 @@ type Log struct {
 	level_bitmap *uint32
 	stack_bitmap *uint32
 	masks        *uint8
+	level_words  *uint32 // per category, enabled without stack trace
 	cat_count    uint32
 }
 
@@ -35,7 +36,16 @@ func (l *Log) refresh(id uint64) {
 	l.level_bitmap = impl.Get_log_merged_log_level_bitmap(id)
 	l.stack_bitmap = impl.Get_log_print_stack_level_bitmap(id)
 	l.masks = impl.Get_log_category_masks_array(id)
+	l.level_words = impl.Get_log_category_level_words(id)
 	l.cat_count = impl.Get_log_categories_count(id)
+}
+
+// enabled_without_stack is the common case: one load and one bit test.
+func (l *Log) enabled_without_stack(level def.Log_level, category_index uint32) bool {
+	if l.level_words == nil || category_index >= l.cat_count {
+		return false
+	}
+	return *(*uint32)(unsafe.Add(unsafe.Pointer(l.level_words), uintptr(category_index)*4))&(1<<uint32(level)) != 0
 }
 
 // Get_version returns the BqLog library version.
@@ -117,6 +127,9 @@ func (l *Log) Is_enable_for(level def.Log_level, category_index uint32) bool {
 	if !l.Is_valid() || level < def.Verbose || level > def.Fatal || category_index >= l.cat_count {
 		return false
 	}
+	if l.enabled_without_stack(level, category_index) {
+		return true
+	}
 	if *l.level_bitmap&(1<<uint32(level)) == 0 {
 		return false
 	}
@@ -125,11 +138,14 @@ func (l *Log) Is_enable_for(level def.Log_level, category_index uint32) bool {
 
 // do_log is shared by the level and category methods. It is private to package bq.
 func (l *Log) do_log(level def.Log_level, category_index uint32, format string, args ...any) bool {
-	if !l.Is_enable_for(level, category_index) {
-		return false
-	}
-	if *l.stack_bitmap&(1<<uint32(level)) != 0 {
-		format += capture_stack()
+	without_stack := l.Is_valid() && level >= def.Verbose && level <= def.Fatal && l.enabled_without_stack(level, category_index)
+	if !without_stack {
+		if !l.Is_enable_for(level, category_index) {
+			return false
+		}
+		if *l.stack_bitmap&(1<<uint32(level)) != 0 {
+			format += capture_stack()
+		}
 	}
 	// Native entry lengths are uint32_t, including the header and thread name.
 	const max_entry_payload = uint64(1<<32 - 1 - 1024)

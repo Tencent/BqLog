@@ -22,13 +22,39 @@
  */
 #include "bq_common/bq_common.h"
 #include "bq_log/types/buffer/log_buffer_defs.h"
+#include "bq_log/log/log_types.h"
 #include "bq_log/types/buffer/miso_linked_list.h"
 #include "bq_log/types/buffer/siso_ring_buffer.h"
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 #include "bq_log/types/buffer/group_list.h"
 #include "bq_log/types/buffer/oversize_buffer.h"
+#include "bq_log/types/buffer/fast_meta_store.h"
 
 namespace bq {
+    // Owner thread of an HP block. thread_name_len_ followed by thread_name_ has the same layout as
+    // _log_entry_ext_head_def followed by the name, so readers can point a log_entry_handle at it.
+    struct log_thread_info {
+        static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
+        uint64_t thread_id_;
+        uint8_t thread_name_len_;
+        char thread_name_[MAX_THREAD_NAME_LEN];
+    };
+    static_assert(sizeof(log_thread_info) == 32, "log_thread_info size");
+    static_assert(offsetof(log_thread_info, thread_name_) == offsetof(log_thread_info, thread_name_len_) + sizeof(_log_entry_ext_head_def), "thread info must match ext info layout");
+
+    extern BQ_TLS log_thread_info log_thread_info_tls_;
+    void init_log_thread_info(log_thread_info& info);
+
+    bq_forceinline const log_thread_info& get_log_thread_info()
+    {
+        log_thread_info& info = log_thread_info_tls_;
+        BQ_UNLIKELY_IF(info.thread_id_ == 0)
+        {
+            init_log_thread_info(info);
+        }
+        return info;
+    }
+
     class alignas(BQ_CACHE_LINE_SIZE) log_buffer {
     public:
 #if defined(BQ_MOBILE_PLATFORM)
@@ -88,6 +114,7 @@ namespace bq {
             log_buffer_write_handle oversize_parent_handle_;
             oversize_buffer_obj_def* oversize_target_buffer_;
             bq::shared_ptr<destruction_mark> destruction_mark_;
+            bool fast_mode_ = false;
 #if defined(BQ_JAVA)
             java_info java_;
 #endif
@@ -111,11 +138,26 @@ namespace bq {
             bq::hash_map_inline<uint64_t, log_tls_buffer_info*>* log_map_ = nullptr;
             uint64_t cur_log_buffer_id_ = 0;
             log_tls_buffer_info* cur_buffer_info_ = nullptr;
+            _api_fast_log_thread_state* fast_state_ = nullptr; // header-side thread local fast path state, see bind_fast_state
+            uint64_t fast_state_buffer_id_ = 0; // id of the buffer fast_state_ describes (ids are never reused)
 
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
             bq_forceinline log_tls_buffer_info& get_buffer_info_directly(const log_buffer* buffer);
+            // Points the header's fast path state at this thread's current buffer and keeps it in sync from then on.
+            void bind_fast_state(_api_fast_log_thread_state* state);
+            // Called whenever this thread's current HP block of the buffer with this id changes.
+            bq_forceinline void on_cur_block_changed(uint64_t buffer_id, block_node_head* block)
+            {
+                BQ_UNLIKELY_IF(fast_state_buffer_id_ == buffer_id)
+                {
+                    publish_fast_state(block);
+                }
+            }
             ~log_tls_info();
+
+        private:
+            void publish_fast_state(block_node_head* block);
         };
 
         BQ_PACK_BEGIN
@@ -155,18 +197,37 @@ namespace bq {
         public:
             alignas(8) bool need_reallocate_;
             alignas(8) context_head context_;
+            // owner thread of the block, so records in HP blocks need not carry it
+            alignas(8) log_thread_info thread_info_;
             bq_forceinline bq::platform::atomic_trivially_constructible<bool>& is_removed()
             {
                 return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<bool>*>(is_removed_place_holder_));
             }
-        } BQ_PACK_END static_assert(sizeof(block_misc_data) == 16 + sizeof(context_head), "invalid block_misc_data size");
+        } BQ_PACK_END static_assert(sizeof(block_misc_data) == 16 + sizeof(context_head) + sizeof(log_thread_info), "invalid block_misc_data size");
 
     public:
         log_buffer(log_buffer_config& config);
 
         ~log_buffer();
 
-        log_buffer_write_handle alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms);
+        // ext_info_size: bytes appended for the writer thread's info, reserved only when the chunk does not land in an HP block.
+        log_buffer_write_handle alloc_write_chunk(uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms);
+
+        bq_forceinline log_buffer_write_handle alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
+        {
+            return alloc_write_chunk(size, 0, current_epoch_ms);
+        }
+
+        bq::block_node_head* alloc_new_hp_block();
+
+        // Fast mode slow path: ensures this thread has a usable HP block (allocates or replaces one marked need_reallocate).
+        bq::block_node_head* ensure_fast_hp_block(log_tls_buffer_info& tls_buffer_info);
+
+        const fast_format_meta* register_fast_log_format(const char* format, uint32_t format_size,
+            uint8_t level, uint32_t category_idx, uint8_t format_type,
+            const uint8_t* arg_types, uint16_t arg_count);
+
+        const fast_meta_head* resolve_fast_log_meta(uint16_t version, uint64_t old_addr);
 
         void commit_write_chunk(const log_buffer_write_handle& handle);
 
@@ -177,6 +238,11 @@ namespace bq {
 #if defined(BQ_JAVA)
         bq::java_buffer_info get_java_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle);
 #endif
+
+        bq_forceinline uint64_t get_id() const
+        {
+            return id_;
+        }
 
         bq_forceinline uint16_t get_version() const
         {
@@ -193,6 +259,15 @@ namespace bq {
             return rt_cache_.current_reading_.is_in_recovery_reading_;
         }
 
+        // Owner thread of the chunk last returned by read_chunk() if it came from an HP block, otherwise nullptr.
+        bq_forceinline const log_thread_info* get_current_reading_thread_info() const
+        {
+            const auto& rt_reading = rt_cache_.current_reading_;
+            return rt_reading.hp_handle_cache_.result == enum_buffer_result_code::success
+                ? &rt_reading.cur_block_->get_misc_data<block_misc_data>().thread_info_
+                : nullptr;
+        }
+
         bq_forceinline const log_buffer_config& get_config() const
         {
             return config_;
@@ -206,8 +281,6 @@ namespace bq {
         size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
 #endif
     private:
-        bq::block_node_head* alloc_new_hp_block();
-
         enum class context_verify_result {
             valid,
             version_pending,
@@ -228,6 +301,9 @@ namespace bq {
         {
             return static_cast<uint16_t>(version_ - version) <= static_cast<uint16_t>(version_ - rt_cache_.current_reading_.version_);
         }
+
+        // Every change of this thread's current HP block goes through here, so the header's fast path state stays in sync.
+        bq_forceinline void set_cur_block(log_tls_buffer_info& tls_buffer_info, block_node_head* block);
 
         context_verify_result verify_context(const context_head& context);
         context_verify_result verify_oversize_context(const context_head& parent_context, const context_head& oversize_context);
@@ -263,6 +339,11 @@ namespace bq {
         uint32_t hp_buffer_max_alloc_size_;
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
+        bq::platform::spin_lock fast_meta_lock_;
+        bq::platform::atomic<fast_meta_store*> fast_meta_ptr_;
+        bq::unique_ptr<fast_meta_store> fast_meta_store_;
+
+        fast_meta_store* get_fast_meta_store();
 
         struct alignas(BQ_CACHE_LINE_SIZE) {
             bq::platform::spin_lock_rw_crazy array_lock_;
@@ -345,6 +426,8 @@ namespace bq {
         return_read_chunk_full_impl(handle);
     }
 
+    BQ_TLS_NON_POD_INLINE(log_buffer::log_tls_info, log_tls_info_)
+
     bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info(const log_buffer* buffer)
     {
         if (buffer->id_ == cur_log_buffer_id_) {
@@ -363,6 +446,12 @@ namespace bq {
         }
         cur_buffer_info_ = iter->value();
         return *cur_buffer_info_;
+    }
+
+    bq_forceinline void log_buffer::set_cur_block(log_tls_buffer_info& tls_buffer_info, block_node_head* block)
+    {
+        tls_buffer_info.cur_block_ = block;
+        log_tls_info__get_direct().on_cur_block_changed(id_, block);
     }
 
     bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info_directly(const log_buffer* buffer)

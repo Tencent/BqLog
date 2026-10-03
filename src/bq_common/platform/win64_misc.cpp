@@ -66,7 +66,7 @@ namespace bq {
         }
 
         // TODO optimize use TSC
-        uint64_t high_performance_epoch_ms()
+        uint64_t system_epoch_ms()
         {
             FILETIME ft;
             LARGE_INTEGER li;

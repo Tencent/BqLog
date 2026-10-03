@@ -14,7 +14,7 @@
 namespace bq {
     bool log_entry_handle::validate() const
     {
-        if (data_len < sizeof(_log_entry_head_def) + sizeof(_log_entry_ext_head_def)) {
+        if (data_len < sizeof(_log_entry_head_def)) {
             return false;
         }
         const auto& h = get_log_head();
@@ -33,19 +33,26 @@ namespace bq {
         }
         const uint32_t args_offset = static_cast<uint32_t>(args_offset_u64);
 
+        uint32_t args_end = data_len;
         const uint32_t ext_off = h.ext_info_offset;
-        if (ext_off < args_offset
-            || static_cast<uint64_t>(ext_off) + sizeof(_log_entry_ext_head_def) > data_len) {
-            return false;
-        }
-
-        const auto& ext = *reinterpret_cast<const _log_entry_ext_head_def*>(data_ptr + ext_off);
-        if (static_cast<uint64_t>(ext_off) + sizeof(_log_entry_ext_head_def) + ext.thread_name_len_ > data_len) {
-            return false;
+        if (ext_off == 0) {
+            if (!external_ext_head_) {
+                return false;
+            }
+        } else {
+            if (ext_off < args_offset
+                || static_cast<uint64_t>(ext_off) + sizeof(_log_entry_ext_head_def) > data_len) {
+                return false;
+            }
+            const auto& ext = *reinterpret_cast<const _log_entry_ext_head_def*>(data_ptr + ext_off);
+            if (static_cast<uint64_t>(ext_off) + sizeof(_log_entry_ext_head_def) + ext.thread_name_len_ > data_len) {
+                return false;
+            }
+            args_end = ext_off;
         }
 
         const uint8_t* args = data_ptr + args_offset;
-        const uint32_t args_len = ext_off - args_offset;
+        const uint32_t args_len = args_end - args_offset;
         uint32_t cursor = 0;
         while (cursor < args_len) {
             if (cursor + static_cast<uint32_t>(4) > args_len) {

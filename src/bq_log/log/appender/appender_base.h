@@ -23,7 +23,6 @@ namespace bq {
         enum appender_type {
             console,
             text_file,
-            raw_file,
             compressed_file,
             type_count
         };
@@ -39,6 +38,7 @@ namespace bq {
         bool init(const bq::string& name, const bq::property_value& config_obj, const log_imp* parent_log);
         bool reset(const bq::property_value& config_obj);
         bool log(const log_entry_handle& handle);
+        bool log_recovery_error(const log_entry_handle& handle);
 
         inline log_level_bitmap get_log_level_bitmap() const
         {

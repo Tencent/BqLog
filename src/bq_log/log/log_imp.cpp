@@ -11,8 +11,8 @@
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/log_snapshot.h"
 #include "bq_log/log/log_types.h"
+#include "bq_log/log/log_record_reader.h"
 #include "bq_log/log/appender/appender_console.h"
-#include "bq_log/log/appender/appender_file_raw.h"
 #include "bq_log/log/appender/appender_file_text.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
 #include "bq_log/utils/log_utils.h"
@@ -152,6 +152,8 @@ namespace bq {
         {
             categories_mask_array_.fill_uninitialized(categories_name_array_.size());
             bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"], categories_mask_array_);
+            fast_level_words_.fill_uninitialized(categories_name_array_.size());
+            memset(&fast_level_words_[0], 0, fast_level_words_.size() * sizeof(uint32_t));
         }
 
         // init print_stack_levels
@@ -277,6 +279,7 @@ namespace bq {
         // init categories mask
         {
             bq::log_utils::get_categories_mask_by_config(categories_name_array_, log_config["categories_mask"], categories_mask_array_);
+            refresh_fast_level_words();
         }
 
         // init snapshot
@@ -316,8 +319,9 @@ namespace bq {
             appender = bq::make_unique<appender_console>();
         } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::text_file))) {
             appender = bq::make_unique<appender_file_text>();
-        } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::raw_file))) {
-            appender = bq::make_unique<appender_file_raw>();
+        } else if (type_str.equals_ignore_case("raw_file")) {
+            util::log_device_console(bq::log_level::warning, "bq log warning: appender \"%s\" ignored, type raw_file has been removed, use compressed_file instead", name.c_str());
+            return false;
         } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::compressed_file))) {
             appender = bq::make_unique<appender_file_compressed>();
         } else {
@@ -340,6 +344,7 @@ namespace bq {
         categories_name_array_.clear();
         name_.clear();
         merged_log_level_bitmap_.clear();
+        no_stack_level_bitmap_.clear();
         if (buffer_) {
             bq::util::aligned_delete(buffer_);
         }
@@ -348,7 +353,7 @@ namespace bq {
         id_ = 0;
     }
 
-    void log_imp::process_log_chunk(bq::log_entry_handle& read_handle)
+    void log_imp::process_log_chunk(bq::log_entry_handle& read_handle, bool recovery_error)
     {
         bool is_recovered_entry = false;
         BQ_UNLIKELY_IF(buffer_->is_current_reading_recovered())
@@ -427,8 +432,10 @@ namespace bq {
         BQ_LIKELY_IF(!is_recovered_entry)
         {
             log(read_handle);
-        } else {
-            log_recovered(read_handle);
+        }
+        else
+        {
+            log_recovered(read_handle, recovery_error);
         }
     }
 
@@ -446,14 +453,18 @@ namespace bq {
         }
     }
 
-    void log_imp::log_recovered(const log_entry_handle& handle)
+    void log_imp::log_recovered(const log_entry_handle& handle, bool recovery_error)
     {
         auto category_idx = handle.get_log_head().category_idx;
-        if (categories_mask_array_.size() <= category_idx || categories_mask_array_[category_idx] == 0) {
+        if (!recovery_error && (categories_mask_array_.size() <= category_idx || categories_mask_array_[category_idx] == 0)) {
             return;
         }
         for (decltype(recovery_appenders_)::size_type i = 0; i < recovery_appenders_.size(); ++i) {
-            recovery_appenders_[i]->log(handle);
+            if (recovery_error) {
+                recovery_appenders_[i]->log_recovery_error(handle);
+            } else {
+                recovery_appenders_[i]->log(handle);
+            }
         }
         if (snapshot_->is_enable()) {
             snapshot_->write_data(handle);
@@ -485,6 +496,16 @@ namespace bq {
         }
         // make sure atomic
         merged_log_level_bitmap_ = tmp;
+        no_stack_level_bitmap_ = log_level_bitmap(bitmap_value & ~*print_stack_level_bitmap_.get_bitmap_ptr());
+        refresh_fast_level_words();
+    }
+
+    void log_imp::refresh_fast_level_words()
+    {
+        const uint32_t no_stack = *no_stack_level_bitmap_.get_bitmap_ptr();
+        for (decltype(fast_level_words_)::size_type i = 0; i < fast_level_words_.size(); ++i) {
+            fast_level_words_[i] = (i < categories_mask_array_.size() && categories_mask_array_[i]) ? no_stack : 0;
+        }
     }
 
     bool log_imp::process(bool is_force_flush)
@@ -498,8 +519,17 @@ namespace bq {
             if (read_chunk.result == enum_buffer_result_code::success) {
                 did_work = true;
                 bq::log_entry_handle log_item(read_chunk.data_addr, read_chunk.data_size);
+                bool recovery_error = false;
+                if (!log_record_reader::read(*buffer_, read_chunk.data_addr, read_chunk.data_size,
+                        fast_record_data_, log_item)) {
+                    recovery_error = log_record_reader::make_recovery_error(*buffer_,
+                        read_chunk.data_addr, read_chunk.data_size, fast_record_data_, log_item);
+                    if (!recovery_error) {
+                        continue;
+                    }
+                }
                 current_epoch_ms = log_item.get_log_head().timestamp_epoch;
-                process_log_chunk(log_item);
+                process_log_chunk(log_item, recovery_error);
             } else if (read_chunk.result == enum_buffer_result_code::err_empty_log_buffer) {
                 break;
             }
@@ -565,7 +595,6 @@ namespace bq {
     {
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); ++i) {
             switch (appenders_list_[i]->get_type()) {
-            case appender_base::appender_type::raw_file:
             case appender_base::appender_type::text_file:
             case appender_base::appender_type::compressed_file:
                 static_cast<bq::appender_file_base*>(appenders_list_[i].operator->())->flush_write_cache();
@@ -580,7 +609,6 @@ namespace bq {
     {
         for (decltype(appenders_list_)::size_type i = 0; i < appenders_list_.size(); ++i) {
             switch (appenders_list_[i]->get_type()) {
-            case appender_base::appender_type::raw_file:
             case appender_base::appender_type::text_file:
             case appender_base::appender_type::compressed_file:
                 static_cast<bq::appender_file_base*>(appenders_list_[i].operator->())->flush_write_io();

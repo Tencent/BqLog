@@ -23,6 +23,25 @@
 #include "bq_log/misc/bq_log_c_types.h"
 
 namespace bq {
+    // The first word is epoch milliseconds in both heads; its high bit marks fast records.
+    static constexpr uint64_t log_head_fast_flag = UINT64_C(1) << 63;
+
+    struct log_head_base_def {
+        static bq_forceinline uint64_t get_epoch(uint64_t value)
+        {
+            return value & ~log_head_fast_flag;
+        }
+
+        static bq_forceinline bool is_fast(uint64_t value)
+        {
+            return (value & log_head_fast_flag) != 0;
+        }
+
+        static bq_forceinline uint64_t set_fast(uint64_t epoch)
+        {
+            return epoch | log_head_fast_flag;
+        }
+    };
     class log;
     namespace test {
         class test_log;
@@ -43,7 +62,7 @@ namespace bq {
     };
 
     BQ_PACK_BEGIN
-    struct alignas(8) _log_entry_head_def {
+    struct alignas(8) _log_entry_head_def : log_head_base_def {
         uint64_t timestamp_epoch;
         uint32_t ext_info_offset;
         uint32_t category_idx;
@@ -64,6 +83,47 @@ namespace bq {
         "_log_entry_head_def::get_head_size_without_format_str() must equal 32");
     static_assert(sizeof(_log_entry_head_def) == 40,
         "_log_entry_head_def's memory layout must be packed!");
+
+    BQ_PACK_BEGIN
+    struct alignas(8) log_head_fast_def : log_head_base_def {
+        uint64_t timestamp_epoch;
+        uint64_t format_meta_addr;
+    } BQ_PACK_END
+
+        static_assert(sizeof(log_head_fast_def) == 16, "log_head_fast_def size");
+    static_assert(offsetof(log_head_fast_def, format_meta_addr) == 8, "log_head_fast_def alignment");
+
+    enum class fast_meta_kind : uint8_t {
+        format = 1,
+        oversize = 2
+    };
+
+    BQ_PACK_BEGIN
+    struct alignas(8) fast_meta_head {
+        uint64_t checksum;
+        uint32_t record_size;
+        fast_meta_kind kind;
+        uint8_t ready;
+        uint16_t reserved;
+    } BQ_PACK_END static_assert(sizeof(fast_meta_head) == 16, "fast meta head size");
+
+    BQ_PACK_BEGIN
+    struct alignas(8) fast_format_meta {
+        fast_meta_head head;
+        uint64_t format_hash;
+        uint32_t category_idx;
+        uint32_t format_size;
+        uint16_t arg_count;
+        uint8_t level;
+        uint8_t format_type;
+        uint32_t reserved;
+
+        const uint8_t* format_data() const { return reinterpret_cast<const uint8_t*>(this) + sizeof(*this); }
+        const uint8_t* arg_types() const { return format_data() + format_size; }
+    } BQ_PACK_END static_assert(sizeof(fast_format_meta) == 40, "fast format meta size");
+    static_assert(offsetof(fast_format_meta, format_hash) == 16, "fast format hash alignment");
+    static_assert(offsetof(fast_format_meta, category_idx) == 24, "fast format category alignment");
+    static_assert(offsetof(fast_format_meta, format_size) == 28, "fast format size alignment");
 
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN
@@ -107,6 +167,5 @@ namespace bq {
         string_utf32_type,
         string_utf_mixed_type
     };
-
 
 }

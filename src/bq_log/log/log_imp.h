@@ -23,6 +23,7 @@ namespace bq {
         friend const uint8_t* bq::api::__api_get_log_category_masks_array_by_log_id(uint64_t log_id);
         friend const uint32_t* bq::api::__api_get_log_merged_log_level_bitmap_by_log_id(uint64_t log_id);
         friend const uint32_t* bq::api::__api_get_log_print_stack_level_bitmap_by_log_id(uint64_t log_id);
+        friend const uint32_t* bq::api::__api_get_log_category_level_words_by_log_id(uint64_t log_id);
 
     public:
         log_imp();
@@ -100,14 +101,27 @@ namespace bq {
             return print_stack_level_bitmap_.have_level(level);
         }
 
+        // Common case first: one load and one bit test when the level is enabled without stack trace.
+        bq_forceinline bool is_enable_without_stack_for(uint32_t category_index, bq::log_level level) const
+        {
+            return category_index < fast_level_words_.size() && ((fast_level_words_[category_index] >> static_cast<uint32_t>(level)) & 1U) != 0;
+        }
+
+        // Levels enabled without stack trace for one category, read by the inline fast path; the address is stable.
+        bq_forceinline const uint32_t* get_fast_level_word(uint32_t category_index) const
+        {
+            return category_index < fast_level_words_.size() ? &fast_level_words_[category_index] : nullptr;
+        }
+
     private:
         bool add_appender(const string& name, const bq::property_value& jobj);
         void refresh_merged_log_level_bitmap();
+        void refresh_fast_level_words();
         void flush_appenders_cache();
         void flush_appenders_io();
         void clear();
-        void process_log_chunk(bq::log_entry_handle& read_handle);
-        void log_recovered(const log_entry_handle& handle);
+        void process_log_chunk(bq::log_entry_handle& read_handle, bool recovery_error = false);
+        void log_recovered(const log_entry_handle& handle, bool recovery_error = false);
 
     private:
         enum class recover_status_enum {
@@ -125,6 +139,7 @@ namespace bq {
         bq::platform::spin_lock spin_lock_;
         log_level_bitmap merged_log_level_bitmap_;
         log_level_bitmap print_stack_level_bitmap_;
+        log_level_bitmap no_stack_level_bitmap_;
         log_buffer* buffer_;
         class log_snapshot* snapshot_;
         uint64_t last_log_entry_epoch_ms_;
@@ -135,7 +150,9 @@ namespace bq {
         bool recovery_appenders_need_begin_;
         bq::array<bq::string> categories_name_array_;
         bq::array_inline<uint8_t> categories_mask_array_;
+        bq::array<uint32_t> fast_level_words_; // sized once at init, so addresses handed to call sites stay valid
 
         bq::string last_config_;
+        bq::array<uint8_t, bq::aligned_allocator<uint8_t, 8>> fast_record_data_;
     };
 }

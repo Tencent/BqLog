@@ -21,9 +21,11 @@
 #include "bq_common_test/test_property.h"
 #include "bq_common_test/test_thread_atomic.h"
 #include "bq_common_test/test_encryption.h"
+#include "bq_common_test/test_fast_clock.h"
 #include "test_miso_ring_buffer.h"
 #include "test_siso_ring_buffer.h"
 #include "test_log_buffer.h"
+#include "test_fast_log.h"
 #include "test_log_appender.h"
 #include "test_log.h"
 #include "test_layout.h"
@@ -104,6 +106,7 @@ int32_t main_logic()
     TEST_GROUP(Bq_Common_Test, bq::test, test_file_manager);
     TEST_GROUP(Bq_Common_Test, bq::test, test_thread_atomic);
     TEST_GROUP(Bq_Common_Test, bq::test, test_encryption);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_fast_clock);
     TEST_GROUP_END(Bq_Common_Test);
 
     TEST_GROUP_BEGIN(Bq_Log_Test);
@@ -111,6 +114,7 @@ int32_t main_logic()
     TEST_GROUP(Bq_Log_Test, bq::test, test_compressed_cache);
     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap", 0));
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_buffer);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_fast_log);
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_appender);
     TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);
@@ -138,8 +142,18 @@ int32_t main_logic()
 
 int32_t main(int32_t argc, char** argv)
 {
-    (void)argc;
-    (void)argv;
+    if (argc > 1 && strcmp(argv[1], "--fast-clock-only") == 0) {
+        bq::test::test_fast_clock clock_test;
+        auto result = clock_test.test();
+        result.output("test_fast_clock");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--fast-only") == 0) {
+        bq::test::test_fast_log fast_test;
+        auto result = fast_test.test();
+        result.output("test_fast_log");
+        return result.is_all_pass() ? 0 : -1;
+    }
     return main_logic();
 }
 

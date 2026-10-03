@@ -46,11 +46,13 @@ void UBqLog::Ensure()
 	        merged_log_level_bitmap_ = bq::api::__api_get_log_merged_log_level_bitmap_by_log_id(log_id_);
 	        categories_mask_array_ = bq::api::__api_get_log_category_masks_array_by_log_id(log_id_);
 	        print_stack_level_bitmap_ = bq::api::__api_get_log_print_stack_level_bitmap_by_log_id(log_id_);
+	        category_level_words_ = bq::api::__api_get_log_category_level_words_by_log_id(log_id_);
 	    }else
 	    {
 	        merged_log_level_bitmap_ = nullptr;
 	        categories_mask_array_ = nullptr;
 	        print_stack_level_bitmap_ = nullptr;
+	        category_level_words_ = nullptr;
 	    }
 		need_renew_inst_ = false;
 	}

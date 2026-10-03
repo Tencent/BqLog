@@ -11,7 +11,6 @@
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 
 #include "bq_log/global/log_vars.h"
-#include "bq_log/log/decoder/appender_decoder_raw.h"
 #include "bq_log/log/decoder/appender_decoder_compressed.h"
 #include "bq_log/log/appender/appender_file_binary.h"
 
@@ -49,9 +48,7 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
         return appender_decode_result::failed_decode_error;
     }
     bq::unique_ptr<appender_decoder_base> decoder;
-    if (head.format == bq::appender_file_binary::appender_format_type::raw) {
-        decoder = bq::make_unique<bq::appender_decoder_raw>();
-    } else if (head.format == bq::appender_file_binary::appender_format_type::compressed) {
+    if (head.format == bq::appender_file_binary::appender_format_type::compressed) {
         decoder = bq::make_unique<bq::appender_decoder_compressed>();
     } else {
         bq::util::log_device_console(log_level::error, "decode log file :%s failed, unrecognized format", path.c_str());

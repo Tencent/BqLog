@@ -368,7 +368,11 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         }
     }
     bq::log_imp* log_impl = bq::log_manager::get_log_by_id(log_js_inst->log_id_);
-    if (!log_impl || !log_impl->is_enable_for(category_index, log_level)) {
+    if (!log_impl) {
+        return bq::make_napi_bool(env, false);
+    }
+    const bool without_stack = log_impl->is_enable_without_stack_for(category_index, log_level);
+    if (!without_stack && !log_impl->is_enable_for(category_index, log_level)) {
         return bq::make_napi_bool(env, false);
     }
 
@@ -384,7 +388,7 @@ static napi_value napi_do_log(bq::log_level log_level, napi_env env, napi_callba
         BQ_NAPI_CALL(env, bq::make_napi_bool(env, false), napi_get_cb_info(env, info, &argc, argv_ptr, NULL, NULL));
     }
 
-    bool enable_stack_trace = log_impl->is_stack_trace_enable_for(log_level);
+    bool enable_stack_trace = !without_stack && log_impl->is_stack_trace_enable_for(log_level);
     napi_value stack_val = nullptr;
     if (enable_stack_trace) {
         napi_value empty_msg;
