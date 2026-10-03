@@ -50,9 +50,11 @@ namespace bq {
 
         bq_forceinline void set_delete_mmap_when_destruct(bool delete_mmap) { delete_mmap_when_destruct_ = delete_mmap; }
 
-        bq_forceinline bool is_valid() const { return buffer_data_ != nullptr;}
+        bq_forceinline bool is_valid() const { return buffer_data_ != nullptr; }
 
         void resize(size_t new_size);
+
+        void flush();
 
         bool is_memory_mapped() const
         {

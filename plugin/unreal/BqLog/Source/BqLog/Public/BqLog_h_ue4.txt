@@ -82,6 +82,7 @@ protected:
     const uint32_t* merged_log_level_bitmap_ = nullptr;
     const uint8_t* categories_mask_array_ = nullptr;
     const uint32_t* print_stack_level_bitmap_ = nullptr;
+    const uint32_t* category_level_words_ = nullptr; // per category, enabled without stack trace
     bool need_renew_inst_ = true;
 };
 

@@ -91,6 +91,11 @@ namespace bq {
         return false;
     }
 
+    bool appender_base::log_recovery_error(const log_entry_handle& handle)
+    {
+        return appenders_enable && log_impl(handle);
+    }
+
     void appender_base::set_basic_configs(const bq::property_value& config_obj)
     {
         const auto& levels_array = config_obj["levels"];

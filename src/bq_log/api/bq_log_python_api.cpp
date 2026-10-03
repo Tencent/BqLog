@@ -838,7 +838,11 @@ static PyObject* py_is_enable_for(PyObject* self, PyObject* args) {
         return nullptr;
     }
     bq::log_imp* log_impl = bq::log_manager::get_log_by_id(static_cast<uint64_t>(log_id_ull));
-    if (!log_impl || !log_impl->is_enable_for(category_idx, static_cast<bq::log_level>(level))) {
+    if (!log_impl) {
+        Py_RETURN_FALSE;
+    }
+    const bq::log_level log_level = static_cast<bq::log_level>(level);
+    if (!log_impl->is_enable_without_stack_for(category_idx, log_level) && !log_impl->is_enable_for(category_idx, log_level)) {
         Py_RETURN_FALSE;
     }
     Py_RETURN_TRUE;

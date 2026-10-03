@@ -23,7 +23,7 @@ namespace bq {
         //gettimeofday has higher performance than "mach_absolute_time"
         //and "CLOCK_REALTIME_COARSE clock_gettime" on mac.
         //TSC is not recommended because of different hardware architectures.
-        uint64_t high_performance_epoch_ms()
+        uint64_t system_epoch_ms()
         {
             struct timeval tv;
             gettimeofday(&tv, NULL);

@@ -258,6 +258,13 @@ namespace bq {
         static uint32_t calculate_min_size_of_memory(uint32_t expected_buffer_size);
 
         /// <summary>
+        /// Offsets used by the header-inlined fast write path. It writes the same chunk layout and cursors as alloc/commit.
+        /// </summary>
+        static void fill_fast_log_layout(_api_fast_log_layout& layout);
+
+        void fill_fast_log_thread_state(_api_fast_log_thread_state& state);
+
+        /// <summary>
         /// Warning:ring buffer can only be read from one thread at same time.
         /// This option is only work in Debug build and will be ignored in Release build.
         /// </summary>
@@ -296,6 +303,12 @@ namespace bq {
         bq_forceinline uint32_t get_total_blocks_count() const
         {
             return aligned_blocks_count_;
+        }
+
+        // Commits the data pages without touching their contents (they may hold data recovered from a memory map).
+        void prefault()
+        {
+            bq::platform::prefault_pages(aligned_blocks_, static_cast<size_t>(aligned_blocks_count_) * sizeof(block));
         }
 
         bq_forceinline bool get_is_memory_recovery() const

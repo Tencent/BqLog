@@ -70,7 +70,7 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 | 名称                         | 是否必须 | 可配置值                                | 默认值               | ConsoleAppender | TextFileAppender | CompressedFileAppender |
 |------------------------------|---------|-----------------------------------------|-------------------|-----------------|------------------|------------------------|
-| `type`                       | ✔       | `console` / `text_file` / `compressed_file` / `raw_file` | -                 | ✔               | ✔                | ✔（加密需此类型）      |
+| `type`                       | ✔       | `console` / `text_file` / `compressed_file` | -                 | ✔               | ✔                | ✔（加密需此类型）      |
 | `enable`                     | ✘       | `true` / `false`                        | `true`            | ✔               | ✔                | ✔                      |
 | `levels`                     | ✘       | 日志等级数组（`[verbose,...]` 或 `[all]`） | `[all]`           | ✔               | ✔                | ✔                      |
 | `time_zone`                  | ✘       | `gmt` / `localtime` / `Z` / `UTC` / `utc+8` / `utc-2` / `utc+11:30` 等 | `localtime` | ✔               | ✔                | ✔（影响滚动日期）      |
@@ -116,7 +116,7 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 影响：
 - ConsoleAppender / TextFileAppender：决定日志文本中时间字段的显示；
-- TextFileAppender / CompressedFileAppender / RawFileAppender：决定文件按日期滚动的切分点（每天 0 点）。
+- TextFileAppender / CompressedFileAppender：决定文件按日期滚动的切分点（每天 0 点）。
 
 #### `appenders_config.xxx.base_dir_type`
 

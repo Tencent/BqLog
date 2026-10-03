@@ -22,9 +22,6 @@
 #include "bq_common/utils/aligned_allocator.h"
 namespace bq {
 
-    static constexpr size_t BQ_CACHE_LINE_SIZE = 128;
-    static constexpr size_t BQ_CACHE_LINE_SIZE_LOG2 = 7;
-
     // This is a wrapper struct which can define your data alignment.
     //"alignas" keyword can only ensure alignment on heap allocation when c++ standard is up to c++17
     // and it does not work correctly when object is constructed with "placement new" when starting address is not aligned.

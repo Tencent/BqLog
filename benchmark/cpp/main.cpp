@@ -3,6 +3,7 @@
 #endif
 #include "bq_log/bq_log.h"
 #include "multi_format_templates.h"
+#include "write_thread_cost.h"
 #include <cstdint>
 #include <cstdlib>
 #include <stdio.h>
@@ -61,6 +62,12 @@ static bq::log compressed_log_multi_format = bq::log::create_log("test_multi_for
 		appenders_config.appender_3.file_name= benchmark_output/test_multi_format
 		appenders_config.appender_3.capacity_limit=1
 	)");
+static bq::log write_thread_cost_log = bq::log::create_log("write_thread_cost", R"(
+        appenders_config.appender_3.type=text_file
+        appenders_config.appender_3.levels=[all]
+        appenders_config.appender_3.file_name= benchmark_output/write_thread_cost
+        appenders_config.appender_3.capacity_limit=1
+    )");
 
 static bq::string ascii_charset;
 static bq::u16string ascii_charset_u16;
@@ -241,19 +248,25 @@ void test_compress_mixed_utf16(int32_t thread_count)
               << std::endl;
 }
 
-void test_compress_multi_param(int32_t thread_count)
+void test_compress_multi_param(int32_t thread_count, write_thread_cost::write_mode mode)
 {
     std::cout << "============================================================" << std::endl;
-    std::cout << "=========Begin Compressed File Log Test 1, 4 params=========" << std::endl;
+    std::cout << "=========Begin Compressed File Log Test 1, 4 params=========" << (mode == write_thread_cost::write_mode::fast ? " (BQ_LOG_FAST_INFO)" : " (log.info)") << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress");
     std::vector<std::thread> threads;
     threads.resize(thread_count);
     uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
     for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
-        threads[thread_index] = std::thread([thread_index, &log_obj]() {
-            for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
-                log_obj.info("idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+        threads[thread_index] = std::thread([thread_index, &log_obj, mode]() {
+            if (mode == write_thread_cost::write_mode::fast) {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    BQ_LOG_FAST_INFO(log_obj, "idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+                }
+            } else {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    log_obj.info("idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+                }
             }
         });
     }
@@ -267,19 +280,25 @@ void test_compress_multi_param(int32_t thread_count)
               << std::endl;
 }
 
-void test_compress_enc_multi_param(int32_t thread_count)
+void test_compress_enc_multi_param(int32_t thread_count, write_thread_cost::write_mode mode)
 {
     std::cout << "============================================================" << std::endl;
-    std::cout << "=========Begin Encrypted Compressed File Log Test 1, 4 params=========" << std::endl;
+    std::cout << "=========Begin Encrypted Compressed File Log Test 1, 4 params=========" << (mode == write_thread_cost::write_mode::fast ? " (BQ_LOG_FAST_INFO)" : " (log.info)") << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress_enc");
     std::vector<std::thread> threads;
     threads.resize(thread_count);
     uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
     for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
-        threads[thread_index] = std::thread([thread_index, &log_obj]() {
-            for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
-                log_obj.info("idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+        threads[thread_index] = std::thread([thread_index, &log_obj, mode]() {
+            if (mode == write_thread_cost::write_mode::fast) {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    BQ_LOG_FAST_INFO(log_obj, "idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+                }
+            } else {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    log_obj.info("idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+                }
             }
         });
     }
@@ -293,19 +312,25 @@ void test_compress_enc_multi_param(int32_t thread_count)
               << std::endl;
 }
 
-void test_text_multi_param(int32_t thread_count)
+void test_text_multi_param(int32_t thread_count, write_thread_cost::write_mode mode)
 {
     std::cout << "============================================================" << std::endl;
-    std::cout << "============Begin Text File Log Test 2, 4 params============" << std::endl;
+    std::cout << "============Begin Text File Log Test 2, 4 params============" << (mode == write_thread_cost::write_mode::fast ? " (BQ_LOG_FAST_INFO)" : " (log.info)") << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("text");
     std::vector<std::thread> threads;
     threads.resize(thread_count);
     uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
     for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
-        threads[thread_index] = std::thread([thread_index, &log_obj]() {
-            for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
-                log_obj.info("idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+        threads[thread_index] = std::thread([thread_index, &log_obj, mode]() {
+            if (mode == write_thread_cost::write_mode::fast) {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    BQ_LOG_FAST_INFO(log_obj, "idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+                }
+            } else {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    log_obj.info("idx:{}, num:{}, This test, {}, {}", thread_index, log_index, 2.4232f, true);
+                }
             }
         });
     }
@@ -319,19 +344,25 @@ void test_text_multi_param(int32_t thread_count)
               << std::endl;
 }
 
-void test_compress_no_param(int32_t thread_count)
+void test_compress_no_param(int32_t thread_count, write_thread_cost::write_mode mode)
 {
     std::cout << "============================================================" << std::endl;
-    std::cout << "=========Begin Compressed File Log Test 3, no param=========" << std::endl;
+    std::cout << "=========Begin Compressed File Log Test 3, no param=========" << (mode == write_thread_cost::write_mode::fast ? " (BQ_LOG_FAST_INFO)" : " (log.info)") << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress");
     std::vector<std::thread> threads;
     threads.resize(thread_count);
     uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
     for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
-        threads[thread_index] = std::thread([thread_index, &log_obj]() {
-            for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
-                log_obj.info("Empty Log, No Param");
+        threads[thread_index] = std::thread([thread_index, &log_obj, mode]() {
+            if (mode == write_thread_cost::write_mode::fast) {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    BQ_LOG_FAST_INFO(log_obj, "Empty Log, No Param");
+                }
+            } else {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    log_obj.info("Empty Log, No Param");
+                }
             }
         });
     }
@@ -345,19 +376,25 @@ void test_compress_no_param(int32_t thread_count)
               << std::endl;
 }
 
-void test_compress_enc_no_param(int32_t thread_count)
+void test_compress_enc_no_param(int32_t thread_count, write_thread_cost::write_mode mode)
 {
     std::cout << "============================================================" << std::endl;
-    std::cout << "=========Begin Encrypted Compressed File Log Test 3, no param=========" << std::endl;
+    std::cout << "=========Begin Encrypted Compressed File Log Test 3, no param=========" << (mode == write_thread_cost::write_mode::fast ? " (BQ_LOG_FAST_INFO)" : " (log.info)") << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("compress_enc");
     std::vector<std::thread> threads;
     threads.resize(thread_count);
     uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
     for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
-        threads[thread_index] = std::thread([thread_index, &log_obj]() {
-            for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
-                log_obj.info("Empty Log, No Param");
+        threads[thread_index] = std::thread([thread_index, &log_obj, mode]() {
+            if (mode == write_thread_cost::write_mode::fast) {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    BQ_LOG_FAST_INFO(log_obj, "Empty Log, No Param");
+                }
+            } else {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    log_obj.info("Empty Log, No Param");
+                }
             }
         });
     }
@@ -371,19 +408,25 @@ void test_compress_enc_no_param(int32_t thread_count)
               << std::endl;
 }
 
-void test_text_no_param(int32_t thread_count)
+void test_text_no_param(int32_t thread_count, write_thread_cost::write_mode mode)
 {
     std::cout << "============================================================" << std::endl;
-    std::cout << "============Begin Text File Log Test 4, no param============" << std::endl;
+    std::cout << "============Begin Text File Log Test 4, no param============" << (mode == write_thread_cost::write_mode::fast ? " (BQ_LOG_FAST_INFO)" : " (log.info)") << std::endl;
     bq::log log_obj = bq::log::get_log_by_name("text");
     std::vector<std::thread> threads;
     threads.resize(thread_count);
     uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
     std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
     for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
-        threads[thread_index] = std::thread([thread_index, &log_obj]() {
-            for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
-                log_obj.info("Empty Log, No Param");
+        threads[thread_index] = std::thread([thread_index, &log_obj, mode]() {
+            if (mode == write_thread_cost::write_mode::fast) {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    BQ_LOG_FAST_INFO(log_obj, "Empty Log, No Param");
+                }
+            } else {
+                for (int32_t log_index = 0; log_index < 2000000; ++log_index) {
+                    log_obj.info("Empty Log, No Param");
+                }
             }
         });
     }
@@ -512,12 +555,16 @@ int main()
     test_compress_chinese_utf16(thread_count);
     test_compress_mixed_utf16(thread_count);
 
-    test_compress_multi_param(thread_count);
-    test_compress_enc_multi_param(thread_count);
-    test_text_multi_param(thread_count);
-    test_compress_no_param(thread_count);
-    test_compress_enc_no_param(thread_count);
-    test_text_no_param(thread_count);
+    // Fixed format tests run twice: once through log.info() and once through BQ_LOG_FAST_INFO().
+    const write_thread_cost::write_mode modes[] = { write_thread_cost::write_mode::normal, write_thread_cost::write_mode::fast };
+    for (const auto mode : modes) {
+        test_compress_multi_param(thread_count, mode);
+        test_compress_enc_multi_param(thread_count, mode);
+        test_text_multi_param(thread_count, mode);
+        test_compress_no_param(thread_count, mode);
+        test_compress_enc_no_param(thread_count, mode);
+        test_text_no_param(thread_count, mode);
+    }
 
     // Multi-format tests: same total log volume as the single-format tests above,
     // but spread across BENCH_MULTI_FORMAT_COUNT distinct format templates so the
@@ -527,5 +574,7 @@ int main()
     test_compress_multi_format_single(thread_count);
     test_compress_multi_format_roundrobin(thread_count);
     test_compress_multi_format_hotwindow(thread_count);
+
+    write_thread_cost::test(thread_count);
     return 0;
 }

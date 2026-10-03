@@ -10,9 +10,35 @@
  */
 #include "bq_common/platform/platform_misc.h"
 #include "bq_common/bq_common.h"
+#include "bq_common/platform/fast_clock.h"
 namespace bq {
     namespace platform {
         static bq::platform::spin_lock_zero_init lock_;
+        static BQ_TLS fast_clock_thread_cache epoch_ms_cache_;
+
+        uint64_t high_performance_epoch_ms()
+        {
+            uint64_t epoch_ms;
+            BQ_LIKELY_IF(fast_clock_read_epoch_ms(epoch_ms_cache_, epoch_ms))
+            {
+                return epoch_ms;
+            }
+            return system_epoch_ms();
+        }
+
+        void prefault_pages(void* addr, size_t size)
+        {
+            const uintptr_t page_size = static_cast<uintptr_t>(common_global_vars::get().page_size_);
+            if (!addr || size == 0 || page_size == 0) {
+                return;
+            }
+            const uintptr_t begin = reinterpret_cast<uintptr_t>(addr);
+            const uintptr_t end = begin + size;
+            for (uintptr_t page = begin - (begin % page_size); page < end; page += page_size) {
+                volatile uint8_t* p = reinterpret_cast<volatile uint8_t*>(page < begin ? begin : page);
+                *p = *p;
+            }
+        }
 
         bq::string get_base_dir(int32_t base_dir_type)
         {

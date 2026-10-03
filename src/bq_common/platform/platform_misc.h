@@ -83,8 +83,11 @@ namespace bq {
             base_dir_initializer();
         };
 
-        // TODO optimize use TSC
+        // Hardware counter clock (fast_clock.h) where available, system_epoch_ms() otherwise.
         uint64_t high_performance_epoch_ms();
+
+        // Platform wall clock, implemented per platform.
+        uint64_t system_epoch_ms();
 
         bq::string get_base_dir(int32_t base_dir_type);
 
@@ -136,6 +139,10 @@ namespace bq {
 
         void* aligned_alloc(size_t alignment, size_t size);
         void aligned_free(void* ptr);
+
+        // Commits every page of [addr, addr + size) by reading and writing back one byte per page; contents are unchanged.
+        // Must not race with any other writer of the range.
+        void prefault_pages(void* addr, size_t size);
 
 #if defined(BQ_UNIT_TEST)
         // Test-only fault-injection hooks for disk-full / OOM scenarios.

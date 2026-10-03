@@ -847,6 +847,95 @@ namespace bq {
                 test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test end...\n");
             }
 
+            class fast_mode_test_thread : public bq::platform::thread {
+                log_buffer& buffer_;
+
+            public:
+                bool write_ok_ = false;
+
+                explicit fast_mode_test_thread(log_buffer& buffer)
+                    : buffer_(buffer)
+                {
+                }
+
+            protected:
+                void run() override
+                {
+                    auto& tls = log_tls_info__get_direct().get_buffer_info(&buffer_);
+                    tls.fast_mode_ = true;
+                    tls.cur_block_ = buffer_.alloc_new_hp_block();
+                    if (!tls.fast_mode_ || !tls.cur_block_) {
+                        return;
+                    }
+                    auto handle = buffer_.alloc_write_chunk(8, bq::platform::high_performance_epoch_ms());
+                    if (handle.result != enum_buffer_result_code::success) {
+                        buffer_.commit_write_chunk(handle);
+                        return;
+                    }
+                    *reinterpret_cast<uint64_t*>(handle.data_addr) = 1;
+                    buffer_.commit_write_chunk(handle);
+                    write_ok_ = true;
+                }
+            };
+
+            void do_fast_mode_buffer_test(test_result& result)
+            {
+                log_buffer_config config;
+                config.log_name = "fast_mode_buffer_test";
+                config.log_categories_name = { "_default" };
+                config.default_buffer_size = 1024 * 64;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                config.high_frequency_threshold_per_second = UINT64_MAX;
+                log_buffer buffer(config);
+
+                fast_mode_test_thread writer(buffer);
+                writer.start();
+                writer.join();
+                result.add_result(writer.write_ok_, "fast mode thread write");
+
+                uint32_t read_count = 0;
+                for (uint32_t i = 0; i < 8; ++i) {
+                    auto handle = buffer.read_chunk();
+                    bq::scoped_log_buffer_handle<log_buffer> read_handle(buffer, handle);
+                    if (handle.result == enum_buffer_result_code::success) {
+                        ++read_count;
+                    }
+                }
+                result.add_result(read_count == 1, "fast mode thread exit read count");
+                result.add_result(buffer.get_groups_count() == 0, "fast mode thread exit recycle");
+
+                auto& tls = log_tls_info__get_direct().get_buffer_info(&buffer);
+                tls.fast_mode_ = true;
+                tls.cur_block_ = buffer.alloc_new_hp_block();
+                result.add_result(tls.fast_mode_ && tls.cur_block_, "fast mode initial hp block");
+                auto* first_block = tls.cur_block_;
+                first_block->get_misc_data<log_buffer::block_misc_data>().need_reallocate_ = true;
+                auto handle = buffer.alloc_write_chunk(8, bq::platform::high_performance_epoch_ms());
+                result.add_result(handle.result == enum_buffer_result_code::success, "fast mode reallocate write");
+                if (handle.result == enum_buffer_result_code::success) {
+                    *reinterpret_cast<uint64_t*>(handle.data_addr) = 2;
+                }
+                buffer.commit_write_chunk(handle);
+                result.add_result(tls.cur_block_ != first_block, "fast mode reallocate switched block");
+
+                const uint32_t oversize = tls.cur_block_->get_buffer().get_max_alloc_size() + 1;
+                handle = buffer.alloc_write_chunk(oversize, bq::platform::high_performance_epoch_ms());
+                result.add_result(handle.result == enum_buffer_result_code::success, "fast mode oversize write");
+                if (handle.result == enum_buffer_result_code::success) {
+                    *reinterpret_cast<uint64_t*>(handle.data_addr) = 3;
+                }
+                buffer.commit_write_chunk(handle);
+                result.add_result(tls.cur_block_ != nullptr, "fast mode hp restored after oversize");
+
+                handle = buffer.alloc_write_chunk(8, bq::platform::high_performance_epoch_ms() + 2000);
+                result.add_result(handle.result == enum_buffer_result_code::success, "standard write after fast mode");
+                if (handle.result == enum_buffer_result_code::success) {
+                    *reinterpret_cast<uint64_t*>(handle.data_addr) = 4;
+                }
+                buffer.commit_write_chunk(handle);
+                result.add_result(tls.cur_block_ != nullptr, "standard write stays hp after fast mode");
+            }
+
         public:
             virtual test_result test() override
             {
@@ -862,6 +951,7 @@ namespace bq {
                 config.high_frequency_threshold_per_second = 1000;
 
                 do_block_list_test(result, config);
+                do_fast_mode_buffer_test(result);
                 config.need_recovery = true;
                 do_block_list_test(result, config);
 

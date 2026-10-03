@@ -39,14 +39,16 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
         return false;
     }
     const uint64_t log_id = LogInstance->log_id_;
-    if (!(((*LogInstance->merged_log_level_bitmap_ & (1U << static_cast<int32_t>(Level))) != 0) && LogInstance->categories_mask_array_[CategoryIndex]))
+    const bool without_stack = LogInstance->category_level_words_
+        && ((LogInstance->category_level_words_[CategoryIndex] >> static_cast<uint32_t>(Level)) & 1U) != 0;
+    if (!without_stack && !(((*LogInstance->merged_log_level_bitmap_ & (1U << static_cast<int32_t>(Level))) != 0) && LogInstance->categories_mask_array_[CategoryIndex]))
     {
         return false;
     }
     bq::_api_u16string_def stack_string_def;
     stack_string_def.str = nullptr;
     stack_string_def.len = 0;
-    bool should_print_stack = (*LogInstance->print_stack_level_bitmap_ & (1 << static_cast<int32_t>(Level)));
+    bool should_print_stack = !without_stack && (*LogInstance->print_stack_level_bitmap_ & (1 << static_cast<int32_t>(Level)));
     if(should_print_stack){
         bq::api::__api_get_stack_trace_utf16(&stack_string_def, 0);
     }

@@ -231,6 +231,22 @@ JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
 
 /*
  * Class:     bq_impl_log_invoker
+ * Method:    __api_get_log_category_level_words_by_log_id
+ * Signature: (J)Ljava/nio/ByteBuffer;
+ */
+JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_1level_1words_1by_1log_1id(JNIEnv* env, jclass, jlong log_id)
+{
+    uint32_t count = bq::api::__api_get_log_categories_count((uint64_t)log_id);
+    const uint32_t* words = bq::api::__api_get_log_category_level_words_by_log_id((uint64_t)log_id);
+    if (!words) {
+        return nullptr;
+    }
+    jobject buffer = bq::platform::create_new_direct_byte_buffer(env, const_cast<uint32_t*>(words), count * sizeof(uint32_t), false);
+    return buffer;
+}
+
+/*
+ * Class:     bq_impl_log_invoker
  * Method:    __api_get_log_print_stack_level_bitmap_by_log_id
  * Signature: (J)Ljava/nio/ByteBuffer;
  */

@@ -26,7 +26,7 @@
  *    Offset  Size  Field
  *    ------  ----  -----------------------------------------------------------
  *    0x0000     4  uint32_t version                      (appender_file_header)
- *    0x0004     1  appender_format_type format           (1=raw, 2=compressed)
+ *    0x0004     1  appender_format_type format           (2=compressed)
  *    0x0005     3  char padding[3]
  *
  * 2. Segment Structure
@@ -88,8 +88,7 @@ namespace bq {
     class appender_file_binary : public appender_file_base {
     public:
         enum class appender_format_type : uint8_t {
-            raw = 1,
-            compressed
+            compressed = 2
         };
         enum class appender_encryption_type : uint8_t {
             plaintext = 1,
@@ -128,7 +127,7 @@ namespace bq {
             uint32_t category_count;
         } BQ_PACK_END
 
-        struct seg_info {
+            struct seg_info {
             uint64_t start_pos;
             uint64_t end_pos;
             appender_encryption_type enc_type_;

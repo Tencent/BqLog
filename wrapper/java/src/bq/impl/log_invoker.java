@@ -42,6 +42,8 @@ public class log_invoker {
 	public static native ByteBuffer __api_get_log_category_masks_array_by_log_id(long log_id);
 	
 	public static native ByteBuffer __api_get_log_print_stack_level_bitmap_by_log_id(long log_id);
+
+	public static native ByteBuffer __api_get_log_category_level_words_by_log_id(long log_id);
 	
 	public static native void __api_log_device_console(int/*bq.log.typedef.log_level*/ level, String content);
 	

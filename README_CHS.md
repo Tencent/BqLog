@@ -283,7 +283,7 @@ bq.log.force_flush_all_logs();
 9. 仓库不再包含二进制产物，从 2.x 版本起请从 [Releases 页面](https://github.com/Tencent/BqLog/releases)下载对应平台和语言的二进制包。
 10. 单条日志长度不再受log.buffer_size限制。
 11. 可以精确手动设置时区。
-12. `raw_file`类型的appender不再维护，标记为`废弃`，请用`compressed_file`类型替代。
+12. `raw_file`类型的appender已删除。配置为`type=raw_file`的appender会打印警告并被忽略，请用`compressed_file`类型替代。
 13. 复盘能力增加可靠性，从实验性功能变成正式能力。见[高级用法 — 数据保护](docs/ADVANCED_USAGE_CHS.md#3-程序异常退出的数据保护)。
 
 ---

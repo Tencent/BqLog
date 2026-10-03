@@ -14,7 +14,7 @@
 #include <time.h>
 namespace bq {
     namespace platform {
-        uint64_t high_performance_epoch_ms()
+        uint64_t system_epoch_ms()
         {
             struct timespec ts;
             clock_gettime(CLOCK_MONOTONIC, &ts);

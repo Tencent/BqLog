@@ -30,7 +30,6 @@ namespace bq {
         const char* log_appender_type_names_[static_cast<int32_t>(appender_base::appender_type::type_count)] = {
             "console",
             "text_file",
-            "raw_file",
             "compressed_file"
         };
         const char log_level_str_[6][3] = {

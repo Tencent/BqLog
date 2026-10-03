@@ -12,7 +12,6 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
-#include "bq_log/log/appender/appender_file_raw.h"
 #include "common_header.h"
 #if defined(WIN32)
 #include "Windows.h"
@@ -37,7 +36,6 @@ struct Options {
 static void print_version()
 {
     CONSOLE_OUTPUT(bq::log_level::debug, "Supported appender format versions:");
-    CONSOLE_OUTPUT(bq::log_level::debug, "  raw file format version:        %" PRIu32 "", bq::appender_file_raw::format_version);
     CONSOLE_OUTPUT(bq::log_level::debug, "  compressed file format version:        %" PRIu32 "", bq::appender_file_compressed::format_version);
 }
 

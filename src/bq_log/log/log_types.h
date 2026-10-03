@@ -16,12 +16,24 @@ namespace bq {
     private:
         const uint8_t* data_ptr;
         uint32_t data_len;
+        // Set by the reader for records without ext info (ext_info_offset == 0), e.g. records in HP blocks.
+        const struct _log_entry_ext_head_def* external_ext_head_ = nullptr;
 
     public:
         log_entry_handle(const uint8_t* in_data_ptr, uint32_t in_data_len)
             : data_ptr(in_data_ptr)
             , data_len(in_data_len)
         {
+        }
+
+        bq_forceinline void set_external_ext_head(const struct _log_entry_ext_head_def* ext_head)
+        {
+            external_ext_head_ = ext_head;
+        }
+
+        bq_forceinline bool has_inline_ext_info() const
+        {
+            return get_log_head().ext_info_offset != 0;
         }
 
         bq_forceinline const uint8_t* data() const
@@ -51,7 +63,8 @@ namespace bq {
 
         bq_forceinline const struct _log_entry_ext_head_def& get_ext_head() const
         {
-            return *(const struct _log_entry_ext_head_def*)(data_ptr + get_log_head().ext_info_offset);
+            const uint32_t ext_info_offset = get_log_head().ext_info_offset;
+            return ext_info_offset ? *(const struct _log_entry_ext_head_def*)(data_ptr + ext_info_offset) : *external_ext_head_;
         }
 
         bq_forceinline size_t get_log_args_offset() const
@@ -66,7 +79,8 @@ namespace bq {
 
         bq_forceinline uint32_t get_log_args_data_size() const
         {
-            return static_cast<uint32_t>(reinterpret_cast<const uint8_t*>(&get_ext_head()) - get_log_args_data());
+            const uint32_t ext_info_offset = get_log_head().ext_info_offset;
+            return (ext_info_offset ? ext_info_offset : data_len) - static_cast<uint32_t>(get_log_args_offset());
         }
 
         bq_forceinline bq::log_level get_level() const
