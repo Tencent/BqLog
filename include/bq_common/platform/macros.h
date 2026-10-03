@@ -198,43 +198,54 @@
     }
 #define BQ_TLS_DEFINE(Type, Name) BQ_TLS_DEFINE_IMPL(Type, Name, )
 #define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name)
-// Header part: only POD TLS is inline, an inline non-POD thread_local emits a strong TLS init routine per TU on Apple ld64.
-#define BQ_TLS_NON_POD_INLINE(Type, Name)                   \
-    inline BQ_TLS Type* ____BQ_TLS_##Name##_ptr;            \
-    inline BQ_TLS bool ____BQ_TSL_##Name##_recycled;        \
-    Type& BQ_TLS_CONCAT(Name, _get_slow)();                 \
-    bq_forceinline Type& BQ_TLS_CONCAT(Name, _get_direct)() \
-    {                                                       \
-        Type* ____p = ____BQ_TLS_##Name##_ptr;              \
-        if (____p) {                                        \
-            return *____p;                                  \
-        }                                                   \
-        return BQ_TLS_CONCAT(Name, _get_slow)();            \
+// Header part: only POD TLS is in the header, an inline non-POD thread_local emits a strong TLS init routine per TU on
+// Apple ld64. Function scope static TLS gives one constant initialized definition per program in C++11; a TLS static
+// data member of a class template would get an on-demand init check on MSVC.
+#define BQ_TLS_NON_POD_INLINE(Type, Name)                                            \
+    struct BQ_TLS_CONCAT(____bq_tls_pod_, Name) {                                    \
+        Type* ptr;                                                                   \
+        bool recycled;                                                               \
+    };                                                                               \
+    inline BQ_TLS_CONCAT(____bq_tls_pod_, Name) & BQ_TLS_CONCAT(Name, _pod)()        \
+    {                                                                                \
+        static BQ_TLS BQ_TLS_CONCAT(____bq_tls_pod_, Name) pod = { nullptr, false }; \
+        return pod;                                                                  \
+    }                                                                                \
+    Type& BQ_TLS_CONCAT(Name, _get_slow)();                                          \
+    bq_forceinline Type& BQ_TLS_CONCAT(Name, _get_direct)()                          \
+    {                                                                                \
+        Type* ____p = BQ_TLS_CONCAT(Name, _pod)().ptr;                               \
+        if (____p) {                                                                 \
+            return *____p;                                                           \
+        }                                                                            \
+        return BQ_TLS_CONCAT(Name, _get_slow)();                                     \
     }
 // Source part: exactly one translation unit.
-#define BQ_TLS_NON_POD_INLINE_IMPL(Type, Name)                                   \
-    struct BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) {               \
-        ~BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__)()                 \
-        {                                                                        \
-            if (____BQ_TLS_##Name##_ptr) {                                       \
-                delete ____BQ_TLS_##Name##_ptr;                                  \
-                ____BQ_TLS_##Name##_ptr = nullptr;                               \
-                ____BQ_TSL_##Name##_recycled = true;                             \
-            }                                                                    \
-        }                                                                        \
-        bq_forceinline operator bool() { return !____BQ_TSL_##Name##_recycled; } \
-        bq_forceinline Type& get()                                               \
-        {                                                                        \
-            if (!____BQ_TLS_##Name##_ptr) {                                      \
-                ____BQ_TLS_##Name##_ptr = new Type();                            \
-            }                                                                    \
-            return *____BQ_TLS_##Name##_ptr;                                     \
-        }                                                                        \
-    };                                                                           \
-    thread_local BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) Name;     \
-    Type& BQ_TLS_CONCAT(Name, _get_slow)()                                       \
-    {                                                                            \
-        return Name.get();                                                       \
+#define BQ_TLS_NON_POD_INLINE_IMPL(Type, Name)                                           \
+    struct BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) {                       \
+        ~BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__)()                         \
+        {                                                                                \
+            auto& pod = BQ_TLS_CONCAT(Name, _pod)();                                     \
+            if (pod.ptr) {                                                               \
+                delete pod.ptr;                                                          \
+                pod.ptr = nullptr;                                                       \
+                pod.recycled = true;                                                     \
+            }                                                                            \
+        }                                                                                \
+        bq_forceinline operator bool() { return !BQ_TLS_CONCAT(Name, _pod)().recycled; } \
+        bq_forceinline Type& get()                                                       \
+        {                                                                                \
+            auto& pod = BQ_TLS_CONCAT(Name, _pod)();                                     \
+            if (!pod.ptr) {                                                              \
+                pod.ptr = new Type();                                                    \
+            }                                                                            \
+            return *pod.ptr;                                                             \
+        }                                                                                \
+    };                                                                                   \
+    thread_local BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) Name;             \
+    Type& BQ_TLS_CONCAT(Name, _get_slow)()                                               \
+    {                                                                                    \
+        return Name.get();                                                               \
     }
 
 #if defined(BQ_MSVC)

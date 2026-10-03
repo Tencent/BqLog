@@ -33,7 +33,8 @@
 namespace bq {
     // Owner thread of an HP block. thread_name_len_ followed by thread_name_ has the same layout as
     // _log_entry_ext_head_def followed by the name, so readers can point a log_entry_handle at it.
-    struct log_thread_info {
+    // Stored in recoverable block memory, so 8 byte aligned on 32-bit targets too.
+    struct alignas(8) log_thread_info {
         static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
         uint64_t thread_id_;
         uint8_t thread_name_len_;

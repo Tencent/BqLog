@@ -101,7 +101,9 @@ namespace bq {
                 out_low = a * b;
                 return __umulh(a, b);
 #elif defined(__SIZEOF_INT128__)
-                const unsigned __int128 r = static_cast<unsigned __int128>(a) * b;
+                // __extension__: -pedantic rejects __int128 otherwise
+                __extension__ typedef unsigned __int128 uint128_type;
+                const uint128_type r = static_cast<uint128_type>(a) * b;
                 out_low = static_cast<uint64_t>(r);
                 return static_cast<uint64_t>(r >> 64);
 #else

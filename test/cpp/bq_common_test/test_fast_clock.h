@@ -97,12 +97,15 @@ namespace bq {
                 bool monotonic = true;
                 const uint64_t end_ms = bq::platform::system_epoch_ms() + 300;
                 while (bq::platform::system_epoch_ms() < end_ms) {
+                    // bracket the read with the wall clock, so a preemption between the reads cannot count as an error
+                    const uint64_t before_ms = precise_epoch_ms();
                     uint64_t ms = 0;
                     if (!bq::platform::fast_clock_read_epoch_ms(cache, sync, ms)) {
                         continue;
                     }
+                    const uint64_t after_ms = precise_epoch_ms();
                     ++reads;
-                    if (abs_diff(ms, precise_epoch_ms()) > 1) {
+                    if (ms + 1 < before_ms || ms > after_ms + 1) {
                         ++far_off;
                     }
                     if (ms < last) {

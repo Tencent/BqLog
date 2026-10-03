@@ -36,10 +36,17 @@ namespace bq {
                 && layout.chunk_data_offset == e::chunk_data_offset && layout.block_size_log2 == e::block_size_log2;
         }
 
+#if defined(BQ_MSVC)
+#pragma warning(push)
+#pragma warning(disable : 4324) // padded to the alignment on purpose
+#endif
         struct alignas(BQ_CACHE_LINE_SIZE) thread_slot {
             bq::_api_fast_log_thread_state state; // written by the library on this thread
             bq::platform::fast_clock_thread_cache clock_cache;
         };
+#if defined(BQ_MSVC)
+#pragma warning(pop)
+#endif
         static_assert(sizeof(thread_slot) == BQ_CACHE_LINE_SIZE, "thread_slot must own exactly one cache line");
 
         template <typename T = void>

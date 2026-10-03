@@ -178,13 +178,18 @@ namespace bq {
                 }
                 bq::_api_fast_log_site_handle unregistered = BQ_FAST_LOG_SITE_INITIALIZER;
                 result.add_result(*unregistered.level_word == 0, "unregistered site fails the inline level check");
+                // flush before each reset_config: the worker filters by the current mask, so records still in the buffer
+                // would be judged by the new configuration
                 write_fast_category(log, 0, 1);
                 write_fast_category(log, 1, 2);
+                log.force_flush();
                 bq::api::__api_log_reset_config(name, (base_config + "log.categories_mask=[ModuleA]\n").c_str());
                 write_fast_category(log, 0, 3);
                 write_fast_category(log, 1, 4);
+                log.force_flush();
                 bq::api::__api_log_reset_config(name, (base_config + "log.categories_mask=[ModuleA,ModuleB]\nappenders_config.test.levels=[error]\n").c_str());
                 write_fast_category(log, 0, 5);
+                log.force_flush();
                 bq::api::__api_log_reset_config(name, (base_config + "log.categories_mask=[ModuleA,ModuleB]\n").c_str());
                 write_fast_category(log, 1, 6);
                 log.force_flush();

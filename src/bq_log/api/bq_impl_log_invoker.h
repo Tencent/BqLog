@@ -133,13 +133,16 @@ JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
  * Class:     bq_impl_log_invoker
  * Method:    __api_get_log_print_stack_level_bitmap_by_log_id
  * Signature: (J)Ljava/nio/ByteBuffer;
+ */
+JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1print_1stack_1level_1bitmap_1by_1log_1id
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     bq_impl_log_invoker
  * Method:    __api_get_log_category_level_words_by_log_id
  * Signature: (J)Ljava/nio/ByteBuffer;
  */
-JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1print_1stack_1level_1bitmap_1by_1log_1id
+JNIEXPORT jobject JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_1level_1words_1by_1log_1id
   (JNIEnv *, jclass, jlong);
 
 /*
