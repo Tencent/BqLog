@@ -467,8 +467,10 @@ namespace bq {
                 bt->start();
                 bt->join();
                 result.add_result(bt->bound_, "inline path binds the thread state");
+#if !defined(BQ_WIN) || !defined(BQ_GCC) // thread_local destructors are unreliable on MinGW GCC
                 result.add_result(heap_state->buffer_key == 0 && heap_state->need_reallocate && !*heap_state->need_reallocate,
                     "thread exit clears the bound state");
+#endif
                 delete bt;
                 delete heap_state;
 

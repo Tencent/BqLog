@@ -71,15 +71,19 @@ namespace bq {
                     result.add_result(true, "fast clock not available on this machine, accuracy test skipped");
                     return;
                 }
+                // past the window over which x86 refines the measured counter frequency
                 uint64_t max_error_ms = 0;
-                for (int32_t i = 0; i < 30; ++i) {
+                for (int32_t i = 0; i < 50; ++i) {
+                    const uint64_t before_ms = precise_epoch_ms();
                     uint64_t ms = 0;
                     const bool ok = bq::platform::fast_clock_read_epoch_ms(cache, sync, ms);
+                    const uint64_t after_ms = precise_epoch_ms();
                     result.add_result(ok, "fast clock read %" PRId32, i);
-                    max_error_ms = bq::max_value(max_error_ms, abs_diff(ms, precise_epoch_ms()));
+                    const uint64_t error_ms = ms < before_ms ? before_ms - ms : (ms > after_ms ? ms - after_ms : 0);
+                    max_error_ms = bq::max_value(max_error_ms, error_ms);
                     bq::platform::thread::sleep(50);
                 }
-                result.add_result(max_error_ms <= 2, "fast clock error %" PRIu64 " ms over 1.5 s", max_error_ms);
+                result.add_result(max_error_ms <= 2, "fast clock error %" PRIu64 " ms over 2.5 s", max_error_ms);
                 result.add_result(abs_diff(bq::platform::high_performance_epoch_ms(), bq::platform::system_epoch_ms()) <= 20, "high_performance_epoch_ms agrees with the system clock");
             }
 
@@ -191,12 +195,17 @@ namespace bq {
                 {
                     uint64_t last = 0;
                     while (!stop_->load_acquire()) {
+                        const bool check = (reads_ & 1023) == 0;
+                        const uint64_t before_ms = check ? precise_epoch_ms() : 0;
                         const uint64_t now = bq::platform::high_performance_epoch_ms();
                         if (now < last) {
                             monotonic_ = false;
                         }
-                        if ((reads_ & 1023) == 0) {
-                            max_error_ms_ = bq::max_value(max_error_ms_, abs_diff(now, precise_epoch_ms()));
+                        if (check) {
+                            // bracketed by the wall clock, so preemption between the reads is not an error
+                            const uint64_t after_ms = precise_epoch_ms();
+                            const uint64_t error_ms = now < before_ms ? before_ms - now : (now > after_ms ? now - after_ms : 0);
+                            max_error_ms_ = bq::max_value(max_error_ms_, error_ms);
                         }
                         last = now;
                         ++reads_;

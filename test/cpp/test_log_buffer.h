@@ -902,7 +902,9 @@ namespace bq {
                     }
                 }
                 result.add_result(read_count == 1, "fast mode thread exit read count");
+#if !defined(BQ_WIN) || !defined(BQ_GCC) // thread_local destructors are unreliable on MinGW GCC, see the group recycle test
                 result.add_result(buffer.get_groups_count() == 0, "fast mode thread exit recycle");
+#endif
 
                 auto& tls = log_tls_info__get_direct().get_buffer_info(&buffer);
                 tls.fast_mode_ = true;

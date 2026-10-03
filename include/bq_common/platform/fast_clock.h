@@ -55,6 +55,8 @@ namespace bq {
             static constexpr uint64_t ns_per_second = 1000000000ULL;
             static constexpr uint64_t max_backward_hold_ms = 1000;
             static constexpr uint64_t frequency_measure_window_ns = 20 * ns_per_ms;
+            static constexpr uint64_t frequency_settled_window_ns = 2000 * ns_per_ms;
+            static constexpr uint64_t unsettled_resync_interval_ms = 50;
             static constexpr uint32_t max_rate_mismatches = 3;
 
             // Per module, constant initialized.
@@ -114,21 +116,23 @@ namespace bq {
 #endif
             }
 
-            // 0 while unknown. x86 has no portable way to read the TSC frequency, so it is measured between the first
-            // anchor of the module and a later one.
-            inline uint64_t counter_frequency(uint64_t counter, uint64_t wall_ns)
+            // 0 while unknown. x86 has no portable way to read the TSC frequency, so it is measured from the first anchor
+            // of the module: usable after 20 ms, then refined on every anchor until the span reaches 2 s (out_settled
+            // false meanwhile), since wall clock jitter over a short span skews every timestamp by the same ratio.
+            inline uint64_t counter_frequency(uint64_t counter, uint64_t wall_ns, bool& out_settled)
             {
                 typedef shared_state<> s;
                 uint64_t frequency = s::counter_frequency_.load_relaxed();
+                out_settled = true;
+#if defined(BQ_ARM_64)
                 if (frequency) {
                     return frequency;
                 }
-#if defined(BQ_ARM_64) && (defined(BQ_GCC) || defined(BQ_CLANG))
+#if defined(BQ_GCC) || defined(BQ_CLANG)
                 __asm__ volatile("mrs %0, cntfrq_el0" : "=r"(frequency));
-                (void)counter;
-                (void)wall_ns;
-#elif defined(BQ_ARM_64) && defined(BQ_MSVC)
+#elif defined(BQ_MSVC)
                 frequency = static_cast<uint64_t>(_ReadStatusReg(BQ_ARM64_SYSREG_CNTFRQ));
+#endif
                 (void)counter;
                 (void)wall_ns;
 #else
@@ -140,9 +144,13 @@ namespace bq {
                     }
                     return 0;
                 }
+                if (frequency && wall_ns >= measure_wall_ns + frequency_settled_window_ns) {
+                    return frequency;
+                }
+                out_settled = false;
                 const uint64_t measure_counter = s::measure_counter_.load_relaxed();
                 if (wall_ns < measure_wall_ns + frequency_measure_window_ns || counter <= measure_counter) {
-                    return 0;
+                    return frequency;
                 }
                 frequency = static_cast<uint64_t>(static_cast<double>(counter - measure_counter) * static_cast<double>(ns_per_second) / static_cast<double>(wall_ns - measure_wall_ns));
 #endif
@@ -171,7 +179,8 @@ namespace bq {
                 if (!synced) {
                     return resync_failed(cache);
                 }
-                const uint64_t frequency = counter_frequency(counter, wall_ns);
+                bool frequency_settled;
+                const uint64_t frequency = counter_frequency(counter, wall_ns, frequency_settled);
                 if (frequency < 1000000ULL) {
                     return resync_failed(cache);
                 }
@@ -193,7 +202,10 @@ namespace bq {
                 cache.base_epoch_ms_ = wall_ns / ns_per_ms;
                 cache.base_ms_fraction_ = static_cast<uint64_t>(static_cast<double>(wall_ns % ns_per_ms) * (18446744073709551616.0 / static_cast<double>(ns_per_ms)));
                 cache.ms_mul_ = static_cast<uint64_t>(18446744073709551616.0 * 1000.0 / static_cast<double>(frequency));
-                cache.resync_counter_ = counter + frequency * BQ_FAST_CLOCK_RESYNC_INTERVAL_MS / 1000ULL;
+                const uint64_t interval_ms = (frequency_settled || BQ_FAST_CLOCK_RESYNC_INTERVAL_MS < unsettled_resync_interval_ms)
+                    ? static_cast<uint64_t>(BQ_FAST_CLOCK_RESYNC_INTERVAL_MS)
+                    : unsettled_resync_interval_ms;
+                cache.resync_counter_ = counter + frequency * interval_ms / 1000ULL;
                 cache.last_sync_wall_ns_ = wall_ns;
                 return true;
             }
