@@ -57,6 +57,7 @@ namespace bq {
             static constexpr uint64_t frequency_measure_window_ns = 20 * ns_per_ms;
             static constexpr uint64_t frequency_settled_window_ns = 2000 * ns_per_ms;
             static constexpr uint64_t unsettled_resync_interval_ms = 50;
+            static constexpr uint32_t max_sync_attempts = 4;
             static constexpr uint32_t max_rate_mismatches = 3;
 
             // Per module, constant initialized.
@@ -172,12 +173,25 @@ namespace bq {
                 if (shared_state<>::untrusted_.load_relaxed()) {
                     return resync_failed(cache);
                 }
-                const uint64_t counter_before = read_counter();
-                uint64_t wall_ns;
-                const bool synced = sync(wall_ns);
-                const uint64_t counter = counter_before + ((read_counter() - counter_before) >> 1);
-                if (!synced) {
-                    return resync_failed(cache);
+                // the anchor is the midpoint of the counter reads around the wall clock read, so a preemption inside that
+                // bracket would offset every timestamp until the next resync: keep the narrowest of a few brackets
+                const uint64_t known_frequency = shared_state<>::counter_frequency_.load_relaxed();
+                const uint64_t good_width = known_frequency ? known_frequency / 20000 : 0; // 50 us
+                uint64_t counter = 0;
+                uint64_t wall_ns = 0;
+                uint64_t best_width = UINT64_MAX;
+                for (uint32_t attempt = 0; attempt < max_sync_attempts && best_width > good_width; ++attempt) {
+                    const uint64_t counter_before = read_counter();
+                    uint64_t attempt_wall_ns;
+                    if (!sync(attempt_wall_ns)) {
+                        return resync_failed(cache);
+                    }
+                    const uint64_t width = read_counter() - counter_before;
+                    if (width < best_width) {
+                        best_width = width;
+                        counter = counter_before + (width >> 1);
+                        wall_ns = attempt_wall_ns;
+                    }
                 }
                 bool frequency_settled;
                 const uint64_t frequency = counter_frequency(counter, wall_ns, frequency_settled);
