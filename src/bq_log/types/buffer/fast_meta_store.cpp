@@ -232,8 +232,13 @@ namespace bq {
             sizeof(fast_format_meta) + static_cast<size_t>(format_size) + arg_count));
         bq::array<uint8_t> bytes;
         bytes.fill_uninitialized(size);
-        memset(&bytes[0], 0, size);
-        auto& entry = *reinterpret_cast<fast_format_meta*>(&bytes[0]);
+        uint8_t* data = bytes.begin();
+        if (!data) {
+            return nullptr;
+        }
+        memset(data, 0, size);
+        auto& entry = *reinterpret_cast<fast_format_meta*>(data);
+        BQ_SUPPRESS_NULL_DEREF_BEGIN();
         entry.head.record_size = size;
         entry.head.kind = fast_meta_kind::format;
         entry.head.ready = 1;
@@ -243,13 +248,13 @@ namespace bq {
         entry.arg_count = arg_count;
         entry.level = level;
         entry.format_type = format_type;
-        memcpy(&bytes[sizeof(entry)], format, format_size);
+        memcpy(data + sizeof(entry), format, format_size);
         if (arg_count) {
-            memcpy(&bytes[sizeof(entry) + format_size], arg_types, arg_count);
+            memcpy(data + sizeof(entry) + format_size, arg_types, arg_count);
         }
-        entry.head.checksum = bq::util::get_hash_64(
-            &bytes[sizeof(uint64_t)], size - sizeof(uint64_t));
-        return reinterpret_cast<const fast_format_meta*>(append(&bytes[0], size));
+        entry.head.checksum = bq::util::get_hash_64(data + sizeof(uint64_t), size - sizeof(uint64_t));
+        BQ_SUPPRESS_NULL_DEREF_END();
+        return reinterpret_cast<const fast_format_meta*>(append(data, size));
     }
 
     bool fast_meta_store::verify(const fast_meta_head* entry, uint32_t available_size) const

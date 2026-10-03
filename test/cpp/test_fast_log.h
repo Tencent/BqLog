@@ -389,6 +389,13 @@ namespace bq {
                 t.join();
                 result.add_result(t.thread_info_after_slow_ && t.block_after_slow_, "slow path keeps a block owned by a thread already in HP");
 
+                // the inline path only exists for the 64-bit layout; elsewhere every fast write takes the exported path
+                if (!bq::fast_inline::is_expected_layout(layout)) {
+                    write_fast(log, 3001);
+                    result.add_result(bq::fast_inline::get_thread_slot().state.buffer_key == 0, "inline path stays unbound without the expected layout");
+                    return;
+                }
+
                 // the pushed thread state describes the block the library sees as current
                 write_fast(log, 3001);
                 auto& buffer = bq::log_manager::get_log_by_id(log.get_id())->get_buffer();

@@ -220,8 +220,7 @@ namespace bq {
         const uint32_t format_size = static_cast<uint32_t>(written);
         const uint32_t ext_offset = static_cast<uint32_t>(sizeof(_log_entry_head_def)
             + bq::align_4(format_size));
-        const uint32_t total_size = ext_offset + sizeof(_log_entry_ext_head_def)
-            + static_cast<uint32_t>(sizeof(thread_name) - 1);
+        const uint32_t total_size = ext_offset + static_cast<uint32_t>(sizeof(_log_entry_ext_head_def) + sizeof(thread_name) - 1);
         converted_data.clear();
         converted_data.fill_uninitialized(total_size);
         uint8_t* target = &converted_data[0];
