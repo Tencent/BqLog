@@ -392,7 +392,7 @@ namespace bq {
                     result.add_result(handle.result == bq::enum_buffer_result_code::success, "cross recovery normal write");
                     if (handle.result == bq::enum_buffer_result_code::success) {
                         memcpy(handle.data_addr, &value, sizeof(value));
-                        handle.data_addr[sizeof(value)] = is_oversize ? 1 : 0;
+                        handle.data_addr[sizeof(value)] = static_cast<uint8_t>(is_oversize ? 1 : 0);
                     }
                     buffer.commit_write_chunk(handle);
                     if (seq % 1201 == 2) {
@@ -482,7 +482,7 @@ namespace bq {
                             continue;
                         }
                         memcpy(&value, chunk.data_addr, sizeof(value));
-                        oversize_count += chunk.data_addr[sizeof(value)] == 1 ? 1 : 0;
+                        oversize_count += chunk.data_addr[sizeof(value)] == 1 ? 1U : 0U;
                     }
                     if (value.lifetime_ >= recovery_cross_lifetimes || value.thread_ >= recovery_cross_threads) {
                         ++bad_record;
@@ -576,6 +576,24 @@ namespace bq {
                 }
             };
 
+            // Reads "<prefix><digits>" at pos and moves pos past the digits.
+            static bool parse_tagged_u32(const bq::string& line, size_t& pos, const char* prefix, uint32_t& out)
+            {
+                const size_t prefix_len = strlen(prefix);
+                if (pos + prefix_len > line.size() || memcmp(line.c_str() + pos, prefix, prefix_len) != 0) {
+                    return false;
+                }
+                pos += prefix_len;
+                const size_t digits_begin = pos;
+                uint32_t value = 0;
+                while (pos < line.size() && line[pos] >= '0' && line[pos] <= '9') {
+                    value = value * 10U + static_cast<uint32_t>(line[pos] - '0');
+                    ++pos;
+                }
+                out = value;
+                return pos > digits_begin;
+            }
+
             static bool log_crash_line_matches(const bq::string& line, uint32_t kind, const char* thread_tag)
             {
                 static const char* const expected[] = { "[I]\t[ModuleA]\tcrash fast info", "[W]\t[ModuleA]\tcrash fast warning",
@@ -652,12 +670,12 @@ namespace bq {
                     }
                     const bq::string line = data.substr(begin, end - begin);
                     begin = end + 1;
-                    const size_t tag = line.find(" r");
+                    size_t tag = line.find(" r");
                     uint32_t round = 0;
                     uint32_t thread = 0;
                     uint32_t seq = 0;
-                    if (line.find("crash ") == bq::string::npos || tag == bq::string::npos
-                        || sscanf(line.c_str() + tag, " r%" SCNu32 " t%" SCNu32 " s%" SCNu32, &round, &thread, &seq) != 3
+                    if (line.find("crash ") == bq::string::npos || tag == bq::string::npos || !parse_tagged_u32(line, tag, " r", round)
+                        || !parse_tagged_u32(line, tag, " t", thread) || !parse_tagged_u32(line, tag, " s", seq)
                         || round >= log_crash_rounds || thread >= log_crash_threads || seq >= log_crash_records) {
                         continue;
                     }
@@ -668,8 +686,8 @@ namespace bq {
                     }
                     seen[index] = true;
                     ++found;
-                    wrong += log_crash_line_matches(line, seq % 6, thread_tags[round][thread]) ? 0 : 1;
-                    oversize += line.find("crash fast oversize") != bq::string::npos ? 1 : 0;
+                    wrong += log_crash_line_matches(line, seq % 6, thread_tags[round][thread]) ? 0U : 1U;
+                    oversize += line.find("crash fast oversize") != bq::string::npos ? 1U : 0U;
                 }
                 const uint32_t expected = log_crash_rounds * log_crash_threads * log_crash_records;
                 result.add_result(found == expected, "log crash: every record recovered (%" PRIu32 " of %" PRIu32 ")", found, expected);
