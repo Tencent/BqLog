@@ -98,9 +98,11 @@ namespace bq {
         /// <param name="log_item"></param>
         void python_style_format_content(const bq::log_entry_handle& log_entry);
 
-        void python_style_format_content_utf8(const bq::log_entry_handle& log_entry);
+        template <typename ARGS_CURSOR>
+        void python_style_format_content_utf8(const bq::log_entry_handle& log_entry, ARGS_CURSOR args);
 
-        void python_style_format_content_utf16(const bq::log_entry_handle& log_entry);
+        template <typename ARGS_CURSOR>
+        void python_style_format_content_utf16(const bq::log_entry_handle& log_entry, ARGS_CURSOR args);
 
         template <typename T>
         format_info c20_format(const T* style, int32_t len);

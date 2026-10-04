@@ -314,10 +314,11 @@ namespace bq {
                                 && entry.get_log_head().log_thread_id == thread_info.thread_id_
                                 && entry.get_ext_head().thread_name_len_ == thread_info.thread_name_len_
                                 && entry.get_log_head().level == static_cast<uint8_t>(bq::log_level::info);
-                            found_first |= valid && entry.get_log_args_data()[4] == 73;
-                            found_second |= valid && entry.get_log_args_data()[4] == 74;
+                            const uint8_t first_arg = entry.is_fast_layout() ? entry.get_fast_args_data()[0] : entry.get_log_args_data()[4];
+                            found_first |= valid && first_arg == 73;
+                            found_second |= valid && first_arg == 74;
                             found_large |= valid && entry.get_log_head().log_format_data_len == 100000
-                                && entry.get_log_args_data()[4] == 75;
+                                && first_arg == 75;
                         } else if (bq::log_record_reader::make_recovery_error(buffer,
                                        chunk.data_addr, chunk.data_size, converted, entry)) {
                             found_recovery_error = entry.validate()

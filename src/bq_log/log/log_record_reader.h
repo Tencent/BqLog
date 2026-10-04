@@ -13,7 +13,7 @@
 #include "bq_log/types/buffer/log_buffer.h"
 
 namespace bq {
-    // Expands fast records to the standard layout and attaches the HP block's owner thread.
+    // Builds the standard head of fast records (arguments stay in place) and attaches the HP block's owner thread.
     class log_record_reader {
         static const log_thread_info* get_block_thread_info(const log_buffer& buffer);
 
