@@ -10,7 +10,7 @@
  */
 #pragma once
 
-#include "bq_common/platform/macros.h"
+#include "bq_common/bq_common_public_include.h"
 
 #if defined(BQ_X86)
 #ifdef BQ_MSVC
