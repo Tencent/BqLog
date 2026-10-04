@@ -277,7 +277,7 @@ namespace bq {
             if (head->ext_info_offset != 0) {
                 bq::_log_entry_ext_head_def* ext_info = reinterpret_cast<bq::_log_entry_ext_head_def*>(chunk_data_ptr + head->ext_info_offset);
                 // initialized in __api_log_write_begin on the same thread
-                const auto& thread_info = bq::log_thread_info_tls_;
+                const auto& thread_info = bq::get_log_thread_info();
                 memcpy(&ext_info->thread_name_len_, &thread_info.thread_name_len_, sizeof(thread_info.thread_name_len_));
                 if (thread_info.thread_name_len_ > 0) {
                     memcpy((uint8_t*)ext_info + sizeof(_log_entry_ext_head_def), thread_info.thread_name_, thread_info.thread_name_len_);

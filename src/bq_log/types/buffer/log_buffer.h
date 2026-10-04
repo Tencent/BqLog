@@ -41,18 +41,7 @@ namespace bq {
     static_assert(sizeof(log_thread_info) == 32, "log_thread_info size");
     static_assert(offsetof(log_thread_info, thread_name_) == offsetof(log_thread_info, thread_name_len_) + sizeof(_log_entry_ext_head_def), "thread info must match ext info layout");
 
-    extern BQ_TLS log_thread_info log_thread_info_tls_;
     void init_log_thread_info(log_thread_info& info);
-
-    bq_forceinline const log_thread_info& get_log_thread_info()
-    {
-        log_thread_info& info = log_thread_info_tls_;
-        BQ_UNLIKELY_IF(info.thread_id_ == 0)
-        {
-            init_log_thread_info(info);
-        }
-        return info;
-    }
 
     class alignas(BQ_CACHE_LINE_SIZE) log_buffer {
     public:
@@ -139,10 +128,20 @@ namespace bq {
             log_tls_buffer_info* cur_buffer_info_ = nullptr;
             _api_fast_log_thread_state* fast_state_ = nullptr; // header-side thread local fast path state, see bind_fast_state
             uint64_t fast_state_buffer_id_ = 0; // id of the buffer fast_state_ describes (ids are never reused)
+            log_thread_info thread_info_ {};
 
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
             bq_forceinline log_tls_buffer_info& get_buffer_info_directly(const log_buffer* buffer);
+
+            bq_forceinline const log_thread_info& get_thread_info()
+            {
+                BQ_UNLIKELY_IF(thread_info_.thread_id_ == 0)
+                {
+                    init_log_thread_info(thread_info_);
+                }
+                return thread_info_;
+            }
 
             void bind_fast_state(_api_fast_log_thread_state* state);
 
@@ -210,7 +209,7 @@ namespace bq {
         ~log_buffer();
 
         // ext_info_size is reserved only outside HP blocks
-        log_buffer_write_handle alloc_write_chunk(uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms);
+        bq_forceinline log_buffer_write_handle alloc_write_chunk(uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms);
 
         bq_forceinline log_buffer_write_handle alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
         {
@@ -227,7 +226,7 @@ namespace bq {
 
         const fast_meta_head* resolve_fast_log_meta(uint16_t version, uint64_t old_addr);
 
-        void commit_write_chunk(const log_buffer_write_handle& handle);
+        bq_forceinline void commit_write_chunk(const log_buffer_write_handle& handle);
 
         bq_forceinline log_buffer_read_handle read_chunk();
 
@@ -322,6 +321,9 @@ namespace bq {
         bool rt_try_traverse_to_next_group();
         void rt_try_traverse_to_next_version();
         void refresh_traverse_end_mark();
+
+        log_buffer_write_handle alloc_write_chunk_full_impl(log_tls_buffer_info& tls_buffer, uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms);
+        void commit_write_chunk_full_impl(log_tls_buffer_info& tls_buffer_info, const log_buffer_write_handle& handle);
 
         // For oversize data.
         log_buffer_write_handle wt_alloc_oversize_write_chunk(uint32_t size, uint64_t current_epoch_ms);
@@ -427,6 +429,46 @@ namespace bq {
     }
 
     BQ_TLS_NON_POD_INLINE(log_buffer::log_tls_info, log_tls_info_)
+
+    bq_forceinline const log_thread_info& get_log_thread_info()
+    {
+        return log_tls_info__get_direct().get_thread_info();
+    }
+
+    bq_forceinline log_buffer_write_handle log_buffer::alloc_write_chunk(uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms)
+    {
+        auto& tls_buffer = log_tls_info__get_direct().get_buffer_info(this);
+        block_node_head* block = tls_buffer.cur_block_;
+        // HP thread inside its frequency window, block kept: the full path would do just this
+        BQ_LIKELY_IF(block && size <= hp_buffer_max_alloc_size_
+            && current_epoch_ms < tls_buffer.last_update_epoch_ms_ + HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL
+            && !block->get_misc_data<block_misc_data>().need_reallocate_)
+        {
+            log_buffer_write_handle result = block->get_buffer().alloc_write_chunk(size);
+            BQ_LIKELY_IF(result.result == enum_buffer_result_code::success)
+            {
+                if (++tls_buffer.update_times_ >= config_.high_frequency_threshold_per_second) {
+                    tls_buffer.last_update_epoch_ms_ = current_epoch_ms;
+                    tls_buffer.update_times_ = 0;
+                }
+                result.ext_info_reserved = false;
+                return result;
+            }
+        }
+        return alloc_write_chunk_full_impl(tls_buffer, size, ext_info_size, current_epoch_ms);
+    }
+
+    bq_forceinline void log_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
+    {
+        auto& tls_buffer_info = log_tls_info__get_direct().get_buffer_info_directly(this);
+        block_node_head* block = tls_buffer_info.cur_block_;
+        BQ_LIKELY_IF(block)
+        {
+            block->get_buffer().commit_write_chunk(handle);
+            return;
+        }
+        commit_write_chunk_full_impl(tls_buffer_info, handle);
+    }
 
     bq_forceinline log_buffer::log_tls_buffer_info& log_buffer::log_tls_info::get_buffer_info(const log_buffer* buffer)
     {

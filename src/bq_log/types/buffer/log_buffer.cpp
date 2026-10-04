@@ -20,8 +20,6 @@
 #include "bq_log/global/log_vars.h"
 
 namespace bq {
-    BQ_TLS log_thread_info log_thread_info_tls_;
-
     void init_log_thread_info(log_thread_info& info)
     {
         bq::string thread_name = bq::platform::thread::get_current_thread_name();
@@ -207,10 +205,8 @@ namespace bq {
         destruction_mark_->is_destructed_ = true;
     }
 
-    log_buffer_write_handle log_buffer::alloc_write_chunk(uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms)
+    log_buffer_write_handle log_buffer::alloc_write_chunk_full_impl(log_tls_buffer_info& tls_buffer, uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms)
     {
-        auto& tls_buffer = log_tls_info__get_direct().get_buffer_info(this);
-
         block_node_head*& block_cache = tls_buffer.cur_block_;
         uint64_t& thread_last_update_epoch_ms = tls_buffer.last_update_epoch_ms_;
         uint64_t& thread_update_times = tls_buffer.update_times_;
@@ -305,9 +301,8 @@ namespace bq {
         return result;
     }
 
-    void log_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
+    void log_buffer::commit_write_chunk_full_impl(log_tls_buffer_info& tls_buffer_info, const log_buffer_write_handle& handle)
     {
-        auto& tls_buffer_info = log_tls_info__get_direct().get_buffer_info_directly(this);
         block_node_head*& block_cache = tls_buffer_info.cur_block_;
         bool is_high_frequency = (block_cache != nullptr);
         if (is_high_frequency) {

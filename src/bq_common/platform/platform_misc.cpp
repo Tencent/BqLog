@@ -10,21 +10,10 @@
  */
 #include "bq_common/platform/platform_misc.h"
 #include "bq_common/bq_common.h"
-#include "bq_common/platform/fast_clock.h"
 namespace bq {
     namespace platform {
         static bq::platform::spin_lock_zero_init lock_;
-        static BQ_TLS fast_clock_thread_cache epoch_ms_cache_;
-
-        uint64_t high_performance_epoch_ms()
-        {
-            uint64_t epoch_ms;
-            BQ_LIKELY_IF(fast_clock_read_epoch_ms(epoch_ms_cache_, epoch_ms))
-            {
-                return epoch_ms;
-            }
-            return system_epoch_ms();
-        }
+        BQ_TLS fast_clock_thread_cache epoch_ms_cache_;
 
         void prefault_pages(void* addr, size_t size)
         {
