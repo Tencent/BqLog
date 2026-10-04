@@ -111,7 +111,18 @@ namespace bq {
 
         void fill_e_style(uint32_t eCount, uint32_t begin_cursor);
 
-        bq_forceinline void expand_format_content_buff_size(uint32_t new_size);
+        bq_forceinline void expand_format_content_buff_size(uint32_t new_size)
+        {
+            if (format_info_.offset != 0) {
+                new_size += (format_info_.width + format_info_.precision + 2); // #will add 2 byte
+            }
+            BQ_UNLIKELY_IF(new_size > format_content.size())
+            {
+                grow_format_content_buff(new_size);
+            }
+        }
+
+        void grow_format_content_buff(uint32_t new_size);
 
         //------------------------- insert functions begin ----------------------//
         uint32_t insert_str_utf8(const char* str, const uint32_t len);
@@ -172,6 +183,8 @@ namespace bq {
         bq::array<char> format_content;
         uint32_t format_content_cursor;
         bq::hash_map<uint64_t, bq::string> thread_names_cache_;
+        uint64_t last_thread_id_ = 0;
+        bq::string last_thread_name_;
         format_info format_info_;
     };
 }

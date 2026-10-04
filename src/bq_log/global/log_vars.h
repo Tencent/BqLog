@@ -40,7 +40,6 @@ namespace bq {
             { '[', 'E', ']' }, // ERROR
             { '[', 'F', ']' } // FATAL
         };
-        const char digit3_array[3000 + 16] = {};
         const char* log_recover_start_str_ = "/************************************* BQLOG RECOVER START *************************************/";
         const char* log_recover_end_str_ = "/************************************* BQLOG RECOVER END *************************************/";
 #if defined(BQ_JAVA)
@@ -66,7 +65,6 @@ namespace bq {
 #if defined(BQ_JAVA)
         static void jni_onload_callback();
 #endif
-        void init_layout_values() const;
 
     protected:
         virtual void partial_destruct() override;
