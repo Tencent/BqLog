@@ -153,5 +153,12 @@ namespace bq {
 
         bq::string last_config_;
         bq::array<uint8_t, bq::aligned_allocator<uint8_t, 8>> fast_record_data_;
+#if defined(BQ_UNIT_TEST)
+        bq::platform::atomic<bool> test_consumer_paused_ { false };
+
+    public:
+        // While paused the worker leaves the buffer alone, so everything written stays for recovery.
+        void test_pause_consumer(bool paused) { test_consumer_paused_.store_release(paused); }
+#endif
     };
 }

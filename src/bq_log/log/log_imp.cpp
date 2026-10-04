@@ -510,6 +510,11 @@ namespace bq {
 
     bool log_imp::process(bool is_force_flush)
     {
+#if defined(BQ_UNIT_TEST)
+        if (test_consumer_paused_.load_acquire()) {
+            return false;
+        }
+#endif
         constexpr uint64_t flush_io_min_interval_ms = 100;
         uint64_t current_epoch_ms = 0;
         bool did_work = false;

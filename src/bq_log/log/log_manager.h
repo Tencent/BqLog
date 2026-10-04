@@ -57,6 +57,11 @@ namespace bq {
 
         void force_flush(uint64_t log_id);
 
+#if defined(BQ_UNIT_TEST)
+        // Destroys the log without consuming its buffer, leaving the memory maps as a crash would.
+        void test_crash_log(uint64_t log_id);
+#endif
+
         bq_forceinline log_worker& get_public_worker()
         {
             return public_worker_;

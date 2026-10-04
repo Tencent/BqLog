@@ -232,6 +232,22 @@ namespace bq {
         }
     }
 
+#if defined(BQ_UNIT_TEST)
+    void log_manager::test_crash_log(uint64_t log_id)
+    {
+        log_imp* log = get_log_by_id(log_id);
+        // an independent worker would be restarted by its watch dog when stopped here
+        assert(log->get_thread_mode() == log_thread_mode::async && "test_crash_log supports async logs only");
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
+            if (log_imp_list_[i].get() == log) {
+                log_imp_list_.erase(log_imp_list_.begin() + static_cast<ptrdiff_t>(i));
+                return;
+            }
+        }
+    }
+
+#endif
     void log_manager::uninit()
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);

@@ -514,6 +514,169 @@ namespace bq {
                 result.add_result(tail.result == bq::enum_buffer_result_code::err_empty_log_buffer, "cross recovery leaves nothing behind");
             }
 
+            static constexpr uint32_t log_crash_rounds = 3;
+            static constexpr uint32_t log_crash_threads = 3;
+            static constexpr uint32_t log_crash_records = 1500;
+
+            // One fast site per (level, category) pair, so recovery has to bring back each site's own format meta.
+            // Templated on the round: a site stays bound to its first log, and each round stands for a new process.
+            template <uint32_t ROUND>
+            static void write_log_crash_record(const bq::log& log, uint32_t thread, uint32_t seq, const bq::string& oversize)
+            {
+                const uint32_t round = ROUND;
+                const uint32_t kind = seq % 6;
+                if (kind == 0) {
+                    BQ_LOG_FAST_INFO(log, "crash fast info r{} t{} s{}", round, thread, seq);
+                } else if (kind == 1) {
+                    BQ_LOG_FAST_WARNING(log, "crash fast warning r{} t{} s{}", round, thread, seq);
+                } else if (kind == 2) {
+                    auto call = bq::make_fast_log_call("crash fast category r{} t{} s{}", round, thread, seq);
+                    static bq::_api_fast_log_site_handle site = BQ_FAST_LOG_SITE_INITIALIZER;
+                    bq::fast_log_from_call<bq::tuple<uint32_t, uint32_t, uint32_t>>(site, log, 1, bq::log_level::error, call);
+                } else if (kind == 3) {
+                    log.info("crash normal r{} t{} s{}", round, thread, seq);
+                } else if (kind == 4) {
+                    BQ_LOG_FAST_DEBUG(log, "crash fast debug r{} t{} s{}", round, thread, seq);
+                } else if (seq % 300 == 5) {
+                    BQ_LOG_FAST_INFO(log, "crash fast oversize r{} t{} s{} {}", round, thread, seq, oversize);
+                } else {
+                    log.warning("crash normal warning r{} t{} s{}", round, thread, seq);
+                }
+                if (seq % 700 == 699) {
+                    // drop back to LP, then burst into HP again
+                    bq::platform::thread::sleep(bq::log_buffer::HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL + 10);
+                }
+            }
+
+            class log_crash_writer : public bq::platform::thread {
+            public:
+                const char* log_name_ = nullptr;
+                uint32_t round_ = 0;
+                uint32_t thread_ = 0;
+                char thread_tag_[64] = {};
+                void run() override
+                {
+                    const bq::log log = bq::log::get_log_by_name(log_name_);
+                    const auto& info = bq::get_log_thread_info();
+                    snprintf(thread_tag_, sizeof(thread_tag_), "[tid-%" PRIu64 " %.*s]", info.thread_id_,
+                        static_cast<int32_t>(info.thread_name_len_), info.thread_name_);
+                    bq::array<char> text;
+                    text.fill_uninitialized(150000);
+                    memset(&text[0], 'o', text.size());
+                    const bq::string oversize(&text[0], text.size());
+                    for (uint32_t seq = 0; seq < log_crash_records; ++seq) {
+                        if (round_ == 0) {
+                            write_log_crash_record<0>(log, thread_, seq, oversize);
+                        } else if (round_ == 1) {
+                            write_log_crash_record<1>(log, thread_, seq, oversize);
+                        } else {
+                            write_log_crash_record<2>(log, thread_, seq, oversize);
+                        }
+                    }
+                }
+            };
+
+            static bool log_crash_line_matches(const bq::string& line, uint32_t kind, const char* thread_tag)
+            {
+                static const char* const expected[] = { "[I]\t[ModuleA]\tcrash fast info", "[W]\t[ModuleA]\tcrash fast warning",
+                    "[E]\t[ModuleB]\tcrash fast category", "[I]\t[ModuleA]\tcrash normal r", "[D]\t[ModuleA]\tcrash fast debug", "" };
+                if (line.find(thread_tag) == bq::string::npos) {
+                    return false;
+                }
+                if (kind < 5) {
+                    return line.find(expected[kind]) != bq::string::npos;
+                }
+                return line.find("[I]\t[ModuleA]\tcrash fast oversize") != bq::string::npos
+                    || line.find("[W]\t[ModuleA]\tcrash normal warning") != bq::string::npos;
+            }
+
+            // The whole log, not just log_buffer: fast format metadata, block thread info, appender recovery. Each round
+            // writes from several threads and is then destroyed unread; the next create_log of the same name recovers it.
+            static void test_log_crash_recovery(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support()) {
+                    return;
+                }
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_crash_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                const bq::string config = bq::string("appenders_config.text.type=text_file\n")
+                    + "appenders_config.text.levels=[all]\n"
+                    + "appenders_config.text.file_name=" + file_name + "\n"
+                    + "appenders_config.text.base_dir_type=0\n"
+                    + "appenders_config.text.enable_rolling_log_file=false\n"
+                    + "log.recovery=true\n"
+                    + "log.thread_mode=async\n"
+                    + "log.buffer_size=65536\n"
+                    + "log.buffer_policy_when_full=expand\n"
+                    + "log.high_perform_mode_freq_threshold_per_second=1000\n";
+                const char* categories[] = { "ModuleA", "ModuleB" };
+                char thread_tags[log_crash_rounds][log_crash_threads][64] = {};
+                for (uint32_t round = 0; round <= log_crash_rounds; ++round) {
+                    const uint64_t log_id = bq::api::__api_create_log(name, config.c_str(), 2, categories);
+                    bq::log log = bq::log::get_log_by_name(name);
+                    result.add_result(log.is_valid() && log.get_id() == log_id, "log crash: create round %" PRIu32, round);
+                    if (!log.is_valid() || round == log_crash_rounds) {
+                        break;
+                    }
+                    bq::log_manager::get_log_by_id(log_id)->test_pause_consumer(true);
+                    log_crash_writer writers[log_crash_threads];
+                    for (uint32_t t = 0; t < log_crash_threads; ++t) {
+                        writers[t].log_name_ = name;
+                        writers[t].round_ = round;
+                        writers[t].thread_ = t;
+                        writers[t].start();
+                    }
+                    for (uint32_t t = 0; t < log_crash_threads; ++t) {
+                        writers[t].join();
+                        memcpy(thread_tags[round][t], writers[t].thread_tag_, sizeof(writers[t].thread_tag_));
+                    }
+                    bq::log_manager::instance().test_crash_log(log.get_id());
+                }
+                bq::log log = bq::log::get_log_by_name(name);
+                log.force_flush();
+                bq::log_manager::instance().test_crash_log(log.get_id());
+
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                uint32_t found = 0;
+                uint32_t wrong = 0;
+                uint32_t oversize = 0;
+                bq::array<bool> seen;
+                seen.fill_uninitialized(log_crash_rounds * log_crash_threads * log_crash_records);
+                memset(&seen[0], 0, seen.size());
+                size_t begin = 0;
+                while (begin < data.size()) {
+                    size_t end = data.find("\n", begin);
+                    if (end == bq::string::npos) {
+                        end = data.size();
+                    }
+                    const bq::string line = data.substr(begin, end - begin);
+                    begin = end + 1;
+                    const size_t tag = line.find(" r");
+                    uint32_t round = 0;
+                    uint32_t thread = 0;
+                    uint32_t seq = 0;
+                    if (line.find("crash ") == bq::string::npos || tag == bq::string::npos
+                        || sscanf(line.c_str() + tag, " r%" SCNu32 " t%" SCNu32 " s%" SCNu32, &round, &thread, &seq) != 3
+                        || round >= log_crash_rounds || thread >= log_crash_threads || seq >= log_crash_records) {
+                        continue;
+                    }
+                    const uint32_t index = (round * log_crash_threads + thread) * log_crash_records + seq;
+                    if (seen[index]) {
+                        ++wrong;
+                        continue;
+                    }
+                    seen[index] = true;
+                    ++found;
+                    wrong += log_crash_line_matches(line, seq % 6, thread_tags[round][thread]) ? 0 : 1;
+                    oversize += line.find("crash fast oversize") != bq::string::npos ? 1 : 0;
+                }
+                const uint32_t expected = log_crash_rounds * log_crash_threads * log_crash_records;
+                result.add_result(found == expected, "log crash: every record recovered (%" PRIu32 " of %" PRIu32 ")", found, expected);
+                result.add_result(wrong == 0, "log crash: format, level, category and thread recovered (%" PRIu32 " wrong)", wrong);
+                result.add_result(oversize > 0, "log crash: oversize fast records recovered (%" PRIu32 ")", oversize);
+            }
+
             static bool decode_has_both(const bq::string& path)
             {
                 bq::tools::log_decoder decoder(path);
@@ -843,6 +1006,7 @@ namespace bq {
                 test_hp_thread_info(result);
                 test_recovery(result);
                 test_recovery_cross(result);
+                test_log_crash_recovery(result);
                 return result;
             }
         };
