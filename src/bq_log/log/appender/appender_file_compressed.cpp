@@ -376,7 +376,7 @@ namespace bq {
 
         uint32_t format_data_len = handle.get_log_head().log_format_data_len;
         const char* format_data_ptr = handle.get_format_string_data();
-        if ((const uint8_t*)format_data_ptr + format_data_len > handle.get_log_args_data()) {
+        if (handle.has_inline_format() && (const uint8_t*)format_data_ptr + format_data_len > handle.get_log_args_data()) {
             bq::util::log_device_console(bq::log_level::error, "appender_file_compressed::log_impl invalid format data length:%" PRIu32, format_data_len);
             return false;
         }

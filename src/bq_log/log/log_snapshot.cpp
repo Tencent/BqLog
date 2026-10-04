@@ -141,6 +141,9 @@ namespace bq {
                         scoped_log_buffer_handle<siso_ring_buffer> scoped_snapshot_write_handle(*snapshot_buffer_, snapshot_write_handle);
                         if (snapshot_write_handle.result == enum_buffer_result_code::success) {
                             memcpy(snapshot_write_handle.data_addr, log_entry.data(), log_entry.data_size());
+                            if (!log_entry.has_inline_format()) {
+                                memcpy(snapshot_write_handle.data_addr + sizeof(_log_entry_head_def), log_entry.get_format_string_data(), log_entry.get_log_head().log_format_data_len);
+                            }
                             if (append_ext_info) {
                                 reinterpret_cast<_log_entry_head_def*>(snapshot_write_handle.data_addr)->ext_info_offset = log_entry.data_size();
                                 memcpy(snapshot_write_handle.data_addr + log_entry.data_size(), &ext_head, ext_info_size);

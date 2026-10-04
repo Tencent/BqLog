@@ -16,6 +16,7 @@ namespace bq {
     private:
         const uint8_t* data_ptr;
         uint32_t data_len;
+        const char* format_ptr_;
         // for records without ext info (ext_info_offset == 0)
         const struct _log_entry_ext_head_def* external_ext_head_ = nullptr;
 
@@ -23,7 +24,19 @@ namespace bq {
         log_entry_handle(const uint8_t* in_data_ptr, uint32_t in_data_len)
             : data_ptr(in_data_ptr)
             , data_len(in_data_len)
+            , format_ptr_(reinterpret_cast<const char*>(in_data_ptr) + sizeof(_log_entry_head_def))
         {
+        }
+
+        // The format string lives elsewhere (fast format metadata); its bytes in the record are left unwritten.
+        bq_forceinline void set_external_format(const char* format)
+        {
+            format_ptr_ = format;
+        }
+
+        bq_forceinline bool has_inline_format() const
+        {
+            return format_ptr_ == reinterpret_cast<const char*>(data_ptr) + sizeof(_log_entry_head_def);
         }
 
         bq_forceinline void set_external_ext_head(const struct _log_entry_ext_head_def* ext_head)
@@ -48,7 +61,7 @@ namespace bq {
 
         bq_forceinline const char* get_format_string_data() const
         {
-            return reinterpret_cast<const char*>(data_ptr) + sizeof(_log_entry_head_def);
+            return format_ptr_;
         }
 
         bq_forceinline _log_entry_head_def& get_log_head()

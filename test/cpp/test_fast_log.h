@@ -557,9 +557,8 @@ namespace bq {
                 void run() override
                 {
                     const bq::log log = bq::log::get_log_by_name(log_name_);
-                    const auto& info = bq::get_log_thread_info();
-                    snprintf(thread_tag_, sizeof(thread_tag_), "[tid-%" PRIu64 " %.*s]", info.thread_id_,
-                        static_cast<int32_t>(info.thread_name_len_), info.thread_name_);
+                    // id only: the text layout caches names by thread id, which the OS reuses across rounds
+                    snprintf(thread_tag_, sizeof(thread_tag_), "[tid-%" PRIu64 " ", bq::get_log_thread_info().thread_id_);
                     bq::array<char> text;
                     text.fill_uninitialized(150000);
                     memset(&text[0], 'o', text.size());
