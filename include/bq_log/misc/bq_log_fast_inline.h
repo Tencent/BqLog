@@ -9,14 +9,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-/*
- * Header-inlined fast write for BQ_LOG_FAST_* macros.
- */
 #include "bq_common/platform/fast_clock.h"
 
 namespace bq {
     namespace fast_inline {
-        // Compared with the library's exported layout before anything is inlined.
         struct expected_layout {
             static constexpr uint32_t head_wt_reading_cursor_cache = 128;
             static constexpr uint32_t head_wt_writing_cursor_cache = 132;
@@ -38,10 +34,10 @@ namespace bq {
 
 #if defined(BQ_MSVC)
 #pragma warning(push)
-#pragma warning(disable : 4324) // padded to the alignment on purpose
+#pragma warning(disable : 4324)
 #endif
         struct alignas(BQ_CACHE_LINE_SIZE) thread_slot {
-            bq::_api_fast_log_thread_state state; // written by the library on this thread
+            bq::_api_fast_log_thread_state state;
             bq::platform::fast_clock_thread_cache clock_cache;
         };
 #if defined(BQ_MSVC)
@@ -53,7 +49,7 @@ namespace bq {
         struct module_state {
             static const bool no_reallocate;
             static const uint32_t no_level;
-            static uint32_t layout_status; // 0 not queried, 1 ready, 2 unavailable (exported APIs only)
+            static uint32_t layout_status; // 0 unknown, 1 ready, 2 unavailable
         };
         template <typename T>
         const bool module_state<T>::no_reallocate = false;
@@ -62,8 +58,7 @@ namespace bq {
         template <typename T>
         uint32_t module_state<T>::layout_status = 0;
 
-        // Constant initialized, no guard: need_reallocate is read before any binding, so it starts at a constant.
-        // Function scope on purpose: MSVC gives a TLS static data member of a class template an on-demand init check.
+        // Function scope: a TLS static member of a class template gets an init guard on MSVC.
         inline thread_slot& get_thread_slot()
         {
             static BQ_TLS thread_slot slot = { { 0, nullptr, nullptr, &module_state<>::no_reallocate, 0, 0 }, {} };
@@ -82,7 +77,6 @@ namespace bq {
             memcpy(address, &value, sizeof(value));
         }
 
-        // Called after the exported slow path succeeded on this thread.
         inline void refresh_thread_slot()
         {
             uint32_t& status = module_state<>::layout_status;
@@ -93,11 +87,10 @@ namespace bq {
             if (status != 1) {
                 return;
             }
-            // the slow path has just made the site's buffer this thread's current one
             bq::api::__api_fast_log_bind_thread_state(&get_thread_slot().state);
         }
 
-        // Returns 0 on success, 1 on success when the consumer should be woken, -1 when the slow path must be used.
+        // 0 written, 1 written and the consumer should be woken, -1 take the slow path
         template <typename FILL>
         bq_forceinline int32_t write(const bq::_api_fast_log_site_handle& site, uint32_t args_size, const FILL& fill)
         {
@@ -108,7 +101,7 @@ namespace bq {
             {
                 return -1;
             }
-            // first, so that few values are live across the out-of-line resync
+            // before the cursors: fewer live values across resync
             uint64_t epoch_ms;
             BQ_UNLIKELY_IF(!bq::platform::fast_clock_read_epoch_ms(slot.clock_cache, epoch_ms))
             {
@@ -117,7 +110,7 @@ namespace bq {
             uint8_t* head = state.siso_head;
             uint8_t* blocks = state.siso_units;
             const uint32_t count = state.unit_count;
-            // two separate loads: a fused ldp would wait on the previous record's cursor store
+            // separate loads: a fused ldp stalls on the previous record's cursor store
             const uint32_t write_cursor = cursor_at(head, l::head_wt_writing_cursor_cache).load_relaxed();
             const uint32_t read_cursor_cache = cursor_at(head, l::head_wt_reading_cursor_cache).load_relaxed();
             const uint32_t record_size = static_cast<uint32_t>(sizeof(bq::log_head_fast_def)) + args_size;
@@ -139,7 +132,7 @@ namespace bq {
             const uint32_t new_cursor = write_cursor + need;
             cursor_at(head, l::head_wt_writing_cursor_cache).store_relaxed(new_cursor);
             cursor_at(head, l::head_writing_cursor).store_release(new_cursor);
-            // edge triggered, same rule as siso_ring_buffer::alloc_write_chunk
+            // same edge-triggered rule as siso_ring_buffer::alloc_write_chunk
             BQ_UNLIKELY_IF(static_cast<uint32_t>(read_cursor_cache + state.half_unit_count - write_cursor - 1) < need)
             {
                 const uint32_t read_cursor = cursor_at(head, l::head_reading_cursor).load_acquire();

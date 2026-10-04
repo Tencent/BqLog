@@ -132,7 +132,7 @@ namespace bq {
             bq::platform::scoped_spin_lock scoped_lock(lock_);
             if (log_level_bitmap_.have_level(log_entry.get_level()) && categories_mask_array_[log_entry.get_category_idx()]) {
                 if (snapshot_buffer_) {
-                    // The stored copy must be self-contained: records without ext info get it appended.
+                    // records without ext info get it appended
                     const bool append_ext_info = !log_entry.has_inline_ext_info();
                     const auto& ext_head = log_entry.get_ext_head();
                     const uint32_t ext_info_size = append_ext_info ? static_cast<uint32_t>(sizeof(_log_entry_ext_head_def) + ext_head.thread_name_len_) : 0;

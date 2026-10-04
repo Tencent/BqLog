@@ -14,25 +14,25 @@
 namespace bq {
     namespace {
         struct fast_meta_find_context {
-            const uint8_t* target;
-            const fast_meta_head* entry;
-            uint32_t size;
+            const uint8_t* target_;
+            const fast_meta_head* entry_;
+            uint32_t size_;
         };
 
         void find_fast_meta(uint8_t* data, uint32_t size, void* context)
         {
             auto& search = *static_cast<fast_meta_find_context*>(context);
-            if (data == search.target) {
-                search.entry = reinterpret_cast<const fast_meta_head*>(data);
-                search.size = size;
+            if (data == search.target_) {
+                search.entry_ = reinterpret_cast<const fast_meta_head*>(data);
+                search.size_ = size;
             }
         }
 
         struct fast_meta_marker_context {
-            uint64_t old_addr;
-            uint32_t normal_id;
-            uint32_t size;
-            bool found;
+            uint64_t old_addr_;
+            uint32_t normal_id_;
+            uint32_t size_;
+            bool found_;
         };
 
         void find_fast_meta_marker(uint8_t* data, uint32_t size, void* context)
@@ -43,11 +43,11 @@ namespace bq {
             auto& search = *static_cast<fast_meta_marker_context*>(context);
             const auto& marker = *reinterpret_cast<const fast_meta_oversize_marker*>(data);
             if (marker.head.kind == fast_meta_kind::oversize && marker.head.ready == 1
-                && marker.old_addr == search.old_addr && marker.normal_id == search.normal_id
-                && marker.data_size == search.size) {
+                && marker.old_addr == search.old_addr_ && marker.normal_id == search.normal_id_
+                && marker.data_size == search.size_) {
                 const uint64_t checksum = bq::util::get_hash_64(
                     data + sizeof(uint64_t), size - sizeof(uint64_t));
-                search.found = checksum == marker.head.checksum;
+                search.found_ = checksum == marker.head.checksum;
             }
         }
     }
@@ -85,20 +85,20 @@ namespace bq {
             bq::file_manager::create_directory(folder_);
         }
         auto item = bq::make_unique<segment>();
-        item->version = version_;
-        item->id = next_segment_id_;
-        item->buffer = bq::make_unique<miso_ring_buffer>(config_,
-            config_.need_recovery ? segment_path(version_, item->id) : bq::string());
-        if (config_.need_recovery && !item->buffer->is_memory_mapped()) {
+        item->version_ = version_;
+        item->id_ = next_segment_id_;
+        item->buffer_ = bq::make_unique<miso_ring_buffer>(config_,
+            config_.need_recovery ? segment_path(version_, item->id_) : bq::string());
+        if (config_.need_recovery && !item->buffer_->is_memory_mapped()) {
             return nullptr;
         }
-        auto& head = item->buffer->get_mmap_misc_data<fast_meta_segment_head>();
+        auto& head = item->buffer_->get_mmap_misc_data<fast_meta_segment_head>();
         memset(&head, 0, sizeof(head));
         head.magic = segment_magic;
-        head.base_addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(item->buffer->get_buffer_addr()));
+        head.base_addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(item->buffer_->get_buffer_addr()));
         head.log_checksum = log_checksum_;
         head.format_version = meta_format_version;
-        head.segment_id = item->id;
+        head.segment_id = item->id_;
         head.buffer_version = version_;
         segment* result = item.operator->();
         segments_.push_back(bq::move(item));
@@ -114,14 +114,14 @@ namespace bq {
             return nullptr;
         }
         auto item = bq::make_unique<segment>();
-        item->version = version;
-        item->id = id;
-        item->buffer = bq::make_unique<miso_ring_buffer>(config_, path);
-        if (!item->buffer->is_memory_mapped()
-            || item->buffer->get_memory_map_buffer_state() != memory_map_buffer_state::recover_from_memory_map) {
+        item->version_ = version;
+        item->id_ = id;
+        item->buffer_ = bq::make_unique<miso_ring_buffer>(config_, path);
+        if (!item->buffer_->is_memory_mapped()
+            || item->buffer_->get_memory_map_buffer_state() != memory_map_buffer_state::recover_from_memory_map) {
             return nullptr;
         }
-        const auto& head = item->buffer->get_mmap_misc_data<fast_meta_segment_head>();
+        const auto& head = item->buffer_->get_mmap_misc_data<fast_meta_segment_head>();
         if (head.magic != segment_magic || head.log_checksum != log_checksum_
             || head.format_version != meta_format_version || head.segment_id != id
             || head.buffer_version != version || (head.base_addr & 7) != 0) {
@@ -149,10 +149,10 @@ namespace bq {
             if (!item) {
                 return nullptr;
             }
-            auto handle = item->buffer->alloc_write_chunk(size);
+            auto handle = item->buffer_->alloc_write_chunk(size);
             if (handle.result == enum_buffer_result_code::success) {
                 memcpy(handle.data_addr, data, size);
-                item->buffer->commit_write_chunk(handle);
+                item->buffer_->commit_write_chunk(handle);
                 return reinterpret_cast<const fast_meta_head*>(handle.data_addr);
             }
             if (handle.result != enum_buffer_result_code::err_not_enough_space
@@ -179,29 +179,29 @@ namespace bq {
                 bq::file_manager::create_directory(folder_);
             }
             auto item = bq::make_unique<normal_entry>();
-            item->version = version_;
-            item->id = next_normal_id_;
+            item->version_ = version_;
+            item->id_ = next_normal_id_;
             const bq::string path = config_.need_recovery
-                ? normal_path(version_, item->id)
+                ? normal_path(version_, item->id_)
                 : bq::string();
-            item->buffer = bq::make_unique<normal_buffer>(sizeof(fast_meta_normal_head) + size, path, true);
-            if (!item->buffer->is_valid()
-                || (config_.need_recovery && !item->buffer->is_memory_mapped())) {
+            item->buffer_ = bq::make_unique<normal_buffer>(sizeof(fast_meta_normal_head) + size, path, true);
+            if (!item->buffer_->is_valid()
+                || (config_.need_recovery && !item->buffer_->is_memory_mapped())) {
                 return nullptr;
             }
-            auto& head = *reinterpret_cast<fast_meta_normal_head*>(item->buffer->data());
+            auto& head = *reinterpret_cast<fast_meta_normal_head*>(item->buffer_->data());
             memset(&head, 0, sizeof(head));
             head.magic = normal_magic;
-            head.base_addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(item->buffer->data()));
+            head.base_addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(item->buffer_->data()));
             head.log_checksum = log_checksum_;
             head.format_version = meta_format_version;
-            head.normal_id = item->id;
+            head.normal_id = item->id_;
             head.data_size = size;
             head.buffer_version = version_;
-            auto* entry = reinterpret_cast<uint8_t*>(item->buffer->data()) + sizeof(head);
+            auto* entry = reinterpret_cast<uint8_t*>(item->buffer_->data()) + sizeof(head);
             memcpy(entry, data, size);
             old_addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(entry));
-            normal_id = item->id;
+            normal_id = item->id_;
             normal_entries_.push_back(bq::move(item));
             ++next_normal_id_;
         }
@@ -283,34 +283,34 @@ namespace bq {
 
     const fast_meta_head* fast_meta_store::resolve_in_segment(segment& item, uint64_t old_addr)
     {
-        const auto& head = item.buffer->get_mmap_misc_data<fast_meta_segment_head>();
+        const auto& head = item.buffer_->get_mmap_misc_data<fast_meta_segment_head>();
         if (old_addr < head.base_addr || old_addr - head.base_addr >= BQ_LOG_FAST_META_SEGMENT_SIZE) {
             return nullptr;
         }
-        const auto* target = item.buffer->get_buffer_addr() + (old_addr - head.base_addr);
+        const auto* target = item.buffer_->get_buffer_addr() + (old_addr - head.base_addr);
         fast_meta_find_context context = { target, nullptr, 0 };
-        item.buffer->data_traverse(find_fast_meta, &context);
-        return verify(context.entry, context.size) ? context.entry : nullptr;
+        item.buffer_->data_traverse(find_fast_meta, &context);
+        return verify(context.entry_, context.size_) ? context.entry_ : nullptr;
     }
 
     const fast_meta_head* fast_meta_store::resolve_in_normal(normal_entry& item, uint64_t old_addr)
     {
-        const auto& head = *reinterpret_cast<const fast_meta_normal_head*>(item.buffer->data());
+        const auto& head = *reinterpret_cast<const fast_meta_normal_head*>(item.buffer_->data());
         if (head.magic != normal_magic || head.log_checksum != log_checksum_
-            || head.format_version != meta_format_version || head.buffer_version != item.version
-            || head.normal_id != item.id || head.data_size > item.buffer->size() - sizeof(head)
+            || head.format_version != meta_format_version || head.buffer_version != item.version_
+            || head.normal_id != item.id_ || head.data_size > item.buffer_->size() - sizeof(head)
             || old_addr != head.base_addr + sizeof(head)) {
             return nullptr;
         }
-        fast_meta_marker_context marker = { old_addr, item.id, head.data_size, false };
+        fast_meta_marker_context marker = { old_addr, item.id_, head.data_size, false };
         for (auto& segment_item : segments_) {
-            if (segment_item->version == item.version) {
-                segment_item->buffer->data_traverse(find_fast_meta_marker, &marker);
+            if (segment_item->version_ == item.version_) {
+                segment_item->buffer_->data_traverse(find_fast_meta_marker, &marker);
             }
         }
         const auto* entry = reinterpret_cast<const fast_meta_head*>(
-            static_cast<const uint8_t*>(item.buffer->data()) + sizeof(head));
-        return marker.found && verify(entry, head.data_size) ? entry : nullptr;
+            static_cast<const uint8_t*>(item.buffer_->data()) + sizeof(head));
+        return marker.found_ && verify(entry, head.data_size) ? entry : nullptr;
     }
 
     void fast_meta_store::load_version(uint16_t version)
@@ -349,11 +349,11 @@ namespace bq {
             } else if (file_name == normal_name) {
                 const bq::string path = normal_path(version, id);
                 auto item = bq::make_unique<normal_entry>();
-                item->version = version;
-                item->id = id;
-                item->buffer = bq::make_unique<normal_buffer>(
+                item->version_ = version;
+                item->id_ = id;
+                item->buffer_ = bq::make_unique<normal_buffer>(
                     bq::file_manager::get_file_size(path), path, false);
-                if (item->buffer->is_memory_mapped()) {
+                if (item->buffer_->is_memory_mapped()) {
                     normal_entries_.push_back(bq::move(item));
                 }
             }
@@ -365,7 +365,7 @@ namespace bq {
         bq::platform::scoped_spin_lock guard(lock_);
         load_version(version);
         for (auto& item : segments_) {
-            if (item->version == version) {
+            if (item->version_ == version) {
                 const auto* entry = resolve_in_segment(*item, old_addr);
                 if (entry && entry->kind != fast_meta_kind::oversize) {
                     return entry;
@@ -373,7 +373,7 @@ namespace bq {
             }
         }
         for (auto& item : normal_entries_) {
-            if (item->version == version) {
+            if (item->version_ == version) {
                 const auto* entry = resolve_in_normal(*item, old_addr);
                 if (entry && entry->kind != fast_meta_kind::oversize) {
                     return entry;
@@ -390,14 +390,14 @@ namespace bq {
         }
         bq::platform::scoped_spin_lock guard(lock_);
         for (size_t i = 0; i < segments_.size();) {
-            if (segments_[i]->version == version) {
+            if (segments_[i]->version_ == version) {
                 segments_.erase(segments_.begin() + static_cast<ptrdiff_t>(i));
             } else {
                 ++i;
             }
         }
         for (size_t i = 0; i < normal_entries_.size();) {
-            if (normal_entries_[i]->version == version) {
+            if (normal_entries_[i]->version_ == version) {
                 normal_entries_.erase(normal_entries_.begin() + static_cast<ptrdiff_t>(i));
             } else {
                 ++i;

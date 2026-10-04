@@ -54,7 +54,7 @@ namespace bq {
             return log_target_;
         }
 
-        // awake_flag_ is set by the worker right before it waits, so only a parked worker costs an exchange.
+        // set by the worker right before it waits, so only a parked worker costs an exchange
         bq_forceinline void awake()
         {
             if (!awake_flag_.load_relaxed()) {

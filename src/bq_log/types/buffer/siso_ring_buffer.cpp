@@ -118,8 +118,7 @@ namespace bq {
         new_block.to_chunk_head().block_num = need_block_count;
         new_block.to_chunk_head().data_size = size;
 
-        // Edge triggered: only the allocation that crosses half full (by the cached read cursor) reports low space.
-        // Refreshing the cache re-arms it once the consumer has caught up.
+        // edge triggered: only the allocation crossing half full reports low space
         const uint32_t used_before = aligned_blocks_count_ - left_space;
         handle.low_space_flag = (used_before << 1) < aligned_blocks_count_ && ((used_before + need_block_count) << 1) >= aligned_blocks_count_;
         if (handle.low_space_flag) {

@@ -101,13 +101,12 @@ namespace bq {
             return print_stack_level_bitmap_.have_level(level);
         }
 
-        // Common case first: one load and one bit test when the level is enabled without stack trace.
         bq_forceinline bool is_enable_without_stack_for(uint32_t category_index, bq::log_level level) const
         {
             return category_index < fast_level_words_.size() && ((fast_level_words_[category_index] >> static_cast<uint32_t>(level)) & 1U) != 0;
         }
 
-        // Levels enabled without stack trace for one category, read by the inline fast path; the address is stable.
+        // stable address, read by the inline fast path
         bq_forceinline const uint32_t* get_fast_level_word(uint32_t category_index) const
         {
             return category_index < fast_level_words_.size() ? &fast_level_words_[category_index] : nullptr;

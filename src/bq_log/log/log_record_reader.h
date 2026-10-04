@@ -13,8 +13,7 @@
 #include "bq_log/types/buffer/log_buffer.h"
 
 namespace bq {
-    // Turns a chunk read from log_buffer into a log_entry_handle: fast records are expanded to the standard layout,
-    // and records without ext info (HP blocks) get the owner thread recorded in their block.
+    // Expands fast records to the standard layout and attaches the HP block's owner thread.
     class log_record_reader {
         static const log_thread_info* get_block_thread_info(const log_buffer& buffer);
 

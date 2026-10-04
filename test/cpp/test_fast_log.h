@@ -340,6 +340,180 @@ namespace bq {
                     "fast recovery multiple segments retired");
             }
 
+            // normal records add a byte: 1 when oversize
+            struct recovery_cross_record {
+                uint32_t lifetime_;
+                uint32_t thread_;
+                uint32_t seq_;
+            };
+
+            static constexpr uint32_t recovery_cross_lifetimes = 3;
+            static constexpr uint32_t recovery_cross_threads = 3;
+            static constexpr uint32_t recovery_cross_records = 3000;
+
+            static bq::log_buffer_config recovery_cross_config(const char* name)
+            {
+                bq::log_buffer_config config;
+                config.log_name = name;
+                config.log_categories_name = { "" };
+                config.need_recovery = true;
+                config.policy = bq::log_memory_policy::auto_expand_when_full;
+                config.high_frequency_threshold_per_second = 1000;
+                return config;
+            }
+
+            // fast and normal records interleaved, with LP fallback, oversize records and compaction
+            static void write_recovery_cross(bq::log_buffer& buffer, const bq::fast_format_meta* format, uint32_t lifetime,
+                uint32_t thread, test_result& result)
+            {
+                bq::array<uint8_t> oversize;
+                oversize.fill_uninitialized(200000);
+                for (uint32_t seq = 0; seq < recovery_cross_records; ++seq) {
+                    const recovery_cross_record value = { lifetime, thread, seq };
+                    const bool fast = (seq % 3) != 2;
+                    if (fast) {
+                        auto handle = buffer.test_alloc_fast_record(format, sizeof(value));
+                        result.add_result(handle.result == bq::enum_buffer_result_code::success, "cross recovery fast write");
+                        if (handle.result == bq::enum_buffer_result_code::success) {
+                            memcpy(handle.data_addr + sizeof(bq::log_head_fast_def), &value, sizeof(value));
+                        }
+                        buffer.commit_write_chunk(handle);
+                        if (seq % 997 == 0) {
+                            const auto* block = buffer.get_buffer_info_for_this_thread().cur_block_;
+                            if (block) {
+                                const_cast<bq::block_node_head*>(block)->get_misc_data<bq::log_buffer::block_misc_data>().need_reallocate_ = true;
+                            }
+                        }
+                        continue;
+                    }
+                    const bool is_oversize = seq % 501 == 2;
+                    const uint32_t size = is_oversize ? static_cast<uint32_t>(oversize.size()) : static_cast<uint32_t>(sizeof(value) + 1);
+                    auto handle = buffer.alloc_write_chunk(size, bq::platform::high_performance_epoch_ms());
+                    result.add_result(handle.result == bq::enum_buffer_result_code::success, "cross recovery normal write");
+                    if (handle.result == bq::enum_buffer_result_code::success) {
+                        memcpy(handle.data_addr, &value, sizeof(value));
+                        handle.data_addr[sizeof(value)] = is_oversize ? 1 : 0;
+                    }
+                    buffer.commit_write_chunk(handle);
+                    if (seq % 1201 == 2) {
+                        // drop back to LP
+                        bq::platform::thread::sleep(bq::log_buffer::HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL + 10);
+                    }
+                }
+            }
+
+            class recovery_cross_writer : public bq::platform::thread {
+            public:
+                bq::log_buffer* buffer_ = nullptr;
+                const bq::fast_format_meta* format_ = nullptr;
+                test_result* result_ = nullptr;
+                uint32_t lifetime_ = 0;
+                uint32_t thread_ = 0;
+                uint64_t thread_id_ = 0;
+                void run() override
+                {
+                    thread_id_ = bq::get_log_thread_info().thread_id_;
+                    write_recovery_cross(*buffer_, format_, lifetime_, thread_, *result_);
+                }
+            };
+
+            // destroying a log_buffer with unread records leaves the same memory map as a crash
+            static void test_recovery_cross(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support()) {
+                    return;
+                }
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_recovery_cross_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = {};
+                for (uint32_t lifetime = 0; lifetime < recovery_cross_lifetimes; ++lifetime) {
+                    auto config = recovery_cross_config(name);
+                    bq::log_buffer buffer(config);
+                    const uint8_t u32 = static_cast<uint8_t>(bq::log_arg_type_enum::uint32_type);
+                    const uint8_t arg_types[] = { u32, u32, u32 };
+                    const auto* format = buffer.register_fast_log_format("cross {} {} {}", 14, static_cast<uint8_t>(bq::log_level::info), 0,
+                        static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type), arg_types, 3);
+                    result.add_result(format != nullptr, "cross recovery format register");
+                    recovery_cross_writer writers[recovery_cross_threads];
+                    for (uint32_t t = 0; t < recovery_cross_threads; ++t) {
+                        writers[t].buffer_ = &buffer;
+                        writers[t].format_ = format;
+                        writers[t].result_ = &result;
+                        writers[t].lifetime_ = lifetime;
+                        writers[t].thread_ = t;
+                        writers[t].start();
+                    }
+                    for (uint32_t t = 0; t < recovery_cross_threads; ++t) {
+                        writers[t].join();
+                        thread_ids[lifetime][t] = writers[t].thread_id_;
+                    }
+                }
+
+                auto config = recovery_cross_config(name);
+                bq::log_buffer buffer(config);
+                uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = {};
+                uint32_t out_of_order = 0;
+                uint32_t bad_record = 0;
+                uint32_t bad_owner = 0;
+                uint32_t oversize_count = 0;
+                bq::array<uint8_t, bq::aligned_allocator<uint8_t, 8>> converted;
+                const uint32_t expected = recovery_cross_lifetimes * recovery_cross_threads * recovery_cross_records;
+                uint32_t read_count = 0;
+                for (uint32_t i = 0; i < expected * 2 && read_count < expected; ++i) {
+                    auto chunk = buffer.read_chunk();
+                    bq::scoped_log_buffer_handle<bq::log_buffer> guard(buffer, chunk);
+                    if (chunk.result != bq::enum_buffer_result_code::success) {
+                        continue;
+                    }
+                    ++read_count;
+                    recovery_cross_record value = {};
+                    uint64_t owner_thread_id = 0;
+                    if (bq::log_record_reader::is_fast_record(chunk.data_addr, chunk.data_size)) {
+                        bq::log_entry_handle entry(chunk.data_addr, chunk.data_size);
+                        if (!bq::log_record_reader::read(buffer, chunk.data_addr, chunk.data_size, converted, entry) || !entry.validate()) {
+                            ++bad_record;
+                            continue;
+                        }
+                        memcpy(&value, chunk.data_addr + sizeof(bq::log_head_fast_def), sizeof(value));
+                        owner_thread_id = entry.get_log_head().log_thread_id;
+                    } else {
+                        if (chunk.data_size < sizeof(value) + 1) {
+                            ++bad_record;
+                            continue;
+                        }
+                        memcpy(&value, chunk.data_addr, sizeof(value));
+                        oversize_count += chunk.data_addr[sizeof(value)] == 1 ? 1 : 0;
+                    }
+                    if (value.lifetime_ >= recovery_cross_lifetimes || value.thread_ >= recovery_cross_threads) {
+                        ++bad_record;
+                        continue;
+                    }
+                    if (owner_thread_id && owner_thread_id != thread_ids[value.lifetime_][value.thread_]) {
+                        ++bad_owner;
+                    }
+                    uint32_t& next = next_seq[value.lifetime_][value.thread_];
+                    if (value.seq_ != next) {
+                        ++out_of_order;
+                    }
+                    next = value.seq_ + 1;
+                }
+                bool all_complete = true;
+                for (uint32_t l = 0; l < recovery_cross_lifetimes; ++l) {
+                    for (uint32_t t = 0; t < recovery_cross_threads; ++t) {
+                        all_complete &= next_seq[l][t] == recovery_cross_records;
+                    }
+                }
+                result.add_result(read_count == expected, "cross recovery reads every record (%" PRIu32 " of %" PRIu32 ")", read_count, expected);
+                result.add_result(all_complete, "cross recovery reaches the last record of every thread and lifetime");
+                result.add_result(out_of_order == 0, "cross recovery keeps per-thread order (%" PRIu32 " out of order)", out_of_order);
+                result.add_result(bad_record == 0, "cross recovery records decode (%" PRIu32 " bad)", bad_record);
+                result.add_result(bad_owner == 0, "cross recovery fast records keep their owner thread (%" PRIu32 " wrong)", bad_owner);
+                result.add_result(oversize_count > 0, "cross recovery includes oversize records (%" PRIu32 ")", oversize_count);
+                auto tail = buffer.read_chunk();
+                bq::scoped_log_buffer_handle<bq::log_buffer> tail_guard(buffer, tail);
+                result.add_result(tail.result == bq::enum_buffer_result_code::err_empty_log_buffer, "cross recovery leaves nothing behind");
+            }
+
             static bool decode_has_both(const bq::string& path)
             {
                 bq::tools::log_decoder decoder(path);
@@ -668,6 +842,7 @@ namespace bq {
                 test_site_level_word(result);
                 test_hp_thread_info(result);
                 test_recovery(result);
+                test_recovery_cross(result);
                 return result;
             }
         };

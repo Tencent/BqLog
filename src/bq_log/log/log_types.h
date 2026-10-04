@@ -16,7 +16,7 @@ namespace bq {
     private:
         const uint8_t* data_ptr;
         uint32_t data_len;
-        // Set by the reader for records without ext info (ext_info_offset == 0), e.g. records in HP blocks.
+        // for records without ext info (ext_info_offset == 0)
         const struct _log_entry_ext_head_def* external_ext_head_ = nullptr;
 
     public:

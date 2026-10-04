@@ -90,7 +90,7 @@ namespace bq {
 
     log_buffer::log_tls_info::~log_tls_info()
     {
-        // first, so a late log from another thread_local destructor takes the exported slow path
+        // first: a later log from another thread_local destructor must take the slow path
         if (fast_state_) {
             clear_fast_state(*fast_state_);
             fast_state_ = nullptr;
@@ -347,6 +347,25 @@ namespace bq {
         return store;
     }
 
+#if defined(BQ_UNIT_TEST)
+    log_buffer_write_handle log_buffer::test_alloc_fast_record(const fast_format_meta* format, uint32_t args_size)
+    {
+        auto& tls_info = log_tls_info__get_direct().get_buffer_info(this);
+        tls_info.fast_mode_ = true;
+        log_buffer_write_handle handle;
+        if (!ensure_fast_hp_block(tls_info)) {
+            return handle;
+        }
+        handle = tls_info.cur_block_->get_buffer().alloc_write_chunk(static_cast<uint32_t>(sizeof(log_head_fast_def)) + args_size);
+        if (handle.result == enum_buffer_result_code::success) {
+            auto& head = *reinterpret_cast<log_head_fast_def*>(handle.data_addr);
+            head.timestamp_epoch = log_head_base_def::set_fast(bq::platform::high_performance_epoch_ms());
+            head.format_meta_addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(format));
+        }
+        return handle;
+    }
+
+#endif
     const fast_format_meta* log_buffer::register_fast_log_format(const char* format, uint32_t format_size,
         uint8_t level, uint32_t category_idx, uint8_t format_type,
         const uint8_t* arg_types, uint16_t arg_count)
@@ -572,7 +591,7 @@ namespace bq {
         if (hp_buffer_max_alloc_size_ == UINT32_MAX) {
             hp_buffer_max_alloc_size_ = new_node->get_buffer().get_max_alloc_size();
         }
-        // first-touch page faults would otherwise land on the producer's hot path for the whole first lap
+        // keeps first-touch page faults off the producer's hot path
         new_node->get_buffer().prefault();
         return new_node;
     }

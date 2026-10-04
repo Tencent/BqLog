@@ -220,7 +220,7 @@ namespace bq {
             return (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << static_cast<int32_t>(level))) != 0;
         }
 
-        // A clear bit means either disabled or enabled with stack trace.
+        // clear: disabled, or enabled with stack trace
         bq_forceinline bool is_enabled_without_stack_trace_for(uint32_t category_index, bq::log_level level) const
         {
             return ((category_level_words_[category_index] >> static_cast<uint32_t>(level)) & 1U) != 0;

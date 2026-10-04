@@ -140,8 +140,7 @@ namespace bq {
         void* aligned_alloc(size_t alignment, size_t size);
         void aligned_free(void* ptr);
 
-        // Commits every page of [addr, addr + size) by reading and writing back one byte per page; contents are unchanged.
-        // Must not race with any other writer of the range.
+        // Commits every page of [addr, addr + size) without changing contents. No concurrent writers.
         void prefault_pages(void* addr, size_t size);
 
 #if defined(BQ_UNIT_TEST)

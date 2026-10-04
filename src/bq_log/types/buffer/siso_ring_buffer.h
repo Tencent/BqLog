@@ -257,9 +257,7 @@ namespace bq {
         /// <returns>The minimum buffer size required</returns>
         static uint32_t calculate_min_size_of_memory(uint32_t expected_buffer_size);
 
-        /// <summary>
-        /// Offsets used by the header-inlined fast write path. It writes the same chunk layout and cursors as alloc/commit.
-        /// </summary>
+        // offsets for the header-inlined fast path, which writes the same chunks as alloc/commit
         static void fill_fast_log_layout(_api_fast_log_layout& layout);
 
         void fill_fast_log_thread_state(_api_fast_log_thread_state& state);
@@ -305,7 +303,7 @@ namespace bq {
             return aligned_blocks_count_;
         }
 
-        // Commits the data pages without touching their contents (they may hold data recovered from a memory map).
+        // commits pages without touching contents, which may be recovered data
         void prefault()
         {
             bq::platform::prefault_pages(aligned_blocks_, static_cast<size_t>(aligned_blocks_count_) * sizeof(block));

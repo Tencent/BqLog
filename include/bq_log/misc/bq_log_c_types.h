@@ -76,40 +76,33 @@ struct BQ_LOG_ABI_TYPE(_api_log_write_handle, bq_api_log_write_handle) {
 BQ_PACK_BEGIN
 struct BQ_LOG_ABI_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle) {
     uint64_t format_meta_addr;
-    uint64_t buffer_id; // compared with the thread's current buffer id on the inline fast path
+    uint64_t buffer_id;
     uint64_t log_id;
     void* buffer_ptr;
-    // bit (1 << level) set when the bound log has that level enabled without stack trace for the site's category.
-    // Kept up to date by the library; an unregistered site points at a constant 0.
-    const uint32_t* level_word;
+    const uint32_t* level_word; // see __api_get_log_category_level_words_by_log_id
 } BQ_PACK_END
 
-// Byte offsets inside the SISO head and chunk format, for the header-inlined fast path.
-// Plain uint32_t fields only; new fields may only be appended. All offsets are computed by the library.
-// Bump the version whenever the meaning of any field, the thread state below, or the chunk/record format changes.
+// Bump when any field, the thread state below or the record format changes. Append-only.
 #define BQ_FAST_LOG_LAYOUT_VERSION 3
 BQ_PACK_BEGIN
 struct BQ_LOG_ABI_TYPE(_api_fast_log_layout, bq_api_fast_log_layout) {
     uint32_t struct_size;
     uint32_t layout_version;
-    uint32_t head_wt_reading_cursor_cache; // head: uint32_t
-    uint32_t head_wt_writing_cursor_cache; // head: uint32_t
-    uint32_t head_writing_cursor; // head: uint32_t, published with release
-    uint32_t head_reading_cursor; // head: uint32_t, consumer progress, read with acquire
-    uint32_t chunk_data_offset; // bytes from a chunk start to its payload
-    uint32_t block_size_log2; // log2 of the SISO allocation unit in bytes
+    uint32_t head_wt_reading_cursor_cache;
+    uint32_t head_wt_writing_cursor_cache;
+    uint32_t head_writing_cursor;
+    uint32_t head_reading_cursor;
+    uint32_t chunk_data_offset;
+    uint32_t block_size_log2;
 } BQ_PACK_END
 
-// Per-thread state of the header-inlined fast path. The header owns it in thread local storage; the library writes it,
-// on the owning thread only, whenever that thread's current HP block of the bound log buffer changes.
-// Natural layout (not packed): read on the hot path.
+// Header-owned TLS, written by the library on its own thread when the current HP block changes. Not packed.
 struct BQ_LOG_ABI_TYPE(_api_fast_log_thread_state, bq_api_fast_log_thread_state) {
-    uint64_t buffer_key; // ~id of the log buffer described below; 0 when there is none (never matches a site)
-    uint8_t* siso_head; // head of the current block's siso_ring_buffer
-    uint8_t* siso_units; // first allocation unit of that ring
-    const bool* need_reallocate; // the current block's flag, set by the consumer; read on every write. Never null:
-                                 // with buffer_key 0 it points at a constant, so a write may read it unconditionally
-    uint32_t unit_count; // power of two
+    uint64_t buffer_key; // ~buffer id, 0 when unbound
+    uint8_t* siso_head;
+    uint8_t* siso_units;
+    const bool* need_reallocate; // never null
+    uint32_t unit_count;
     uint32_t half_unit_count;
 };
 

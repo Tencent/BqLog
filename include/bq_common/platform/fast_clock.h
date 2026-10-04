@@ -9,20 +9,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-/*
- * Hardware counter clock read per thread. Each thread anchors the counter to the system wall clock and re-anchors it
- * every BQ_FAST_CLOCK_RESYNC_INTERVAL_MS, so cross-core skew, wall clock steps and drift last at most one interval.
- * Everything is inline; each module (executable, shared library) keeps its own state.
- */
+// Per-thread hardware counter clock, re-anchored to the wall clock every BQ_FAST_CLOCK_RESYNC_INTERVAL_MS.
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
 #if defined(BQ_MSVC)
 #include <intrin.h>
 #endif
 #if defined(BQ_MSVC) && defined(BQ_ARM_64)
-// ARM64_SYSREG(op0, op1, CRn, CRm, op2) encodings, as winnt.h defines them; this header does not include windows.h.
-#define BQ_ARM64_SYSREG_CNTVCT 0x5F02 // CNTVCT_EL0: 3, 3, 14, 0, 2
-#define BQ_ARM64_SYSREG_CNTFRQ 0x5F00 // CNTFRQ_EL0: 3, 3, 14, 0, 0
+// ARM64_SYSREG encodings from winnt.h, without including windows.h
+#define BQ_ARM64_SYSREG_CNTVCT 0x5F02
+#define BQ_ARM64_SYSREG_CNTFRQ 0x5F00
 #endif
 
 // Must be the same in every translation unit of a module.
@@ -36,15 +32,15 @@
 
 namespace bq {
     namespace platform {
-        // Per thread, zero initialized. epoch_ms_ is current until the counter reaches next_ms_counter_.
+        // Zero initialized. epoch_ms_ is current until the counter reaches next_ms_counter_.
         struct fast_clock_thread_cache {
             uint64_t next_ms_counter_;
             uint64_t epoch_ms_;
             uint64_t resync_counter_;
             uint64_t base_counter_;
             uint64_t base_epoch_ms_;
-            uint64_t base_ms_fraction_; // sub-millisecond part of the anchor, 64-bit binary fraction
-            uint64_t ms_mul_; // milliseconds per tick, 64-bit binary fraction
+            uint64_t base_ms_fraction_; // 64-bit binary fraction
+            uint64_t ms_mul_; // ms per tick, 64-bit binary fraction
             uint64_t last_sync_wall_ns_;
             uint32_t rate_mismatches_;
             uint32_t reserved_;
@@ -60,13 +56,12 @@ namespace bq {
             static constexpr uint32_t max_sync_attempts = 4;
             static constexpr uint32_t max_rate_mismatches = 3;
 
-            // Per module, constant initialized.
             template <typename T = void>
             struct shared_state {
                 static atomic_trivially_constructible<uint64_t> counter_frequency_;
                 static atomic_trivially_constructible<uint64_t> measure_counter_;
                 static atomic_trivially_constructible<uint64_t> measure_wall_ns_;
-                static atomic_trivially_constructible<uint32_t> untrusted_; // the counter rate kept disagreeing with the wall clock
+                static atomic_trivially_constructible<uint32_t> untrusted_;
             };
             template <typename T>
             atomic_trivially_constructible<uint64_t> shared_state<T>::counter_frequency_;
@@ -104,7 +99,6 @@ namespace bq {
                 out_low = a * b;
                 return __umulh(a, b);
 #elif defined(__SIZEOF_INT128__)
-                // __extension__: -pedantic rejects __int128 otherwise
                 __extension__ typedef unsigned __int128 uint128_type;
                 const uint128_type r = static_cast<uint128_type>(a) * b;
                 out_low = static_cast<uint64_t>(r);
@@ -117,9 +111,7 @@ namespace bq {
 #endif
             }
 
-            // 0 while unknown. x86 has no portable way to read the TSC frequency, so it is measured from the first anchor
-            // of the module: usable after 20 ms, then refined on every anchor until the span reaches 2 s (out_settled
-            // false meanwhile), since wall clock jitter over a short span skews every timestamp by the same ratio.
+            // x86 has no portable TSC frequency: measured from the first anchor, refined until the span reaches 2 s.
             inline uint64_t counter_frequency(uint64_t counter, uint64_t wall_ns, bool& out_settled)
             {
                 typedef shared_state<> s;
@@ -166,15 +158,13 @@ namespace bq {
                 return false;
             }
 
-            // SYNC: bool (uint64_t& out_epoch_ns) const, a precise wall clock; false means the counter must not be used.
             template <typename SYNC>
             bq_noinline bool resync(fast_clock_thread_cache& cache, const SYNC& sync)
             {
                 if (shared_state<>::untrusted_.load_relaxed()) {
                     return resync_failed(cache);
                 }
-                // the anchor is the midpoint of the counter reads around the wall clock read, so a preemption inside that
-                // bracket would offset every timestamp until the next resync: keep the narrowest of a few brackets
+                // a preemption inside the bracket would offset every timestamp until the next resync
                 const uint64_t known_frequency = shared_state<>::counter_frequency_.load_relaxed();
                 const uint64_t good_width = known_frequency ? known_frequency / 20000 : 0; // 50 us
                 uint64_t counter = 0;
@@ -203,7 +193,7 @@ namespace bq {
                     const double ticks = static_cast<double>(counter - cache.base_counter_);
                     const double tolerance = expected_ticks * 0.01 + static_cast<double>(frequency) / 10000.0;
                     if (ticks > expected_ticks + tolerance || ticks < expected_ticks - tolerance) {
-                        // a single miss is a wall clock step or a resume from sleep; a persistent one is a wrong frequency
+                        // once is a wall clock step, repeatedly is a wrong frequency
                         if (++cache.rate_mismatches_ >= max_rate_mismatches) {
                             shared_state<>::untrusted_.store_relaxed(1);
                             return resync_failed(cache);
@@ -224,11 +214,11 @@ namespace bq {
                 return true;
             }
 
-            // Returns 0 when the counter must not be used.
+            // 0: counter unusable
             template <typename SYNC>
             inline uint64_t advance(fast_clock_thread_cache& cache, uint64_t counter, const SYNC& sync)
             {
-                // counter below the anchor: moved to a core whose counter is behind
+                // below the anchor: moved to a core whose counter is behind
                 BQ_UNLIKELY_IF((counter >= cache.resync_counter_) | (counter < cache.base_counter_))
                 {
                     if (!resync(cache, sync)) {
@@ -240,7 +230,6 @@ namespace bq {
                 const uint64_t whole_ms = mul_high(counter - cache.base_counter_, cache.ms_mul_, fraction);
                 const uint64_t sum = fraction + cache.base_ms_fraction_;
                 uint64_t epoch_ms = cache.base_epoch_ms_ + whole_ms + (sum < fraction ? 1U : 0U);
-                // a new anchor may land slightly behind the time already handed out; only a large step back is followed
                 if (epoch_ms < cache.epoch_ms_ && cache.epoch_ms_ - epoch_ms <= max_backward_hold_ms) {
                     epoch_ms = cache.epoch_ms_;
                 }
@@ -251,7 +240,6 @@ namespace bq {
             }
         }
 
-        // Precise wall clock the counter is anchored to. false where the platform has none.
         inline bool fast_clock_sync_epoch_ns(uint64_t& out_epoch_ns)
         {
 #if defined(BQ_WIN)
@@ -274,7 +262,7 @@ namespace bq {
 #endif
         }
 
-        // false: the caller falls back to the system clock.
+        // false: fall back to the system clock
         template <typename SYNC>
         bq_forceinline bool fast_clock_read_epoch_ms(fast_clock_thread_cache& cache, const SYNC& sync, uint64_t& out_epoch_ms)
         {

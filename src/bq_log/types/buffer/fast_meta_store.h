@@ -55,15 +55,15 @@ namespace bq {
 
     class fast_meta_store {
         struct segment {
-            bq::unique_ptr<miso_ring_buffer> buffer;
-            uint16_t version;
-            uint32_t id;
+            bq::unique_ptr<miso_ring_buffer> buffer_;
+            uint16_t version_;
+            uint32_t id_;
         };
 
         struct normal_entry {
-            bq::unique_ptr<normal_buffer> buffer;
-            uint16_t version;
-            uint32_t id;
+            bq::unique_ptr<normal_buffer> buffer_;
+            uint16_t version_;
+            uint32_t id_;
         };
 
         static constexpr uint64_t segment_magic = UINT64_C(0xb09fa57e3ac10003);

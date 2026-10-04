@@ -400,8 +400,6 @@ namespace bq {
         return true;
     }
 
-    // Everything the inline write declines: disabled levels, stack traces, first use on a thread,
-    // wrap-around, full buffer, old library.
     template <typename ARGS, typename STR>
     bq_noinline bool fast_log_slow(bq::_api_fast_log_site_handle& site, const bq::log& log,
         uint32_t category_index, bq::log_level level, STR format)
@@ -419,8 +417,7 @@ namespace bq {
         return true;
     }
 
-    // Scalars go to the slow path by value: passing their address would keep the caller's variables in memory
-    // around the inlined fast path.
+    // by value, so the caller's scalars need not be spilled around the inlined fast path
     template <typename T>
     struct fast_slow_arg {
         typedef bq::condition_type_t<bq::tools::is_type_constexpr_size<bq::decay_t<T>>::value, bq::decay_t<T>, const T&> type;
@@ -451,8 +448,7 @@ namespace bq {
         return true;
     }
 
-    // The slow path takes a null terminated char array format as a pointer, so its code is shared by every call site with
-    // the same argument types instead of being instantiated per format length. Other formats are passed as they are.
+    // A null terminated char array format decays to a pointer, so the slow path is shared per argument types.
     template <typename STR>
     struct fast_slow_format {
         typedef const STR& type;
@@ -470,8 +466,6 @@ namespace bq {
         }
     };
 
-    // 0: written inline. Otherwise the caller takes fast_log_slow.
-    // A site is bound to the log and category of its first use, so the level check reads only the site's word.
     template <typename FILL>
     bq_forceinline bool fast_log_inline(const bq::_api_fast_log_site_handle& site, bq::log_level level,
         uint32_t args_size, const FILL& fill)
@@ -634,12 +628,8 @@ namespace bq {
 
 }
 
-// BQ_LOG_FAST_* (C++ only): a lower latency alternative to log.info() and the other level functions.
-// Each macro call site binds, on first use, the log object, category and format string it is called with; a call site
-// must keep using the same log object and format string. Level and category changes made by reset_config are still
-// honored. Calls with stack trace levels, from sync mode logs, or through an old library use the normal write path.
-//
-// Constant initialized (no guard): an unregistered site fails the inline level check and takes the slow path.
+// BQ_LOG_FAST_*: lower latency log.info() and friends. A call site binds the log object and format string of its first
+// call and must keep using them; reset_config level and category changes still apply.
 #define BQ_FAST_LOG_SITE_INITIALIZER { 0, 0, 0, nullptr, &bq::fast_inline::module_state<>::no_level }
 
 #define BQ_LOG_FAST_VERBOSE(log_obj, ...)                                                            \

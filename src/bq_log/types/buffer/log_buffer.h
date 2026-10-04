@@ -31,9 +31,7 @@
 #include "bq_log/types/buffer/fast_meta_store.h"
 
 namespace bq {
-    // Owner thread of an HP block. thread_name_len_ followed by thread_name_ has the same layout as
-    // _log_entry_ext_head_def followed by the name, so readers can point a log_entry_handle at it.
-    // Stored in recoverable block memory, so 8 byte aligned on 32-bit targets too.
+    // Owner thread of an HP block. From thread_name_len_ on, same layout as _log_entry_ext_head_def plus name.
     struct alignas(8) log_thread_info {
         static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
         uint64_t thread_id_;
@@ -145,9 +143,9 @@ namespace bq {
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
             bq_forceinline log_tls_buffer_info& get_buffer_info_directly(const log_buffer* buffer);
-            // Points the header's fast path state at this thread's current buffer and keeps it in sync from then on.
+
             void bind_fast_state(_api_fast_log_thread_state* state);
-            // Called whenever this thread's current HP block of the buffer with this id changes.
+
             bq_forceinline void on_cur_block_changed(uint64_t buffer_id, block_node_head* block)
             {
                 BQ_UNLIKELY_IF(fast_state_buffer_id_ == buffer_id)
@@ -198,7 +196,7 @@ namespace bq {
         public:
             alignas(8) bool need_reallocate_;
             alignas(8) context_head context_;
-            // owner thread of the block, so records in HP blocks need not carry it
+
             alignas(8) log_thread_info thread_info_;
             bq_forceinline bq::platform::atomic_trivially_constructible<bool>& is_removed()
             {
@@ -211,7 +209,7 @@ namespace bq {
 
         ~log_buffer();
 
-        // ext_info_size: bytes appended for the writer thread's info, reserved only when the chunk does not land in an HP block.
+        // ext_info_size is reserved only outside HP blocks
         log_buffer_write_handle alloc_write_chunk(uint32_t size, uint32_t ext_info_size, uint64_t current_epoch_ms);
 
         bq_forceinline log_buffer_write_handle alloc_write_chunk(uint32_t size, uint64_t current_epoch_ms)
@@ -221,7 +219,6 @@ namespace bq {
 
         bq::block_node_head* alloc_new_hp_block();
 
-        // Fast mode slow path: ensures this thread has a usable HP block (allocates or replaces one marked need_reallocate).
         bq::block_node_head* ensure_fast_hp_block(log_tls_buffer_info& tls_buffer_info);
 
         const fast_format_meta* register_fast_log_format(const char* format, uint32_t format_size,
@@ -260,7 +257,7 @@ namespace bq {
             return rt_cache_.current_reading_.is_in_recovery_reading_;
         }
 
-        // Owner thread of the chunk last returned by read_chunk() if it came from an HP block, otherwise nullptr.
+        // owner of the last chunk read if it came from an HP block
         bq_forceinline const log_thread_info* get_current_reading_thread_info() const
         {
             const auto& rt_reading = rt_cache_.current_reading_;
@@ -276,6 +273,8 @@ namespace bq {
 
 #if defined(BQ_UNIT_TEST)
         const log_tls_buffer_info& get_buffer_info_for_this_thread() const;
+        // fast record with its head filled in, args after the head
+        log_buffer_write_handle test_alloc_fast_record(const fast_format_meta* format, uint32_t args_size);
 
         int32_t get_groups_count() const { return hp_buffer_.get_groups_count(); }
         void garbage_collect() { hp_buffer_.garbage_collect(); }
@@ -303,7 +302,7 @@ namespace bq {
             return static_cast<uint16_t>(version_ - version) <= static_cast<uint16_t>(version_ - rt_cache_.current_reading_.version_);
         }
 
-        // Every change of this thread's current HP block goes through here, so the header's fast path state stays in sync.
+        // every cur_block_ change goes through here to keep the header's fast state in sync
         bq_forceinline void set_cur_block(log_tls_buffer_info& tls_buffer_info, block_node_head* block);
 
         context_verify_result verify_context(const context_head& context);

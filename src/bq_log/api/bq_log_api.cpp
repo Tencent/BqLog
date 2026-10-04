@@ -188,6 +188,12 @@ namespace bq {
             return log_manager::instance().reset_config(log_name_utf8, config_content_utf8);
         }
 
+        static void awake_log_worker(bq::log_imp* log)
+        {
+            auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
+            worker.awake();
+        }
+
         BQ_API bq::_api_log_write_handle __api_log_write_begin(uint64_t log_id, uint8_t log_level, uint32_t category_index, uint8_t format_string_type, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_data_bytes_len)
         {
             auto log = bq::log_manager::get_log_by_id(log_id);
@@ -212,8 +218,7 @@ namespace bq {
                 auto write_handle = log_buffer.alloc_write_chunk(length_without_ext_info, ext_info_length, epoch_ms);
                 bool need_awake_worker = (write_handle.result == enum_buffer_result_code::err_not_enough_space || write_handle.result == enum_buffer_result_code::err_wait_and_retry || write_handle.low_space_flag);
                 if (need_awake_worker) {
-                    auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
-                    worker.awake();
+                    awake_log_worker(log);
                 }
                 while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
                     bq::platform::thread::cpu_relax();
@@ -326,8 +331,7 @@ namespace bq {
         {
             auto& tls_info = log_tls_info__get_direct().get_buffer_info(buffer);
             tls_info.fast_mode_ = true;
-            // Invariant relied on by the inline fast path: after this, the thread's current buffer is `buffer`
-            // and cur_block_ is usable.
+            // the inline fast path relies on buffer being this thread's current one afterwards
             return buffer->ensure_fast_hp_block(tls_info) ? &tls_info : nullptr;
         }
 
@@ -412,18 +416,15 @@ namespace bq {
             if (!state) {
                 return;
             }
-            // the exported fast write just made the site's buffer this thread's current one
             log_tls_info__get_direct().bind_fast_state(state);
         }
 
         BQ_API void __api_fast_log_notify_low_space(const bq::_api_fast_log_site_handle* site)
         {
             auto* log = bq::log_manager::get_log_by_id(site->log_id);
-            if (!log) {
-                return;
+            if (log) {
+                awake_log_worker(log);
             }
-            auto& worker = log->get_thread_mode() == log_thread_mode::independent ? log->get_worker() : log_manager::instance().get_public_worker();
-            worker.awake();
         }
 
         BQ_API void __api_set_appender_enable(uint64_t log_id, const char* appender_name, bool enable)

@@ -13,10 +13,10 @@
 namespace bq {
     namespace {
         struct fast_arg_size {
-            uint32_t source_size;
-            uint32_t target_size;
-            uint32_t value_offset;
-            uint32_t value_size;
+            uint32_t source_size_;
+            uint32_t target_size_;
+            uint32_t value_offset_;
+            uint32_t value_size_;
         };
 
         bool get_fast_arg_size(log_arg_type_enum type, const uint8_t* source,
@@ -25,42 +25,42 @@ namespace bq {
             result = {};
             switch (type) {
             case log_arg_type_enum::null_type:
-                result.target_size = 4;
+                result.target_size_ = 4;
                 return true;
             case log_arg_type_enum::bool_type:
             case log_arg_type_enum::char_type:
             case log_arg_type_enum::int8_type:
             case log_arg_type_enum::uint8_type:
-                result.source_size = 4;
-                result.target_size = 4;
-                result.value_offset = 2;
-                result.value_size = 1;
+                result.source_size_ = 4;
+                result.target_size_ = 4;
+                result.value_offset_ = 2;
+                result.value_size_ = 1;
                 break;
             case log_arg_type_enum::char16_type:
             case log_arg_type_enum::int16_type:
             case log_arg_type_enum::uint16_type:
-                result.source_size = 4;
-                result.target_size = 4;
-                result.value_offset = 2;
-                result.value_size = 2;
+                result.source_size_ = 4;
+                result.target_size_ = 4;
+                result.value_offset_ = 2;
+                result.value_size_ = 2;
                 break;
             case log_arg_type_enum::char32_type:
             case log_arg_type_enum::int32_type:
             case log_arg_type_enum::uint32_type:
             case log_arg_type_enum::float_type:
-                result.source_size = 4;
-                result.target_size = 8;
-                result.value_offset = 4;
-                result.value_size = 4;
+                result.source_size_ = 4;
+                result.target_size_ = 8;
+                result.value_offset_ = 4;
+                result.value_size_ = 4;
                 break;
             case log_arg_type_enum::int64_type:
             case log_arg_type_enum::uint64_type:
             case log_arg_type_enum::double_type:
             case log_arg_type_enum::pointer_type:
-                result.source_size = 8;
-                result.target_size = 12;
-                result.value_offset = 4;
-                result.value_size = 8;
+                result.source_size_ = 8;
+                result.target_size_ = 12;
+                result.value_offset_ = 4;
+                result.value_size_ = 8;
                 break;
             case log_arg_type_enum::string_utf8_type:
             case log_arg_type_enum::string_utf16_type: {
@@ -73,16 +73,16 @@ namespace bq {
                 if (total > available || total > UINT32_MAX - 4) {
                     return false;
                 }
-                result.source_size = static_cast<uint32_t>(total);
-                result.target_size = result.source_size + 4;
-                result.value_offset = 4;
-                result.value_size = result.source_size;
+                result.source_size_ = static_cast<uint32_t>(total);
+                result.target_size_ = result.source_size_ + 4;
+                result.value_offset_ = 4;
+                result.value_size_ = result.source_size_;
                 break;
             }
             default:
                 return false;
             }
-            return result.source_size <= available;
+            return result.source_size_ <= available;
         }
     }
 
@@ -152,8 +152,8 @@ namespace bq {
                     args + cursor, args_size - cursor, field)) {
                 return false;
             }
-            cursor += field.source_size;
-            legacy_args_size += field.target_size;
+            cursor += field.source_size_;
+            legacy_args_size += field.target_size_;
         }
         if (cursor != args_size) {
             return false;
@@ -186,12 +186,12 @@ namespace bq {
             get_fast_arg_size(static_cast<log_arg_type_enum>(type),
                 args + cursor, args_size - cursor, field);
             target[target_cursor] = type;
-            if (field.value_size) {
-                memcpy(target + target_cursor + field.value_offset,
-                    args + cursor, field.value_size);
+            if (field.value_size_) {
+                memcpy(target + target_cursor + field.value_offset_,
+                    args + cursor, field.value_size_);
             }
-            cursor += field.source_size;
-            target_cursor += field.target_size;
+            cursor += field.source_size_;
+            target_cursor += field.target_size_;
         }
         output = log_entry_handle(target, static_cast<uint32_t>(total_size));
         output.set_external_ext_head(reinterpret_cast<const _log_entry_ext_head_def*>(&thread->thread_name_len_));
