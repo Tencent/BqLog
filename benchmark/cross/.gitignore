@@ -1,7 +1,0 @@
-build/
-run/output/
-run/stdout_*
-run/mem_stdout_*
-log4j/lib/
-log4j/classes/
-log4j/output/
