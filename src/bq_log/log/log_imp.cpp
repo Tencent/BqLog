@@ -355,6 +355,12 @@ namespace bq {
 
     void log_imp::process_log_chunk(bq::log_entry_handle& read_handle, bool recovery_error)
     {
+        BQ_LIKELY_IF(recover_status_ == recover_status_enum::recovered && !buffer_->is_current_reading_recovered())
+        {
+            keep_timestamp_monotonic(read_handle.get_log_head());
+            log(read_handle);
+            return;
+        }
         bool is_recovered_entry = false;
         BQ_UNLIKELY_IF(buffer_->is_current_reading_recovered())
         {
@@ -419,16 +425,7 @@ namespace bq {
             }
         }
 
-        auto& head = read_handle.get_log_head();
-
-        // Due to the high concurrency of our ring_buffer,
-        // we cannot guarantee that the order of log entries matches the sequence of system time retrieval for each entry.
-        // To avoid timestamp regression in such scenarios, we've implemented a minor safeguard.
-        if (head.timestamp_epoch > last_log_entry_epoch_ms_) {
-            last_log_entry_epoch_ms_ = head.timestamp_epoch;
-        } else {
-            head.timestamp_epoch = last_log_entry_epoch_ms_;
-        }
+        keep_timestamp_monotonic(read_handle.get_log_head());
         BQ_LIKELY_IF(!is_recovered_entry)
         {
             log(read_handle);

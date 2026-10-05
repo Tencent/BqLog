@@ -76,21 +76,6 @@ namespace bq {
         return reset_impl(config_obj);
     }
 
-    bool appender_base::log(const log_entry_handle& handle)
-    {
-        auto category_idx = handle.get_log_head().category_idx;
-        if (categories_mask_array_.size() <= category_idx || categories_mask_array_[category_idx] == 0) {
-            return false;
-        }
-
-        if (log_level_bitmap_.have_level(handle.get_level())) {
-            if (appenders_enable) {
-                return log_impl(handle);
-            }
-        }
-        return false;
-    }
-
     bool appender_base::log_recovery_error(const log_entry_handle& handle)
     {
         return appenders_enable && log_impl(handle);

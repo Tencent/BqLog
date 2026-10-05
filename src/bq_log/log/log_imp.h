@@ -120,6 +120,16 @@ namespace bq {
         void flush_appenders_io();
         void clear();
         void process_log_chunk(bq::log_entry_handle& read_handle, bool recovery_error = false);
+
+        // Producers on different threads can commit out of clock order, so the consumer never lets time go back.
+        bq_forceinline void keep_timestamp_monotonic(_log_entry_head_def& head)
+        {
+            if (head.timestamp_epoch > last_log_entry_epoch_ms_) {
+                last_log_entry_epoch_ms_ = head.timestamp_epoch;
+            } else {
+                head.timestamp_epoch = last_log_entry_epoch_ms_;
+            }
+        }
         void log_recovered(const log_entry_handle& handle, bool recovery_error = false);
 
     private:
