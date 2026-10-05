@@ -881,17 +881,24 @@ namespace bq {
                 const uint32_t* merged = bq::api::__api_get_log_merged_log_level_bitmap_by_log_id(log.get_id());
                 const uint32_t* stack = bq::api::__api_get_log_print_stack_level_bitmap_by_log_id(log.get_id());
                 const uint32_t* words = bq::api::__api_get_log_category_level_words_by_log_id(log.get_id());
-                result.add_result(words != nullptr && words[0] == (*merged & ~*stack), "category level word is merged without stack levels");
+                // low half: enabled without stack trace, the only part read by 2.5-era style readers; high half: with stack
+                const auto expected_word = [&]() {
+                    return (*merged & ~*stack) | ((*merged & *stack) << BQ_LOG_LEVEL_WORD_STACK_SHIFT);
+                };
+                result.add_result(words != nullptr && words[0] == expected_word(), "category level word holds no stack and stack levels");
                 result.add_result(log.is_enabled_without_stack_trace_for(0, bq::log_level::info)
                         && !log.is_enabled_without_stack_trace_for(0, bq::log_level::error)
                         && !log.is_enabled_without_stack_trace_for(0, bq::log_level::debug),
                     "inline enable uses no stack bitmap");
                 log.reset_config(base_config + "log.print_stack_levels=[warning]\n");
-                result.add_result(words[0] == (*merged & ~*stack)
+                result.add_result(words[0] == expected_word()
                         && log.is_enabled_without_stack_trace_for(0, bq::log_level::error)
                         && !log.is_enabled_without_stack_trace_for(0, bq::log_level::warning),
                     "no stack bitmap follows reset_config");
                 result.add_result(!log.debug("level bitmap disabled"), "standard disabled level rejected");
+                const uint8_t* masks = bq::api::__api_get_log_category_masks_array_by_log_id(log.get_id());
+                result.add_result(*merged == ((1U << 2) | (1U << 3) | (1U << 4)) && *stack == (1U << 3) && masks && masks[0],
+                    "separate bitmaps unchanged for older wrappers");
                 log.info("level bitmap plain {}", 1);
                 log.warning("level bitmap stack {}", 2);
                 BQ_LOG_FAST_WARNING(log, "level bitmap fast stack {}", 3);

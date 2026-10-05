@@ -168,7 +168,8 @@ BQ_API_DEF(const uint32_t*, __api_get_log_print_stack_level_bitmap_by_log_id, (u
 
 /// <summary>
 /// get the address of the per category level words of log: bit (1 << level) set when that level is enabled without
-/// stack trace for that category. Kept up to date on reset_config.
+/// stack trace for that category, bit (1 << (level + BQ_LOG_LEVEL_WORD_STACK_SHIFT)) set when it is enabled with
+/// stack trace. Kept up to date on reset_config.
 /// </summary>
 /// <param name="log_id"></param>
 /// <returns>nullptr if log is not found</returns>

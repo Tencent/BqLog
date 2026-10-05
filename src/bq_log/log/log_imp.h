@@ -106,6 +106,13 @@ namespace bq {
             return category_index < fast_level_words_.size() && ((fast_level_words_[category_index] >> static_cast<uint32_t>(level)) & 1U) != 0;
         }
 
+        // enabled with or without stack trace
+        bq_forceinline bool is_enable_in_level_word(uint32_t category_index, bq::log_level level) const
+        {
+            return category_index < fast_level_words_.size()
+                && ((fast_level_words_[category_index] >> static_cast<uint32_t>(level)) & (1U | (1U << BQ_LOG_LEVEL_WORD_STACK_SHIFT))) != 0;
+        }
+
         // stable address, read by the inline fast path
         bq_forceinline const uint32_t* get_fast_level_word(uint32_t category_index) const
         {

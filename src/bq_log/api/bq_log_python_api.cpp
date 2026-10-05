@@ -842,7 +842,7 @@ static PyObject* py_is_enable_for(PyObject* self, PyObject* args) {
         Py_RETURN_FALSE;
     }
     const bq::log_level log_level = static_cast<bq::log_level>(level);
-    if (!log_impl->is_enable_without_stack_for(category_idx, log_level) && !log_impl->is_enable_for(category_idx, log_level)) {
+    if (!log_impl->is_enable_in_level_word(category_idx, log_level)) {
         Py_RETURN_FALSE;
     }
     Py_RETURN_TRUE;

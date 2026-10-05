@@ -500,8 +500,10 @@ namespace bq {
     void log_imp::refresh_fast_level_words()
     {
         const uint32_t no_stack = *no_stack_level_bitmap_.get_bitmap_ptr();
+        const uint32_t with_stack = *merged_log_level_bitmap_.get_bitmap_ptr() & *print_stack_level_bitmap_.get_bitmap_ptr();
+        const uint32_t word = no_stack | (with_stack << BQ_LOG_LEVEL_WORD_STACK_SHIFT);
         for (decltype(fast_level_words_)::size_type i = 0; i < fast_level_words_.size(); ++i) {
-            fast_level_words_[i] = (i < categories_mask_array_.size() && categories_mask_array_[i]) ? no_stack : 0;
+            fast_level_words_[i] = (i < categories_mask_array_.size() && categories_mask_array_[i]) ? word : 0;
         }
     }
 

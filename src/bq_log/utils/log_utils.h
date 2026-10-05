@@ -217,17 +217,12 @@ namespace bq {
         static_assert(sizeof(T) <= 8, "vlq_encode only support integers with size less than or equal to 8 bytes");
         (void)data_len;
         using U_T = typename make_unsinged<PURE_T>::type;
-        uint8_t* target_data_uint8 = (uint8_t*)target_data;
-        // most values (indexes, small deltas) fit one byte; same byte as case 1 below
-        if (static_cast<uint64_t>(static_cast<U_T>(value)) < min_value_of_length<2>::value) {
-            target_data_uint8[0] = static_cast<uint8_t>(prefix<1>::value + static_cast<uint8_t>(value));
-            return 1;
-        }
         uint32_t length = get_vlq_encode_length((U_T)value);
 #ifndef NDEBUG
         assert((size_t)length <= data_len && "VLQ encoding buffer size not enough");
         assert(bq::util::is_little_endian() && "Only Little-Endian is Supported!");
 #endif
+        uint8_t* target_data_uint8 = (uint8_t*)target_data;
         uint64_t encoded_value = 0;
         const uint8_t* encoded_value_ptr = (const uint8_t*)&encoded_value;
         switch (length) {

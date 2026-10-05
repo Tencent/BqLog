@@ -73,6 +73,9 @@ struct BQ_LOG_ABI_TYPE(_api_log_write_handle, bq_api_log_write_handle) {
     BQ_LOG_ABI_TYPE(enum_buffer_result_code, bq_buffer_result_code) result;
 } BQ_PACK_END
 
+// Per category level word: bits [0, 16) levels enabled without stack trace, bits [16, 32) levels enabled with it.
+#define BQ_LOG_LEVEL_WORD_STACK_SHIFT 16
+
 BQ_PACK_BEGIN
 struct BQ_LOG_ABI_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle) {
     uint64_t format_meta_addr;

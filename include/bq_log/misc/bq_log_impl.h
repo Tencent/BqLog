@@ -224,14 +224,12 @@ namespace bq {
     template <typename STR, bq::enable_if_t<bq::log::is_bq_log_format<STR>::value, bool>>
     inline bool log::do_log(uint32_t category_index, bq::log_level level, const STR& log_format_content) const
     {
-        bool should_print_stack = false;
-        BQ_UNLIKELY_IF(!is_enabled_without_stack_trace_for(category_index, level))
+        const uint32_t level_word = category_level_words_[category_index] >> static_cast<uint32_t>(level);
+        BQ_UNLIKELY_IF((level_word & (1U | (1U << BQ_LOG_LEVEL_WORD_STACK_SHIFT))) == 0)
         {
-            if (!is_enable_for(category_index, level)) {
-                return false;
-            }
-            should_print_stack = is_stack_trace_enabled_for(level);
+            return false;
         }
+        const bool should_print_stack = (level_word & 1U) == 0;
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
         size_t format_size = bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_size(log_format_content);
         size_t total_format_data_size = format_size + bq::get<1>(stack_info);
@@ -260,14 +258,12 @@ namespace bq {
     template <typename STR, bq::enable_if_t<bq::log::is_bq_log_format<STR>::value, bool>, typename... Args>
     inline bool log::do_log(uint32_t category_index, bq::log_level level, const STR& log_format_content, const Args&... args) const
     {
-        bool should_print_stack = false;
-        BQ_UNLIKELY_IF(!is_enabled_without_stack_trace_for(category_index, level))
+        const uint32_t level_word = category_level_words_[category_index] >> static_cast<uint32_t>(level);
+        BQ_UNLIKELY_IF((level_word & (1U | (1U << BQ_LOG_LEVEL_WORD_STACK_SHIFT))) == 0)
         {
-            if (!is_enable_for(category_index, level)) {
-                return false;
-            }
-            should_print_stack = is_stack_trace_enabled_for(level);
+            return false;
         }
+        const bool should_print_stack = (level_word & 1U) == 0;
         bq::tuple<const char*, uint32_t> stack_info = should_print_stack ? get_stack_trace<STR>() : bq::make_tuple((const char*)nullptr, (uint32_t)0);
         size_t format_size = bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_size(log_format_content);
         size_t total_format_data_size = format_size + bq::get<1>(stack_info);
