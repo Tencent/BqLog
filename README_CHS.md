@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.5.0
+# BqLog (扁鹊日志) V 2.6.0
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.5.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.5.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.6.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.6.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -16,18 +16,27 @@
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
 
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。
-> **BqLog 2.x 正式发布！** 新增`纯血鸿蒙`、`Python` 与 `Node.js` 支持，并带来非对称混合加密能力。
->
-> 🚀 在 [Benchmark](#-benchmark-结果) 中，BqLog 压缩日志模式比 fmtlog 快 **7-16 倍**、quill 快 **7-18 倍**、spdlog（异步）快 **6-65 倍**、Log4j2 快 **9-22 倍**、glog 快 **47-252 倍**；纯文本模式同样全面领先。
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.5.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+## 🎯 BqLog 的定位
 
-## 📋 v2.5.0 更新亮点
+**极限性能是 BqLog 的起点，而不是全部。** 它是一个成熟的工业级组件，为要发布上线的产品而生：
 
-- **性能提升**：优化日志写入，减少无效的工作线程唤醒和 Java 参数分配。
-- **Go 语言支持**：新增 Go wrapper，支持自动参数转换、category 和源码模块分发。
+- **管道两端都要快。** 一台现代设备上，既有写日志的业务线程，也有把日志落成文件的消费线程。把一边做快、把活儿推给另一边，只是跷跷板，不是优化。BqLog 两手都抓、两手都硬：日志线程的开销和消费线程的开销一起压低，并且按真实使用场景来做基准测试，而不是只测一个热循环。
+- **跑在哪里都兼容。** Windows、macOS、Linux、iOS、Android、HarmonyOS、OpenHarmony 和各类 Unix；C++、Java/Kotlin、C#、Python、TypeScript/ArkTS、Go 共用同一个内核，甚至可以共用同一个日志对象；游戏引擎、不带 STL 的移动端工具链、开着 `-Werror` 的严格构建都没问题。
+- **为出事的那一天准备好。** 进程崩溃后能把崩溃前写下的日志恢复回来；磁盘写满时既不崩溃也不卡死；损坏的文件会被跳过而不是被信任；消费者跟不上时有明确的处理策略。
+- **好用，而且不容易用错。** 一行创建日志、一行写日志；都是普通函数，IDE 能补全也能做类型检查；旧版本的头文件可以直接搭配新版本的库，日志文件格式跨版本可读。
+
+---
+
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.6.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+
+## 📋 v2.6.0 更新亮点
+
+- **C++ 专属的快速模式**：`BQ_LOG_FAST_INFO(log, ...)` 等宏，日志线程上的开销约为普通模式的一半，持续写日志的线程上每条只要几纳秒，见[快速开始](#c)和 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#3-写日志)。
+- **普通模式更快**：`log.info` 在日志线程上执行的指令减少约 16%。和 2.5.0 比整条流水线（macOS，同一个 benchmark），文本输出快 14%～30%，压缩输出最多快约 40%。
+- **更快的时钟**：在可靠的平台上，时间戳直接取自 CPU 硬件计数器，不可靠时自动退回系统时钟。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 
@@ -48,7 +57,7 @@
 ## ✨ 特点
 
 - 相比常见开源日志库有显著性能优势（详见 [Benchmark](#-benchmark-结果)），不仅适用于服务器和客户端，也非常适合移动端设备。
-- 内存消耗少：在 Benchmark 用例中（10 线程、每线程 200 万条日志），即使同时挂载三种 appender，BqLog 内存消耗也仅约 2-3 MB。移动平台场景一般在1 MB左右。
+- 内存消耗少：在 Benchmark 用例中（10 线程、每线程 200 万条日志），即使同时挂着 6 个 logger，macOS 上整个 benchmark 进程的峰值也只有 8.5 MB。移动平台上，BqLog 自身一般在 1 MB 左右。
 - 提供高性能、高压缩比的实时压缩日志格式。
 - 以接近于0的性能损耗，提供高强度的非对称混合加密日志，保护日志内容安全（可选）。
 - 可在游戏引擎（`Unity`、`Unreal` 等）中正常使用，对 Unreal 提供蓝图和常用类型的支持。
@@ -125,6 +134,14 @@ int main() {
     return 0;
 }
 ```
+
+**C++ 专属的快速模式。** 在 C++ 最热的代码路径上，可以用 `BQ_LOG_FAST_*` 宏写同样的日志，调用线程的开销只有普通模式的一小部分：
+
+```cpp
+BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);
+```
+
+输出和 `log.info` 完全一样。代价是：内存使用稍高一点；它是宏，IDE 代码提示体验比普通成员函数差一点；每个调用点会绑定第一次调用时的日志对象和格式串，所以同一个调用点必须固定使用同一个日志对象和同一个格式串。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#3-写日志)。
 
 ### Java
 
@@ -217,56 +234,29 @@ bq.log.force_flush_all_logs();
 
 ## 📊 Benchmark 结果
 
-测试：1-10 线程，每线程写 2,000,000 条日志。环境：PC，AMD Ryzen 9 9950X（16 核 / 32 线程），96 GB，Windows 11 专业版；Java 测试使用 JBR 21.0.9。
+Benchmark 同时测管道的两端：所有日志落盘的总消耗，以及日志线程自身的开销（连同它消耗的消费端 CPU 和内存），并且都针对真实使用场景。完整的测法、Windows 数据和日志线程部分见 [Benchmark](docs/BENCHMARK_CHS.md)。
 
-对比：BqLog（Text / Compress / Compress+Encrypt）vs spdlog 1.17.0（异步）、glog 0.7.1、fmtlog、quill 11.1.0、Log4j2 2.23.1。
+**总消耗，4 个参数，macOS（Apple M4 Pro），毫秒，越小越好。** 1～10 线程，每线程 2,000,000 条，计时到全部落盘：
 
-下表 BqLog 数据来自 C++ 接口。其他语言的 wrapper 通常会增加运行时和
-跨语言调用开销，性能随语言和负载而变化，请以对应语言的实测结果为准。
+| | 1 线程 | 2 线程 | 3 线程 | 4 线程 | 5 线程 | 6 线程 | 7 线程 | 8 线程 | 9 线程 | 10 线程 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| BqLog 压缩，快速模式（C++） | 36 | 70 | 109 | 145 | 182 | 238 | 256 | 313 | 347 | 411 |
+| BqLog 压缩+加密，快速模式（C++） | 46 | 78 | 123 | 158 | 193 | 248 | 270 | 311 | 358 | 456 |
+| BqLog 文本，快速模式（C++） | 178 | 334 | 480 | 623 | 805 | 1003 | 1098 | 1280 | 1471 | 1865 |
+| BqLog 压缩，普通模式（C++） | 53 | 79 | 113 | 148 | 209 | 244 | 272 | 313 | 357 | 438 |
+| BqLog 压缩+加密，普通模式（C++） | 45 | 84 | 120 | 159 | 209 | 246 | 285 | 326 | 374 | 457 |
+| BqLog 文本，普通模式（C++） | 169 | 304 | 440 | 603 | 785 | 1010 | 1077 | 1234 | 1428 | 1736 |
+| fmtlog | 270 | 534 | 800 | 1065 | 1382 | 1602 | 1885 | 2091 | 2500 | 2899 |
+| quill | 361 | 725 | 1112 | 1459 | 1811 | 2221 | 2597 | 3004 | 3323 | 3953 |
+| Log4j2（Java） | 740 | 1024 | 1420 | 1750 | 2313 | 2483 | 3005 | 3469 | 3785 | 3808 |
+| spdlog（异步） | 573 | 1681 | 3520 | 6904 | 13843 | 25105 | 35947 | 42858 | 49091 | 56292 |
+| glog | 2413 | 4135 | 6635 | 9958 | 13673 | 21834 | 28843 | 34818 | 40268 | 44857 |
 
-#### 吞吐量 — 带 4 个参数的总耗时（毫秒）
-
-|                              | 1 线程 | 2 线程 | 3 线程 | 4 线程 | 5 线程 | 6 线程 | 7 线程 | 8 线程 | 9 线程 | 10 线程 |
-|------------------------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|---------|
-| BqLog Compress (C++)         | 95     | 144    | 210    | 210    | 226    | 267    | 362    | 395    | 439    | 507     |
-| BqLog Compress+Encrypt (C++) | 102    | 166    | 167    | 190    | 236    | 308    | 350    | 391    | 453    | 493     |
-| BqLog Text (C++)             | 258    | 513    | 777    | 1054   | 1324   | 1587   | 1891   | 2143   | 2465   | 2811    |
-| fmtlog                       | 672    | 1219   | 1766   | 2428   | 3024   | 3923   | 4612   | 5935   | 6293   | 7934    |
-| quill                        | 639    | 1429   | 2232   | 3082   | 3915   | 4726   | 5609   | 6246   | 6957   | 7812    |
-| Log4j2 (Java)                | 873    | 1484   | 2087   | 2727   | 3738   | 4541   | 4889   | 6127   | 9475   | 7192    |
-| spdlog（异步）               | 560    | 1649   | 3402   | 5737   | 9069   | 13827  | 21494  | 24518  | 28463  | 32939   |
-| glog                         | 4485   | 8548   | 14875  | 21387  | 28295  | 36060  | 45742  | 62368  | 102370 | 127550  |
-
-#### 峰值内存占用（MB）
-
-|                                          | 1 线程 | 4 线程 | 10 线程 |
-|------------------------------------------|--------|--------|---------|
-| BqLog（单进程内同时挂载 3 种 appender）  | 12.7   | 13.3   | 14.7    |
-| spdlog（异步）                           | 14.4   | 14.4   | 14.7    |
-| glog                                     | 11.9   | 12.1   | 12.4    |
-| fmtlog                                   | 17.1   | 20.2   | 23.3    |
-| quill                                    | 282.1  | 1062.7 | 2714.9  |
-| Log4j2 (Java)                            | 1537.8 | 6884.3 | 4631.5  |
-
-#### 日志文件大小（1 线程，400 万条日志）
-
-| 库 | 格式 | 大小 | 压缩比 |
-|----|------|------|--------|
-| BqLog Compress | 二进制 | 45 MB | 比文本 **小 6.3 倍** |
-| BqLog Compress+Encrypt | 加密 | 45 MB | 比文本 **小 6.3 倍** |
-| BqLog Text | 文本 | 283 MB | — |
-| spdlog（异步） | 文本 | 285 MB | — |
-| quill | 文本 | 247 MB | — |
-| fmtlog | 文本 | 270 MB | — |
-| glog | 文本 | 314 MB | — |
-| Log4j2 | 文本 | 410 MB（200 万条） | — |
-
-- BqLog Compress 比 fmtlog 快 **7-16 倍**，比 quill 快 **7-18 倍**，比 spdlog（异步）快 **6-65 倍**，比 Log4j2 快 **9-22 倍**，比 glog 快 **47-252 倍**
-- 加密几乎 **零额外开销**
-- 压缩格式比文本 **小 6.3 倍**
-- BqLog 同时挂载三种 appender 时也仅使用 **12.7-14.7 MB** 内存
-
-> 完整 Benchmark 代码、方法论和功能对比请见 [Benchmark](docs/BENCHMARK_CHS.md)。
+- BqLog 压缩：**比 fmtlog 快 5～7 倍**，**比 quill 快 7～10 倍**，**比 Log4j2 快 9～14 倍**，比 spdlog（异步）和 glog 快一到两个数量级。
+- BqLog 文本仍然**比 fmtlog 快 1.6～1.8 倍**，fmtlog 是这里最快的文本日志库。
+- 快速模式和普通模式的总吞吐基本相同：快速模式在日志线程上省下的成本，不会在消费端还回去。
+- 加密几乎不要钱；压缩格式比 BqLog 自己的文本输出小约 **6.7 倍**。
+- 10 线程时的峰值内存：BqLog 一个进程挂 6 个 logger 只有 **8.5 MB**；quill 是 **1.4 GB**。
 
 ---
 

@@ -2,6 +2,14 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.6.0] - 2026-10-05
+- **C++ only fast mode**: Added `BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL`. They write the same entries as `log.info` and friends, but the work on the calling thread is inlined at the call site: a level check, the timestamp and the raw arguments. Trade-offs: slightly more memory, weaker IDE hints (macros), default category only, and a fixed log object and format string per call site. See [API Reference — fast mode](docs/API_REFERENCE.md#3-write-logs).
+- **Performance — normal mode, logging thread**: `log.info` and the other level functions run about 16% fewer instructions on the calling thread; a disabled level now costs a single memory load and bit test.
+- **Performance — whole pipeline**: Against 2.5.0 on the same benchmark (macOS, Apple M4 Pro), text output is 14–30% faster and compressed output up to about 40% faster; compressed output with 4 threads and 4 arguments is unchanged.
+- **Performance — clock**: Timestamps come from the CPU hardware counter where it is reliable (with continuous checks against the system clock), falling back to the system clock automatically.
+- **Removed**: The `raw_file` appender. An appender configured with `type=raw_file` is now ignored with a warning; use `compressed_file`.
+- **Compatibility**: Applications built against 2.5 headers, and the 2.5 wrappers of every language, work unchanged with the 2.6 library.
+
 ## [v2.5.0] - 2026-09-23
 - **Performance**: Improved log-writing performance and reduced unnecessary worker wakeups and Java argument allocations.
 - **Go support**: Added a Go wrapper with automatic argument conversion, category support, and source-module distribution.

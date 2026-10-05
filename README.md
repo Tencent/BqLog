@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (BianQue Log) V 2.5.0
+# BqLog (BianQue Log) V 2.6.0
 
 **English** | [简体中文](./README_CHS.md)
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.5.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.5.0-orange.svg?style=flat)](CHANGELOG.md)
+[![Release Version](https://img.shields.io/badge/release-2.6.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.6.0-orange.svg?style=flat)](CHANGELOG.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -16,18 +16,27 @@
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
 
 > BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
-> **BqLog 2.x is officially released!** With native `HarmonyOS NEXT`, `Python` and `Node.js` support, and asymmetric hybrid encryption.
->
-> 🚀 In [Benchmarks](#-benchmark-results), BqLog's compressed log mode is **7–16x faster than fmtlog**, **7–18x faster than quill**, **6–65x faster than spdlog (async)**, **9–22x faster than Log4j2**, and **47–252x faster than glog**; plain text mode also outperforms all of them.
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_Download-Release_2.5.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+## 🎯 What BqLog is for
 
-## 📋 What's New in v2.5.0
+**Extreme speed is where BqLog starts, not where it stops.** It is a mature, industrial-grade component, built for products that ship:
 
-- **Performance**: Improved log-writing performance and reduced unnecessary worker wakeups and Java argument allocations.
-- **Go support**: Added a Go wrapper with automatic argument conversion, category support, and source-module distribution.
+- **Fast on both ends of the pipe.** A modern machine runs the threads that write logs *and* the thread that turns them into files. Making one side fast by pushing the work onto the other is a seesaw, not an optimization. BqLog keeps both sides cheap — the logging thread and the consumer — and is benchmarked on realistic workloads, not on a single hot loop.
+- **Compatible everywhere it runs.** Windows, macOS, Linux, iOS, Android, HarmonyOS, OpenHarmony and the Unix family; C++, Java/Kotlin, C#, Python, TypeScript/ArkTS and Go sharing one core and even one log object; game engines, mobile toolchains without an STL, strict `-Werror` builds.
+- **Built for the bad day.** Crash recovery that replays what the process wrote before it died, a full disk that neither crashes nor hangs the app, corrupted files that are skipped instead of trusted, and an explicit policy for a consumer that cannot keep up.
+- **Easy to get right.** One line to create a log, one line to write; plain functions your IDE completes and type-checks; old headers keep working with new libraries, and file formats stay readable across versions.
+
+---
+
+[![Download](https://img.shields.io/badge/⬇_Download-Release_2.6.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+
+## 📋 What's New in v2.6.0
+
+- **C++ only fast mode**: `BQ_LOG_FAST_INFO(log, ...)` and friends roughly halve the cost on the logging thread, down to a few nanoseconds per call on a busy thread; see [Quick Start](#c) and [API Reference — fast mode](docs/API_REFERENCE.md#3-write-logs).
+- **Faster normal mode**: `log.info` runs about 16% fewer instructions on the logging thread. End to end against 2.5.0 (macOS, same benchmark), text output is 14–30% faster and compressed output up to about 40% faster.
+- **Faster clock**: timestamps come from the CPU's hardware counter where it is reliable, falling back to the system clock automatically.
 
 > Full changelog → [CHANGELOG.md](CHANGELOG.md)
 
@@ -47,7 +56,7 @@
 ## ✨ Highlights
 
 - Significant performance advantage over common open-source logging libraries (see [Benchmark](#-benchmark-results)); suitable for server, client, and mobile.
-- Low memory usage: in the Benchmark case (10 threads, 2,000,000 log entries each), BqLog uses only about 2-3 MB of memory even with three appenders active simultaneously. And in mobile platform scenarios, it's generally around 1 MB.
+- Low memory usage: in the Benchmark case (10 threads, 2,000,000 log entries each), the whole benchmark process peaks at 8.5 MB on macOS even with six loggers active at once. On mobile platforms, BqLog itself generally uses around 1 MB.
 - Provides a high-performance, high-compression real-time compressed log format.
 - Supports strong hybrid encryption (asymmetric + symmetric) for log content protection with nearly zero performance overhead (optional).
 - Works well inside game engines (`Unity`, `Unreal`, etc.), with UE Blueprint and builtin data type support.
@@ -124,6 +133,14 @@ int main() {
     return 0;
 }
 ```
+
+**C++ only fast mode.** On the hottest C++ paths, the `BQ_LOG_FAST_*` macros write the same log entry for a fraction of the cost on the calling thread:
+
+```cpp
+BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);
+```
+
+The output is identical to `log.info`. The price: a little more memory, weaker IDE hints than a plain member function (it is a macro), and each call site binds the log object and format string of its first call — use one log object and a fixed format string per call site. Details in [API Reference — fast mode](docs/API_REFERENCE.md#3-write-logs).
 
 ### Java
 
@@ -216,57 +233,29 @@ bq.log.force_flush_all_logs();
 
 ## 📊 Benchmark results
 
-Test: 1–10 threads, each writing 2,000,000 log entries. Environment: PC, AMD Ryzen 9 9950X (16 cores / 32 threads), 96 GB, Windows 11 Pro; Java tests on JBR 21.0.9.
+The benchmark measures both ends of the pipe — the total cost of getting every entry onto disk, and the cost on the logging thread itself next to the consumer CPU and memory it takes — on realistic workloads. Full methodology, Windows numbers and the logging thread part: [Benchmark](docs/BENCHMARK.md).
 
-Comparison: BqLog (Text / Compress / Compress+Encrypt) vs spdlog 1.17.0 (async), glog 0.7.1, fmtlog, quill 11.1.0, Log4j2 2.23.1.
+**Total cost, 4 parameters, macOS (Apple M4 Pro), ms, lower is better.** 1–10 threads, 2,000,000 entries per thread, timed until everything is on disk:
 
-The BqLog figures below measure the C++ API. Other language wrappers generally
-add runtime and cross-language call overhead; their performance depends on the
-language and workload and should be measured separately.
+| | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| BqLog Compress, fast mode (C++) | 36 | 70 | 109 | 145 | 182 | 238 | 256 | 313 | 347 | 411 |
+| BqLog Compress+Encrypt, fast mode (C++) | 46 | 78 | 123 | 158 | 193 | 248 | 270 | 311 | 358 | 456 |
+| BqLog Text, fast mode (C++) | 178 | 334 | 480 | 623 | 805 | 1003 | 1098 | 1280 | 1471 | 1865 |
+| BqLog Compress, normal mode (C++) | 53 | 79 | 113 | 148 | 209 | 244 | 272 | 313 | 357 | 438 |
+| BqLog Compress+Encrypt, normal mode (C++) | 45 | 84 | 120 | 159 | 209 | 246 | 285 | 326 | 374 | 457 |
+| BqLog Text, normal mode (C++) | 169 | 304 | 440 | 603 | 785 | 1010 | 1077 | 1234 | 1428 | 1736 |
+| fmtlog | 270 | 534 | 800 | 1065 | 1382 | 1602 | 1885 | 2091 | 2500 | 2899 |
+| quill | 361 | 725 | 1112 | 1459 | 1811 | 2221 | 2597 | 3004 | 3323 | 3953 |
+| Log4j2 (Java) | 740 | 1024 | 1420 | 1750 | 2313 | 2483 | 3005 | 3469 | 3785 | 3808 |
+| spdlog (async) | 573 | 1681 | 3520 | 6904 | 13843 | 25105 | 35947 | 42858 | 49091 | 56292 |
+| glog | 2413 | 4135 | 6635 | 9958 | 13673 | 21834 | 28843 | 34818 | 40268 | 44857 |
 
-#### Throughput — Total Time Cost with 4 parameters (ms)
-
-|                              | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
-|------------------------------|----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|-----------|------------|
-| BqLog Compress (C++)         | 95       | 144       | 210       | 210       | 226       | 267       | 362       | 395       | 439       | 507        |
-| BqLog Compress+Encrypt (C++) | 102      | 166       | 167       | 190       | 236       | 308       | 350       | 391       | 453       | 493        |
-| BqLog Text (C++)             | 258      | 513       | 777       | 1054      | 1324      | 1587      | 1891      | 2143      | 2465      | 2811       |
-| fmtlog                       | 672      | 1219      | 1766      | 2428      | 3024      | 3923      | 4612      | 5935      | 6293      | 7934       |
-| quill                        | 639      | 1429      | 2232      | 3082      | 3915      | 4726      | 5609      | 6246      | 6957      | 7812       |
-| Log4j2 (Java)                | 873      | 1484      | 2087      | 2727      | 3738      | 4541      | 4889      | 6127      | 9475      | 7192       |
-| spdlog (async)               | 560      | 1649      | 3402      | 5737      | 9069      | 13827     | 21494     | 24518     | 28463     | 32939      |
-| glog                         | 4485     | 8548      | 14875     | 21387     | 28295     | 36060     | 45742     | 62368     | 102370    | 127550     |
-
-#### Peak Memory Usage (MB)
-
-|                                          | 1 Thread | 4 Threads | 10 Threads |
-|------------------------------------------|----------|-----------|------------|
-| BqLog (all 3 appenders in one process)   | 12.7     | 13.3      | 14.7       |
-| spdlog (async)                           | 14.4     | 14.4      | 14.7       |
-| glog                                     | 11.9     | 12.1      | 12.4       |
-| fmtlog                                   | 17.1     | 20.2      | 23.3       |
-| quill                                    | 282.1    | 1062.7    | 2714.9     |
-| Log4j2 (Java)                            | 1537.8   | 6884.3    | 4631.5     |
-
-#### Output File Size (1 thread, 4M log entries)
-
-| Library | Format | Size | Compression Ratio |
-|---------|--------|------|-------------------|
-| BqLog Compress | Binary | 45 MB | **6.3x** smaller |
-| BqLog Compress+Encrypt | Encrypted | 45 MB | **6.3x** smaller |
-| BqLog Text | Text | 283 MB | — |
-| spdlog (async) | Text | 285 MB | — |
-| quill | Text | 247 MB | — |
-| fmtlog | Text | 270 MB | — |
-| glog | Text | 314 MB | — |
-| Log4j2 | Text | 410 MB (2M entries) | — |
-
-- BqLog Compress: **7–16x faster** than fmtlog, **7–18x** than quill, **6–65x** than spdlog (async), **9–22x** than Log4j2, **47–252x** than glog
-- Encryption adds **near-zero overhead**
-- Compressed format is **6.3x smaller** than text
-- BqLog uses only **12.7–14.7 MB** memory with all three appenders active
-
-> For full benchmark code, methodology, and feature comparison, see [Benchmark](docs/BENCHMARK.md).
+- BqLog Compress: **5–7x faster than fmtlog**, **7–10x faster than quill**, **9–14x faster than Log4j2**, one to two orders of magnitude ahead of spdlog (async) and glog.
+- BqLog Text is still **1.6–1.8x faster than fmtlog**, the fastest text logger here.
+- Fast mode and normal mode reach about the same total throughput: what fast mode saves on the logging thread is not paid back on the consumer.
+- Encryption is close to free; the compressed format is about **6.7x smaller** than BqLog's own text output.
+- Peak memory at 10 threads: BqLog **8.5 MB** with six loggers in one process; quill **1.4 GB**.
 
 ---
 

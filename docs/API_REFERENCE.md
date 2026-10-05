@@ -130,6 +130,27 @@ log_obj.error("Error code: {}", err_code);
 ```
 
 Supported `STR` types: `char*`, `char16_t*`, `char32_t*`, `wchar_t*`, `std::string`, `std::u16string`, `std::wstring`, Unreal `FString` / `FName` / `FText`, etc.
+
+#### C++ only fast mode
+
+Besides the normal mode (`log_obj.info(...)` and the other level functions), C++ has a fast mode: six macros that write exactly the same log entry while costing the calling thread much less.
+
+```cpp
+BQ_LOG_FAST_INFO(log_obj, "Hello {}, count={}", "world", 42);
+BQ_LOG_FAST_ERROR(log_obj, "Error code: {}", err_code);
+// BQ_LOG_FAST_VERBOSE, BQ_LOG_FAST_DEBUG, BQ_LOG_FAST_INFO, BQ_LOG_FAST_WARNING, BQ_LOG_FAST_ERROR, BQ_LOG_FAST_FATAL
+```
+
+The first call at each call site registers its format string once; after that, the thread only checks the level, stores the timestamp and the raw arguments into its own buffer, and returns. The format string is not copied or hashed again, and nothing goes through a library function call.
+
+Use it on hot paths. For everything else, the normal mode is the better default, because fast mode has a price:
+
+- **Fixed log object and format string per call site.** A call site binds the log object and format string of its first call. Passing a different log object or a different format string to the same call site later (for example through a helper function that forwards its arguments into one `BQ_LOG_FAST_*` line) is not supported: the entry still goes to the first log object with the first format string. Configuration changes (`reset_config`, levels, category masks) do apply.
+- **Default category only.** The macros write to category 0. For categorized logs, use the normal mode.
+- **Slightly more memory.** Each registered format string is kept once in the log's metadata area for its lifetime, and every thread that uses fast mode keeps one 128-byte thread local slot.
+- **Weaker IDE hints.** These are macros, so code completion and parameter hints are not as helpful as with the member functions of the normal mode. Argument types are still checked at compile time.
+
+Supported arguments are the same as in the normal mode. When a level is configured to print a stack trace (`log.print_stack_levels`) or the log runs in sync mode, a fast mode call quietly falls back to the normal mode, so the output stays correct; it is just not faster in that case.
 </details>
 
 <details>
