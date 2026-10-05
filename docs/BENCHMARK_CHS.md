@@ -32,7 +32,7 @@
 - quill 11.1.0（异步文件日志，按官方 benchmark 配置：后端 busy-spin）
 - Log4j2 2.23.1（Java，AsyncLogger + Disruptor + Async Appender）
 
-所有库的完整可运行 benchmark 工程（CMake + FetchContent，每个库一个可执行文件，附吞吐量与峰值内存的 PowerShell 运行脚本）存放在专门的 [`benchmark` 分支](https://github.com/Tencent/BqLog/tree/benchmark/benchmark/cross)。
+所有库的完整可运行 benchmark 工程（CMake + FetchContent，每个库一个可执行文件，附吞吐量与峰值内存的 PowerShell 运行脚本）保存在 [`benchmark_2.5.0` 标签](https://github.com/Tencent/BqLog/tree/benchmark_2.5.0/benchmark/cross)。
 
 ### 2. Benchmark 结果
 
@@ -112,7 +112,7 @@ benchmark 在相同条件下比较。
 
 ### 4. 附录：Benchmark 源代码
 
-以下代码与 [`benchmark` 分支](https://github.com/Tencent/BqLog/tree/benchmark/benchmark/cross)上的可运行工程一致。
+以下代码与 [`benchmark_2.5.0` 标签](https://github.com/Tencent/BqLog/tree/benchmark_2.5.0/benchmark/cross)的可运行工程一致。
 
 #### 4.1 BqLog C++ Benchmark 代码
 
