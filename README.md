@@ -1,67 +1,80 @@
-# benchmark
+# BqLog benchmark 2.6.0
 
-Cross-library logging performance comparison: benchmark code and measured data. The main project lives on `main` / `develop`; this orphan branch only carries the benchmark.
+Cross-library logging benchmark for **BqLog 2.6.0**: the code, the runner scripts and the raw data behind [docs/BENCHMARK.md](https://github.com/Tencent/BqLog/blob/Release_2.6.0/docs/BENCHMARK.md) ([简体中文](https://github.com/Tencent/BqLog/blob/Release_2.6.0/docs/BENCHMARK_CHS.md)) of the 2.6.0 release. Benchmarks of other versions: [index on the `benchmark` branch](https://github.com/Tencent/BqLog/tree/benchmark).
 
-## Environment
+Third-party libraries are fetched at build time and are not part of this repository; their licenses are listed in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
-- AMD Ryzen 9 9950X (16 cores / 32 threads), 96 GB, Windows 11 Pro 26100
-- C++: MSVC 14.51 (VS 18 Insiders), Release x64
-- Java: JBR 21.0.9 (bundled with Android Studio)
+## What it measures
 
-## Library versions and configurations
+1. **Throughput** (`bench_<lib>`): 1, 2, 4, 6, 8 and 10 threads, 2,000,000 entries per thread, timed until everything is on disk, with the CPU time of the whole process and its peak memory. Fixed size buffers that block when full for every library, plus a group with growing buffers (BqLog `expand`, quill's default unbounded queue).
+2. **Latency on the logging thread** (`bench_latency_<lib>`, one source `bench_latency.cpp` for every library): every thread writes batches of 20 calls with a 2000-2200 us busy wait between them, each batch timed with a serialized hardware counter; p50 / p99 / p99.9 / mean per call, next to the consumer CPU and peak memory.
 
-- BqLog: develop @ 2598992a
-- spdlog v1.17.0 — async mode (8192-slot queue + 1 backend thread, blocking overflow policy, nothing dropped; timing includes the final shutdown drain/flush)
-- glog v0.7.1 — the library has no async mode
-- fmtlog main @ 308b231 — built with FMTLOG_BLOCK=1 (its default drops logs when the queue is full)
-- quill v11.1.0 — per its official benchmark config, busy-spin backend
-- Log4j2 2.23.1 + disruptor 3.4.2 — AsyncLogger + Async Appender
+BqLog C++ is built in both its normal mode (`log.info`) and its fast mode (`BQ_LOG_FAST_INFO`).
+
+## Library versions
+
+| Library | Version | Configuration |
+|---|---|---|
+| BqLog | 2.6.0 (built from the main repository's `src/`) | default configuration |
+| quill | v13.0.0 | `BoundedBlocking` 64 KiB per thread; `UnboundedBlocking` in the growing group |
+| fmtlog | v2.3.0 | `FMTLOG_BLOCK=1` (its default drops entries when the queue is full) |
+| spdlog | v1.17.0 | async, 8192 slots, blocking overflow policy |
+| glog | v0.7.1 | synchronous by design |
+| Log4j2 | 2.26.0 + Disruptor 4.0.0 | AsyncLogger, throughput only |
 
 ## How to run
 
-benchmark/cross depends on the main repo's src/ and CMake_utils.txt, so overlay this branch's benchmark/ directory onto a develop checkout first.
-
-Windows (MSVC):
+`benchmark/cross` builds BqLog from the main repository's `src/` and `CMake_utils.txt`, so put this branch's `benchmark/` directory into a checkout of [Release_2.6.0](https://github.com/Tencent/BqLog/tree/Release_2.6.0) first:
 
 ```
+git clone -b Release_2.6.0 https://github.com/Tencent/BqLog.git
+cd BqLog
+git fetch origin benchmark_2.6.0
+git checkout origin/benchmark_2.6.0 -- benchmark README.md THIRD_PARTY_LICENSES.md
+```
+
+Build (third-party libraries come from CMake FetchContent; offline, point `-DFETCHCONTENT_SOURCE_DIR_QUILL=` and friends at local clones):
+
+```
+# Linux / macOS ("mac" on macOS)
+cmake -S benchmark/cross -B benchmark/cross/build -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Release
+cmake --build benchmark/cross/build -j --target bench_bqlog bench_quill bench_fmtlog bench_spdlog bench_glog \
+    bench_latency_bqlog_fast bench_latency_bqlog_normal bench_latency_quill bench_latency_fmtlog bench_latency_spdlog
+
+# Windows (MSVC)
 cmake -S benchmark/cross -B benchmark/cross/build -DTARGET_PLATFORM=win64
 cmake --build benchmark/cross/build --config Release
 ```
 
-Linux / macOS:
+Run on AC power with nothing else busy. Results go to `$RUN_DIR` (default `benchmark/cross/run`).
 
 ```
-cmake -S benchmark/cross -B benchmark/cross/build -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Release   # use "unix" on macOS
-cmake --build benchmark/cross/build -j
-```
+# Linux / macOS: throughput, 3 rounds for the libraries compared closely, 1 round for the slow ones
+export RUN_DIR=$PWD/benchmark/cross/run THREADS="1 2 4 6 8 10"
+for r in 1 2 3; do for lib in bqlog quill fmtlog; do ./benchmark/cross/run_benchmark.sh $lib; done; done
+THREADS="1 2 4 6" ./benchmark/cross/run_benchmark.sh spdlog
+THREADS="1 2 4 6" ./benchmark/cross/run_benchmark.sh glog
+./benchmark/cross/log4j/fetch_deps.sh && ./benchmark/cross/log4j/run_benchmark.sh
+# latency on the logging thread: 5 interleaved rounds, 1 and 4 threads
+./benchmark/cross/run_latency.sh 5 1 4
 
-Third-party libraries are fetched by CMake FetchContent. For offline environments, clone them yourself and point CMake at the local copies with `-DFETCHCONTENT_SOURCE_DIR_SPDLOG=` etc. One executable per library; use the runner scripts:
-
-```
 # Windows
-powershell -File benchmark/cross/run_benchmark.ps1 -Lib bqlog      # bqlog/spdlog/glog/fmtlog/quill, threads 1~10
-powershell -File benchmark/cross/measure_memory.ps1 -Lib bqlog -Threads 1,4,10
-
-# Linux / macOS (verified on WSL Ubuntu 24.04)
-./benchmark/cross/run_benchmark.sh bqlog 1 10
-./benchmark/cross/measure_memory.sh bqlog 1 4 10
+powershell -File benchmark/cross/run_benchmark.ps1 -Lib bqlog
+powershell -File benchmark/cross/log4j/fetch_deps.ps1; powershell -File benchmark/cross/log4j/run_benchmark.ps1
+powershell -File benchmark/cross/run_latency.ps1 -Rounds 5 -Threads 1,4
 ```
 
-Log4j2 runs separately:
+A full run on an Apple M4 Pro takes about 20 minutes. Then turn the CSV files into the tables and charts of the docs (medians of the rounds):
 
 ```
-# Windows
-powershell -File benchmark/cross/log4j/fetch_deps.ps1              # downloads jars into log4j/lib
-javac -cp "lib/*" -d classes src/bq/benchmark/log4j/main.java      # inside log4j/
-powershell -File benchmark/cross/log4j/run_benchmark.ps1
-
-# Linux / macOS (JDK 17+; the script compiles automatically)
-./benchmark/cross/log4j/fetch_deps.sh
-./benchmark/cross/log4j/run_benchmark.sh 1 10
+python3 benchmark/cross/make_tables.py benchmark/cross/run en          # tables, "chs" for Chinese
+python3 benchmark/cross/make_tables.py benchmark/cross/run en charts   # Mermaid charts
 ```
 
 ## Results
 
-Raw data measured on 2026-09-27 lives in benchmark/cross/run/ (csv files and filesizes.txt). The summary tables are in the main repo's docs/BENCHMARK.md (and its Chinese version).
+`benchmark/cross/results_mac/`: Apple M4 Pro (10 performance + 4 efficiency cores), 48 GB, macOS 15.6.1, Apple clang 17, 2026-10-05.
 
-Note: fmtlog's setLogFile races with its polling thread, so its two test cases run in separate processes (second argument mp/np). Also, poll() must not run concurrently with the polling thread: the final flush stops the thread first, then drains in a poll(true) loop — otherwise the tail of the log is silently lost (about 0.76% in this workload). verify_counts.py checks that every library lands exactly 2M x thread_count entries per test.
+- `results.csv`: throughput, every round (`lib,test,threads,ms,cpu_ms,peak_mb`)
+- `latency.csv`: latency on the logging thread, every round
+- `filesizes.txt`: output file sizes of the 1-thread run

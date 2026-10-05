@@ -1,47 +1,33 @@
+# Log4j2 throughput runner, Windows. Needs a JDK 17+ (java and javac on PATH, or JAVA_HOME).
+# Usage: powershell -File run_benchmark.ps1 [-Threads 1,2,4,6,8,10]
+# Results are appended to $env:RUN_DIR\results.csv (default: ..\run).
 param(
-    [int]$From = 1,
-    [int]$To = 10,
-    [switch]$MemoryOnly
+    [int[]]$Threads = @(1, 2, 4, 6, 8, 10)
 )
 $ErrorActionPreference = 'Stop'
 
-$JAVA = 'E:\Android\Android Studio\jbr\bin\java.exe'
 $dir = Split-Path $MyInvocation.MyCommand.Path
-$runDir = 'E:\BqLog\benchmark\cross\run'
-New-Item -ItemType Directory -Force -Path (Join-Path $runDir 'output') | Out-Null
+$runDir = if ($env:RUN_DIR) { $env:RUN_DIR } else { Join-Path $dir '..\run' }
+$java = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { 'java' }
+$javac = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\javac.exe' } else { 'javac' }
+$csv = Join-Path $runDir 'results.csv'
 
-$cp = "classes;lib\*;."
-foreach ($n in $From..$To) {
-    Get-ChildItem (Join-Path $runDir 'output') -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+New-Item -ItemType Directory -Force -Path $runDir, (Join-Path $dir 'classes'), (Join-Path $dir 'output') | Out-Null
+if (-not (Test-Path $csv)) { 'lib,test,threads,ms,cpu_ms,peak_mb' | Out-File -Encoding ascii $csv }
 
-    $p = Start-Process -FilePath $JAVA `
-        -ArgumentList "-cp `"$cp`" bq.benchmark.log4j.main $n mp" `
-        -WorkingDirectory $dir -PassThru -NoNewWindow `
-        -RedirectStandardOutput (Join-Path $runDir "stdout_log4j2_$n.txt")
-    $peak = 0
-    while (-not $p.HasExited) {
-        try { $p.Refresh(); $v = $p.PeakWorkingSet64; if ($v -gt $peak) { $peak = $v } } catch {}
-        Start-Sleep -Milliseconds 5
-    }
-    try { $p.Refresh(); $v = $p.PeakWorkingSet64; if ($v -gt $peak) { $peak = $v } } catch {}
-    $peakMB = [math]::Round($peak / 1MB, 1)
-
-    foreach ($line in Get-Content (Join-Path $runDir "stdout_log4j2_$n.txt")) {
+Push-Location $dir
+& $javac -cp "lib\*" -d classes src\bq\benchmark\log4j\main.java
+foreach ($n in $Threads) {
+    Get-ChildItem (Join-Path $dir 'output') -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+    $stdout = Join-Path $runDir "stdout_log4j2_$n.txt"
+    & $java -cp "classes;lib\*;." bq.benchmark.log4j.main $n mp | Out-File -Encoding ascii $stdout
+    foreach ($line in Get-Content $stdout) {
         if ($line -match '^RESULT\|') {
-            $parts = $line.Split('|')
-            if (-not $MemoryOnly) {
-                "$($parts[1]),$($parts[2]),$($parts[3]),$($parts[4])," | Out-File -Append -Encoding ascii (Join-Path $runDir 'results.csv')
-            }
-            Write-Host "log4j2 t=$n $($parts[2]) : $($parts[4]) ms, peak $peakMB MB"
-        }
-    }
-    "log4j2,$n,$peakMB" | Out-File -Append -Encoding ascii (Join-Path $runDir 'memory.csv')
-
-    if ($n -eq 1) {
-        $size = (Get-ChildItem (Join-Path $dir 'output') -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
-        if ($size) {
-            "FILESIZE|log4j2|$([math]::Round($size/1MB,1)) MB (2M entries, multi_param only)|$([math]::Round($size/2000000,1)) B/entry" |
-                Out-File -Append -Encoding ascii (Join-Path $runDir 'filesizes.txt')
+            # RESULT|lib|test|threads|ms|cpu_ms|peak_mb (peak memory is not measured for the JVM)
+            $p = $line.Split('|')
+            "$($p[1]),$($p[2]),$($p[3]),$($p[4]),$($p[5]),$($p[6])" | Out-File -Append -Encoding ascii $csv
+            Write-Host "log4j2 t=$n $($p[2]) : $($p[4]) ms, cpu $($p[5]) ms"
         }
     }
 }
+Pop-Location

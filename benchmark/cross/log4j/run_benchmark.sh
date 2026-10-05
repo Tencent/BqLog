@@ -6,7 +6,7 @@ set -e
 FROM=${1:-1}
 TO=${2:-10}
 DIR=$(cd "$(dirname "$0")" && pwd)
-RUN_DIR="$DIR/../run"
+RUN_DIR=${RUN_DIR:-"$DIR/../run"}
 CSV="$RUN_DIR/results.csv"
 
 JAVAC=javac
@@ -17,18 +17,18 @@ if [ -n "$JAVA_HOME" ]; then
 fi
 
 mkdir -p "$RUN_DIR/output" "$DIR/classes" "$DIR/output"
-[ -f "$CSV" ] || echo "lib,test,threads,ms" > "$CSV"
+[ -f "$CSV" ] || echo "lib,test,threads,ms,cpu_ms,peak_mb" > "$CSV"
 
-"$JAVAC" -cp "lib/*" -d classes src/bq/benchmark/log4j/main.java
+(cd "$DIR" && "$JAVAC" -cp "lib/*" -d classes src/bq/benchmark/log4j/main.java)
 
-for n in $(seq "$FROM" "$TO"); do
+for n in ${THREADS:-$(seq "$FROM" "$TO")}; do
     rm -rf "$DIR/output"
     mkdir -p "$DIR/output"
     OUT="$RUN_DIR/stdout_log4j2_${n}.txt"
     (cd "$DIR" && "$JAVA" -cp "classes:lib/*:." bq.benchmark.log4j.main "$n" mp) > "$OUT"
-    grep '^RESULT|' "$OUT" | while IFS='|' read -r _ lib test threads ms; do
-        echo "$lib,$test,$threads,$ms" >> "$CSV"
-        echo "log4j2 t=$n $test : $ms ms"
+    grep '^RESULT|' "$OUT" | while IFS='|' read -r _ lib test threads ms cpu_ms peak_mb; do
+        echo "$lib,$test,$threads,$ms,$cpu_ms,$peak_mb" >> "$CSV"
+        echo "log4j2 t=$n $test : $ms ms, cpu $cpu_ms ms"
     done
     if [ "$n" -eq 1 ]; then
         size=$(find "$DIR/output" -type f -exec stat -c %s {} \; 2>/dev/null | awk '{s+=$1}END{print s}')

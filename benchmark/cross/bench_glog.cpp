@@ -7,6 +7,7 @@
 #include <chrono>
 #include <iostream>
 #include <cstdlib>
+#include "bench_sys.h"
 
 static const int ITERATIONS = 2000000;
 
@@ -22,6 +23,7 @@ int main(int argc, char* argv[])
 
     // multi_param
     {
+        const double cpu_start = bench_process_cpu_ms();
         auto start = std::chrono::steady_clock::now();
         std::vector<std::thread> threads;
         for (int t = 0; t < thread_count; ++t) {
@@ -35,11 +37,12 @@ int main(int argc, char* argv[])
         google::FlushLogFiles(google::GLOG_INFO);
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        std::cout << "RESULT|glog|multi_param|" << thread_count << "|" << ms << std::endl;
+        std::cout << "RESULT|glog|multi_param|" << thread_count << "|" << ms << "|" << static_cast<long long>(bench_process_cpu_ms() - cpu_start) << "|" << bench_peak_mb() << std::endl;
     }
 
     // no_param
     {
+        const double cpu_start = bench_process_cpu_ms();
         auto start = std::chrono::steady_clock::now();
         std::vector<std::thread> threads;
         for (int t = 0; t < thread_count; ++t) {
@@ -53,7 +56,7 @@ int main(int argc, char* argv[])
         google::FlushLogFiles(google::GLOG_INFO);
         auto end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        std::cout << "RESULT|glog|no_param|" << thread_count << "|" << ms << std::endl;
+        std::cout << "RESULT|glog|no_param|" << thread_count << "|" << ms << "|" << static_cast<long long>(bench_process_cpu_ms() - cpu_start) << "|" << bench_peak_mb() << std::endl;
     }
 
     google::ShutdownGoogleLogging();

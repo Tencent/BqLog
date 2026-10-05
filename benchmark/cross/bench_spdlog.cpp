@@ -11,6 +11,7 @@
 #include <chrono>
 #include <iostream>
 #include <cstdlib>
+#include "bench_sys.h"
 
 static const int ITERATIONS = 2000000;
 static const size_t QUEUE_SIZE = 8192; // spdlog default async queue slots
@@ -22,6 +23,7 @@ static void run_test(const char* name, const char* file, int thread_count, bool 
     auto logger = spdlog::create_async<spdlog::sinks::basic_file_sink_mt>(name, file, true);
     logger->set_pattern("%Y-%m-%d %H:%M:%S.%f [%t] [%l] %v");
 
+    const double cpu_start = bench_process_cpu_ms();
     auto start = std::chrono::steady_clock::now();
     std::vector<std::thread> threads;
     for (int t = 0; t < thread_count; ++t) {
@@ -40,7 +42,7 @@ static void run_test(const char* name, const char* file, int thread_count, bool 
     auto end = std::chrono::steady_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "RESULT|spdlog_async|" << (multi_param ? "multi_param" : "no_param")
-              << "|" << thread_count << "|" << ms << std::endl;
+              << "|" << thread_count << "|" << ms << "|" << static_cast<long long>(bench_process_cpu_ms() - cpu_start) << "|" << bench_peak_mb() << std::endl;
 }
 
 int main(int argc, char* argv[])

@@ -47,12 +47,12 @@ set(QUILL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(QUILL_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(quill
     GIT_REPOSITORY https://github.com/odygrd/quill.git
-    GIT_TAG v11.1.0
+    GIT_TAG v13.0.0
     GIT_SHALLOW TRUE)
 
 FetchContent_Declare(fmtlog
     GIT_REPOSITORY https://github.com/MengRao/fmtlog.git
-    GIT_TAG main
+    GIT_TAG v2.3.0
     GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(spdlog glog quill fmtlog)
@@ -82,3 +82,28 @@ target_link_libraries(bench_fmtlog PRIVATE fmtlog-static fmt)
 
 add_executable(bench_quill bench_quill.cpp)
 target_link_libraries(bench_quill PRIVATE quill::quill)
+
+# Producer side cost, one executable per library from the same source
+# BqLog normal and fast mode are separate executables, so each one's call site is the only one in the timed loop
+add_executable(bench_latency_bqlog_normal bench_latency.cpp)
+target_compile_definitions(bench_latency_bqlog_normal PRIVATE BENCH_BQLOG_NORMAL)
+target_include_directories(bench_latency_bqlog_normal PRIVATE "${BQLOG_ROOT}/include")
+target_link_libraries(bench_latency_bqlog_normal PRIVATE BqLog)
+
+add_executable(bench_latency_bqlog_fast bench_latency.cpp)
+target_compile_definitions(bench_latency_bqlog_fast PRIVATE BENCH_BQLOG_FAST)
+target_include_directories(bench_latency_bqlog_fast PRIVATE "${BQLOG_ROOT}/include")
+target_link_libraries(bench_latency_bqlog_fast PRIVATE BqLog)
+
+add_executable(bench_latency_quill bench_latency.cpp)
+target_compile_definitions(bench_latency_quill PRIVATE BENCH_QUILL)
+target_link_libraries(bench_latency_quill PRIVATE quill::quill)
+
+add_executable(bench_latency_fmtlog bench_latency.cpp)
+target_compile_definitions(bench_latency_fmtlog PRIVATE BENCH_FMTLOG)
+target_include_directories(bench_latency_fmtlog PRIVATE ${fmtlog_SOURCE_DIR} ${fmtlog_SOURCE_DIR}/fmt/include)
+target_link_libraries(bench_latency_fmtlog PRIVATE fmtlog-static fmt)
+
+add_executable(bench_latency_spdlog bench_latency.cpp)
+target_compile_definitions(bench_latency_spdlog PRIVATE BENCH_SPDLOG)
+target_link_libraries(bench_latency_spdlog PRIVATE spdlog::spdlog)

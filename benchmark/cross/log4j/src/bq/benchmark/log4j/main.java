@@ -4,6 +4,8 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.async.AsyncLoggerContextSelector;
 
+import java.lang.management.ManagementFactory;
+
 import static org.apache.logging.log4j.util.Unbox.box;
 
 public class main {
@@ -20,6 +22,8 @@ public class main {
 
         System.out.println("Is Async:" + AsyncLoggerContextSelector.isSelected());
 
+        com.sun.management.OperatingSystemMXBean os_bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        long cpu_start_ns = os_bean.getProcessCpuTime();
         Thread[] threads = new Thread[thread_count];
         long start_time = System.currentTimeMillis();
         for (int idx = 0; idx < thread_count; ++idx) {
@@ -46,6 +50,6 @@ public class main {
 
         long flush_time = System.currentTimeMillis();
         System.out.println("RESULT|log4j2|" + (multi_param ? "multi_param" : "no_param")
-            + "|" + thread_count + "|" + (flush_time - start_time));
+            + "|" + thread_count + "|" + (flush_time - start_time) + "|" + ((os_bean.getProcessCpuTime() - cpu_start_ns) / 1000000) + "|" + "0");
     }
 }

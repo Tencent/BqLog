@@ -1,5 +1,7 @@
 // quill benchmark, configured per quill's official benchmark with busy-spin
 // backend (sleep_duration = 0ns) for maximum performance.
+// block:  a fixed 64 KiB queue per thread that blocks the logging thread when full, the same as BqLog's default
+// expand: quill's default queue, which grows when full (compared with BqLog's log.buffer_policy_when_full=expand)
 #include "quill/Backend.h"
 #include "quill/Frontend.h"
 #include "quill/LogMacros.h"
@@ -10,18 +12,29 @@
 #include <chrono>
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
+#include "bench_sys.h"
 
 static const int ITERATIONS = 2000000;
 
-static void run_test(const char* logger_name, const char* file, int thread_count, bool multi_param)
+struct fixed_queue_options : quill::FrontendOptions {
+    static constexpr quill::QueueType queue_type = quill::QueueType::BoundedBlocking;
+    static constexpr size_t initial_queue_capacity = 64 * 1024;
+    static constexpr size_t unbounded_queue_max_capacity = 64 * 1024;
+};
+using fixed_frontend = quill::FrontendImpl<fixed_queue_options>;
+
+template <typename FRONTEND>
+static void run_test(const char* lib_name, const char* logger_name, const char* file, int thread_count, bool multi_param)
 {
-    auto file_sink = quill::Frontend::create_or_get_sink<quill::FileSink>(file);
-    quill::Logger* logger = quill::Frontend::create_or_get_logger(
+    auto file_sink = FRONTEND::template create_or_get_sink<quill::FileSink>(file);
+    auto* logger = FRONTEND::create_or_get_logger(
         logger_name, std::move(file_sink),
         quill::PatternFormatterOptions{
             "%(time) [%(thread_id)] %(log_level) %(message)",
             "%H:%M:%S.%Qns"});
 
+    const double cpu_start = bench_process_cpu_ms();
     auto start = std::chrono::steady_clock::now();
     std::vector<std::thread> threads;
     for (int t = 0; t < thread_count; ++t) {
@@ -37,11 +50,11 @@ static void run_test(const char* logger_name, const char* file, int thread_count
     }
     for (auto& th : threads) th.join();
     logger->flush_log();
-    quill::Frontend::remove_logger(logger);
+    FRONTEND::remove_logger(logger);
     auto end = std::chrono::steady_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "RESULT|quill|" << (multi_param ? "multi_param" : "no_param")
-              << "|" << thread_count << "|" << ms << std::endl;
+    std::cout << "RESULT|" << lib_name << "|" << (multi_param ? "multi_param" : "no_param")
+              << "|" << thread_count << "|" << ms << "|" << static_cast<long long>(bench_process_cpu_ms() - cpu_start) << "|" << bench_peak_mb() << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -54,7 +67,12 @@ int main(int argc, char* argv[])
     quill::Backend::start(backend_options);
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // let backend init
 
-    run_test("bench_mp", "output/quill_mp.log", thread_count, true);
-    run_test("bench_np", "output/quill_np.log", thread_count, false);
+    if (argc > 2 && strcmp(argv[2], "expand") == 0) {
+        run_test<quill::Frontend>("quill_expand", "bench_mp", "output/quill_mp.log", thread_count, true);
+        run_test<quill::Frontend>("quill_expand", "bench_np", "output/quill_np.log", thread_count, false);
+    } else {
+        run_test<fixed_frontend>("quill", "bench_mp", "output/quill_mp.log", thread_count, true);
+        run_test<fixed_frontend>("quill", "bench_np", "output/quill_np.log", thread_count, false);
+    }
     return 0;
 }
