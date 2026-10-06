@@ -107,7 +107,7 @@ namespace bq {
         template <typename T>
         format_info c20_format(const T* style, int32_t len);
 
-        void fill_and_alignment(uint32_t wirte_begin_pos);
+        void fill_and_alignment(uint32_t write_begin_pos);
 
         void fill_e_style(uint32_t eCount, uint32_t begin_cursor);
 
