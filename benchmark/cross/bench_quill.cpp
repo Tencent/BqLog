@@ -21,6 +21,11 @@ struct fixed_queue_options : quill::FrontendOptions {
     static constexpr quill::QueueType queue_type = quill::QueueType::BoundedBlocking;
     static constexpr size_t initial_queue_capacity = 64 * 1024;
     static constexpr size_t unbounded_queue_max_capacity = 64 * 1024;
+#if defined(_WIN32)
+    // quill retries a full queue after sleep_for_ns(800), which is ::Sleep(1 ms) on Windows: every blocked call
+    // would sleep a whole millisecond. Retry without sleeping, as the 800 ns sleep effectively is elsewhere.
+    static constexpr uint32_t blocking_queue_retry_interval_ns = 0;
+#endif
 };
 using fixed_frontend = quill::FrontendImpl<fixed_queue_options>;
 

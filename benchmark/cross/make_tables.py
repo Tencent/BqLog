@@ -228,9 +228,10 @@ def charts():
         # spdlog is 30x the others and would flatten every other bar to zero: it stays in the table only
         lat_rows = [(chart_name(r[0]), statistics.median(lat[r[0]])) for r in LATENCY_ROWS
                     if lat.get(r[0]) and r[0] != "spdlog_async"]
+        spdlog_ns = "{:.0f}".format(statistics.median(lat["spdlog_async"])) if lat.get("spdlog_async") else "-"
         print("\n<!-- chart: latency -->")
-        print(mermaid_bar("日志线程平均延迟，1 个日志线程（spdlog 220 ns，见表）" if chs
-            else "Mean latency on the logging thread, 1 logging thread (spdlog: 220 ns, see the table)", "ns", lat_rows, "{:.1f}"))
+        print(mermaid_bar(f"日志线程平均延迟，1 个日志线程（spdlog {spdlog_ns} ns，见表）" if chs
+            else f"Mean latency on the logging thread, 1 logging thread (spdlog: {spdlog_ns} ns, see the table)", "ns", lat_rows, "{:.1f}"))
 
 
 if len(sys.argv) > 3 and sys.argv[3] == "charts":

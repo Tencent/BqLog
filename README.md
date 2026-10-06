@@ -16,7 +16,7 @@ BqLog C++ is built in both its normal mode (`log.info`) and its fast mode (`BQ_L
 | Library | Version | Configuration |
 |---|---|---|
 | BqLog | 2.6.0 (built from the main repository's `src/`) | default configuration |
-| quill | v13.0.0 | `BoundedBlocking` 64 KiB per thread; `UnboundedBlocking` in the growing group |
+| quill | v13.0.0 | `BoundedBlocking` 64 KiB per thread (on Windows with a 0 retry interval: its default 800 ns becomes `Sleep(1)`, a whole millisecond); `UnboundedBlocking` in the growing group |
 | fmtlog | v2.3.0 | `FMTLOG_BLOCK=1` (its default drops entries when the queue is full) |
 | spdlog | v1.17.0 | async, 8192 slots, blocking overflow policy |
 | glog | v0.7.1 | synchronous by design |
@@ -78,3 +78,5 @@ python3 benchmark/cross/make_tables.py benchmark/cross/run en charts   # Mermaid
 - `results.csv`: throughput, every round (`lib,test,threads,ms,cpu_ms,peak_mb`)
 - `latency.csv`: latency on the logging thread, every round
 - `filesizes.txt`: output file sizes of the 1-thread run
+
+`benchmark/cross/results_win/`: AMD Ryzen 9 9950X (16 cores / 32 threads), 96 GB, Windows 11 Pro 24H2 (10.0.26100), MSVC 19.51 (Visual Studio 2026) Release x64, OpenJDK 25.0.2, 2026-10-06, BqLog built with the MSVC atomic fix that follows 2.6.0 on `develop`. Same files as above.
