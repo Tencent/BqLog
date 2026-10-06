@@ -21,9 +21,6 @@ namespace bq {
     class log_manager;
     class log_imp;
     class log_worker : public bq::platform::thread {
-    public:
-        static constexpr uint64_t default_process_interval_ms = 66;
-
     private:
         log_manager* manager_;
         log_imp* log_target_;

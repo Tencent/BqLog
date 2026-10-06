@@ -19,6 +19,7 @@
 #endif
 namespace bq {
     static bq::platform::atomic<int32_t> log_worker_name_seq = 0;
+    static constexpr uint64_t default_process_interval_ms = 66;
     BQ_TLS_NON_POD(log_worker_watch_dog, tls_log_worker_watch_dog_)
 
     log_worker::log_worker()
