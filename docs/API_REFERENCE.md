@@ -57,6 +57,16 @@ log_obj = log.create_log("my_log", config)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+import bq "github.com/Tencent/BqLog/go/v2"
+// the third argument is the category names, nil for a plain log
+logObj := bq.Create_log("my_log", config, nil)
+```
+</details>
+
 Key points:
 
 1. The return value will **never be null** in any language. If creation fails, check via `is_valid()`.
@@ -107,6 +117,14 @@ const logObj = bq.log.get_log_by_name("my_log");
 
 ```python
 log_obj = log.get_log_by_name("my_log")
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+logObj := bq.Get_log_by_name("my_log")
 ```
 </details>
 
@@ -205,6 +223,23 @@ log_obj.error("Error code: {}", err_code)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+logObj.Info("Hello {}, count={}", "world", 42)
+logObj.Error("Error code: {}", errCode)
+// All levels: Verbose, Debug, Info, Warning, Error, Fatal
+
+// A log created with category names (Create_category_log) takes the category index first
+catLog := bq.Create_category_log("my_cat_log", config, []string{"", "Gameplay"})
+catLog.Info_c(1, "score={}", 42)
+// Verbose_c, Debug_c, Info_c, Warning_c, Error_c, Fatal_c
+```
+
+> Any number of arguments. Built-in numbers, `bool` and `string` (including named types such as enums) keep their native types, so formatting still happens asynchronously on the worker thread. Values implementing `fmt.Stringer` / `error` are logged through `String()` / `Error()`, any other value through `fmt.Sprint`, and `nil` as `null`. Arguments are only converted after the level and category check passes. Every level function returns `bool`: whether the entry was written.
+</details>
+
 ### Supported parameter types
 
 - Null pointer → `null`
@@ -214,6 +249,7 @@ log_obj.error("Error code: {}", err_code)
 - 32-bit and 64-bit floating point numbers
 - All string types in each language
 - C# / Java: any object (via `ToString()`)
+- Go: any value (via `String()` / `Error()`, otherwise `fmt.Sprint`)
 - C++: POD types (1/2/4/8 bytes), custom types (see [Advanced Usage — Custom parameter types](./ADVANCED_USAGE.md#4-custom-parameter-types))
 
 ![Log Level](img/log_level.png)
@@ -269,6 +305,15 @@ log_obj.force_flush()
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+bq.Force_flush_all_logs()
+logObj.Force_flush()
+```
+</details>
+
 ---
 
 ## 5. Crash protection
@@ -312,6 +357,14 @@ bq.log.enable_auto_crash_handle();
 
 ```python
 log.enable_auto_crash_handle()
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+bq.Enable_auto_crash_handle()
 ```
 </details>
 
@@ -368,13 +421,24 @@ log.unregister_console_callback(callback)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+// callback: func(log_id uint64, category_idx int32, level def.Log_level, content string)
+// (def is "github.com/Tencent/BqLog/go/v2/def")
+bq.Register_console_callback(callback)
+bq.Unregister_console_callback(callback)
+```
+</details>
+
 **Note:**
 1. Do **not** call any synchronous BqLog flush functions inside the callback — this will deadlock.
 2. Unity / Tuanjie / Unreal plugins already redirect ConsoleAppender to the editor log window automatically.
 
 ### Actively fetch (for VM environments)
 
-When direct native-thread callbacks are not suitable (C#, Java, IL2CPP, Node.js), use buffered fetch mode:
+When direct native-thread callbacks are not suitable (C#, Java, IL2CPP, Node.js, Go), use buffered fetch mode:
 
 ```cpp
 // Enable buffering (disables register_console_callback and default console output)
@@ -385,6 +449,19 @@ bq::log::fetch_and_remove_console_buffer(on_console_callback);
 ```
 
 > **IL2CPP:** Ensure callback is `static unsafe` with `[MonoPInvokeCallback(typeof(type_console_callback))]`.
+
+Go:
+
+```go
+bq.Set_console_buffer_enable(true)
+
+// fetches one entry per call, returns false when the buffer is empty;
+// keep fetching from one goroutine pinned with runtime.LockOSThread
+for bq.Fetch_and_remove_console_buffer(func(log_id uint64, category_idx int32, level def.Log_level, content string) {
+    // ...
+}) {
+}
+```
 
 ---
 
@@ -427,6 +504,14 @@ const success = logObj.reset_config(newConfig);
 
 ```python
 success = log_obj.reset_config(new_config)
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+success := logObj.Reset_config(newConfig)
 ```
 </details>
 
@@ -481,6 +566,15 @@ log_obj.set_appender_enable("appender_name", True)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+logObj.Set_appender_enable("appender_name", false)  // disable
+logObj.Set_appender_enable("appender_name", true)   // re-enable
+```
+</details>
+
 ---
 
 ## 9. Snapshot
@@ -528,6 +622,14 @@ snapshot = log_obj.take_snapshot("UTC+8")
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+snapshot := logObj.Take_snapshot("UTC+8")
+```
+</details>
+
 ---
 
 ## 10. Decode binary log files
@@ -535,7 +637,6 @@ snapshot = log_obj.take_snapshot("UTC+8")
 For decoding CompressedFileAppender logs at runtime:
 
 ```cpp
-// C++ only — other languages use the offline command-line tool
 bq::tools::log_decoder decoder("path/to/file.logcompr", "optional_private_key");
 while (decoder.decode() == bq::appender_decode_result::success) {
     auto& text = decoder.get_last_decoded_log_entry();
@@ -543,6 +644,20 @@ while (decoder.decode() == bq::appender_decode_result::success) {
 }
 // Or decode entire file at once:
 bq::tools::log_decoder::decode_file("input.logcompr", "output.txt", "optional_key");
+```
+
+Go:
+
+```go
+decoder := bq.Decoder_create("path/to/file.logcompr", "optional_private_key")
+if decoder.Is_valid() {
+    defer decoder.Destroy()
+    for text, ok := decoder.Decode(); ok; text, ok = decoder.Decode() {
+        // process text...
+    }
+}
+// Or decode entire file at once:
+bq.Decode_file("input.logcompr", "output.txt", "optional_key")
 ```
 
 ### Offline command-line decoder

@@ -164,6 +164,12 @@ func Force_flush(log_id uint64) {
 	C.__api_force_flush(C.uint64_t(log_id))
 }
 
+func Set_appender_enable(log_id uint64, appender_name string, enable bool) {
+	c_name := C.CString(appender_name)
+	defer C.free(unsafe.Pointer(c_name))
+	C.__api_set_appender_enable(C.uint64_t(log_id), c_name, C.bool(enable))
+}
+
 func Get_file_base_dir(base_dir_type int32) string {
 	return C.GoString(C.__api_get_file_base_dir(C.int32_t(base_dir_type)))
 }
