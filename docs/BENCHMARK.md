@@ -32,7 +32,7 @@ Comparison Objects:
 - quill 11.1.0 (async file logger, configured per official benchmark: busy-spin backend)
 - Log4j2 2.23.1 (Java, AsyncLogger with Disruptor + Async Appender)
 
-The complete, runnable benchmark project for all libraries (CMake + FetchContent, one executable per library, PowerShell runners for throughput and peak memory) is kept at the [`benchmark_2.5.0` tag](https://github.com/Tencent/BqLog/tree/benchmark_2.5.0/benchmark/cross).
+The complete, runnable benchmark project for all libraries (CMake + FetchContent, one executable per library, PowerShell runners for throughput and peak memory) is kept at the [`benchmarks/2.5.0` branch](https://github.com/Tencent/BqLog/tree/benchmarks/2.5.0/benchmark/cross).
 
 ### 2. Benchmark results
 
@@ -113,7 +113,7 @@ Measured as the Windows process peak working set, sampled every 5 ms for the who
 
 ### 4. Appendix: Benchmark Source Code
 
-The sources below mirror the runnable project at the [`benchmark_2.5.0` tag](https://github.com/Tencent/BqLog/tree/benchmark_2.5.0/benchmark/cross).
+The sources below mirror the runnable project at the [`benchmarks/2.5.0` branch](https://github.com/Tencent/BqLog/tree/benchmarks/2.5.0/benchmark/cross).
 
 #### 4.1 BqLog C++ Benchmark code
 
