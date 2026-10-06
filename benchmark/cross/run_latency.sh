@@ -22,6 +22,8 @@ for r in $(seq 1 "$ROUNDS"); do
         for lib in $LIBS; do
             rm -rf "$RUN_DIR/output"
             mkdir -p "$RUN_DIR/output"
+            # finish writing back the previous test's files first, so it does not slow this one down
+            sync
             line=$(cd "$RUN_DIR" && "$BIN_DIR/bench_latency_$lib" "$n" | grep '^RESULT_LAT|')
             echo "$line" | awk -F'|' -v r="$r" 'BEGIN{OFS=","} {print r,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13}' >> "$CSV"
             echo "round $r: $line"

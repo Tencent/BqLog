@@ -35,6 +35,8 @@ foreach ($n in $Threads) {
     foreach ($argString in $argSets) {
         $idx++
         $outFile = Join-Path $runDir "stdout_${Lib}_${n}_$idx.txt"
+        # finish writing back the previous test's files first, so it does not slow this one down
+        Write-VolumeCache -DriveLetter (Get-Item $runDir).PSDrive.Name -ErrorAction SilentlyContinue
         Start-Process -FilePath $exe -ArgumentList $argString -WorkingDirectory $runDir `
             -Wait -NoNewWindow -RedirectStandardOutput $outFile | Out-Null
         foreach ($line in Get-Content $outFile) {

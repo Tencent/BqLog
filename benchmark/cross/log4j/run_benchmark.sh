@@ -25,6 +25,7 @@ for n in ${THREADS:-$(seq "$FROM" "$TO")}; do
     rm -rf "$DIR/output"
     mkdir -p "$DIR/output"
     OUT="$RUN_DIR/stdout_log4j2_${n}.txt"
+    sync
     (cd "$DIR" && "$JAVA" -cp "classes:lib/*:." bq.benchmark.log4j.main "$n" mp) > "$OUT"
     grep '^RESULT|' "$OUT" | while IFS='|' read -r _ lib test threads ms cpu_ms peak_mb; do
         echo "$lib,$test,$threads,$ms,$cpu_ms,$peak_mb" >> "$CSV"

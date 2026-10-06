@@ -48,6 +48,8 @@ $n expand"
         [ -n "$args" ] || continue
         idx=$((idx + 1))
         OUT="$RUN_DIR/stdout_${LIB}_${n}_${idx}.txt"
+        # finish writing back the previous test's files first, so it does not slow this one down
+        sync
         (cd "$RUN_DIR" && "$BIN_DIR/bench_$LIB" $args) > "$OUT"
         grep '^RESULT|' "$OUT" | while IFS='|' read -r _ lib test threads ms cpu_ms peak_mb; do
             echo "$lib,$test,$threads,$ms,$cpu_ms,$peak_mb" >> "$CSV"

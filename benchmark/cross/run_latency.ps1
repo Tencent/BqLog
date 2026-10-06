@@ -26,6 +26,8 @@ foreach ($r in 1..$Rounds) {
             Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force -Path $out | Out-Null
             $stdout = Join-Path $runDir "lat_stdout.txt"
+            # finish writing back the previous test's files first, so it does not slow this one down
+            Write-VolumeCache -DriveLetter (Get-Item $runDir).PSDrive.Name -ErrorAction SilentlyContinue
             Start-Process -FilePath (Join-Path $exeDir "bench_latency_$lib.exe") -ArgumentList "$n" -WorkingDirectory $runDir `
                 -Wait -NoNewWindow -RedirectStandardOutput $stdout | Out-Null
             foreach ($line in Get-Content $stdout) {
