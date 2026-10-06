@@ -80,3 +80,5 @@ python3 benchmark/cross/make_tables.py benchmark/cross/run en charts   # Mermaid
 - `filesizes.txt`: output file sizes of the 1-thread run
 
 `benchmark/cross/results_win/`: AMD Ryzen 9 9950X (16 cores / 32 threads), 96 GB, Windows 11 Pro 24H2 (10.0.26100), MSVC 19.51 (Visual Studio 2026) Release x64, OpenJDK 25.0.2, 2026-10-06, BqLog built with the MSVC atomic fix that follows 2.6.0 on `develop`. Same files as above.
+
+`benchmark/cross/results_linux/`: DevCloud VM, AMD EPYC 7K62 (32 vCPUs), 62 GB, TencentOS Server 3.2 (Linux 5.4), clang 15.0.7 Release x64, OpenJDK 17.0.20, 2026-10-06, BqLog from `develop` (960104fd). Same files as above.
