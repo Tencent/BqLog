@@ -29,8 +29,8 @@ BqLog C++ is built in both its normal mode (`log.info`) and its fast mode (`BQ_L
 ```
 git clone -b Release_2.6.0 https://github.com/Tencent/BqLog.git
 cd BqLog
-git fetch origin benchmark_2.6.0
-git checkout origin/benchmark_2.6.0 -- benchmark README.md THIRD_PARTY_LICENSES.md
+git fetch origin benchmarks/2.6.0
+git checkout origin/benchmarks/2.6.0 -- benchmark README.md THIRD_PARTY_LICENSES.md
 ```
 
 Build (third-party libraries come from CMake FetchContent; offline, point `-DFETCHCONTENT_SOURCE_DIR_QUILL=` and friends at local clones):
