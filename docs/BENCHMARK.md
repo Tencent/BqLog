@@ -552,7 +552,7 @@ With growing buffers fast mode has clearly better throughput (with several threa
 
 ## 6. Source code
 
-The complete project for this version (2.6.0) is at [`benchmark_2.6.0`](https://github.com/Tencent/BqLog/tree/benchmark_2.6.0/benchmark/cross): CMake + FetchContent, one executable per library, the runner scripts, the raw data, and `make_tables.py`, which produces these tables and charts. Benchmarks of other versions: see the [index on the `benchmark` branch](https://github.com/Tencent/BqLog/tree/benchmark).
+The complete project for this version (2.6.0) is at [`benchmarks/2.6.0`](https://github.com/Tencent/BqLog/tree/benchmarks/2.6.0/benchmark/cross): CMake + FetchContent, one executable per library, the runner scripts, the raw data, and `make_tables.py`, which produces these tables and charts. Benchmarks of other versions: see the [index on the `benchmark` branch](https://github.com/Tencent/BqLog/tree/benchmark).
 
 - throughput: `bench_<lib>.cpp`, `run_benchmark.sh` (`bench_bqlog <threads> <block|expand> [config]`, `bench_quill <threads> <block|expand>`)
 - latency on the logging thread: `bench_latency.cpp` (one source, built once per library), `run_latency.sh`

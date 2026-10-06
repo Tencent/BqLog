@@ -59,7 +59,7 @@
 
 ## 性能数据在哪？
 
-[docs/BENCHMARK_CHS.md](BENCHMARK_CHS.md)，分两部分：总消耗（整条流水线的吞吐，1–10 线程、每线程 200 万条）和日志线程自身的开销，另外还有峰值内存和输出文件体积。本版本的测试代码在 [`benchmark_2.6.0`](https://github.com/Tencent/BqLog/tree/benchmark_2.6.0/benchmark/cross)，可以自己跑。
+[docs/BENCHMARK_CHS.md](BENCHMARK_CHS.md)，分两部分：总消耗（整条流水线的吞吐，1–10 线程、每线程 200 万条）和日志线程自身的开销，另外还有峰值内存和输出文件体积。本版本的测试代码在 [`benchmarks/2.6.0`](https://github.com/Tencent/BqLog/tree/benchmarks/2.6.0/benchmark/cross)，可以自己跑。
 
 ## 崩溃后日志怎么办？
 

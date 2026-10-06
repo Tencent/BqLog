@@ -59,7 +59,7 @@ Every language has its proper channel:
 
 ## Where are the performance numbers?
 
-[docs/BENCHMARK.md](BENCHMARK.md), in two parts: total cost (throughput of the whole pipeline, 1–10 threads, 2 million entries per thread) and the cost on the logging thread itself, plus peak memory and output file size. The test code for this version lives at [`benchmark_2.6.0`](https://github.com/Tencent/BqLog/tree/benchmark_2.6.0/benchmark/cross) and you can rerun it yourself.
+[docs/BENCHMARK.md](BENCHMARK.md), in two parts: total cost (throughput of the whole pipeline, 1–10 threads, 2 million entries per thread) and the cost on the logging thread itself, plus peak memory and output file size. The test code for this version lives at [`benchmarks/2.6.0`](https://github.com/Tencent/BqLog/tree/benchmarks/2.6.0/benchmark/cross) and you can rerun it yourself.
 
 ## What happens to my logs if the process crashes?
 

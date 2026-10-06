@@ -552,7 +552,7 @@ BqLog 的 C++ 有两种写日志的方式，输出完全一样：
 
 ## 6. 源代码
 
-本版本（2.6.0）的完整工程在 [`benchmark_2.6.0`](https://github.com/Tencent/BqLog/tree/benchmark_2.6.0/benchmark/cross)：CMake + FetchContent，每个库一个可执行文件，运行脚本、原始数据，以及生成这些表格和图表的 `make_tables.py`。其他版本的 benchmark 见 [`benchmark` 分支的索引](https://github.com/Tencent/BqLog/tree/benchmark)。
+本版本（2.6.0）的完整工程在 [`benchmarks/2.6.0`](https://github.com/Tencent/BqLog/tree/benchmarks/2.6.0/benchmark/cross)：CMake + FetchContent，每个库一个可执行文件，运行脚本、原始数据，以及生成这些表格和图表的 `make_tables.py`。其他版本的 benchmark 见 [`benchmark` 分支的索引](https://github.com/Tencent/BqLog/tree/benchmark)。
 
 - 吞吐：`bench_<lib>.cpp`，`run_benchmark.sh`（`bench_bqlog <线程数> <block|expand> [配置]`，`bench_quill <线程数> <block|expand>`）
 - 日志线程延迟：`bench_latency.cpp`（一份源码，每个库编一次），`run_latency.sh`
