@@ -28,6 +28,7 @@ namespace bq {
         , mutex_(true)
         , wait_flag_(false)
         , awake_flag_(false)
+        , process_interval_ms_(default_process_interval_ms)
     {
     }
 
@@ -110,9 +111,13 @@ namespace bq {
             if (is_cancelled()) {
                 break;
             }
+            const uint64_t interval_ms = process_interval_ms_.load_relaxed();
+            if (interval_ms == 0) {
+                continue;
+            }
             mutex_.lock();
             awake_flag_.store_relaxed(true);
-            trigger_.wait_for(mutex_, process_interval_ms);
+            trigger_.wait_for(mutex_, interval_ms);
             awake_flag_.store_relaxed(false);
             mutex_.unlock();
         }

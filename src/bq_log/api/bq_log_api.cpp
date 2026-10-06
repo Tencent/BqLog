@@ -221,7 +221,7 @@ namespace bq {
                     awake_log_worker(log);
                 }
                 while (write_handle.result == enum_buffer_result_code::err_wait_and_retry) {
-                    bq::platform::thread::cpu_relax();
+                    bq::platform::thread::yield();
                     log_buffer.commit_write_chunk(write_handle);
                     write_handle = log_buffer.alloc_write_chunk(length_without_ext_info, ext_info_length, epoch_ms);
                 }

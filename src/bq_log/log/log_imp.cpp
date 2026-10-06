@@ -9,6 +9,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_log/log/log_imp.h"
+#include "bq_log/log/log_manager.h"
 #include "bq_log/log/log_snapshot.h"
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_record_reader.h"
@@ -211,6 +212,15 @@ namespace bq {
             snapshot_ = new log_snapshot(this, snapshot_config);
         }
         worker_.init(thread_mode_, this);
+        if (log_config["worker_interval_ms"].is_integral()) {
+            // independent: this log's own worker; async: the public worker shared by all async logs
+            auto interval_ms = (uint64_t)(int64_t)log_config["worker_interval_ms"];
+            if (thread_mode_ == bq::log_thread_mode::independent) {
+                worker_.set_process_interval_ms(interval_ms);
+            } else if (thread_mode_ == bq::log_thread_mode::async) {
+                bq::log_manager::instance().get_public_worker().set_process_interval_ms(interval_ms);
+            }
+        }
         if (thread_mode_ == log_thread_mode::independent) {
             worker_.start();
         }

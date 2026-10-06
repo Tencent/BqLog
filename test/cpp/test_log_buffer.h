@@ -612,8 +612,12 @@ namespace bq {
 #endif
                 test_output_dynamic(bq::log_level::info, "[log buffer] GC...\n");
                 bq::platform::thread::sleep(group_list::GROUP_NODE_GC_LIFE_TIME_MS * 2);
-                test_buffer.garbage_collect();
-                result.add_result(test_buffer.get_garbage_count() == 0, "group garbage collect test");
+                {
+                    // the read thread frees pooled groups by itself, no explicit garbage_collect() call
+                    auto final_handle = test_buffer.read_chunk();
+                    bq::scoped_log_buffer_handle<bq::log_buffer> scoped_final_handle(test_buffer, final_handle);
+                }
+                result.add_result(test_buffer.get_garbage_count() == 0, "group garbage collect test, left:%zu", test_buffer.get_garbage_count());
                 test_output_dynamic(bq::log_level::info, "[log buffer] done.\n");
             }
 

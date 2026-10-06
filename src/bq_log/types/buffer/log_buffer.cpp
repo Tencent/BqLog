@@ -407,6 +407,7 @@ namespace bq {
                 }
                 rt_reading.state_ = read_state::next_group_finding;
                 rt_recycle_oversize_buffers();
+                hp_buffer_.garbage_collect_if_pending();
                 break;
             case read_state::hp_block_reading:
                 rt_reading.hp_handle_cache_ = rt_reading.cur_block_->get_buffer().batch_read();

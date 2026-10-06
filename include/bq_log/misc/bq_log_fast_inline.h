@@ -116,24 +116,31 @@ namespace bq {
             const uint32_t record_size = static_cast<uint32_t>(sizeof(bq::log_head_fast_def)) + args_size;
             const uint32_t need = (record_size + l::chunk_data_offset + (1U << l::block_size_log2) - 1) >> l::block_size_log2;
             const uint32_t index = write_cursor & (count - 1);
-            BQ_UNLIKELY_IF((count - index < need) | (read_cursor_cache + count - write_cursor < need))
+            uint8_t* chunk = blocks + (static_cast<size_t>(index) << l::block_size_log2);
+            uint8_t* record = chunk + l::chunk_data_offset;
+            uint32_t used = need;
+            BQ_UNLIKELY_IF(count - index < need)
+            {
+                // as siso_ring_buffer::alloc_write_chunk: the head keeps the tail blocks, the record starts at block 0
+                used = count - index + ((record_size + (1U << l::block_size_log2) - 1) >> l::block_size_log2);
+                record = blocks;
+            }
+            BQ_UNLIKELY_IF(read_cursor_cache + count - write_cursor < used)
             {
                 return -1;
             }
-            uint8_t* chunk = blocks + (static_cast<size_t>(index) << l::block_size_log2);
-            store_u32(chunk, need);
+            store_u32(chunk, used);
             store_u32(chunk + sizeof(uint32_t), record_size);
-            uint8_t* record = chunk + l::chunk_data_offset;
             bq::log_head_fast_def record_head;
             record_head.timestamp_epoch = bq::log_head_base_def::set_fast(epoch_ms);
             record_head.format_meta_addr = site.format_meta_addr;
             memcpy(record, &record_head, sizeof(record_head));
             fill(record + sizeof(bq::log_head_fast_def));
-            const uint32_t new_cursor = write_cursor + need;
+            const uint32_t new_cursor = write_cursor + used;
             cursor_at(head, l::head_wt_writing_cursor_cache).store_relaxed(new_cursor);
             cursor_at(head, l::head_writing_cursor).store_release(new_cursor);
             // same edge-triggered rule as siso_ring_buffer::alloc_write_chunk
-            BQ_UNLIKELY_IF(static_cast<uint32_t>(read_cursor_cache + state.half_unit_count - write_cursor - 1) < need)
+            BQ_UNLIKELY_IF(static_cast<uint32_t>(read_cursor_cache + state.half_unit_count - write_cursor - 1) < used)
             {
                 const uint32_t read_cursor = cursor_at(head, l::head_reading_cursor).load_acquire();
                 cursor_at(head, l::head_wt_reading_cursor_cache).store_relaxed(read_cursor);

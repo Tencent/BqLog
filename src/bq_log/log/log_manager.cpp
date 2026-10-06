@@ -295,9 +295,11 @@ namespace bq {
         bq::util::log_device_console(bq::log_level::warning, "thread id:%" PRIu64 ", name:%s was terminated, try restart it!", worker_ptr->get_thread_id(), worker_ptr->get_thread_name().c_str());
         auto thread_mode = worker_ptr->get_thread_mode();
         auto target_log = worker_ptr->get_log_target();
+        auto process_interval_ms = worker_ptr->get_process_interval_ms();
         bq::object_destructor<log_worker>::destruct(worker_ptr);
         bq::object_constructor<log_worker>::construct(worker_ptr);
         worker_ptr->init(thread_mode, target_log);
+        worker_ptr->set_process_interval_ms(process_interval_ms);
         worker_ptr->start();
     }
 

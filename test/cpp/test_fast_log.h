@@ -13,6 +13,7 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_record_reader.h"
 #include "bq_log/log/log_manager.h"
+#include "test_category_log.h"
 
 namespace bq {
     namespace test {
@@ -120,6 +121,74 @@ namespace bq {
             }
 
             // A fresh log (so layout's thread name cache is empty) written by a named thread that reaches HP.
+            // records of changing size cross the end of the ring many times; the inline path splits them like
+            // siso_ring_buffer::alloc_write_chunk, and every one must come out whole and in order
+            // BQ_LOG_FAST_* with a generated category log: the same macro takes log.cat.xxx before the format
+            static void test_generated_category(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_generated_category_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                bq::test_category_log log = bq::test_category_log::create_log(name, (bq::string("log.high_perform_mode_freq_threshold_per_second=1\n") + "log.categories_mask=[ModuleA.SystemA,ModuleB]\n" + "appenders_config.test.type=text_file\n" + "appenders_config.test.levels=[all]\n" + "appenders_config.test.file_name=" + file_name + "\n" + "appenders_config.test.base_dir_type=0\n" + "appenders_config.test.enable_rolling_log_file=false\n").c_str());
+                result.add_result(log.is_valid(), "generated category log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                for (int32_t i = 0; i < 3; ++i) {
+                    BQ_LOG_FAST_INFO(log, "cat none {}", i);
+                    BQ_LOG_FAST_INFO(log, log.cat.ModuleA.SystemA, "cat system {}", i);
+                    BQ_LOG_FAST_WARNING(log, log.cat.ModuleA.SystemA.ClassA, "cat class {} {}", i, "x");
+                    BQ_LOG_FAST_INFO(log, log.cat.ModuleB, "cat module b");
+                    BQ_LOG_FAST_INFO(log, log.cat.ModuleA, "cat module a {}", i);
+                }
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                result.add_result(data.find("[ModuleA.SystemA]\tcat system 2") != bq::string::npos, "fast category: ModuleA.SystemA");
+                result.add_result(data.find("[ModuleA.SystemA.ClassA]\tcat class 2 x") != bq::string::npos, "fast category: nested category and level");
+                result.add_result(data.find("[ModuleB]\tcat module b") != bq::string::npos, "fast category: no arguments");
+                result.add_result(data.find("cat module a") == bq::string::npos, "fast category: masked out category is filtered");
+                result.add_result(data.find("cat none") == bq::string::npos, "fast category: default category is filtered by the mask");
+            }
+
+            static void test_inline_wrap(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_wrap_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                bq::log log = bq::log::create_log(name, (bq::string("log.buffer_size=4096\n") + "log.high_perform_mode_freq_threshold_per_second=1\n" + "appenders_config.test.type=text_file\n" + "appenders_config.test.levels=[all]\n" + "appenders_config.test.file_name=" + file_name + "\n" + "appenders_config.test.base_dir_type=0\n" + "appenders_config.test.enable_rolling_log_file=false\n").c_str());
+                result.add_result(log.is_valid(), "inline wrap log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                const bq::string padding("abcdefghijklmnopqrstuvwxyz0123456789");
+                constexpr int32_t count = 20000;
+                for (int32_t i = 0; i < count; ++i) {
+                    BQ_LOG_FAST_INFO(log, "wrap {} {}", i, padding.substr(0, static_cast<size_t>(i % 37)));
+                }
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                int32_t expected = 0;
+                bool whole = true;
+                size_t pos = 0;
+                char line[128];
+                while (expected < count) {
+                    snprintf(line, sizeof(line), "wrap %" PRId32 " ", expected);
+                    const size_t found = data.find(line, pos);
+                    if (found == bq::string::npos) {
+                        break;
+                    }
+                    const size_t text_begin = found + strlen(line);
+                    const size_t text_len = static_cast<size_t>(expected % 37);
+                    const size_t line_end = data.find("\n", text_begin);
+                    whole = whole && line_end != bq::string::npos && line_end - text_begin == text_len
+                        && memcmp(data.c_str() + text_begin, padding.c_str(), text_len) == 0;
+                    pos = text_begin;
+                    ++expected;
+                }
+                result.add_result(expected == count, "inline wrap: every record in order (%" PRId32 " of %" PRId32 ")", expected, count);
+                result.add_result(whole, "inline wrap: every record whole");
+            }
+
             static void test_hp_thread_info(test_result& result)
             {
                 char name[96];
@@ -156,12 +225,14 @@ namespace bq {
                 result.add_result(decode_has_line(compressed_path, "named fast 5002", tag), "hp fast record thread info in compressed file");
             }
 
+            // a category argument of the same base type as a generated log's log.cat.xxx
             static void write_fast_category(const bq::log& log, uint32_t category, int32_t value)
             {
-                auto call = bq::make_fast_log_call("category {} {}", category, value);
-                static bq::_api_fast_log_site_handle site_a = BQ_FAST_LOG_SITE_INITIALIZER;
-                static bq::_api_fast_log_site_handle site_b = BQ_FAST_LOG_SITE_INITIALIZER;
-                bq::fast_log_from_call<bq::tuple<uint32_t, int32_t>>(category == 0 ? site_a : site_b, log, category, bq::log_level::info, call);
+                if (category == 0) {
+                    BQ_LOG_FAST_INFO(log, bq::log_category_base<0>(), "category {} {}", category, value);
+                } else {
+                    BQ_LOG_FAST_INFO(log, bq::log_category_base<1>(), "category {} {}", category, value);
+                }
             }
 
             // The inline level check reads only the call site's level word: it must follow reset_config and category masks.
@@ -531,9 +602,7 @@ namespace bq {
                 } else if (kind == 1) {
                     BQ_LOG_FAST_WARNING(log, "crash fast warning r{} t{} s{}", round, thread, seq);
                 } else if (kind == 2) {
-                    auto call = bq::make_fast_log_call("crash fast category r{} t{} s{}", round, thread, seq);
-                    static bq::_api_fast_log_site_handle site = BQ_FAST_LOG_SITE_INITIALIZER;
-                    bq::fast_log_from_call<bq::tuple<uint32_t, uint32_t, uint32_t>>(site, log, 1, bq::log_level::error, call);
+                    BQ_LOG_FAST_ERROR(log, bq::log_category_base<1>(), "crash fast category r{} t{} s{}", round, thread, seq);
                 } else if (kind == 3) {
                     log.info("crash normal r{} t{} s{}", round, thread, seq);
                 } else if (kind == 4) {
@@ -1026,6 +1095,8 @@ namespace bq {
                 result.add_result(decode_has_both(TO_ABSOLUTE_PATH(file_name + "_compressed_1.logcompr", 0)),
                     "fast and standard compressed file");
                 test_inline_support(result, log);
+                test_inline_wrap(result);
+                test_generated_category(result);
                 test_level_bitmaps(result);
                 test_site_level_word(result);
                 test_hp_thread_info(result);

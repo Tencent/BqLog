@@ -512,50 +512,30 @@ namespace bq {
         return fast_log_slow<ARGS, const STR&, First, Args...>(site, log, category_index, level, format, first, args...);
     }
 
-    template <size_t... Indexes>
-    struct fast_index_sequence {
+    // A generated category type (log.cat.xxx) derives from log_category_base<CAT_INDEX>.
+    template <typename T>
+    struct fast_log_category_index {
+        template <uint32_t CAT_INDEX>
+        static char (&pick(const bq::log_category_base<CAT_INDEX>*))[CAT_INDEX + 2];
+        static char (&pick(...))[1];
+        // 0: not a category, otherwise category index + 1
+        static constexpr uint32_t tag = static_cast<uint32_t>(sizeof(pick(static_cast<const bq::decay_t<T>*>(nullptr)))) - 1;
     };
 
-    template <size_t Count, size_t... Indexes>
-    struct make_fast_index_sequence : make_fast_index_sequence<Count - 1, Count - 1, Indexes...> {
-    };
-
-    template <size_t... Indexes>
-    struct make_fast_index_sequence<0, Indexes...> {
-        using type = fast_index_sequence<Indexes...>;
-    };
-
-    template <typename Call>
-    struct fast_log_call_types;
-
-    template <typename STR, typename... Args>
-    struct fast_log_call_types<bq::tuple<STR, Args...>> {
-        using args_type = bq::tuple<bq::decay_t<Args>...>;
-        static constexpr size_t count = sizeof...(Args);
-    };
-
-    template <typename... Args>
-    bq_forceinline bq::tuple<Args...> make_fast_log_call(Args&&... args)
+    // BQ_LOG_FAST_*(log, format, args...): category 0
+    template <typename STR, typename... Args, bq::enable_if_t<bq::tools::_is_bq_log_format_type<STR>::value, bool> = true>
+    bq_forceinline bool fast_log_call(bq::_api_fast_log_site_handle& site, const bq::log& log, bq::log_level level,
+        const STR& format, const Args&... args)
     {
-        return bq::tuple<Args...>(bq::forward<Args>(args)...);
+        return bq::fast_log<bq::tuple<bq::decay_t<Args>...>>(site, log, 0, level, format, args...);
     }
 
-    template <typename ARGS, typename Call, size_t... Indexes>
-    bq_forceinline bool fast_log_from_call_impl(bq::_api_fast_log_site_handle& site,
-        const bq::log& log, uint32_t category_index, bq::log_level level,
-        const Call& call, fast_index_sequence<Indexes...>)
+    // BQ_LOG_FAST_*(log, log.cat.xxx, format, args...): the category is a type, its index a constant
+    template <typename CAT, typename STR, typename... Args, bq::enable_if_t<(bq::fast_log_category_index<CAT>::tag != 0), bool> = true>
+    bq_forceinline bool fast_log_call(bq::_api_fast_log_site_handle& site, const bq::log& log, bq::log_level level,
+        const CAT&, const STR& format, const Args&... args)
     {
-        return fast_log<ARGS>(site, log, category_index, level, bq::get<0>(call),
-            bq::get<Indexes + 1>(call)...);
-    }
-
-    template <typename ARGS, typename Call>
-    bq_forceinline bool fast_log_from_call(bq::_api_fast_log_site_handle& site,
-        const bq::log& log, uint32_t category_index, bq::log_level level,
-        const Call& call)
-    {
-        return fast_log_from_call_impl<ARGS>(site, log, category_index, level, call,
-            typename make_fast_index_sequence<fast_log_call_types<Call>::count>::type());
+        return bq::fast_log<bq::tuple<bq::decay_t<Args>...>>(site, log, bq::fast_log_category_index<CAT>::tag - 1, level, format, args...);
     }
 
     inline category_log::category_log()
@@ -624,60 +604,43 @@ namespace bq {
 
 }
 
-// BQ_LOG_FAST_*: lower latency log.info() and friends. A call site binds the log object and format string of its first
-// call and must keep using them; reset_config level and category changes still apply.
+// BQ_LOG_FAST_*: lower latency log.info() and friends, BQ_LOG_FAST_INFO(log, [log.cat.xxx,] format, args...). A call site
+// binds the log object, category and format string of its first call and must keep using them; reset_config level and
+// category mask changes still apply.
 #define BQ_FAST_LOG_SITE_INITIALIZER { 0, 0, 0, nullptr, &bq::fast_inline::module_state<>::no_level }
 
-#define BQ_LOG_FAST_VERBOSE(log_obj, ...)                                                            \
-    do {                                                                                             \
-        const auto& bq_fast_log = (log_obj);                                                         \
-        auto bq_fast_call = bq::make_fast_log_call(__VA_ARGS__);                                     \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER;            \
-        bq::fast_log_from_call<typename bq::fast_log_call_types<decltype(bq_fast_call)>::args_type>( \
-            bq_fast_site, bq_fast_log, 0, bq::log_level::verbose, bq_fast_call);                     \
+#define BQ_LOG_FAST_VERBOSE(log_obj, ...)                                                 \
+    do {                                                                                  \
+        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::verbose, __VA_ARGS__);  \
     } while (false)
 
-#define BQ_LOG_FAST_DEBUG(log_obj, ...)                                                              \
-    do {                                                                                             \
-        const auto& bq_fast_log = (log_obj);                                                         \
-        auto bq_fast_call = bq::make_fast_log_call(__VA_ARGS__);                                     \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER;            \
-        bq::fast_log_from_call<typename bq::fast_log_call_types<decltype(bq_fast_call)>::args_type>( \
-            bq_fast_site, bq_fast_log, 0, bq::log_level::debug, bq_fast_call);                       \
+#define BQ_LOG_FAST_DEBUG(log_obj, ...)                                                   \
+    do {                                                                                  \
+        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::debug, __VA_ARGS__);    \
     } while (false)
 
-#define BQ_LOG_FAST_INFO(log_obj, ...)                                                               \
-    do {                                                                                             \
-        const auto& bq_fast_log = (log_obj);                                                         \
-        auto bq_fast_call = bq::make_fast_log_call(__VA_ARGS__);                                     \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER;            \
-        bq::fast_log_from_call<typename bq::fast_log_call_types<decltype(bq_fast_call)>::args_type>( \
-            bq_fast_site, bq_fast_log, 0, bq::log_level::info, bq_fast_call);                        \
+#define BQ_LOG_FAST_INFO(log_obj, ...)                                                    \
+    do {                                                                                  \
+        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::info, __VA_ARGS__);     \
     } while (false)
 
-#define BQ_LOG_FAST_WARNING(log_obj, ...)                                                            \
-    do {                                                                                             \
-        const auto& bq_fast_log = (log_obj);                                                         \
-        auto bq_fast_call = bq::make_fast_log_call(__VA_ARGS__);                                     \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER;            \
-        bq::fast_log_from_call<typename bq::fast_log_call_types<decltype(bq_fast_call)>::args_type>( \
-            bq_fast_site, bq_fast_log, 0, bq::log_level::warning, bq_fast_call);                     \
+#define BQ_LOG_FAST_WARNING(log_obj, ...)                                                 \
+    do {                                                                                  \
+        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::warning, __VA_ARGS__);  \
     } while (false)
 
-#define BQ_LOG_FAST_ERROR(log_obj, ...)                                                              \
-    do {                                                                                             \
-        const auto& bq_fast_log = (log_obj);                                                         \
-        auto bq_fast_call = bq::make_fast_log_call(__VA_ARGS__);                                     \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER;            \
-        bq::fast_log_from_call<typename bq::fast_log_call_types<decltype(bq_fast_call)>::args_type>( \
-            bq_fast_site, bq_fast_log, 0, bq::log_level::error, bq_fast_call);                       \
+#define BQ_LOG_FAST_ERROR(log_obj, ...)                                                   \
+    do {                                                                                  \
+        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::error, __VA_ARGS__);    \
     } while (false)
 
-#define BQ_LOG_FAST_FATAL(log_obj, ...)                                                              \
-    do {                                                                                             \
-        const auto& bq_fast_log = (log_obj);                                                         \
-        auto bq_fast_call = bq::make_fast_log_call(__VA_ARGS__);                                     \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER;            \
-        bq::fast_log_from_call<typename bq::fast_log_call_types<decltype(bq_fast_call)>::args_type>( \
-            bq_fast_site, bq_fast_log, 0, bq::log_level::fatal, bq_fast_call);                       \
+#define BQ_LOG_FAST_FATAL(log_obj, ...)                                                   \
+    do {                                                                                  \
+        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::fatal, __VA_ARGS__);    \
     } while (false)
