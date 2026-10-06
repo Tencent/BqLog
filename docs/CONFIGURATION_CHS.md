@@ -176,6 +176,7 @@ appenders_config.appender_3.file_name=~/bqLog/compress_log
 | `log.print_stack_levels`                  | ✘       | 日志等级数组                           | 空（不打印调用栈）                                             | ✔                              |
 | `log.buffer_policy_when_full`             | ✘       | `discard` / `block` / `expand`         | `block`                                                        | ✘                              |
 | `log.high_perform_mode_freq_threshold_per_second` | ✘ | 64 位正整数                            | `1000`                                                         | ✘                              |
+| `log.worker_interval_ms`                  | ✘       | 64 位非负整数（毫秒）                   | `66`                                                           | ✘                              |
 
 #### `log.thread_mode`
 
@@ -224,6 +225,22 @@ log.print_stack_levels=[error,fatal]
 - `block`（推荐默认）：写日志的线程会阻塞等待缓冲区有空间；
 - `expand`（不推荐）：缓冲区会动态扩容为原来两倍，直到可写。
   可能显著增加内存占用，虽然 BqLog 通过良好的线程调度减少了扩容次数，但仍建议谨慎使用。
+
+#### `log.worker_interval_ms`
+
+消费线程无事可做时最多休眠多久（毫秒），缓冲区快满时会被提前唤醒。默认 `66`。
+
+> ⚠️ **在 `async` 模式（默认）下，这是一个全局设置。** 所有 `async` 模式的 Log 对象共用同一个公共 worker 线程，这个配置改的就是这个公共线程，因此会**同时影响进程里所有其他 `async` Log 对象**：
+> - 只要有一个 `async` Log 配置了它，所有 `async` Log 的消费线程都按这个间隔运行；
+> - 多个 `async` Log 配置了不同的值时，以**最后创建**的那个为准；
+> - 没有配置这一项的 Log，不会把公共 worker 恢复成默认值。
+>
+> 如果只想调整某一个 Log 的消费间隔，而不影响其他 Log，请把该 Log 设为 `log.thread_mode=independent`，它会有自己专属的 worker 线程，这个配置只作用于它自己。
+
+- `independent` 模式：只作用于该 Log 自己的 worker 线程，不影响其他 Log。
+- `sync` 模式：没有 worker 线程，配置无效。
+- 配置为 `0` 表示消费线程从不休眠，一直轮询。这会占满一个 CPU 核心；在 `async` 模式下，意味着公共 worker 为所有 `async` Log 一直轮询。只建议在延迟极其敏感、并且有空闲核心的场景使用。
+- 只在 `create_log` 时生效，不能通过 `reset_config` 修改。
 
 #### `log.high_perform_mode_freq_threshold_per_second`
 

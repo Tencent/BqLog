@@ -23,7 +23,7 @@
 
 ## C++ 专属的快速模式是什么，什么时候用？
 
-`BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL` 是 C++ 专属的宏，写出的日志和 `log.info` 等普通模式完全一样，但调用线程上的开销只有一小部分。适合用在热点路径上。代价是：内存稍多一点；它是宏，IDE 代码提示体验差一点；只支持默认类别；每个调用点必须固定使用第一次调用时的日志对象和格式串。其他地方，普通模式是更简单的默认选择。详见 [API 参考：快速模式](API_REFERENCE_CHS.md#3-写日志)。
+`BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL` 是 C++ 专属的宏，写出的日志和 `log.info` 等普通模式完全一样，但调用线程上的开销只有一小部分。适合用在热点路径上。Category 的用法和普通模式一样：`BQ_LOG_FAST_INFO(log, log.cat.xxx, ...)`。代价是：内存稍多一点；它是宏，IDE 代码提示体验差一点；每个调用点必须固定使用第一次调用时的日志对象和格式串。其他地方，普通模式是更简单的默认选择。详见 [API 参考：快速模式](API_REFERENCE_CHS.md#fast-mode)。
 
 ## 谁在生产环境用它？
 
@@ -59,7 +59,7 @@
 
 ## 性能数据在哪？
 
-[docs/BENCHMARK_CHS.md](BENCHMARK_CHS.md)，分两部分：总消耗（整条流水线的吞吐，1–10 线程、每线程 200 万条）和日志线程自身的开销，另外还有峰值内存和输出文件体积。测试代码在 [`benchmark` 分支](https://github.com/Tencent/BqLog/tree/benchmark/benchmark/cross)，可以自己跑。
+[docs/BENCHMARK_CHS.md](BENCHMARK_CHS.md)，分两部分：总消耗（整条流水线的吞吐，1–10 线程、每线程 200 万条）和日志线程自身的开销，另外还有峰值内存和输出文件体积。本版本的测试代码在 [`benchmark_2.6.0`](https://github.com/Tencent/BqLog/tree/benchmark_2.6.0/benchmark/cross)，可以自己跑。
 
 ## 崩溃后日志怎么办？
 
@@ -91,7 +91,7 @@
 
 ## 包体和内存占用多大？
 
-Android 动态库约 200 KB。benchmark 的 10 线程用例（每个 logger 2000 万条日志、同时挂 6 个 logger）里，macOS 上整个 benchmark 进程的峰值内存是 8.5 MB；移动端场景下 BqLog 自身一般 1 MB 上下。对比对象里有到 GB 级的。
+Android 动态库约 200 KB。benchmark 的 10 线程用例（共 2000 万条日志）里，macOS 上整个 benchmark 进程的峰值内存不超过 3.1 MB；移动端场景下 BqLog 自身一般 1 MB 上下。
 
 ## 消费者写不过来时会丢日志吗？
 

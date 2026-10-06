@@ -1,311 +1,324 @@
 # Benchmark
 
-[← Back to Home](../README.md) | [简体中文](./BENCHMARK_CHS.md)
+[← Back to home](../README.md) | [简体中文](./BENCHMARK_CHS.md)
 
-## Why two parts
+BqLog is built for real workloads: logs go to real files on disk; buffers have a fixed size by default and block when full, so nothing is lost; they can be set to grow when needed, and the memory is given back after a burst; crash recovery is supported; and the consumer thread sleeps when idle by default to save CPU, with no tuning needed.
 
-A modern machine runs two kinds of work for every log entry: the **logging thread** that calls `info()`, and the **consumer** — the background thread that formats, compresses and writes. Both run on real cores of the same device. A logger can make the logging thread look fast by pushing work to the consumer, by spinning the consumer on a full core, or by letting a queue grow without bound; the cost has only moved. That is a seesaw, not a speed-up.
+Logging is not the core of an application. A logger whose calls are fast but which takes a lot of CPU for it, or lets its memory grow without bound, is not good enough. So every result below comes with its CPU cost and memory.
 
-BqLog works on both sides at once, and this benchmark measures both:
+- **Part 1: throughput.** Total time and CPU cost until every thread is done and every entry is on disk: the real load logging puts on the machine.
+- **Part 2: latency on the logging thread.** How long one log call takes on the application thread.
 
-1. **Total cost (throughput).** How long it takes from the first log call until every entry is on disk. This is the whole load a logger puts on the machine — producer and consumer together — and the number that decides whether a busy server or game keeps up.
-2. **Cost on the logging thread.** How long the calling thread itself spends inside log calls, in two realistic patterns, reported together with the consumer CPU and memory it took to get there.
+BqLog's C++ numbers all use fast mode (the `BQ_LOG_FAST_INFO` family of macros); section 4 compares it with normal mode.
 
-Both parts use realistic workloads: real files on disk, the same log line with 4 arguments everywhere, every library in its recommended asynchronous configuration with a consumer that sleeps when idle, and no entry dropped.
+## 1. Environment
 
-BqLog C++ is measured in its two modes:
+| | |
+|---|---|
+| Machine | MacBook Pro, Apple M4 Pro (10 performance + 4 efficiency cores), 48 GB |
+| OS | macOS 15.6.1 |
+| Compiler | Apple clang 17, Release, arm64 |
+| Date | 2026-10-05 |
 
-- **Normal mode** — `log.info(...)`, the default API, with the best IDE support.
-- **C++ only fast mode** — `BQ_LOG_FAST_INFO(log, ...)`. Same output, much less work on the logging thread; slightly more memory, weaker IDE hints, and a fixed log object and format string per call site ([details](API_REFERENCE.md#3-write-logs)).
+Libraries (latest releases as of October 2026): BqLog 2.6.0, quill 13.0.0, fmtlog 2.3.0, spdlog 1.17.0, glog 0.7.1, Log4j2 2.26.0 + Disruptor 4.0.0.
 
-## 1. Environments and versions
+## 2. Part 1: throughput
 
-| | macOS | Windows |
-|---|---|---|
-| Machine | MacBook Pro, Apple M4 Pro (10 performance + 4 efficiency cores), 48 GB | PC, AMD Ryzen 9 9950X (16 cores / 32 threads), 96 GB |
-| OS | macOS 15.6.1 | Windows 11 Pro (10.0.26100) |
-| Compiler | Apple clang 17, Release, arm64 | MSVC 14.51, Release x64 |
-| Java | OpenJDK 21.0.8 | JBR 21.0.9 |
-| Measured | 2026-10-05, BqLog 2.6.0 | 2026-09-27, BqLog 2.5.0 (to be re-measured on 2.6.0) |
+### Test case
 
-Libraries, all at their latest release (2026-10):
+- 1, 2, 4, 6, 8 and 10 threads write at the same time, 2,000,000 entries per thread, timed from the first call until everything is flushed to disk; every library blocks instead of dropping entries.
+- Two lines: `"idx:{}, num:{}, This test, {}, {}", t, i, 2.4232f, true` (4 parameters) and `"Empty Log, No Param"` (no parameter).
+- **Fixed size buffers**: BqLog's default (64 KiB per thread, blocks when full); quill with `BoundedBlocking`, 64 KiB per thread; fmtlog with `FMTLOG_BLOCK=1`; spdlog async, 8192 slots, blocking; glog synchronous; Log4j2 AsyncLogger.
+- **Growing buffers**: BqLog `log.buffer_policy_when_full=expand`; quill's default `UnboundedBlocking` queue. The other libraries have no growing queue and are not in this group.
+- Consumer thread: BqLog uses its default policy with nothing set; the other libraries are set up as their own benchmarks or documentation recommend, quill's being a zero-wait busy spin (`sleep_duration=0`; no real application would run like that).
+- BqLog is measured with compressed and with text output. Compressed+encrypted output is almost the same as unencrypted (2% to 15% more time and CPU, within 5% with several threads), so it is left out of the tables to keep them readable.
+- CPU cost is given as **CPU time**: the CPU time of every thread in the process added up, that is, how much CPU the work took in total. Every library does the same amount of work here, so CPU times compare directly; a "CPU usage" figure (CPU time / total time) would be misleading, since the library that finishes sooner would show the higher usage. In part 2 the logging threads write at a fixed pace and every library runs for the same time, so there the consumer's CPU usage is given.
+- Peak memory is the high-water mark of the process's physical memory (macOS `phys_footprint`); every BqLog configuration runs in its own process.
+- BqLog, quill and fmtlog: median of 3 rounds; spdlog, glog and Log4j2: 1 round (spdlog and glog up to 6 threads).
 
-- **BqLog 2.6.0** — Text, Compress and Compress+Encrypt appenders, normal mode and fast mode
-- **quill 13.0.0** — default `UnboundedBlocking` queue; default backend (sleeps 100 µs when idle) in the latency part, busy-spin backend per quill's own benchmark in the throughput part
-- **fmtlog 2.3.0** — compiled with `FMTLOG_BLOCK=1` (its default drops entries when the queue is full)
-- **spdlog 1.17.0** — async logger, 8192-slot queue, blocking overflow policy
-- **glog 0.7.1** — synchronous by design (it has no async mode)
-- **Log4j2 2.26.0** with Disruptor 4.0.0 — AsyncLogger, throughput part only (Java)
+### At 10 threads (4 parameters)
 
-The complete runnable project — CMake with FetchContent, one executable per library, runner scripts for every table below — lives on the [`benchmark` branch](https://github.com/Tencent/BqLog/tree/benchmark/benchmark/cross). The figures here measure the C++ API; other language wrappers add their own runtime and call overhead.
+```mermaid
+---
+config:
+  xyChart:
+    width: 760
+    height: 360
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#2a78d6"
+---
+xychart-beta
+    title "Total time, fixed size buffers, 10 threads, 4 parameters"
+    x-axis ["BqLog compressed", "BqLog text", "quill", "fmtlog", "Log4j2"]
+    y-axis "ms" 0 --> 5000
+    bar [375, 1548, 4338, 2982, 3754]
+```
 
-## 2. Part one: total cost (throughput)
+```mermaid
+---
+config:
+  xyChart:
+    width: 760
+    height: 360
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#2a78d6"
+---
+xychart-beta
+    title "Total time, growing buffers, 10 threads, 4 parameters"
+    x-axis ["BqLog compressed", "BqLog text", "quill"]
+    y-axis "ms" 0 --> 5000
+    bar [504, 1718, 3751]
+```
 
-1–10 threads write at the same time; each thread writes 2,000,000 entries. Timing runs from the start until every entry has been flushed to disk (`force_flush_all_logs()` for BqLog, `spdlog::shutdown()`, `FlushLogFiles`, a draining `poll(true)` for fmtlog, `flush_log()` for quill, `LoggerContext.stop()` for Log4j2). Every run was checked to land exactly 2,000,000 × threads entries in the file.
+```mermaid
+---
+config:
+  xyChart:
+    width: 760
+    height: 360
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#2a78d6"
+---
+xychart-beta
+    title "CPU time, fixed size buffers, 10 threads, 4 parameters"
+    x-axis ["BqLog compressed", "BqLog text", "quill", "fmtlog", "Log4j2"]
+    y-axis "ms" 0 --> 50000
+    bar [3984, 16307, 29048, 32093, 19383]
+```
 
-### 2.1 macOS (Apple M4 Pro)
+```mermaid
+---
+config:
+  xyChart:
+    width: 760
+    height: 360
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#2a78d6"
+---
+xychart-beta
+    title "CPU time, growing buffers, 10 threads, 4 parameters"
+    x-axis ["BqLog compressed", "BqLog text", "quill"]
+    y-axis "ms" 0 --> 10000
+    bar [1613, 4079, 5475]
+```
 
-#### Total time, 4 parameters (ms, lower is better)
+```mermaid
+---
+config:
+  xyChart:
+    width: 760
+    height: 360
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#2a78d6"
+---
+xychart-beta
+    title "Peak memory, fixed size buffers, 10 threads, 4 parameters"
+    x-axis ["BqLog compressed", "BqLog text", "quill", "fmtlog"]
+    y-axis "MB" 0 --> 20
+    bar [3.0, 3.1, 10.3, 12.0]
+```
 
-| | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| BqLog Compress, fast mode (C++) | 36 | 70 | 109 | 145 | 182 | 238 | 256 | 313 | 347 | 411 |
-| BqLog Compress+Encrypt, fast mode (C++) | 46 | 78 | 123 | 158 | 193 | 248 | 270 | 311 | 358 | 456 |
-| BqLog Text, fast mode (C++) | 178 | 334 | 480 | 623 | 805 | 1003 | 1098 | 1280 | 1471 | 1865 |
-| BqLog Compress, normal mode (C++) | 53 | 79 | 113 | 148 | 209 | 244 | 272 | 313 | 357 | 438 |
-| BqLog Compress+Encrypt, normal mode (C++) | 45 | 84 | 120 | 159 | 209 | 246 | 285 | 326 | 374 | 457 |
-| BqLog Text, normal mode (C++) | 169 | 304 | 440 | 603 | 785 | 1010 | 1077 | 1234 | 1428 | 1736 |
-| fmtlog | 270 | 534 | 800 | 1065 | 1382 | 1602 | 1885 | 2091 | 2500 | 2899 |
-| quill | 361 | 725 | 1112 | 1459 | 1811 | 2221 | 2597 | 3004 | 3323 | 3953 |
-| Log4j2 (Java) | 740 | 1024 | 1420 | 1750 | 2313 | 2483 | 3005 | 3469 | 3785 | 3808 |
-| spdlog (async) | 573 | 1681 | 3520 | 6904 | 13843 | 25105 | 35947 | 42858 | 49091 | 56292 |
-| glog | 2413 | 4135 | 6635 | 9958 | 13673 | 21834 | 28843 | 34818 | 40268 | 44857 |
+```mermaid
+---
+config:
+  xyChart:
+    width: 760
+    height: 360
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#2a78d6"
+---
+xychart-beta
+    title "Peak memory, growing buffers, 10 threads, 4 parameters"
+    x-axis ["BqLog compressed", "BqLog text", "quill"]
+    y-axis "MB" 0 --> 2000
+    bar [657, 746, 1383]
+```
 
-#### Total time, no parameter (ms, lower is better)
+### Total time, 4 parameters (ms, lower is better)
 
-| | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| BqLog Compress, fast mode (C++) | 38 | 72 | 103 | 122 | 137 | 167 | 197 | 235 | 255 | 303 |
-| BqLog Compress+Encrypt, fast mode (C++) | 38 | 67 | 109 | 129 | 137 | 168 | 203 | 222 | 259 | 319 |
-| BqLog Text, fast mode (C++) | 87 | 160 | 211 | 312 | 369 | 452 | 524 | 633 | 696 | 916 |
-| BqLog Compress, normal mode (C++) | 25 | 64 | 77 | 107 | 177 | 172 | 188 | 215 | 255 | 321 |
-| BqLog Compress+Encrypt, normal mode (C++) | 32 | 63 | 78 | 105 | 138 | 167 | 231 | 224 | 252 | 324 |
-| BqLog Text, normal mode (C++) | 98 | 173 | 201 | 284 | 351 | 428 | 497 | 573 | 647 | 856 |
-| fmtlog | 156 | 305 | 495 | 666 | 830 | 1031 | 1166 | 1381 | 1481 | 1932 |
-| quill | 223 | 462 | 721 | 946 | 1178 | 1442 | 1744 | 2017 | 2215 | 2532 |
-| spdlog (async) | 500 | 1480 | 3245 | 6064 | 12925 | 24201 | 33739 | 40360 | 46564 | 55105 |
-| glog | 1761 | 3140 | 4956 | 7283 | 10530 | 19427 | 26027 | 31964 | 37053 | 40587 |
+| | 1 Thread | 2 Threads | 4 Threads | 6 Threads | 8 Threads | 10 Threads |
+|---|---:|---:|---:|---:|---:|---:|
+| BqLog, compressed | 39 | 74 | 148 | 223 | 299 | 375 |
+| BqLog, text | 152 | 312 | 617 | 935 | 1236 | 1548 |
+| quill | 331 | 706 | 1517 | 2328 | 3350 | 4338 |
+| fmtlog | 254 | 508 | 1089 | 1577 | 2097 | 2982 |
+| spdlog (async) | 535 | 1762 | 6758 | 25056 | - | - |
+| glog (synchronous) | 2322 | 4033 | 9929 | 21544 | - | - |
+| Log4j2 (Java) | 665 | 954 | 1872 | 2388 | 3424 | 3754 |
+| BqLog, compressed, expand | 43 | 91 | 196 | 302 | 392 | 504 |
+| BqLog, text, expand | 161 | 327 | 667 | 1017 | 1368 | 1718 |
+| quill, default queue (grows) | 348 | 690 | 1433 | 2212 | 2952 | 3751 |
 
-#### Peak memory of the throughput run (MB)
+### CPU time, 4 parameters (ms, all threads, lower is better)
 
-Peak resident set size of the whole process, from the kernel's high-water mark. The BqLog process hosts all six configurations (three appenders × two modes) at once; every other process hosts one logger.
+| | 1 Thread | 2 Threads | 4 Threads | 6 Threads | 8 Threads | 10 Threads |
+|---|---:|---:|---:|---:|---:|---:|
+| BqLog, compressed | 76 | 219 | 734 | 1506 | 2427 | 3984 |
+| BqLog, text | 303 | 784 | 3047 | 6453 | 10992 | 16307 |
+| quill | 493 | 1350 | 4697 | 9621 | 18139 | 29048 |
+| fmtlog | 475 | 1461 | 5310 | 10809 | 18490 | 32093 |
+| spdlog (async) | 966 | 3675 | 20142 | 85372 | - | - |
+| glog (synchronous) | 2318 | 7342 | 30661 | 92488 | - | - |
+| Log4j2 (Java) | 2810 | 4386 | 9206 | 12036 | 17525 | 19383 |
+| BqLog, compressed, expand | 85 | 195 | 461 | 804 | 1161 | 1613 |
+| BqLog, text, expand | 322 | 670 | 1404 | 2218 | 3095 | 4079 |
+| quill, default queue (grows) | 487 | 968 | 2032 | 3194 | 4287 | 5475 |
 
-| | 1 Thread | 4 Threads | 10 Threads |
-|---|---:|---:|---:|
-| BqLog (6 configurations in one process) | 5.4 | 6.6 | 8.5 |
-| quill | 143.2 | 560.8 | 1405.7 |
-| fmtlog | 2.6 | 5.7 | 12.2 |
-| spdlog (async) | 5.0 | 8.5 | 8.6 |
-| glog | 1.6 | 2.0 | 2.5 |
+### Peak memory, 4 parameters (MB)
 
-#### Output file size (1 thread, 4 million entries)
+| | 1 Thread | 2 Threads | 4 Threads | 6 Threads | 8 Threads | 10 Threads |
+|---|---:|---:|---:|---:|---:|---:|
+| BqLog, compressed | 2.3 | 2.5 | 2.6 | 2.8 | 3.0 | 3.0 |
+| BqLog, text | 2.3 | 2.4 | 2.5 | 2.7 | 3.0 | 3.1 |
+| quill | 5.4 | 7.3 | 5.4 | 7.2 | 8.9 | 10.3 |
+| fmtlog | 2.3 | 3.3 | 5.5 | 7.7 | 9.9 | 12.0 |
+| spdlog (async) | 4.5 | 4.5 | 4.6 | 4.7 | - | - |
+| glog (synchronous) | 1.1 | 1.3 | 1.4 | 1.5 | - | - |
+| BqLog, compressed, expand | 62.0 | 136.7 | 278.2 | 408.1 | 532.2 | 657.3 |
+| BqLog, text, expand | 75.0 | 150.6 | 303.3 | 451.3 | 598.3 | 745.6 |
+| quill, default queue (grows) | 142.9 | 278.1 | 552.0 | 835.2 | 1111.7 | 1383.4 |
+
+### Total time, no parameter (ms, lower is better)
+
+| | 1 Thread | 2 Threads | 4 Threads | 6 Threads | 8 Threads | 10 Threads |
+|---|---:|---:|---:|---:|---:|---:|
+| BqLog, compressed | 42 | 68 | 123 | 171 | 228 | 287 |
+| BqLog, text | 71 | 145 | 288 | 435 | 568 | 715 |
+| quill | 211 | 437 | 977 | 1542 | 2242 | 2905 |
+| fmtlog | 158 | 311 | 671 | 1017 | 1333 | 1797 |
+| spdlog (async) | 509 | 1521 | 5956 | 24097 | - | - |
+| glog (synchronous) | 1730 | 3012 | 7203 | 19185 | - | - |
+| BqLog, compressed, expand | 48 | 56 | 116 | 198 | 250 | 324 |
+| BqLog, text, expand | 73 | 149 | 303 | 463 | 608 | 771 |
+| quill, default queue (grows) | 222 | 448 | 910 | 1439 | 1935 | 2520 |
+
+### CPU time, no parameter (ms, all threads, lower is better)
+
+| | 1 Thread | 2 Threads | 4 Threads | 6 Threads | 8 Threads | 10 Threads |
+|---|---:|---:|---:|---:|---:|---:|
+| BqLog, compressed | 84 | 198 | 612 | 1170 | 2006 | 3080 |
+| BqLog, text | 141 | 363 | 1214 | 2717 | 4837 | 7291 |
+| quill | 328 | 885 | 3100 | 6585 | 12403 | 19828 |
+| fmtlog | 285 | 879 | 3205 | 6843 | 11597 | 19095 |
+| spdlog (async) | 839 | 2988 | 17195 | 79658 | - | - |
+| glog (synchronous) | 1726 | 5401 | 21206 | 74055 | - | - |
+| BqLog, compressed, expand | 96 | 159 | 420 | 721 | 971 | 1170 |
+| BqLog, text, expand | 146 | 356 | 811 | 1269 | 1712 | 2072 |
+| quill, default queue (grows) | 373 | 801 | 1666 | 2611 | 3507 | 4380 |
+
+### Output file size (1 thread, 2,000,000 entries of each line)
 
 | | Format | Size | Bytes per entry |
 |---|---|---:|---:|
-| BqLog Compress (either mode) | binary | 47 MB | 12 |
-| BqLog Compress+Encrypt (either mode) | binary, encrypted | 47 MB | 12 |
-| BqLog Text (either mode) | text | 317 MB | 79 |
-| quill | text | 263 MB | 66 |
+| BqLog, compressed | binary | 47 MB | 12 |
+| BqLog, compressed+encrypted | binary, encrypted | 47 MB | 12 |
+| BqLog, text | text | 317 MB | 79 |
+| quill | text | 267 MB | 67 |
 | fmtlog | text | 299 MB | 75 |
-| spdlog (async) | text | 303 MB | 76 |
+| spdlog (async) | text | 307 MB | 77 |
 | glog | text | 349 MB | 87 |
-| Log4j2 | text | 213 MB (2 million entries, 4 parameters only) | 106 |
 
-#### Reading the macOS throughput numbers
+### Conclusions
 
-- **BqLog Compress is 5–7x faster than fmtlog, 7–10x faster than quill and 9–14x faster than Log4j2**, with 4 parameters; spdlog (async) and glog are one to two orders of magnitude behind.
-- **BqLog Text** — formatting every entry into a full text line — is still **1.6–1.8x faster than fmtlog** and 2.1–2.5x faster than quill, the fastest text loggers here.
-- **Fast mode does not hand its gain back on the consumer.** Total throughput is about the same in both modes: within a few percent for most thread counts, a little faster for Compress, a little slower for Text. The consumer reads fast mode records in place, so what fast mode saves on the logging thread is not paid again on the background core.
-- **Encryption is close to free**: Compress+Encrypt stays within a few percent of Compress at 2–10 threads.
-- **Memory**: quill's per-thread queues grow under sustained load (up to 1.4 GB at 10 threads); BqLog stays within single-digit megabytes with six loggers in one process.
+- **Fixed size buffers (the default)**: at every thread count and for both lines, BqLog has the lowest total time and CPU time of all libraries. With 4 parameters, against the best other library at each thread count: BqLog compressed is 6.5 to 8 times faster with 1/4.9 to 1/7.2 of the CPU time; BqLog text is 1.6 to 1.9 times faster with 16% to 42% less CPU time. BqLog's peak memory stays within 3.1 MB.
+- **Growing buffers**: against a queue that grows as well, BqLog compressed is 7 to 8 times faster with 1/3.4 to 1/5.7 of the CPU time; BqLog text is about 2 times faster with 25% to 34% less CPU time; peak memory is about half.
+- The compressed format is about 1/7 the size of text.
 
-### 2.2 Windows (AMD Ryzen 9 9950X)
+## 3. Part 2: latency on the logging thread
 
-> Measured on BqLog 2.5.0 (normal mode only) with quill 11.1.0, fmtlog @ 308b231 and Log4j2 2.23.1. To be re-measured on 2.6.0 with the library versions listed above.
+### Test case
 
-#### Total time, 4 parameters (ms, lower is better)
+One source and one timing method for every library:
 
-| | 1 Thread | 2 Threads | 3 Threads | 4 Threads | 5 Threads | 6 Threads | 7 Threads | 8 Threads | 9 Threads | 10 Threads |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| BqLog Compress (C++) | 95 | 144 | 210 | 210 | 226 | 267 | 362 | 395 | 439 | 507 |
-| BqLog Compress+Encrypt (C++) | 102 | 166 | 167 | 190 | 236 | 308 | 350 | 391 | 453 | 493 |
-| BqLog Text (C++) | 258 | 513 | 777 | 1054 | 1324 | 1587 | 1891 | 2143 | 2465 | 2811 |
-| fmtlog | 672 | 1219 | 1766 | 2428 | 3024 | 3923 | 4612 | 5935 | 6293 | 7934 |
-| quill | 639 | 1429 | 2232 | 3082 | 3915 | 4726 | 5609 | 6246 | 6957 | 7812 |
-| Log4j2 (Java) | 873 | 1484 | 2087 | 2727 | 3738 | 4541 | 4889 | 6127 | 9475 | 7192 |
-| spdlog (async) | 560 | 1649 | 3402 | 5737 | 9069 | 13827 | 21494 | 24518 | 28463 | 32939 |
-| glog | 4485 | 8548 | 14875 | 21387 | 28295 | 36060 | 45742 | 62368 | 102370 | 127550 |
+- every logging thread writes batches of 20 calls with a random 2000-2200 us busy wait between batches, 5,000 batches per thread
+- a serialized hardware counter is read before and after each batch (arm64: `isb; mrs cntvct_el0; isb`), latency per call = batch time / 20
+- the log call is a lambda inlined into the timed loop, like a call site in user code
+- every library uses a fixed size queue that blocks when full (64 KiB per thread); every consumer sleeps 1 ms when idle (BqLog `log.worker_interval_ms=1`, quill `sleep_duration=1ms`, fmtlog polling every 1 ms)
+- columns: **p50** (a typical call), **p99 / p99.9** (the slowest 1% / 0.1%), **mean** (total time in log calls / number of calls: how much of the application thread logging takes), next to the consumer CPU (average CPU usage of every thread but the logging threads, as a percentage of one core) and peak memory
+- median of 5 interleaved rounds. The hardware counter on this machine ticks about every 41.7 ns, so spread over a batch of 20 the resolution is about 2 ns per call.
 
-#### Peak memory (MB), Windows peak working set
+```mermaid
+---
+config:
+  xyChart:
+    width: 760
+    height: 360
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#2a78d6"
+---
+xychart-beta
+    title "Mean latency on the logging thread, 1 logging thread (spdlog: 220 ns, see the table)"
+    x-axis ["BqLog", "quill", "fmtlog"]
+    y-axis "ns" 0 --> 50
+    bar [6.3, 6.9, 27.7]
+```
 
-| | 1 Thread | 4 Threads | 10 Threads |
-|---|---:|---:|---:|
-| BqLog (3 appenders in one process) | 12.7 | 13.3 | 14.7 |
-| spdlog (async) | 14.4 | 14.4 | 14.7 |
-| glog | 11.9 | 12.1 | 12.4 |
-| fmtlog | 17.1 | 20.2 | 23.3 |
-| quill | 282.1 | 1062.7 | 2714.9 |
-| Log4j2 (Java) | 1537.8 | 6884.3 | 4631.5 |
+### 1 logging thread
 
-## 3. Part two: cost on the logging thread
+| | p50 (ns) | p99 (ns) | p99.9 (ns) | mean (ns) | consumer CPU | peak memory (MB) |
+|---|---:|---:|---:|---:|---:|---:|
+| BqLog | 4 | 29 | 77 | 6.3 | 0.5% | 1.9 |
+| quill | 4 | 29 | 154 | 6.9 | 0.5% | 1.9 |
+| fmtlog | 16 | 166 | 227 | 27.7 | 0.5% | 2.4 |
+| spdlog (async) | 177 | 458 | 907 | 220.2 | 0.4% | 4.7 |
 
-### 3.1 How it is measured
+### 4 logging threads
 
-Each logging thread writes **bursts of 100 log calls** and times every burst with `steady_clock` — one clock read per burst, so the clock's own cost and resolution are spread over 100 calls. Two scenarios:
+| | p50 (ns) | p99 (ns) | p99.9 (ns) | mean (ns) | consumer CPU | peak memory (MB) |
+|---|---:|---:|---:|---:|---:|---:|
+| BqLog | 6 | 166 | 250 | 19.2 | 1.1% | 2.5 |
+| quill | 6 | 168 | 252 | 18.4 | 1.2% | 2.9 |
+| fmtlog | 18 | 175 | 294 | 34.3 | 0.9% | 5.7 |
+| spdlog (async) | 193 | 573 | 1175 | 228.4 | 1.5% | 5.0 |
 
-- **busy** — bursts back to back. The thread logs non-stop and keeps the consumer fully loaded; this is where a producer meets a full buffer.
-- **occasional** — a 1 ms sleep after every burst. This is how most applications log: in short spurts, coming back to the logger after other work, with cold caches.
+### Conclusions
 
-For each scenario we report, per log call:
+- BqLog's cost on the logging thread is in the lowest tier of the libraries measured: with 1 thread p50 4 ns, p99 29 ns, p99.9 77 ns, none above any other library; with 4 threads it matches the best other library (the means differ by 0.8 ns, within the timer resolution).
+- Against fmtlog and spdlog, BqLog's p50 is 3 to 40 times lower, and its p99 and p99.9 are lower too.
+- Every library's consumer CPU stays within 1.5%.
 
-- **mean** — total time spent in log calls ÷ number of calls. Every stall is included, so this is the share of the thread's time that logging takes. If you read only one number, read this one.
-- **p50** — a typical burst.
-- **p99** — the slowest 1% of bursts: blocking on a full buffer, page faults, interference from the consumer.
+## 4. Fast mode and normal mode
 
-We report percentiles over bursts, not a single per-call histogram, on purpose: with an ordinary clock, a single call of a few nanoseconds cannot be measured honestly, while a burst of 100 can.
+BqLog's C++ API has two ways to write a log, with exactly the same output:
 
-And next to them, **what the speed costs**: the **consumer CPU** (CPU time of everything but the logging threads, as % of one core) and the **peak memory** of the process. A logging thread can be made almost free by giving the consumer a whole core, or by letting the queue grow without limit; those two columns show whether that happened.
+- **Normal mode**: `log.info("idx:{}", i)`, available in every language wrapper, with the best IDE completion.
+- **Fast mode**: `BQ_LOG_FAST_INFO(log, "idx:{}", i)`, C++ only. Each call site binds the log object and format string of its first call ([details](API_REFERENCE.md#fast-mode)).
 
-All consumers run in their default, idle-sleeping configuration (quill's backend sleeps 100 µs, BqLog's worker sleeps until woken), all loggers write text files with the same line, and each scenario runs 7 interleaved rounds; the tables show the median.
+| | Fast mode | Normal mode |
+|---|---|---|
+| Throughput, fixed size buffers, 4 parameters (total time and CPU time) | within ±8% of normal mode | baseline |
+| Throughput, fixed size buffers, no parameter (total time and CPU time) | text about the same; compressed 62% more at 1 thread, 28% to 45% more at 2 threads, 3% to 17% more from 4 threads up | baseline |
+| Logging thread, 1 thread (p50 / p99 / mean, ns) | 4 / 29 / 6.3 | 12 / 60 / 16.2 |
+| Logging thread, 4 threads (p50 / p99 / mean, ns) | 6 / 166 / 19.2 | 16 / 181 / 26.9 |
 
-### 3.2 macOS (Apple M4 Pro)
+The two modes reach about the same throughput: what fast mode saves on the logging thread is not moved onto the consumer thread (the exception is compressed output with no parameter, where fast mode is a little slower with few threads). The difference is mainly on the logging thread, where a fast mode call is about 8 to 10 nanoseconds quicker - negligible in real applications.
 
-#### busy, 1 thread
+With growing buffers fast mode has clearly better throughput (with several threads normal mode takes 1.5 to 3.7 times as long), so use fast mode where buffers need to grow.
 
-| | mean (ns) | p50 (ns) | p99 (ns) | consumer CPU | peak memory (MB) |
-|---|---:|---:|---:|---:|---:|
-| BqLog, fast mode | 75.4 | 5.0 | 904.2 | 100% | 2.6 |
-| BqLog, normal mode | 79.1 | 13.3 | 376.2 | 100% | 2.6 |
-| quill | 5.9 | 2.1 | 17.1 | 97% | 143.4 |
-| fmtlog | 118.3 | 115.0 | 186.7 | 99% | 2.8 |
-| spdlog (async) | 288.1 | 277.5 | 492.9 | 94% | 5.3 |
-
-#### busy, 4 threads
-
-| | mean (ns) | p50 (ns) | p99 (ns) | consumer CPU | peak memory (MB) |
-|---|---:|---:|---:|---:|---:|
-| BqLog, fast mode | 287.1 | 7.5 | 4930.0 | 100% | 4.3 |
-| BqLog, normal mode | 280.3 | 12.1 | 1967.9 | 100% | 4.2 |
-| quill | 8.9 | 2.5 | 17.1 | 97% | 566.8 |
-| fmtlog | 529.1 | 496.7 | 1625.0 | 100% | 7.3 |
-| spdlog (async) | 3492.3 | 3363.3 | 6442.9 | 83% | 6.8 |
-
-#### occasional, 1 thread
-
-| | mean (ns) | p50 (ns) | p99 (ns) | consumer CPU | peak memory (MB) |
-|---|---:|---:|---:|---:|---:|
-| BqLog, fast mode | 47.5 | 24.6 | 287.9 | 3% | 2.3 |
-| BqLog, normal mode | 92.4 | 55.8 | 542.1 | 3% | 2.3 |
-| quill | 4.2 | 3.8 | 11.2 | 5% | 6.4 |
-| fmtlog | 47.1 | 35.4 | 199.2 | 6% | 2.5 |
-| spdlog (async) | 651.6 | 492.1 | 3471.7 | 7% | 5.0 |
-
-#### occasional, 4 threads
-
-| | mean (ns) | p50 (ns) | p99 (ns) | consumer CPU | peak memory (MB) |
-|---|---:|---:|---:|---:|---:|
-| BqLog, fast mode | 34.9 | 18.3 | 210.0 | 8% | 2.8 |
-| BqLog, normal mode | 68.5 | 41.7 | 387.9 | 8% | 2.8 |
-| quill | 4.0 | 3.8 | 12.1 | 10% | 14.3 |
-| fmtlog | 43.2 | 35.8 | 165.0 | 12% | 5.9 |
-| spdlog (async) | 963.6 | 792.9 | 3523.3 | 20% | 5.3 |
-
-#### Reading the logging thread numbers
-
-- **quill has the cheapest logging thread on this machine**, 4–9 ns per call in every scenario. In the busy scenario that comes with memory: its queues grow to 143 MB with one thread and 567 MB with four, where every other logger stays under 8 MB. In the occasional scenario its backend also polls every 100 µs while the application is idle, which is why its consumer uses more CPU than BqLog's while doing the same work.
-- **BqLog's fast mode keeps a typical burst at 5–8 ns per call while the consumer is under full load** (busy, p50), about 2x below normal mode. The busy mean is much higher, for both modes, because the busy scenario produces text faster than any consumer here can format it: BqLog's default buffer (64 KB per thread) fills, and the logging thread waits for the consumer instead of growing memory. That wait is the default `block` policy at work; `log.buffer_policy_when_full=expand` or a larger `log.buffer_size` trades it for memory, which is what quill's default unbounded queue does. Part one shows how quickly BqLog's consumer works through such a backlog.
-- **In the occasional scenario, fast mode costs about half of normal mode** (18–25 ns vs 42–56 ns typical per call), but quill stays far ahead at 4 ns. Our measurements show where that gap comes from: the first call after the 1 ms sleep costs BqLog's fast mode about 1,800 cycles against quill's 500, and the following calls of the burst run at roughly half the clock speed. quill's backend wakes every 100 µs even when there is nothing to do, which keeps the core warm and clocked up; BqLog's worker sleeps until there is work. When we let a dummy thread wake every 100 µs next to BqLog, the same fast mode burst dropped from about 51 to 16 cycles per call. In other words, this part of quill's lead is bought with a consumer that never really goes to sleep — a trade-off BqLog deliberately does not make. Narrowing this gap without that trade-off is on our list.
-- **BqLog's consumer is the lightest** in the occasional scenario (3–8% of a core, against 5–20% for the others), and in total cost (part one) it finishes the same work 7–10x sooner than quill.
-
-## 4. Feature comparison
+## 5. Features
 
 | Feature | BqLog | spdlog | glog | fmtlog | quill | Log4j2 |
-|---------|-------|--------|------|--------|-------|--------|
-| Async logging | ✅ | ✅ (used in this benchmark) | ❌ (not supported) | ✅ | ✅ | ✅ |
-| Real-time compression | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ (rolling gzip) |
-| Log encryption | ✅ (RSA+AES hybrid) | ❌ | ❌ | ❌ | ❌ | ❌ |
+|------|-------|--------|------|--------|-------|--------|
+| Asynchronous | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
+| Real-time compression | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ (gzip on roll) |
+| Encryption | ✅ (RSA+AES hybrid) | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Crash recovery | ✅ (Recovery) | ❌ | ✅ (signal handler) | ❌ | ✅ (signal handler) | ❌ |
-| Multi-language | ✅ (C++/Java/C#/Python/TypeScript/ArkTS/Go) | ❌ (C++ only) | ❌ (C++ only) | ❌ (C++ only) | ❌ (C++ only) | Java only |
-| Cross-platform | ✅ (Win/Mac/Linux/iOS/Android/HarmonyOS) | ✅ (Win/Mac/Linux) | ✅ (Win/Mac/Linux) | ✅ (Win/Mac/Linux) | ✅ (Win/Mac/Linux) | JVM |
-| `{fmt}` formatting | ✅ | ✅ | ❌ (stream) | ✅ | ✅ | ✅ (similar) |
-| No-heap-alloc hot path | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Languages | ✅ (C++/Java/C#/Python/TypeScript/ArkTS/Go) | ❌ (C++ only) | ❌ (C++ only) | ❌ (C++ only) | ❌ (C++ only) | Java only |
+| Platforms | ✅ (Win/Mac/Linux/iOS/Android/HarmonyOS) | ✅ (Win/Mac/Linux) | ✅ (Win/Mac/Linux) | ✅ (Win/Mac/Linux) | ✅ (Win/Mac/Linux) | JVM |
+| `{fmt}` formatting | ✅ | ✅ | ❌ (streams) | ✅ | ✅ | ✅ (similar) |
 | Game engine plugins | ✅ (Unity/Unreal) | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-## 5. Notes on fairness
+## 6. Source code
 
-- **Everyone writes everything.** No logger drops entries: fmtlog runs with `FMTLOG_BLOCK=1`, spdlog with its blocking overflow policy, BqLog with its default `block` policy, quill with its default blocking queue. Every throughput run was verified to land exactly 2,000,000 × threads entries.
-- **quill** uses its own benchmark's busy-spin backend in the throughput part (its fastest setting) and its default sleeping backend in the latency part, where every consumer must be in the same, realistic mode.
-- **spdlog** is measured in its async mode, its recommended high-throughput configuration; timing ends after `spdlog::shutdown()` has drained the queue.
-- **glog** is synchronous by design and uses its stream API; it has no `{fmt}`-style formatting.
-- **fmtlog**: `setLogFile()` races with its polling thread, so its two throughput tests run in separate processes, and the final flush stops the polling thread first and drains with `poll(true)`.
-- **Log4j2** is in the throughput part only; its numbers include the JVM.
+The complete project for this version (2.6.0) is at [`benchmark_2.6.0`](https://github.com/Tencent/BqLog/tree/benchmark_2.6.0/benchmark/cross): CMake + FetchContent, one executable per library, the runner scripts, the raw data, and `make_tables.py`, which produces these tables and charts. Benchmarks of other versions: see the [index on the `benchmark` branch](https://github.com/Tencent/BqLog/tree/benchmark).
 
-## 6. Appendix: benchmark source code
-
-The sources live on the [`benchmark` branch](https://github.com/Tencent/BqLog/tree/benchmark/benchmark/cross): `bench_<lib>.cpp` for the throughput part (one executable per library), `bench_latency.cpp` for the logging thread part (one source, built once per library), `run_benchmark.sh`/`.ps1`, `run_latency.sh`, `measure_memory.sh`/`.ps1`, the Log4j2 project under `log4j/`, and `make_tables.py`, which turns the CSV output into the tables above.
-
-### 6.1 BqLog, throughput
-
-```cpp
-// normal mode: log.info
-static void run_test(bq::log& log_obj, const char* lib_name, int thread_count, bool multi_param)
-{
-    auto start = std::chrono::steady_clock::now();
-    std::vector<std::thread> threads;
-    for (int t = 0; t < thread_count; ++t) {
-        threads.emplace_back([t, &log_obj, multi_param]() {
-            for (int i = 0; i < ITERATIONS; ++i) {
-                if (multi_param) {
-                    log_obj.info("idx:{}, num:{}, This test, {}, {}", t, i, 2.4232f, true);
-                } else {
-                    log_obj.info("Empty Log, No Param");
-                }
-            }
-        });
-    }
-    for (auto& th : threads) th.join();
-    bq::log::force_flush_all_logs();
-    report(lib_name, thread_count, multi_param, start);
-}
-
-// C++ only fast mode: BQ_LOG_FAST_* macros. A call site binds the log object of its first call,
-// so every log gets its own instantiation (and with it its own call sites).
-template <int LOG_TAG>
-static void run_fast_test(bq::log& log_obj, const char* lib_name, int thread_count, bool multi_param)
-{
-    // ... same loop, with
-    //     BQ_LOG_FAST_INFO(log_obj, "idx:{}, num:{}, This test, {}, {}", t, i, 2.4232f, true);
-}
-```
-
-Appender configuration (Text uses `type=text_file`; Compress+Encrypt adds `pub_key=...`):
-
-```
-log.high_perform_mode_freq_threshold_per_second=1
-appenders_config.appender_0.type=compressed_file
-appenders_config.appender_0.levels=[all]
-appenders_config.appender_0.file_name=output/bqlog_compress
-appenders_config.appender_0.always_create_new_file=true
-```
-
-### 6.2 Logging thread part (all libraries)
-
-```cpp
-static void producer(int t, bool occasional, std::vector<double>& out, double& cpu_ms)
-{
-    const double cpu_start = thread_cpu_ms();
-    const int bursts = occasional ? OCCASIONAL_BURSTS : BUSY_BURSTS; // 2000 : 20000
-    int counter = 0;
-    for (int w = 0; w < 100 * BURST_CALLS; ++w) {                     // warm up
-        log_one(t, counter++);
-    }
-    for (int b = 0; b < bursts; ++b) {
-        const auto start = std::chrono::steady_clock::now();
-        for (int k = 0; k < BURST_CALLS; ++k) {                        // 100 calls
-            log_one(t, counter++);
-        }
-        const auto end = std::chrono::steady_clock::now();
-        out.push_back(std::chrono::duration<double, std::nano>(end - start).count() / BURST_CALLS);
-        if (occasional) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-    }
-    cpu_ms = thread_cpu_ms() - cpu_start;
-}
-```
-
-`log_one` is the only line that differs between libraries, for example `g_log->info(...)` / `BQ_LOG_FAST_INFO(*g_log, ...)` for BqLog and `LOG_INFO(g_logger, ...)` for quill, always with `"idx:{}, num:{}, This test, {}, {}", t, i, 2.4232f, true`. Consumer CPU is process CPU time minus the logging threads' own CPU time, divided by the wall time.
-
-### 6.3 Other libraries, throughput
-
-The spdlog, glog, fmtlog, quill and Log4j2 throughput programs follow the same structure as 6.1 — same thread layout, same two log lines, timing until everything is on disk — with each library's own async setup described in section 1 and section 5. See `bench_spdlog.cpp`, `bench_glog.cpp`, `bench_fmtlog.cpp`, `bench_quill.cpp` and `log4j/src/bq/benchmark/log4j/main.java` on the benchmark branch.
+- throughput: `bench_<lib>.cpp`, `run_benchmark.sh` (`bench_bqlog <threads> <block|expand> [config]`, `bench_quill <threads> <block|expand>`)
+- latency on the logging thread: `bench_latency.cpp` (one source, built once per library), `run_latency.sh`
+- reading CPU and memory: `bench_sys.h`

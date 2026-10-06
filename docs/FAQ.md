@@ -23,7 +23,7 @@ But the real difference is industrial completeness. What a logging library faces
 
 ## What is the C++ fast mode, and when should I use it?
 
-`BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL` are C++ only macros that write the same log entry as `log.info` and friends (the normal mode) at a fraction of the cost on the calling thread. Use them on hot paths. The trade-offs: slightly more memory, weaker IDE hints because they are macros, default category only, and each call site must keep using the log object and format string of its first call. Everywhere else, the normal mode is the simpler default. See [API Reference — fast mode](API_REFERENCE.md#3-write-logs).
+`BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL` are C++ only macros that write the same log entry as `log.info` and friends (the normal mode) at a fraction of the cost on the calling thread. Use them on hot paths. Categories work the same way as in the normal mode: `BQ_LOG_FAST_INFO(log, log.cat.xxx, ...)`. The trade-offs: slightly more memory, weaker IDE hints because they are macros, and each call site must keep using the log object and format string of its first call. Everywhere else, the normal mode is the simpler default. See [API Reference — fast mode](API_REFERENCE.md#fast-mode).
 
 ## Who runs it in production?
 
@@ -59,7 +59,7 @@ Every language has its proper channel:
 
 ## Where are the performance numbers?
 
-[docs/BENCHMARK.md](BENCHMARK.md), in two parts: total cost (throughput of the whole pipeline, 1–10 threads, 2 million entries per thread) and the cost on the logging thread itself, plus peak memory and output file size. The test code lives on the [`benchmark` branch](https://github.com/Tencent/BqLog/tree/benchmark/benchmark/cross) and you can rerun it yourself.
+[docs/BENCHMARK.md](BENCHMARK.md), in two parts: total cost (throughput of the whole pipeline, 1–10 threads, 2 million entries per thread) and the cost on the logging thread itself, plus peak memory and output file size. The test code for this version lives at [`benchmark_2.6.0`](https://github.com/Tencent/BqLog/tree/benchmark_2.6.0/benchmark/cross) and you can rerun it yourself.
 
 ## What happens to my logs if the process crashes?
 
@@ -91,7 +91,7 @@ Yes, plain text is available through the TextFileAppender — and even that text
 
 ## How big is the library, and how much memory does it use?
 
-About 200 KB as an Android dynamic library. In the 10-thread benchmark case (20 million entries per logger, six loggers active), the whole benchmark process peaks at 8.5 MB on macOS; on mobile, BqLog itself generally uses around 1 MB. One comparison object in the same run peaks in the GB range.
+About 200 KB as an Android dynamic library. In the 10-thread benchmark case (20 million entries in total), the whole benchmark process peaks at no more than 3.1 MB on macOS; on mobile, BqLog itself generally uses around 1 MB.
 
 ## Will logs be dropped if the consumer can't keep up?
 

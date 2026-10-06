@@ -131,6 +131,8 @@ log_obj.error("Error code: {}", err_code);
 
 支持的 `STR` 类型：`char*`、`char16_t*`、`char32_t*`、`wchar_t*`、`std::string`、`std::u16string`、`std::wstring`、Unreal `FString` / `FName` / `FText` 等。
 
+<a id="fast-mode"></a>
+
 #### C++ 专属的快速模式
 
 除了普通模式（`log_obj.info(...)` 等各级别函数），C++ 还有一个快速模式：六个宏，写出的日志和普通模式完全一样，但调用线程的开销小得多。
@@ -139,18 +141,20 @@ log_obj.error("Error code: {}", err_code);
 BQ_LOG_FAST_INFO(log_obj, "Hello {}, count={}", "world", 42);
 BQ_LOG_FAST_ERROR(log_obj, "Error code: {}", err_code);
 // BQ_LOG_FAST_VERBOSE, BQ_LOG_FAST_DEBUG, BQ_LOG_FAST_INFO, BQ_LOG_FAST_WARNING, BQ_LOG_FAST_ERROR, BQ_LOG_FAST_FATAL
+
+// 生成的 Category 日志类：同一个宏，Category 放在格式串前面，写法和 info(cat, ...) 一样
+BQ_LOG_FAST_INFO(my_category_log, my_category_log.cat.Shop.Seller, "order {} paid", order_id);
 ```
 
 每个调用点第一次执行时，把格式串注册一次；之后调用线程只做三件事：判断级别、写入时间戳和原始参数到本线程自己的缓冲区、返回。格式串不再拷贝也不再计算哈希，全程不经过库函数调用。
 
 快速模式适合用在热点路径上。其他地方建议继续用普通模式，因为快速模式有代价：
 
-- **每个调用点的日志对象和格式串固定。** 调用点会绑定第一次调用时的日志对象和格式串。之后同一个调用点传入别的日志对象或别的格式串（比如通过一个转发参数的辅助函数，把参数都送进同一行 `BQ_LOG_FAST_*`）是不支持的：日志仍然会写进第一个日志对象、用第一个格式串。配置变更（`reset_config`、级别、类别掩码）照常生效。
-- **只支持默认类别。** 宏写入类别 0。需要按类别输出的日志，请使用普通模式。
+- **每个调用点的日志对象、Category 和格式串固定。** 调用点会绑定第一次调用时的日志对象和格式串（Category 是编译期确定的类型，本来就固定）。之后同一个调用点传入别的日志对象或别的格式串（比如通过一个转发参数的辅助函数，把参数都送进同一行 `BQ_LOG_FAST_*`）是不支持的：日志仍然会写进第一个日志对象、用第一个格式串。配置变更（`reset_config`、级别、类别掩码）照常生效。
 - **内存稍多一点。** 每个注册过的格式串在日志对象的生命周期内保存一份；每个用到快速模式的线程多占一个 128 字节的线程局部槽位。
 - **IDE 代码提示体验差一些。** 这是宏，代码补全和参数提示不如普通模式的成员函数好用。参数类型仍然会在编译期检查。
 
-支持的参数类型和普通模式相同。如果某个级别配置了打印调用栈（`log.print_stack_levels`），或者日志对象是同步模式，快速模式的调用会自动退回普通模式，输出依然正确，只是这种情况下不会更快。
+支持 [Category](./ADVANCED_USAGE_CHS.md#2-支持分类category的-log-对象)：第二个参数是 `log.cat.xxx` 时按该 Category 输出，是格式串时用默认 Category。是哪一种在编译期决定，带 Category 的调用和不带的一样快。支持的参数类型和普通模式相同。如果某个级别配置了打印调用栈（`log.print_stack_levels`），或者日志对象是同步模式，快速模式的调用会自动退回普通模式，输出依然正确，只是这种情况下不会更快。
 </details>
 
 <details>
