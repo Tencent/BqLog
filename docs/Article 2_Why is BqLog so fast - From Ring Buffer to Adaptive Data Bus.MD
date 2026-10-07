@@ -10,26 +10,19 @@ BqLog's `log_buffer` gives low-frequency threads a shared queue and high-frequen
 
 ## 1. Benchmark and scope
 
-The comparison covers C++ spdlog (async mode), glog, fmtlog, quill and Java Log4j2; each component's full configuration is listed in [BENCHMARK.md](BENCHMARK.md). The table below shows results for 1–10 threads: each thread writes two million records with four formatting arguments. The machine is a PC (AMD Ryzen 9 9950X, 16 cores / 32 threads, 96 GB, Windows 11 Pro; Java tests on JBR 21.0.9).
+The full 2.6.0 benchmark compares BqLog with C++ spdlog (async mode), glog, fmtlog and quill, and with Java Log4j2, on macOS (Apple M4 Pro) and Windows (AMD Ryzen 9 9950X), reporting total time, CPU time and peak memory together. Methodology, every library's configuration and the complete tables are in [BENCHMARK.md](BENCHMARK.md).
 
-Adding a thread also adds two million records. Ten threads therefore write twenty million records; throughput calculations must use that total.
+On a single log call, BqLog, quill and fmtlog are in the same tier. The gap appears in total cost. With fixed-size buffers, 10 threads and 2,000,000 records per thread (four formatting arguments), timed until every record is on disk:
 
-### Total time for records with four arguments, in milliseconds
+| | macOS | Windows |
+|---|---:|---:|
+| BqLog compressed | 375 ms | 567 ms |
+| BqLog text | 1548 ms | 2613 ms |
+| quill | 4338 ms | 5536 ms |
+| fmtlog | 2982 ms | 9428 ms |
+| Log4j2 (Java) | 3754 ms | 4711 ms |
 
-|                              | 1 thread | 2 threads | 3 threads | 4 threads | 5 threads | 6 threads | 7 threads | 8 threads | 9 threads | 10 threads |
-|------------------------------|-------|-------|-------|-------|-------|-------|-------|-------|-------|--------|
-| BqLog Compress(C++)          | 95    | 144   | 210   | 210   | 226   | 267   | 362   | 395   | 439   | 507    |
-| BqLog Compress+Encrypt(C++)  | 102   | 166   | 167   | 190   | 236   | 308   | 350   | 391   | 453   | 493    |
-| BqLog Text(C++)              | 258   | 513   | 777   | 1054  | 1324  | 1587  | 1891  | 2143  | 2465  | 2811   |
-| fmtlog                       | 548   | 1173  | 1665  | 2194  | 2881  | 3440  | 4386  | 5242  | 5888  | 6926   |
-| quill                        | 639   | 1429  | 2232  | 3082  | 3915  | 4726  | 5609  | 6246  | 6957  | 7812   |
-| Log4j2 (Java)                | 873   | 1484  | 2087  | 2727  | 3738  | 4541  | 4889  | 6127  | 9475  | 7192   |
-| spdlog (async)               | 560   | 1649  | 3402  | 5737  | 9069  | 13827 | 21494 | 24518 | 28463 | 32939  |
-| glog                         | 4485  | 8548  | 14875 | 21387 | 28295 | 36060 | 45742 | 62368 | 102370 | 127550 |
-
-At ten threads, BqLog compressed takes 507 ms: about 1/14 of Log4j2, 1/65 of async spdlog, and roughly 13.7x and 15.4x faster than fmtlog and quill. Encrypted compressed output takes 493 ms, on par with unencrypted (the difference is within measurement noise). These measurements cover the complete write path and cannot be attributed to the queue alone. Workload and configuration details are in the [benchmark](https://github.com/Tencent/BqLog/blob/main/README.md#-benchmark-results) and [BENCHMARK.md](BENCHMARK.md).
-
-Formatting, cache access, I/O and communication between threads all contribute. This article examines communication: allocation in the shared MISO queue and the transition to dedicated SISO queues. The related design was submitted for patent protection before BqLog was open-sourced.
+These numbers cover the complete write path and cannot be attributed to the queue alone. Formatting, cache access, I/O and communication between threads all contribute. This article examines communication: allocation in the shared MISO queue and the transition to dedicated SISO queues.
 
 ## 2. Starting with two ring-buffer designs
 
