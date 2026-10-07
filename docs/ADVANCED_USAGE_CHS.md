@@ -459,7 +459,7 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 
 解密加密日志时，需要私钥文件。推荐使用 BqLog 自带命令行工具 `BqLog_LogDecoder`：
 
-- 使用方法参见 [API 参考 — 离线解码](./API_REFERENCE_CHS.md#离线解码二进制格式的-appender)。
+- 使用方法参见 [API 参考 — 离线命令行解码器](./API_REFERENCE_CHS.md#离线命令行解码器)。
 
 示例：
 
