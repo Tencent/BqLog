@@ -67,6 +67,13 @@ namespace bq {
         }
     }
 
+    void normal_buffer::flush()
+    {
+        if (memory_map_handle_.has_been_mapped()) {
+            bq::memory_map::flush_memory_map(memory_map_handle_);
+        }
+    }
+
     void normal_buffer::resize(size_t new_size)
     {
         if (new_size == size()) {

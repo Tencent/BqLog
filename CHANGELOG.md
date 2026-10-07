@@ -2,6 +2,13 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.6.0] - 2026-10-05
+- **C++ only fast mode**: Added `BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL`. They write the same entries as `log.info` and friends, but the work on the calling thread is inlined at the call site: a level check, the timestamp and the raw arguments. The same macros take a category too: `BQ_LOG_FAST_INFO(log, log.cat.xxx, "...", ...)`; with or without a category is decided at compile time and costs the same. Trade-offs: slightly more memory, weaker IDE hints (macros), and a fixed log object and format string per call site. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
+- **Performance — normal mode, logging thread**: `log.info` and the other level functions run about 16% fewer instructions on the calling thread; a disabled level now costs a single memory load and bit test.
+- **Performance — whole pipeline**: Against 2.5.0 on the same benchmark (macOS, Apple M4 Pro), text output is 14–30% faster and compressed output up to about 40% faster; compressed output with 4 threads and 4 arguments is unchanged.
+- **Performance — clock**: Timestamps come from the CPU hardware counter where it is reliable (with continuous checks against the system clock), falling back to the system clock automatically.
+- **New setting `log.worker_interval_ms`**: the longest the consumer thread sleeps when idle, in milliseconds (default `66`). In `async` mode it applies to the shared worker of every `async` log. See [Configuration — log.worker_interval_ms](docs/CONFIGURATION.md#logworker_interval_ms).
+
 ## [v2.5.0] - 2026-09-23
 - **Performance**: Improved log-writing performance and reduced unnecessary worker wakeups and Java argument allocations.
 - **Go support**: Added a Go wrapper with automatic argument conversion, category support, and source-module distribution.

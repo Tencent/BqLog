@@ -41,7 +41,7 @@ namespace bq.impl
             {
                 format_str = "null";
             }
-            if (bq.log.is_stack_trace_enable_for(log, level))
+            if (bq.log.is_stack_trace_enable_for(log, level, category))
             {
                 format_str += "\n" + new StackTrace(2, true);
             }

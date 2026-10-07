@@ -685,18 +685,6 @@ namespace bq {
             }
         };
 
-        static const bq::string& decode_raw_item()
-        {
-            static decoder_test decoder(".lograw");
-            auto result = decoder.get().decode();
-            if (result == bq::appender_decode_result::eof) {
-                decoder.pick_new_log_file();
-                result = decoder.get().decode();
-            }
-            result_ptr->add_result(result == bq::appender_decode_result::success, "decoder failed, error code:%" PRId32, (int32_t)result);
-            return decoder.get().get_last_decoded_log_entry();
-        }
-
         static const bq::string& decode_compressed_item()
         {
             static decoder_test decoder(".logcompr");
@@ -1044,14 +1032,6 @@ namespace bq {
 						appenders_config.CompressedAppender.max_file_size=100000000
 						appenders_config.CompressedAppender.expire_time_days=2
 						
-						appenders_config.RawAppender.type=raw_file
-						appenders_config.RawAppender.time_zone=localtime
-						appenders_config.RawAppender.levels=[error,fatal]
-						appenders_config.RawAppender.file_name=bqLog/UnitTestLog/test3
-						appenders_config.RawAppender.base_dir_type=0
-						appenders_config.RawAppender.max_file_size=100000000
-						appenders_config.RawAppender.expire_time_days=2
-					
 						log.thread_mode=sync
 						log.categories_mask=[ModuleA.SystemA,ModuleB]
 			        )"
@@ -1101,8 +1081,6 @@ namespace bq {
             // decode test
             bool is_encrypted = !get_encript_config().is_empty();
             for (size_t i = 0; i < test_log_3_all_console_outputs.size(); ++i) {
-                const bq::string& raw_item = decode_raw_item();
-                result_ptr->add_result(decoded_item_matches_console_output(raw_item, test_log_3_all_console_outputs[i]), "%s test idx:%" PRIu64 ", raw test, \ndecoded: %s, \nconsole: %s", (is_encrypted ? "encrypt" : ""), static_cast<uint64_t>(i), raw_item.c_str(), test_log_3_all_console_outputs[i].c_str());
                 const bq::string& compressed_item = decode_compressed_item();
                 result_ptr->add_result(decoded_item_matches_console_output(compressed_item, test_log_3_all_console_outputs[i]), "%s test idx:%" PRIu64 ", compressed test, \ndecoded: %s, \nconsole: %s", (is_encrypted ? "encrypt" : ""), static_cast<uint64_t>(i), compressed_item.c_str(), test_log_3_all_console_outputs[i].c_str());
             }
@@ -1161,8 +1139,6 @@ namespace bq {
                 + "OmO+42HqCD4mqxMU1rgcWOn+LLW3HSqbE5kYA9XDwEtxCnMiKqP7sA==\n"
                 + "-----END RSA PRIVATE KEY-----\n";
             set_encript_config("appenders_config.CompressedAppender.pub_key="
-                + pub_key + "\n"
-                + "appenders_config.RawAppender.pub_key="
                 + pub_key + "\n");
             create_test_log_3_file_appender("snapshot.buffer_size=65536\n" + get_encript_config());
 

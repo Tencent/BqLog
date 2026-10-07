@@ -88,6 +88,12 @@ my_category_log.info(my_category_log.cat.Factory.People, "Log5"); // Category = 
 [CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Factory.People] Log5
 ```
 
+C++ 的[快速模式](./API_REFERENCE_CHS.md#fast-mode)也支持 Category，用法相同，Category 放在格式串前面：
+
+```cpp
+BQ_LOG_FAST_INFO(my_category_log, my_category_log.cat.Shop.Seller, "Log2"); // Category = Shop.Seller
+```
+
 配合[配置说明](./CONFIGURATION_CHS.md)中的 `categories_mask`，可以在输出侧进行灵活过滤。
 结合 [API 参考](./API_REFERENCE_CHS.md) 中的 Console 回调，您可以通过 `category_idx` + 下述 API 获取 Category 名称列表：
 

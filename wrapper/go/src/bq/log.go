@@ -24,18 +24,30 @@ import (
 // with Create_log / Get_log_by_name.
 type Log struct {
 	id           uint64
+	name         string
 	level_bitmap *uint32
 	stack_bitmap *uint32
 	masks        *uint8
+	level_words  *uint32 // per category, enabled without stack trace
 	cat_count    uint32
 }
 
 func (l *Log) refresh(id uint64) {
 	l.id = id
+	l.name, _ = impl.Get_log_name_by_id(id)
 	l.level_bitmap = impl.Get_log_merged_log_level_bitmap(id)
 	l.stack_bitmap = impl.Get_log_print_stack_level_bitmap(id)
 	l.masks = impl.Get_log_category_masks_array(id)
+	l.level_words = impl.Get_log_category_level_words(id)
 	l.cat_count = impl.Get_log_categories_count(id)
+}
+
+// enabled_without_stack is the common case: one load and one bit test.
+func (l *Log) enabled_without_stack(level def.Log_level, category_index uint32) bool {
+	if l.level_words == nil || category_index >= l.cat_count {
+		return false
+	}
+	return *(*uint32)(unsafe.Add(unsafe.Pointer(l.level_words), uintptr(category_index)*4))&(1<<uint32(level)) != 0
 }
 
 // Get_version returns the BqLog library version.
@@ -75,8 +87,14 @@ func Create_log(name, config string, category_names []string) *Log {
 }
 
 // Reset_config overwrites the config of an existing log by name.
+// Prefer the Reset_config method of the log object.
 func Reset_config(name, config string) bool {
 	return impl.Log_reset_config(name, config)
+}
+
+// Force_flush_all_logs makes bqLog flush buffered logs of every log object.
+func Force_flush_all_logs() {
+	impl.Force_flush(0)
 }
 
 // Get_logs_count returns how many log objects exist.
@@ -102,6 +120,8 @@ func (l *Log) Is_valid() bool { return l != nil && l.id != 0 }
 
 func (l *Log) Get_id() uint64 { return l.id }
 
+func (l *Log) Get_name() string { return l.name }
+
 func (l *Log) Get_categories_count() int {
 	return int(impl.Get_log_categories_count(l.id))
 }
@@ -117,6 +137,9 @@ func (l *Log) Is_enable_for(level def.Log_level, category_index uint32) bool {
 	if !l.Is_valid() || level < def.Verbose || level > def.Fatal || category_index >= l.cat_count {
 		return false
 	}
+	if l.enabled_without_stack(level, category_index) {
+		return true
+	}
 	if *l.level_bitmap&(1<<uint32(level)) == 0 {
 		return false
 	}
@@ -125,11 +148,14 @@ func (l *Log) Is_enable_for(level def.Log_level, category_index uint32) bool {
 
 // do_log is shared by the level and category methods. It is private to package bq.
 func (l *Log) do_log(level def.Log_level, category_index uint32, format string, args ...any) bool {
-	if !l.Is_enable_for(level, category_index) {
-		return false
-	}
-	if *l.stack_bitmap&(1<<uint32(level)) != 0 {
-		format += capture_stack()
+	without_stack := l.Is_valid() && level >= def.Verbose && level <= def.Fatal && l.enabled_without_stack(level, category_index)
+	if !without_stack {
+		if !l.Is_enable_for(level, category_index) {
+			return false
+		}
+		if *l.stack_bitmap&(1<<uint32(level)) != 0 {
+			format += capture_stack()
+		}
 	}
 	// Native entry lengths are uint32_t, including the header and thread name.
 	const max_entry_payload = uint64(1<<32 - 1 - 1024)
@@ -201,6 +227,22 @@ func (l *Log) Warning(format string, args ...any) bool {
 }
 func (l *Log) Error(format string, args ...any) bool { return l.do_log(def.Error, 0, format, args...) }
 func (l *Log) Fatal(format string, args ...any) bool { return l.do_log(def.Fatal, 0, format, args...) }
+
+// Reset_config modifies the config of this log object; some fields, such as
+// buffer_size, cannot be modified.
+func (l *Log) Reset_config(config string) bool {
+	if !l.Is_valid() || len(config) == 0 {
+		return false
+	}
+	return impl.Log_reset_config(l.name, config)
+}
+
+// Set_appender_enable temporarily disables or enables an appender of this log object.
+func (l *Log) Set_appender_enable(appender_name string, enable bool) {
+	if l.Is_valid() {
+		impl.Set_appender_enable(l.id, appender_name, enable)
+	}
+}
 
 // Force_flush makes bqLog flush buffered logs of this log object.
 func (l *Log) Force_flush() {

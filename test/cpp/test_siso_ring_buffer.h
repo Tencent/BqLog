@@ -269,6 +269,35 @@ namespace bq {
                 bq::platform::aligned_free(buffer_data2);
             }
 
+            // low_space_flag is edge triggered: once per crossing of half full, re-armed after the consumer catches up.
+            void do_low_space_edge_test(test_result& result)
+            {
+                const uint32_t memory_size = bq::siso_ring_buffer::calculate_min_size_of_memory(4096);
+                bq::array<uint8_t> memory;
+                memory.fill_uninitialized(memory_size + BQ_CACHE_LINE_SIZE);
+                uint8_t* aligned = reinterpret_cast<uint8_t*>((reinterpret_cast<uintptr_t>(&memory[0]) + BQ_CACHE_LINE_SIZE - 1) & ~(static_cast<uintptr_t>(BQ_CACHE_LINE_SIZE) - 1));
+                bq::siso_ring_buffer ring(aligned, memory_size, false);
+                for (int32_t round = 0; round < 3; ++round) {
+                    uint32_t flags = 0;
+                    uint32_t writes = 0;
+                    while (true) {
+                        auto handle = ring.alloc_write_chunk(24);
+                        if (handle.result != bq::enum_buffer_result_code::success) {
+                            break;
+                        }
+                        flags += handle.low_space_flag ? 1U : 0U;
+                        ++writes;
+                        ring.commit_write_chunk(handle);
+                    }
+                    result.add_result(writes > 4 && flags == 1, "low space reported once per fill, round %" PRId32 ", flags:%" PRIu32, round, flags);
+                    auto batch = ring.batch_read();
+                    while (batch.has_next()) {
+                        batch.next();
+                    }
+                    ring.return_batch_read_chunks(batch);
+                }
+            }
+
         public:
             virtual test_result test() override
             {
@@ -287,6 +316,7 @@ namespace bq {
                 }
 
                 do_traverse_test(result);
+                do_low_space_edge_test(result);
                 return result;
             }
         };

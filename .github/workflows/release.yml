@@ -2,12 +2,6 @@ name: Build And Release
 
 on:
   workflow_dispatch:
-    inputs:
-      go_only:
-        description: 'Test and publish only the Go source module; skip all other builds and releases'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   id-token: write  # Required for OIDC
@@ -15,11 +9,9 @@ permissions:
 
 jobs:
   build:
-    if: ${{ !inputs.go_only }}
     uses: ./.github/workflows/build.yml
 
   release:
-    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build, validate_go_module]
     steps:
@@ -197,7 +189,6 @@ jobs:
   prepare_go_module:
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ always() && !cancelled() && (inputs.go_only || needs.build.result == 'success') }}
     outputs:
       version: ${{ steps.version.outputs.version }}
     permissions:
@@ -253,7 +244,6 @@ jobs:
 
   validate_go_module:
     needs: prepare_go_module
-    if: ${{ always() && !cancelled() && needs.prepare_go_module.result == 'success' }}
     strategy:
       fail-fast: false
       matrix:
@@ -295,9 +285,7 @@ jobs:
         run: go run . -verify "$MODULE_DIRECTORY"
 
   publish_go:
-    # A Go-only release still requires every Go check, but no other release.
     needs: [prepare_go_module, release, validate_go_module]
-    if: ${{ always() && !cancelled() && github.event_name == 'workflow_dispatch' && needs.prepare_go_module.result == 'success' && needs.validate_go_module.result == 'success' && (inputs.go_only || needs.release.result == 'success') }}
     runs-on: ubuntu-latest
     concurrency:
       group: bqlog-go-dist-publish
@@ -373,7 +361,6 @@ jobs:
 
   # Publish Python wheel to PyPI
   publish_pypi:
-    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     permissions:
@@ -406,7 +393,6 @@ jobs:
 
   # Publish Node.js package to npm (via Trusted Publishing / OIDC)
   publish_npm:
-    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     permissions:
@@ -438,7 +424,6 @@ jobs:
 
   # Publish Java fat JAR to Maven Central
   publish_java_maven:
-    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     steps:
@@ -569,7 +554,6 @@ jobs:
 
   # Publish Android AAR to Maven Central
   publish_android_maven:
-    if: ${{ !inputs.go_only }}
     runs-on: ubuntu-latest
     needs: [build]
     steps:

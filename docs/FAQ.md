@@ -6,11 +6,24 @@
 
 An open-source, industrial-grade logging library from Tencent, with a C++ core. It exists to break the "impossible triangle" of shipped builds: you want full logging, but can't pay for it with performance, package size or storage. This is no toy project: it runs in production in Honor of Kings (international) — a client product with over 30 million DAU — and other recent Tencent titles such as 王者万象棋 and 洛克王国 have adopted it since.
 
+## What does BqLog aim for?
+
+Extreme speed, but not speed alone. BqLog is meant to be a mature, industrial-grade component, and that means four things at once:
+
+- **Speed on both ends.** The thread that writes a log entry and the thread that turns it into a file run on the same machine. A library that makes the first one fast by pushing work onto the second has only moved the cost. BqLog keeps both cheap and is measured on realistic workloads.
+- **Compatibility.** Many platforms, many languages sharing one core, many environments — game engines, mobile toolchains without an STL, strict compiler settings.
+- **Robustness when things go wrong.** Crashes, full disks, corrupted files, a consumer that falls behind: each has a defined, tested behavior.
+- **Developer experience.** Simple calls that your IDE completes and type-checks, and compatibility across versions: older headers keep working with newer libraries, and log files stay readable.
+
 ## How is BqLog different from spdlog, quill or fmtlog?
 
-On raw performance: spdlog's strength is its ecosystem, quill's is call-site latency, fmtlog's is lean text logging — and BqLog leads on total throughput and memory footprint in the same benchmark scenario ([numbers here](BENCHMARK.md)).
+On raw performance: spdlog's strength is its ecosystem, quill's is call-site latency, fmtlog's is lean text logging. BqLog leads on total throughput and memory footprint in the same benchmark scenario, and its C++ fast mode roughly halves the cost on the logging thread ([numbers here](BENCHMARK.md)). On the calling thread alone, quill is still the cheapest; the benchmark shows that next to what it costs in consumer CPU and memory, because a logger that is fast only on the calling thread usually pays for it on another core or in memory.
 
 But the real difference is industrial completeness. What a logging library faces once it ships inside a released product — losing logs in crashes, content encryption, mixed-language codebases, mobile toolchain constraints, compatibility across repeated builds and multiple versions, package-size budgets — is all covered and accounted for in BqLog. Each of the other three has its own gaps across these dimensions.
+
+## What is the C++ fast mode, and when should I use it?
+
+`BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL` are C++ only macros that write the same log entry as `log.info` and friends (the normal mode) at a fraction of the cost on the calling thread. Use them on hot paths. Categories work the same way as in the normal mode: `BQ_LOG_FAST_INFO(log, log.cat.xxx, ...)`. The trade-offs: slightly more memory, weaker IDE hints because they are macros, and each call site must keep using the log object and format string of its first call. Everywhere else, the normal mode is the simpler default. See [API Reference — fast mode](API_REFERENCE.md#fast-mode).
 
 ## Who runs it in production?
 
@@ -46,7 +59,7 @@ Every language has its proper channel:
 
 ## Where are the performance numbers?
 
-[docs/BENCHMARK.md](BENCHMARK.md): 1–10 threads, 2 million entries per thread, 4 format arguments each — throughput, peak memory and output file size. The test code is in benchmark/ and you can rerun it yourself.
+[docs/BENCHMARK.md](BENCHMARK.md), in two parts: total cost (throughput of the whole pipeline, 1–10 threads, 2 million entries per thread) and the cost on the logging thread itself, plus peak memory and output file size. The test code for this version lives at [`benchmarks/2.6.0`](https://github.com/Tencent/BqLog/tree/benchmarks/2.6.0/benchmark/cross) and you can rerun it yourself.
 
 ## What happens to my logs if the process crashes?
 
@@ -78,7 +91,7 @@ Yes, plain text is available through the TextFileAppender — and even that text
 
 ## How big is the library, and how much memory does it use?
 
-About 200 KB as an Android dynamic library. In the 10-thread benchmark case (20 million entries, three appenders active), BqLog's own peak memory is 2–3 MB; on mobile it's generally around 1 MB. One comparison object in the same run peaks in the GB range.
+About 200 KB as an Android dynamic library. In the 10-thread benchmark case (20 million entries in total), the whole benchmark process peaks at no more than 3.1 MB on macOS; on mobile, BqLog itself generally uses around 1 MB.
 
 ## Will logs be dropped if the consumer can't keep up?
 

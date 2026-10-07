@@ -79,6 +79,7 @@ namespace bq {
         }
         bq_forceinline uint64_t get_in_pool_epoch_ms() const { return in_pool_epoch_ms_; }
         bq_forceinline void set_in_pool_epoch_ms(uint64_t epoch_ms) { in_pool_epoch_ms_ = epoch_ms; }
+        bq_forceinline void set_delete_mmap_when_destruct(bool delete_mmap) { buffer_entity_->set_delete_mmap_when_destruct(delete_mmap); }
         bq_forceinline bool is_range_include(const block_node_head* block) const
         {
             return head_ptr_->used_.is_range_include(block);
@@ -136,6 +137,15 @@ namespace bq {
 #endif
 
         void garbage_collect();
+
+        // read thread only, cheap enough to call once per traversal: the clock is read only while the pool holds groups
+        bq_forceinline void garbage_collect_if_pending()
+        {
+            BQ_UNLIKELY_IF(gc_pending_)
+            {
+                garbage_collect_pending();
+            }
+        }
 
         size_t get_garbage_count();
 
@@ -246,6 +256,7 @@ namespace bq {
             }
             current.value().set_in_pool_epoch_ms(bq::platform::high_performance_epoch_ms());
             pool_.push(&current.value());
+            gc_pending_ = true;
 #if defined(BQ_UNIT_TEST)
             groups_count_.fetch_add_seq_cst(-1);
 #endif
@@ -254,8 +265,14 @@ namespace bq {
         bq_forceinline const log_buffer_config& get_config() const { return config_; }
 
     private:
+        void garbage_collect_pending();
+
+    private:
         const log_buffer_config& config_;
         uint16_t max_block_count_per_group_;
+        // only touched by the read thread
+        bool gc_pending_ = false;
+        uint64_t last_gc_epoch_ms_ = 0;
 #if defined(BQ_UNIT_TEST)
         bq::platform::atomic<int32_t> groups_count_ = 0;
 #endif

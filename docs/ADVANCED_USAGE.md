@@ -88,6 +88,12 @@ Output Example:
 [CategoryDemoLog]   UTC+08 2024-07-04 17:35:14.144[tid-54912 ] [I] [Factory.People] Log5
 ```
 
+C++ [fast mode](./API_REFERENCE.md#fast-mode) supports categories too, the same way, with the category before the format string:
+
+```cpp
+BQ_LOG_FAST_INFO(my_category_log, my_category_log.cat.Shop.Seller, "Log2"); // Category = Shop.Seller
+```
+
 Cooperating with `categories_mask` in [Configuration](./CONFIGURATION.md), flexible filtering can be performed on output side.
 Combined with Console callback (see [API Reference](./API_REFERENCE.md)), you can get Category name list via `category_idx` + following API:
 

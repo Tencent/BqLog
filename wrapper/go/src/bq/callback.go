@@ -12,12 +12,20 @@
 package bq
 
 import (
+	"reflect"
+	"sync"
+
 	"github.com/Tencent/BqLog/wrapper/go/src/bq/def"
 	"github.com/Tencent/BqLog/wrapper/go/src/bq/impl"
 )
 
 // Console_callback receives a formatted console log line.
 type Console_callback func(log_id uint64, category_idx int32, level def.Log_level, content string)
+
+var (
+	callback_mu         sync.Mutex
+	registered_callback Console_callback
+)
 
 func wrap_console_callback(callback Console_callback) impl.Console_callback {
 	if callback == nil {
@@ -31,11 +39,27 @@ func wrap_console_callback(callback Console_callback) impl.Console_callback {
 // Register_console_callback registers a callback invoked for every console
 // appender output. Pass nil to unregister.
 func Register_console_callback(callback Console_callback) {
+	callback_mu.Lock()
+	registered_callback = callback
+	callback_mu.Unlock()
 	impl.Set_console_hook(wrap_console_callback(callback))
 	if callback != nil {
 		impl.Register_console_callback()
 	} else {
 		impl.Unregister_console_callback()
+	}
+}
+
+// Unregister_console_callback unregisters callback if it is the registered
+// console callback. Go functions are not comparable, so callbacks are matched by
+// their code: closures from the same function literal count as the same callback.
+func Unregister_console_callback(callback Console_callback) {
+	callback_mu.Lock()
+	matched := callback != nil && registered_callback != nil &&
+		reflect.ValueOf(callback).Pointer() == reflect.ValueOf(registered_callback).Pointer()
+	callback_mu.Unlock()
+	if matched {
+		Register_console_callback(nil)
 	}
 }
 

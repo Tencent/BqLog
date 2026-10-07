@@ -11,6 +11,7 @@
 #pragma once
 
 #include "bq_common/bq_common_public_include.h"
+#include "bq_common/platform/fast_clock.h"
 #if defined(BQ_POSIX)
 #include "bq_common/platform/posix_misc.h"
 #endif
@@ -83,8 +84,21 @@ namespace bq {
             base_dir_initializer();
         };
 
-        // TODO optimize use TSC
-        uint64_t high_performance_epoch_ms();
+        // Platform wall clock, implemented per platform.
+        uint64_t system_epoch_ms();
+
+        extern BQ_TLS fast_clock_thread_cache epoch_ms_cache_;
+
+        // Hardware counter clock (fast_clock.h) where available, system_epoch_ms() otherwise.
+        bq_forceinline uint64_t high_performance_epoch_ms()
+        {
+            uint64_t epoch_ms;
+            BQ_LIKELY_IF(fast_clock_read_epoch_ms(epoch_ms_cache_, epoch_ms))
+            {
+                return epoch_ms;
+            }
+            return system_epoch_ms();
+        }
 
         bq::string get_base_dir(int32_t base_dir_type);
 
@@ -136,6 +150,9 @@ namespace bq {
 
         void* aligned_alloc(size_t alignment, size_t size);
         void aligned_free(void* ptr);
+
+        // Commits every page of [addr, addr + size) without changing contents. No concurrent writers.
+        void prefault_pages(void* addr, size_t size);
 
 #if defined(BQ_UNIT_TEST)
         // Test-only fault-injection hooks for disk-full / OOM scenarios.

@@ -145,6 +145,12 @@ namespace bq {
             return old_tail;
         }
 
+        bq_forceinline bool is_empty()
+        {
+            bq::platform::scoped_spin_lock lock(lock_);
+            return head_ == nullptr;
+        }
+
         /// <summary>
         /// get current objects count in pool
         /// </summary>

@@ -69,6 +69,44 @@ BQ_API_DEF(BQ_LOG_API_TYPE(_api_log_write_handle, bq_api_log_write_handle), __ap
 /// <param name="write_handle">The handle returned by <see cref="__api_log_write_begin"/>.</param>
 BQ_API_DEF(void, __api_log_write_finish, (uint64_t log_id, BQ_LOG_API_TYPE(_api_log_write_handle, bq_api_log_write_handle) write_handle), (log_id, write_handle));
 
+BQ_API_DEF(bool, __api_fast_log_site_init, (BQ_LOG_API_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle)* site, uint64_t log_id,
+    uint8_t level, uint32_t category_idx, uint8_t format_type, const char* format, uint32_t format_size,
+    const uint8_t* arg_types, uint16_t arg_count),
+    (site, log_id, level, category_idx, format_type, format, format_size, arg_types, arg_count));
+
+BQ_API_DEF(bool, __api_fast_log_write_no_args,
+    (const BQ_LOG_API_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle)* site),
+    (site));
+
+BQ_API_DEF(BQ_LOG_API_TYPE(_api_fast_log_write_handle, bq_api_fast_log_write_handle), __api_fast_log_write_begin,
+    (const BQ_LOG_API_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle)* site,
+        uint32_t args_size), (site, args_size));
+
+BQ_API_DEF(void, __api_fast_log_write_finish,
+    (const BQ_LOG_API_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle)* site,
+        uint8_t* args_addr), (site, args_addr));
+
+/// <summary>
+/// Fills the SISO layout used by the header-inlined fast path. false if layout_version is not supported.
+/// </summary>
+BQ_API_DEF(bool, __api_fast_log_get_layout,
+    (BQ_LOG_API_TYPE(_api_fast_log_layout, bq_api_fast_log_layout)* out_layout, uint32_t layout_version),
+    (out_layout, layout_version));
+
+/// <summary>
+/// Binds the caller's thread local fast path state to this thread's current log buffer; the library keeps it updated.
+/// </summary>
+BQ_API_DEF(void, __api_fast_log_bind_thread_state,
+    (BQ_LOG_API_TYPE(_api_fast_log_thread_state, bq_api_fast_log_thread_state)* state),
+    (state));
+
+/// <summary>
+/// Wakes the consumer when the inline fast path finds the block half full.
+/// </summary>
+BQ_API_DEF(void, __api_fast_log_notify_low_space,
+    (const BQ_LOG_API_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle)* site),
+    (site));
+
 /// <summary>
 /// toggle of all console appenders,
 /// you can disable it to optimize performance in release version
@@ -127,6 +165,15 @@ BQ_API_DEF(const uint32_t*, __api_get_log_merged_log_level_bitmap_by_log_id, (ui
 /// <param name="log_id"></param>
 /// <returns>nullptr if log is not found</returns>
 BQ_API_DEF(const uint32_t*, __api_get_log_print_stack_level_bitmap_by_log_id, (uint64_t log_id), (log_id));
+
+/// <summary>
+/// get the address of the per category level words of log: bit (1 << level) set when that level is enabled without
+/// stack trace for that category, bit (1 << (level + BQ_LOG_LEVEL_WORD_STACK_SHIFT)) set when it is enabled with
+/// stack trace. Kept up to date on reset_config.
+/// </summary>
+/// <param name="log_id"></param>
+/// <returns>nullptr if log is not found</returns>
+BQ_API_DEF(const uint32_t*, __api_get_log_category_level_words_by_log_id, (uint64_t log_id), (log_id));
 
 /// <summary>
 /// get the address of category masks array, this array address is always valid.

@@ -57,6 +57,16 @@ log_obj = log.create_log("my_log", config)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+import bq "github.com/Tencent/BqLog/go/v2"
+// 第三个参数是 Category 名称列表，普通日志传 nil
+logObj := bq.Create_log("my_log", config, nil)
+```
+</details>
+
 要点：
 
 1. 任何语言中，返回值都**不会为 null**。如创建失败，可通过 `is_valid()` 判断。
@@ -110,6 +120,14 @@ log_obj = log.get_log_by_name("my_log")
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+logObj := bq.Get_log_by_name("my_log")
+```
+</details>
+
 > 注意：请确保该 Log 已通过 `create_log` 创建过，否则 `is_valid()` 返回 false。
 
 ---
@@ -130,6 +148,31 @@ log_obj.error("Error code: {}", err_code);
 ```
 
 支持的 `STR` 类型：`char*`、`char16_t*`、`char32_t*`、`wchar_t*`、`std::string`、`std::u16string`、`std::wstring`、Unreal `FString` / `FName` / `FText` 等。
+
+<a id="fast-mode"></a>
+
+#### C++ 专属的快速模式
+
+除了普通模式（`log_obj.info(...)` 等各级别函数），C++ 还有一个快速模式：六个宏，写出的日志和普通模式完全一样，但调用线程的开销小得多。
+
+```cpp
+BQ_LOG_FAST_INFO(log_obj, "Hello {}, count={}", "world", 42);
+BQ_LOG_FAST_ERROR(log_obj, "Error code: {}", err_code);
+// BQ_LOG_FAST_VERBOSE, BQ_LOG_FAST_DEBUG, BQ_LOG_FAST_INFO, BQ_LOG_FAST_WARNING, BQ_LOG_FAST_ERROR, BQ_LOG_FAST_FATAL
+
+// 生成的 Category 日志类：同一个宏，Category 放在格式串前面，写法和 info(cat, ...) 一样
+BQ_LOG_FAST_INFO(my_category_log, my_category_log.cat.Shop.Seller, "order {} paid", order_id);
+```
+
+每个调用点第一次执行时，把格式串注册一次；之后调用线程只做三件事：判断级别、写入时间戳和原始参数到本线程自己的缓冲区、返回。格式串不再拷贝也不再计算哈希，全程不经过库函数调用。
+
+快速模式适合用在热点路径上。其他地方建议继续用普通模式，因为快速模式有代价：
+
+- **每个调用点的日志对象、Category 和格式串固定。** 调用点会绑定第一次调用时的日志对象和格式串（Category 是编译期确定的类型，本来就固定）。之后同一个调用点传入别的日志对象或别的格式串（比如通过一个转发参数的辅助函数，把参数都送进同一行 `BQ_LOG_FAST_*`）是不支持的：日志仍然会写进第一个日志对象、用第一个格式串。配置变更（`reset_config`、级别、类别掩码）照常生效。
+- **内存稍多一点。** 每个注册过的格式串在日志对象的生命周期内保存一份；每个用到快速模式的线程多占一个 128 字节的线程局部槽位。
+- **IDE 代码提示体验差一些。** 这是宏，代码补全和参数提示不如普通模式的成员函数好用。参数类型仍然会在编译期检查。
+
+支持 [Category](./ADVANCED_USAGE_CHS.md#2-支持分类category的-log-对象)：第二个参数是 `log.cat.xxx` 时按该 Category 输出，是格式串时用默认 Category。是哪一种在编译期决定，带 Category 的调用和不带的一样快。支持的参数类型和普通模式相同。如果某个级别配置了打印调用栈（`log.print_stack_levels`），或者日志对象是同步模式，快速模式的调用会自动退回普通模式，输出依然正确，只是这种情况下不会更快。
 </details>
 
 <details>
@@ -180,6 +223,23 @@ log_obj.error("Error code: {}", err_code)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+logObj.Info("Hello {}, count={}", "world", 42)
+logObj.Error("Error code: {}", errCode)
+// 所有等级: Verbose, Debug, Info, Warning, Error, Fatal
+
+// 带 Category 的日志（Create_category_log）在格式串前传入 Category 序号
+catLog := bq.Create_category_log("my_cat_log", config, []string{"", "Gameplay"})
+catLog.Info_c(1, "score={}", 42)
+// Verbose_c, Debug_c, Info_c, Warning_c, Error_c, Fatal_c
+```
+
+> 参数个数不限。内置数值类型、`bool`、`string`（包括枚举之类的具名类型）保持原生类型传递，格式化仍然在工作线程异步完成。实现了 `fmt.Stringer` / `error` 的值通过 `String()` / `Error()` 输出，其他值通过 `fmt.Sprint` 输出，`nil` 输出为 `null`。参数只在级别和 Category 检查通过后才转换。各级别函数返回 `bool`，表示日志是否写入。
+</details>
+
 ### 支持的参数类型
 
 - 空指针 → `null`
@@ -189,6 +249,7 @@ log_obj.error("Error code: {}", err_code)
 - 32 位与 64 位浮点数
 - 各语言的所有字符串类型
 - C# / Java：任意对象（通过 `ToString()` 输出）
+- Go：任意值（通过 `String()` / `Error()` 输出，否则用 `fmt.Sprint`）
 - C++：POD 类型（1/2/4/8 字节）、自定义类型（见 [高级用法 — 自定义参数类型](./ADVANCED_USAGE_CHS.md#4-自定义参数类型)）
 
 ![日志等级](img/log_level.png)
@@ -244,6 +305,15 @@ log_obj.force_flush()
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+bq.Force_flush_all_logs()
+logObj.Force_flush()
+```
+</details>
+
 ---
 
 ## 5. 崩溃保护
@@ -287,6 +357,14 @@ bq.log.enable_auto_crash_handle();
 
 ```python
 log.enable_auto_crash_handle()
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+bq.Enable_auto_crash_handle()
 ```
 </details>
 
@@ -343,13 +421,24 @@ log.unregister_console_callback(callback)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+// callback: func(log_id uint64, category_idx int32, level def.Log_level, content string)
+// （def 包为 "github.com/Tencent/BqLog/go/v2/def"）
+bq.Register_console_callback(callback)
+bq.Unregister_console_callback(callback)
+```
+</details>
+
 **注意：**
 1. **不要**在回调中调用任何同步刷新的 BqLog 函数——会造成死锁。
 2. Unity / 团结引擎 / Unreal 插件已自动将 ConsoleAppender 重定向到编辑器日志窗口。
 
 ### 主动拉取（适用于虚拟机环境）
 
-当不适合从原生线程直接回调到虚拟机时（C#、Java、IL2CPP、Node.js），使用缓冲拉取模式：
+当不适合从原生线程直接回调到虚拟机时（C#、Java、IL2CPP、Node.js、Go），使用缓冲拉取模式：
 
 ```cpp
 // 启用缓冲（register_console_callback 和默认 console 输出将被禁用）
@@ -360,6 +449,19 @@ bq::log::fetch_and_remove_console_buffer(on_console_callback);
 ```
 
 > **IL2CPP 环境：** 确保回调为 `static unsafe` 方法，并添加 `[MonoPInvokeCallback(typeof(type_console_callback))]`。
+
+Go：
+
+```go
+bq.Set_console_buffer_enable(true)
+
+// 每次调用拉取一条，缓冲区为空时返回 false；
+// 请始终在同一个用 runtime.LockOSThread 固定的 goroutine 中拉取
+for bq.Fetch_and_remove_console_buffer(func(log_id uint64, category_idx int32, level def.Log_level, content string) {
+    // ...
+}) {
+}
+```
 
 ---
 
@@ -402,6 +504,14 @@ const success = logObj.reset_config(newConfig);
 
 ```python
 success = log_obj.reset_config(new_config)
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+success := logObj.Reset_config(newConfig)
 ```
 </details>
 
@@ -456,6 +566,15 @@ log_obj.set_appender_enable("appender_name", True)
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+logObj.Set_appender_enable("appender_name", false)  // 禁用
+logObj.Set_appender_enable("appender_name", true)   // 重新启用
+```
+</details>
+
 ---
 
 ## 9. 快照（Snapshot）
@@ -503,6 +622,14 @@ snapshot = log_obj.take_snapshot("UTC+8")
 ```
 </details>
 
+<details>
+<summary><b>Go</b></summary>
+
+```go
+snapshot := logObj.Take_snapshot("UTC+8")
+```
+</details>
+
 ---
 
 ## 10. 解码二进制日志文件
@@ -510,7 +637,6 @@ snapshot = log_obj.take_snapshot("UTC+8")
 运行时解码 CompressedFileAppender 日志：
 
 ```cpp
-// 仅 C++ —— 其他语言使用离线命令行工具
 bq::tools::log_decoder decoder("path/to/file.logcompr", "optional_private_key");
 while (decoder.decode() == bq::appender_decode_result::success) {
     auto& text = decoder.get_last_decoded_log_entry();
@@ -518,6 +644,20 @@ while (decoder.decode() == bq::appender_decode_result::success) {
 }
 // 或一次性解码整个文件：
 bq::tools::log_decoder::decode_file("input.logcompr", "output.txt", "optional_key");
+```
+
+Go：
+
+```go
+decoder := bq.Decoder_create("path/to/file.logcompr", "optional_private_key")
+if decoder.Is_valid() {
+    defer decoder.Destroy()
+    for text, ok := decoder.Decode(); ok; text, ok = decoder.Decode() {
+        // 处理 text...
+    }
+}
+// 或一次性解码整个文件：
+bq.Decode_file("input.logcompr", "output.txt", "optional_key")
 ```
 
 ### 离线命令行解码器

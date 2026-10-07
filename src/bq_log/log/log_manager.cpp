@@ -232,6 +232,25 @@ namespace bq {
         }
     }
 
+#if defined(BQ_UNIT_TEST)
+    void log_manager::test_crash_log(uint64_t log_id)
+    {
+        log_imp* log = get_log_by_id(log_id);
+        // an independent worker would be restarted by its watch dog when stopped here
+        if (!log || log->get_thread_mode() != log_thread_mode::async) {
+            assert(false && "test_crash_log supports async logs only");
+            return;
+        }
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
+            if (log_imp_list_[i].get() == log) {
+                log_imp_list_.erase(log_imp_list_.begin() + static_cast<ptrdiff_t>(i));
+                return;
+            }
+        }
+    }
+
+#endif
     void log_manager::uninit()
     {
         bq::platform::scoped_spin_lock_read_crazy scoped_lock(logs_lock_);
@@ -276,9 +295,11 @@ namespace bq {
         bq::util::log_device_console(bq::log_level::warning, "thread id:%" PRIu64 ", name:%s was terminated, try restart it!", worker_ptr->get_thread_id(), worker_ptr->get_thread_name().c_str());
         auto thread_mode = worker_ptr->get_thread_mode();
         auto target_log = worker_ptr->get_log_target();
+        auto process_interval_ms = worker_ptr->get_process_interval_ms();
         bq::object_destructor<log_worker>::destruct(worker_ptr);
         bq::object_constructor<log_worker>::construct(worker_ptr);
         worker_ptr->init(thread_mode, target_log);
+        worker_ptr->set_process_interval_ms(process_interval_ms);
         worker_ptr->start();
     }
 

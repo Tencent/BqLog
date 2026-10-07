@@ -132,11 +132,29 @@ namespace bq {
             bq::platform::scoped_spin_lock scoped_lock(lock_);
             if (log_level_bitmap_.have_level(log_entry.get_level()) && categories_mask_array_[log_entry.get_category_idx()]) {
                 if (snapshot_buffer_) {
+                    // records without ext info get it appended; fast layout records get their format and arguments rebuilt
+                    const bool append_ext_info = !log_entry.has_inline_ext_info();
+                    const auto& ext_head = log_entry.get_ext_head();
+                    const uint32_t ext_info_size = append_ext_info ? static_cast<uint32_t>(sizeof(_log_entry_ext_head_def) + ext_head.thread_name_len_) : 0;
+                    const uint32_t record_size = log_entry.is_fast_layout()
+                        ? static_cast<uint32_t>(log_entry.get_log_args_offset()) + log_entry.get_standard_args_size()
+                        : log_entry.data_size();
                     while (true) {
-                        auto snapshot_write_handle = snapshot_buffer_->alloc_write_chunk(log_entry.data_size());
+                        auto snapshot_write_handle = snapshot_buffer_->alloc_write_chunk(record_size + ext_info_size);
                         scoped_log_buffer_handle<siso_ring_buffer> scoped_snapshot_write_handle(*snapshot_buffer_, snapshot_write_handle);
                         if (snapshot_write_handle.result == enum_buffer_result_code::success) {
                             memcpy(snapshot_write_handle.data_addr, log_entry.data(), log_entry.data_size());
+                            if (log_entry.is_fast_layout()) {
+                                const uint32_t format_size = log_entry.get_log_head().log_format_data_len;
+                                uint8_t* format_target = snapshot_write_handle.data_addr + sizeof(_log_entry_head_def);
+                                memcpy(format_target, log_entry.get_format_string_data(), format_size);
+                                memset(format_target + format_size, 0, bq::align_4(static_cast<size_t>(format_size)) - format_size);
+                                log_entry.write_standard_args(snapshot_write_handle.data_addr + log_entry.get_log_args_offset());
+                            }
+                            if (append_ext_info) {
+                                reinterpret_cast<_log_entry_head_def*>(snapshot_write_handle.data_addr)->ext_info_offset = record_size;
+                                memcpy(snapshot_write_handle.data_addr + record_size, &ext_head, ext_info_size);
+                            }
                             break;
                         } else if (snapshot_write_handle.result == enum_buffer_result_code::err_not_enough_space) {
                             // Since siso_buffer requires contiguous data, you can end up in a situation where the buffer is apparently empty,

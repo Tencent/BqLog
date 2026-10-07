@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md)
 
+## [v2.6.0] - 2026-10-05
+- **C++ 专属的快速模式**：新增 `BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL`。写出的日志和 `log.info` 等普通模式完全一样，但调用线程上的工作直接内联在调用点：判断级别、写时间戳和原始参数。同一个宏也支持 Category：`BQ_LOG_FAST_INFO(log, log.cat.xxx, "...", ...)`，带不带 Category 由编译期决定，开销相同。代价：内存稍多一点；它是宏，IDE 代码提示体验差一点；每个调用点的日志对象和格式串固定。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
+- **性能提升：普通模式的日志线程**：`log.info` 等级别函数在调用线程上执行的指令减少约 16%；被关闭的级别现在只需一次内存读取和一次位测试。
+- **性能提升：整条流水线**：在同一个 benchmark 上和 2.5.0 对比（macOS，Apple M4 Pro），文本输出快 14%～30%，压缩输出最多快约 40%；压缩输出在 4 线程、4 个参数时持平。
+- **性能提升：时钟**：在可靠的平台上，时间戳直接取自 CPU 硬件计数器（并持续与系统时钟校对），不可靠时自动退回系统时钟。
+- **新增配置 `log.worker_interval_ms`**：消费线程空闲时最长休眠多久，单位毫秒（默认 `66`）。`async` 模式下作用于所有 `async` 日志共用的工作线程。详见 [配置说明：log.worker_interval_ms](docs/CONFIGURATION_CHS.md#logworker_interval_ms)。
+
 ## [v2.5.0] - 2026-09-23
 - **性能提升**：优化日志写入，减少无效的工作线程唤醒和 Java 参数分配。
 - **Go 语言支持**：新增 Go wrapper，支持自动参数转换、category 和源码模块分发。

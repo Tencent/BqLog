@@ -24,13 +24,8 @@
 #endif
 
 #if defined(BQ_WIN)
-#if BQ_IN_UNREAL
-#include "Windows/AllowWindowsPlatformTypes.h"
-#include <WinSock2.h>
-#else
-#include <WinSock2.h>
-#include <windows.h>
-#endif
+#include <stdint.h>
+struct HINSTANCE__;
 #elif defined(BQ_POSIX)
 #include <dlfcn.h>
 #else
@@ -47,6 +42,15 @@
 
 namespace bq {
     namespace api_dynamic_binding {
+#if defined(BQ_WIN)
+        // The same C linkage symbols as windows.h, which may be included before or after this header.
+        typedef HINSTANCE__* HMODULE;
+        typedef intptr_t(__stdcall* FARPROC)();
+        extern "C" __declspec(dllimport) HMODULE __stdcall GetModuleHandleA(const char* module_name);
+        extern "C" __declspec(dllimport) HMODULE __stdcall LoadLibraryA(const char* lib_file_name);
+        extern "C" __declspec(dllimport) FARPROC __stdcall GetProcAddress(HMODULE module, const char* proc_name);
+#endif
+
 #if defined(BQ_MSVC)
         template <typename pointer_type>
         bq_forceinline void* pointer_to_void(pointer_type pointer)
@@ -286,7 +290,3 @@ namespace bq {
                 bq_api_function_type_##name>(#name);                                               \
         return function arguments;                                                                 \
     }
-
-#if defined(BQ_WIN) && BQ_IN_UNREAL
-#include "Windows/HideWindowsPlatformTypes.h"
-#endif

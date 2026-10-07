@@ -118,11 +118,13 @@ namespace bq {
         new_block.to_chunk_head().block_num = need_block_count;
         new_block.to_chunk_head().data_size = size;
 
-        handle.low_space_flag = ((aligned_blocks_count_ - left_space) << 1) >= aligned_blocks_count_;
+        // edge triggered: only the allocation crossing half full reports low space
+        const uint32_t used_before = aligned_blocks_count_ - left_space;
+        handle.low_space_flag = (used_before << 1) < aligned_blocks_count_ && ((used_before + need_block_count) << 1) >= aligned_blocks_count_;
         if (handle.low_space_flag) {
             head_->wt_reading_cursor_cache_ = head_->reading_cursor().load_acquire();
             left_space = static_cast<uint32_t>(head_->wt_reading_cursor_cache_ + aligned_blocks_count_ - head_->wt_writing_cursor_cache_);
-            handle.low_space_flag = ((aligned_blocks_count_ - left_space) << 1) >= aligned_blocks_count_;
+            handle.low_space_flag = ((aligned_blocks_count_ - left_space + need_block_count) << 1) >= aligned_blocks_count_;
         }
         handle.result = enum_buffer_result_code::success;
 #if defined(BQ_LOG_BUFFER_DEBUG)
@@ -436,6 +438,24 @@ namespace bq {
         head_->writing_cursor().store_release(head_->wt_writing_cursor_cache_);
         mmap_buffer_state_ = memory_map_buffer_state::recover_from_memory_map;
         return true;
+    }
+
+    void siso_ring_buffer::fill_fast_log_thread_state(_api_fast_log_thread_state& state)
+    {
+        state.siso_head = reinterpret_cast<uint8_t*>(head_);
+        state.siso_units = reinterpret_cast<uint8_t*>(aligned_blocks_);
+        state.unit_count = aligned_blocks_count_;
+        state.half_unit_count = aligned_blocks_count_ >> 1;
+    }
+
+    void siso_ring_buffer::fill_fast_log_layout(_api_fast_log_layout& layout)
+    {
+        layout.head_wt_reading_cursor_cache = static_cast<uint32_t>(BQ_POD_RUNTIME_OFFSET_OF(head, wt_reading_cursor_cache_));
+        layout.head_wt_writing_cursor_cache = static_cast<uint32_t>(BQ_POD_RUNTIME_OFFSET_OF(head, wt_writing_cursor_cache_));
+        layout.head_writing_cursor = static_cast<uint32_t>(BQ_POD_RUNTIME_OFFSET_OF(head, writing_cursor_place_holder_));
+        layout.head_reading_cursor = static_cast<uint32_t>(BQ_POD_RUNTIME_OFFSET_OF(head, reading_cursor_place_holder_));
+        layout.chunk_data_offset = static_cast<uint32_t>(BQ_POD_RUNTIME_OFFSET_OF(chunk_head_def, data));
+        layout.block_size_log2 = static_cast<uint32_t>(BLOCK_SIZE_LOG2);
     }
 
     void siso_ring_buffer::init_with_memory(void* buffer, size_t buffer_size)

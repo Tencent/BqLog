@@ -131,6 +131,9 @@ public class log {
     private ByteBuffer merged_log_level_bitmap_ = null;
     private ByteBuffer categories_mask_array_ = null;
     private ByteBuffer print_stack_level_bitmap_ = null;
+    // One int per category: bit (1 << level) set when that level is enabled without stack trace (see
+    // __api_get_log_category_level_words_by_log_id). null on an older library; the separate bitmaps are used then.
+    private ByteBuffer category_level_words_ = null;
 	/** Category names configured for this log. */
     protected List<String> categories_name_array_ = null;
     private log_context context_ = null;
@@ -147,6 +150,7 @@ public class log {
         log_inst.merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(log_id);
         log_inst.categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(log_id);
         log_inst.print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(log_id);
+        log_inst.category_level_words_ = get_category_level_words(log_id);
 
         long category_count = log_invoker.__api_get_log_categories_count(log_id);
         log_inst.categories_name_array_ = new ArrayList<String>((int)category_count);
@@ -175,6 +179,25 @@ public class log {
     {
 		callback_obj.callback(log_id, category_idx, bq.def.log_level.values()[log_level], content);
     }
+    private static ByteBuffer get_category_level_words(long log_id)
+    {
+        try
+        {
+            return log_invoker.__api_get_log_category_level_words_by_log_id(log_id);
+        }
+        catch (UnsatisfiedLinkError e)
+        {
+            return null; // older native library
+        }
+    }
+
+    // Common case: enabled and no stack trace, one int load and one bit test.
+    private boolean is_enable_without_stack_for(log_category_base category, log_level level)
+    {
+        return category_level_words_ != null
+            && (category_level_words_.getInt((int)log_category_base.get_index(category) << 2) & (1 << level.ordinal())) != 0;
+    }
+
     private boolean is_enable_for(log_category_base category, log_level level)
     {
     	if((merged_log_level_bitmap_.getInt(0) & (1 << level.ordinal())) == 0 
@@ -363,6 +386,7 @@ public class log {
         merged_log_level_bitmap_ = log_invoker.__api_get_log_merged_log_level_bitmap_by_log_id(log_id_);
         categories_mask_array_ = log_invoker.__api_get_log_category_masks_array_by_log_id(log_id_);
         print_stack_level_bitmap_ = log_invoker.__api_get_log_print_stack_level_bitmap_by_log_id(log_id_);
+        category_level_words_ = get_category_level_words(log_id_);
 
         long category_count = log_invoker.__api_get_log_categories_count(log_id_);
         categories_name_array_ = new ArrayList<String>((int)category_count);
@@ -469,11 +493,12 @@ public class log {
     //log methods for param count 0
     protected boolean do_log(log_category_base category, log_level level, String log_format_content)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             return false;
         }
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -526,7 +551,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -535,7 +561,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -584,7 +610,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -597,7 +624,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -647,7 +674,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -664,7 +692,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -715,7 +743,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -736,7 +765,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -788,7 +817,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -813,7 +843,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -866,7 +896,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -895,7 +926,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -949,7 +980,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -982,7 +1014,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -1037,7 +1069,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -1074,7 +1107,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -1130,7 +1163,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -1171,7 +1205,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -1228,7 +1262,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -1273,7 +1308,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9) + context_.get_param_storage_size_no_optimized(p10);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -1331,7 +1366,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -1380,7 +1416,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9) + context_.get_param_storage_size_no_optimized(p10) + context_.get_param_storage_size_no_optimized(p11);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -1439,7 +1475,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             if(null != p1 && p1.getClass() == constants.cls_param_wrapper)
             {
@@ -1492,7 +1529,7 @@ public class log {
             return false;
         }
         long param_storage_size = context_.get_param_storage_size_no_optimized(p1) + context_.get_param_storage_size_no_optimized(p2) + context_.get_param_storage_size_no_optimized(p3) + context_.get_param_storage_size_no_optimized(p4) + context_.get_param_storage_size_no_optimized(p5) + context_.get_param_storage_size_no_optimized(p6) + context_.get_param_storage_size_no_optimized(p7) + context_.get_param_storage_size_no_optimized(p8) + context_.get_param_storage_size_no_optimized(p9) + context_.get_param_storage_size_no_optimized(p10) + context_.get_param_storage_size_no_optimized(p11) + context_.get_param_storage_size_no_optimized(p12);
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();
@@ -1555,7 +1592,8 @@ public class log {
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object... args)
     {
-        if(!is_enable_for(category, level))
+        final boolean without_stack = is_enable_without_stack_for(category, level);
+        if(!without_stack && !is_enable_for(category, level))
         {
             for(Object o : args)
             {
@@ -1571,7 +1609,7 @@ public class log {
         {
         	param_storage_size += context_.get_param_storage_size_no_optimized(o);
         }
-        if((print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
+        if(!without_stack && (print_stack_level_bitmap_.getInt(0) & (1 << level.ordinal())) != 0)
         {
         	StringBuffer sb = new StringBuffer(log_format_content);
         	StackTraceElement[] stack_trace_elements = Thread.currentThread().getStackTrace();

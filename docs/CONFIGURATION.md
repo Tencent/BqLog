@@ -70,7 +70,7 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 | Name                         | Mandatory | Configurable Values                                | Default Value             | ConsoleAppender | TextFileAppender | CompressedFileAppender |
 |------------------------------|---------|-----------------------------------------|--------------------|-----------------|------------------|------------------------|
-| `type`                       | Yes       | `console` / `text_file` / `compressed_file` / `raw_file` | -                  | Yes               | Yes                | Yes      |
+| `type`                       | Yes       | `console` / `text_file` / `compressed_file` | -                  | Yes               | Yes                | Yes      |
 | `enable`                     | No       | `true` / `false`                        | `true`             | Yes               | Yes                | Yes                      |
 | `levels`                     | No       | Log level array (`[verbose,...]` or `[all]`) | `[all]`            | Yes               | Yes                | Yes                      |
 | `time_zone`                  | No       | `gmt` / `localtime` / `Z` / `UTC` / `utc+8` / `utc-2` / `utc+11:30` etc. | `localtime` | Yes               | Yes                | Yes (Affects rolling date)      |
@@ -116,7 +116,7 @@ Specify timezone used for timestamp formatting, also affects "date boundary" for
 
 Effect:
 - ConsoleAppender / TextFileAppender: Determine display of time field in log text;
-- TextFileAppender / CompressedFileAppender / RawFileAppender: Determine cut-off point for file rolling by date (0 o'clock every day).
+- TextFileAppender / CompressedFileAppender: Determine cut-off point for file rolling by date (0 o'clock every day).
 
 #### `appenders_config.xxx.base_dir_type`
 
@@ -176,6 +176,7 @@ If it is relative path, it is based on directory corresponding to `base_dir_type
 | `log.print_stack_levels`                  | No       | Log level array                           | Empty (No call stack printing)                                             | Yes                              |
 | `log.buffer_policy_when_full`             | No       | `discard` / `block` / `expand`         | `block`                                                        | No                              |
 | `log.high_perform_mode_freq_threshold_per_second` | No | 64-bit Positive Integer                            | `1000`                                                         | No                              |
+| `log.worker_interval_ms`                  | No       | 64-bit Non-negative Integer (ms)       | `66`                                                           | No                              |
 
 #### `log.thread_mode`
 
@@ -224,6 +225,22 @@ Behavior when buffer is full:
 - `block` (Recommended Default): Thread writing logs will block waiting for space in buffer;
 - `expand` (Not Recommended): Buffer will dynamically expand to twice original size until writable.
   May significantly increase memory usage, although BqLog reduces expansion frequency through good thread scheduling, it is still recommended to use with caution.
+
+#### `log.worker_interval_ms`
+
+The longest the consumer thread sleeps when it has nothing to do, in milliseconds. It is woken early when a buffer runs low on space. Default `66`.
+
+> ⚠️ **In `async` mode (the default) this is a global setting.** Every `async` log object shares one public worker thread, and this setting changes that thread, so it **affects every other `async` log object in the process as well**:
+> - once one `async` log sets it, the consumer of every `async` log runs at that interval;
+> - when several `async` logs set different values, the log **created last** wins;
+> - a log that does not set it does not put the public worker back to the default.
+>
+> To change the consumer interval of one log without touching the others, set that log to `log.thread_mode=independent`: it gets a worker thread of its own, and the setting applies to that worker only.
+
+- `independent` mode: applies only to the log's own worker thread, other logs are not affected.
+- `sync` mode: there is no worker thread, the setting has no effect.
+- `0` means the consumer never sleeps and keeps polling. That takes a whole CPU core; in `async` mode it means the public worker polls for every `async` log. Only use it when latency matters above all and a core is free.
+- Read only by `create_log`; it cannot be changed with `reset_config`.
 
 #### `log.high_perform_mode_freq_threshold_per_second`
 

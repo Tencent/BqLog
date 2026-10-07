@@ -71,6 +71,9 @@ namespace bq.impl
         public unsafe static extern uint* __api_get_log_print_stack_level_bitmap_by_log_id(ulong log_id);
 
         [DllImport(LIB_NAME, CallingConvention = CallingConvention.Cdecl,CharSet = CharSet.Unicode)]
+        public unsafe static extern uint* __api_get_log_category_level_words_by_log_id(ulong log_id);
+
+        [DllImport(LIB_NAME, CallingConvention = CallingConvention.Cdecl,CharSet = CharSet.Unicode)]
         public unsafe static extern byte* __api_log_device_console(log_level level, byte* content);
         
         [DllImport(LIB_NAME, CallingConvention = CallingConvention.Cdecl,CharSet = CharSet.Unicode)]
