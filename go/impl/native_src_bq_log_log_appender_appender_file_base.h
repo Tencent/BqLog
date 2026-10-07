@@ -79,7 +79,16 @@ namespace bq {
 
         virtual bool reset_impl(const bq::property_value& config_obj) override;
 
-        virtual bool log_impl(const log_entry_handle& handle) override;
+        // Hot path: disk healthy, branch never taken. When the previous flush hit ENOSPC, entries are dropped at the
+        // door so the in-memory cache cannot grow without bound; what is already cached stays and is retried.
+        virtual bool log_impl(const log_entry_handle& handle) override
+        {
+            BQ_UNLIKELY_IF(should_drop_due_to_io_failure())
+            {
+                return false;
+            }
+            return refresh_file_handle(handle);
+        }
 
         bq_forceinline bool should_drop_due_to_io_failure() const { return disk_full_drop_; }
 
@@ -108,14 +117,43 @@ namespace bq {
 
         void clear_read_cache();
 
-        write_with_cache_handle alloc_write_cache(size_t size);
+        bq_forceinline write_with_cache_handle alloc_write_cache(size_t size)
+        {
+#ifndef NDEBUG
+            assert(!cache_write_already_allocated_ && "duplicate call alloc_write_cache in log file appender");
+            cache_write_already_allocated_ = true;
+#endif
+            BQ_UNLIKELY_IF(cache_write_cursor_ + static_cast<uint64_t>(size) > get_cache_write_size())
+            {
+                make_room_in_write_cache(size);
+            }
+            write_with_cache_handle result_handle;
+            result_handle.data_ = cache_write_ + static_cast<ptrdiff_t>(cache_write_cursor_);
+            result_handle.alloc_len_ = size;
+            result_handle.used_len_ = size;
+            return result_handle;
+        }
 
-        void return_write_cache(const write_with_cache_handle& handle);
+        bq_forceinline void return_write_cache(const write_with_cache_handle& handle)
+        {
+#ifndef NDEBUG
+            assert(cache_write_already_allocated_ && "call return_write_cache without calling alloc_write_cache in log file appender");
+            assert(handle.used_len_ <= handle.alloc_len_ && "used data length greater than allocated length in log file appender");
+            cache_write_already_allocated_ = false;
+#endif
+            cache_write_cursor_ += static_cast<uint64_t>(handle.used_len_);
+        }
 
         // Low performance function, try to use write cache first
         size_t direct_write(const void* data, size_t size, bq::file_manager::seek_option seek_opt, int64_t seek_offset);
 
-        void mark_write_finished();
+        bq_forceinline void mark_write_finished()
+        {
+#ifndef NDEBUG
+            assert(!cache_write_already_allocated_ && "mark_write_finished must be called after return_write_cache()");
+#endif
+            cache_write_head_->cache_write_finished_cursor_ = cache_write_cursor_;
+        }
 
         void set_cache_write_padding(uint8_t new_padding);
 
@@ -137,13 +175,28 @@ namespace bq {
 
         bool try_recover();
 
-        bool is_file_oversize();
+        bq_forceinline bool is_file_oversize() const
+        {
+            return max_file_size_ > 0 && current_file_size_ >= max_file_size_;
+        }
 
         void clear_all_expired_files(); // retention limit
 
         void clear_all_limit_files(); // capacity limit
 
-        bool refresh_file_handle(const log_entry_handle& handle);
+        bq_forceinline bool refresh_file_handle(const log_entry_handle& handle)
+        {
+            BQ_LIKELY_IF(file_ && !is_file_oversize()
+                && (!enable_rolling_log_file_ || handle.get_log_head().timestamp_epoch <= current_file_expire_time_epoch_ms_))
+            {
+                return true;
+            }
+            return open_file_for_entry(handle);
+        }
+
+        bool open_file_for_entry(const log_entry_handle& handle);
+
+        void make_room_in_write_cache(size_t size);
 
         bool open_file_with_write_exclusive(const bq::string& file_path);
 

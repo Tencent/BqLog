@@ -85,6 +85,16 @@ namespace bq {
             return static_cast<To>(value);
         }
 
+        bq_forceinline void atomic_thread_fence_acquire() noexcept
+        {
+            __atomic_thread_fence(__ATOMIC_ACQUIRE);
+        }
+
+        bq_forceinline void atomic_thread_fence_release() noexcept
+        {
+            __atomic_thread_fence(__ATOMIC_RELEASE);
+        }
+
         template <typename T, size_t N>
         class alignas(8) _atomic_base {
         public:

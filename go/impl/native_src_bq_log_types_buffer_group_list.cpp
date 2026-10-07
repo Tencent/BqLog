@@ -297,11 +297,24 @@ namespace bq {
             },
                 &current_epoch_ms);
             if (candidiate) {
+                // an empty group holds no data to recover, so its mmap file goes with it
+                candidiate->set_delete_mmap_when_destruct(true);
                 bq::util::aligned_delete(candidiate);
             } else {
                 break;
             }
         }
+        gc_pending_ = !pool_.is_empty();
+    }
+
+    void group_list::garbage_collect_pending()
+    {
+        uint64_t current_epoch_ms = bq::platform::high_performance_epoch_ms();
+        if (current_epoch_ms < last_gc_epoch_ms_ + GROUP_NODE_GC_LIFE_TIME_MS) {
+            return;
+        }
+        last_gc_epoch_ms_ = current_epoch_ms;
+        garbage_collect();
     }
 
     size_t group_list::get_garbage_count()

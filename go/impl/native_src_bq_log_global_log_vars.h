@@ -30,7 +30,6 @@ namespace bq {
         const char* log_appender_type_names_[static_cast<int32_t>(appender_base::appender_type::type_count)] = {
             "console",
             "text_file",
-            "raw_file",
             "compressed_file"
         };
         const char log_level_str_[6][3] = {
@@ -41,7 +40,6 @@ namespace bq {
             { '[', 'E', ']' }, // ERROR
             { '[', 'F', ']' } // FATAL
         };
-        const char digit3_array[3000 + 16] = {};
         const char* log_recover_start_str_ = "/************************************* BQLOG RECOVER START *************************************/";
         const char* log_recover_end_str_ = "/************************************* BQLOG RECOVER END *************************************/";
 #if defined(BQ_JAVA)
@@ -67,7 +65,6 @@ namespace bq {
 #if defined(BQ_JAVA)
         static void jni_onload_callback();
 #endif
-        void init_layout_values() const;
 
     protected:
         virtual void partial_destruct() override;

@@ -85,6 +85,10 @@ namespace bq {
 
         bq_forceinline void renew() { get_buffer().renew(); }
 
+        static uint32_t get_buffer_offset() { return static_cast<uint32_t>(BQ_POD_RUNTIME_OFFSET_OF(block_node_head, buffer_)); }
+
+        static uint32_t get_misc_data_offset() { return static_cast<uint32_t>(BQ_POD_RUNTIME_OFFSET_OF(block_node_head, misc_data_)); }
+
         static constexpr ptrdiff_t get_buffer_data_offset()
         {
             return (ptrdiff_t)((sizeof(block_node_head) + BQ_CACHE_LINE_SIZE - 1) - ((sizeof(block_node_head) + BQ_CACHE_LINE_SIZE - 1) % BQ_CACHE_LINE_SIZE));

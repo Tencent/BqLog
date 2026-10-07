@@ -13,7 +13,7 @@
 #include "native_include_bq_common_bq_common_public_include.h"
 #include "native_src_bq_common_platform_platform_misc.h"
 #include "native_src_bq_common_platform_thread_mutex.h"
-#include "native_src_bq_common_platform_atomic_atomic.h"
+#include "native_include_bq_common_platform_atomic_atomic.h"
 
 namespace bq {
     struct file_handle {

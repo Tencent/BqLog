@@ -313,3 +313,50 @@ func Test_snapshot_concurrency(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func Test_appender_enable_reset_config_and_flush_all(t *testing.T) {
+	bq.Set_console_buffer_enable(false)
+	name := fmt.Sprintf("parity_%d", next_log.Add(1))
+	log := bq.Create_log(name, "appenders_config.Console.type=console\nappenders_config.Console.levels=[all]\nlog.thread_mode=sync\n", nil)
+	if log.Get_name() != name || bq.Get_log_by_name(name).Get_name() != name {
+		t.Fatalf("Get_name=%q, want %q", log.Get_name(), name)
+	}
+	var count atomic.Int32
+	callback := func(id uint64, _ int32, _ def.Log_level, _ string) {
+		if id == log.Get_id() {
+			count.Add(1)
+		}
+	}
+	bq.Register_console_callback(callback)
+	defer bq.Register_console_callback(nil)
+
+	log.Set_appender_enable("Console", false)
+	log.Info("disabled")
+	log.Set_appender_enable("Console", true)
+	log.Info("enabled")
+	if count.Load() != 1 {
+		t.Fatalf("Set_appender_enable: callback count=%d, want 1", count.Load())
+	}
+
+	if !log.Reset_config("appenders_config.Console.type=console\nappenders_config.Console.levels=[error]\nlog.thread_mode=sync\n") {
+		t.Fatal("Reset_config failed")
+	}
+	if log.Is_enable_for(def.Info, 0) || !log.Is_enable_for(def.Error, 0) {
+		t.Fatal("Reset_config did not apply the new levels")
+	}
+	if (&bq.Log{}).Reset_config("log.thread_mode=sync\n") {
+		t.Fatal("Reset_config on an invalid log must fail")
+	}
+
+	bq.Unregister_console_callback(func(uint64, int32, def.Log_level, string) {})
+	log.Error("still registered")
+	if count.Load() != 2 {
+		t.Fatalf("an unrelated callback must not unregister: count=%d, want 2", count.Load())
+	}
+	bq.Unregister_console_callback(callback)
+	log.Error("unregistered")
+	if count.Load() != 2 {
+		t.Fatalf("Unregister_console_callback: count=%d, want 2", count.Load())
+	}
+	bq.Force_flush_all_logs()
+}

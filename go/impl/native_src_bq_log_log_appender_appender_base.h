@@ -23,7 +23,6 @@ namespace bq {
         enum appender_type {
             console,
             text_file,
-            raw_file,
             compressed_file,
             type_count
         };
@@ -38,7 +37,15 @@ namespace bq {
         void clear();
         bool init(const bq::string& name, const bq::property_value& config_obj, const log_imp* parent_log);
         bool reset(const bq::property_value& config_obj);
-        bool log(const log_entry_handle& handle);
+        bq_forceinline bool log(const log_entry_handle& handle)
+        {
+            const uint32_t category_idx = handle.get_log_head().category_idx;
+            if (categories_mask_array_.size() <= category_idx || categories_mask_array_[category_idx] == 0) {
+                return false;
+            }
+            return log_level_bitmap_.have_level(handle.get_level()) && appenders_enable && log_impl(handle);
+        }
+        bool log_recovery_error(const log_entry_handle& handle);
 
         inline log_level_bitmap get_log_level_bitmap() const
         {

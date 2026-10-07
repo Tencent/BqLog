@@ -21,9 +21,6 @@ namespace bq {
     class log_manager;
     class log_imp;
     class log_worker : public bq::platform::thread {
-    public:
-        static constexpr uint64_t process_interval_ms = 66;
-
     private:
         log_manager* manager_;
         log_imp* log_target_;
@@ -32,12 +29,23 @@ namespace bq {
         platform::mutex mutex_;
         platform::atomic<bool> wait_flag_;
         platform::atomic<bool> awake_flag_;
+        bq::platform::atomic<uint64_t> process_interval_ms_; // 0: never sleep
 
     public:
         log_worker();
         ~log_worker();
 
         void init(log_thread_mode thread_mode, log_imp* log_target);
+
+        bq_forceinline uint64_t get_process_interval_ms() const
+        {
+            return process_interval_ms_.load_relaxed();
+        }
+
+        bq_forceinline void set_process_interval_ms(uint64_t interval_ms)
+        {
+            process_interval_ms_.store_relaxed(interval_ms);
+        }
 
         bq_forceinline bool is_public_worker() const
         {
@@ -54,8 +62,12 @@ namespace bq {
             return log_target_;
         }
 
+        // set by the worker right before it waits, so only a parked worker costs an exchange
         bq_forceinline void awake()
         {
+            if (!awake_flag_.load_relaxed()) {
+                return;
+            }
             bool origin_value = awake_flag_.exchange_relaxed(false);
             if (origin_value) {
                 mutex_.lock();

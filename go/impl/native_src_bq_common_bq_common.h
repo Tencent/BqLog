@@ -26,7 +26,7 @@
 
 #include "native_include_bq_common_bq_common_public_include.h"
 #include "native_src_bq_common_platform_simd.h"
-#include "native_src_bq_common_platform_atomic_atomic.h"
+#include "native_include_bq_common_platform_atomic_atomic.h"
 #include "native_src_bq_common_platform_no_lib_cpp_impl.h"
 #include "native_src_bq_common_utils_aligned_allocator.h"
 #include "native_src_bq_common_utils_utility_types.h"

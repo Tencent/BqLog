@@ -42,6 +42,7 @@ namespace bq {
         uint8_t* data_addr;
         enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;
         bool low_space_flag = false; // just approximate because of multi-thread
+        bool ext_info_reserved = true; // false when the chunk is in an HP block, whose owner thread is recorded once in the block
     };
 
     struct log_buffer_read_handle {

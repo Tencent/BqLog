@@ -10,6 +10,9 @@
  */
 #pragma once
 #include <stddef.h>
+
+#define BQ_CACHE_LINE_SIZE static_cast<size_t>(128)
+#define BQ_CACHE_LINE_SIZE_LOG2 static_cast<size_t>(7)
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define BQ_WIN 1
 #ifdef _WIN64
@@ -108,10 +111,13 @@
 
 #ifdef BQ_MSVC
 #define bq_forceinline __forceinline
+#define bq_noinline __declspec(noinline)
 #elif defined(BQ_GCC) || defined(BQ_CLANG)
 #define bq_forceinline __inline__ __attribute__((always_inline))
+#define bq_noinline __attribute__((noinline))
 #else
 #define bq_forceinline inline
+#define bq_noinline
 #endif
 
 #include "native_include_bq_common_platform_build_type.h"
@@ -157,7 +163,57 @@
 // use BQ_TLS_NON_POD instead of thread_local can avoid crash when thread exit.
 #define BQ_TLS_CONCAT_INNER(a, b) a##b
 #define BQ_TLS_CONCAT(a, b) BQ_TLS_CONCAT_INNER(a, b)
-#define BQ_TLS_DEFINE(Type, Name)                                                \
+#define BQ_TLS_DEFINE_IMPL(Type, Name, Inline)                                      \
+    Inline BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                    \
+    Inline BQ_TLS bool ____BQ_TSL_##Name##_recycled;                                \
+    struct BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) {                  \
+        BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__)()                     \
+        {                                                                           \
+        }                                                                           \
+        ~BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__)()                    \
+        {                                                                           \
+            if (____BQ_TLS_##Name##_ptr) {                                          \
+                delete ____BQ_TLS_##Name##_ptr;                                     \
+                ____BQ_TLS_##Name##_ptr = nullptr;                                  \
+                ____BQ_TSL_##Name##_recycled = true;                                \
+            }                                                                       \
+        }                                                                           \
+        bq_forceinline operator bool() { return !____BQ_TSL_##Name##_recycled; }    \
+        bq_forceinline Type& get()                                                  \
+        {                                                                           \
+            if (!____BQ_TLS_##Name##_ptr) {                                         \
+                ____BQ_TLS_##Name##_ptr = new Type();                               \
+            }                                                                       \
+            return *____BQ_TLS_##Name##_ptr;                                        \
+        }                                                                           \
+    };                                                                              \
+    Inline thread_local BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) Name; \
+    bq_forceinline Type& BQ_TLS_CONCAT(Name, _get_direct)()                         \
+    {                                                                               \
+        Type* ____p = ____BQ_TLS_##Name##_ptr;                                      \
+        if (____p) {                                                                \
+            return *____p;                                                          \
+        }                                                                           \
+        return Name.get();                                                          \
+    }
+#define BQ_TLS_DEFINE(Type, Name) BQ_TLS_DEFINE_IMPL(Type, Name, )
+#define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name)
+// Header part: declares the POD TLS defined by BQ_TLS_NON_POD_INLINE_IMPL, so inline code can read it. An inline non-POD
+// thread_local would emit a strong TLS init routine per TU on Apple ld64.
+#define BQ_TLS_NON_POD_INLINE(Type, Name)                   \
+    extern BQ_TLS Type* ____BQ_TLS_##Name##_ptr;            \
+    extern BQ_TLS bool ____BQ_TSL_##Name##_recycled;        \
+    Type& BQ_TLS_CONCAT(Name, _get_slow)();                 \
+    bq_forceinline Type& BQ_TLS_CONCAT(Name, _get_direct)() \
+    {                                                       \
+        Type* ____p = ____BQ_TLS_##Name##_ptr;              \
+        if (____p) {                                        \
+            return *____p;                                  \
+        }                                                   \
+        return BQ_TLS_CONCAT(Name, _get_slow)();            \
+    }
+// Source part: exactly one translation unit. Same storage as BQ_TLS_NON_POD.
+#define BQ_TLS_NON_POD_INLINE_IMPL(Type, Name)                                   \
     BQ_TLS Type* ____BQ_TLS_##Name##_ptr;                                        \
     BQ_TLS bool ____BQ_TSL_##Name##_recycled;                                    \
     struct BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) {               \
@@ -182,15 +238,10 @@
         }                                                                        \
     };                                                                           \
     thread_local BQ_TLS_CONCAT(_bq_non_pod_holder_##Name##_, __LINE__) Name;     \
-    bq_forceinline Type& BQ_TLS_CONCAT(Name, _get_direct)()                      \
+    Type& BQ_TLS_CONCAT(Name, _get_slow)()                                       \
     {                                                                            \
-        Type* ____p = ____BQ_TLS_##Name##_ptr;                                   \
-        if (____p) {                                                             \
-            return *____p;                                                        \
-        }                                                                        \
         return Name.get();                                                       \
     }
-#define BQ_TLS_NON_POD(Type, Name) BQ_TLS_DEFINE(Type, Name)
 
 #if defined(BQ_MSVC)
 #define BQ_PACK_BEGIN __pragma(pack(push, 1))
@@ -253,9 +304,9 @@
 #define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END() \
     _Pragma("GCC diagnostic pop")
 #elif defined(BQ_MSVC)
-#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN()                                                              \
-    __pragma(warning(push))                                                                                  \
-        __pragma(warning(disable : 4700)) /* C4700: Uninitialized Local Variable Used */                     \
+#define BQ_SUPPRESS_MAYBE_UNINITIALIZED_BEGIN()                                          \
+    __pragma(warning(push))                                                              \
+        __pragma(warning(disable : 4700)) /* C4700: Uninitialized Local Variable Used */ \
         __pragma(warning(disable : 4701)) /* C4701: Potentially Uninitialized Local Variable Used */
 #define BQ_SUPPRESS_MAYBE_UNINITIALIZED_END() \
     __pragma(warning(pop))

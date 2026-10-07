@@ -19,6 +19,7 @@
 #endif
 namespace bq {
     static bq::platform::atomic<int32_t> log_worker_name_seq = 0;
+    static constexpr uint64_t default_process_interval_ms = 66;
     BQ_TLS_NON_POD(log_worker_watch_dog, tls_log_worker_watch_dog_)
 
     log_worker::log_worker()
@@ -28,6 +29,7 @@ namespace bq {
         , mutex_(true)
         , wait_flag_(false)
         , awake_flag_(false)
+        , process_interval_ms_(default_process_interval_ms)
     {
     }
 
@@ -110,9 +112,13 @@ namespace bq {
             if (is_cancelled()) {
                 break;
             }
+            const uint64_t interval_ms = process_interval_ms_.load_relaxed();
+            if (interval_ms == 0) {
+                continue;
+            }
             mutex_.lock();
             awake_flag_.store_relaxed(true);
-            trigger_.wait_for(mutex_, process_interval_ms);
+            trigger_.wait_for(mutex_, interval_ms);
             awake_flag_.store_relaxed(false);
             mutex_.unlock();
         }

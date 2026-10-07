@@ -17,8 +17,8 @@ func Test_generated_category_outside_package(t *testing.T) {
 		t.Fatal("generated logger is invalid")
 	}
 	// All six generated methods live in a different package from the wrapper.
-	cat := categories.Generated_category_Category__7_ModuleA_7_SystemA_6_ClassA
-	methods := []func(categories.Generated_category_Category, string, ...any) bool{
+	cat := log.Cat.ModuleA.SystemA.ClassA
+	methods := []func(categories.Generated_category_Category_ref, string, ...any) bool{
 		log.Verbose_c, log.Debug_c, log.Info_c, log.Warning_c, log.Error_c, log.Fatal_c,
 	}
 	for _, method := range methods {
@@ -26,14 +26,20 @@ func Test_generated_category_outside_package(t *testing.T) {
 			t.Fatal("generated category method failed")
 		}
 	}
+	if !log.Info_c(log.Cat.ModuleA.SystemA, "mid level") {
+		t.Fatal("generated inner category method failed")
+	}
 	snapshot := log.Take_snapshot("gmt")
 	if strings.Count(snapshot, "[ModuleA.SystemA.ClassA]") != 6 || strings.Count(snapshot, "generated 42") != 6 {
 		t.Fatalf("unexpected generated output: %s", snapshot)
 	}
+	if !strings.Contains(snapshot, "[ModuleA.SystemA]\tmid level") {
+		t.Fatalf("unexpected inner category output: %s", snapshot)
+	}
 	if !categories.Get_Generated_category_by_name("generated_category_test").Is_valid() {
 		t.Fatal("generated lookup failed")
 	}
-	if categories.Generated_category_Category__3_A_B == categories.Generated_category_Category__1_A_1_B {
+	if log.Cat.A_B == log.Cat.A.B {
 		t.Fatal("generated category names collide")
 	}
 	if log.Info_c(categories.Generated_category_Category(^uint32(0)), "invalid") {

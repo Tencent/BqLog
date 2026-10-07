@@ -22,6 +22,39 @@ namespace bq {
     // =================================================================================================
 
     // -------------------------------------------------------------------------------------------------
+    static const char digit_pairs[201] = "00010203040506070809"
+                                         "10111213141516171819"
+                                         "20212223242526272829"
+                                         "30313233343536373839"
+                                         "40414243444546474849"
+                                         "50515253545556575859"
+                                         "60616263646566676869"
+                                         "70717273747576777879"
+                                         "80818283848586878889"
+                                         "90919293949596979899";
+
+    // writes the base 10 digits of value to dst (room for 20), returns the count
+    static bq_forceinline uint32_t write_decimal_digits(uint64_t value, char* dst)
+    {
+        uint32_t count = 1;
+        for (uint64_t limit = 10; count < 20 && value >= limit; limit *= 10) {
+            ++count;
+        }
+        char* p = dst + count;
+        while (value >= 100) {
+            const uint32_t pair = static_cast<uint32_t>(value % 100) * 2;
+            value /= 100;
+            p -= 2;
+            memcpy(p, digit_pairs + pair, 2);
+        }
+        if (value >= 10) {
+            memcpy(p - 2, digit_pairs + value * 2, 2);
+        } else {
+            *(p - 1) = static_cast<char>('0' + value);
+        }
+        return count;
+    }
+
     // find_brace_and_copy (UTF-8 / ASCII)
     // Scans the source buffer for braces '{' or '}' and copies content to the destination buffer.
     // Stops upon encountering a brace or reaching the specified length.
@@ -63,15 +96,7 @@ namespace bq {
 
             int32_t mask = _mm256_movemask_epi8(mask_v);
             if (mask != 0) {
-                // Found brace
-                uint32_t idx = 0;
-#if defined(BQ_MSVC)
-                unsigned long index;
-                _BitScanForward(&index, static_cast<unsigned long>(mask));
-                idx = static_cast<uint32_t>(index);
-#else
-                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<uint32_t>(mask)));
-#endif
+                const uint32_t idx = bq_ctz64(static_cast<uint32_t>(mask));
                 // Copy up to idx
                 memcpy(dst, src, idx);
                 found_brace = true;
@@ -102,14 +127,7 @@ namespace bq {
 
             int32_t mask = _mm_movemask_epi8(mask_v);
             if (mask != 0) {
-                uint32_t idx = 0;
-#if defined(BQ_MSVC)
-                unsigned long index;
-                _BitScanForward(&index, static_cast<unsigned long>(mask));
-                idx = static_cast<uint32_t>(index);
-#else
-                idx = static_cast<uint32_t>(__builtin_ctz(static_cast<uint32_t>(mask)));
-#endif
+                const uint32_t idx = bq_ctz64(static_cast<uint32_t>(mask));
                 memcpy(dst, src, idx);
                 found_brace = true;
                 return static_cast<uint32_t>(src - start) + idx;
@@ -136,11 +154,13 @@ namespace bq {
             uint8x16_t cmp_r = vceqq_u8(chunk, brace_r);
             uint8x16_t mask_v = vorrq_u8(cmp_l, cmp_r);
 
-            if (bq_vmaxvq_u8(mask_v) != 0) {
-                break;
-            }
-
+            // src + 16 <= end, so dst has room for the whole chunk
             vst1q_u8(reinterpret_cast<uint8_t*>(dst), chunk);
+            const uint64_t mask = bq_neon_byte_mask(mask_v);
+            if (mask != 0) {
+                found_brace = true;
+                return static_cast<uint32_t>(src - start) + (bq_ctz64(mask) >> 2);
+            }
             src += 16;
             dst += 16;
         }
@@ -382,37 +402,36 @@ namespace bq {
         memcpy(&format_content[format_content_cursor], time_zone_ptr_->get_time_string_cache(), time_zone_ptr_->get_time_string_cache_len());
         format_content_cursor += static_cast<uint32_t>(time_zone_ptr_->get_time_string_cache_len());
 
-        auto m_sec = static_cast<int32_t>(epoch_ms % 1000);
-        const char* ms_src = &log_global_vars::get().digit3_array[m_sec * 3];
+        const uint32_t m_sec = static_cast<uint32_t>(epoch_ms % 1000);
         char* ms_dest = &format_content[format_content_cursor];
-        ms_dest[0] = ms_src[0];
-        ms_dest[1] = ms_src[1];
-        ms_dest[2] = ms_src[2];
+        ms_dest[0] = static_cast<char>('0' + m_sec / 100);
+        memcpy(ms_dest + 1, digit_pairs + (m_sec % 100) * 2, 2);
         format_content_cursor += 3;
         return enum_layout_result::finished;
     }
 
     bq::layout::enum_layout_result layout::insert_thread_info(const bq::log_entry_handle& log_entry)
     {
-        const auto& ext_info = log_entry.get_ext_head();
-        auto iter = thread_names_cache_.find(log_entry.get_log_head().log_thread_id);
-        if (iter == thread_names_cache_.end()) {
-            char tmp[256];
-            uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", log_entry.get_log_head().log_thread_id));
-            memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), ext_info.thread_name_len_);
-            cursor += ext_info.thread_name_len_;
-            tmp[cursor++] = ']';
-            tmp[cursor++] = '\t';
-            assert(cursor < 256);
-            tmp[cursor] = '\0';
-            bq::string thread_name = tmp;
-            iter = thread_names_cache_.add(log_entry.get_log_head().log_thread_id, bq::move(thread_name));
+        const uint64_t thread_id = log_entry.get_log_head().log_thread_id;
+        if (thread_id != last_thread_id_ || last_thread_name_.is_empty()) {
+            auto iter = thread_names_cache_.find(thread_id);
+            if (iter == thread_names_cache_.end()) {
+                const auto& ext_info = log_entry.get_ext_head();
+                char tmp[256];
+                uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", thread_id));
+                memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), ext_info.thread_name_len_);
+                cursor += ext_info.thread_name_len_;
+                tmp[cursor++] = ']';
+                tmp[cursor++] = '\t';
+                assert(cursor < 256);
+                tmp[cursor] = '\0';
+                bq::string thread_name = tmp;
+                iter = thread_names_cache_.add(thread_id, bq::move(thread_name));
+            }
+            last_thread_id_ = thread_id;
+            last_thread_name_ = iter->value();
         }
-        if (iter->value().size() > 0) {
-            expand_format_content_buff_size(format_content_cursor + (uint32_t)iter->value().size());
-            memcpy(&format_content[format_content_cursor], iter->value().c_str(), iter->value().size());
-            format_content_cursor += (uint32_t)iter->value().size();
-        }
+        insert_str_utf8(last_thread_name_.c_str(), static_cast<uint32_t>(last_thread_name_.size()));
         return enum_layout_result::finished;
     }
 
@@ -536,11 +555,11 @@ namespace bq {
 
     //'format_content' may be more suitable as a parameter
     //@param format_content
-    //@paramwirte_begin_pos
-    void layout::fill_and_alignment(uint32_t wirte_begin_pos)
+    //@paramwrite_begin_pos
+    void layout::fill_and_alignment(uint32_t write_begin_pos)
     {
         // fill and alignment
-        uint32_t dis = format_content_cursor - wirte_begin_pos;
+        uint32_t dis = format_content_cursor - write_begin_pos;
         if (dis < format_info_.width) {
             uint32_t fill_count = format_info_.width - dis;
             // alignment right
@@ -549,8 +568,8 @@ namespace bq {
                 uint32_t ignore_index = 0;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
-                    uint32_t opt_index = wirte_begin_pos + format_info_.width - i;
-                    uint32_t move_index = wirte_begin_pos + (dis - i);
+                    uint32_t opt_index = write_begin_pos + format_info_.width - i;
+                    uint32_t move_index = write_begin_pos + (dis - i);
 
                     // keep the sign in front
                     if ((format_content[move_index] == '+' || format_content[move_index] == '-') && format_info_.fill != ' ') {
@@ -574,7 +593,7 @@ namespace bq {
                 }
                 // fill
                 for (uint32_t i = ignore; i < fill_count; i++) {
-                    uint32_t opt_index = wirte_begin_pos + i;
+                    uint32_t opt_index = write_begin_pos + i;
                     format_content[opt_index] = format_info_.fill;
                 }
             }
@@ -592,18 +611,18 @@ namespace bq {
                 uint32_t front = fill_count - end;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
-                    uint32_t opt_index = wirte_begin_pos + format_info_.width - i - end;
-                    uint32_t move_index = wirte_begin_pos + (dis - i);
+                    uint32_t opt_index = write_begin_pos + format_info_.width - i - end;
+                    uint32_t move_index = write_begin_pos + (dis - i);
                     format_content[opt_index] = format_content[move_index];
                 }
                 // fill front
                 for (uint32_t i = 0; i < front; i++) {
-                    uint32_t opt_index = wirte_begin_pos + i;
+                    uint32_t opt_index = write_begin_pos + i;
                     format_content[opt_index] = format_info_.fill;
                 }
                 // fill end
                 for (uint32_t i = 0; i < end; i++) {
-                    uint32_t opt_index = front + wirte_begin_pos + dis + i;
+                    uint32_t opt_index = front + write_begin_pos + dis + i;
                     format_content[opt_index] = format_info_.fill;
                 }
             }
@@ -650,24 +669,32 @@ namespace bq {
 
     void layout::python_style_format_content(const bq::log_entry_handle& log_entry)
     {
-        if (log_entry.get_log_head().log_format_str_type == static_cast<uint16_t>(log_arg_type_enum::string_utf8_type)) {
-            python_style_format_content_utf8(log_entry);
+        const bool utf8 = log_entry.get_log_head().log_format_str_type == static_cast<uint16_t>(log_arg_type_enum::string_utf8_type);
+        if (log_entry.is_fast_layout()) {
+            if (utf8) {
+                python_style_format_content_utf8(log_entry, log_entry.get_fast_args());
+            } else {
+                python_style_format_content_utf16(log_entry, log_entry.get_fast_args());
+            }
         } else {
-            python_style_format_content_utf16(log_entry);
+            if (utf8) {
+                python_style_format_content_utf8(log_entry, log_entry.get_standard_args());
+            } else {
+                python_style_format_content_utf16(log_entry, log_entry.get_standard_args());
+            }
         }
         expand_format_content_buff_size(format_content_cursor + 1);
         format_content[format_content_cursor] = '\0';
         assert(format_content_cursor < format_content.size());
     }
 
-    void layout::python_style_format_content_utf8(const bq::log_entry_handle& log_entry)
+    template <typename ARGS_CURSOR>
+    void layout::python_style_format_content_utf8(const bq::log_entry_handle& log_entry, ARGS_CURSOR args)
     {
-        const uint8_t* args_data_ptr = log_entry.get_log_args_data();
-        uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char* format_data_ptr = log_entry.get_format_string_data();
         uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
 
-        if (args_data_len == 0) {
+        if (!args.has_next()) {
             expand_format_content_buff_size(format_content_cursor + format_data_len);
             memcpy((char*)&format_content[format_content_cursor], format_data_ptr, format_data_len);
             format_content_cursor += format_data_len;
@@ -679,7 +706,6 @@ namespace bq {
         expand_format_content_buff_size(format_content_cursor + format_data_len);
 
         uint32_t i = 0;
-        uint32_t args_data_cursor = 0;
 
         while (i < format_data_len) {
             bool found_brace = false;
@@ -717,11 +743,11 @@ namespace bq {
                     format_info_.reset();
 
                 // Parse format string (e.g. "{:.2f}")
-                if (args_data_cursor < args_data_len) {
+                if (args.has_next()) {
                     // Look ahead for the closing brace '}' to determine the length of the format specifier.
                     int32_t format_spec_len = 0;
-                    bool format_spec_closed = false;
-                    for (uint32_t k = i; k < format_data_len && k < i + 20; ++k) { // Limit lookahead to avoid excessive scanning.
+                    bool format_spec_closed = i < format_data_len && format_data_ptr[i] == '}';
+                    for (uint32_t k = i; !format_spec_closed && k < format_data_len && k < i + 20; ++k) { // Limit lookahead to avoid excessive scanning.
                         char c_scan = format_data_ptr[k];
                         if (c_scan == '}') {
                             format_spec_closed = true;
@@ -736,15 +762,21 @@ namespace bq {
                     }
 
                     if (format_spec_closed) {
-                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
-                        if (format_info_.offset != 0) {
-                            i += (format_info_.offset + 1); // advance past format spec and '}'
+                        if (format_spec_len == 0) {
+                            format_info_ = format_info(); // what c20_format returns for "{}"
+                            format_info_.used = true;
+                            ++i;
                         } else {
-                            i += static_cast<uint32_t>(format_spec_len + 1); // advance past content and '}'
+                            format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                            if (format_info_.offset != 0) {
+                                i += (format_info_.offset + 1); // advance past format spec and '}'
+                            } else {
+                                i += static_cast<uint32_t>(format_spec_len + 1); // advance past content and '}'
+                            }
                         }
 
                         auto write_begin_pos = format_content_cursor;
-                        uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
+                        uint8_t type_info_i = args.type();
                         bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
 
                         switch (type_info) {
@@ -754,91 +786,91 @@ namespace bq {
                         case bq::log_arg_type_enum::null_type:
                             assert(sizeof(void*) >= 4);
                             insert_str_utf8("null", static_cast<uint32_t>(sizeof("null") - 1));
-                            args_data_cursor += 4;
+                            args.skip_null();
                             break;
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
                             {
-                                const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
+                                const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args.value());
                                 insert_pointer(arg_data_ptr);
-                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t)); // use 64bit pointer for serialize
+                                args.skip_value(static_cast<uint32_t>(sizeof(uint64_t))); // use 64bit pointer for serialize
                             }
                             break;
                         case bq::log_arg_type_enum::bool_type:
-                            insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_bool(*reinterpret_cast<const bool*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::char_type:
-                            insert_char(*reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_char(*reinterpret_cast<const char*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::char16_type:
-                            insert_char16(*reinterpret_cast<const char16_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_char16(*reinterpret_cast<const char16_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::char32_type:
-                            insert_char32(*reinterpret_cast<const char32_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += 8;
+                            insert_char32(*reinterpret_cast<const char32_t*>(args.value()));
+                            args.skip_value(4);
                             break;
                         case bq::log_arg_type_enum::int8_type:
-                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::uint8_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::int16_type:
-                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::uint16_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::int32_type:
-                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += 8;
+                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args.value()));
+                            args.skip_value(4);
                             break;
                         case bq::log_arg_type_enum::uint32_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += 8;
+                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args.value()));
+                            args.skip_value(4);
                             break;
                         case bq::log_arg_type_enum::int64_type:
-                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += 12;
+                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args.value()));
+                            args.skip_value(8);
                             break;
                         case bq::log_arg_type_enum::uint64_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += 12;
+                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args.value()));
+                            args.skip_value(8);
                             break;
                         case bq::log_arg_type_enum::float_type:
-                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
+                            insert_decimal(*reinterpret_cast<const float*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(float)));
                             break;
                         case bq::log_arg_type_enum::double_type:
-                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
+                            insert_decimal(*reinterpret_cast<const double*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(double)));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {
-                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args.value());
+                            const char* str = reinterpret_cast<const char*>(args.value() + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf8(str, str_len);
-                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint32_t) + bq::align_4(str_len)));
                         } break;
                         case bq::log_arg_type_enum::string_utf16_type: {
-                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args.value());
+                            const char* str = reinterpret_cast<const char*>(args.value() + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf16(str, str_len);
-                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint32_t) + bq::align_4(str_len)));
                         } break;
                         default:
                             break;
                         }
 
-                        assert(args_data_cursor <= args_data_len);
+                        assert(args.in_bounds());
                         fill_and_alignment(write_begin_pos);
 
                         // Check buffer size after insertion (insert functions handle it, but good to be safe)
@@ -860,10 +892,9 @@ namespace bq {
         }
     }
 
-    void layout::python_style_format_content_utf16(const bq::log_entry_handle& log_entry)
+    template <typename ARGS_CURSOR>
+    void layout::python_style_format_content_utf16(const bq::log_entry_handle& log_entry, ARGS_CURSOR args)
     {
-        const uint8_t* args_data_ptr = log_entry.get_log_args_data();
-        uint32_t args_data_len = log_entry.get_log_args_data_size();
         const char16_t* format_data_ptr = (const char16_t*)log_entry.get_format_string_data();
         uint32_t format_data_len = log_entry.get_log_head().log_format_data_len;
 
@@ -872,7 +903,6 @@ namespace bq {
         uint32_t wchar_len = format_data_len >> 1;
 
         uint32_t i = 0;
-        uint32_t args_data_cursor = 0;
 
         while (i < wchar_len) {
             bool found_brace = false;
@@ -950,11 +980,11 @@ namespace bq {
                     format_info_.reset();
 
                 // Parse format string (simple scan in U16)
-                if (args_data_cursor < args_data_len) {
+                if (args.has_next()) {
 
                     int32_t format_spec_len = 0;
-                    bool format_spec_closed = false;
-                    for (uint32_t k = i; k < wchar_len && k < i + 20; ++k) {
+                    bool format_spec_closed = i < wchar_len && format_data_ptr[i] == u'}';
+                    for (uint32_t k = i; !format_spec_closed && k < wchar_len && k < i + 20; ++k) {
                         char16_t c_scan = format_data_ptr[k];
                         if (c_scan == '}') {
                             format_spec_closed = true;
@@ -978,15 +1008,21 @@ namespace bq {
                     }
 
                     if (format_spec_closed) {
-                        format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
-                        if (format_info_.offset != 0) {
-                            i += (format_info_.offset + 1);
+                        if (format_spec_len == 0) {
+                            format_info_ = format_info(); // what c20_format returns for "{}"
+                            format_info_.used = true;
+                            ++i;
                         } else {
-                            i += static_cast<uint32_t>(format_spec_len + 1);
+                            format_info_ = c20_format(&format_data_ptr[i], format_spec_len + 1);
+                            if (format_info_.offset != 0) {
+                                i += (format_info_.offset + 1);
+                            } else {
+                                i += static_cast<uint32_t>(format_spec_len + 1);
+                            }
                         }
 
                         auto write_begin_pos = format_content_cursor;
-                        uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
+                        uint8_t type_info_i = args.type();
                         bq::log_arg_type_enum type_info = static_cast<bq::log_arg_type_enum>(type_info_i);
 
                         switch (type_info) {
@@ -996,91 +1032,91 @@ namespace bq {
                         case bq::log_arg_type_enum::null_type:
                             assert(sizeof(void*) >= 4);
                             insert_str_utf8("null", static_cast<uint32_t>(sizeof("null") - 1));
-                            args_data_cursor += 4;
+                            args.skip_null();
                             break;
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
                             {
-                                const void* ptr_data = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
+                                const void* ptr_data = *reinterpret_cast<const void* const*>(args.value());
                                 insert_pointer(ptr_data);
-                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
+                                args.skip_value(static_cast<uint32_t>(sizeof(uint64_t)));
                             }
                             break;
                         case bq::log_arg_type_enum::bool_type:
-                            insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_bool(*reinterpret_cast<const bool*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::char_type:
-                            insert_char(*reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_char(*reinterpret_cast<const char*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::char16_type:
-                            insert_char16(*reinterpret_cast<const char16_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_char16(*reinterpret_cast<const char16_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::char32_type:
-                            insert_char32(*reinterpret_cast<const char32_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += 8;
+                            insert_char32(*reinterpret_cast<const char32_t*>(args.value()));
+                            args.skip_value(4);
                             break;
                         case bq::log_arg_type_enum::int8_type:
-                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_signed(*reinterpret_cast<const int8_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::uint8_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_unsigned(*reinterpret_cast<const uint8_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::int16_type:
-                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_signed(*reinterpret_cast<const int16_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::uint16_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args_data_ptr + args_data_cursor + 2));
-                            args_data_cursor += 4;
+                            insert_integral_unsigned(*reinterpret_cast<const uint16_t*>(args.small_value()));
+                            args.skip_small();
                             break;
                         case bq::log_arg_type_enum::int32_type:
-                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int32_t));
+                            insert_integral_signed(*reinterpret_cast<const int32_t*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(int32_t)));
                             break;
                         case bq::log_arg_type_enum::uint32_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint32_t));
+                            insert_integral_unsigned(*reinterpret_cast<const uint32_t*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint32_t)));
                             break;
                         case bq::log_arg_type_enum::int64_type:
-                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(int64_t));
+                            insert_integral_signed(*reinterpret_cast<const int64_t*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(int64_t)));
                             break;
                         case bq::log_arg_type_enum::uint64_type:
-                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
+                            insert_integral_unsigned(*reinterpret_cast<const uint64_t*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint64_t)));
                             break;
                         case bq::log_arg_type_enum::float_type:
-                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
+                            insert_decimal(*reinterpret_cast<const float*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(float)));
                             break;
                         case bq::log_arg_type_enum::double_type:
-                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
-                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
+                            insert_decimal(*reinterpret_cast<const double*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(double)));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {
-                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args.value());
+                            const char* str = reinterpret_cast<const char*>(args.value() + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf8(str, str_len);
-                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint32_t) + bq::align_4(str_len)));
                         } break;
                         case bq::log_arg_type_enum::string_utf16_type: {
-                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args_data_ptr + args_data_cursor + 4);
-                            const char* str = reinterpret_cast<const char*>(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t));
+                            const uint32_t* len_ptr = reinterpret_cast<const uint32_t*>(args.value());
+                            const char* str = reinterpret_cast<const char*>(args.value() + sizeof(uint32_t));
                             uint32_t str_len = *len_ptr;
                             insert_str_utf16(str, str_len);
-                            args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint32_t) + bq::align_4(str_len)));
                         } break;
                         default:
                             break;
                         }
 
-                        assert(args_data_cursor <= args_data_len);
+                        assert(args.in_bounds());
                         fill_and_alignment(write_begin_pos);
 
                         safe_buff_size = format_content_cursor + (uint32_t)((wchar_len - i) * 3 / 2);
@@ -1097,14 +1133,8 @@ namespace bq {
         }
     }
 
-    void layout::expand_format_content_buff_size(uint32_t new_size)
+    void layout::grow_format_content_buff(uint32_t new_size)
     {
-        if (format_info_.offset != 0) {
-            new_size += (format_info_.width + format_info_.precision + 2); // #will add 2 byte
-        }
-        if (new_size <= format_content.size()) {
-            return;
-        }
         format_content.fill_uninitialized(bq::roundup_pow_of_two(new_size) - format_content.size());
     }
 
@@ -1227,24 +1257,8 @@ namespace bq {
 
         auto begin_cursor = format_content_cursor;
         uint32_t e_count = 0;
-        if (base == 10 && format_info_.type != 'e' && value >= 1000000000ULL) {
-            const char* const digit3 = log_global_vars::get().digit3_array;
-            char tmp[20]; // uint64_t max is 20 digits
-            char* p = tmp + sizeof(tmp);
-            while (value >= 1000) {
-                uint32_t r = static_cast<uint32_t>(value % 1000);
-                value /= 1000;
-                p -= 3;
-                memcpy(p, &digit3[r * 3], 3);
-            }
-            const char* d = &digit3[static_cast<uint32_t>(value) * 3];
-            int32_t start = (value >= 100) ? 0 : ((value >= 10) ? 1 : 2);
-            for (int32_t k = 2; k >= start; --k) {
-                *--p = d[k];
-            }
-            uint32_t digit_count = static_cast<uint32_t>(tmp + sizeof(tmp) - p);
-            memcpy(&format_content[format_content_cursor], p, digit_count);
-            format_content_cursor += digit_count;
+        if (base == 10 && format_info_.type != 'e') {
+            format_content_cursor += write_decimal_digits(value, &format_content[format_content_cursor]);
             return format_content_cursor - width;
         }
         do {
@@ -1329,27 +1343,10 @@ namespace bq {
         auto begin_cursor = format_content_cursor;
         // Scientific Counting Check
         uint32_t e_count = 0;
-        if (base == 10 && format_info_.type != 'e'
-            && (value >= 1000000000LL || value <= -1000000000LL)) {
+        if (base == 10 && format_info_.type != 'e') {
             // unsigned arithmetic handles INT64_MIN
-            uint64_t mag = (value < 0) ? (0ULL - static_cast<uint64_t>(value)) : static_cast<uint64_t>(value);
-            const char* const digit3 = log_global_vars::get().digit3_array;
-            char tmp[20]; // uint64_t max is 20 digits
-            char* p = tmp + sizeof(tmp);
-            while (mag >= 1000) {
-                uint32_t r = static_cast<uint32_t>(mag % 1000);
-                mag /= 1000;
-                p -= 3;
-                memcpy(p, &digit3[r * 3], 3);
-            }
-            const char* d = &digit3[static_cast<uint32_t>(mag) * 3];
-            int32_t start = (mag >= 100) ? 0 : ((mag >= 10) ? 1 : 2);
-            for (int32_t k = 2; k >= start; --k) {
-                *--p = d[k];
-            }
-            uint32_t digit_count = static_cast<uint32_t>(tmp + sizeof(tmp) - p);
-            memcpy(&format_content[format_content_cursor], p, digit_count);
-            format_content_cursor += digit_count;
+            const uint64_t magnitude = (value < 0) ? (0ULL - static_cast<uint64_t>(value)) : static_cast<uint64_t>(value);
+            format_content_cursor += write_decimal_digits(magnitude, &format_content[format_content_cursor]);
             return format_content_cursor - width;
         }
         do {

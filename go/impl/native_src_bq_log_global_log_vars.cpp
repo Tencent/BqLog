@@ -37,14 +37,6 @@ namespace bq {
     }
 #endif
 
-    void log_global_vars::init_layout_values() const
-    {
-        for (uint32_t i = 0; i < 1000; ++i) {
-            // 16 may overflow, it only make compilers ignore warning.
-            snprintf(const_cast<char*>(digit3_array) + i * 3, 16, "%03" PRIu32, i);
-        }
-    }
-
     void log_global_vars::partial_destruct()
     {
         /*delete log_manager_inst_;
@@ -74,7 +66,6 @@ namespace bq {
 #if defined(BQ_JAVA)
         platform::jni_onload_register register_(&log_global_vars::jni_onload_callback);
 #endif
-        init_layout_values();
     }
 
 }

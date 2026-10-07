@@ -30,6 +30,7 @@ namespace bq {
         const uint32_t* merged_log_level_bitmap_;
         const uint8_t* categories_mask_array_;
         const uint32_t* print_stack_level_bitmap_;
+        const uint32_t* category_level_words_;
         uint64_t log_id_;
         bq::string name_;
 
@@ -47,16 +48,19 @@ namespace bq {
             : merged_log_level_bitmap_(nullptr)
             , categories_mask_array_(nullptr)
             , print_stack_level_bitmap_(nullptr)
+            , category_level_words_(nullptr)
             , log_id_(0)
         {
         }
 
+    public:
         template <typename STR, bq::enable_if_t<bq::log::is_bq_log_format<STR>::value, bool> = true>
         bool do_log(uint32_t category_index, bq::log_level level, const STR& log_format_content) const;
 
         template <typename STR, bq::enable_if_t<bq::log::is_bq_log_format<STR>::value, bool> = true, typename... Args>
         bool do_log(uint32_t category_index, bq::log_level level, const STR& log_format_content, const Args&... args) const;
 
+    protected:
         static log get_log_by_id(uint64_t log_id);
 
         bool is_enable_for(uint32_t category_index, bq::log_level level) const;
@@ -204,6 +208,22 @@ namespace bq {
         uint64_t get_id() const
         {
             return log_id_;
+        }
+
+        bool is_enabled_for(uint32_t category_index, bq::log_level level) const
+        {
+            return is_enable_for(category_index, level);
+        }
+
+        bool is_stack_trace_enabled_for(bq::log_level level) const
+        {
+            return (*print_stack_level_bitmap_ & static_cast<uint32_t>(1 << static_cast<int32_t>(level))) != 0;
+        }
+
+        // clear: disabled, or enabled with stack trace
+        bq_forceinline bool is_enabled_without_stack_trace_for(uint32_t category_index, bq::log_level level) const
+        {
+            return ((category_level_words_[category_index] >> static_cast<uint32_t>(level)) & 1U) != 0;
         }
 
         /// <summary>

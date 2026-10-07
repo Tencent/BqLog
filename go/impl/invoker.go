@@ -162,6 +162,12 @@ func Force_flush(log_id uint64) {
 	C.__api_force_flush(C.uint64_t(log_id))
 }
 
+func Set_appender_enable(log_id uint64, appender_name string, enable bool) {
+	c_name := C.CString(appender_name)
+	defer C.free(unsafe.Pointer(c_name))
+	C.__api_set_appender_enable(C.uint64_t(log_id), c_name, C.bool(enable))
+}
+
 func Get_file_base_dir(base_dir_type int32) string {
 	return C.GoString(C.__api_get_file_base_dir(C.int32_t(base_dir_type)))
 }
@@ -208,6 +214,12 @@ func Get_log_merged_log_level_bitmap(log_id uint64) *uint32 {
 
 func Get_log_print_stack_level_bitmap(log_id uint64) *uint32 {
 	return (*uint32)(unsafe.Pointer(C.__api_get_log_print_stack_level_bitmap_by_log_id(C.uint64_t(log_id))))
+}
+
+// Get_log_category_level_words returns one uint32 per category: bit (1 << level) set when that level is enabled without
+// stack trace. nil when the log is not found.
+func Get_log_category_level_words(log_id uint64) *uint32 {
+	return (*uint32)(unsafe.Pointer(C.__api_get_log_category_level_words_by_log_id(C.uint64_t(log_id))))
 }
 
 func Get_log_category_masks_array(log_id uint64) *uint8 {

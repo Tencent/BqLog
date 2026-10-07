@@ -128,28 +128,6 @@ namespace bq {
         return (prev_config_file_name == config_file_name_) && (prev_base_dir_type == base_dir_type_);
     }
 
-    bool appender_file_base::log_impl(const log_entry_handle& handle)
-    {
-        // Hot path: disk healthy, branch never taken, single inlined load
-        // of disk_full_drop_. BQ_UNLIKELY_IF gives the compiler a hint to
-        // keep this off the fast path.
-        //
-        // When the previous flush hit ENOSPC, drop the incoming entry at
-        // the door so the in-memory cache cannot grow without bound while
-        // we wait for the disk to free up. Whatever was already in cache
-        // BEFORE the ENOSPC stays there - the next flush will retry and
-        // those entries land as soon as space comes back. The single
-        // entry whose write tipped the disk over the edge is kept too
-        // (it had already been mark_write_finished()'d into the cache
-        // before flush ran), so consumers see at most one transitional
-        // entry around the disk-full event.
-        BQ_UNLIKELY_IF(should_drop_due_to_io_failure())
-        {
-            return false;
-        }
-        return refresh_file_handle(handle);
-    }
-
     void appender_file_base::on_file_open(bool is_new_created)
     {
         (void)is_new_created;
@@ -238,36 +216,14 @@ namespace bq {
         }
     }
 
-    appender_file_base::write_with_cache_handle appender_file_base::alloc_write_cache(size_t size)
+    void appender_file_base::make_room_in_write_cache(size_t size)
     {
-#ifndef NDEBUG
-        assert(!cache_write_already_allocated_ && "duplicate call alloc_write_cache in log file appender");
-        cache_write_already_allocated_ = true;
-#endif
-        uint64_t need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
+        flush_write_cache();
+        const uint64_t need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
         if (need_cache_write_size > get_cache_write_size()) {
-            flush_write_cache();
-            need_cache_write_size = cache_write_cursor_ + static_cast<uint64_t>(size);
-            if (need_cache_write_size > get_cache_write_size()) {
-                uint64_t new_cache_size = bq::roundup_pow_of_two(need_cache_write_size + cache_write_head_size_ + cache_write_padding_);
-                resize_cache_write_entity(static_cast<size_t>(new_cache_size));
-            }
+            uint64_t new_cache_size = bq::roundup_pow_of_two(need_cache_write_size + cache_write_head_size_ + cache_write_padding_);
+            resize_cache_write_entity(static_cast<size_t>(new_cache_size));
         }
-        write_with_cache_handle result_handle;
-        result_handle.data_ = cache_write_ + static_cast<ptrdiff_t>(cache_write_cursor_);
-        result_handle.alloc_len_ = size;
-        result_handle.used_len_ = size;
-        return result_handle;
-    }
-
-    void appender_file_base::return_write_cache(const appender_file_base::write_with_cache_handle& handle)
-    {
-#ifndef NDEBUG
-        assert(cache_write_already_allocated_ && "call return_write_cache without calling alloc_write_cache in log file appender");
-        assert(handle.used_len_ <= handle.alloc_len_ && "used data length greater than allocated length in log file appender");
-        cache_write_already_allocated_ = false;
-#endif
-        cache_write_cursor_ += static_cast<uint64_t>(handle.used_len_);
     }
 
     size_t appender_file_base::direct_write(const void* data, size_t size, bq::file_manager::seek_option seek_opt, int64_t seek_offset)
@@ -276,14 +232,6 @@ namespace bq {
         bq::file_manager::instance().seek(file_, bq::file_manager::seek_option::end, static_cast<int64_t>(0));
         current_file_size_ = bq::file_manager::instance().get_file_size(file_);
         return real_write_size;
-    }
-
-    void appender_file_base::mark_write_finished()
-    {
-#ifndef NDEBUG
-        assert(!cache_write_already_allocated_ && "mark_write_finished must be called after return_write_cache()");
-#endif
-        cache_write_head_->cache_write_finished_cursor_ = cache_write_cursor_;
     }
 
     void appender_file_base::set_cache_write_padding(uint8_t new_padding)
@@ -330,7 +278,7 @@ namespace bq {
         flush_when_destruct_ = flush;
     }
 
-    bool appender_file_base::refresh_file_handle(const log_entry_handle& handle)
+    bool appender_file_base::open_file_for_entry(const log_entry_handle& handle)
     {
         bool need_create_new_file = (!file_) || is_file_oversize();
         if ((!need_create_new_file) && enable_rolling_log_file_) {
@@ -659,16 +607,6 @@ namespace bq {
         }
         file_manager::instance().seek(file_, file_manager::seek_option::end, 0);
         on_file_open(current_file_size_ == 0);
-    }
-
-    bool appender_file_base::is_file_oversize()
-    {
-        if (max_file_size_ > 0) {
-            if (current_file_size_ >= max_file_size_) {
-                return true;
-            }
-        }
-        return false;
     }
 
     void appender_file_base::clear_all_expired_files()

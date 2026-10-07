@@ -121,6 +121,7 @@ namespace bq {
         block* aligned_blocks_;
         uint32_t aligned_blocks_count_; // the max size of aligned_blocks_count_ will not exceed (INT32_MAX / sizeof(block))
         bq::unique_ptr<bq::normal_buffer> buffer_entity_;
+        bq::string mmap_path_override_;
 #if defined(BQ_LOG_BUFFER_DEBUG)
         alignas(BQ_CACHE_LINE_SIZE) bool check_thread_ = true;
         bq::platform::thread::thread_id empty_thread_id_ = 0;
@@ -133,7 +134,7 @@ namespace bq {
     public:
         miso_ring_buffer() = delete;
 
-        miso_ring_buffer(const log_buffer_config& config);
+        miso_ring_buffer(const log_buffer_config& config, const bq::string& mmap_path_override = bq::string());
 
         miso_ring_buffer(const miso_ring_buffer& rhs) = delete;
 
@@ -223,6 +224,11 @@ namespace bq {
         bq_forceinline const uint8_t* get_buffer_addr() const
         {
             return (uint8_t*)aligned_blocks_;
+        }
+
+        bq_forceinline bool is_memory_mapped() const
+        {
+            return buffer_entity_->is_memory_mapped();
         }
 
         bq_forceinline uint32_t get_block_size() const

@@ -22,7 +22,7 @@
  * call start to begin thread.
  */
 #include "native_include_bq_common_bq_common_public_include.h"
-#include "native_src_bq_common_platform_atomic_atomic.h"
+#include "native_include_bq_common_platform_atomic_atomic.h"
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif

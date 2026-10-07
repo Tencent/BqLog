@@ -12,7 +12,6 @@
 #include "native_src_bq_common_bq_common.h"
 #include "native_include_bq_log_bq_log.h"
 #include "native_src_bq_log_log_appender_appender_file_compressed.h"
-#include "native_src_bq_log_log_appender_appender_file_raw.h"
 
 bool bq::appender_decoder_helper::decode(const bq::string& in_file_path, const bq::string& out_file_path, const bq::string& priv_key)
 {

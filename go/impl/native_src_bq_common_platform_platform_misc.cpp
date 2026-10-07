@@ -13,6 +13,21 @@
 namespace bq {
     namespace platform {
         static bq::platform::spin_lock_zero_init lock_;
+        BQ_TLS fast_clock_thread_cache epoch_ms_cache_;
+
+        void prefault_pages(void* addr, size_t size)
+        {
+            const uintptr_t page_size = static_cast<uintptr_t>(common_global_vars::get().page_size_);
+            if (!addr || size == 0 || page_size == 0) {
+                return;
+            }
+            const uintptr_t begin = reinterpret_cast<uintptr_t>(addr);
+            const uintptr_t end = begin + size;
+            for (uintptr_t page = begin - (begin % page_size); page < end; page += page_size) {
+                volatile uint8_t* p = reinterpret_cast<volatile uint8_t*>(page < begin ? begin : page);
+                *p = *p;
+            }
+        }
 
         bq::string get_base_dir(int32_t base_dir_type)
         {

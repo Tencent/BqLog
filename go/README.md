@@ -1,10 +1,10 @@
-# BqLog for Go 2.5.0
+# BqLog for Go 2.6.0
 
 **GitHub: [https://github.com/Tencent/BqLog](https://github.com/Tencent/BqLog)**
 
 Go bindings for BqLog, Tencent's lightweight, high-performance logging system.
 
-[Integration Guide](https://github.com/Tencent/BqLog/blob/afb97141512a180270c34fb906a835ff34124574/docs/INTEGRATION_GUIDE.md#go) | [简体中文](https://github.com/Tencent/BqLog/blob/afb97141512a180270c34fb906a835ff34124574/docs/INTEGRATION_GUIDE_CHS.md#go)
+[Integration Guide](https://github.com/Tencent/BqLog/blob/52d087f330881e350fc005e9501387ecb188df4e/docs/INTEGRATION_GUIDE.md#go) | [简体中文](https://github.com/Tencent/BqLog/blob/52d087f330881e350fc005e9501387ecb188df4e/docs/INTEGRATION_GUIDE_CHS.md#go)
 
 ## Quick Start
 
@@ -46,29 +46,6 @@ go run .
 
 Logging methods accept zero or any number of arguments. Objects support Go's
 String/Error methods, and nil is logged as null.
-
-### Category logging
-
-Go has no method overloading, so category methods use the `_c` suffix.
-Use `Info(format, ...)` for ordinary logging and
-`Info_c(category, format, ...)` to specify a category; the other levels follow
-the same pattern. Exported Go methods start with an uppercase letter.
-
-Using the same `config`, replace the logger creation and logging calls inside
-`main` with:
-
-```go
-log := bq.Create_category_log("game", config,
-    []string{"", "Gameplay", "Network"})
-log.Info("default category")
-log.Info_c(1, "score={}", 42) // Gameplay
-log.Warning_c(2, "connection closed") // Network
-log.Force_flush()
-```
-
-Category indices correspond to the names passed at creation. The category
-generator provides typed constants and the same `Info_c` methods, avoiding
-handwritten indices.
 
 ### Packages and versions
 

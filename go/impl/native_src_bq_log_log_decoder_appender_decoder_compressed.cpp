@@ -429,9 +429,11 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
     bq::log_entry_handle entry(raw_data_.begin(), static_cast<uint32_t>(raw_data_.size()));
     // head is invalid now, because raw_data may have expanded it's capacity.
     entry.get_log_head().ext_info_offset = static_cast<uint32_t>(ext_info_offset);
-    auto& ext_info = const_cast<_log_entry_ext_head_def&>(entry.get_ext_head());
+    auto& ext_info = *reinterpret_cast<_log_entry_ext_head_def*>(&raw_data_[ext_info_offset]);
     memcpy(&entry.get_log_head().log_thread_id, &thread_info_iter->value().thread_id, sizeof(thread_info_iter->value().thread_id));
+    BQ_SUPPRESS_NULL_DEREF_BEGIN();
     ext_info.thread_name_len_ = static_cast<uint8_t>(thread_info_iter->value().thread_name.size());
+    BQ_SUPPRESS_NULL_DEREF_END();
     memcpy(reinterpret_cast<uint8_t*>(&ext_info) + sizeof(_log_entry_ext_head_def), thread_info_iter->value().thread_name.c_str(), ext_info.thread_name_len_);
     return do_decode_by_log_entry_handle(entry);
 }

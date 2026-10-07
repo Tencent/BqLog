@@ -34,9 +34,9 @@ namespace bq {
 }
 
 #ifdef BQ_MSVC
-#include "native_src_bq_common_platform_atomic__inner_atomic_msvc.h"
+#include "native_include_bq_common_platform_atomic__inner_atomic_msvc.h"
 #elif defined(BQ_CLANG) || defined(BQ_GCC)
-#include "native_src_bq_common_platform_atomic__inner_atomic_GNU_C.h"
+#include "native_include_bq_common_platform_atomic__inner_atomic_GNU_C.h"
 #else
 static_assert(false, "bq::platform::atomic is not supported in your compiler");
 #endif

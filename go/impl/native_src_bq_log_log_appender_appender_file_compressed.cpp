@@ -359,6 +359,111 @@ namespace bq {
         }
     }
 
+    // returns the number of bytes written to out
+    template <typename ARGS_CURSOR>
+    static bq_forceinline uint32_t write_compressed_args(ARGS_CURSOR args, uint8_t* out)
+    {
+        constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
+        constexpr size_t VLQ_MAX_SIZE_64 = bq::log_utils::vlq::vlq_max_bytes_count<uint64_t>();
+        uint32_t log_data_cursor = 0;
+        while (args.has_next()) {
+            uint8_t type_info_i = args.type();
+            bq::log_arg_type_enum type_info = (bq::log_arg_type_enum)(type_info_i);
+            out[log_data_cursor++] = type_info_i;
+            switch (type_info) {
+            case bq::log_arg_type_enum::unsupported_type:
+                bq::util::log_device_console(bq::log_level::warning, "appender_file_compressed : non_primitivi_type is not supported yet, type:%" PRId32, (int32_t)type_info);
+                args.skip_all();
+                break;
+            case bq::log_arg_type_enum::null_type:
+                args.skip_null();
+                break;
+            case bq::log_arg_type_enum::pointer_type:
+                assert(sizeof(void*) >= 4);
+                memcpy(out + log_data_cursor, args.value(), sizeof(uint64_t));
+                log_data_cursor += static_cast<uint32_t>(sizeof(uint64_t));
+                args.skip_value(static_cast<uint32_t>(sizeof(uint64_t))); // use 64bit pointer for serialize
+                break;
+            case bq::log_arg_type_enum::bool_type:
+            case bq::log_arg_type_enum::char_type:
+            case bq::log_arg_type_enum::int8_type:
+            case bq::log_arg_type_enum::uint8_type:
+                out[log_data_cursor] = *args.small_value();
+                log_data_cursor++;
+                args.skip_small();
+                break;
+            case bq::log_arg_type_enum::char16_type:
+            case bq::log_arg_type_enum::uint16_type:
+                log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint16_t*)args.small_value(), out + log_data_cursor, VLQ_MAX_SIZE);
+                args.skip_small();
+                break;
+            case bq::log_arg_type_enum::int16_type:
+                log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int16_t*)args.small_value()), out + log_data_cursor, VLQ_MAX_SIZE);
+                args.skip_small();
+                break;
+            case bq::log_arg_type_enum::char32_type:
+            case bq::log_arg_type_enum::uint32_type:
+                log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint32_t*)args.value(), out + log_data_cursor, VLQ_MAX_SIZE);
+                args.skip_value(static_cast<uint32_t>(sizeof(int32_t)));
+                break;
+            case bq::log_arg_type_enum::int32_type:
+                log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int32_t*)args.value()), out + log_data_cursor, VLQ_MAX_SIZE);
+                args.skip_value(static_cast<uint32_t>(sizeof(int32_t)));
+                break;
+            case bq::log_arg_type_enum::float_type:
+                memcpy(out + log_data_cursor, args.value(), sizeof(int32_t));
+                log_data_cursor += static_cast<uint32_t>(sizeof(int32_t));
+                args.skip_value(static_cast<uint32_t>(sizeof(int32_t)));
+                break;
+            case bq::log_arg_type_enum::uint64_type:
+                log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint64_t*)args.value(), out + log_data_cursor, VLQ_MAX_SIZE_64);
+                args.skip_value(static_cast<uint32_t>(sizeof(int64_t)));
+                break;
+            case bq::log_arg_type_enum::int64_type:
+                log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int64_t*)args.value()), out + log_data_cursor, VLQ_MAX_SIZE_64);
+                args.skip_value(static_cast<uint32_t>(sizeof(int64_t)));
+                break;
+            case bq::log_arg_type_enum::double_type:
+                memcpy(out + log_data_cursor, args.value(), sizeof(int64_t));
+                log_data_cursor += static_cast<uint32_t>(sizeof(int64_t));
+                args.skip_value(static_cast<uint32_t>(sizeof(int64_t)));
+                break;
+            case bq::log_arg_type_enum::string_utf8_type: {
+                const uint32_t* len_ptr = (const uint32_t*)args.value();
+                uint32_t str_len = *len_ptr;
+                log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(str_len, out + log_data_cursor, VLQ_MAX_SIZE);
+                memcpy(out + log_data_cursor, args.value() + sizeof(uint32_t), str_len);
+                log_data_cursor += str_len;
+                args.skip_value(static_cast<uint32_t>(sizeof(uint32_t) + bq::align_4(str_len)));
+            } break;
+            case bq::log_arg_type_enum::string_utf16_type: {
+                // trans to utf-mixed to get best balance of size and performance
+                out[log_data_cursor - 1] = (uint8_t)bq::log_arg_type_enum::string_utf_mixed_type;
+                const uint32_t* len_ptr = (const uint32_t*)args.value();
+                uint32_t str_len = *len_ptr;
+
+                uint32_t max_utf8_str_len = ((str_len * 3) >> 1) + 1;
+                auto pre_len_size = bq::log_utils::vlq::get_vlq_encode_length((uint32_t)max_utf8_str_len);
+
+                uint32_t utf_mixed_len = bq::util::utf16_to_utf_mixed((const char16_t*)(args.value() + sizeof(uint32_t)), str_len >> 1, (char*)(out + log_data_cursor + pre_len_size), max_utf8_str_len);
+
+                uint32_t real_len_size = (uint32_t)bq::log_utils::vlq::vlq_encode(utf_mixed_len, out + log_data_cursor, VLQ_MAX_SIZE);
+
+                assert((real_len_size == pre_len_size || (real_len_size + 1 == pre_len_size)) && "compressed log, utf16 arguments write error");
+                if (real_len_size + 1 == pre_len_size) {
+                    out[log_data_cursor + real_len_size] = 0; // 0 placeholder, if the pre-estimated size is not accurate
+                }
+                log_data_cursor += (pre_len_size + utf_mixed_len);
+                args.skip_value(static_cast<uint32_t>(sizeof(uint32_t) + bq::align_4(str_len)));
+            } break;
+            default:
+                args.skip_all();
+                break;
+            }
+        }
+        return log_data_cursor;
+    }
+
     // Due to the use of VLQ and character encoding conversions,
     // the actual storage size may be up to 5 times smaller than the initially calculated maximum size.
     // In such cases, it's possible that the final storage space required will be one bit less.
@@ -374,9 +479,11 @@ namespace bq {
             return false;
         }
 
+        // stores through the write cache may alias the handle, so the layout is read once
+        const bool is_fast_layout = handle.is_fast_layout();
         uint32_t format_data_len = handle.get_log_head().log_format_data_len;
         const char* format_data_ptr = handle.get_format_string_data();
-        if ((const uint8_t*)format_data_ptr + format_data_len > handle.get_log_args_data()) {
+        if (!is_fast_layout && (const uint8_t*)format_data_ptr + format_data_len > handle.get_log_args_data()) {
             bq::util::log_device_console(bq::log_level::error, "appender_file_compressed::log_impl invalid format data length:%" PRIu32, format_data_len);
             return false;
         }
@@ -512,7 +619,7 @@ namespace bq {
             constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
             constexpr size_t VLQ_MAX_SIZE_64 = bq::log_utils::vlq::vlq_max_bytes_count<uint64_t>();
 
-            uint32_t raw_log_args_data_len = handle.get_log_args_data_size();
+            const uint32_t raw_log_args_data_len = is_fast_layout ? handle.get_standard_args_size() : handle.get_log_args_data_size();
             auto max_log_data_size = VLQ_MAX_SIZE + VLQ_MAX_SIZE + VLQ_MAX_SIZE + ((size_t)raw_log_args_data_len << 1); // format template idx(VLQ), epoch offset milliseconds(VLQ), args(*2, mabe wast, but can ensure utf16 can properly trans to utf-mixed, consider vlq size my increate 1 bytes to, so use *2 instead of *3/2 + 1)
 
             auto data_len_min_size = get_vlq_min_bytes_length_of_item_header(max_log_data_size);
@@ -532,105 +639,9 @@ namespace bq {
             log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(thread_info_idx, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
 
             // write log params
-            {
-                const uint8_t* const args_data_ptr = handle.get_log_args_data();
-                uint32_t args_data_cursor = 0;
-                while (args_data_cursor < raw_log_args_data_len) {
-                    uint8_t type_info_i = *(args_data_ptr + args_data_cursor);
-                    bq::log_arg_type_enum type_info = (bq::log_arg_type_enum)(type_info_i);
-                    write_handle.data()[log_data_cursor++] = type_info_i;
-                    switch (type_info) {
-                    case bq::log_arg_type_enum::unsupported_type:
-                        bq::util::log_device_console(bq::log_level::warning, "appender_file_compressed : non_primitivi_type is not supported yet, type:%" PRId32, (int32_t)type_info);
-                        args_data_cursor = raw_log_args_data_len;
-                        break;
-                    case bq::log_arg_type_enum::null_type:
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::pointer_type:
-                        assert(sizeof(void*) >= 4);
-                        memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4, sizeof(uint64_t));
-                        log_data_cursor += static_cast<uint32_t>(sizeof(uint64_t));
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint64_t)); // use 64bit pointer for serialize
-                        break;
-                    case bq::log_arg_type_enum::bool_type:
-                    case bq::log_arg_type_enum::char_type:
-                    case bq::log_arg_type_enum::int8_type:
-                    case bq::log_arg_type_enum::uint8_type:
-                        write_handle.data()[log_data_cursor] = *(args_data_ptr + args_data_cursor + 2);
-                        log_data_cursor++;
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::char16_type:
-                    case bq::log_arg_type_enum::uint16_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint16_t*)(args_data_ptr + args_data_cursor + 2), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::int16_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int16_t*)(args_data_ptr + args_data_cursor + 2)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-                        args_data_cursor += 4;
-                        break;
-                    case bq::log_arg_type_enum::char32_type:
-                    case bq::log_arg_type_enum::uint32_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint32_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int32_t));
-                        break;
-                    case bq::log_arg_type_enum::int32_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int32_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int32_t));
-                        break;
-                    case bq::log_arg_type_enum::float_type:
-                        memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4, sizeof(int32_t));
-                        log_data_cursor += static_cast<uint32_t>(sizeof(int32_t));
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int32_t));
-                        break;
-                    case bq::log_arg_type_enum::uint64_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(*(const uint64_t*)(args_data_ptr + args_data_cursor + 4), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int64_t));
-                        break;
-                    case bq::log_arg_type_enum::int64_type:
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(bq::log_utils::zigzag::encode(*(const int64_t*)(args_data_ptr + args_data_cursor + 4)), write_handle.data() + log_data_cursor, VLQ_MAX_SIZE_64);
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(int64_t));
-                        break;
-                    case bq::log_arg_type_enum::double_type:
-                        memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4, sizeof(int64_t));
-                        log_data_cursor += static_cast<uint32_t>(sizeof(int64_t));
-                        args_data_cursor += static_cast<uint32_t>(4 + sizeof(int64_t));
-                        break;
-                    case bq::log_arg_type_enum::string_utf8_type: {
-                        const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
-                        uint32_t str_len = *len_ptr;
-                        log_data_cursor += (uint32_t)bq::log_utils::vlq::vlq_encode(str_len, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-                        memcpy(write_handle.data() + log_data_cursor, args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t), str_len);
-                        log_data_cursor += str_len;
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                    } break;
-                    case bq::log_arg_type_enum::string_utf16_type: {
-                        // trans to utf-mixed to get best balance of size and performance
-                        write_handle.data()[log_data_cursor - 1] = (uint8_t)bq::log_arg_type_enum::string_utf_mixed_type;
-                        const uint32_t* len_ptr = (const uint32_t*)(args_data_ptr + args_data_cursor + 4);
-                        uint32_t str_len = *len_ptr;
-
-                        uint32_t max_utf8_str_len = ((str_len * 3) >> 1) + 1;
-                        auto pre_len_size = bq::log_utils::vlq::get_vlq_encode_length((uint32_t)max_utf8_str_len);
-
-                        uint32_t utf_mixed_len = bq::util::utf16_to_utf_mixed((const char16_t*)(args_data_ptr + args_data_cursor + 4 + sizeof(uint32_t)), str_len >> 1, (char*)(write_handle.data() + log_data_cursor + pre_len_size), max_utf8_str_len);
-
-                        uint32_t real_len_size = (uint32_t)bq::log_utils::vlq::vlq_encode(utf_mixed_len, write_handle.data() + log_data_cursor, VLQ_MAX_SIZE);
-
-                        assert((real_len_size == pre_len_size || (real_len_size + 1 == pre_len_size)) && "compressed log, utf16 arguments write error");
-                        if (real_len_size + 1 == pre_len_size) {
-                            write_handle.data()[log_data_cursor + real_len_size] = 0; // 0 placeholder, if the pre-estimated size is not accurate
-                        }
-                        log_data_cursor += (pre_len_size + utf_mixed_len);
-                        args_data_cursor += static_cast<uint32_t>(4U + sizeof(uint32_t) + bq::align_4(str_len));
-                    } break;
-                    default:
-                        break;
-                    }
-                    continue;
-                }
-            }
+            log_data_cursor += is_fast_layout
+                ? write_compressed_args(handle.get_fast_args(), write_handle.data() + log_data_cursor)
+                : write_compressed_args(standard_args_cursor(handle.get_log_args_data(), raw_log_args_data_len), write_handle.data() + log_data_cursor);
             // write back head
             uint32_t real_total_len = log_data_cursor;
             write_handle.reset_used_len(real_total_len);

@@ -20,7 +20,7 @@
  *
  */
 #include "native_include_bq_common_bq_common_public_include.h"
-#include "native_src_bq_common_platform_atomic_atomic.h"
+#include "native_include_bq_common_platform_atomic_atomic.h"
 #include "native_src_bq_common_platform_thread_thread.h"
 #include "native_src_bq_common_utils_utility_types.h"
 namespace bq {
