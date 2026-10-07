@@ -2699,10 +2699,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -2771,10 +2771,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -2867,10 +2867,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -2936,10 +2936,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3023,10 +3023,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3094,10 +3094,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3189,10 +3189,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3260,10 +3260,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3351,10 +3351,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3421,10 +3421,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3515,10 +3515,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3585,10 +3585,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3673,10 +3673,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3745,10 +3745,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3841,10 +3841,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -3913,10 +3913,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -5534,10 +5534,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -5608,10 +5608,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -5706,10 +5706,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -5778,10 +5778,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -5869,10 +5869,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -5942,10 +5942,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -6039,10 +6039,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
@@ -6112,10 +6112,10 @@ jobs:
             URLS=""
             case "$ARCH" in
               amd64|x86_64)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/amd64/binary/sets/xbase.tar.xz"
                 ;;
               aarch64|arm64|evbarm)
-                URLS="https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
+                URLS="https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://ftp.jaist.ac.jp/pub/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz https://mirrors.tuna.tsinghua.edu.cn/NetBSD/NetBSD-10.1/evbarm-aarch64/binary/sets/xbase.tar.xz"
                 ;;
               *)
                 echo "Unknown arch $ARCH; please set xbase URL manually" >&2
