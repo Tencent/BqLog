@@ -2,7 +2,7 @@
 
 [简体中文](PERFORMANCE_DESIGN_CHS.md) · [Project home](../README.md)
 
-BqLog's speed is not magic. These three articles start from a single line of log and derive the whole design step by step: take the most intuitive approach, count what it costs, and let that cost lead to the next one. Everything is written against the BqLog 2.5.0 source.
+BqLog's speed is not magic. These three articles start from a single line of log and derive the whole design step by step: take the most intuitive approach, count what it costs, and let that cost lead to the next one. Everything is written against the BqLog 2.6.0 source.
 
 | Article | What it covers |
 |---|---|
