@@ -521,7 +521,7 @@ This enables the `rsa_aes_xor` segment format described above for this appender.
 
 When decrypting encrypted logs, private key file is required. Recommended to use BqLog built-in command line tool `BqLog_LogDecoder`:
 
-- Usage see [API Reference — Offline decoder](./API_REFERENCE.md#offline-decoder-for-binary-appenders).
+- Usage see [API Reference — Offline command-line decoder](./API_REFERENCE.md#offline-command-line-decoder).
 
 Example:
 
