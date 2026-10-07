@@ -32,8 +32,7 @@ namespace bq {
                 && layout.chunk_data_offset == e::chunk_data_offset && layout.block_size_log2 == e::block_size_log2;
         }
 
-        // 16 bytes: NetBSD's aarch64 runtime linker misplaces TLS blocks aligned to more than that
-        struct alignas(16) thread_slot {
+        struct thread_slot {
             bq::_api_fast_log_thread_state state;
             bq::platform::fast_clock_thread_cache clock_cache;
         };
