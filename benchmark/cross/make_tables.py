@@ -44,6 +44,11 @@ def threads_header(threads):
     return "| | " + " | ".join(f"{n} Thread{'s' if n > 1 else ''}" for n in threads) + " |"
 
 
+# results.csv is optional: a platform may have latency results only
+def has_throughput():
+    return os.path.exists(os.path.join(RUN, "results.csv"))
+
+
 def load_throughput():
     data = collections.defaultdict(lambda: collections.defaultdict(list))
     with open(os.path.join(RUN, "results.csv")) as f:
@@ -192,8 +197,14 @@ def chart_name(key):
 # charts for the key comparisons: totals at the largest thread count every library ran (spdlog and glog stop at 6),
 # so each chart compares like with like
 def charts():
-    data = load_throughput()
     chs = LANG == "chs"
+    if has_throughput():
+        throughput_charts(chs)
+    latency_chart(chs)
+
+
+def throughput_charts(chs):
+    data = load_throughput()
     fixed = ("bqlog_fast_compress", "bqlog_fast_text", "quill", "fmtlog", "log4j2")
     expand = ("bqlog_fast_compress_expand", "bqlog_fast_text_expand", "quill_expand")
 
@@ -218,6 +229,8 @@ def charts():
         emit(f"{what_en} expand", f"{what_chs}，可扩容，10 线程，4 个参数", f"{what_en}, growing buffers, 10 threads, 4 parameters",
             unit_chs, unit_en, rows(i, expand, 10), "{:.0f}")
 
+
+def latency_chart(chs):
     lat = collections.defaultdict(list)
     path = os.path.join(RUN, "latency.csv")
     if os.path.exists(path):
@@ -237,6 +250,7 @@ def charts():
 if len(sys.argv) > 3 and sys.argv[3] == "charts":
     charts()
 else:
-    throughput()
-    ratios()
+    if has_throughput():
+        throughput()
+        ratios()
     latency()
