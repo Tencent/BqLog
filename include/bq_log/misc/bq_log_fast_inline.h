@@ -32,25 +32,11 @@ namespace bq {
                 && layout.chunk_data_offset == e::chunk_data_offset && layout.block_size_log2 == e::block_size_log2;
         }
 
-#if defined(BQ_MSVC)
-#pragma warning(push)
-#pragma warning(disable : 4324)
-#endif
-// NetBSD's aarch64 runtime linker misplaces the TLS blocks once the TLS segment is aligned to more than 16 bytes
-#if defined(__NetBSD__) && defined(BQ_ARM_64)
-#define BQ_FAST_THREAD_SLOT_ALIGN 16
-#else
-#define BQ_FAST_THREAD_SLOT_ALIGN BQ_CACHE_LINE_SIZE
-#endif
-        struct alignas(BQ_FAST_THREAD_SLOT_ALIGN) thread_slot {
+        // 16 bytes: NetBSD's aarch64 runtime linker misplaces TLS blocks aligned to more than that
+        struct alignas(16) thread_slot {
             bq::_api_fast_log_thread_state state;
             bq::platform::fast_clock_thread_cache clock_cache;
-            uint8_t padding[BQ_CACHE_LINE_SIZE - sizeof(bq::_api_fast_log_thread_state) - sizeof(bq::platform::fast_clock_thread_cache)];
         };
-#if defined(BQ_MSVC)
-#pragma warning(pop)
-#endif
-        static_assert(sizeof(thread_slot) == BQ_CACHE_LINE_SIZE, "thread_slot must own exactly one cache line");
 
         template <typename T = void>
         struct module_state {
@@ -68,7 +54,7 @@ namespace bq {
         // Function scope: a TLS static member of a class template gets an init guard on MSVC.
         inline thread_slot& get_thread_slot()
         {
-            static BQ_TLS thread_slot slot = { { 0, nullptr, nullptr, &module_state<>::no_reallocate, 0, 0 }, {}, {} };
+            static BQ_TLS thread_slot slot = { { 0, nullptr, nullptr, &module_state<>::no_reallocate, 0, 0 }, {} };
             return slot;
         }
 
