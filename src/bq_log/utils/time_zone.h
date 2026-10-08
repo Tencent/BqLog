@@ -81,8 +81,8 @@ namespace bq {
 
         // Cache for time string
         char time_cache_[MAX_TIME_STR_LEN + 1];
-        size_t time_cache_len_;
-        uint64_t last_time_epoch_cache_ = 0;
+        size_t time_cache_len_ = 0;
+        uint64_t last_time_epoch_cache_ = UINT64_MAX; // UINT64_MAX: no cached string yet (epoch 0 is a valid time)
     };
 
 }

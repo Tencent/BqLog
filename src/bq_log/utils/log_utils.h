@@ -104,6 +104,16 @@ namespace bq {
 
             template <typename T>
             bq_forceinline static BQ_FUNC_RETURN_CONSTEXPR size_t vlq_decode(T& value, const void* src_data);
+
+            // Same as vlq_decode, but fails instead of reading past src_len bytes (for untrusted input).
+            template <typename T>
+            bq_forceinline static size_t vlq_decode_bounded(T& value, const void* src_data, size_t src_len)
+            {
+                if (src_len == 0 || static_cast<size_t>(get_vlq_decode_length(*static_cast<const uint8_t*>(src_data))) > src_len) {
+                    return invalid_decode_length;
+                }
+                return vlq_decode(value, src_data);
+            }
         };
 
         // Recursive function to return gcd of a and b

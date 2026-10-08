@@ -13,6 +13,7 @@
 #include <atomic>
 #include <random>
 #include <thread>
+#include <vector>
 #include "test_base.h"
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/appender/appender_console.h"
@@ -1175,6 +1176,106 @@ namespace bq {
                 result.add_result(unavailable_init_ok && !unavailable_recovery_ok, "log-buffer recovery is discarded when a new indexed file cannot be opened");
             }
 
+            // Hand-built compressed log files: the decoder must reject malformed input instead of
+            // allocating from untrusted lengths or formatting garbage.
+            // Values of the private appender_file_compressed::item_type and template_sub_type enums.
+            enum : uint8_t {
+                malformed_item_log_template = 0,
+                malformed_item_log_entry = 128,
+                malformed_template_format_utf8 = 0,
+                malformed_template_thread_info = 1
+            };
+
+            static void malformed_put_u32(std::vector<uint8_t>& out, uint32_t value)
+            {
+                for (uint32_t i = 0; i < 4; ++i) {
+                    out.push_back(static_cast<uint8_t>(value >> (8 * i)));
+                }
+            }
+
+            static std::vector<uint8_t> malformed_file_head(uint32_t category_name_len, const char* category_name)
+            {
+                std::vector<uint8_t> out;
+                malformed_put_u32(out, appender_file_compressed::format_version);
+                out.push_back(static_cast<uint8_t>(appender_file_binary::appender_format_type::compressed));
+                out.insert(out.end(), 3, static_cast<uint8_t>(0));
+                out.insert(out.end(), 8, static_cast<uint8_t>(0xFF)); // next_seg_pos = UINT64_MAX: last segment
+                out.push_back(static_cast<uint8_t>(appender_file_binary::appender_segment_type::normal));
+                out.push_back(static_cast<uint8_t>(appender_file_binary::appender_encryption_type::plaintext));
+                out.insert(out.end(), 2, static_cast<uint8_t>(0));
+                const uint8_t magic_and_local_time[] = { 2, 2, 7, 0 };
+                out.insert(out.end(), magic_and_local_time, magic_and_local_time + sizeof(magic_and_local_time));
+                malformed_put_u32(out, 0); // gmt_offset_hours
+                malformed_put_u32(out, 0); // gmt_offset_minutes
+                malformed_put_u32(out, 0); // time_zone_diff_to_gmt_ms
+                char time_zone_str[32] = "UTC0";
+                out.insert(out.end(), time_zone_str, time_zone_str + sizeof(time_zone_str));
+                malformed_put_u32(out, 1); // category_count
+                malformed_put_u32(out, category_name_len);
+                out.insert(out.end(), category_name, category_name + strlen(category_name));
+                return out;
+            }
+
+            static void malformed_add_item(std::vector<uint8_t>& out, uint8_t item_type, const std::vector<uint8_t>& payload)
+            {
+                out.push_back(item_type);
+                out.push_back(static_cast<uint8_t>(0x80 | payload.size())); // 1 byte VLQ, payload < 128 bytes
+                out.insert(out.end(), payload.begin(), payload.end());
+            }
+
+            // template "x={}", one thread info, then one log entry with the given argument bytes
+            static std::vector<uint8_t> malformed_file_with_entry(const std::vector<uint8_t>& arg_bytes)
+            {
+                std::vector<uint8_t> out = malformed_file_head(0, "");
+                malformed_add_item(out, malformed_item_log_template, { malformed_template_format_utf8, static_cast<uint8_t>(log_level::info), 0x80, 'x', '=', '{', '}' });
+                malformed_add_item(out, malformed_item_log_template, { malformed_template_thread_info, 0x80, 0x80, 't' });
+                std::vector<uint8_t> entry = { 0x80, 0x80, 0x80 }; // epoch offset, template index, thread info index
+                entry.insert(entry.end(), arg_bytes.begin(), arg_bytes.end());
+                malformed_add_item(out, malformed_item_log_entry, entry);
+                return out;
+            }
+
+            static appender_decode_result malformed_decode(const char* name, const std::vector<uint8_t>& bytes, bq::string& out_text)
+            {
+                bq::string path = TO_ABSOLUTE_PATH(bq::string("bq_decoder_malformed_") + name + ".logcompr", 0);
+                {
+                    auto handle = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    bq::file_manager::instance().truncate_file(handle, 0);
+                    bq::file_manager::instance().write_file(handle, bytes.data(), bytes.size());
+                    bq::file_manager::instance().flush_file(handle);
+                }
+                appender_decode_result result;
+                {
+                    bq::tools::log_decoder decoder(path);
+                    result = decoder.decode();
+                    out_text = decoder.get_last_decoded_log_entry();
+                }
+                bq::file_manager::remove_file_or_dir(path);
+                return result;
+            }
+
+            void do_decoder_malformed_file_test(test_result& result)
+            {
+                bq::string text;
+                const uint8_t int32_type = static_cast<uint8_t>(log_arg_type_enum::int32_type);
+                const uint8_t double_type = static_cast<uint8_t>(log_arg_type_enum::double_type);
+                result.add_result(malformed_decode("valid", malformed_file_with_entry({ int32_type, 0x8A /* zigzag(5) */ }), text) == appender_decode_result::success && text.end_with("x=5"),
+                    "decoder malformed file: hand-built control file decodes");
+                result.add_result(malformed_decode("huge_name", malformed_file_head(0xFFFFFFF0U, "abc"), text) != appender_decode_result::success,
+                    "decoder malformed file: category name length larger than the file is rejected");
+                result.add_result(malformed_decode("unknown_type", malformed_file_with_entry({ 0x7F }), text) != appender_decode_result::success,
+                    "decoder malformed file: unknown argument type is rejected");
+                result.add_result(malformed_decode("short_double", malformed_file_with_entry({ double_type, 1, 2 }), text) != appender_decode_result::success,
+                    "decoder malformed file: truncated double argument is rejected");
+                std::vector<uint8_t> huge_item = malformed_file_head(0, "");
+                huge_item.push_back(malformed_item_log_entry);
+                const uint8_t vlq_4g[] = { 0x08, 0xFF, 0xFF, 0xFF, 0xE0 }; // 5 byte VLQ: item size close to 4 GiB
+                huge_item.insert(huge_item.end(), vlq_4g, vlq_4g + sizeof(vlq_4g));
+                huge_item.insert(huge_item.end(), 16, static_cast<uint8_t>(0));
+                result.add_result(malformed_decode("huge_item", huge_item, text) != appender_decode_result::success,
+                    "decoder malformed file: item size larger than the file is rejected");
+            }
+
         public:
             virtual test_result test() override
             {
@@ -1185,6 +1286,7 @@ namespace bq {
                 constexpr int32_t loop_count = 4;
 #endif
                 do_binary_appender_test_with_enc(result);
+                do_decoder_malformed_file_test(result);
                 for (int32_t i = 0; i < loop_count; ++i) {
                     do_console_appender_test(result);
                 }
