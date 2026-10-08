@@ -14,6 +14,7 @@
 
 #include "bq_log/api/bq_log_napi.h"
 #if defined(BQ_NAPI)
+#include <math.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/global/log_vars.h"

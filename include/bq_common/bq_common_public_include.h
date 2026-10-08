@@ -26,7 +26,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <ctype.h>
-#include <math.h>
 #include <time.h>
 
 #include "bq_common/misc/assert.h"
