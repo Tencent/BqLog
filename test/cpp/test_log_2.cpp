@@ -13,6 +13,7 @@
 #include <thread>
 #include <atomic>
 #include <cstdio>
+#include <math.h>
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -132,13 +133,25 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X000C|"), "layout format");
                 double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.3659098511|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.366|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{}|", -0.5);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0.500000000000000|"), "layout format negative fraction");
+                log_inst.error(log_inst.cat.ModuleB, "|{:+.1f}|", -0.25f);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0.2|"), "layout format negative fraction with sign");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.2f}|", 0.96);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0.96|"), "layout format rounding");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.0f}|", 1.75);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|2|"), "layout format rounding to integer");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.1f}|", 1e20);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|100000000000000000000.0|"), "layout format beyond int64");
+                log_inst.error(log_inst.cat.ModuleB, "|{}|{}|{}|", static_cast<double>(NAN), static_cast<double>(INFINITY), -static_cast<double>(INFINITY));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|nan|inf|-inf|"), "layout format nan and infinity");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", 10000000000000);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12E}|", (uint64_t)10000000000000);
@@ -184,13 +197,13 @@ namespace bq {
                 log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X3B03AD8AD|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", 100);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         100|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.366|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 10000000000000.0);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);

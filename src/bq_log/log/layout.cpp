@@ -1380,115 +1380,185 @@ namespace bq {
         return format_content_cursor - width;
     }
 
+    namespace {
+        const uint64_t decimal_pow10[20] = { 1ULL, 10ULL, 100ULL, 1000ULL, 10000ULL, 100000ULL, 1000000ULL, 10000000ULL, 100000000ULL,
+            1000000000ULL, 10000000000ULL, 100000000000ULL, 1000000000000ULL, 10000000000000ULL, 100000000000000ULL,
+            1000000000000000ULL, 10000000000000000ULL, 100000000000000000ULL, 1000000000000000000ULL, 10000000000000000000ULL };
+
+        // Rounds `frac` (0 <= frac < 1) to `precision` (<= 19) decimal digits exactly, half to even like
+        // printf. `int_part_odd` decides ties when precision is 0. A result of 10^precision is a carry
+        // into the integer part.
+        uint64_t round_fraction(double frac, uint32_t precision, bool int_part_odd)
+        {
+            if (frac == 0.0) {
+                return 0;
+            }
+            uint64_t bits;
+            memcpy(&bits, &frac, sizeof(bits));
+            const uint32_t biased_exp = static_cast<uint32_t>((bits >> 52) & 0x7FF);
+            uint64_t mantissa = bits & ((1ULL << 52) - 1);
+            uint32_t shift; // frac == mantissa * 2^-shift, shift >= 1 because frac < 1
+            if (biased_exp == 0) {
+                shift = 1074;
+            } else {
+                mantissa |= (1ULL << 52);
+                shift = 1075 - biased_exp;
+            }
+            if (shift >= 128) {
+                return 0; // mantissa * 10^precision < 2^117, so the scaled value is below 0.5
+            }
+            // product = mantissa * 10^precision as 128 bits (hi:lo)
+            const uint64_t m = decimal_pow10[precision];
+            const uint64_t a_lo = mantissa & 0xFFFFFFFFULL, a_hi = mantissa >> 32;
+            const uint64_t b_lo = m & 0xFFFFFFFFULL, b_hi = m >> 32;
+            const uint64_t p0 = a_lo * b_lo, p1 = a_lo * b_hi, p2 = a_hi * b_lo, p3 = a_hi * b_hi;
+            const uint64_t mid = (p0 >> 32) + (p1 & 0xFFFFFFFFULL) + (p2 & 0xFFFFFFFFULL);
+            const uint64_t lo = (mid << 32) | (p0 & 0xFFFFFFFFULL);
+            const uint64_t hi = p3 + (p1 >> 32) + (p2 >> 32) + (mid >> 32);
+            // q = product >> shift; compare the dropped bits (rem) with half of 2^shift
+            uint64_t q, rem_hi, rem_lo, half_hi, half_lo;
+            if (shift >= 64) {
+                const uint32_t s = shift - 64;
+                q = (s == 0) ? hi : (hi >> s);
+                rem_hi = (s == 0) ? 0 : (hi & ((1ULL << s) - 1));
+                rem_lo = lo;
+                half_hi = (s == 0) ? 0 : (1ULL << (s - 1));
+                half_lo = (s == 0) ? (1ULL << 63) : 0;
+            } else {
+                q = (lo >> shift) | (hi << (64 - shift));
+                rem_hi = 0;
+                rem_lo = lo & ((1ULL << shift) - 1);
+                half_hi = 0;
+                half_lo = 1ULL << (shift - 1);
+            }
+            const bool above_half = rem_hi > half_hi || (rem_hi == half_hi && rem_lo > half_lo);
+            const bool is_half = rem_hi == half_hi && rem_lo == half_lo;
+            const bool odd = (precision == 0) ? int_part_odd : ((q & 1) != 0);
+            if (above_half || (is_half && odd)) {
+                ++q;
+            }
+            return q;
+        }
+
+        uint32_t decimal_digits_count(uint64_t value)
+        {
+            uint32_t n = 1;
+            while (value >= 10) {
+                value /= 10;
+                ++n;
+            }
+            return n;
+        }
+
+        uint32_t write_uint_padded(char* dst, uint64_t value, uint32_t digits)
+        {
+            for (uint32_t i = digits; i > 0; --i) {
+                dst[i - 1] = static_cast<char>('0' + value % 10);
+                value /= 10;
+            }
+            return digits;
+        }
+    }
+
     void layout::insert_decimal(float value)
     {
-        if (format_info_.type == 'e')
-            format_info_.type = 'Z';
-        uint32_t int_width = 0;
-        auto precision = (int32_t)((format_info_.precision != 0xFFFFFFFF) ? format_info_.precision : 7);
-        auto begin_cursor = format_content_cursor;
-        if (value >= 0) {
-            uint64_t i_part = static_cast<uint64_t>(value);
-            int_width = insert_integral_unsigned(i_part, 10);
-            value -= static_cast<float>(i_part);
-        } else {
-            int64_t i_part = static_cast<int64_t>(value);
-            int_width = insert_integral_signed(i_part, 10);
-            value -= static_cast<float>(i_part);
-        }
-        if (format_info_.width > 0 && format_info_.width < static_cast<uint32_t>(precision) + 1 + int_width) {
-            precision = static_cast<int32_t>(format_info_.width - int_width - 1);
-        }
-
-        value = fabsf(value);
-        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(precision) + 5); // more 5 maybe use in e style
-        uint32_t point_index = 0;
-        if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
-            point_index = format_content_cursor;
-            format_content[format_content_cursor++] = '.';
-        }
-        while (precision > 0) {
-            value *= 10;
-            int32_t digit = static_cast<int32_t>(value);
-            value -= static_cast<float>(digit);
-            --precision;
-            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
-        }
-
-        if (format_info_.type == 'Z') {
-            format_info_.type = 'e';
-            uint32_t moves = int_width - 1;
-            if (point_index != 0) {
-                while (moves > 0) {
-                    auto temp = format_content[point_index];
-                    format_content[point_index] = format_content[point_index - 1];
-                    format_content[point_index - 1] = temp;
-                    --point_index;
-                    --moves;
-                }
-            }
-
-            moves = int_width - 1;
-            if (format_info_.precision > 0 && format_info_.precision < format_content_cursor - begin_cursor)
-                format_content_cursor = point_index + format_info_.precision + 1;
-            fill_e_style(moves, begin_cursor);
-        }
+        insert_decimal_impl(static_cast<double>(value), 7);
     }
 
     void layout::insert_decimal(double value)
     {
-        if (format_info_.type == 'e')
-            format_info_.type = 'Z';
-        uint32_t int_width = 0;
-        auto precision = (int32_t)((format_info_.precision != 0xFFFFFFFF) ? format_info_.precision : 15);
-        auto begin_cursor = format_content_cursor;
-        if (value >= 0) {
-            uint64_t i_part = static_cast<uint64_t>(value);
-            int_width = insert_integral_unsigned(i_part, 10);
-            value -= static_cast<double>(i_part);
-        } else {
-            int64_t i_part = static_cast<int64_t>(value);
-            int_width = insert_integral_signed(i_part, 10);
-            value -= static_cast<double>(i_part);
-        }
-        if (format_info_.width > 0 && format_info_.width < static_cast<uint32_t>(precision) + 1 + int_width) {
-            precision = (static_cast<int32_t>(format_info_.width) - static_cast<int32_t>(int_width) - 1);
-            if (precision < 0)
-                precision = 0;
-        }
+        insert_decimal_impl(value, 15);
+    }
 
-        value = fabs(value);
-        expand_format_content_buff_size(format_content_cursor + static_cast<uint32_t>(precision) + 5); // more 5 maybe use for e-style
-        uint32_t point_index = 0;
-        if (precision > 0 || (format_info_.type == 'Z' && int_width > 1)) {
-            point_index = format_content_cursor;
-            format_content[format_content_cursor++] = '.';
-        }
-        auto temp_precision = precision;
-        while (temp_precision > 0) {
-            value *= 10;
-            int32_t digit = static_cast<int32_t>(value);
-            value -= static_cast<double>(digit);
-            --temp_precision;
-            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
-        }
-        if (format_info_.type == 'Z') {
-            format_info_.type = 'e';
-            uint32_t moves = int_width - 1;
-            if (point_index != 0) {
-                while (moves > 0) {
-                    auto temp = format_content[point_index];
-                    format_content[point_index] = format_content[point_index - 1];
-                    format_content[point_index - 1] = temp;
-                    --point_index;
-                    --moves;
-                }
+    // Values in (-1, 0) keep their sign, NaN and infinity print as such, values beyond the int64
+    // range print in full and the last digit is rounded like printf / std::format. Fixed notation
+    // below 2^64 with up to 19 decimals uses integer arithmetic; everything else uses snprintf.
+    void layout::insert_decimal_impl(double value, int32_t default_precision)
+    {
+        const bool e_style = (format_info_.type == 'e');
+        const bool negative = signbit(value) != 0;
+        const bool with_sign = negative || format_info_.sign == '+';
+        char buf[512];
+        uint32_t len = 0;
+        if (isnan(value) || isinf(value)) {
+            if (with_sign) {
+                buf[len++] = negative ? '-' : '+';
             }
-            moves = int_width - 1;
-            if (format_info_.precision > 0 && format_info_.precision < format_content_cursor - begin_cursor)
-                format_content_cursor = point_index + format_info_.precision + 1;
-            fill_e_style(moves, begin_cursor);
+            const bool upper = e_style && format_info_.upper;
+            const char* word = isnan(value) ? (upper ? "NAN" : "nan") : (upper ? "INF" : "inf");
+            memcpy(buf + len, word, 3);
+            len += 3;
+        } else {
+            uint32_t precision = static_cast<uint32_t>(default_precision);
+            if (format_info_.precision != 0xFFFFFFFF) {
+                precision = bq::min_value(format_info_.precision, static_cast<uint32_t>(99));
+            } else if (e_style) {
+                precision = 6;
+            }
+            const double abs_value = fabs(value);
+            if (!e_style && abs_value < 18446744073709551616.0 && precision <= 19) {
+                const uint64_t int_part_raw = static_cast<uint64_t>(abs_value);
+                const double frac = abs_value - static_cast<double>(int_part_raw); // exact
+                uint64_t int_part = 0;
+                uint64_t frac_digits = 0;
+                for (int32_t pass = 0; pass < 2; ++pass) {
+                    int_part = int_part_raw;
+                    frac_digits = round_fraction(frac, precision, (int_part & 1) != 0);
+                    if (frac_digits == decimal_pow10[precision]) {
+                        frac_digits = 0;
+                        ++int_part;
+                    }
+                    // Existing behaviour: drop fraction digits so the number fits in the width.
+                    const uint32_t int_width = decimal_digits_count(int_part) + (with_sign ? 1U : 0U);
+                    if (pass != 0 || format_info_.width == 0 || format_info_.width >= precision + 1 + int_width) {
+                        break;
+                    }
+                    const uint32_t fitted = format_info_.width > int_width ? format_info_.width - int_width - 1 : 0;
+                    if (fitted == precision) {
+                        break;
+                    }
+                    precision = fitted;
+                }
+                if (with_sign) {
+                    buf[len++] = negative ? '-' : '+';
+                }
+                len += write_uint_padded(buf + len, int_part, decimal_digits_count(int_part));
+                if (precision > 0) {
+                    buf[len++] = '.';
+                    len += write_uint_padded(buf + len, frac_digits, precision);
+                }
+            } else {
+                char fmt[8];
+                uint32_t fmt_len = 0;
+                fmt[fmt_len++] = '%';
+                if (format_info_.sign == '+') {
+                    fmt[fmt_len++] = '+';
+                }
+                fmt[fmt_len++] = '.';
+                fmt[fmt_len++] = '*';
+                fmt[fmt_len++] = e_style ? (format_info_.upper ? 'E' : 'e') : 'f';
+                fmt[fmt_len] = '\0';
+                int32_t written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(precision), value);
+                if (!e_style && format_info_.width > 0 && written > 0) {
+                    // Existing behaviour: drop fraction digits so the number fits in the width.
+                    const char* dot = strchr(buf, '.');
+                    const uint32_t int_width = dot ? static_cast<uint32_t>(dot - buf) : static_cast<uint32_t>(written);
+                    if (format_info_.width < precision + 1 + int_width) {
+                        const uint32_t fitted = format_info_.width > int_width ? format_info_.width - int_width - 1 : 0;
+                        if (fitted != precision) {
+                            written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(fitted), value);
+                        }
+                    }
+                }
+                if (written <= 0) {
+                    return;
+                }
+                len = bq::min_value(static_cast<uint32_t>(written), static_cast<uint32_t>(sizeof(buf) - 1));
+            }
         }
+        expand_format_content_buff_size(format_content_cursor + len);
+        memcpy(&format_content[format_content_cursor], buf, static_cast<size_t>(len));
+        format_content_cursor += len;
     }
 
     void layout::reverse(uint32_t begin_cursor, uint32_t end_cursor)

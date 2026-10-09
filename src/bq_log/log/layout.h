@@ -147,6 +147,8 @@ namespace bq {
 
         void insert_decimal(double value);
 
+        void insert_decimal_impl(double value, int32_t default_precision);
+
         void reverse(uint32_t begin_cursor, uint32_t end_cursor);
         //------------------------- insert functions end ----------------------//
 
