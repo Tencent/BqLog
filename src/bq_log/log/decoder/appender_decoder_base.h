@@ -90,6 +90,8 @@ namespace bq {
         bq::array<bq::string> category_names_;
 
     private:
+        // built from payload_metadata_ once the header is read, so its time string cache spans entries
+        bq::time_zone time_zone_;
         bq::file_handle file_;
         size_t current_file_size_ = 0;
         size_t current_file_cursor_ = SIZE_MAX;
@@ -97,5 +99,15 @@ namespace bq {
 
         bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
+
+#if defined(BQ_UNIT_TEST)
+        size_t peak_cache_read_size_ = 0;
+
+    public:
+        size_t get_peak_cache_read_size_for_test() const
+        {
+            return peak_cache_read_size_;
+        }
+#endif
     };
 }

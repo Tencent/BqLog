@@ -154,6 +154,12 @@ int32_t main(int32_t argc, char** argv)
         result.output("test_fast_log");
         return result.is_all_pass() ? 0 : -1;
     }
+    if (argc > 1 && strcmp(argv[1], "--appender-only") == 0) {
+        bq::test::test_log_appender appender_test;
+        auto result = appender_test.test();
+        result.output("test_log_appender");
+        return result.is_all_pass() ? 0 : -1;
+    }
     return main_logic();
 }
 

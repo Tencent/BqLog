@@ -254,8 +254,12 @@ namespace bq {
         if (offset == 0) {
             first_byte &= 0x7F; // 0b01111111
         }
-        size_t size_len = bq::log_utils::vlq::vlq_decode(data_size, read_handle.data() + offset);
+        size_t size_len = bq::log_utils::vlq::vlq_decode_bounded(data_size, read_handle.data() + offset, read_handle.len() - static_cast<size_t>(offset));
         if (size_len == bq::log_utils::vlq::invalid_decode_length) {
+            if (offset == 0) {
+                first_byte |= (uint8_t)type;
+            }
+            context.log_parse_fail_reason("decode compressed log file failed, decode item size failed");
             return bq::make_tuple(false, type, read_handle);
         }
         if (offset == 0) {
@@ -277,7 +281,7 @@ namespace bq {
             return false;
         }
         uint64_t epoch_offset_zigzag;
-        if (bq::log_utils::vlq::vlq_decode(epoch_offset_zigzag, data_handle.data()) == bq::log_utils::vlq::invalid_decode_length) {
+        if (bq::log_utils::vlq::vlq_decode_bounded(epoch_offset_zigzag, data_handle.data(), data_handle.len()) == bq::log_utils::vlq::invalid_decode_length) {
             context.log_parse_fail_reason("log entry epoch_offset decode failed");
             return false;
         }
@@ -299,7 +303,7 @@ namespace bq {
         }
         // bq::log_level log_level = (bq::log_level)level_byte;
         uint32_t category_idx = 0;
-        size_t category_idx_size = bq::log_utils::vlq::vlq_decode(category_idx, data_handle.data() + 1);
+        size_t category_idx_size = bq::log_utils::vlq::vlq_decode_bounded(category_idx, data_handle.data() + 1, data_handle.len() - 1);
         if (category_idx_size == bq::log_utils::vlq::invalid_decode_length) {
             context.log_parse_fail_reason("parse format template failed, category index vlq decode failed");
             return false;

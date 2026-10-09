@@ -21,6 +21,7 @@
 #include "bq_log/log/appender/appender_file_binary.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
 #include "bq_log/log/decoder/appender_decoder_base.h"
+#include "bq_log/log/decoder/appender_decoder_compressed.h"
 
 namespace bq {
     namespace test {
@@ -1276,6 +1277,230 @@ namespace bq {
                     "decoder malformed file: item size larger than the file is rejected");
             }
 
+            // Writes bytes to a test file under appender_test/.
+            static bq::string write_bytes_for_test(const char* name, const uint8_t* bytes, size_t size)
+            {
+                bq::file_manager::create_directory(TO_ABSOLUTE_PATH("appender_test", 0));
+                bq::string path = TO_ABSOLUTE_PATH(bq::string("appender_test/") + name, 0);
+                auto handle = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                bq::file_manager::instance().truncate_file(handle, 0);
+                bq::file_manager::instance().write_file(handle, bytes, size);
+                bq::file_manager::instance().flush_file(handle);
+                return path;
+            }
+
+            // Decodes a file through the internal decoder, so the test can read its peak read cache size.
+            static appender_decode_result decode_internal_for_test(const bq::string& path, size_t& out_peak_cache_size)
+            {
+                auto handle = bq::file_manager::instance().open_file(path, file_open_mode_enum::read);
+                appender_decoder_compressed decoder;
+                appender_decode_result result = decoder.init(handle, "");
+                if (result == appender_decode_result::success) {
+                    result = decoder.decode();
+                }
+                out_peak_cache_size = decoder.get_peak_cache_read_size_for_test();
+                return result;
+            }
+
+            // The existing size checks only reject these files after the fact, so the result alone does not prove
+            // the fix: the read cache must stay near its default size instead of following the length in the file.
+            void do_decoder_untrusted_size_allocation_test(test_result& result)
+            {
+                constexpr size_t max_sane_cache = 1024 * 1024;
+
+                std::vector<uint8_t> huge_name = malformed_file_head(0xFFFFFFF0U, "abc");
+                size_t peak = 0;
+                appender_decode_result decode_result = decode_internal_for_test(write_bytes_for_test("decoder_huge_name.logcompr", huge_name.data(), huge_name.size()), peak);
+                result.add_result(decode_result != appender_decode_result::success && peak < max_sane_cache,
+                    "decoder: category name length from the file does not drive the read cache size (peak %" PRIu64 ")", static_cast<uint64_t>(peak));
+
+                std::vector<uint8_t> huge_item = malformed_file_head(0, "");
+                huge_item.push_back(malformed_item_log_entry);
+                const uint8_t vlq_4g[] = { 0x08, 0xFF, 0xFF, 0xFF, 0xE0 };
+                huge_item.insert(huge_item.end(), vlq_4g, vlq_4g + sizeof(vlq_4g));
+                huge_item.insert(huge_item.end(), 16, static_cast<uint8_t>(0));
+                decode_result = decode_internal_for_test(write_bytes_for_test("decoder_huge_item.logcompr", huge_item.data(), huge_item.size()), peak);
+                result.add_result(decode_result != appender_decode_result::success && peak < max_sane_cache,
+                    "decoder: item size from the file does not drive the read cache size (peak %" PRIu64 ")", static_cast<uint64_t>(peak));
+            }
+
+            // A truncated double must be rejected before any of its bytes are copied, and an entry ending right
+            // after a fixed size argument must still decode.
+            void do_decoder_fixed_size_arg_test(test_result& result)
+            {
+                bq::string text;
+                const uint8_t double_type = static_cast<uint8_t>(log_arg_type_enum::double_type);
+                const uint8_t float_type = static_cast<uint8_t>(log_arg_type_enum::float_type);
+                const uint8_t pointer_type = static_cast<uint8_t>(log_arg_type_enum::pointer_type);
+                const uint8_t bool_type = static_cast<uint8_t>(log_arg_type_enum::bool_type);
+                for (uint8_t short_len = 0; short_len < 8; ++short_len) {
+                    std::vector<uint8_t> args = { double_type };
+                    args.insert(args.end(), short_len, static_cast<uint8_t>(0x40));
+                    result.add_result(malformed_decode("short_double_n", malformed_file_with_entry(args), text) != appender_decode_result::success,
+                        "decoder: double with %" PRIu32 " of 8 bytes is rejected", static_cast<uint32_t>(short_len));
+                }
+                for (uint8_t short_len = 0; short_len < 4; ++short_len) {
+                    std::vector<uint8_t> args = { float_type };
+                    args.insert(args.end(), short_len, static_cast<uint8_t>(0x40));
+                    result.add_result(malformed_decode("short_float_n", malformed_file_with_entry(args), text) != appender_decode_result::success,
+                        "decoder: float with %" PRIu32 " of 4 bytes is rejected", static_cast<uint32_t>(short_len));
+                }
+                result.add_result(malformed_decode("short_pointer", malformed_file_with_entry({ pointer_type, 1, 2, 3 }), text) != appender_decode_result::success,
+                    "decoder: truncated pointer is rejected");
+                result.add_result(malformed_decode("short_bool", malformed_file_with_entry({ bool_type }), text) != appender_decode_result::success,
+                    "decoder: bool without its value byte is rejected");
+                result.add_result(malformed_decode("bool_value_7", malformed_file_with_entry({ bool_type, 7 }), text) == appender_decode_result::success && text.end_with("x=TRUE"),
+                    "decoder: any non-zero bool byte decodes as true (got \"%s\")", text.c_str());
+                // 1.5 as a little-endian double
+                result.add_result(malformed_decode("exact_double", malformed_file_with_entry({ double_type, 0, 0, 0, 0, 0, 0, 0xF8, 0x3F }), text) == appender_decode_result::success && text.end_with("x=1.500000000000000"),
+                    "decoder: double ending exactly at the end of the entry decodes (got \"%s\")", text.c_str());
+            }
+
+            // A truncated VLQ argument must be rejected; an int16 must not be zigzag decoded from a value that
+            // was never written.
+            void do_decoder_truncated_vlq_arg_test(test_result& result)
+            {
+                bq::string text;
+                const uint8_t int16_type = static_cast<uint8_t>(log_arg_type_enum::int16_type);
+                const uint8_t int32_type = static_cast<uint8_t>(log_arg_type_enum::int32_type);
+                const uint8_t int64_type = static_cast<uint8_t>(log_arg_type_enum::int64_type);
+                const uint8_t utf8_type = static_cast<uint8_t>(log_arg_type_enum::string_utf8_type);
+                // 0x40: prefix of a 2 byte VLQ, 0x08: prefix of a 5 byte VLQ, 0x01: prefix of an 8 byte VLQ
+                result.add_result(malformed_decode("short_vlq16", malformed_file_with_entry({ int16_type, 0x40 }), text) != appender_decode_result::success,
+                    "decoder: truncated int16 VLQ is rejected");
+                result.add_result(malformed_decode("short_vlq32", malformed_file_with_entry({ int32_type, 0x08, 1, 2 }), text) != appender_decode_result::success,
+                    "decoder: truncated int32 VLQ is rejected");
+                result.add_result(malformed_decode("short_vlq64", malformed_file_with_entry({ int64_type, 0x01, 1, 2, 3 }), text) != appender_decode_result::success,
+                    "decoder: truncated int64 VLQ is rejected");
+                result.add_result(malformed_decode("short_vlq_str", malformed_file_with_entry({ utf8_type, 0x40 }), text) != appender_decode_result::success,
+                    "decoder: truncated string length VLQ is rejected");
+                result.add_result(malformed_decode("vlq16_neg", malformed_file_with_entry({ int16_type, 0x85 /* zigzag(-3) */ }), text) == appender_decode_result::success && text.end_with("x=-3"),
+                    "decoder: int16 zigzag value decodes");
+            }
+
+            // Writes one entry with the given string through a real compressed appender and decodes the file.
+            // Returns the decoded line, or an empty string if the file did not decode.
+            template <typename STR>
+            static bq::string compressed_round_trip_line(const char* case_name, const STR& value)
+            {
+                clear_appender_file_base_test_folder();
+                bq::string file_name = bq::string("appender_test/") + case_name;
+                bq::string config = bq::string(
+                                        "log.thread_mode=sync\n"
+                                        "log.recovery=false\n"
+                                        "appenders_config.file.type=compressed_file\n"
+                                        "appenders_config.file.levels=[all]\n"
+                                        "appenders_config.file.time_zone=UTC\n"
+                                        "appenders_config.file.base_dir_type=0\n"
+                                        "appenders_config.file.always_create_new_file=true\n"
+                                        "appenders_config.file.enable_rolling_log_file=false\n"
+                                        "appenders_config.file.file_name=")
+                    + file_name + "\n";
+                {
+                    bq::log log_obj = bq::log::create_log(bq::string("round_trip_") + case_name, config);
+                    log_obj.info("s=[{}]", value);
+                    log_obj.force_flush();
+                    log_obj.reset_config("log.thread_mode=sync\nappenders_config.c.type=console\nappenders_config.c.enable=false\n");
+                }
+                bq::array<bq::string> names = bq::file_manager::get_sub_dirs_and_files_name(TO_ABSOLUTE_PATH("appender_test", 0));
+                for (const auto& name : names) {
+                    if (!name.begin_with(case_name) || !name.end_with(".logcompr")) {
+                        continue;
+                    }
+                    bq::tools::log_decoder decoder(bq::file_manager::combine_path(TO_ABSOLUTE_PATH("appender_test", 0), name));
+                    if (decoder.decode() != appender_decode_result::success) {
+                        return "";
+                    }
+                    return decoder.get_last_decoded_log_entry();
+                }
+                return "";
+            }
+
+            static bq::string bracketed(const char* text, size_t len)
+            {
+                return bq::string("s=[") + bq::string(text, len) + "]";
+            }
+
+            // The writer stores a UTF-8 argument as its length followed by its bytes; only UTF-16 arguments
+            // (written as UTF-mixed) may carry a 0 placeholder byte after the length. A UTF-8 argument that
+            // starts with '\0' must round trip unchanged instead of being read as placeholder + shifted text.
+            void do_compressed_utf8_leading_null_test(test_result& result)
+            {
+                const char leading_null[] = { '\0', 'a', 'b', 'c' };
+                bq::string line = compressed_round_trip_line("utf8_leading_null", bq::string(leading_null, sizeof(leading_null)));
+                result.add_result(line.end_with(bracketed(leading_null, sizeof(leading_null))),
+                    "compressed round trip: UTF-8 argument starting with '\\0' keeps every byte (decoded %" PRIu64 " bytes)", static_cast<uint64_t>(line.size()));
+
+                const char only_null[] = { '\0' };
+                line = compressed_round_trip_line("utf8_only_null", bq::string(only_null, sizeof(only_null)));
+                result.add_result(line.end_with(bracketed(only_null, sizeof(only_null))),
+                    "compressed round trip: UTF-8 argument \"\\0\" keeps its byte (decoded %" PRIu64 " bytes)", static_cast<uint64_t>(line.size()));
+
+                // two arguments: a shifted first string would swallow the start of the second
+                const char two_nulls[] = { '\0', '\0', 'x' };
+                line = compressed_round_trip_line("utf8_two_nulls", bq::string(two_nulls, sizeof(two_nulls)));
+                result.add_result(line.end_with(bracketed(two_nulls, sizeof(two_nulls))),
+                    "compressed round trip: UTF-8 argument \"\\0\\0x\" keeps every byte (decoded %" PRIu64 " bytes)", static_cast<uint64_t>(line.size()));
+
+                // the UTF-16 placeholder path must keep working: for 50 non-ASCII chars the writer estimates
+                // 3 * 50 + 1 = 151 bytes (2 byte VLQ) but the UTF-mixed length is 1 + 100 = 101 (1 byte VLQ),
+                // so it writes a 0 placeholder after the length
+                char16_t wide_chars[50];
+                bq::string expected_wide;
+                for (int32_t i = 0; i < 50; ++i) {
+                    wide_chars[i] = static_cast<char16_t>(0x4E2D);
+                    expected_wide += "\xE4\xB8\xAD";
+                }
+                line = compressed_round_trip_line("utf16_placeholder", bq::u16string(wide_chars, 50));
+                result.add_result(line.end_with(bq::string("s=[") + expected_wide + "]"),
+                    "compressed round trip: UTF-16 argument written with a placeholder byte decodes");
+            }
+
+            // parse_exist_log_file decides whether an existing file can be appended to. A log entry item whose
+            // epoch VLQ claims more bytes than the item holds must make the file rejected (a new file opened),
+            // not be decoded from the bytes of the next item. The bad item is followed by a valid one because an
+            // item in the last 6 bytes of a file is never parsed (the item header read hits the end of file first).
+            void do_parse_exist_truncated_vlq_test(test_result& result)
+            {
+                clear_appender_file_base_test_folder();
+                bq::string config_str = "log.thread_mode=sync\n"
+                                        "log.recovery=false\n"
+                                        "appenders_config.file.type=compressed_file\n"
+                                        "appenders_config.file.levels=[all]\n"
+                                        "appenders_config.file.time_zone=UTC\n"
+                                        "appenders_config.file.base_dir_type=0\n"
+                                        "appenders_config.file.always_create_new_file=false\n"
+                                        "appenders_config.file.enable_rolling_log_file=false\n"
+                                        "appenders_config.file.file_name=appender_test/parse_exist\n";
+                {
+                    bq::log log_obj = bq::log::create_log("parse_exist_first", config_str);
+                    log_obj.info("first {}", 1);
+                    log_obj.force_flush();
+                    log_obj.reset_config("log.thread_mode=sync\nappenders_config.c.type=console\nappenders_config.c.enable=false\n");
+                }
+                bq::string first_path = TO_ABSOLUTE_PATH("appender_test/parse_exist_1.logcompr", 0);
+                bool first_exists = bq::file_manager::is_file(first_path);
+                {
+                    // [type][1 byte VLQ size = 2][0x01: prefix of an 8 byte VLQ][0x00], then a valid entry with a 2 byte payload
+                    auto handle = bq::file_manager::instance().open_file(first_path, file_open_mode_enum::read_write);
+                    const uint8_t items[] = { malformed_item_log_entry, 0x82, 0x01, 0x00, malformed_item_log_entry, 0x82, 0x80, 0x80 };
+                    bq::file_manager::instance().write_file(handle, items, sizeof(items), bq::file_manager::seek_option::end, 0);
+                    bq::file_manager::instance().flush_file(handle);
+                }
+                size_t corrupt_size = bq::file_manager::get_file_size(first_path);
+                {
+                    bq::log log_obj = bq::log::create_log("parse_exist_second", config_str);
+                    log_obj.info("second {}", 2);
+                    log_obj.force_flush();
+                    log_obj.reset_config("log.thread_mode=sync\nappenders_config.c.type=console\nappenders_config.c.enable=false\n");
+                }
+                bool corrupt_untouched = bq::file_manager::get_file_size(first_path) == corrupt_size;
+                bool second_created = bq::file_manager::is_file(TO_ABSOLUTE_PATH("appender_test/parse_exist_2.logcompr", 0));
+                result.add_result(first_exists && corrupt_untouched && second_created,
+                    "compressed appender: existing file with a truncated VLQ in an entry is not reused (first_exists:%d, untouched:%d, second_created:%d)",
+                    static_cast<int32_t>(first_exists), static_cast<int32_t>(corrupt_untouched), static_cast<int32_t>(second_created));
+            }
+
         public:
             virtual test_result test() override
             {
@@ -1287,6 +1512,11 @@ namespace bq {
 #endif
                 do_binary_appender_test_with_enc(result);
                 do_decoder_malformed_file_test(result);
+                do_decoder_untrusted_size_allocation_test(result);
+                do_decoder_fixed_size_arg_test(result);
+                do_decoder_truncated_vlq_arg_test(result);
+                do_compressed_utf8_leading_null_test(result);
+                do_parse_exist_truncated_vlq_test(result);
                 for (int32_t i = 0; i < loop_count; ++i) {
                     do_console_appender_test(result);
                 }

@@ -65,6 +65,7 @@ namespace bq {
             }
             return appender_decode_result::failed_decode_error;
         }
+        time_zone_.restore_by_config(payload_metadata_.use_local_time, payload_metadata_.gmt_offset_hours, payload_metadata_.gmt_offset_minutes, payload_metadata_.time_zone_diff_to_gmt_ms, payload_metadata_.time_zone_str);
 
         for (uint32_t i = 0; i < payload_metadata_.category_count; ++i) {
             uint32_t name_len = 0;
@@ -182,6 +183,9 @@ namespace bq {
             auto total_size = bq::max_value(alloc_size + read_offset, DECODER_CACHE_READ_DEFAULT_SIZE);
             cache_read_.clear();
             cache_read_.fill_uninitialized(total_size);
+#if defined(BQ_UNIT_TEST)
+            peak_cache_read_size_ = bq::max_value(peak_cache_read_size_, total_size);
+#endif
             auto expected_read_size = total_size - read_offset;
             if (static_cast<uint64_t>(expected_read_size) > seg_left_size) {
                 expected_read_size = static_cast<size_t>(seg_left_size);
@@ -229,8 +233,7 @@ namespace bq {
 
     appender_decode_result appender_decoder_base::do_decode_by_log_entry_handle(const log_entry_handle& item)
     {
-        time_zone time_zone_tmp(payload_metadata_.use_local_time, payload_metadata_.gmt_offset_hours, payload_metadata_.gmt_offset_minutes, payload_metadata_.time_zone_diff_to_gmt_ms, payload_metadata_.time_zone_str);
-        auto layout_result = layout_.do_layout(item, time_zone_tmp, &category_names_);
+        auto layout_result = layout_.do_layout(item, time_zone_, &category_names_);
         if (layout_result != layout::enum_layout_result::finished) {
             util::log_device_console(log_level::error, "decode compressed log file failed, layout error code:%" PRId32, (int32_t)layout_result);
             return appender_decode_result::failed_decode_error;
