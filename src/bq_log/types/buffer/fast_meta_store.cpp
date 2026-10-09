@@ -224,6 +224,9 @@ namespace bq {
         uint8_t level, uint32_t category_idx, uint8_t format_type,
         const uint8_t* arg_types, uint16_t arg_count)
     {
+#if defined(BQ_UNIT_TEST)
+        test_register_count_.fetch_add_relaxed(1);
+#endif
         if (!format || (arg_count && !arg_types)
             || static_cast<uint64_t>(format_size) + arg_count + sizeof(fast_format_meta) > UINT32_MAX) {
             return nullptr;

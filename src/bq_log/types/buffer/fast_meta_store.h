@@ -96,6 +96,11 @@ namespace bq {
     public:
         fast_meta_store(const log_buffer_config& config, uint16_t version);
 
+#if defined(BQ_UNIT_TEST)
+        // T01 race test: counts every registration, deduped or not
+        bq::platform::atomic<uint32_t> test_register_count_ { 0 };
+#endif
+
         const fast_format_meta* register_format(const char* format, uint32_t format_size,
             uint8_t level, uint32_t category_idx, uint8_t format_type,
             const uint8_t* arg_types, uint16_t arg_count);

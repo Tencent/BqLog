@@ -274,6 +274,11 @@ namespace bq {
         const log_tls_buffer_info& get_buffer_info_for_this_thread() const;
         // fast record with its head filled in, args after the head
         log_buffer_write_handle test_alloc_fast_record(const fast_format_meta* format, uint32_t args_size);
+        // every fast_log_format registration, including duplicated ones: 1 per site when a site races to init
+        uint32_t test_fast_meta_register_count()
+        {
+            return get_fast_meta_store()->test_register_count_.load_relaxed();
+        }
 
         int32_t get_groups_count() const { return hp_buffer_.get_groups_count(); }
         void garbage_collect() { hp_buffer_.garbage_collect(); }

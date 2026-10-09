@@ -380,6 +380,12 @@ namespace bq {
         if (format_size > UINT32_MAX - sizeof(uint32_t)) {
             return false;
         }
+        bq::fast_inline::site_init_guard guard(&site);
+        const uint32_t* current_level_word = bq::fast_inline::load_level_word_acquire(site);
+        // a zeroed handle (no BQ_FAST_LOG_SITE_INITIALIZER) has a null level_word: also uninitialized
+        if (current_level_word && current_level_word != &bq::fast_inline::module_state<>::no_level) {
+            return true;
+        }
         bq::array<uint8_t> normalized;
         normalized.fill_uninitialized(format_size + sizeof(uint32_t));
         bq::tools::_type_copy<false>(format, &normalized[0], format_size + sizeof(uint32_t));
@@ -392,7 +398,13 @@ namespace bq {
                 fast_log_arg_types<ARGS>::count)) {
             return false;
         }
-        site = new_site;
+        // publish level_word last with release order: the inline path reads it with acquire and
+        // must never observe a site whose meta address or buffer id is not yet visible
+        site.format_meta_addr = new_site.format_meta_addr;
+        site.buffer_id = new_site.buffer_id;
+        site.log_id = new_site.log_id;
+        site.buffer_ptr = new_site.buffer_ptr;
+        bq::fast_inline::store_level_word_release(site, new_site.level_word);
         return true;
     }
 
@@ -403,7 +415,8 @@ namespace bq {
         if (!log.is_enabled_for(category_index, level)) {
             return false;
         }
-        if (log.is_stack_trace_enabled_for(level) || (!site.buffer_ptr && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
+        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::module_state<>::no_level;
+        if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
             return log.do_log(category_index, level, format);
         }
         if (!bq::api::__api_fast_log_write_no_args(&site)) {
@@ -427,7 +440,8 @@ namespace bq {
         if (!log.is_enabled_for(category_index, level)) {
             return false;
         }
-        if (log.is_stack_trace_enabled_for(level) || (!site.buffer_ptr && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
+        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::module_state<>::no_level;
+        if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
             return log.do_log(category_index, level, format, first, args...);
         }
         auto size_seq = bq::tools::make_size_seq<false>(first, args...);
@@ -466,7 +480,8 @@ namespace bq {
     bq_forceinline bool fast_log_inline(const bq::_api_fast_log_site_handle& site, bq::log_level level,
         uint32_t args_size, const FILL& fill)
     {
-        BQ_UNLIKELY_IF(((*site.level_word >> static_cast<uint32_t>(level)) & 1U) == 0)
+        const uint32_t* level_word = bq::fast_inline::load_level_word_acquire(site);
+        BQ_UNLIKELY_IF(((*level_word >> static_cast<uint32_t>(level)) & 1U) == 0)
         {
             return false;
         }
@@ -611,36 +626,36 @@ namespace bq {
 
 #define BQ_LOG_FAST_VERBOSE(log_obj, ...)                                                 \
     do {                                                                                  \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
         bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::verbose, __VA_ARGS__);  \
     } while (false)
 
 #define BQ_LOG_FAST_DEBUG(log_obj, ...)                                                   \
     do {                                                                                  \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
         bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::debug, __VA_ARGS__);    \
     } while (false)
 
 #define BQ_LOG_FAST_INFO(log_obj, ...)                                                    \
     do {                                                                                  \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
         bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::info, __VA_ARGS__);     \
     } while (false)
 
 #define BQ_LOG_FAST_WARNING(log_obj, ...)                                                 \
     do {                                                                                  \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
         bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::warning, __VA_ARGS__);  \
     } while (false)
 
 #define BQ_LOG_FAST_ERROR(log_obj, ...)                                                   \
     do {                                                                                  \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
         bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::error, __VA_ARGS__);    \
     } while (false)
 
 #define BQ_LOG_FAST_FATAL(log_obj, ...)                                                   \
     do {                                                                                  \
-        static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
+        alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
         bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::fatal, __VA_ARGS__);    \
     } while (false)

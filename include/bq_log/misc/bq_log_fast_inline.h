@@ -42,6 +42,8 @@ namespace bq {
             static const bool no_reallocate;
             static const uint32_t no_level;
             static uint32_t layout_status; // 0 unknown, 1 ready, 2 unavailable
+            // cold path only: serializes first-time site initialization; 0 = free
+            static bq::platform::atomic_trivially_constructible<uint32_t> site_init_locks[32];
         };
         template <typename T>
         const bool module_state<T>::no_reallocate = false;
@@ -49,12 +51,68 @@ namespace bq {
         const uint32_t module_state<T>::no_level = 0;
         template <typename T>
         uint32_t module_state<T>::layout_status = 0;
+        template <typename T>
+        bq::platform::atomic_trivially_constructible<uint32_t> module_state<T>::site_init_locks[32];
 
         // Function scope: a TLS static member of a class template gets an init guard on MSVC.
         inline thread_slot& get_thread_slot()
         {
             static BQ_TLS thread_slot slot = { { 0, nullptr, nullptr, &module_state<>::no_reallocate, 0, 0 }, {} };
             return slot;
+        }
+
+        // A minimal spin lock for the public header: spin_lock lives in src/ and user code cannot reach it.
+        // Hashed by site address so concurrent initializations of different sites rarely share a lock.
+        // A minimal spin lock for the public header: spin_lock and its cpu_relax live in src/ and user
+        // code cannot reach them. The pause is a copy of bq::platform::thread::cpu_relax().
+        bq_forceinline void site_init_pause()
+        {
+#if defined(BQ_MSVC) && defined(BQ_X86)
+            _mm_pause();
+#elif defined(BQ_MSVC) && defined(BQ_ARM)
+            __yield();
+#elif defined(BQ_MSVC)
+            _ReadWriteBarrier();
+#elif defined(BQ_ARM)
+            __asm__ __volatile__("yield");
+#else
+            __asm__ __volatile__("pause");
+#endif
+        }
+
+        class site_init_guard {
+            bq::platform::atomic_trivially_constructible<uint32_t>& lock_;
+
+        public:
+            explicit site_init_guard(const void* site)
+                : lock_(module_state<>::site_init_locks[((reinterpret_cast<uintptr_t>(site) >> 3) ^ (reinterpret_cast<uintptr_t>(site) >> 9)) & 31U])
+            {
+                while (lock_.exchange_acquire(1U) != 0U) {
+                    while (lock_.load_relaxed() != 0U) {
+                        site_init_pause();
+                    }
+                }
+            }
+
+            ~site_init_guard()
+            {
+                lock_.store_release(0U);
+            }
+
+            site_init_guard(const site_init_guard&) = delete;
+            site_init_guard& operator=(const site_init_guard&) = delete;
+        };
+
+        // level_word is the publication field of a fast site: the other fields are plain stores before it
+        // and may only be read after an acquire load of it returned the initialized value.
+        bq_forceinline const uint32_t* load_level_word_acquire(const bq::_api_fast_log_site_handle& site)
+        {
+            return BQ_PACK_ACCESS_BY_TYPE(site.level_word, bq::platform::atomic<const uint32_t*>).load_acquire();
+        }
+
+        bq_forceinline void store_level_word_release(bq::_api_fast_log_site_handle& site, const uint32_t* word)
+        {
+            BQ_PACK_ACCESS_BY_TYPE(site.level_word, bq::platform::atomic<const uint32_t*>).store_release(word);
         }
 
         typedef bq::platform::atomic_trivially_constructible<uint32_t> cursor;

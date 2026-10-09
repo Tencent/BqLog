@@ -14,6 +14,10 @@
 #include "bq_log/log/log_record_reader.h"
 #include "bq_log/log/log_manager.h"
 #include "test_category_log.h"
+#include <atomic>
+#include <thread>
+#include <vector>
+#include <initializer_list>
 
 namespace bq {
     namespace test {
@@ -983,6 +987,175 @@ namespace bq {
                     "standard stack level still prints stack trace");
             }
 
+            // one distinct call site per N: each expansion has its own function scope static site
+            template <int32_t N>
+            static void race_site(const bq::log& log, int32_t tid)
+            {
+                BQ_LOG_FAST_INFO(log, "race {} {}", N, tid);
+            }
+
+            template <int32_t... N>
+            struct race_seq {
+                static void build(void (**out)(const bq::log&, int32_t))
+                {
+                    int32_t i = 0;
+                    (void)std::initializer_list<int> { (out[i++] = &race_site<N>, 0)... };
+                }
+            };
+
+            // COLS indices starting at OFFSET, one recursion level per column (keeps template depth low)
+            template <int32_t I, int32_t OFFSET, int32_t... N>
+            struct race_gen : race_gen<I - 1, OFFSET, OFFSET + I - 1, N...> {};
+            template <int32_t OFFSET, int32_t... N>
+            struct race_gen<0, OFFSET, N...> {
+                typedef race_seq<N...> type;
+            };
+
+            template <int32_t ROW, int32_t COLS>
+            struct race_table {
+                static constexpr int32_t count = (ROW + 1) * COLS;
+                typedef void (*site_func)(const bq::log&, int32_t);
+                static void build(site_func* out)
+                {
+                    typedef typename race_gen<COLS, ROW * COLS>::type row;
+                    row::build(out);
+                    race_table<ROW - 1, COLS>::build(out + COLS);
+                }
+            };
+            template <int32_t COLS>
+            struct race_table<-1, COLS> {
+                static constexpr int32_t count = 0;
+                typedef void (*site_func)(const bq::log&, int32_t);
+                static void build(site_func*)
+                {
+                }
+            };
+
+            class race_barrier {
+                std::atomic<int32_t> arrived_;
+                std::atomic<int32_t> phase_;
+                const int32_t total_;
+
+            public:
+                explicit race_barrier(int32_t total)
+                    : arrived_(0)
+                    , phase_(0)
+                    , total_(total)
+                {
+                }
+
+                void wait()
+                {
+                    const int32_t phase = phase_.load(std::memory_order_acquire);
+                    if (arrived_.fetch_add(1) + 1 == total_) {
+                        arrived_.store(0, std::memory_order_relaxed);
+                        phase_.store(phase + 1, std::memory_order_release);
+                    } else {
+                        while (phase_.load(std::memory_order_acquire) == phase) {
+                            std::this_thread::yield();
+                        }
+                    }
+                }
+            };
+
+            // Every thread's first call of every site happens simultaneously: the publication of a site's
+            // fields races with other threads' reads, which must neither drop a record nor register twice.
+            static void test_site_init_race(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_site_race_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                const bq::string config = bq::string("appenders_config.test.type=text_file\n")
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n"
+                    + "log.thread_mode=async\n"
+                    + "log.buffer_size=65536\n"
+                    + "log.buffer_policy_when_full=expand\n"
+                    + "log.high_perform_mode_freq_threshold_per_second=1000000\n";
+                bq::log log = bq::log::create_log(name, config);
+                result.add_result(log.is_valid(), "site race log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+#if defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE)
+                constexpr int32_t thread_count = 16;
+                typedef race_table<3, 25> sites;
+#else
+                constexpr int32_t thread_count = 64;
+                typedef race_table<24, 40> sites;
+#endif
+                constexpr int32_t rounds = 3;
+                typedef typename sites::site_func site_func;
+                site_func table[sites::count];
+                sites::build(table);
+
+                for (int32_t round = 0; round < rounds; ++round) {
+                    race_barrier barrier(thread_count);
+                    std::vector<std::thread> threads;
+                    for (int32_t t = 0; t < thread_count; ++t) {
+                        threads.emplace_back([&barrier, &log, &table, t]() {
+                            for (int32_t i = 0; i < sites::count; ++i) {
+                                barrier.wait();
+                                table[i](log, t);
+                            }
+                        });
+                    }
+                    for (auto& thread : threads) {
+                        thread.join();
+                    }
+                }
+                log.force_flush();
+                bq::log_imp* imp = bq::log_manager::get_log_by_id(log.get_id());
+                result.add_result(imp != nullptr, "site race log imp");
+                if (imp) {
+                    result.add_result(imp->get_buffer().test_fast_meta_register_count() == static_cast<uint32_t>(sites::count),
+                        "site race: each site registers exactly once (%u of %d)",
+                        imp->get_buffer().test_fast_meta_register_count(), sites::count);
+                }
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                bq::array<uint32_t> seen;
+                seen.fill_uninitialized(static_cast<size_t>(sites::count) * thread_count);
+                memset(&seen[0], 0, seen.size() * sizeof(uint32_t));
+                uint32_t total_lines = 0;
+                uint32_t bad_lines = 0;
+                size_t begin = 0;
+                while (begin < data.size()) {
+                    size_t end = data.find("\n", begin);
+                    if (end == bq::string::npos) {
+                        end = data.size();
+                    }
+                    const bq::string line = data.substr(begin, end - begin);
+                    begin = end + 1;
+                    const size_t race_pos = line.find("race ");
+                    if (race_pos == bq::string::npos) {
+                        continue;
+                    }
+                    int32_t site = -1;
+                    int32_t tid = -1;
+                    if (sscanf(line.c_str() + race_pos, "race %d %d", &site, &tid) != 2
+                        || site < 0 || site >= sites::count || tid < 0 || tid >= thread_count) {
+                        ++bad_lines;
+                        continue;
+                    }
+                    ++total_lines;
+                    ++seen[static_cast<size_t>(static_cast<uint32_t>(site) * static_cast<uint32_t>(thread_count) + static_cast<uint32_t>(tid))];
+                }
+                result.add_result(bad_lines == 0, "site race: no unexpected lines (%u)", bad_lines);
+                result.add_result(total_lines == static_cast<uint32_t>(sites::count) * thread_count * rounds,
+                    "site race: every record written (%u of %u)", total_lines,
+                    static_cast<uint32_t>(sites::count) * thread_count * rounds);
+                uint32_t missing = 0;
+                uint32_t duplicated = 0;
+                for (size_t i = 0; i < seen.size(); ++i) {
+                    missing += seen[i] < rounds ? 1U : 0U;
+                    duplicated += seen[i] > rounds ? 1U : 0U;
+                }
+                result.add_result(missing == 0, "site race: no dropped records (%u combos short)", missing);
+                result.add_result(duplicated == 0, "site race: no duplicated records (%u combos over)", duplicated);
+            }
+
             test_result test() override
             {
                 test_result result;
@@ -1094,6 +1267,7 @@ namespace bq {
                     "removed raw_file appender is ignored");
                 result.add_result(decode_has_both(TO_ABSOLUTE_PATH(file_name + "_compressed_1.logcompr", 0)),
                     "fast and standard compressed file");
+                test_site_init_race(result);
                 test_inline_support(result, log);
                 test_inline_wrap(result);
                 test_generated_category(result);
