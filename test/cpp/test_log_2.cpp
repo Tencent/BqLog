@@ -163,6 +163,27 @@ namespace bq {
                 log_inst.error(log_inst.cat.ModuleB, "|{:e}|{:+.2e}|{:.1e}|{:.0e}|", -1500, (uint16_t)1500, 99999, 25);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-1.500000e+03|+1.50e+03|1.0e+05|2e+01|"), "layout format integer e-style sign and rounding");
                 {
+                    // A spec longer than 10 characters is not supported and must not keep its width:
+                    // the output buffer is not grown for it, so padding near the end of the buffer
+                    // used to write past it. Try every line length around the initial 1024 byte buffer.
+                    bool long_spec_ok = true;
+                    bool width_ok = true;
+                    bq::string padding;
+                    bq::string spaces;
+                    for (uint32_t space = 0; space < 98; ++space) {
+                        spaces.push_back(' ');
+                    }
+                    for (uint32_t pad = 0; pad < 1100; ++pad) {
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:<99--------}").c_str(), 1);
+                        long_spec_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "1");
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:<99}").c_str(), 1);
+                        width_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "1" + spaces);
+                        padding.push_back('a');
+                    }
+                    result.add_result(long_spec_ok, "layout format spec longer than 10 characters");
+                    result.add_result(width_ok, "layout format width near the end of the buffer");
+                }
+                {
                     const char* current_locale = setlocale(LC_NUMERIC, nullptr);
                     bq::string saved_locale = current_locale ? current_locale : "C";
                     const char* comma_locales[] = { "de-DE", "de_DE.UTF-8", "de_DE.utf8", "fr_FR.UTF-8", "fr_FR.utf8" };
