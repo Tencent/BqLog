@@ -454,51 +454,15 @@ namespace bq {
             }
             static bq::string trans(float value)
             {
-                bq::string result;
-                int32_t precision = 7;
-                if (value >= 0) {
-                    uint64_t i_part = static_cast<uint64_t>(value);
-                    result = trans(i_part);
-                    value -= static_cast<float>(i_part);
-                } else {
-                    int64_t i_part = static_cast<int64_t>(value);
-                    result = trans(i_part);
-                    value -= static_cast<float>(i_part);
-                }
-                value = fabsf(value);
-                result += ".";
-                while (precision > 0) {
-                    value *= 10;
-                    int32_t digit = (int32_t)value;
-                    value -= (float)(digit);
-                    --precision;
-                    result.push_back((char)('0' + (char)digit));
-                }
-                return result;
+                char tmp_str[512];
+                snprintf(tmp_str, sizeof(tmp_str), "%.7f", static_cast<double>(value));
+                return tmp_str;
             }
             static bq::string trans(double value)
             {
-                bq::string result;
-                int32_t precision = 15;
-                if (value >= 0) {
-                    uint64_t i_part = static_cast<uint64_t>(value);
-                    result = trans(i_part);
-                    value -= static_cast<double>(i_part);
-                } else {
-                    int64_t i_part = static_cast<int64_t>(value);
-                    result = trans(i_part);
-                    value -= static_cast<double>(i_part);
-                }
-                value = fabs(value);
-                result += ".";
-                while (precision > 0) {
-                    value *= 10;
-                    int32_t digit = (int32_t)value;
-                    value -= (double)(digit);
-                    --precision;
-                    result.push_back((char)('0' + (char)digit));
-                }
-                return result;
+                char tmp_str[512];
+                snprintf(tmp_str, sizeof(tmp_str), "%.15f", value);
+                return tmp_str;
             }
             template <size_t N>
             static bq::string trans_utf8_char_array_impl(const char (&value)[N])
