@@ -21,6 +21,7 @@
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/types/buffer/miso_ring_buffer.h"
+#include "bq_log/types/storage/instance_storage.h"
 
 namespace bq {
 
@@ -49,11 +50,15 @@ namespace bq {
 #endif
         // Global variables are initialized using placement new; therefore, do not construct objects here, as alignment (alignas) cannot be guaranteed.
 #if defined(BQ_NAPI)
-        bq::miso_ring_buffer console_msg_buffer_ { bq::log_buffer_config { "napi_console_cb_msg", bq::array<bq::string> {}, 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 } };
+        bq::miso_ring_buffer console_msg_buffer_ { bq::log_buffer_config { "napi_console_cb_msg", bq::array<bq::string> { }, 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 } };
         bq::platform::napi_callback_dispatcher console_callback_dispatcher_;
 #endif
         appender_console::console_static_misc console_static_misc_;
         appender_decoder_manager appender_decoder_manager_inst_;
+        // Members reverse-destruct: log_manager (and all its log_buffers' mmaps) goes first,
+        // then the instance lock is released.
+        bq::unique_ptr<instance_storage> instance_storage_;
+        bq::platform::spin_lock instance_storage_lock_;
         log_manager log_manager_inst_;
 
     private:

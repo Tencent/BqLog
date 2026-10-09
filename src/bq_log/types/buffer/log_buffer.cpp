@@ -188,7 +188,6 @@ namespace bq {
         } else {
             assert(lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ == 0 && "invalid lp_buffer_head_misc init value");
             rt_cache_.current_reading_.version_ = 0;
-            clear_recovery_data();
         }
         rt_cache_.current_reading_.is_in_recovery_reading_
             = (rt_cache_.current_reading_.version_ != version_);
@@ -902,8 +901,8 @@ namespace bq {
 #endif
         ++rt_reading.version_;
         rt_reading.is_in_recovery_reading_ = (rt_reading.version_ != version_);
-        if (!fast_meta_ptr_.load_acquire() && !rt_reading.is_in_recovery_reading_ && config_.need_recovery) {
-            const bq::string folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/fast_meta", 0);
+        if (!fast_meta_ptr_.load_acquire() && !rt_reading.is_in_recovery_reading_ && config_.need_recovery && config_.storage) {
+            const bq::string folder = config_.storage->legacy_fast_meta_dir();
             if (bq::file_manager::is_dir(folder)) {
                 get_fast_meta_store();
             }
@@ -986,11 +985,9 @@ namespace bq {
         if (enum_buffer_result_code::success != over_size_handle.result) {
             uint32_t default_buffer_size = (size < (UINT32_MAX >> 1)) ? (size << 1) : UINT32_MAX;
             bq::string abs_recovery_file_path;
-            if (config_.need_recovery) {
+            if (config_.need_recovery && config_.storage) {
                 auto new_index = current_oversize_buffer_index_.add_fetch(1, bq::platform::memory_order::relaxed);
-                char tmp[32];
-                snprintf(tmp, sizeof(tmp), "_%" PRIu64, new_index);
-                abs_recovery_file_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + tmp + ".mmap", 0);
+                abs_recovery_file_path = config_.storage->os_path(new_index);
             }
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
             temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, abs_recovery_file_path, true));
@@ -1216,8 +1213,8 @@ namespace bq {
                     if (is_empty) {
                         bq::string abs_mmap_file_path = temprorary_oversize_buffer_.buffers_array_[index]->buffer_.get_mmap_file_path();
                         temprorary_oversize_buffer_.buffers_array_.erase_replace(temprorary_oversize_buffer_.buffers_array_.begin() + static_cast<ptrdiff_t>(index));
-                        if (bq::file_manager::is_file(abs_mmap_file_path)) {
-                            bq::file_manager::remove_file_or_dir(abs_mmap_file_path);
+                        if (config_.storage && !abs_mmap_file_path.is_empty() && bq::file_manager::is_file(abs_mmap_file_path)) {
+                            config_.storage->remove(abs_mmap_file_path);
                         }
                     }
                 }
@@ -1339,24 +1336,28 @@ namespace bq {
         }
 
         // Recover oversize buffers
-        bq::string over_size_memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os", 0);
+        if (!config_.storage) {
+            return;
+        }
+        bq::string over_size_memory_map_folder = config_.storage->os_dir();
         if (bq::file_manager::is_dir(over_size_memory_map_folder)) {
             bq::array<bq::string> sub_names = bq::file_manager::get_sub_dirs_and_files_name(over_size_memory_map_folder);
             for (const bq::string& file_name : sub_names) {
                 bq::string full_path = bq::file_manager::combine_path(over_size_memory_map_folder, file_name);
-                if (!file_name.end_with(".mmap") || !file_name.begin_with(config_.log_name + "_")) {
+                if (!file_name.end_with(".mmap")) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                     continue;
                 }
                 char* end_ptr = nullptr;
                 errno = 0;
-                bq::string file_name_cpy = file_name.substr(config_.log_name.size() + 1);
+                bq::string file_name_cpy = file_name.substr(0, file_name.size() - strlen(".mmap"));
                 uint64_t u64_value = strtoull(file_name_cpy.c_str(), &end_ptr, 10);
                 if (errno == ERANGE
-                    || end_ptr != file_name_cpy.c_str() + (file_name_cpy.size() - strlen(".mmap"))) {
+                    || file_name_cpy.is_empty()
+                    || end_ptr != file_name_cpy.c_str() + file_name_cpy.size()) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                     continue;
                 }
                 size_t file_size = bq::file_manager::get_file_size(full_path);
@@ -1371,7 +1372,7 @@ namespace bq {
                 }
                 if (default_buffer_size == UINT32_MAX) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s, invalid size:%" PRIu64, full_path.c_str(), static_cast<uint64_t>(file_size));
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                     continue;
                 }
                 if (u64_value > current_oversize_buffer_index_.load(bq::platform::memory_order::relaxed)) {
@@ -1384,7 +1385,7 @@ namespace bq {
                     || !is_version_valid(oversize_buffer_context.version_)) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file when recovery:%s, invalid context", full_path.c_str());
                     recovery_buffer.reset();
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                 } else {
                     temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::move(recovery_buffer));
                 }
@@ -1417,11 +1418,4 @@ namespace bq {
 #endif
     }
 
-    void log_buffer::clear_recovery_data()
-    {
-        bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name, 0);
-        if (bq::file_manager::is_dir(memory_map_folder)) {
-            bq::file_manager::remove_file_or_dir(memory_map_folder);
-        }
-    }
 }

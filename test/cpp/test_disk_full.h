@@ -55,6 +55,8 @@
 #include "bq_log/log/log_imp.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/types/buffer/log_buffer.h"
+#include "bq_log/types/storage/instance_storage.h"
+#include "bq_log/types/storage/log_storage.h"
 #include "bq_log/bq_log_entry.h"
 
 namespace bq {
@@ -118,7 +120,10 @@ namespace bq {
         private:
             static void wipe_log_state(const char* log_name)
             {
-                bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH(bq::string("bqlog_mmap/mmap_") + log_name, 0));
+                auto* inst = bq::instance_storage::get();
+                if (inst) {
+                    inst->remove(inst->logs_dir() + "/" + bq::log_storage::escape_name(log_name));
+                }
                 bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("disk_full_test", 0));
             }
 
@@ -521,7 +526,7 @@ namespace bq {
             static const bq::string& g_pub_key()
             {
                 static const bq::string k = bq::string(
-                    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+FonyOHuS2uC6IZc16bfd6qQk4ykBOt3nTfBFc")
+                                                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+FonyOHuS2uC6IZc16bfd6qQk4ykBOt3nTfBFc")
                     + "Nr8ZWvvcf4H0hFkrpMtQ0AJO057GhVTQCCfnvfStSq2Yra+O5VGpI5Q6NLrUuVERimjNgwtxbXt3P8Nw87jEIJiY/8m2FUXhZE"
                     + "PwoA7t+2/953cNE1itJskJtojwaUlMN0dXBJxs4NP8MfBPPZQ5vNV8xgEf1SCQzQBAJsofy1kPHHqJNBXUBsNA44SP5H95JOz+"
                     + "r0oaNkYxT88Zk4tbk5N3hk5aXyZVp49OqhrXCPf5owDa4Lqk4UzVTk9EimxvtSuiUTzr7IJhHYy7jsGnSgq6dH0xlUfxKeX pippocao@PIPPOCAO-PC6";

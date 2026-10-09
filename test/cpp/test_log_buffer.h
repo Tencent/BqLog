@@ -19,6 +19,7 @@
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/memory_pool.h"
 #include "bq_log/types/buffer/normal_buffer.h"
+#include "bq_log/types/storage/log_storage.h"
 
 namespace bq {
     namespace test {
@@ -644,6 +645,8 @@ namespace bq {
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
 
                     constexpr uint32_t min_chunk_size = 1;
@@ -692,6 +695,8 @@ namespace bq {
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
                     for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
                         for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
@@ -777,6 +782,8 @@ namespace bq {
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
                     std::vector<std::thread> task_thread_vector;
                     uint32_t msg_count_cpy = MESSAGE_PER_VERSION;
@@ -839,6 +846,8 @@ namespace bq {
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
 
                     assert(total_message_count > read_message_count);
@@ -959,7 +968,12 @@ namespace bq {
                 do_block_list_test(result, config);
                 do_fast_mode_buffer_test(result);
                 config.need_recovery = true;
-                do_block_list_test(result, config);
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    do_block_list_test(result, config);
+                }
+                config.storage = nullptr;
 
                 do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
@@ -974,9 +988,14 @@ namespace bq {
                 config.policy = log_memory_policy::block_when_full;
                 do_log_buffer_test(result, config);
                 config.need_recovery = true;
-                do_log_buffer_test(result, config);
-                config.policy = log_memory_policy::auto_expand_when_full;
-                do_log_buffer_test(result, config);
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    do_log_buffer_test(result, config);
+                    config.policy = log_memory_policy::auto_expand_when_full;
+                    do_log_buffer_test(result, config);
+                }
+                config.storage = nullptr;
 
                 // Run in a separate thread to ensure TLS cleanup and avoid Sanitizer leak reports.
                 std::thread recovery_test_thread([this, &result]() {

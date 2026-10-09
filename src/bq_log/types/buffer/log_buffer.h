@@ -29,6 +29,7 @@
 #include "bq_log/types/buffer/group_list.h"
 #include "bq_log/types/buffer/oversize_buffer.h"
 #include "bq_log/types/buffer/fast_meta_store.h"
+#include "bq_log/types/storage/log_storage.h"
 
 namespace bq {
     // Owner thread of an HP block. From thread_name_len_ on, same layout as _log_entry_ext_head_def plus name.
@@ -128,7 +129,7 @@ namespace bq {
             log_tls_buffer_info* cur_buffer_info_ = nullptr;
             _api_fast_log_thread_state* fast_state_ = nullptr; // header-side thread local fast path state, see bind_fast_state
             uint64_t fast_state_buffer_id_ = 0; // id of the buffer fast_state_ describes (ids are never reused)
-            log_thread_info thread_info_ {};
+            log_thread_info thread_info_ { };
 
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
@@ -313,7 +314,6 @@ namespace bq {
         context_verify_result verify_oversize_context(const context_head& parent_context, const context_head& oversize_context);
         void deregister_seq(const context_head& context);
         void prepare_and_fix_recovery_data();
-        void clear_recovery_data();
 
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);

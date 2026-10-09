@@ -13,6 +13,8 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_record_reader.h"
 #include "bq_log/log/log_manager.h"
+#include "bq_log/types/storage/instance_storage.h"
+#include "bq_log/types/storage/log_storage.h"
 #include "test_category_log.h"
 #include <atomic>
 #include <thread>
@@ -75,8 +77,8 @@ namespace bq {
 
             public:
                 bool hp_without_ext_ = false;
-                char thread_tag_[64] = {}; // "[tid-<id> <name>]" as layout prints it
-                char thread_id_tag_[32] = {}; // "[tid-<id> "
+                char thread_tag_[64] = { }; // "[tid-<id> <name>]" as layout prints it
+                char thread_id_tag_[32] = { }; // "[tid-<id> "
                 explicit named_writer_thread(const bq::log& log)
                     : log_(log)
                 {
@@ -297,6 +299,8 @@ namespace bq {
                 config.log_categories_name = { "" };
                 config.need_recovery = true;
                 config.policy = bq::log_memory_policy::auto_expand_when_full;
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
                 const uint16_t old_version = [&]() {
                     bq::log_buffer buffer(config);
                     uint8_t arg_type = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
@@ -360,11 +364,13 @@ namespace bq {
                 snprintf(first_name, sizeof(first_name), "%" PRIu16 "_0.mmap", old_version);
                 snprintf(second_name, sizeof(second_name), "%" PRIu16 "_1.mmap", old_version);
                 snprintf(large_name, sizeof(large_name), "%" PRIu16 "_0.large.mmap", old_version);
-                const bq::string folder = TO_ABSOLUTE_PATH(
-                    bq::string("bqlog_mmap/mmap_") + name + "/fast_meta", 0);
-                const bq::string first_path = bq::file_manager::combine_path(folder, first_name);
-                const bq::string second_path = bq::file_manager::combine_path(folder, second_name);
-                const bq::string large_path = bq::file_manager::combine_path(folder, large_name);
+                auto* inst = bq::instance_storage::get();
+                const bq::string fast_meta_folder = inst
+                    ? bq::file_manager::combine_path(inst->logs_dir(), bq::log_storage::escape_name(name) + "/fast_meta")
+                    : bq::string();
+                const bq::string first_path = bq::file_manager::combine_path(fast_meta_folder, first_name);
+                const bq::string second_path = bq::file_manager::combine_path(fast_meta_folder, second_name);
+                const bq::string large_path = bq::file_manager::combine_path(fast_meta_folder, large_name);
                 result.add_result(bq::file_manager::is_file(first_path), "fast recovery first segment persisted");
                 result.add_result(bq::file_manager::is_file(second_path), "fast recovery multiple segments persisted");
                 result.add_result(bq::file_manager::is_file(large_path), "fast recovery oversize metadata persisted");
@@ -435,6 +441,10 @@ namespace bq {
                 config.need_recovery = true;
                 config.policy = bq::log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = 1000;
+                static bq::array<bq::unique_ptr<bq::log_storage>> storages;
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
+                storages.push_back(bq::move(storage));
                 return config;
             }
 
@@ -501,7 +511,7 @@ namespace bq {
                 }
                 char name[96];
                 snprintf(name, sizeof(name), "fast_mode_recovery_cross_%" PRIu64, bq::platform::high_performance_epoch_ms());
-                uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = {};
+                uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = { };
                 for (uint32_t lifetime = 0; lifetime < recovery_cross_lifetimes; ++lifetime) {
                     auto config = recovery_cross_config(name);
                     bq::log_buffer buffer(config);
@@ -527,7 +537,7 @@ namespace bq {
 
                 auto config = recovery_cross_config(name);
                 bq::log_buffer buffer(config);
-                uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = {};
+                uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = { };
                 uint32_t out_of_order = 0;
                 uint32_t bad_record = 0;
                 uint32_t bad_owner = 0;
@@ -542,7 +552,7 @@ namespace bq {
                         continue;
                     }
                     ++read_count;
-                    recovery_cross_record value = {};
+                    recovery_cross_record value = { };
                     uint64_t owner_thread_id = 0;
                     if (bq::log_record_reader::is_fast_record(chunk.data_addr, chunk.data_size)) {
                         bq::log_entry_handle entry(chunk.data_addr, chunk.data_size);
@@ -627,7 +637,7 @@ namespace bq {
                 const char* log_name_ = nullptr;
                 uint32_t round_ = 0;
                 uint32_t thread_ = 0;
-                char thread_tag_[64] = {};
+                char thread_tag_[64] = { };
                 void run() override
                 {
                     const bq::log log = bq::log::get_log_by_name(log_name_);
@@ -702,7 +712,7 @@ namespace bq {
                     + "log.buffer_policy_when_full=expand\n"
                     + "log.high_perform_mode_freq_threshold_per_second=1000\n";
                 const char* categories[] = { "ModuleA", "ModuleB" };
-                char thread_tags[log_crash_rounds][log_crash_threads][64] = {};
+                char thread_tags[log_crash_rounds][log_crash_threads][64] = { };
                 for (uint32_t round = 0; round <= log_crash_rounds; ++round) {
                     const uint64_t log_id = bq::api::__api_create_log(name, config.c_str(), 2, categories);
                     bq::log log = bq::log::get_log_by_name(name);
@@ -925,7 +935,7 @@ namespace bq {
                     "second log uses its own hp block");
 
                 // low space notification on a real site, and on a site whose log no longer resolves
-                bq::_api_fast_log_site_handle site = {};
+                bq::_api_fast_log_site_handle site = { };
                 result.add_result(bq::init_fast_log_site<bq::tuple<int32_t>>(site, log, 0, bq::log_level::info, "notify {}"), "site init");
                 result.add_result(site.log_id == log.get_id() && site.buffer_id == buffer.get_id(), "site carries log id and buffer id");
                 bq::api::__api_fast_log_notify_low_space(&site);
@@ -1005,7 +1015,7 @@ namespace bq {
 
             // COLS indices starting at OFFSET, one recursion level per column (keeps template depth low)
             template <int32_t I, int32_t OFFSET, int32_t... N>
-            struct race_gen : race_gen<I - 1, OFFSET, OFFSET + I - 1, N...> {};
+            struct race_gen : race_gen<I - 1, OFFSET, OFFSET + I - 1, N...> { };
             template <int32_t OFFSET, int32_t... N>
             struct race_gen<0, OFFSET, N...> {
                 typedef race_seq<N...> type;

@@ -9,6 +9,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_log/types/buffer/fast_meta_store.h"
+#include "bq_log/types/storage/log_storage.h"
 #include <stdlib.h>
 
 namespace bq {
@@ -56,7 +57,7 @@ namespace bq {
         : config_(config)
         , log_checksum_(config.calculate_check_sum())
         , version_(version)
-        , folder_(TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/fast_meta", 0))
+        , folder_(config.storage ? config.storage->legacy_fast_meta_dir() : "")
         , active_segment_(nullptr)
     {
         config_.default_buffer_size = BQ_LOG_FAST_META_SEGMENT_SIZE;
@@ -81,7 +82,7 @@ namespace bq {
         if (next_segment_id_ == UINT32_MAX) {
             return nullptr;
         }
-        if (config_.need_recovery && !bq::file_manager::is_dir(folder_)) {
+        if (config_.need_recovery && config_.storage && !bq::file_manager::is_dir(folder_)) {
             bq::file_manager::create_directory(folder_);
         }
         auto item = bq::make_unique<segment>();
@@ -175,7 +176,7 @@ namespace bq {
             if (next_normal_id_ == UINT32_MAX) {
                 return nullptr;
             }
-            if (config_.need_recovery && !bq::file_manager::is_dir(folder_)) {
+            if (config_.need_recovery && config_.storage && !bq::file_manager::is_dir(folder_)) {
                 bq::file_manager::create_directory(folder_);
             }
             auto item = bq::make_unique<normal_entry>();
@@ -205,7 +206,7 @@ namespace bq {
             normal_entries_.push_back(bq::move(item));
             ++next_normal_id_;
         }
-        fast_meta_oversize_marker marker = {};
+        fast_meta_oversize_marker marker = { };
         marker.head.record_size = sizeof(marker);
         marker.head.kind = fast_meta_kind::oversize;
         marker.head.ready = 1;
@@ -411,7 +412,7 @@ namespace bq {
             snprintf(prefix, sizeof(prefix), "%" PRIu16 "_", version);
             for (const auto& file_name : bq::file_manager::get_sub_dirs_and_files_name(folder_)) {
                 if (file_name.begin_with(prefix) && file_name.end_with(".mmap")) {
-                    bq::file_manager::remove_file_or_dir(
+                    config_.storage->remove(
                         bq::file_manager::combine_path(folder_, file_name));
                 }
             }
@@ -428,7 +429,7 @@ namespace bq {
         snprintf(prefix, sizeof(prefix), "%" PRIu16 "_", version_);
         for (const auto& file_name : bq::file_manager::get_sub_dirs_and_files_name(folder_)) {
             if (!file_name.begin_with(prefix) && file_name.end_with(".mmap")) {
-                bq::file_manager::remove_file_or_dir(
+                config_.storage->remove(
                     bq::file_manager::combine_path(folder_, file_name));
             }
         }

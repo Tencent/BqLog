@@ -34,6 +34,8 @@
 #endif
 
 namespace bq {
+    class log_storage;
+
 #define BUFFER_ATOMIC_CAST_IGNORE_ALIGNMENT(X, TYPE) BQ_PACK_ACCESS_BY_TYPE(X, bq::platform::atomic<TYPE>)
 
 #define BQ_POD_RUNTIME_OFFSET_OF(Type, Field) static_cast<size_t>((reinterpret_cast<uintptr_t>(&(((Type*)0x10000)->Field))) - static_cast<uintptr_t>(0x10000))
@@ -114,6 +116,10 @@ namespace bq {
             uint64_t check_sum = verify_str.hash_code();
             return check_sum;
         }
+
+        /// <summary>Instance-scoped storage for mmap paths; null when recovery is off or no
+        /// instance could be claimed (buffers then fall back to heap memory).</summary>
+        const log_storage* storage = nullptr;
     };
 
     template <typename BUFFER_TYPE>
