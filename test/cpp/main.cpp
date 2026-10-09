@@ -160,6 +160,12 @@ int32_t main(int32_t argc, char** argv)
         result.output("test_log_appender");
         return result.is_all_pass() ? 0 : -1;
     }
+    if (argc > 1 && strcmp(argv[1], "--log-only") == 0) {
+        bq::test::test_log log_test;
+        auto result = log_test.test();
+        result.output("test_log");
+        return result.is_all_pass() ? 0 : -1;
+    }
     return main_logic();
 }
 

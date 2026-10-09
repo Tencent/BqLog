@@ -15,6 +15,9 @@
 
 #include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
+#if defined(BQ_MSVC)
+#include <intrin.h>
+#endif
 
 namespace bq {
 
@@ -54,6 +57,34 @@ namespace bq {
             *(p - 1) = static_cast<char>('0' + value);
         }
         return count;
+    }
+
+    static const uint64_t decimal_pow10[20] = { 1ULL, 10ULL, 100ULL, 1000ULL, 10000ULL, 100000ULL, 1000000ULL, 10000000ULL, 100000000ULL,
+        1000000000ULL, 10000000000ULL, 100000000000ULL, 1000000000000ULL, 10000000000000ULL, 100000000000000ULL,
+        1000000000000000ULL, 10000000000000000ULL, 100000000000000000ULL, 1000000000000000000ULL, 10000000000000000000ULL };
+
+    static bq_forceinline uint32_t decimal_digits_count(uint64_t value)
+    {
+        uint32_t count = 1;
+        while (count < 20 && value >= decimal_pow10[count]) {
+            ++count;
+        }
+        return count;
+    }
+
+    // writes exactly count digits, zero padded on the left
+    static bq_forceinline void write_decimal_digits_padded(uint64_t value, char* dst, uint32_t count)
+    {
+        char* p = dst + count;
+        for (; count >= 2; count -= 2) {
+            const uint32_t pair = static_cast<uint32_t>(value % 100) * 2;
+            value /= 100;
+            p -= 2;
+            memcpy(p, digit_pairs + pair, 2);
+        }
+        if (count != 0) {
+            *(p - 1) = static_cast<char>('0' + value % 10);
+        }
     }
 
     // find_brace_and_copy (UTF-8 / ASCII)
@@ -632,42 +663,6 @@ namespace bq {
         }
     }
 
-    void layout::fill_e_style(uint32_t e_count, uint32_t begin_cursor)
-    {
-        uint32_t bitcount = 0;
-        auto temp = e_count;
-        do {
-            temp /= 10;
-            bitcount++;
-        } while (temp != 0);
-        expand_format_content_buff_size(format_content_cursor + bitcount + 3); // 3->e+0
-        // 1.000000 -> 1.0000
-        int32_t jump = static_cast<int32_t>(format_content_cursor) - (static_cast<int32_t>(begin_cursor + format_info_.width - bitcount) - 2); // 2->e+
-        if (jump > 0) {
-            format_content_cursor -= static_cast<uint32_t>(jump);
-            if (format_content_cursor == begin_cursor)
-                format_content_cursor++;
-        }
-        // 1.0000 -> 1.0000e+
-        if (format_info_.upper)
-            format_content[format_content_cursor++] = 'E';
-        else
-            format_content[format_content_cursor++] = 'e';
-        format_content[format_content_cursor++] = '+';
-        begin_cursor = format_content_cursor;
-        temp = e_count;
-        // 1.0000e+ -> 1.0000e+60
-        do {
-            int32_t digit = static_cast<int32_t>(e_count % 10);
-            format_content[format_content_cursor++] = static_cast<char>('0' + digit);
-            e_count /= 10;
-        } while (e_count != 0);
-        if (temp <= 9)
-            format_content[format_content_cursor++] = '0';
-        // 1.0000e+60 -> 1.0000e+06
-        reverse(begin_cursor, format_content_cursor - 1);
-    }
-
     void layout::python_style_format_content(const bq::log_entry_handle& log_entry)
     {
         const bool utf8 = log_entry.get_log_head().log_format_str_type == static_cast<uint16_t>(log_arg_type_enum::string_utf8_type);
@@ -846,11 +841,11 @@ namespace bq {
                             args.skip_value(8);
                             break;
                         case bq::log_arg_type_enum::float_type:
-                            insert_decimal(*reinterpret_cast<const float*>(args.value()));
+                            insert_decimal(static_cast<double>(*reinterpret_cast<const float*>(args.value())), 7);
                             args.skip_value(static_cast<uint32_t>(sizeof(float)));
                             break;
                         case bq::log_arg_type_enum::double_type:
-                            insert_decimal(*reinterpret_cast<const double*>(args.value()));
+                            insert_decimal(*reinterpret_cast<const double*>(args.value()), 15);
                             args.skip_value(static_cast<uint32_t>(sizeof(double)));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {
@@ -1092,11 +1087,11 @@ namespace bq {
                             args.skip_value(static_cast<uint32_t>(sizeof(uint64_t)));
                             break;
                         case bq::log_arg_type_enum::float_type:
-                            insert_decimal(*reinterpret_cast<const float*>(args.value()));
+                            insert_decimal(static_cast<double>(*reinterpret_cast<const float*>(args.value())), 7);
                             args.skip_value(static_cast<uint32_t>(sizeof(float)));
                             break;
                         case bq::log_arg_type_enum::double_type:
-                            insert_decimal(*reinterpret_cast<const double*>(args.value()));
+                            insert_decimal(*reinterpret_cast<const double*>(args.value()), 15);
                             args.skip_value(static_cast<uint32_t>(sizeof(double)));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {
@@ -1219,6 +1214,10 @@ namespace bq {
     {
         uint32_t width = format_content_cursor;
         assert(base <= 32 && "base is a number belongs to [2, 32]");
+        if (format_info_.type == 'e' && base == 10) {
+            insert_integral_e_style(value, false);
+            return format_content_cursor - width;
+        }
         if (format_info_.type == 'b') {
             base = 2;
         } else if (format_info_.type == 'x') {
@@ -1257,8 +1256,7 @@ namespace bq {
         }
 
         auto begin_cursor = format_content_cursor;
-        uint32_t e_count = 0;
-        if (base == 10 && format_info_.type != 'e') {
+        if (base == 10) {
             format_content_cursor += write_decimal_digits(value, &format_content[format_content_cursor]);
             return format_content_cursor - width;
         }
@@ -1274,22 +1272,8 @@ namespace bq {
             }
             value /= base;
             ++format_content_cursor;
-            if (value > base)
-                e_count++;
         } while (value != 0);
-
-        if (format_info_.type == 'e') {
-            // 0000001 -> 000000.1
-            format_content[format_content_cursor] = format_content[format_content_cursor - 1];
-            format_content[format_content_cursor - 1] = '.';
-            ++format_content_cursor;
-
-            // 000000.1 -> 1.000000
-            reverse(begin_cursor, format_content_cursor - 1);
-
-            fill_e_style(e_count, begin_cursor);
-        } else
-            reverse(begin_cursor, format_content_cursor - 1);
+        reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
     }
 
@@ -1297,6 +1281,12 @@ namespace bq {
     {
         uint32_t width = format_content_cursor;
         assert(base <= 32 && "base is a number belongs to [2, 32]");
+        // unsigned arithmetic handles INT64_MIN
+        const uint64_t magnitude = (value < 0) ? (0ULL - static_cast<uint64_t>(value)) : static_cast<uint64_t>(value);
+        if (format_info_.type == 'e' && base == 10) {
+            insert_integral_e_style(magnitude, value < 0);
+            return format_content_cursor - width;
+        }
         // Hex check
         if (format_info_.type == 'b') {
             base = 2;
@@ -1342,11 +1332,7 @@ namespace bq {
         }
 
         auto begin_cursor = format_content_cursor;
-        // Scientific Counting Check
-        uint32_t e_count = 0;
-        if (base == 10 && format_info_.type != 'e') {
-            // unsigned arithmetic handles INT64_MIN
-            const uint64_t magnitude = (value < 0) ? (0ULL - static_cast<uint64_t>(value)) : static_cast<uint64_t>(value);
+        if (base == 10) {
             format_content_cursor += write_decimal_digits(magnitude, &format_content[format_content_cursor]);
             return format_content_cursor - width;
         }
@@ -1361,199 +1347,245 @@ namespace bq {
                     format_content[format_content_cursor] = static_cast<char>('a' + digit - 0xA);
             }
             value /= base;
-            if (value > base)
-                e_count++; // Counting
             ++format_content_cursor;
         } while (value != 0);
-        if (format_info_.type == 'e') {
-            // 0000001 -> 000000.1
-            format_content[format_content_cursor] = format_content[format_content_cursor - 1];
-            format_content[format_content_cursor - 1] = '.';
-            ++format_content_cursor;
-
-            // 000000.1 -> 1.000000
-            reverse(begin_cursor, format_content_cursor - 1);
-
-            fill_e_style(e_count, begin_cursor);
-        } else
-            reverse(begin_cursor, format_content_cursor - 1);
+        reverse(begin_cursor, format_content_cursor - 1);
         return format_content_cursor - width;
     }
 
-    namespace {
-        const uint64_t decimal_pow10[20] = { 1ULL, 10ULL, 100ULL, 1000ULL, 10000ULL, 100000ULL, 1000000ULL, 10000000ULL, 100000000ULL,
-            1000000000ULL, 10000000000ULL, 100000000000ULL, 1000000000000ULL, 10000000000000ULL, 100000000000000ULL,
-            1000000000000000ULL, 10000000000000000ULL, 100000000000000000ULL, 1000000000000000000ULL, 10000000000000000000ULL };
-
-        // Rounds `frac` (0 <= frac < 1) to `precision` (<= 19) decimal digits exactly, half to even like
-        // printf. `int_part_odd` decides ties when precision is 0. A result of 10^precision is a carry
-        // into the integer part.
-        uint64_t round_fraction(double frac, uint32_t precision, bool int_part_odd)
-        {
-            if (frac == 0.0) {
-                return 0;
-            }
-            uint64_t bits;
-            memcpy(&bits, &frac, sizeof(bits));
-            const uint32_t biased_exp = static_cast<uint32_t>((bits >> 52) & 0x7FF);
-            uint64_t mantissa = bits & ((1ULL << 52) - 1);
-            uint32_t shift; // frac == mantissa * 2^-shift, shift >= 1 because frac < 1
-            if (biased_exp == 0) {
-                shift = 1074;
-            } else {
-                mantissa |= (1ULL << 52);
-                shift = 1075 - biased_exp;
-            }
-            if (shift >= 128) {
-                return 0; // mantissa * 10^precision < 2^117, so the scaled value is below 0.5
-            }
-            // product = mantissa * 10^precision as 128 bits (hi:lo)
-            const uint64_t m = decimal_pow10[precision];
-            const uint64_t a_lo = mantissa & 0xFFFFFFFFULL, a_hi = mantissa >> 32;
-            const uint64_t b_lo = m & 0xFFFFFFFFULL, b_hi = m >> 32;
-            const uint64_t p0 = a_lo * b_lo, p1 = a_lo * b_hi, p2 = a_hi * b_lo, p3 = a_hi * b_hi;
-            const uint64_t mid = (p0 >> 32) + (p1 & 0xFFFFFFFFULL) + (p2 & 0xFFFFFFFFULL);
-            const uint64_t lo = (mid << 32) | (p0 & 0xFFFFFFFFULL);
-            const uint64_t hi = p3 + (p1 >> 32) + (p2 >> 32) + (mid >> 32);
-            // q = product >> shift; compare the dropped bits (rem) with half of 2^shift
-            uint64_t q, rem_hi, rem_lo, half_hi, half_lo;
-            if (shift >= 64) {
-                const uint32_t s = shift - 64;
-                q = (s == 0) ? hi : (hi >> s);
-                rem_hi = (s == 0) ? 0 : (hi & ((1ULL << s) - 1));
-                rem_lo = lo;
-                half_hi = (s == 0) ? 0 : (1ULL << (s - 1));
-                half_lo = (s == 0) ? (1ULL << 63) : 0;
-            } else {
-                q = (lo >> shift) | (hi << (64 - shift));
-                rem_hi = 0;
-                rem_lo = lo & ((1ULL << shift) - 1);
-                half_hi = 0;
-                half_lo = 1ULL << (shift - 1);
-            }
-            const bool above_half = rem_hi > half_hi || (rem_hi == half_hi && rem_lo > half_lo);
-            const bool is_half = rem_hi == half_hi && rem_lo == half_lo;
-            const bool odd = (precision == 0) ? int_part_odd : ((q & 1) != 0);
-            if (above_half || (is_half && odd)) {
-                ++q;
-            }
-            return q;
-        }
-
-        uint32_t decimal_digits_count(uint64_t value)
-        {
-            uint32_t n = 1;
-            while (value >= 10) {
-                value /= 10;
-                ++n;
-            }
-            return n;
-        }
-
-        uint32_t write_uint_padded(char* dst, uint64_t value, uint32_t digits)
-        {
-            for (uint32_t i = digits; i > 0; --i) {
-                dst[i - 1] = static_cast<char>('0' + value % 10);
-                value /= 10;
-            }
-            return digits;
-        }
-    }
-
-    void layout::insert_decimal(float value)
+    // exact like printf("%.*e"), half to even
+    void layout::insert_integral_e_style(uint64_t magnitude, bool negative)
     {
-        insert_decimal_impl(static_cast<double>(value), 7);
+        const uint32_t precision = (format_info_.precision != 0xFFFFFFFF) ? bq::min_value(format_info_.precision, static_cast<uint32_t>(99)) : 6;
+        const uint32_t digits = decimal_digits_count(magnitude);
+        uint32_t exponent = digits - 1;
+        uint64_t mantissa = magnitude;
+        uint32_t mantissa_digits = digits;
+        if (digits > precision + 1) {
+            const uint64_t divisor = decimal_pow10[digits - precision - 1];
+            const uint64_t rem = magnitude % divisor;
+            mantissa = magnitude / divisor;
+            mantissa_digits = precision + 1;
+            if (rem > divisor / 2 || (rem == divisor / 2 && (mantissa & 1) != 0)) {
+                ++mantissa;
+                if (mantissa == decimal_pow10[mantissa_digits]) {
+                    mantissa /= 10;
+                    ++exponent;
+                }
+            }
+        }
+        expand_format_content_buff_size(format_content_cursor + precision + 7);
+        char* dst = &format_content[format_content_cursor];
+        if (negative) {
+            *dst++ = '-';
+        } else if (format_info_.sign == '+') {
+            *dst++ = '+';
+        }
+        // digits go one slot right, then the first one moves left over the radix point
+        write_decimal_digits_padded(mantissa, dst + 1, mantissa_digits);
+        dst[0] = dst[1];
+        if (precision > 0) {
+            dst[1] = '.';
+            dst += mantissa_digits + 1;
+            for (uint32_t i = mantissa_digits - 1; i < precision; ++i) {
+                *dst++ = '0';
+            }
+        } else {
+            ++dst;
+        }
+        *dst++ = format_info_.upper ? 'E' : 'e';
+        *dst++ = '+';
+        memcpy(dst, digit_pairs + exponent * 2, 2);
+        dst += 2;
+        format_content_cursor = static_cast<uint32_t>(dst - &format_content[0]);
     }
 
-    void layout::insert_decimal(double value)
+    static bq_forceinline uint64_t mul_64x64_to_128(uint64_t a, uint64_t b, uint64_t& high)
     {
-        insert_decimal_impl(value, 15);
+#if defined(BQ_MSVC) && defined(BQ_X86_64)
+        return _umul128(a, b, &high);
+#elif defined(BQ_MSVC) && defined(BQ_ARM_64)
+        high = __umulh(a, b);
+        return a * b;
+#elif defined(__SIZEOF_INT128__)
+        __extension__ typedef unsigned __int128 uint128_type;
+        const uint128_type r = static_cast<uint128_type>(a) * b;
+        high = static_cast<uint64_t>(r >> 64);
+        return static_cast<uint64_t>(r);
+#else
+        const uint64_t a_lo = a & 0xFFFFFFFFULL, a_hi = a >> 32;
+        const uint64_t b_lo = b & 0xFFFFFFFFULL, b_hi = b >> 32;
+        const uint64_t p0 = a_lo * b_lo, p1 = a_lo * b_hi, p2 = a_hi * b_lo, p3 = a_hi * b_hi;
+        const uint64_t mid = (p0 >> 32) + (p1 & 0xFFFFFFFFULL) + (p2 & 0xFFFFFFFFULL);
+        high = p3 + (p1 >> 32) + (p2 >> 32) + (mid >> 32);
+        return (mid << 32) | (p0 & 0xFFFFFFFFULL);
+#endif
     }
 
-    // Values in (-1, 0) keep their sign, NaN and infinity print as such, values beyond the int64
-    // range print in full and the last digit is rounded like printf / std::format. Fixed notation
-    // below 2^64 with up to 19 decimals uses integer arithmetic; everything else uses snprintf.
-    void layout::insert_decimal_impl(double value, int32_t default_precision)
+    // frac (0 <= frac < 1) times 10^precision, rounded half to even like printf; 10^precision means a carry
+    static bq_forceinline uint64_t round_fraction(double frac, uint32_t precision, bool int_part_odd)
+    {
+        if (frac == 0.0) {
+            return 0;
+        }
+        uint64_t bits;
+        memcpy(&bits, &frac, sizeof(bits));
+        const uint32_t biased_exp = static_cast<uint32_t>((bits >> 52) & 0x7FF);
+        uint64_t mantissa = bits & ((1ULL << 52) - 1);
+        uint32_t shift; // frac == mantissa * 2^-shift
+        if (biased_exp == 0) {
+            shift = 1074;
+        } else {
+            mantissa |= (1ULL << 52);
+            shift = 1075 - biased_exp;
+        }
+        if (shift >= 128) {
+            return 0;
+        }
+        uint64_t hi;
+        const uint64_t lo = mul_64x64_to_128(mantissa, decimal_pow10[precision], hi);
+        uint64_t q, rem_hi, rem_lo, half_hi, half_lo;
+        if (shift >= 64) {
+            const uint32_t s = shift - 64;
+            q = (s == 0) ? hi : (hi >> s);
+            rem_hi = (s == 0) ? 0 : (hi & ((1ULL << s) - 1));
+            rem_lo = lo;
+            half_hi = (s == 0) ? 0 : (1ULL << (s - 1));
+            half_lo = (s == 0) ? (1ULL << 63) : 0;
+        } else {
+            q = (lo >> shift) | (hi << (64 - shift));
+            rem_hi = 0;
+            rem_lo = lo & ((1ULL << shift) - 1);
+            half_hi = 0;
+            half_lo = 1ULL << (shift - 1);
+        }
+        const bool above_half = rem_hi > half_hi || (rem_hi == half_hi && rem_lo > half_lo);
+        const bool is_half = rem_hi == half_hi && rem_lo == half_lo;
+        const bool odd = (precision == 0) ? int_part_odd : ((q & 1) != 0);
+        if (above_half || (is_half && odd)) {
+            ++q;
+        }
+        return q;
+    }
+
+    static bq_forceinline uint64_t round_fraction_with_carry(double frac, uint32_t precision, uint64_t& int_part)
+    {
+        const uint64_t digits = round_fraction(frac, precision, (int_part & 1) != 0);
+        if (digits == decimal_pow10[precision]) {
+            ++int_part;
+            return 0;
+        }
+        return digits;
+    }
+
+    // snprintf writes the radix character of LC_NUMERIC, which may be several bytes
+    static uint32_t normalize_radix(char* buf, uint32_t len)
+    {
+        uint32_t i = (len > 0 && (buf[0] == '-' || buf[0] == '+')) ? 1 : 0;
+        while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+            ++i;
+        }
+        if (i >= len || buf[i] == '.' || buf[i] == 'e' || buf[i] == 'E') {
+            return len;
+        }
+        uint32_t radix_end = i;
+        while (radix_end < len && (buf[radix_end] < '0' || buf[radix_end] > '9') && buf[radix_end] != 'e' && buf[radix_end] != 'E') {
+            ++radix_end;
+        }
+        buf[i] = '.';
+        memmove(buf + i + 1, buf + radix_end, len - radix_end);
+        return len - (radix_end - i - 1);
+    }
+
+    void layout::insert_decimal(double value, uint32_t default_precision)
     {
         const bool e_style = (format_info_.type == 'e');
-        const bool negative = signbit(value) != 0;
-        const bool with_sign = negative || format_info_.sign == '+';
-        char buf[512];
-        uint32_t len = 0;
-        if (isnan(value) || isinf(value)) {
-            if (with_sign) {
-                buf[len++] = negative ? '-' : '+';
+        // bit tests instead of signbit / isnan / isinf, which are CRT calls on MSVC
+        uint64_t bits;
+        memcpy(&bits, &value, sizeof(bits));
+        const bool negative = (bits >> 63) != 0;
+        const char sign_char = negative ? '-' : (format_info_.sign == '+' ? '+' : '\0');
+        if ((bits & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL) {
+            expand_format_content_buff_size(format_content_cursor + 4);
+            if (sign_char) {
+                format_content[format_content_cursor++] = sign_char;
             }
+            const bool is_nan = (bits & 0x000FFFFFFFFFFFFFULL) != 0;
             const bool upper = e_style && format_info_.upper;
-            const char* word = isnan(value) ? (upper ? "NAN" : "nan") : (upper ? "INF" : "inf");
-            memcpy(buf + len, word, 3);
-            len += 3;
-        } else {
-            uint32_t precision = static_cast<uint32_t>(default_precision);
-            if (format_info_.precision != 0xFFFFFFFF) {
-                precision = bq::min_value(format_info_.precision, static_cast<uint32_t>(99));
-            } else if (e_style) {
-                precision = 6;
-            }
-            const double abs_value = fabs(value);
-            if (!e_style && abs_value < 18446744073709551616.0 && precision <= 19) {
-                const uint64_t int_part_raw = static_cast<uint64_t>(abs_value);
-                const double frac = abs_value - static_cast<double>(int_part_raw); // exact
-                uint64_t int_part = 0;
-                uint64_t frac_digits = 0;
-                for (int32_t pass = 0; pass < 2; ++pass) {
-                    int_part = int_part_raw;
-                    frac_digits = round_fraction(frac, precision, (int_part & 1) != 0);
-                    if (frac_digits == decimal_pow10[precision]) {
-                        frac_digits = 0;
-                        ++int_part;
-                    }
-                    // Existing behaviour: drop fraction digits so the number fits in the width.
-                    const uint32_t int_width = decimal_digits_count(int_part) + (with_sign ? 1U : 0U);
-                    if (pass != 0 || format_info_.width == 0 || format_info_.width >= precision + 1 + int_width) {
-                        break;
-                    }
-                    const uint32_t fitted = format_info_.width > int_width ? format_info_.width - int_width - 1 : 0;
-                    if (fitted == precision) {
-                        break;
-                    }
+            const char* word = is_nan ? (upper ? "NAN" : "nan") : (upper ? "INF" : "inf");
+            memcpy(&format_content[format_content_cursor], word, 3);
+            format_content_cursor += 3;
+            return;
+        }
+        uint32_t precision = default_precision;
+        if (format_info_.precision != 0xFFFFFFFF) {
+            precision = bq::min_value(format_info_.precision, static_cast<uint32_t>(99));
+        } else if (e_style) {
+            precision = 6;
+        }
+        const double abs_value = fabs(value);
+        if (!e_style && abs_value < 18446744073709551616.0 && precision <= 19) {
+            // the signed conversion is a single instruction, the unsigned one a helper call on x64 MSVC
+            const uint64_t int_part_raw = (abs_value < 9223372036854775808.0) ? static_cast<uint64_t>(static_cast<int64_t>(abs_value)) : static_cast<uint64_t>(abs_value);
+            const double frac = abs_value - static_cast<double>(int_part_raw);
+            uint64_t int_part = int_part_raw;
+            uint64_t frac_digits = round_fraction_with_carry(frac, precision, int_part);
+            uint32_t int_digits = decimal_digits_count(int_part);
+            // drop fraction digits so the number fits in the width
+            const uint32_t int_width = int_digits + (sign_char ? 1U : 0U);
+            if (format_info_.width != 0 && format_info_.width < precision + 1 + int_width) {
+                const uint32_t fitted = format_info_.width > int_width ? format_info_.width - int_width - 1 : 0;
+                if (fitted != precision) {
                     precision = fitted;
+                    int_part = int_part_raw;
+                    frac_digits = round_fraction_with_carry(frac, precision, int_part);
+                    int_digits = decimal_digits_count(int_part);
                 }
-                if (with_sign) {
-                    buf[len++] = negative ? '-' : '+';
-                }
-                len += write_uint_padded(buf + len, int_part, decimal_digits_count(int_part));
-                if (precision > 0) {
-                    buf[len++] = '.';
-                    len += write_uint_padded(buf + len, frac_digits, precision);
-                }
-            } else {
-                char fmt[8];
-                uint32_t fmt_len = 0;
-                fmt[fmt_len++] = '%';
-                if (format_info_.sign == '+') {
-                    fmt[fmt_len++] = '+';
-                }
-                fmt[fmt_len++] = '.';
-                fmt[fmt_len++] = '*';
-                fmt[fmt_len++] = e_style ? (format_info_.upper ? 'E' : 'e') : 'f';
-                fmt[fmt_len] = '\0';
-                int32_t written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(precision), value);
-                if (!e_style && format_info_.width > 0 && written > 0) {
-                    // Existing behaviour: drop fraction digits so the number fits in the width.
-                    const char* dot = strchr(buf, '.');
-                    const uint32_t int_width = dot ? static_cast<uint32_t>(dot - buf) : static_cast<uint32_t>(written);
-                    if (format_info_.width < precision + 1 + int_width) {
-                        const uint32_t fitted = format_info_.width > int_width ? format_info_.width - int_width - 1 : 0;
-                        if (fitted != precision) {
-                            written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(fitted), value);
-                        }
+            }
+            expand_format_content_buff_size(format_content_cursor + 1 + int_digits + 1 + precision);
+            char* dst = &format_content[format_content_cursor];
+            if (sign_char) {
+                *dst++ = sign_char;
+            }
+            write_decimal_digits_padded(int_part, dst, int_digits);
+            dst += int_digits;
+            if (precision > 0) {
+                *dst++ = '.';
+                write_decimal_digits_padded(frac_digits, dst, precision);
+                dst += precision;
+            }
+            format_content_cursor = static_cast<uint32_t>(dst - &format_content[0]);
+            return;
+        }
+
+        char fmt[8];
+        uint32_t fmt_len = 0;
+        fmt[fmt_len++] = '%';
+        if (format_info_.sign == '+') {
+            fmt[fmt_len++] = '+';
+        }
+        fmt[fmt_len++] = '.';
+        fmt[fmt_len++] = '*';
+        fmt[fmt_len++] = e_style ? (format_info_.upper ? 'E' : 'e') : 'f';
+        fmt[fmt_len] = '\0';
+        char buf[512];
+        int32_t written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(precision), value);
+        if (written <= 0) {
+            return;
+        }
+        uint32_t len = normalize_radix(buf, bq::min_value(static_cast<uint32_t>(written), static_cast<uint32_t>(sizeof(buf) - 1)));
+        if (!e_style && format_info_.width > 0) {
+            const char* dot = static_cast<const char*>(memchr(buf, '.', len));
+            const uint32_t int_width = dot ? static_cast<uint32_t>(dot - buf) : len;
+            if (format_info_.width < precision + 1 + int_width) {
+                const uint32_t fitted = format_info_.width > int_width ? format_info_.width - int_width - 1 : 0;
+                if (fitted != precision) {
+                    written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(fitted), value);
+                    if (written <= 0) {
+                        return;
                     }
+                    len = normalize_radix(buf, bq::min_value(static_cast<uint32_t>(written), static_cast<uint32_t>(sizeof(buf) - 1)));
                 }
-                if (written <= 0) {
-                    return;
-                }
-                len = bq::min_value(static_cast<uint32_t>(written), static_cast<uint32_t>(sizeof(buf) - 1));
             }
         }
         expand_format_content_buff_size(format_content_cursor + len);
@@ -1765,11 +1797,11 @@ namespace bq {
                             args_data_cursor += 12;
                             break;
                         case bq::log_arg_type_enum::float_type:
-                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
+                            insert_decimal(static_cast<double>(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4)), 7);
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
                             break;
                         case bq::log_arg_type_enum::double_type:
-                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
+                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4), 15);
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {
@@ -1981,11 +2013,11 @@ namespace bq {
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             break;
                         case bq::log_arg_type_enum::float_type:
-                            insert_decimal(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4));
+                            insert_decimal(static_cast<double>(*reinterpret_cast<const float*>(args_data_ptr + args_data_cursor + 4)), 7);
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(float));
                             break;
                         case bq::log_arg_type_enum::double_type:
-                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4));
+                            insert_decimal(*reinterpret_cast<const double*>(args_data_ptr + args_data_cursor + 4), 15);
                             args_data_cursor += static_cast<uint32_t>(4 + sizeof(double));
                             break;
                         case bq::log_arg_type_enum::string_utf8_type: {

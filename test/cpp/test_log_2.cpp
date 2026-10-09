@@ -13,6 +13,8 @@
 #include <thread>
 #include <atomic>
 #include <cstdio>
+#include <random>
+#include <locale.h>
 #include <math.h>
 #include "bq_common/bq_common.h"
 
@@ -153,9 +155,64 @@ namespace bq {
                 log_inst.error(log_inst.cat.ModuleB, "|{}|{}|{}|", static_cast<double>(NAN), static_cast<double>(INFINITY), -static_cast<double>(INFINITY));
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|nan|inf|-inf|"), "layout format nan and infinity");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", 10000000000000);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+13|"), "layout format integer e-style");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12E}|", (uint64_t)10000000000000);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+11|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+13|"), "layout format integer e-style");
+                log_inst.error(log_inst.cat.ModuleB, "v=[{:e}] end", 100000);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\tv=[1.000000e+05] end"), "layout format integer e-style keeps preceding text");
+                log_inst.error(log_inst.cat.ModuleB, "|{:e}|{:+.2e}|{:.1e}|{:.0e}|", -1500, (uint16_t)1500, 99999, 25);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-1.500000e+03|+1.50e+03|1.0e+05|2e+01|"), "layout format integer e-style sign and rounding");
+                {
+                    const char* current_locale = setlocale(LC_NUMERIC, nullptr);
+                    bq::string saved_locale = current_locale ? current_locale : "C";
+                    const char* comma_locales[] = { "de-DE", "de_DE.UTF-8", "de_DE.utf8", "fr_FR.UTF-8", "fr_FR.utf8" };
+                    bool locale_applied = false;
+                    for (const char* name : comma_locales) {
+                        if (setlocale(LC_NUMERIC, name)) {
+                            locale_applied = true;
+                            break;
+                        }
+                    }
+                    if (locale_applied) {
+                        log_inst.error(log_inst.cat.ModuleB, "|{:.2f}|{:.1f}|", 1.25, 1e20);
+                        result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.25|100000000000000000000.0|"), "layout format fixed notation ignores LC_NUMERIC");
+                        log_inst.error(log_inst.cat.ModuleB, "|{:e}|{:12.3E}|{:.25f}|", 1.5, 103.1234, 0.1);
+                        result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.500000e+00|   1.031E+02|0.1000000000000000055511151|"), "layout format snprintf path ignores LC_NUMERIC");
+                        setlocale(LC_NUMERIC, saved_locale.c_str());
+                    }
+                }
+                {
+                    std::mt19937_64 rng(20261009);
+                    char fmt[32];
+                    char expected[512];
+                    for (int32_t precision = 0; precision <= 19; ++precision) {
+                        snprintf(fmt, sizeof(fmt), "|{:.%" PRId32 "f}|", precision);
+                        for (int32_t n = 0; n < 300; ++n) {
+                            double value = 0;
+                            uint64_t bits = rng();
+                            switch (n % 4) {
+                            case 0:
+                                value = std::uniform_real_distribution<double>(-1000.0, 1000.0)(rng);
+                                break;
+                            case 1:
+                                // any magnitude below 2^64, subnormals included
+                                bits = (bits & 0x800FFFFFFFFFFFFFULL) | (((bits >> 52) % (1023 + 64)) << 52);
+                                memcpy(&value, &bits, sizeof(value));
+                                break;
+                            case 2:
+                                // exact binary ties
+                                value = static_cast<double>(static_cast<int64_t>(bits % 2000) - 1000) + static_cast<double>((bits >> 32) % 16) / 16.0;
+                                break;
+                            default:
+                                value = static_cast<double>(static_cast<float>(std::uniform_real_distribution<double>(-100000.0, 100000.0)(rng)));
+                                break;
+                            }
+                            snprintf(expected, sizeof(expected), "|%.*f|", static_cast<int>(precision), value);
+                            log_inst.error(log_inst.cat.ModuleB, fmt, value);
+                            result.add_result(log_str.end_with(expected), "layout format %s of %.17g matches printf %s", fmt, value, expected);
+                        }
+                    }
+                }
 
                 i = 15841548461;
                 log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);

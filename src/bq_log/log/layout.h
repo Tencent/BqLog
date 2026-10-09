@@ -109,8 +109,6 @@ namespace bq {
 
         void fill_and_alignment(uint32_t write_begin_pos);
 
-        void fill_e_style(uint32_t eCount, uint32_t begin_cursor);
-
         bq_forceinline void expand_format_content_buff_size(uint32_t new_size)
         {
             if (format_info_.offset != 0) {
@@ -143,11 +141,9 @@ namespace bq {
 
         uint32_t insert_integral_signed(int64_t value, uint32_t base = 10);
 
-        void insert_decimal(float value);
+        void insert_integral_e_style(uint64_t magnitude, bool negative);
 
-        void insert_decimal(double value);
-
-        void insert_decimal_impl(double value, int32_t default_precision);
+        void insert_decimal(double value, uint32_t default_precision);
 
         void reverse(uint32_t begin_cursor, uint32_t end_cursor);
         //------------------------- insert functions end ----------------------//
