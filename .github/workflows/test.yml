@@ -212,6 +212,61 @@ jobs:
         run: exit 1
 
 
+  #Multi-instance regression (T04)
+  multi_instance:
+    name: multi_instance (${{ matrix.os.label }})
+    runs-on: ${{ matrix.os.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - label: "windows"
+            runs_on: windows-latest
+          - label: "ubuntu"
+            runs_on: ubuntu-latest
+          - label: "macos"
+            runs_on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Prepare legacy 2.6.0 checkout (ubuntu)
+        if: ${{ matrix.os.label == 'ubuntu' }}
+        run: |
+          git fetch origin develop
+          git worktree add /tmp/bq260 948d0507
+
+      - name: Configure and build (windows)
+        if: ${{ matrix.os.label == 'windows' }}
+        shell: pwsh
+        run: |
+          cmake -S test/multi_instance -B build_mi
+          cmake --build build_mi --config Release -j
+
+      - name: Configure and build (linux/macos)
+        if: ${{ matrix.os.label != 'windows' }}
+        run: |
+          cmake -S test/multi_instance -B build_mi \
+            ${{ matrix.os.label == 'ubuntu' && '-DBQ_LEGACY_SRC=/tmp/bq260' || '' }}
+          cmake --build build_mi -j
+
+      - name: Run multi-instance cases (ubuntu, with legacy and dual runtime)
+        if: ${{ matrix.os.label == 'ubuntu' }}
+        run: |
+          ctest --test-dir build_mi --output-on-failure -R multi_instance
+
+      - name: Run multi-instance cases (windows/macos)
+        if: ${{ matrix.os.label != 'ubuntu' }}
+        run: |
+          python test/multi_instance/run.py \
+            --worker $(find build_mi -name 'bq_multi_instance_worker*' -type f -perm -u+x | head -1) \
+            --out build_mi/mi_out
+
   #Linux-ubuntu
   ubuntu:
     name: ubuntu (${{ matrix.runner.label }} ${{ matrix.cc }} ${{ matrix.cpp_ver }} ${{ matrix.asan.label }})

@@ -20,6 +20,7 @@
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/log/decoder/appender_decoder_helper.h"
 #include "bq_log/types/buffer/log_buffer.h"
+#include "bq_log/types/storage/instance_storage.h"
 
 #ifdef BQ_POSIX
 #ifdef BQ_PS
@@ -650,5 +651,20 @@ namespace bq {
             out_name_ptr->str = str;
             out_name_ptr->len = len;
         }
+
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+        BQ_API bool __api_test_get_storage_report(uint64_t log_id, uint32_t* out_instance, bool* out_lp_mapped, bool* out_hp_mapped)
+        {
+            bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
+            if (!log) {
+                return false;
+            }
+            auto* inst = bq::instance_storage::get();
+            *out_instance = inst ? inst->index() : UINT32_MAX;
+            *out_lp_mapped = log->get_buffer().is_lp_memory_mapped();
+            *out_hp_mapped = log->get_buffer().is_first_hp_group_memory_mapped();
+            return true;
+        }
+#endif
     }
 }

@@ -320,3 +320,9 @@ BQ_API_DEF(uint32_t, __api_go_log_write_1, (uint64_t log_id, uint8_t level, uint
 BQ_API_DEF(uint32_t, __api_go_log_write_2, (uint64_t log_id, uint8_t level, uint32_t category_index, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_types, uint64_t value0, const char* string0, uint64_t value1, const char* string1), (log_id, level, category_index, format_str_bytes_len, format_str_data, args_types, value0, string0, value1, string1));
 BQ_API_DEF(uint32_t, __api_go_log_write_4, (uint64_t log_id, uint8_t level, uint32_t category_index, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_count, uint32_t args_types, uint64_t value0, const char* string0, uint64_t value1, const char* string1, uint64_t value2, const char* string2, uint64_t value3, const char* string3), (log_id, level, category_index, format_str_bytes_len, format_str_data, args_count, args_types, value0, string0, value1, string1, value2, string2, value3, string3));
 #endif
+
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+// test only: fills instance index (UINT32_MAX if none), and whether the log's lp/hp
+// buffers are backed by memory maps (hp is false before the first hp block exists)
+BQ_API_DEF(bool, __api_test_get_storage_report, (uint64_t log_id, uint32_t* out_instance, bool* out_lp_mapped, bool* out_hp_mapped), (log_id, out_instance, out_lp_mapped, out_hp_mapped));
+#endif

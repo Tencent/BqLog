@@ -360,6 +360,16 @@ namespace bq {
     }
 
 #endif
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+    bool log_buffer::is_first_hp_group_memory_mapped()
+    {
+        auto group = hp_buffer_.first(group_list::lock_type::no_lock);
+        if (!group) {
+            return false;
+        }
+        return group.value().get_memory_map_status() != create_memory_map_result::failed;
+    }
+#endif
     const fast_format_meta* log_buffer::register_fast_log_format(const char* format, uint32_t format_size,
         uint8_t level, uint32_t category_idx, uint8_t format_type,
         const uint8_t* arg_types, uint16_t arg_count)

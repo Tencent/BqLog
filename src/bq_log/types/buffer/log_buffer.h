@@ -285,6 +285,12 @@ namespace bq {
         void garbage_collect() { hp_buffer_.garbage_collect(); }
         size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
 #endif
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+        // test-only: whether the low performance buffer is backed by a memory map
+        bool is_lp_memory_mapped() const { return lp_buffer_.is_memory_mapped(); }
+        // test-only: whether the first hp group is backed by a memory map (false before the first hp block)
+        bool is_first_hp_group_memory_mapped();
+#endif
     private:
         enum class context_verify_result {
             valid,
