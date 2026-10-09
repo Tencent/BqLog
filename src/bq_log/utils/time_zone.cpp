@@ -49,7 +49,7 @@ namespace bq {
         time_zone_str_ = "";
         time_zone_diff_to_gmt_ms_ = 0;
         time_cache_len_ = 0;
-        last_time_epoch_cache_ = 0;
+        last_time_epoch_cache_ = UINT64_MAX;
     }
 
     void time_zone::parse_by_string(const bq::string& time_zone_str)
@@ -151,6 +151,8 @@ namespace bq {
         gmt_offset_minutes_ = gmt_offset_minutes;
         time_zone_diff_to_gmt_ms_ = time_zone_diff_to_gmt_ms;
         time_zone_str_ = time_zone_str;
+        time_cache_len_ = 0;
+        last_time_epoch_cache_ = UINT64_MAX; // the cached string belongs to the previous time zone
     }
 
     bq::string time_zone::get_local_timezone_name()

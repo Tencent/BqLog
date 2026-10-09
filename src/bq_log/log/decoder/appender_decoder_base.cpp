@@ -52,7 +52,11 @@ namespace bq {
             util::log_device_console(log_level::error, "decode log file failed, read payload metadata failed");
             return appender_decode_result::failed_io_error;
         }
+        // The bool is rebuilt from its raw byte and the time zone name is terminated, since the file may be corrupt.
+        const uint8_t raw_use_local_time = read_handle.data()[offsetof(appender_file_binary::appender_payload_metadata, use_local_time)];
         memcpy(&payload_metadata_, read_handle.data(), sizeof(payload_metadata_));
+        payload_metadata_.use_local_time = (raw_use_local_time != 0);
+        payload_metadata_.time_zone_str[sizeof(payload_metadata_.time_zone_str) - 1] = '\0';
         if (payload_metadata_.magic_number[0] != 2 || payload_metadata_.magic_number[1] != 2 || payload_metadata_.magic_number[2] != 7) {
             if (cur_read_seg_.enc_type == appender_file_binary::appender_encryption_type::plaintext) {
                 util::log_device_console(log_level::error, "decode log file failed, magic number mismatch");
@@ -70,7 +74,11 @@ namespace bq {
                 util::log_device_console(log_level::error, "read category name length failed");
                 return appender_decode_result::failed_io_error;
             }
-            name_len = *(const uint32_t*)read_handle.data();
+            memcpy(&name_len, read_handle.data(), sizeof(name_len));
+            if (static_cast<size_t>(name_len) > current_file_size_) {
+                util::log_device_console(log_level::error, "category name length %" PRIu32 " exceeds file size", name_len);
+                return appender_decode_result::failed_decode_error;
+            }
             if (name_len > 0) {
                 name.fill_uninitialized((size_t)name_len);
                 read_handle = read_with_cache((size_t)name_len);
@@ -168,11 +176,13 @@ namespace bq {
                 size_t file_pos_alignment = current_file_cursor_ % appender_file_base::DEFAULT_BUFFER_ALIGNMENT;
                 read_offset = file_pos_alignment;
             }
-            auto total_size = bq::max_value(size + read_offset, DECODER_CACHE_READ_DEFAULT_SIZE);
+            uint64_t seg_left_size = cur_read_seg_.end_pos - static_cast<uint64_t>(current_file_cursor_);
+            // Never allocate more than the segment can supply; a short read is reported to the caller.
+            size_t alloc_size = (static_cast<uint64_t>(size) > seg_left_size) ? static_cast<size_t>(seg_left_size) : size;
+            auto total_size = bq::max_value(alloc_size + read_offset, DECODER_CACHE_READ_DEFAULT_SIZE);
             cache_read_.clear();
             cache_read_.fill_uninitialized(total_size);
             auto expected_read_size = total_size - read_offset;
-            uint64_t seg_left_size = cur_read_seg_.end_pos - static_cast<uint64_t>(current_file_cursor_);
             if (static_cast<uint64_t>(expected_read_size) > seg_left_size) {
                 expected_read_size = static_cast<size_t>(seg_left_size);
             }
