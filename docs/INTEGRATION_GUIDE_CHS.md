@@ -262,6 +262,23 @@ pip install ./bqlog-{version}-cp37-abi3-{platform}.whl
 
 ---
 
+## Go
+
+- 通过 cgo 支持 Go 1.21+。
+- **go get（推荐）**：
+
+```bash
+go get github.com/Tencent/BqLog@latest
+```
+
+Go 模块自带 native 源码，通过 cgo 自动编译，无需预编译库。
+
+- **预编译库** — 仅支持桌面平台（Windows、Linux、macOS）。若直接链接预编译 BqLog 库而非 cgo 编译，构建库时需开启构建脚本的 Go 选项（Windows/Linux 为第 8 个参数，macOS `all` 动作末位的 `go` 参数）。开启后库会导出 `__api_go_log_write`、`__api_go_log_write_1`、`__api_go_log_write_2`、`__api_go_log_write_4`。
+
+可参考仓库下 `/wrapper/go/src/bq` 目录。
+
+---
+
 ## Unity / 团结引擎 / Unreal Engine
 
 完整引擎集成步骤请见 **[游戏引擎集成指南](./ENGINE_INTEGRATION_CHS.md)**，包括：

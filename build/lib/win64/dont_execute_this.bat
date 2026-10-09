@@ -5,9 +5,9 @@ rem ------------------------------------------------------------
 rem Unified build/generate/pack driver for Windows
 rem
 rem Usage patterns (all parameters optional; missing ones will be prompted):
-rem   Dont_Execute_This.bat all [arch] [compiler] [java] [node] [python] [dynamic_lib|static_lib|both]
-rem   Dont_Execute_This.bat build [arch] [compiler] [java] [node] [python] [dynamic_lib|static_lib|both]
-rem   Dont_Execute_This.bat gen-vsproj [arch] [msvc|clang] [java] [node] [python] [dynamic_lib|static_lib|both]
+rem   Dont_Execute_This.bat all [arch] [compiler] [java] [node] [python] [dynamic_lib|static_lib|both] [go]
+rem   Dont_Execute_This.bat build [arch] [compiler] [java] [node] [python] [dynamic_lib|static_lib|both] [go]
+rem   Dont_Execute_This.bat gen-vsproj [arch] [msvc|clang] [java] [node] [python] [dynamic_lib|static_lib|both] [go]
 rem   Dont_Execute_This.bat pack [arch]
 rem
 rem Legacy compatibility:
@@ -51,7 +51,7 @@ call :normalize_onoff "%ARG3%" JAVA_SUPPORT
 call :normalize_onoff "%ARG4%" NODE_API_SUPPORT
 call :normalize_onoff "%ARG5%" PYTHON_SUPPORT
 call :normalize_onoff "%ARG7%" GO_SUPPORT
-if not defined GO_SUPPORT set "GO_SUPPORT=OFF"
+if not defined GO_SUPPORT if not "%ARG7%"=="" set "GO_SUPPORT=OFF"
 call :normalize_build_lib_type "%ARG6%" BUILD_LIB_TYPE
 
 if exist "..\..\..\artifacts" rmdir /s /q "..\..\..\artifacts"
@@ -105,6 +105,7 @@ if not defined COMPILER_TYPE call :ask_compiler COMPILER_TYPE
 if not defined JAVA_SUPPORT call :ask_yes_no "Enable Java/JNI support?" JAVA_SUPPORT
 if not defined NODE_API_SUPPORT call :ask_yes_no "Enable Node-API (Node.js) support?" NODE_API_SUPPORT
 if not defined PYTHON_SUPPORT call :ask_yes_no "Enable Python (CPython C Extension) support?" PYTHON_SUPPORT
+if not defined GO_SUPPORT call :ask_yes_no "Enable Go (cgo) support?" GO_SUPPORT
 goto :eof
 
 :ensure_arch_only

@@ -133,6 +133,9 @@ ensure_common_params() {
   if [[ -z "${PYTHON_SUPPORT:-}" ]]; then
     PYTHON_SUPPORT="$(ask_yes_no "Enable Python (CPython C Extension) support?")"
   fi
+  if [[ -z "${GO_SUPPORT:-}" ]]; then
+    GO_SUPPORT="$(ask_yes_no "Enable Go (cgo) support?")"
+  fi
 }
 
 determine_generator() {
@@ -149,10 +152,18 @@ determine_generator() {
 JAVA_SUPPORT="$(normalize_onoff "$ARG1")"
 NODE_API_SUPPORT="$(normalize_onoff "$ARG2")"
 PYTHON_SUPPORT="$(normalize_onoff "$ARG3")"
-GO_SUPPORT="$(normalize_onoff "$ARG6")"
+if [[ "$ACTION" == "all" ]]; then
+  # all [java] [node] [python] [lib_type] [go]: no format position
+  GO_SUPPORT="$(normalize_onoff "$ARG5")"
+  BUILD_LIB_TYPE="$(normalize_build_lib_type "$ARG4")"
+  # old 7-position calls passed go as the 7th (after format); only trust it when it parses as on/off
+  [[ -z "$GO_SUPPORT" ]] && GO_SUPPORT="$(normalize_onoff "$ARG6")"
+else
+  BUILD_LIB_TYPE="$(normalize_build_lib_type "$ARG4")"
+  APPLE_LIB_FORMAT="$(normalize_format "$ARG5")"
+  GO_SUPPORT="$(normalize_onoff "$ARG6")"
+fi
 [[ -z "${GO_SUPPORT}" ]] && GO_SUPPORT="OFF"
-BUILD_LIB_TYPE="$(normalize_build_lib_type "$ARG4")"
-APPLE_LIB_FORMAT="$(normalize_format "$ARG5")"
 
 echo "Parsed params:"
 echo "  ACTION:            ${ACTION:-}"
@@ -161,6 +172,7 @@ echo "  NODE_API_SUPPORT:  ${NODE_API_SUPPORT:-<unset>}"
 echo "  PYTHON_SUPPORT:   ${PYTHON_SUPPORT:-<unset>}"
 echo "  BUILD_LIB_TYPE:    ${BUILD_LIB_TYPE:-<unset>}"
 echo "  APPLE_LIB_FORMAT:  ${APPLE_LIB_FORMAT:-<unset>}"
+echo "  GO_SUPPORT:        ${GO_SUPPORT:-<unset>}"
 echo "  GENERATOR:         $(determine_generator)"
 
 # Always build universal binaries (arm64 + x86_64)
@@ -344,6 +356,7 @@ case "$ACTION" in
     [[ -z "${JAVA_SUPPORT:-}"     ]] && JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
     [[ -z "${NODE_API_SUPPORT:-}" ]] && NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
     [[ -z "${PYTHON_SUPPORT:-}" ]] && PYTHON_SUPPORT="$(ask_yes_no "Enable Python (CPython C Extension) support?")"
+    [[ -z "${GO_SUPPORT:-}" ]] && GO_SUPPORT="$(ask_yes_no "Enable Go (cgo) support?")"
     BUILD_LIB_TYPE_ALL="${BUILD_LIB_TYPE:-both}"
     if [[ "$BUILD_LIB_TYPE_ALL" == "dynamic_lib" ]]; then
       # dynamic only: respect NODE_API rule (same logic as build_all_combos)

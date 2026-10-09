@@ -168,6 +168,9 @@ ensure_common_params() {
   [ -z "$JAVA_SUPPORT" ] && JAVA_SUPPORT=$(ask_yes_no "Enable Java/JNI support?")
   [ -z "$NODE_API_SUPPORT" ] && NODE_API_SUPPORT=$(ask_yes_no "Enable Node-API (Node.js) support?")
   [ -z "$PYTHON_SUPPORT" ] && PYTHON_SUPPORT=$(ask_yes_no "Enable Python (CPython C Extension) support?")
+  if [ -z "$GO_SUPPORT" ] && [ -t 0 ]; then
+    GO_SUPPORT=$(ask_yes_no "Enable Go (cgo) support?")
+  fi
   echo
   echo "Parameters:"
   echo "  ARCH             : $ARCH_PARAM"
@@ -175,6 +178,7 @@ ensure_common_params() {
   echo "  JAVA_SUPPORT     : $JAVA_SUPPORT"
   echo "  NODE_API_SUPPORT : $NODE_API_SUPPORT"
   echo "  PYTHON_SUPPORT   : $PYTHON_SUPPORT"
+  echo "  GO_SUPPORT       : $GO_SUPPORT"
   echo
 }
 ensure_arch_only() {
@@ -193,7 +197,7 @@ JAVA_SUPPORT="$(normalize_onoff "$ARG3")"
 NODE_API_SUPPORT="$(normalize_onoff "$ARG4")"
 PYTHON_SUPPORT="$(normalize_onoff "$ARG5")"
 GO_SUPPORT="$(normalize_onoff "$ARG7")"
-[ -z "$GO_SUPPORT" ] && GO_SUPPORT="OFF"
+[ -z "$GO_SUPPORT" ] && [ ! -t 0 ] && GO_SUPPORT="OFF"
 BUILD_LIB_TYPE="$(normalize_build_lib_type "$ARG6")"
 
 build_one() {

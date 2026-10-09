@@ -261,6 +261,23 @@ Refer to `/demo/python` directory under the repository.
 
 ---
 
+## Go
+
+- Supports Go 1.21+ via cgo.
+- **go get (recommended)**:
+
+```bash
+go get github.com/Tencent/BqLog@latest
+```
+
+The Go module ships the native sources and builds them through cgo automatically; no prebuilt library is needed.
+
+- **Prebuilt library** — Desktop platforms only (Windows, Linux, macOS). If you link against a prebuilt BqLog library instead of building via cgo, the library must have been built with the build script's Go option enabled (the 8th parameter on Windows/Linux, `go` in the macOS `all` action). When enabled, the library exports `__api_go_log_write`, `__api_go_log_write_1`, `__api_go_log_write_2` and `__api_go_log_write_4`.
+
+Refer to `/wrapper/go/src/bq` directory under the repository.
+
+---
+
 ## Unity / Tuanjie Engine / Unreal Engine
 
 See the dedicated **[Game Engine Integration Guide](./ENGINE_INTEGRATION.md)** for:
