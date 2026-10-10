@@ -16,6 +16,10 @@
 #else
 #include <signal.h>
 #include <unistd.h>
+#include <vector>
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
 #endif
 
 static void write_text_file(const std::string& path, const std::string& content)
@@ -50,6 +54,7 @@ int main(int argc, char** argv)
     bool report = false;
     bool child_lock_test = false;
     long long die_after = -1;
+    bool die_flush = false;
     long long sleep_seconds = -1;
     const char* child_lock_path = nullptr;
     const char* hold_until = nullptr;
@@ -68,6 +73,10 @@ int main(int argc, char** argv)
             recovery = std::string(argv[++i]) == "on";
         } else if (arg == "--die-after") {
             die_after = std::atoll(argv[++i]);
+        } else if (arg == "--die-flush") {
+            // flush before dying: everything committed is on disk, so recovery must
+            // deliver it exactly once (no replay of already-persisted records)
+            die_flush = true;
         } else if (arg == "--two-logs") {
             two_logs = true;
         } else if (arg == "--report") {
@@ -123,7 +132,16 @@ int main(int argc, char** argv)
         log.info("lock holder alive");
         log.force_flush();
         std::string self_path;
-#if defined(_WIN32)
+#if defined(__APPLE__)
+        // /proc/self/exe does not exist on macOS
+        uint32_t path_size = 0;
+        _NSGetExecutablePath(nullptr, &path_size);
+        std::vector<char> module_path(path_size + 1, 0);
+        if (_NSGetExecutablePath(&module_path[0], &path_size) != 0) {
+            return 4;
+        }
+        self_path = &module_path[0];
+#elif defined(_WIN32)
         char module_path[MAX_PATH] = { 0 };
         GetModuleFileNameA(nullptr, module_path, MAX_PATH);
         self_path = module_path;
@@ -141,15 +159,28 @@ int main(int argc, char** argv)
         STARTUPINFOA startup_info = { };
         startup_info.cb = sizeof(startup_info);
         PROCESS_INFORMATION process_info = { };
-        if (!CreateProcessA(nullptr, &cmd[0], nullptr, nullptr, FALSE,
+        // bInheritHandles=TRUE: the point of the test is that the instance lock handle itself is
+        // created non-inheritable, so it must not reach the child even when handles are inherited
+        if (!CreateProcessA(nullptr, &cmd[0], nullptr, nullptr, TRUE,
                 CREATE_NO_WINDOW, nullptr, nullptr, &startup_info, &process_info)) {
             return 4;
         }
         CloseHandle(process_info.hThread);
         CloseHandle(process_info.hProcess);
 #else
-        int rc = std::system(cmd.c_str());
-        (void)rc;
+        // fork+exec, not std::system: system() blocks until the child exits, so the parent would
+        // never "exit immediately while the child is still alive" and nothing would be tested
+        pid_t child = fork();
+        if (child < 0) {
+            return 4;
+        }
+        if (child == 0) {
+            // the child must not compete for the instance lock: drop the parent's handle first
+            // by exec'ing a fresh process image (fd's are close-on-exec in the library)
+            execl(self_path.c_str(), self_path.c_str(), "0", log_name.c_str(), "1", "--sleep", "10", (char*)nullptr);
+            _exit(127);
+        }
+        // do not wait: the parent returns and exits while the child sleeps
 #endif
         return 0; // normal exit, child still alive holding nothing
     }
@@ -217,8 +248,16 @@ int main(int argc, char** argv)
             }
         }
         if (die_after >= 0 && i + 1 == committed) {
-            // records up to committed_seq stay in the ring buffer / appender
-            // cache: the successor must recover them, so no force_flush here
+            if (die_flush) {
+                // exactly-once mode: persist everything up to committed_seq before dying, so
+                // recovery must not replay any of it
+                log.force_flush();
+                if (two_logs) {
+                    log_b.force_flush();
+                }
+            }
+            // without --die-flush the records up to committed_seq stay in the ring buffer /
+            // appender cache and the successor recovers them (at-least-once)
             write_text_file("committed_" + id + ".json",
                 "{\"committed_seq\": " + std::to_string(committed) + "}");
             self_kill();

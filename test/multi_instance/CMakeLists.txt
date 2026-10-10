@@ -129,7 +129,7 @@ endif()
 
 enable_testing()
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-foreach(case M1 M2 M3 M4 M5 M6 M7 M8)
+foreach(case M1 M2 M3 M4 M5 M6 M7 M8 M9)
     add_test(NAME multi_instance_${case}
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run.py --case ${case}
                 --worker $<TARGET_FILE:bq_multi_instance_worker>

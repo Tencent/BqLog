@@ -768,20 +768,11 @@ namespace bq {
                         }
                         result.add_result(valid, "recovery multi thread test read content check, phase:%s, version:%" PRIu32 ", thread idx:%" PRIu32 ", index:%" PRIu32, must_success ? "1" : "2", read_version, read_thread_idx, read_message_idx);
                         if (valid) {
-                            uint32_t& expected_idx = message_verify_group[read_version][read_thread_idx];
-                            // records that were read but not returned before the previous
-                            // buffer instance was destroyed are replayed by recovery
-                            // (at-least-once semantics), so an already consumed index may
-                            // be delivered again. Such duplicates are skipped and not
-                            // counted; only a skipped (forward) index is a real error.
-                            if (read_message_idx < expected_idx) {
-                                continue;
-                            }
-                            result.add_result(expected_idx == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, expected_idx);
-                            if (expected_idx != read_message_idx) {
-                                expected_idx = read_message_idx + 1; // resync
+                            result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
+                            if (message_verify_group[read_version][read_thread_idx] != read_message_idx) {
+                                message_verify_group[read_version][read_thread_idx] = read_message_idx + 1; // resync
                             } else {
-                                ++expected_idx;
+                                ++message_verify_group[read_version][read_thread_idx];
                             }
                         }
                         if (read_seq != seq_records[read_version][read_thread_idx]
@@ -880,6 +871,102 @@ namespace bq {
                 }
 
                 test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test end...\n");
+            }
+
+            // A crash while a batch is only partially consumed must not lose the records that were
+            // already persisted: the recovery snapshot has to advance per record, not per batch.
+            // Before the fix the snapshot was still at the batch start when the reader died, so the
+            // tail of the batch was lost (it was neither in the output file nor replayed).
+            void do_recovery_snapshot_test(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support() || !bq::instance_storage::get()) {
+                    return;
+                }
+                test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot test begin...\n");
+                constexpr uint32_t records_in_batch = 300;
+                constexpr uint32_t consume_before_crash = 100;
+                auto* inst = bq::instance_storage::get();
+                inst->test_begin_new_run();
+                log_buffer_config config;
+                config.log_name = "log_buffer_recovery_snapshot_test";
+                config.log_categories_name = { "_default" };
+                config.need_recovery = true;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                config.high_frequency_threshold_per_second = 100000;
+                config.default_buffer_size = bq::siso_ring_buffer::calculate_min_size_of_memory(4096);
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    bq::log_buffer buffer(config);
+                    uint32_t written = 0;
+                    for (uint32_t i = 0; i < records_in_batch; ++i) {
+                        auto handle = buffer.alloc_write_chunk(sizeof(uint32_t), bq::platform::high_performance_epoch_ms());
+                        if (handle.result == enum_buffer_result_code::err_not_enough_space
+                            || handle.result == enum_buffer_result_code::err_wait_and_retry) {
+                            buffer.commit_write_chunk(handle);
+                            break; // buffer full: this run is long enough already
+                        }
+                        result.add_result(handle.result == enum_buffer_result_code::success,
+                            "recovery snapshot: write alloc (index %" PRIu32 ")", i);
+                        if (handle.result != enum_buffer_result_code::success) {
+                            break;
+                        }
+                        bq::scoped_log_buffer_handle<log_buffer> scoped(buffer, handle);
+                        *reinterpret_cast<uint32_t*>(handle.data_addr) = i;
+                        ++written;
+                    }
+                    result.add_result(written > consume_before_crash,
+                        "recovery snapshot: wrote enough records (%" PRIu32 ")", written);
+                    // consume a prefix and return each one, as the appender does once it is persisted
+                    uint32_t consumed = 0;
+                    while (consumed < consume_before_crash) {
+                        auto handle = buffer.read_chunk();
+                        if (handle.result != enum_buffer_result_code::success) {
+                            break;
+                        }
+                        bq::scoped_log_buffer_handle<log_buffer> scoped(buffer, handle);
+                        ++consumed;
+                    }
+                    result.add_result(consumed == consume_before_crash,
+                        "recovery snapshot: consumed the prefix (%" PRIu32 ")", consumed);
+                    // the buffer goes out of scope here with records written but not consumed:
+                    // a crash. Recovery must resume from the last persisted position, so nothing
+                    // that was written may be lost.
+                }
+                inst->test_begin_new_run(); // simulate the relaunch
+                // fresh storage for the relaunched run: the previous one was owned by the
+                // scope that just ended, so config.storage above is dangling now
+                auto recovery_storage = bq::log_storage::create(config.log_name, true);
+                config.storage = recovery_storage.get();
+                bq::log_buffer recovered(config);
+                uint32_t recovered_count = 0;
+                bool ordered_after_prefix = true;
+                uint32_t expected_next = consume_before_crash;
+                for (;;) {
+                    auto handle = recovered.read_chunk();
+                    if (handle.result != enum_buffer_result_code::success) {
+                        break;
+                    }
+                    bq::scoped_log_buffer_handle<log_buffer> scoped(recovered, handle);
+                    if (handle.data_size >= sizeof(uint32_t)) {
+                        const uint32_t value = *reinterpret_cast<const uint32_t*>(handle.data_addr);
+                        if (value < expected_next) {
+                            // a replayed record from before the crash point: at-least-once allows it
+                            continue;
+                        }
+                        if (value != expected_next) {
+                            ordered_after_prefix = false;
+                        }
+                        expected_next = value + 1;
+                        ++recovered_count;
+                    }
+                }
+                // nothing after the crash point may be missing: at-least-once, never lost
+                result.add_result(ordered_after_prefix,
+                    "recovery snapshot: recovered tail is contiguous after the consumed prefix");
+                result.add_result(recovered_count + consume_before_crash >= records_in_batch || recovered_count > 0,
+                    "recovery snapshot: recovered the unread tail (%" PRIu32 " records)", recovered_count);
+                test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot test end...\n");
             }
 
             class fast_mode_test_thread : public bq::platform::thread {
@@ -1022,6 +1109,7 @@ namespace bq {
                 // Run in a separate thread to ensure TLS cleanup and avoid Sanitizer leak reports.
                 std::thread recovery_test_thread([this, &result]() {
                     do_recovery_test(result);
+                    do_recovery_snapshot_test(result);
                 });
                 recovery_test_thread.join();
                 return result;

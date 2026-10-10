@@ -320,6 +320,25 @@ namespace bq {
         void discard_recovery_data();
         void prepare_and_fix_recovery_data();
 
+        // The version stamped on data that must never be recovered. It has to sit OUTSIDE the
+        // recovery window: a stale run's data is only unreachable when (version_ - marked) is
+        // greater than MAX_RECOVERY_VERSION_RANGE. Marking with version_ + 1 (just ahead of the
+        // current run) would fall back inside the window a few runs later and the data would be
+        // recovered as if it were valid.
+        // instance_storage::get() may be null (no mmap support, or the instance could not be
+        // claimed); the recovery version is then 0 and nothing is recovered
+        static uint16_t recovery_run_version();
+
+        static uint16_t invalid_recovery_version_for(uint16_t version)
+        {
+            return static_cast<uint16_t>(version - MAX_RECOVERY_VERSION_RANGE - 1);
+        }
+
+        bq_forceinline uint16_t invalid_recovery_version() const
+        {
+            return invalid_recovery_version_for(version_);
+        }
+
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
         log_buffer_read_handle read_chunk_full_impl();
@@ -422,6 +441,9 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             assert(rt_reading.hp_handle_cache_.verify_chunk(handle) && "log_buffer::return_read_chunk hp chunk return verify failed");
 #endif
+            // this record has now been persisted (return_read_chunk only runs after the appender's
+            // mark_write_finished), so the recovery snapshot may move past it
+            rt_reading.cur_block_->get_buffer().advance_recovery_snapshot(rt_reading.hp_handle_cache_.consumed_cursor());
             if (!rt_reading.hp_handle_cache_.has_next()) {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_block_);

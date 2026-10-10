@@ -53,11 +53,15 @@ def read_lines(path):
         return []
 
 
-def check_records(exe_args_done, cwd, worker_ids, records, two_logs=False):
+def check_records(exe_args_done, cwd, worker_ids, records, two_logs=False, allowed_foreign=()):
     """Verify each worker's output file holds exactly its own records in seq order.
 
     Returns a dict {worker_id: problems} where problems is a list of strings
     naming every missing or duplicated (kind, seq).
+
+    allowed_foreign: worker ids whose records may legitimately appear in another
+    worker's file because recovering that worker's crashed run replayed its tail
+    there.
     """
     problems = {}
     for wid in worker_ids:
@@ -81,11 +85,15 @@ def check_records(exe_args_done, cwd, worker_ids, records, two_logs=False):
                         continue
                     expected.append((kind, seq))
         actual = []
+        all_records = []
         for kind in kinds:
+            # all worker tags seen in this file, needed to detect cross-contamination
+            found = [(kind, int(w), int(s)) for w, s in re.findall(
+                rf"\b{kind} worker=(\d+) seq=(\d+)", texts)]
+            all_records += found
             # filter by worker tag: a successor that recovers a dead worker's
             # tail replays records tagged worker=<dead id> into its own file
-            actual += [(kind, int(s)) for w, s in re.findall(
-                rf"\b{kind} worker=(\d+) seq=(\d+)", texts) if int(w) == wid]
+            actual += [(kind, s) for k, w, s in found if w == wid]
         counts = {}
         for item in actual:
             counts[item] = counts.get(item, 0) + 1
@@ -96,9 +104,18 @@ def check_records(exe_args_done, cwd, worker_ids, records, two_logs=False):
                 worker_problems.append(f"missing {item[0]} seq={item[1]}")
             elif count > 1:
                 worker_problems.append(f"duplicated {item[0]} seq={item[1]} x{count}")
-        foreign = [item for item in counts if item not in set(expected)]
-        if foreign:
-            worker_problems.append(f"foreign records: {sorted(foreign)[:5]}")
+        # foreign checks over ALL tags, not the worker-filtered counts:
+        #  - another worker's tag in this worker's own file is contamination, unless
+        #    that worker crashed and its tail was replayed here during recovery
+        #  - an own-tag record whose (kind, seq) is not expected must not exist
+        # The worker-filtered `counts` above can never reveal the first kind.
+        cross = sorted({(k, w, s) for k, w, s in all_records
+                        if w != wid and w not in allowed_foreign})
+        if cross:
+            worker_problems.append(f"records of another worker: {cross[:5]}")
+        unknown = sorted({(k, s) for k, s in counts if (k, s) not in set(expected)})
+        if unknown:
+            worker_problems.append(f"unexpected records: {unknown[:5]}")
         # per-seq order within each kind
         for kind in kinds:
             seqs = [s for k, s in actual if k == kind]
@@ -334,8 +351,8 @@ def case_M5(exe, out, records):
         wait_files([cwd / "ready_0.json"], [a0])
         run_die_worker(exe, cwd, 1, "m5_log", 300, captures, children)
         hold.unlink()
-        # the die path self-kills (exit code 9); anything else is a failure
-        if a0.wait(timeout=RECORD_TIMEOUT) not in (0, 9):
+        # the die path self-kills: exit code 9 on Windows, -9 (SIGKILL) on POSIX
+        if a0.wait(timeout=RECORD_TIMEOUT) not in (0, 9, -9):
             fail("worker A0 failed before its die point")
         committed0 = json.loads((cwd / "committed_0.json").read_text())["committed_seq"]
         p1_before = {str(p.relative_to(cwd)): p.stat().st_size
@@ -409,9 +426,11 @@ def case_M5(exe, out, records):
             extra = sorted(s for (k, s) in seen if k == kind and not (0 <= s < n_committed))
             if extra:
                 fail(f"worker A{wid} wrote beyond committed_seq: {kind} seq={extra[:8]}")
-    # C and D each produce their own full records
+    # C and D each produce their own full records. C recovered A0's crash and D
+    # recovered A1's, so their files may also carry those dead workers' replayed
+    # tails (at-least-once), which check_records must not treat as contamination.
     for wid in (2, 3):
-        problems = check_records(None, cwd, [wid], records)
+        problems = check_records(None, cwd, [wid], records, allowed_foreign=(0, 1))
         if problems[wid]:
             fail(f"worker {wid}: {'; '.join(problems[wid][:8])}")
 
@@ -507,7 +526,9 @@ def case_M8(exe, out, records):
         # parent creates the recovery log (holds p0), spawns --sleep child, exits
         p = spawn(exe, cwd, ["0", "m8_log", str(records), "--child-lock-test", str(cwd)], captures, "worker_0")
         children.append(p)
-        p.wait(timeout=RECORD_TIMEOUT)
+        # the parent must exit 0 immediately, leaving its sleeping child behind
+        if p.wait(timeout=RECORD_TIMEOUT) != 0:
+            fail("worker D (parent) did not exit 0")
         # immediately a new worker: must get instance 0 (child inherited nothing)
         e = spawn(exe, cwd, ["1", "m8_log", str(records), "--report"], captures, "worker_1")
         children.append(e)
@@ -530,6 +551,56 @@ def case_M8(exe, out, records):
         fail(f"worker E lp_mapped={ready['lp_mapped']}, want true")
 
 
+def case_M9(exe, out, records):
+    """Recovery after a flush-then-die: everything committed was on disk, so the
+    successor must deliver each committed record exactly once (no replay)."""
+    cwd = out / "M9"
+    cwd.mkdir(parents=True)
+    captures, children = [], []
+    committed = min(records, 300)
+    try:
+        d = spawn(exe, cwd,
+            ["0", "m9_log", str(records), "--die-after", str(committed), "--die-flush"],
+            captures, "worker_0")
+        children.append(d)
+        wait_files([cwd / "committed_0.json"], [d])
+        # the die path self-kills regardless of the flush
+        if d.wait(timeout=RECORD_TIMEOUT) not in (0, 9, -9):
+            fail("worker D (flush-die) did not self-kill as expected")
+        committed0 = json.loads((cwd / "committed_0.json").read_text())["committed_seq"]
+        # the successor must recover the deferred records
+        e = spawn(exe, cwd, ["1", "m9_log", str(records), "--report"], captures, "worker_1")
+        children.append(e)
+        wait_files([cwd / "done_1"], [e])
+        if e.wait(timeout=RECORD_TIMEOUT) != 0:
+            fail("worker E failed")
+    finally:
+        for p in children:
+            if p.poll() is None:
+                p.kill()
+                p.wait()
+        for capture in captures:
+            capture.close()
+    # flush-die means the records were persisted before the kill, so the successor must
+    # not produce a duplicate of any record the dead worker already wrote
+    combined = ""
+    for w in (0, 1):
+        combined += "".join(p.read_text(encoding="utf-8", errors="replace")
+            for p in sorted(cwd.glob(f"output/worker_{w}_*.log")))
+    seen = {}
+    for kind in ("normal", "fast"):
+        for w, s in re.findall(rf"\b{kind} worker=(\d+) seq=(\d+)", combined):
+            if int(w) != 0:
+                continue
+            seen[(kind, int(s))] = seen.get((kind, int(s)), 0) + 1
+    for seq in range(committed0):
+        for kind in ("normal", "fast"):
+            if seen.get((kind, seq), 0) == 0:
+                fail(f"flush-die: committed record lost: {kind} seq={seq}")
+            if seen.get((kind, seq), 0) > 1:
+                fail(f"flush-die: committed record replayed: {kind} seq={seq} x{seen[(kind, seq)]}")
+
+
 CASES = {
     "M1": case_M1,
     "M2": case_M2,
@@ -539,6 +610,7 @@ CASES = {
     "M6": case_M6,
     "M7": case_M7,
     "M8": case_M8,
+    "M9": case_M9,
 }
 
 

@@ -169,22 +169,27 @@ namespace bq {
         fast_state_->buffer_key = ~fast_state_buffer_id_;
     }
 
+    uint16_t log_buffer::recovery_run_version()
+    {
+        auto* inst = instance_storage::get();
+        return inst ? inst->run_version() : 0;
+    }
+
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
         , hp_buffer_(config_, BLOCKS_PER_GROUP_NODE)
         , lp_buffer_(config_)
         , hp_buffer_max_alloc_size_(UINT32_MAX)
-        , version_(config_.need_recovery ? instance_storage::get()->run_version() : 0)
+        // instance_storage::get() is null when the platform does not support mmap (or the instance
+        // could not be claimed); there is nothing to recover then, same as before T05
+        , version_(config_.need_recovery ? recovery_run_version() : 0)
         , destruction_mark_(bq::make_shared<destruction_mark>())
         , current_oversize_buffer_index_(0)
     {
         static bq::platform::atomic<uint64_t> id_generator(0);
         id_ = id_generator.add_fetch_relaxed(1);
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
-        if (config.need_recovery) {
-            // instance_storage::get() is null when the platform does not support
-            // mmap (or the instance could not be claimed); buffers are on the
-            // heap then and there is nothing to recover, same as before T05
+        if (config_.need_recovery) {
             auto* inst = instance_storage::get();
             auto& misc = lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>();
             const uint64_t serial = inst ? inst->run_serial() : 0;
@@ -1053,7 +1058,7 @@ namespace bq {
             // never enters the wait_and_retry spin loop. Disk-full is not a
             // back-pressure scenario - waiting is futile.
             --tls_buffer.wt_data_.current_write_seq_;
-            parent_context->version_ = static_cast<uint16_t>(version_ + 1);
+            parent_context->version_ = invalid_recovery_version();
             lp_buffer_.commit_write_chunk(parent_result);
             log_buffer_write_handle fail;
             fail.result = enum_buffer_result_code::err_io_failure_drop;
@@ -1238,7 +1243,7 @@ namespace bq {
         // HP: groups were already recovered from their mmap files, so the files
         // cannot be deleted; invalidating every used/stage block's context
         // makes the reader recycle them through the regular version_invalid path
-        const uint16_t invalid_version = static_cast<uint16_t>(version_ + 1); // outside the recovery window
+        const uint16_t invalid_version = invalid_recovery_version();
         auto group = hp_buffer_.first(group_list::lock_type::no_lock);
         while (group) {
             block_node_head* block = group.value().get_data_head().used_.first();
@@ -1259,7 +1264,7 @@ namespace bq {
         // meta journal of a stale run is handled by meta_registry's expired-file
         // cleanup at the next enable_journal.
         if (config_.storage) {
-            bq::file_manager::remove_file_or_dir(config_.storage->os_dir());
+            config_.storage->remove(config_.storage->os_dir());
         }
     }
 
@@ -1288,7 +1293,7 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
                 bq::util::log_device_console(bq::log_level::error, "fix invalid log data in lp_buffer when recovering, version:%" PRIu16 ", seq:%" PRIu32, context.version_, context.seq_);
 #endif
-                context.version_++; // mark invalid
+                context.version_ = invalid_recovery_version_for(buffer.get_version()); // mark unrecoverable
             } else if (static_cast<uint16_t>(buffer.version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                 auto& recovery_map = buffer.rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(buffer.version_ - 1 - context.version_)];
                 auto iter = recovery_map.find(context.get_tls_info());
@@ -1319,7 +1324,7 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
                     bq::util::log_device_console(bq::log_level::error, "fix invalid log data in hp_buffer used list when recovering, version:%" PRIu16 ", seq:%" PRIu32, context.version_, context.seq_);
 #endif
-                    context.version_++; // mark invalid
+                    context.version_ = invalid_recovery_version(); // mark unrecoverable
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
                     auto iter = recovery_map.find(context.get_tls_info());
@@ -1346,7 +1351,7 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
                     bq::util::log_device_console(bq::log_level::error, "fix invalid log data in hp_buffer stage list when recovering, version:%" PRIu16 ", seq:%" PRIu32, context.version_, context.seq_);
 #endif
-                    context.version_++; // mark invalid
+                    context.version_ = invalid_recovery_version(); // mark unrecoverable
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
                     auto iter = recovery_map.find(context.get_tls_info());

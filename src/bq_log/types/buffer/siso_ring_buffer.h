@@ -129,6 +129,12 @@ namespace bq {
             {
                 return current_cursor_ != end_cursor_;
             }
+            // the cursor past the record most recently handed out by next(): the recovery
+            // snapshot advances to it once that record's persistence has finished
+            uint32_t consumed_cursor() const
+            {
+                return current_cursor_;
+            }
             log_buffer_read_handle next()
             {
                 log_buffer_read_handle handle;
@@ -243,6 +249,14 @@ namespace bq {
         /// </summary>
         /// <param name="handle"></param>
         void return_batch_read_chunks(const siso_buffer_batch_read_handle& handle);
+
+        /// <summary>
+        /// Moves the mmap recovery snapshot past the record most recently returned by the batch
+        /// handle. The caller must only call this once that record's persistence has finished
+        /// (the appender's mark_write_finished); the reading_cursor released to the writer still
+        /// only moves when the whole batch is returned.
+        /// </summary>
+        void advance_recovery_snapshot(uint32_t cursor);
 
         /// <summary>
         /// Traverses all data written, invoking the provided callback for each chunk from the consumer thread.
