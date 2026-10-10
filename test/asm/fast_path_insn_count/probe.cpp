@@ -12,7 +12,12 @@ bool probe_macro_ref(const bq::log& l, int32_t x, float y)
     return true;
 }
 #if defined(BQ_CPP_20)
-// T08 adds:
-// bool probe_fast_global(int32_t x, float y) { return g_log.fast_info<"a {} {}">(x, y); }
-// bool probe_fast_ref(const bq::log& l, int32_t x, float y) { return l.fast_info<"a {} {}">(x, y); }
+bool probe_fast_global(int32_t x, float y)
+{
+    return g_log.fast_info<"a {} {}">(x, y);
+}
+bool probe_fast_ref(const bq::log& l, int32_t x, float y)
+{
+    return l.fast_info<"a {} {}">(x, y);
+}
 #endif

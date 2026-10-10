@@ -112,6 +112,48 @@ namespace bq {
         using log::error;
         using log::fatal;
 
+#if defined(BQ_CPP_20)
+        using bq::log::fast_verbose;
+        using bq::log::fast_debug;
+        using bq::log::fast_info;
+        using bq::log::fast_warning;
+        using bq::log::fast_error;
+        using bq::log::fast_fatal;
+
+        /// Macro-free fast log with a category of this class; the format string is a
+        /// compile-time template argument, a site is shared by (format, level, category, wire types).
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bq_forceinline bool fast_verbose(const test_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::verbose, CAT_INDEX>(*this, args...);
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bq_forceinline bool fast_debug(const test_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::debug, CAT_INDEX>(*this, args...);
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bq_forceinline bool fast_info(const test_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::info, CAT_INDEX>(*this, args...);
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bq_forceinline bool fast_warning(const test_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::warning, CAT_INDEX>(*this, args...);
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bq_forceinline bool fast_error(const test_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::error, CAT_INDEX>(*this, args...);
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bq_forceinline bool fast_fatal(const test_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::fatal, CAT_INDEX>(*this, args...);
+        }
+#endif
+
         ///Core log functions with category param, there are 6 log levels:
         ///verbose, debug, info, warning, error, fatal
         template<typename STR, uint32_t CAT_INDEX, bq::enable_if_t<bq::test_category_log::is_test_category_log_format_type<STR>::value, bool> = true>

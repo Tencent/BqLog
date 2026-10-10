@@ -141,13 +141,44 @@ namespace bq {
         }
 
         // 0 written, 1 written and the consumer should be woken, -1 take the slow path
-        template <typename FILL>
-        bq_forceinline int32_t write(const bq::_api_fast_log_site_handle& site, uint32_t args_size, const FILL& fill)
+        //
+        // META says where the record's meta address comes from: the macro path already holds it in a
+        // register (by value), the fast_info path reads it from the site only when the head is
+        // stored, which keeps fewer values live across the resync check.
+        struct fast_meta_by_value {
+            uint64_t addr;
+            bq_forceinline uint64_t get() const { return addr; }
+        };
+
+        struct fast_meta_by_ptr {
+            const uint64_t* addr;
+            // the mask is stored with release before any read, and the reader acquired it, so the
+            // meta address observed here is always the registered one
+            bq_forceinline uint64_t get() const
+            {
+                return BQ_PACK_ACCESS_BY_TYPE(*addr, bq::platform::atomic<uint64_t>).load_relaxed();
+            }
+        };
+
+        // Like fast_meta_by_ptr, but holds the site instead of a pointer to one of its packed
+        // members: the macro's site is a packed struct, so &site.format_meta_addr warns under
+        // -Waddress-of-packed-member. Reading the field through the site pointer keeps the load
+        // late (at head store time) exactly as by_ptr does.
+        struct fast_meta_by_site {
+            const bq::_api_fast_log_site_handle* site;
+            bq_forceinline uint64_t get() const
+            {
+                return BQ_PACK_ACCESS_BY_TYPE(site->format_meta_addr, bq::platform::atomic<uint64_t>).load_relaxed();
+            }
+        };
+
+        template <typename META, typename FILL>
+        bq_forceinline int32_t write(uint64_t buffer_id, const META& meta, uint32_t args_size, const FILL& fill)
         {
             typedef expected_layout l;
             thread_slot& slot = get_thread_slot();
             const bq::_api_fast_log_thread_state& state = slot.state;
-            BQ_UNLIKELY_IF((~state.buffer_key != site.buffer_id) | *state.need_reallocate)
+            BQ_UNLIKELY_IF((~state.buffer_key != buffer_id) | *state.need_reallocate)
             {
                 return -1;
             }
@@ -183,7 +214,7 @@ namespace bq {
             store_u32(chunk + sizeof(uint32_t), record_size);
             bq::log_head_fast_def record_head;
             record_head.timestamp_epoch = bq::log_head_base_def::set_fast(epoch_ms);
-            record_head.format_meta_addr = site.format_meta_addr;
+            record_head.format_meta_addr = meta.get();
             memcpy(record, &record_head, sizeof(record_head));
             fill(record + sizeof(bq::log_head_fast_def));
             const uint32_t new_cursor = write_cursor + used;

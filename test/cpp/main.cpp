@@ -28,6 +28,9 @@
 #include "test_meta_registry.h"
 #include "test_log_buffer.h"
 #include "test_fast_log.h"
+#if defined(BQ_CPP_20)
+#include "test_fast_info.h"
+#endif
 #include "test_log_appender.h"
 #include "test_log.h"
 #include "test_layout.h"
@@ -119,6 +122,9 @@ int32_t main_logic()
     TEST_GROUP(Bq_Log_Test, bq::test, test_meta_registry);
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_fast_log);
+#if defined(BQ_CPP_20)
+    TEST_GROUP(Bq_Log_Test, bq::test, test_fast_info);
+#endif
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_appender);
     TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);
@@ -176,6 +182,14 @@ int32_t main(int32_t argc, char** argv)
         result.output("test_meta_registry");
         return result.is_all_pass() ? 0 : -1;
     }
+#if defined(BQ_CPP_20)
+    if (argc > 1 && strcmp(argv[1], "--fast-info-only") == 0) {
+        bq::test::test_fast_info fast_info_test;
+        auto result = fast_info_test.test();
+        result.output("test_fast_info");
+        return result.is_all_pass() ? 0 : -1;
+    }
+#endif
     return main_logic();
 }
 

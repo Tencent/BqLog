@@ -489,7 +489,8 @@ namespace bq {
         {
             return false;
         }
-        const int32_t result = bq::fast_inline::write(site, args_size, fill);
+        const int32_t result = bq::fast_inline::write(site.buffer_id,
+            bq::fast_inline::fast_meta_by_site { &site }, args_size, fill);
         BQ_UNLIKELY_IF(result > 0)
         {
             bq::api::__api_fast_log_notify_low_space(&site);
@@ -534,11 +535,7 @@ namespace bq {
     // A generated category type (log.cat.xxx) derives from log_category_base<CAT_INDEX>.
     template <typename T>
     struct fast_log_category_index {
-        template <uint32_t CAT_INDEX>
-        static char (&pick(const bq::log_category_base<CAT_INDEX>*))[CAT_INDEX + 2];
-        static char (&pick(...))[1];
-        // 0: not a category, otherwise category index + 1
-        static constexpr uint32_t tag = static_cast<uint32_t>(sizeof(pick(static_cast<const bq::decay_t<T>*>(nullptr)))) - 1;
+        static constexpr uint32_t tag = bq::log_category_index<T>::value;
     };
 
     // BQ_LOG_FAST_*(log, format, args...): category 0
@@ -663,3 +660,8 @@ namespace bq {
         alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
         bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::fatal, __VA_ARGS__);    \
     } while (false)
+
+#if defined(BQ_CPP_20)
+// after class log is complete: defines fast_info_detail::fast_impl used by log::fast_*
+#include "bq_log/misc/bq_log_fast_info.h"
+#endif

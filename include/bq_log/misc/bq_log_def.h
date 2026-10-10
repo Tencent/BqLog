@@ -154,6 +154,16 @@ namespace bq {
     struct log_category_base {
     };
 
+    // A generated category type (log.cat.xxx) derives from log_category_base<CAT_INDEX>.
+    // 0: not a category, otherwise category index + 1.
+    template <typename T>
+    struct log_category_index {
+        template <uint32_t CAT_INDEX>
+        static char (&pick(const bq::log_category_base<CAT_INDEX>*))[CAT_INDEX + 2];
+        static char (&pick(...))[1];
+        static constexpr uint32_t value = static_cast<uint32_t>(sizeof(pick(static_cast<const bq::decay_t<T>*>(nullptr)))) - 1;
+    };
+
     enum class log_arg_type_enum : uint8_t {
         unsupported_type,
         null_type,

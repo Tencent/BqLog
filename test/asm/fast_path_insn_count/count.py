@@ -26,7 +26,9 @@ def parse_gcc_style(asm_text):
         line = raw.strip()
         if not line:
             continue
-        m = re.match(r"^(_Z\d+probe_\w+|probe_\w+):$", line)
+        # a label line ending in ':' that mentions probe_ (covers _Z...probe, __Z...probe on
+        # Apple/32-bit Mingw, and unadorned probe_ symbols)
+        m = re.match(r"^((?:_Z\d+)?(?:__)?probe_\w+):$", line)
         if m:
             current = m.group(1)
             results.setdefault(current, 0)
@@ -45,11 +47,20 @@ def parse_gcc_style(asm_text):
 
 
 def main():
+    # "--extra -mcmodel=small" (space separated) makes argparse treat the value as an unknown
+    # option and fail with "expected one argument". Normalize it to the "--extra=..." form
+    # before parsing so both spellings work.
+    argv = sys.argv[1:]
+    for i, token in enumerate(argv):
+        if token == "--extra" and i + 1 < len(argv):
+            argv[i] = "--extra=" + argv[i + 1]
+            del argv[i + 1]
+            break
     parser = argparse.ArgumentParser()
     parser.add_argument("--cxx", default="g++")
     parser.add_argument("--std", default="c++20")
     parser.add_argument("--extra", default="")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     probe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "probe.cpp")
     with tempfile.TemporaryDirectory() as tmp:

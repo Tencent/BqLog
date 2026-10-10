@@ -23,12 +23,18 @@
 #include "bq_log/misc/bq_log_def.h"
 #include "bq_log/misc/bq_log_api.h"
 #include "bq_log/misc/bq_log_wrapper_tools.h"
+#if defined(BQ_CPP_20)
+#include "bq_log/misc/bq_log_fixed_format.h"
+#endif
 
 namespace bq {
     class log {
     private:
 #if defined(BQ_UNIT_TEST)
         friend class test::test_fast_log;
+#endif
+#if defined(BQ_CPP_20)
+        friend struct fast_info_detail::log_access;
 #endif
         const uint32_t* merged_log_level_bitmap_;
         const uint8_t* categories_mask_array_;
@@ -292,6 +298,88 @@ namespace bq {
         bool fatal(const STR& log_content) const;
         template <typename STR, bq::enable_if_t<bq::log::is_bq_log_format<STR>::value, bool> = true, typename... Args>
         bool fatal(const STR& log_format_content, const Args&... args) const;
+
+#if defined(BQ_CPP_20)
+    public:
+        /// Macro-free fast log: the format string is a compile-time template argument and the
+        /// level and buffer come from this log, so any log works, including invalid ones.
+        /// A site is shared by (format, level, category, argument types).
+        template <bq::fixed_format F, typename... Args, bq::enable_if_t<!(bq::fast_info_detail::is_category<Args>::value || ...), bool> = true>
+        bq_forceinline bool fast_info(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::info, 0>(*this, args...);
+        }
+        template <bq::fixed_format F, typename... Args, bq::enable_if_t<!(bq::fast_info_detail::is_category<Args>::value || ...), bool> = true>
+        bq_forceinline bool fast_verbose(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::verbose, 0>(*this, args...);
+        }
+        template <bq::fixed_format F, typename... Args, bq::enable_if_t<!(bq::fast_info_detail::is_category<Args>::value || ...), bool> = true>
+        bq_forceinline bool fast_debug(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::debug, 0>(*this, args...);
+        }
+        template <bq::fixed_format F, typename... Args, bq::enable_if_t<!(bq::fast_info_detail::is_category<Args>::value || ...), bool> = true>
+        bq_forceinline bool fast_warning(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::warning, 0>(*this, args...);
+        }
+        template <bq::fixed_format F, typename... Args, bq::enable_if_t<!(bq::fast_info_detail::is_category<Args>::value || ...), bool> = true>
+        bq_forceinline bool fast_error(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::error, 0>(*this, args...);
+        }
+        template <bq::fixed_format F, typename... Args, bq::enable_if_t<!(bq::fast_info_detail::is_category<Args>::value || ...), bool> = true>
+        bq_forceinline bool fast_fatal(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::fatal, 0>(*this, args...);
+        }
+
+        // a category that does not belong to this log class (bq::log itself owns none): the
+        // generated classes shadow this with an overload per category they do own
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bool fast_verbose(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
+        {
+            static_assert(bq::fast_info_detail::always_false<Args...>::value,
+                "fast_*: this category does not belong to this log class");
+            return false;
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bool fast_debug(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
+        {
+            static_assert(bq::fast_info_detail::always_false<Args...>::value,
+                "fast_*: this category does not belong to this log class");
+            return false;
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bool fast_info(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
+        {
+            static_assert(bq::fast_info_detail::always_false<Args...>::value,
+                "fast_*: this category does not belong to this log class");
+            return false;
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bool fast_warning(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
+        {
+            static_assert(bq::fast_info_detail::always_false<Args...>::value,
+                "fast_*: this category does not belong to this log class");
+            return false;
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bool fast_error(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
+        {
+            static_assert(bq::fast_info_detail::always_false<Args...>::value,
+                "fast_*: this category does not belong to this log class");
+            return false;
+        }
+        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
+        bool fast_fatal(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
+        {
+            static_assert(bq::fast_info_detail::always_false<Args...>::value,
+                "fast_*: this category does not belong to this log class");
+            return false;
+        }
+#endif
     };
 
     class category_log : public bq::log {
