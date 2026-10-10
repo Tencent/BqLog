@@ -255,17 +255,12 @@ jobs:
             ${{ matrix.os.label == 'ubuntu' && '-DBQ_LEGACY_SRC=/tmp/bq260' || '' }}
           cmake --build build_mi -j
 
-      - name: Run multi-instance cases (ubuntu, with legacy and dual runtime)
-        if: ${{ matrix.os.label == 'ubuntu' }}
+      # ctest on every platform: it resolves the worker path and the per-case output
+      # directory itself, so no shell-specific find/$(...) is needed (the previous
+      # bash-ism did not run under the default pwsh on Windows)
+      - name: Run multi-instance cases
         run: |
-          ctest --test-dir build_mi --output-on-failure -R multi_instance
-
-      - name: Run multi-instance cases (windows/macos)
-        if: ${{ matrix.os.label != 'ubuntu' }}
-        run: |
-          python test/multi_instance/run.py \
-            --worker $(find build_mi -name 'bq_multi_instance_worker*' -type f -perm -u+x | head -1) \
-            --out build_mi/mi_out
+          ctest --test-dir build_mi --output-on-failure -R multi_instance -C Release
 
   #Linux-ubuntu
   ubuntu:
@@ -313,9 +308,14 @@ jobs:
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
-          cd build/test/linux  
+          cd build/test/linux
           chmod +x *.sh
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+
+      - name: fast_info compile-fail cases
+        if: ${{ matrix.cpp_ver == '20' }}
+        run: |
+          python3 test/compile_fail/run_compile_fail.py --cxx ${{ matrix.cc == 'clang' && 'clang++' || 'g++' }} --std c++20
 
   #linux-debian
   debian:

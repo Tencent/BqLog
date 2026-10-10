@@ -85,6 +85,14 @@ ask_yes_no() {
     esac
   done
 }
+# Non-interactive (CI) runs must not block on a prompt: default the optional feature to OFF.
+ask_yes_no_or_off() {
+  if [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${GITHUB_ACTIONS:-}" ]; then
+    ask_yes_no "$1"
+  else
+    echo "OFF"
+  fi
+}
 ask_build_lib_type() {
   echo
   echo "Select library type:"
@@ -163,7 +171,9 @@ else
   APPLE_LIB_FORMAT="$(normalize_format "$ARG5")"
   GO_SUPPORT="$(normalize_onoff "$ARG6")"
 fi
-[[ -z "${GO_SUPPORT}" ]] && GO_SUPPORT="OFF"
+# GO_SUPPORT is left unset when the arguments did not carry it: the caller prompts for it
+# (or defaults to OFF when non-interactive). Defaulting it to OFF here would make that prompt
+# unreachable.
 
 echo "Parsed params:"
 echo "  ACTION:            ${ACTION:-}"
@@ -352,11 +362,12 @@ rm -rf "../../../install"
 # Dispatch
 case "$ACTION" in
   all)
-    # If CLI provided ON/OFF, use it; otherwise prompt
-    [[ -z "${JAVA_SUPPORT:-}"     ]] && JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
-    [[ -z "${NODE_API_SUPPORT:-}" ]] && NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
-    [[ -z "${PYTHON_SUPPORT:-}" ]] && PYTHON_SUPPORT="$(ask_yes_no "Enable Python (CPython C Extension) support?")"
-    [[ -z "${GO_SUPPORT:-}" ]] && GO_SUPPORT="$(ask_yes_no "Enable Go (cgo) support?")"
+    # If CLI provided ON/OFF, use it; otherwise prompt (or default OFF when non-interactive,
+    # e.g. CI, where a prompt would block the build)
+    [[ -z "${JAVA_SUPPORT:-}"     ]] && JAVA_SUPPORT="$(ask_yes_no_or_off "Enable Java/JNI support?")"
+    [[ -z "${NODE_API_SUPPORT:-}" ]] && NODE_API_SUPPORT="$(ask_yes_no_or_off "Enable Node-API (Node.js) support?")"
+    [[ -z "${PYTHON_SUPPORT:-}" ]] && PYTHON_SUPPORT="$(ask_yes_no_or_off "Enable Python (CPython C Extension) support?")"
+    [[ -z "${GO_SUPPORT:-}" ]] && GO_SUPPORT="$(ask_yes_no_or_off "Enable Go (cgo) support?")"
     BUILD_LIB_TYPE_ALL="${BUILD_LIB_TYPE:-both}"
     if [[ "$BUILD_LIB_TYPE_ALL" == "dynamic_lib" ]]; then
       # dynamic only: respect NODE_API rule (same logic as build_all_combos)

@@ -100,12 +100,35 @@ exit /b 0
 rem ================= helpers: prompts and normalization =================
 
 :ensure_common_params
-if not defined ARCH_PARAM call :ask_arch ARCH_PARAM
-if not defined COMPILER_TYPE call :ask_compiler COMPILER_TYPE
-if not defined JAVA_SUPPORT call :ask_yes_no "Enable Java/JNI support?" JAVA_SUPPORT
-if not defined NODE_API_SUPPORT call :ask_yes_no "Enable Node-API (Node.js) support?" NODE_API_SUPPORT
-if not defined PYTHON_SUPPORT call :ask_yes_no "Enable Python (CPython C Extension) support?" PYTHON_SUPPORT
-if not defined GO_SUPPORT call :ask_yes_no "Enable Go (cgo) support?" GO_SUPPORT
+rem Non-interactive (CI) runs cannot answer prompts: default the optional features to OFF and
+rem the required ones to native/msvc, instead of blocking on `choice` forever.
+set "BQ_INTERACTIVE=1"
+if not "%CI%"=="" set "BQ_INTERACTIVE=0"
+if not "%GITHUB_ACTIONS%"=="" set "BQ_INTERACTIVE=0"
+if not defined ARCH_PARAM call :ask_or_default_arch ARCH_PARAM
+if not defined COMPILER_TYPE call :ask_or_default_compiler COMPILER_TYPE
+if not defined JAVA_SUPPORT call :ask_yes_no_or_off "Enable Java/JNI support?" JAVA_SUPPORT
+if not defined NODE_API_SUPPORT call :ask_yes_no_or_off "Enable Node-API (Node.js) support?" NODE_API_SUPPORT
+if not defined PYTHON_SUPPORT call :ask_yes_no_or_off "Enable Python (CPython C Extension) support?" PYTHON_SUPPORT
+if not defined GO_SUPPORT call :ask_yes_no_or_off "Enable Go (cgo) support?" GO_SUPPORT
+goto :eof
+
+:ask_or_default_arch
+set "OUTVAR=%~1"
+if "%BQ_INTERACTIVE%"=="0" ( set "%OUTVAR%=native" & goto :eof )
+call :ask_arch %1
+goto :eof
+
+:ask_or_default_compiler
+set "OUTVAR=%~1"
+if "%BQ_INTERACTIVE%"=="0" ( set "%OUTVAR%=msvc" & goto :eof )
+call :ask_compiler %1
+goto :eof
+
+:ask_yes_no_or_off
+set "OUTVAR=%~2"
+if "%BQ_INTERACTIVE%"=="0" ( set "%OUTVAR%=OFF" & goto :eof )
+call :ask_yes_no %1 %2
 goto :eof
 
 :ensure_arch_only

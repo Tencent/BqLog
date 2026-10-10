@@ -9,3 +9,23 @@ node_modules/
 /package.json
 
 .DS_Store
+
+# Test and tool run artifacts (produced by running the unit tests / demos from a build dir)
+/appender_test/
+/bqLog/
+/bqlog_mmap/
+/bqlog_mmap_test_*/
+/compressed_cache_test/
+/enc_output/
+/fast_mode_output/
+/property.properties
+/case_f_preview.txt
+/test_siso_*.mmap
+/test/multi_instance/mi_out/
+/build/build_mi/
+/build/mi_out/
+/build/tools_gen/
+/build/test/win64/MinGWProj_GCC/
+/build/test/win64/MinGWProj_GCC.*
+/build/test/win64/*.log
+/build/test/win64/*.txt
