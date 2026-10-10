@@ -217,8 +217,8 @@ int main(int argc, char** argv)
             }
         }
         if (die_after >= 0 && i + 1 == committed) {
-            // everything up to committed_seq is flushed and visible to the appender
-            log.force_flush();
+            // records up to committed_seq stay in the ring buffer / appender
+            // cache: the successor must recover them, so no force_flush here
             write_text_file("committed_" + id + ".json",
                 "{\"committed_seq\": " + std::to_string(committed) + "}");
             self_kill();

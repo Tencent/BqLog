@@ -316,11 +316,19 @@ namespace bq {
             return;
         }
 #if defined(BQ_LOG_BUFFER_DEBUG)
-        assert(handle.end_cursor_ == handle.current_cursor_ && "siso_buffer_batch_read_handle::return_batch_read_chunks called with not finished reading handle");
+        // rt_reading_cursor_cache_ stays at the batch start while the batch is
+        // being processed; only this return publishes the consumed position.
+        assert(handle.start_cursor_ == head_->rt_reading_cursor_cache_ && "invalid batch handle start cursor");
         assert(handle.start_cursor_ == head_->reading_cursor().load_relaxed() && "invalid batch handle start cursor");
-        assert(handle.end_cursor_ == head_->rt_reading_cursor_cache_ && "invalid batch handle end cursor");
+        assert(handle.current_cursor_ <= handle.end_cursor_ && "invalid batch handle current cursor");
         assert(handle.end_cursor_ == head_->rt_writing_cursor_cache_ && "invalid batch handle end cursor");
 #endif
+        // publish the consumed position: reading_cursor (the write-side view)
+        // and rt_reading_cursor_cache (the mmap recovery snapshot) move to
+        // current_cursor_, i.e. past the last record the appender has fully
+        // persisted. Crashing mid-batch replays the unprocessed tail instead
+        // of losing it.
+        head_->rt_reading_cursor_cache_ = handle.current_cursor_;
         head_->reading_cursor().store_release(head_->rt_reading_cursor_cache_);
     }
 

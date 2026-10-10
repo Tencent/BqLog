@@ -145,8 +145,10 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 last_cursor_ = current_cursor_;
 #endif
+                // advance the handle-local cursor only; rt_reading_cursor_cache_
+                // (the mmap recovery snapshot) must not move before the appender
+                // has persisted the record, otherwise a crash here loses it
                 current_cursor_ += current_block.to_chunk_head().block_num;
-                parent_->head_->rt_reading_cursor_cache_ = current_cursor_;
                 return handle;
             }
 
