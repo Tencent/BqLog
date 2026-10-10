@@ -61,6 +61,42 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 ---
 
+## 转义与续行
+
+值取这一行第一个 `=` 后面的内容（这一行没有 `=` 时取第一个 `:` 后面的内容），首尾空白会被去掉。
+
+值里的反斜杠只有三种用途：
+
+| 写法 | 结果 |
+|------|------|
+| 行尾的 `\` | 值续到下一行，见下文 |
+| `\n` | 换行 |
+| `\=`、`\:` | `=`、`:` 本身（值里含这两个字符时用） |
+
+`\n` 和续行不是一回事：`\n` 是转义，出现在值的任何位置都表示换行；续行只看反斜杠是不是**这一行的最后一个字符**。
+
+值以 `\` 结尾时会续到下一行：去掉这个 `\`，把下一行去掉首尾空白后接上来；那一行结尾又是 `\` 就继续接。所以下面这段
+
+```ini
+appenders_config.f.file_name=D:\logs\
+appenders_config.f.type=text_file
+```
+
+解析出来是 `file_name = D:\logsappenders_config.f.type=text_file`：下一行整行被拼了上去，`type` 这项就没了。也就是说，配置中间的值只要以 `\` 结尾，就会吃掉下面一行。
+
+行尾想写一个真正的反斜杠是没有转义写法的。Windows 路径要以 `\` 结尾，就把它放到配置的最后一行：
+
+```ini
+appenders_config.f.type=text_file
+appenders_config.f.file_name=D:\logs\
+```
+
+最后一行后面没有行可以接，`\` 就原样保留，`file_name` 是 `D:\logs\`。其它位置要么不写这个尾斜杠，要么改用 `/`。
+
+值为空时这一项会被丢掉：`key=` 不会产生 `key`；续行之后接成空值也一样，比如 `key=\` 后面跟一行只有空格。
+
+---
+
 ## 详细解释
 
 ### `appenders_config`

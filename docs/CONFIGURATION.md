@@ -61,6 +61,42 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 ---
 
+## Escaping and line continuation
+
+A value is everything after the first `=` on the line (if the line has no `=`, after the first `:`), with surrounding spaces removed.
+
+A backslash inside a value has three uses:
+
+| Written         | Result                                              |
+|-----------------|-----------------------------------------------------|
+| `\` at line end | The value continues on the next line, see below      |
+| `\n`            | A line break                                        |
+| `\=`, `\:`      | A literal `=` / `:`, for values that contain one     |
+
+`\n` and line continuation are not the same thing. `\n` is an escape and works anywhere in the value; continuation depends only on the backslash being the last character of the line.
+
+When a value ends with `\`, it continues on the next line: the `\` is dropped, the next line is trimmed and appended, and if that line also ends with `\` it continues again. So
+
+```ini
+appenders_config.f.file_name=D:\logs\
+appenders_config.f.type=text_file
+```
+
+parses as `file_name = D:\logsappenders_config.f.type=text_file`: the `\` is gone and the whole next line is glued onto the value, so `type` is lost. In the middle of a config, a value ending with `\` always eats the line below it.
+
+There is no escape for a real backslash at the end of a line. A Windows path that ends with `\` has to be on the last line of the config:
+
+```ini
+appenders_config.f.type=text_file
+appenders_config.f.file_name=D:\logs\
+```
+
+The last line has nothing to join, so the `\` stays and `file_name` is `D:\logs\`. Anywhere else, leave the trailing backslash out or use `/`.
+
+A key with an empty value is dropped: `key=` does not create `key`, and neither does a continuation that ends up empty (`key=\` followed by a line with only spaces).
+
+---
+
 ## Detailed explanation
 
 ### `appenders_config`
