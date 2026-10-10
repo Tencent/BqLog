@@ -23,9 +23,16 @@ namespace bq {
     namespace test {
         class test_meta_registry : public test_base {
         private:
+            // Claim the process instance when it has not been claimed yet: the recovery tests need
+            // a real instance (a meta directory to write segments into). In the full suite some
+            // other test claims it first; running this class alone (--meta-only) must not silently
+            // skip everything, which is how the continuation-segment bug went unnoticed.
             static bool instance_available()
             {
-                return bq::instance_storage::get() != nullptr;
+                if (bq::instance_storage::get()) {
+                    return true;
+                }
+                return bq::instance_storage::acquire() != nullptr;
             }
 
             static bq::string meta_dir()
@@ -199,9 +206,14 @@ namespace bq {
                 char name_a[32];
                 char name_b[32];
                 char name_c[32];
+                char name_ok_seg[32];
+                char name_old_seg[32];
                 snprintf(name_a, sizeof(name_a), "%" PRIu16 ".mmap", static_cast<uint16_t>(cur - 17));
                 snprintf(name_b, sizeof(name_b), "%" PRIu16 ".mmap", static_cast<uint16_t>(cur - 16));
                 snprintf(name_c, sizeof(name_c), "%" PRIu16 ".mmap", cur);
+                // continuation segments of the same versions: an in-window one must survive
+                snprintf(name_ok_seg, sizeof(name_ok_seg), "%" PRIu16 "_1.mmap", static_cast<uint16_t>(cur - 16));
+                snprintf(name_old_seg, sizeof(name_old_seg), "%" PRIu16 "_1.mmap", static_cast<uint16_t>(cur - 17));
                 // drop the registry's journal segments first: they hold <cur>.mmap
                 // open exclusively and this test must be able to re-create that file
                 // (as if left behind by a wrapped earlier run); the next registration
@@ -210,6 +222,8 @@ namespace bq {
                 make_file(name_a);
                 make_file(name_b);
                 make_file(name_c);
+                make_file(name_ok_seg);
+                make_file(name_old_seg);
                 make_file("garbage.txt");
                 make_file("12_34_56.mmap"); // unparseable name
                 bq::meta_registry::instance().test_cleanup_expired();
@@ -219,10 +233,19 @@ namespace bq {
                     "cleanup: version at window edge (cur-16) kept");
                 result.add_result(!bq::file_manager::is_file(bq::file_manager::combine_path(dir, name_c)),
                     "cleanup: current version file removed (stale from a wrapped earlier run)");
+                result.add_result(bq::file_manager::is_file(bq::file_manager::combine_path(dir, name_ok_seg)),
+                    "cleanup: continuation segment in window (cur-16)_1 kept");
+                result.add_result(!bq::file_manager::is_file(bq::file_manager::combine_path(dir, name_old_seg)),
+                    "cleanup: continuation segment outside window (cur-17)_1 removed");
                 result.add_result(!bq::file_manager::is_file(bq::file_manager::combine_path(dir, "garbage.txt")),
                     "cleanup: garbage name removed");
                 result.add_result(!bq::file_manager::is_file(bq::file_manager::combine_path(dir, "12_34_56.mmap")),
                     "cleanup: unparseable segment name removed");
+                // a name that looks like a segment but is not ("<v>_x.mmap") is still garbage
+                make_file("11_x.mmap");
+                bq::meta_registry::instance().test_cleanup_expired();
+                result.add_result(!bq::file_manager::is_file(bq::file_manager::combine_path(dir, "11_x.mmap")),
+                    "cleanup: non-numeric segment index removed");
             }
 
             // T06 §3.5: wraparound distances

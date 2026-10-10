@@ -128,9 +128,16 @@ namespace bq {
 
     const fast_format_meta* meta_registry::append_locked(const uint8_t* entry, uint32_t entry_size, uint64_t checksum)
     {
-        // sync the journal to the current run before dedupe: a dedupe hit must not
-        // skip re-journaling existing entries into a new run's segments
+#if defined(BQ_UNIT_TEST)
+        // An in-process relaunch (test_begin_new_run) bumps the run version without going through
+        // enable_journal, so the journal must be re-synced here for the dedupe path below. In
+        // production the run version only changes across process restarts, where this registry is
+        // rebuilt from scratch; enable_journal already opened the run's segment, so skipping the
+        // sync keeps every registration from taking the instance lock.
         const bool journal_ok = !journal_enabled_ || journal_sync_run_locked();
+#else
+        const bool journal_ok = true;
+#endif
         // dedupe: same checksum and same bytes
         auto list_iter = index_.find(checksum);
         if (list_iter != index_.end()) {
@@ -162,14 +169,12 @@ namespace bq {
             return false;
         }
         uint32_t size = BQ_LOG_META_SEGMENT_SIZE;
-        // a single entry larger than a fresh segment gets its own exact-size segment
+        // An entry that does not fit a fresh segment gets a dedicated segment sized exactly to it,
+        // so the oversized segment holds that one entry and nothing else (see segment_append_locked,
+        // which never appends to a dedicated segment again).
         const uint32_t need = meta_journal_head_size + min_capacity;
-        while (size < need) {
-            if (size > (UINT32_MAX >> 1)) {
-                size = need;
-                break;
-            }
-            size <<= 1;
+        if (need > size) {
+            size = need;
         }
         char file_name[32];
         if (journal_next_segment_index_ == 0) {
@@ -226,10 +231,11 @@ namespace bq {
         {
             auto& last = journal_segments_[journal_segments_.size() - 1];
             auto& head = *reinterpret_cast<meta_journal_head*>(last->data());
-            // max capacity derives from this segment's real size (an oversized
-            // single-entry segment is larger than BQ_LOG_META_SEGMENT_SIZE)
+            // a dedicated oversized segment (sized exactly for one big entry) must not take
+            // ordinary entries: only a fresh, exactly-fitting segment holds its single entry
+            const bool dedicated = last->size() > BQ_LOG_META_SEGMENT_SIZE;
             const uint32_t max_committed = static_cast<uint32_t>(last->size() - meta_journal_head_size);
-            if (head.committed_size + entry_size > max_committed) {
+            if (dedicated || head.committed_size + entry_size > max_committed) {
                 if (!journal_open_segment_locked(entry_size)) {
                     return false;
                 }
@@ -302,26 +308,26 @@ namespace bq {
         for (const auto& name : bq::file_manager::get_sub_dirs_and_files_name(meta_dir)) {
             bool parsed = false;
             uint64_t v = 0;
-            size_t dot = 0;
-            // accepted names: "<v>.mmap" and "<v>_<n>.mmap", v decimal
+            // accepted names: "<v>.mmap" and "<v>_<n>.mmap", both decimal; anything else is garbage.
+            // A continuation segment ("<v>_<n>.mmap") must parse its version the same way, otherwise
+            // it is deleted as unparseable even when it is inside the recovery window.
             if (name.end_with(".mmap") && !name.is_empty()) {
-                dot = name.size() - strlen(".mmap");
+                const size_t dot = name.size() - strlen(".mmap");
                 if (dot > 0) {
-                    bool all_digits = true;
-                    for (size_t i = 0; i < dot; ++i) {
-                        if (name[i] < '0' || name[i] > '9') {
-                            if (name[i] == '_') {
-                                break; // "<v>_<n>.mmap": stop at the underscore
-                            }
-                            all_digits = false;
-                            break;
+                    char* end_ptr = nullptr;
+                    errno = 0;
+                    v = strtoull(name.c_str(), &end_ptr, 10);
+                    if (errno != ERANGE && end_ptr != name.c_str() && v <= UINT16_MAX) {
+                        if (end_ptr == name.c_str() + dot) {
+                            parsed = true; // "<v>.mmap"
+                        } else if (*end_ptr == '_') {
+                            // "<v>_<n>.mmap": parse the segment index and require it to end at ".mmap"
+                            char* seg_end = nullptr;
+                            errno = 0;
+                            const unsigned long long seg = strtoull(end_ptr + 1, &seg_end, 10);
+                            parsed = errno != ERANGE && seg_end != end_ptr + 1
+                                && seg_end == name.c_str() + dot && seg <= UINT16_MAX;
                         }
-                    }
-                    if (all_digits) {
-                        char* end_ptr = nullptr;
-                        errno = 0;
-                        v = strtoull(name.c_str(), &end_ptr, 10);
-                        parsed = errno != ERANGE && end_ptr == name.c_str() + dot && v <= UINT16_MAX;
                     }
                 }
             }
@@ -355,9 +361,14 @@ namespace bq {
         item->loaded = false;
         auto* inst = instance_storage::get();
         const bq::string meta_dir = inst ? inst->meta_dir() : bq::string();
-        bool load_ok = true;
+        // loaded means the version is usable: segment 0 is either absent (empty version, as
+        // before) or parsed cleanly. A failure in segment 0 makes the version unusable; a
+        // failure in a later segment only drops that segment and the ones after it, so entries
+        // already read from earlier segments stay recoverable.
+        bool loaded = true;
+        bool stop = false;
         if (inst && bq::file_manager::is_dir(meta_dir)) {
-            for (uint16_t n = 0; load_ok; ++n) {
+            for (uint16_t n = 0; !stop; ++n) {
                 char file_name[32];
                 if (n == 0) {
                     snprintf(file_name, sizeof(file_name), "%" PRIu16 ".mmap", version);
@@ -366,13 +377,14 @@ namespace bq {
                 }
                 const bq::string path = bq::file_manager::combine_path(meta_dir, file_name);
                 if (!bq::file_manager::is_file(path)) {
-                    break;
+                    break; // no more segments; the ones read so far stand
                 }
                 const uint64_t file_size = bq::file_manager::get_file_size(path);
                 auto segment = bq::make_unique<normal_buffer>(
                     static_cast<size_t>(file_size), path, false);
                 if (!segment->is_memory_mapped() || file_size < meta_journal_head_size) {
-                    load_ok = false;
+                    loaded = loaded && n != 0;
+                    stop = true;
                     break;
                 }
                 const auto& head = *reinterpret_cast<const meta_journal_head*>(segment->data());
@@ -381,14 +393,17 @@ namespace bq {
                     || head.run_version != version
                     || head.segment_index != n
                     || head.committed_size > file_size - meta_journal_head_size
-                    // a segment from a run outside the recovery window is stale
-                    || (inst && static_cast<uint16_t>(inst->run_serial() - head.run_serial) > bq::MAX_RECOVERY_VERSION_RANGE)) {
-                    load_ok = false;
+                    // a segment from a run outside the recovery window is stale. run_serial is a
+                    // uint64 that never wraps, so compare it as such (matching log_buffer), rather
+                    // than truncating the difference to uint16.
+                    || (inst && inst->run_serial() - head.run_serial > bq::MAX_RECOVERY_VERSION_RANGE)) {
+                    loaded = loaded && n != 0;
+                    stop = true;
                     break;
                 }
                 item->segments.push_back(bq::move(segment));
-                auto& loaded = *item->segments[item->segments.size() - 1];
-                const auto* cursor = static_cast<const uint8_t*>(loaded.data()) + meta_journal_head_size;
+                const auto& loaded_seg = *item->segments[item->segments.size() - 1];
+                const auto* cursor = static_cast<const uint8_t*>(loaded_seg.data()) + meta_journal_head_size;
                 const auto* end = cursor + head.committed_size;
                 while (cursor + meta_journal_entry_head_size <= end) {
                     const auto& entry_head = *reinterpret_cast<const meta_journal_entry_head*>(cursor);
@@ -407,16 +422,17 @@ namespace bq {
                     cursor += entry_head.entry_size;
                 }
                 if (cursor != end) {
-                    // a torn or structurally invalid entry invalidates the rest of this segment
-                    // and all later segments
-                    load_ok = false;
+                    // a torn or structurally invalid entry stops the walk here; entries already
+                    // read from this and earlier segments stay in the map
+                    loaded = loaded && n != 0;
+                    stop = true;
                     break;
                 }
             }
         }
-        item->loaded = load_ok;
+        item->loaded = loaded;
         recovered_.push_back(bq::move(item));
-        return load_ok ? recovered_[recovered_.size() - 1].operator->() : nullptr;
+        return loaded ? recovered_[recovered_.size() - 1].operator->() : nullptr;
     }
 
     const fast_format_meta* meta_registry::resolve_recovered(uint16_t version, uint64_t arena_addr)

@@ -61,8 +61,8 @@ namespace bq {
             format = reinterpret_cast<const fast_format_meta*>(
                 static_cast<uintptr_t>(head.format_meta_addr));
         } else {
-            format = reinterpret_cast<const fast_format_meta*>(
-                buffer.resolve_fast_log_meta(version, head.format_meta_addr));
+            // resolve_fast_log_meta already returns the meta pointer; no cast needed
+            format = buffer.resolve_fast_log_meta(version, head.format_meta_addr);
         }
         if (!format || format->head.kind != fast_meta_kind::format) {
             return false;
