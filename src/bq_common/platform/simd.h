@@ -11,7 +11,6 @@
 #pragma once
 
 #include "bq_common/bq_common_public_include.h"
-#include "bq_common/platform/inline_intrinsics.h"
 
 #if defined(BQ_X86)
 #ifdef BQ_MSVC

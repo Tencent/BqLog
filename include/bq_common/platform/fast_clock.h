@@ -12,7 +12,6 @@
 // Per-thread hardware counter clock, re-anchored to the wall clock every BQ_FAST_CLOCK_RESYNC_INTERVAL_MS.
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
-#include "bq_common/platform/inline_intrinsics.h"
 #if defined(BQ_MSVC)
 #include <intrin.h>
 #endif

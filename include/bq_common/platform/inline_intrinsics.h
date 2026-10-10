@@ -9,8 +9,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-// Small integer intrinsics, safe to include from public headers. Each falls back to its _portable version.
-#include "bq_common/bq_common_public_include.h"
+// Small integer intrinsics, included by bq_common_public_include.h. Each falls back to its _portable version.
+#include <stdint.h>
+#include "bq_common/platform/macros.h"
 #if defined(BQ_MSVC)
 #include <intrin.h>
 #endif

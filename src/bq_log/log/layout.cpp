@@ -1472,6 +1472,24 @@ namespace bq {
         return len - (radix_end - i - 1);
     }
 
+    // literal formats only, the library builds with -Wformat=2; returns 0 on failure
+    static uint32_t format_decimal_snprintf(char* buf, size_t buf_size, bool e_style, bool upper, bool plus, uint32_t precision, double value)
+    {
+        const int32_t p = static_cast<int32_t>(precision);
+        int32_t written;
+        if (!e_style) {
+            written = plus ? snprintf(buf, buf_size, "%+.*f", p, value) : snprintf(buf, buf_size, "%.*f", p, value);
+        } else if (upper) {
+            written = plus ? snprintf(buf, buf_size, "%+.*E", p, value) : snprintf(buf, buf_size, "%.*E", p, value);
+        } else {
+            written = plus ? snprintf(buf, buf_size, "%+.*e", p, value) : snprintf(buf, buf_size, "%.*e", p, value);
+        }
+        if (written <= 0) {
+            return 0;
+        }
+        return normalize_radix(buf, bq::min_value(static_cast<uint32_t>(written), static_cast<uint32_t>(buf_size - 1)));
+    }
+
     void layout::insert_decimal(double value, uint32_t default_precision)
     {
         const bool e_style = (format_info_.type == 'e');
@@ -1533,33 +1551,21 @@ namespace bq {
             return;
         }
 
-        char fmt[8];
-        uint32_t fmt_len = 0;
-        fmt[fmt_len++] = '%';
-        if (format_info_.sign == '+') {
-            fmt[fmt_len++] = '+';
-        }
-        fmt[fmt_len++] = '.';
-        fmt[fmt_len++] = '*';
-        fmt[fmt_len++] = e_style ? (format_info_.upper ? 'E' : 'e') : 'f';
-        fmt[fmt_len] = '\0';
         char buf[512];
-        int32_t written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(precision), value);
-        if (written <= 0) {
+        uint32_t len = format_decimal_snprintf(buf, sizeof(buf), e_style, format_info_.upper, format_info_.sign == '+', precision, value);
+        if (len == 0) {
             return;
         }
-        uint32_t len = normalize_radix(buf, bq::min_value(static_cast<uint32_t>(written), static_cast<uint32_t>(sizeof(buf) - 1)));
         if (!e_style && format_info_.width > 0) {
             const char* dot = static_cast<const char*>(memchr(buf, '.', len));
             const uint32_t int_width = dot ? static_cast<uint32_t>(dot - buf) : len;
             if (format_info_.width < precision + 1 + int_width) {
                 const uint32_t fitted = format_info_.width > int_width ? format_info_.width - int_width - 1 : 0;
                 if (fitted != precision) {
-                    written = snprintf(buf, sizeof(buf), fmt, static_cast<int32_t>(fitted), value);
-                    if (written <= 0) {
+                    len = format_decimal_snprintf(buf, sizeof(buf), e_style, format_info_.upper, format_info_.sign == '+', fitted, value);
+                    if (len == 0) {
                         return;
                     }
-                    len = normalize_radix(buf, bq::min_value(static_cast<uint32_t>(written), static_cast<uint32_t>(sizeof(buf) - 1)));
                 }
             }
         }
