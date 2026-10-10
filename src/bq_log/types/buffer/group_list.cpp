@@ -164,11 +164,13 @@ namespace bq {
         , max_block_count_per_group_(max_block_count_per_group)
         , current_group_index_(0)
     {
-        bq::string memory_map_folder = config_.storage ? config_.storage->hp_dir() : "";
-        if (!config_.need_recovery) {
-            // non-recovery logs must not touch the disk
+        // a recovery log without storage has no mmap directory to work in: without this, the
+        // folder would normalize to "./" and the code below would walk the working directory and
+        // dereference a null storage. Non-recovery logs must not touch the disk either.
+        if (!config_.need_recovery || !config_.storage) {
             return;
         }
+        const bq::string memory_map_folder = config_.storage->hp_dir();
         if (bq::file_manager::is_file(memory_map_folder)) {
             bq::file_manager::remove_file_or_dir(memory_map_folder);
         }

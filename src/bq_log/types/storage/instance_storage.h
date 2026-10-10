@@ -61,6 +61,9 @@ namespace bq {
         // bq::make_unique instantiates placement new, so the ctor can't be private
         instance_storage() = default;
         ~instance_storage(); // unlock_instance_file
+        // one instance per process: copying would duplicate the lock handle and the root path
+        instance_storage(const instance_storage&) = delete;
+        instance_storage& operator=(const instance_storage&) = delete;
 
     private:
         uint32_t index_ = 0;

@@ -34,7 +34,6 @@ namespace bq {
         bq::string os_path(uint64_t index) const; // dir/os/<index>.mmap
         bq::string appender_path(const bq::string& appender_name) const; // dir/appenders/<escaped appender>.mmap
         void remove(const bq::string& abs_path) const; // forwards to instance_storage::remove
-        void clear() const; // deletes everything under dir (keeps dir itself)
 
     private:
         bq::string dir_;

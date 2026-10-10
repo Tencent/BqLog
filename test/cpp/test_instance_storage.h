@@ -110,8 +110,26 @@ namespace bq {
                 }
                 inst1->remove(outside_file);
                 result.add_result(bq::file_manager::is_file(outside_file), "remove() refuses paths outside the instance root");
-                inst1->remove(inner);
-                result.add_result(!bq::file_manager::is_file(outside_file) || true, "remove() outside check leaves no side effects");
+                // a path that escapes the root lexically must also be refused
+                const bq::string escape = inst1->root() + "/../../bqlog_mmap_test_escape.txt";
+                auto h_escape = bq::file_manager::instance().open_file(TO_ABSOLUTE_PATH("bqlog_mmap_test_escape.txt", 0),
+                    bq::file_open_mode_enum::write | bq::file_open_mode_enum::auto_create);
+                if (h_escape.is_valid()) {
+                    bq::file_manager::instance().close_file(h_escape);
+                }
+                inst1->remove(escape);
+                result.add_result(bq::file_manager::is_file(TO_ABSOLUTE_PATH("bqlog_mmap_test_escape.txt", 0)),
+                    "remove() refuses a path that escapes the root with /../");
+                bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap_test_escape.txt", 0));
+                // a real file inside the root is removed
+                const bq::string inside_file = inst1->logs_dir() + "/remove_me.txt";
+                auto h_in = bq::file_manager::instance().open_file(inside_file, bq::file_open_mode_enum::write | bq::file_open_mode_enum::auto_create);
+                if (h_in.is_valid()) {
+                    bq::file_manager::instance().close_file(h_in);
+                }
+                result.add_result(bq::file_manager::is_file(inside_file), "remove(): inner file created");
+                inst1->remove(inside_file);
+                result.add_result(!bq::file_manager::is_file(inside_file), "remove() deletes a path inside the instance root");
                 bq::file_manager::remove_file_or_dir(outside_file);
                 bq::file_manager::remove_file_or_dir(outer);
             }

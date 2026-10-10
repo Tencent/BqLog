@@ -104,7 +104,11 @@ namespace bq {
 
     bool instance_storage::owns(const bq::string& abs_path) const
     {
-        return root_.size() > 0 && abs_path.size() > root_.size() && abs_path.find(root_) == 0 && abs_path.c_str()[root_.size()] == '/';
+        // compare the normalized form: a path such as "<root>/a/../../elsewhere" must not pass
+        // the prefix test just because it starts with root_
+        const bq::string normalized = bq::file_manager::get_lexically_path(abs_path);
+        return root_.size() > 0 && normalized.size() > root_.size() && normalized.find(root_) == 0
+            && normalized.c_str()[root_.size()] == '/';
     }
 
     void instance_storage::remove(const bq::string& abs_path) const
@@ -120,7 +124,7 @@ namespace bq {
     {
         auto sub_names = file_manager::get_sub_dirs_and_files_name(base);
         for (const auto& name : sub_names) {
-            if (name.find("mmap_") != 0) {
+            if (!name.begin_with("mmap_")) {
                 continue;
             }
             const bq::string dir = file_manager::combine_path(base, name);
@@ -128,7 +132,7 @@ namespace bq {
             bool in_use = false;
             auto lp_names = file_manager::get_sub_dirs_and_files_name(lp_dir);
             for (const auto& lp_name : lp_names) {
-                if (lp_name.size() < 5 || lp_name.find(".mmap") != lp_name.size() - 5) {
+                if (!lp_name.end_with(".mmap")) {
                     continue;
                 }
                 auto h = file_manager::instance().open_file(file_manager::combine_path(lp_dir, lp_name), file_open_mode_enum::read_write | file_open_mode_enum::exclusive);

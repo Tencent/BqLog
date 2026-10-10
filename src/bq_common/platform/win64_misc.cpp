@@ -227,8 +227,14 @@ namespace bq {
             }
             OVERLAPPED ov = { };
             if (!LockFileEx(h, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &ov)) {
+                const DWORD err = GetLastError();
                 CloseHandle(h);
-                return instance_lock_result::held_by_other;
+                // only a real contention is retryable; other failures (e.g. a volume without
+                // locking support) must not be retried forever
+                if (err == ERROR_LOCK_VIOLATION) {
+                    return instance_lock_result::held_by_other;
+                }
+                return instance_lock_result::error;
             }
             out_handle = h;
             return instance_lock_result::locked;

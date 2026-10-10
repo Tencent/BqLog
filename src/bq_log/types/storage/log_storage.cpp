@@ -95,11 +95,4 @@ namespace bq {
         inst->remove(abs_path);
     }
 
-    void log_storage::clear() const
-    {
-        auto names = file_manager::get_sub_dirs_and_files_name(dir_);
-        for (const auto& name : names) {
-            file_manager::remove_file_or_dir(file_manager::combine_path(dir_, name));
-        }
-    }
 }
