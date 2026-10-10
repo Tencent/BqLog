@@ -12,6 +12,7 @@
 // Per-thread hardware counter clock, re-anchored to the wall clock every BQ_FAST_CLOCK_RESYNC_INTERVAL_MS.
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
+#include "bq_common/platform/inline_intrinsics.h"
 #if defined(BQ_MSVC)
 #include <intrin.h>
 #endif
@@ -85,28 +86,6 @@ namespace bq {
 #elif defined(BQ_X86_64)
                 return __builtin_ia32_rdtsc();
 #else
-                return 0;
-#endif
-            }
-
-            bq_forceinline uint64_t mul_high(uint64_t a, uint64_t b, uint64_t& out_low)
-            {
-#if defined(BQ_MSVC) && defined(BQ_X86_64)
-                uint64_t high;
-                out_low = _umul128(a, b, &high);
-                return high;
-#elif defined(BQ_MSVC) && defined(BQ_ARM_64)
-                out_low = a * b;
-                return __umulh(a, b);
-#elif defined(__SIZEOF_INT128__)
-                __extension__ typedef unsigned __int128 uint128_type;
-                const uint128_type r = static_cast<uint128_type>(a) * b;
-                out_low = static_cast<uint64_t>(r);
-                return static_cast<uint64_t>(r >> 64);
-#else
-                (void)a;
-                (void)b;
-                out_low = 0;
                 return 0;
 #endif
             }
@@ -226,8 +205,8 @@ namespace bq {
                     }
                     counter = cache.base_counter_;
                 }
-                uint64_t fraction;
-                const uint64_t whole_ms = mul_high(counter - cache.base_counter_, cache.ms_mul_, fraction);
+                uint64_t whole_ms;
+                const uint64_t fraction = bq::bq_umul128(counter - cache.base_counter_, cache.ms_mul_, whole_ms);
                 const uint64_t sum = fraction + cache.base_ms_fraction_;
                 uint64_t epoch_ms = cache.base_epoch_ms_ + whole_ms + (sum < fraction ? 1U : 0U);
                 if (epoch_ms < cache.epoch_ms_ && cache.epoch_ms_ - epoch_ms <= max_backward_hold_ms) {

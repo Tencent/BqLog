@@ -15,9 +15,6 @@
 
 #include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
-#if defined(BQ_MSVC)
-#include <intrin.h>
-#endif
 
 namespace bq {
 
@@ -1400,28 +1397,6 @@ namespace bq {
         format_content_cursor = static_cast<uint32_t>(dst - &format_content[0]);
     }
 
-    static bq_forceinline uint64_t mul_64x64_to_128(uint64_t a, uint64_t b, uint64_t& high)
-    {
-#if defined(BQ_MSVC) && defined(BQ_X86_64)
-        return _umul128(a, b, &high);
-#elif defined(BQ_MSVC) && defined(BQ_ARM_64)
-        high = __umulh(a, b);
-        return a * b;
-#elif defined(__SIZEOF_INT128__)
-        __extension__ typedef unsigned __int128 uint128_type;
-        const uint128_type r = static_cast<uint128_type>(a) * b;
-        high = static_cast<uint64_t>(r >> 64);
-        return static_cast<uint64_t>(r);
-#else
-        const uint64_t a_lo = a & 0xFFFFFFFFULL, a_hi = a >> 32;
-        const uint64_t b_lo = b & 0xFFFFFFFFULL, b_hi = b >> 32;
-        const uint64_t p0 = a_lo * b_lo, p1 = a_lo * b_hi, p2 = a_hi * b_lo, p3 = a_hi * b_hi;
-        const uint64_t mid = (p0 >> 32) + (p1 & 0xFFFFFFFFULL) + (p2 & 0xFFFFFFFFULL);
-        high = p3 + (p1 >> 32) + (p2 >> 32) + (mid >> 32);
-        return (mid << 32) | (p0 & 0xFFFFFFFFULL);
-#endif
-    }
-
     // frac (0 <= frac < 1) times 10^precision, rounded half to even like printf; 10^precision means a carry
     static bq_forceinline uint64_t round_fraction(double frac, uint32_t precision, bool int_part_odd)
     {
@@ -1443,7 +1418,7 @@ namespace bq {
             return 0;
         }
         uint64_t hi;
-        const uint64_t lo = mul_64x64_to_128(mantissa, decimal_pow10[precision], hi);
+        const uint64_t lo = bq_umul128(mantissa, decimal_pow10[precision], hi);
         uint64_t q, rem_hi, rem_lo, half_hi, half_lo;
         if (shift >= 64) {
             const uint32_t s = shift - 64;
