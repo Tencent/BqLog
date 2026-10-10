@@ -484,14 +484,22 @@ namespace bq {
         while (true) {
             index++;
             if (index >= len || index > 10) {
+                // unsupported spec: drop any width or precision parsed so far, the
+                // output buffer is only grown for them when offset != 0
                 fi.offset = 0;
                 fi.width = 0;
+                width[0] = '0';
+                width[1] = 0;
+                precision = false;
                 break;
             }
             char c = static_cast<char>(style[index]);
             if (c == '{') {
                 fi.offset = 0;
                 fi.width = 0;
+                width[0] = '0';
+                width[1] = 0;
+                precision = false;
                 break;
             } else if (c == '}') {
                 fi.offset = static_cast<uint32_t>(index);
@@ -590,6 +598,7 @@ namespace bq {
         // fill and alignment
         uint32_t dis = format_content_cursor - write_begin_pos;
         if (dis < format_info_.width) {
+            expand_format_content_buff_size(write_begin_pos + format_info_.width);
             uint32_t fill_count = format_info_.width - dis;
             // alignment right
             if (format_info_.align == '>') {
