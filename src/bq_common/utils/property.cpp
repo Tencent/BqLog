@@ -68,18 +68,15 @@ namespace bq {
             if (kv.size() == 2) {
                 bq::string key = kv[0].trim();
                 bq::string value = kv[1].trim();
+                // A trailing backslash continues the value on the next line. On the last line there
+                // is nothing to continue with, so the backslash is kept (e.g. a Windows directory path).
+                while (!value.is_empty() && value[value.size() - 1] == '\\' && i + 1 < lines.size()) {
+                    i++;
+                    value = value.substr(0, value.size() - 1);
+                    value += lines[i].trim();
+                }
                 if (value.is_empty())
                     continue;
-                while (true) {
-                    if (value[value.size() - 1] != '\\') {
-                        break;
-                    }
-                    i++;
-                    if (i < lines.size()) {
-                        value = value.substr(0, value.size() - 1);
-                        value += lines[i].trim();
-                    }
-                }
                 value = value.replace("\\n", "\n");
                 value = value.replace("\\=", "=");
                 value = value.replace("\\:", ":");
