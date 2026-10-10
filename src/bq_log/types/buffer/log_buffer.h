@@ -30,6 +30,7 @@
 #include "bq_log/types/buffer/oversize_buffer.h"
 #include "bq_log/types/buffer/fast_meta_store.h"
 #include "bq_log/types/storage/log_storage.h"
+#include "bq_log/types/storage/instance_storage.h"
 
 namespace bq {
     // Owner thread of an HP block. From thread_name_len_ on, same layout as _log_entry_ext_head_def plus name.
@@ -51,19 +52,21 @@ namespace bq {
 #else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 #endif
-#if defined(BQ_UNIT_TEST)
-        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 5;
-#else
-        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 2;
-#endif
+        // how many past runs' data can still be recovered: versions
+        // version_ - MAX_RECOVERY_VERSION_RANGE + 1 .. version_ - 1 stay visible
+        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 16;
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL = 1000;
         static constexpr uint64_t OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS = 1000;
 
     public:
         BQ_PACK_BEGIN
         struct lp_buffer_head_misc {
-            uint16_t saved_version_;
+            uint16_t saved_version_; // run_version of the last run that wrote this LP
+            uint16_t padding_;
+            uint32_t reserved_;
+            uint64_t saved_run_serial_; // run_serial of the last run that wrote this LP
         } BQ_PACK_END
+        static_assert(sizeof(lp_buffer_head_misc) == 16, "lp_buffer_head_misc size");
 
             struct destruction_mark {
             bq::platform::spin_lock lock_;
@@ -319,6 +322,10 @@ namespace bq {
         context_verify_result verify_context(const context_head& context);
         context_verify_result verify_oversize_context(const context_head& parent_context, const context_head& oversize_context);
         void deregister_seq(const context_head& context);
+        // makes leftover data from an out-of-window (stale) run invisible:
+        // LP is re-initialized, HP block contexts are marked invalid, OS and
+        // fast meta files are deleted from storage
+        void discard_recovery_data();
         void prepare_and_fix_recovery_data();
 
         // For reading thread.

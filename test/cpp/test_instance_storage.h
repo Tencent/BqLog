@@ -20,6 +20,38 @@ namespace bq {
     namespace test {
         class test_instance_storage : public test_base {
         private:
+            static bool instance_available()
+            {
+                return bq::instance_storage::get() != nullptr;
+            }
+
+            // a minimal valid record: its size is the payload, content is opaque to the buffer
+            static void write_marker_record(log_buffer& buffer, uint64_t marker)
+            {
+                auto handle = buffer.alloc_write_chunk(sizeof(marker), bq::platform::high_performance_epoch_ms());
+                if (handle.result != enum_buffer_result_code::success) {
+                    buffer.commit_write_chunk(handle);
+                    return;
+                }
+                memcpy(handle.data_addr, &marker, sizeof(marker));
+                buffer.commit_write_chunk(handle);
+            }
+
+            static bool read_find_marker(log_buffer& buffer, uint64_t marker)
+            {
+                for (int32_t i = 0; i < 64; ++i) {
+                    auto chunk = buffer.read_chunk();
+                    if (chunk.result != enum_buffer_result_code::success) {
+                        return false;
+                    }
+                    bq::scoped_log_buffer_handle<log_buffer> guard(buffer, chunk);
+                    if (chunk.data_size == sizeof(marker) && memcmp(chunk.data_addr, &marker, sizeof(marker)) == 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             static void test_escape_name(test_result& result)
             {
                 result.add_result(bq::log_storage::escape_name("abc") == "abc", "escape_name lowercase unchanged");
@@ -155,6 +187,262 @@ namespace bq {
                 result.add_result(bq::file_manager::is_file(lp_path), "recovery=true log persists lp.mmap at logs/<escaped>/lp.mmap (%s)", lp_path.c_str());
             }
 
+            // T05: run version increments per run and never visits 0
+            static void test_run_version_increment(test_result& result)
+            {
+                auto* inst = bq::instance_storage::get();
+                if (!inst) {
+                    result.add_result(true, "run version increment (no instance claimed, mmap unsupported)");
+                    return;
+                }
+                inst->test_set_run(65534, 100);
+                inst->test_begin_new_run();
+                result.add_result(inst->run_version() == 65535, "run version 65534 -> 65535");
+                result.add_result(inst->run_serial() == 101, "run serial 100 -> 101");
+                inst->test_begin_new_run();
+                result.add_result(inst->run_version() == 1, "run version skips 0: 65535 -> 1");
+                result.add_result(inst->run_serial() == 102, "run serial 101 -> 102");
+            }
+
+            // T05: recovery keeps working when the 16-bit version crosses its wrap point.
+            // Each round writes a normal record and an oversize record (which lands in an
+            // OS file and carries its own version context), then dies unread; the next
+            // round must recover both exactly once. Covers the oversize wraparound bug.
+            static void test_run_version_wraparound_recovery(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                    return;
+                }
+                auto* inst = bq::instance_storage::get();
+                // force the version near the wrap point; serial stays monotonic so
+                // nothing in this run's other recovery logs is judged stale
+                inst->test_set_run(65530, inst->run_serial());
+                char name[96];
+                snprintf(name, sizeof(name), "instance_version_wrap_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                log_buffer_config config;
+                config.log_name = name;
+                config.log_categories_name = { "_default" };
+                config.need_recovery = true;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                constexpr uint64_t normal_marker_base = 0xABCD0000;
+                constexpr uint64_t oversize_marker_base = 0xEF010000;
+                constexpr uint32_t oversize_size = 128 * 1024;
+                uint32_t recovered_runs = 0;
+                for (uint32_t step = 0; step < 10; ++step) {
+                    {
+                        auto storage = bq::log_storage::create(config.log_name, true);
+                        config.storage = storage.get();
+                        log_buffer buffer(config);
+                        if (step > 0) {
+                            uint32_t normal_found = 0;
+                            uint32_t oversize_found = 0;
+                            while (true) {
+                                auto chunk = buffer.read_chunk();
+                                if (chunk.result != enum_buffer_result_code::success) {
+                                    break;
+                                }
+                                bq::scoped_log_buffer_handle<log_buffer> guard(buffer, chunk);
+                                if (chunk.data_size == sizeof(uint64_t)) {
+                                    uint64_t marker;
+                                    memcpy(&marker, chunk.data_addr, sizeof(marker));
+                                    if (marker == normal_marker_base + step - 1) {
+                                        ++normal_found;
+                                    }
+                                } else if (chunk.data_size == oversize_size) {
+                                    uint64_t marker;
+                                    memcpy(&marker, chunk.data_addr, sizeof(marker));
+                                    if (marker == oversize_marker_base + step - 1) {
+                                        ++oversize_found;
+                                    }
+                                }
+                            }
+                            if (normal_found == 1 && oversize_found == 1) {
+                                ++recovered_runs;
+                            } else {
+                                result.add_result(false, "version wraparound run %u: normal_found:%u oversize_found:%u (expect 1/1)",
+                                    step, normal_found, oversize_found);
+                            }
+                        }
+                        write_marker_record(buffer, normal_marker_base + step);
+                        bq::array<uint8_t> oversize;
+                        oversize.fill_uninitialized(oversize_size);
+                        memset(&oversize[0], 0, oversize_size);
+                        const uint64_t oversize_marker = oversize_marker_base + step;
+                        memcpy(&oversize[0], &oversize_marker, sizeof(oversize_marker));
+                        auto handle = buffer.alloc_write_chunk(oversize_size, bq::platform::high_performance_epoch_ms());
+                        if (handle.result == enum_buffer_result_code::success) {
+                            memcpy(handle.data_addr, &oversize[0], oversize_size);
+                        }
+                        buffer.commit_write_chunk(handle);
+                        result.add_result(handle.result == enum_buffer_result_code::success, "version wraparound run %u oversize write", step);
+                    }
+                    inst->test_begin_new_run();
+                }
+                result.add_result(recovered_runs == 9, "version wraparound: normal+oversize recovered in every crossed run, got:%" PRIu32 "/9", recovered_runs);
+            }
+
+            // T05: oversize (OS) records recovered across a version wrap. The OS
+            // context always carries the version of the run that wrote it, so this
+            // exercises recovery of OS files whose context version is numerically
+            // larger than the current run (65535 -> 1).
+            static void test_run_version_oversize_wrap_parent(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                    return;
+                }
+                auto* inst = bq::instance_storage::get();
+                char name[96];
+                snprintf(name, sizeof(name), "instance_version_oswrap_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                log_buffer_config config;
+                config.log_name = name;
+                config.log_categories_name = { "_default" };
+                config.need_recovery = true;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                constexpr uint64_t parent_marker = 0x11AA0001;
+                constexpr uint64_t oversize_marker = 0x22BB0002;
+                constexpr uint32_t oversize_size = 128 * 1024;
+                {
+                    inst->test_set_run(65535, inst->run_serial());
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    log_buffer buffer(config);
+                    write_marker_record(buffer, parent_marker);
+                }
+                inst->test_begin_new_run(); // version wraps to 1
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    log_buffer buffer(config);
+                    bq::array<uint8_t> oversize;
+                    oversize.fill_uninitialized(oversize_size);
+                    memset(&oversize[0], 0, oversize_size);
+                    memcpy(&oversize[0], &oversize_marker, sizeof(oversize_marker));
+                    auto handle = buffer.alloc_write_chunk(oversize_size, bq::platform::high_performance_epoch_ms());
+                    result.add_result(handle.result == enum_buffer_result_code::success, "oversize wrap parent: oversize write");
+                    if (handle.result == enum_buffer_result_code::success) {
+                        memcpy(handle.data_addr, &oversize[0], oversize_size);
+                    }
+                    buffer.commit_write_chunk(handle);
+                }
+                inst->test_begin_new_run(); // version 2
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
+                log_buffer buffer(config);
+                bool parent_found = false;
+                bool oversize_found = false;
+                while (true) {
+                    auto chunk = buffer.read_chunk();
+                    if (chunk.result != enum_buffer_result_code::success) {
+                        break;
+                    }
+                    bq::scoped_log_buffer_handle<log_buffer> guard(buffer, chunk);
+                    if (chunk.data_size == sizeof(uint64_t)) {
+                        uint64_t marker;
+                        memcpy(&marker, chunk.data_addr, sizeof(marker));
+                        parent_found |= marker == parent_marker;
+                    } else if (chunk.data_size == oversize_size) {
+                        uint64_t marker;
+                        memcpy(&marker, chunk.data_addr, sizeof(marker));
+                        oversize_found |= marker == oversize_marker;
+                    }
+                }
+                result.add_result(parent_found, "oversize wrap parent: parent record from run 65535 recovered");
+                result.add_result(oversize_found, "oversize wrap parent: oversize record from run 1 recovered");
+            }
+
+            // T05: more than MAX_RECOVERY_VERSION_RANGE runs later, data is stale and discarded
+            static void test_run_version_stale_discard(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                    return;
+                }
+                auto* inst = bq::instance_storage::get();
+                char name[96];
+                snprintf(name, sizeof(name), "instance_version_stale_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                log_buffer_config config;
+                config.log_name = name;
+                config.log_categories_name = { "_default" };
+                config.need_recovery = true;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    log_buffer buffer(config);
+                    write_marker_record(buffer, 0xDEAD0001);
+                }
+                for (uint32_t i = 0; i < log_buffer::MAX_RECOVERY_VERSION_RANGE + 1; ++i) {
+                    inst->test_begin_new_run();
+                }
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
+                log_buffer buffer(config);
+                result.add_result(!read_find_marker(buffer, 0xDEAD0001),
+                    "version out of window: stale recovery data discarded after %u runs",
+                    static_cast<unsigned>(log_buffer::MAX_RECOVERY_VERSION_RANGE + 1));
+            }
+
+            // T05: within MAX_RECOVERY_VERSION_RANGE runs, data is still recovered
+            static void test_run_version_window_recovery(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                    return;
+                }
+                auto* inst = bq::instance_storage::get();
+                char name[96];
+                snprintf(name, sizeof(name), "instance_version_window_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                log_buffer_config config;
+                config.log_name = name;
+                config.log_categories_name = { "_default" };
+                config.need_recovery = true;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    log_buffer buffer(config);
+                    write_marker_record(buffer, 0xFACE0002);
+                }
+                for (uint32_t i = 0; i < log_buffer::MAX_RECOVERY_VERSION_RANGE - 1; ++i) {
+                    inst->test_begin_new_run();
+                }
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
+                log_buffer buffer(config);
+                result.add_result(read_find_marker(buffer, 0xFACE0002),
+                    "version in window: data recovered after %u runs",
+                    static_cast<unsigned>(log_buffer::MAX_RECOVERY_VERSION_RANGE - 1));
+            }
+
+            // T05: mmap data whose run serial is ahead of this run (e.g. copied directory)
+            // must never be recovered
+            static void test_run_version_serial_guard(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                    return;
+                }
+                auto* inst = bq::instance_storage::get();
+                char name[96];
+                snprintf(name, sizeof(name), "instance_version_serial_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                log_buffer_config config;
+                config.log_name = name;
+                config.log_categories_name = { "_default" };
+                config.need_recovery = true;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    log_buffer buffer(config);
+                    write_marker_record(buffer, 0xBEEF0003);
+                }
+                // pretend this run started far behind the run that wrote the data
+                const uint64_t current_serial = inst->run_serial();
+                inst->test_set_run(static_cast<uint16_t>(inst->run_version() + 1), current_serial > 100 ? current_serial - 100 : 0);
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
+                log_buffer buffer(config);
+                result.add_result(!read_find_marker(buffer, 0xBEEF0003),
+                    "run serial ahead of current: recovery data from a copied directory discarded");
+            }
+
         public:
             virtual test_result test() override
             {
@@ -165,6 +453,12 @@ namespace bq {
                 test_cleanup_legacy_dirs(result);
                 test_no_recovery_no_disk(result);
                 test_recovery_lp_mmap(result);
+                test_run_version_increment(result);
+                test_run_version_wraparound_recovery(result);
+                test_run_version_oversize_wrap_parent(result);
+                test_run_version_stale_discard(result);
+                test_run_version_window_recovery(result);
+                test_run_version_serial_guard(result);
                 return result;
             }
         };

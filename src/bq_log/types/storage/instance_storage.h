@@ -12,6 +12,19 @@
 #include "bq_common/bq_common.h"
 
 namespace bq {
+    class normal_buffer;
+
+    BQ_PACK_BEGIN
+    struct alignas(8) instance_head {
+        uint64_t magic; // 0x42514C4F47494E53 ("BQLOGINS")
+        uint32_t format_version; // 1
+        uint16_t run_version;
+        uint16_t reserved0;
+        uint64_t run_serial;
+        uint8_t reserved[40];
+    } BQ_PACK_END
+    static_assert(sizeof(instance_head) == 64, "instance head size");
+
     // One claimed instance per process: a process lock file plus the instance's mmap root.
     // The lock is held by an open file description, so the kernel releases it when the
     // process dies, and two runtimes in one process exclude each other.
@@ -21,6 +34,11 @@ namespace bq {
         static instance_storage* acquire();
         // nullptr if not claimed yet (no recovery log created)
         static instance_storage* get();
+
+        // the version number every recovery log_buffer of this run shares; bumped once per acquire()
+        uint16_t run_version() const { return head_->run_version; }
+        // monotonically increasing run counter; never wraps
+        uint64_t run_serial() const { return head_->run_serial; }
 
         uint32_t index() const { return index_; }
         const bq::string& root() const { return root_; } // <base>/bqlog_mmap/p<k>
@@ -33,6 +51,13 @@ namespace bq {
         // deletes unused mmap_<log> legacy directories under base
         static void cleanup_legacy_dirs(const bq::string& base);
 
+#if defined(BQ_UNIT_TEST)
+        // simulates a relaunch: bumps run_version / run_serial as acquire() does
+        void test_begin_new_run();
+        // sets the counters directly (wrap-around tests)
+        void test_set_run(uint16_t version, uint64_t serial);
+#endif
+
         // bq::make_unique instantiates placement new, so the ctor can't be private
         instance_storage() = default;
         ~instance_storage(); // unlock_instance_file
@@ -41,5 +66,7 @@ namespace bq {
         uint32_t index_ = 0;
         bq::string root_;
         platform::platform_file_handle lock_handle_ = platform::invalid_platform_file_handle;
+        bq::unique_ptr<normal_buffer> head_buffer_;
+        instance_head* head_ = nullptr;
     };
 }

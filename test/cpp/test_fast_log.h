@@ -291,6 +291,9 @@ namespace bq {
 
             static void test_recovery(test_result& result)
             {
+                if (auto* inst0 = bq::instance_storage::get()) {
+                    inst0->test_begin_new_run(); // simulate a relaunch
+                }
                 char name[96];
                 snprintf(name, sizeof(name), "fast_mode_recovery_%" PRIu64,
                     bq::platform::high_performance_epoch_ms());
@@ -374,6 +377,9 @@ namespace bq {
                 result.add_result(bq::file_manager::is_file(first_path), "fast recovery first segment persisted");
                 result.add_result(bq::file_manager::is_file(second_path), "fast recovery multiple segments persisted");
                 result.add_result(bq::file_manager::is_file(large_path), "fast recovery oversize metadata persisted");
+                if (auto* inst1 = bq::instance_storage::get()) {
+                    inst1->test_begin_new_run(); // the second buffer construction is the relaunch
+                }
                 {
                     bq::log_buffer buffer(config);
                     const auto& thread_info = bq::get_log_thread_info();
@@ -513,6 +519,9 @@ namespace bq {
                 snprintf(name, sizeof(name), "fast_mode_recovery_cross_%" PRIu64, bq::platform::high_performance_epoch_ms());
                 uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = { };
                 for (uint32_t lifetime = 0; lifetime < recovery_cross_lifetimes; ++lifetime) {
+                    if (auto* inst = bq::instance_storage::get()) {
+                        inst->test_begin_new_run(); // simulate a relaunch
+                    }
                     auto config = recovery_cross_config(name);
                     bq::log_buffer buffer(config);
                     const uint8_t u32 = static_cast<uint8_t>(bq::log_arg_type_enum::uint32_type);
@@ -535,6 +544,9 @@ namespace bq {
                     }
                 }
 
+                if (auto* inst = bq::instance_storage::get()) {
+                    inst->test_begin_new_run(); // the recovery buffer below is the relaunch
+                }
                 auto config = recovery_cross_config(name);
                 bq::log_buffer buffer(config);
                 uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = { };
@@ -714,6 +726,9 @@ namespace bq {
                 const char* categories[] = { "ModuleA", "ModuleB" };
                 char thread_tags[log_crash_rounds][log_crash_threads][64] = { };
                 for (uint32_t round = 0; round <= log_crash_rounds; ++round) {
+                    if (auto* inst = bq::instance_storage::get()) {
+                        inst->test_begin_new_run(); // each round simulates a relaunch
+                    }
                     const uint64_t log_id = bq::api::__api_create_log(name, config.c_str(), 2, categories);
                     bq::log log = bq::log::get_log_by_name(name);
                     result.add_result(log.is_valid() && log.get_id() == log_id, "log crash: create round %" PRIu32, round);

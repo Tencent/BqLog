@@ -174,7 +174,7 @@ namespace bq {
         , hp_buffer_(config_, BLOCKS_PER_GROUP_NODE)
         , lp_buffer_(config_)
         , hp_buffer_max_alloc_size_(UINT32_MAX)
-        , version_(config_.need_recovery ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
+        , version_(config_.need_recovery ? instance_storage::get()->run_version() : 0)
         , destruction_mark_(bq::make_shared<destruction_mark>())
         , fast_meta_ptr_(nullptr)
         , current_oversize_buffer_index_(0)
@@ -183,6 +183,25 @@ namespace bq {
         id_ = id_generator.add_fetch_relaxed(1);
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
         if (config.need_recovery) {
+            // instance_storage::get() is null when the platform does not support
+            // mmap (or the instance could not be claimed); buffers are on the
+            // heap then and there is nothing to recover, same as before T05
+            auto* inst = instance_storage::get();
+            auto& misc = lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>();
+            const uint64_t serial = inst ? inst->run_serial() : 0;
+            if (inst) {
+                // data from another instance (copied directory) or older than the
+                // recovery window is unreachable via version numbers anyway; the
+                // serial check also covers wrap-around collisions of run_version
+                const bool stale = misc.saved_run_serial_ == 0
+                    || serial <= misc.saved_run_serial_
+                    || serial - misc.saved_run_serial_ > MAX_RECOVERY_VERSION_RANGE;
+                if (stale) {
+                    discard_recovery_data();
+                }
+                misc.saved_version_ = static_cast<uint16_t>(version_);
+                misc.saved_run_serial_ = serial;
+            }
             rt_cache_.current_reading_.version_ = static_cast<uint16_t>(version_ - MAX_RECOVERY_VERSION_RANGE);
             prepare_and_fix_recovery_data();
         } else {
@@ -663,7 +682,7 @@ namespace bq {
                 return context_verify_result::seq_invalid;
             }
         }
-        else if (parent_context.version_ < oversize_context.version_)
+        else if (static_cast<int16_t>(static_cast<uint16_t>(oversize_context.version_ - parent_context.version_)) > 0)
         {
             BQ_UNLIKELY_IF(!is_version_valid(oversize_context.version_))
             {
@@ -1238,6 +1257,38 @@ namespace bq {
         return log_tls_info__get_direct().get_buffer_info(this);
     }
 #endif
+
+    void log_buffer::discard_recovery_data()
+    {
+        // LP: re-init in place, the backing file stays but all cursors and the
+        // misc area (saved_version_ / saved_run_serial_) are reset
+        lp_buffer_.discard_recovered_data();
+        // HP: groups were already recovered from their mmap files, so the files
+        // cannot be deleted; invalidating every used/stage block's context
+        // makes the reader recycle them through the regular version_invalid path
+        const uint16_t invalid_version = static_cast<uint16_t>(version_ + 1); // outside the recovery window
+        auto group = hp_buffer_.first(group_list::lock_type::no_lock);
+        while (group) {
+            block_node_head* block = group.value().get_data_head().used_.first();
+            while (block) {
+                block->get_misc_data<block_misc_data>().context_.version_ = invalid_version;
+                block = group.value().get_data_head().used_.next(block);
+            }
+            block = group.value().get_data_head().stage_.first();
+            while (block) {
+                block->get_misc_data<block_misc_data>().context_.version_ = invalid_version;
+                block = group.value().get_data_head().stage_.next(block);
+            }
+            group = hp_buffer_.next(group, group_list::lock_type::no_lock);
+        }
+        // OS (oversize) and legacy fast meta files are not mapped yet at this
+        // point, they can simply be removed. lp.mmap / hp files are currently
+        // mapped, they stay (their contents are neutralized above / by the LP re-init).
+        if (config_.storage) {
+            bq::file_manager::remove_file_or_dir(config_.storage->os_dir());
+            bq::file_manager::remove_file_or_dir(config_.storage->legacy_fast_meta_dir());
+        }
+    }
 
     /**
      * @brief Fixes mmap data errors by invalidating data with the same version as the current run.

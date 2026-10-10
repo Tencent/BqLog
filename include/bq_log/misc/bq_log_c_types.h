@@ -86,7 +86,7 @@ struct BQ_LOG_ABI_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle) {
 } BQ_PACK_END
 
 // Bump when any field, the thread state below or the record format changes. Append-only.
-#define BQ_FAST_LOG_LAYOUT_VERSION 3
+#define BQ_FAST_LOG_LAYOUT_VERSION 4
 BQ_PACK_BEGIN
 struct BQ_LOG_ABI_TYPE(_api_fast_log_layout, bq_api_fast_log_layout) {
     uint32_t struct_size;

@@ -109,7 +109,9 @@ namespace bq {
         /// <returns></returns>
         uint64_t calculate_check_sum() const
         {
-            bq::string verify_str = log_name + "/";
+            // the prefix makes mmap data written by 2.6.x (same path, different
+            // layout) never verify as recoverable data
+            bq::string verify_str = "bqlog_mmap_v3/" + log_name + "/";
             for (const auto& category_name : log_categories_name) {
                 verify_str += category_name + "/";
             }

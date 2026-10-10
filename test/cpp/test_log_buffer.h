@@ -20,7 +20,7 @@
 #include "bq_log/types/buffer/memory_pool.h"
 #include "bq_log/types/buffer/normal_buffer.h"
 #include "bq_log/types/storage/log_storage.h"
-
+#include "bq_log/types/storage/instance_storage.h"
 namespace bq {
     namespace test {
         static bq::platform::atomic<int32_t> linked_list_test_number_generator_ = 0;
@@ -627,6 +627,12 @@ namespace bq {
                 if (!bq::memory_map::is_platform_support()) {
                     return;
                 }
+                // simulate a relaunch; a no-op if no instance was claimed
+                auto test_begin_new_run_safe = []() {
+                    if (auto* inst = bq::instance_storage::get()) {
+                        inst->test_begin_new_run();
+                    }
+                };
                 constexpr uint32_t WRITE_VERSION_COUNT = 5;
 #if defined(BQ_MOBILE_PLATFORM)
                 constexpr uint32_t MESSAGE_PER_VERSION = 1000;
@@ -639,6 +645,9 @@ namespace bq {
 
                 // Single Thread Test
                 for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                    // each loop iteration simulates a relaunch: without bumping the
+                    // instance run version the previous run's data would be judged stale
+                    test_begin_new_run_safe();
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };
@@ -689,6 +698,8 @@ namespace bq {
                 }
 
                 {
+                    // simulates a relaunch before reading everything back
+                    test_begin_new_run_safe();
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };
@@ -785,6 +796,7 @@ namespace bq {
                 };
 
                 for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                    test_begin_new_run_safe(); // simulate a relaunch
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };
@@ -849,6 +861,7 @@ namespace bq {
                 }
 
                 {
+                    test_begin_new_run_safe(); // simulate a relaunch
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };

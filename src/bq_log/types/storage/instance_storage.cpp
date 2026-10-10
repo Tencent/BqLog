@@ -11,8 +11,14 @@
 #include "bq_log/types/storage/instance_storage.h"
 #include "bq_common/bq_common.h"
 #include "bq_log/global/log_vars.h"
+#include "bq_log/types/buffer/normal_buffer.h"
 
 namespace bq {
+    namespace {
+        constexpr uint64_t instance_magic = 0x42514C4F47494E53ULL;
+        constexpr uint32_t instance_format_version = 1;
+    }
+
     instance_storage* instance_storage::acquire()
     {
         auto& vars = log_global_vars::get();
@@ -49,6 +55,25 @@ namespace bq {
             inst->lock_handle_ = h;
             file_manager::create_directory(inst->logs_dir());
             file_manager::create_directory(inst->meta_dir());
+            // the head records this run's run_version / run_serial; it must persist,
+            // so a normal_buffer backed by instance.mmap
+            inst->head_buffer_ = bq::make_unique<normal_buffer>(sizeof(instance_head), inst->instance_file(), true);
+            if (!inst->head_buffer_->is_memory_mapped()) {
+                util::log_device_console(log_level::warning, "bqlog instance storage disabled: cannot memory map %s", inst->instance_file().c_str());
+                // inst is dropped here: ~instance_storage releases the lock file handle
+                return nullptr;
+            }
+            inst->head_ = static_cast<instance_head*>(inst->head_buffer_->data());
+            auto& h_head = *inst->head_;
+            if (h_head.magic != instance_magic || h_head.format_version != instance_format_version) {
+                memset(&h_head, 0, sizeof(h_head));
+                h_head.magic = instance_magic;
+                h_head.format_version = instance_format_version;
+            }
+            ++h_head.run_serial;
+            if (++h_head.run_version == 0) {
+                h_head.run_version = 1; // 0 is the zero-init value everywhere; never a live version
+            }
             cleanup_legacy_dirs(base);
             vars.instance_storage_ = bq::move(inst);
             return vars.instance_storage_.get();
@@ -118,6 +143,32 @@ namespace bq {
             }
         }
     }
+
+#if defined(BQ_UNIT_TEST)
+    void instance_storage::test_begin_new_run()
+    {
+        auto& vars = log_global_vars::get();
+        bq::platform::scoped_spin_lock lock(vars.instance_storage_lock_);
+        if (!head_) {
+            return;
+        }
+        ++head_->run_serial;
+        if (++head_->run_version == 0) {
+            head_->run_version = 1;
+        }
+    }
+
+    void instance_storage::test_set_run(uint16_t version, uint64_t serial)
+    {
+        auto& vars = log_global_vars::get();
+        bq::platform::scoped_spin_lock lock(vars.instance_storage_lock_);
+        if (!head_) {
+            return;
+        }
+        head_->run_version = version;
+        head_->run_serial = serial;
+    }
+#endif
 
     instance_storage::~instance_storage()
     {
