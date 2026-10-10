@@ -27,11 +27,15 @@
 namespace bq {
     class log {
     private:
+#if defined(BQ_UNIT_TEST)
+        friend class test::test_fast_log;
+#endif
         const uint32_t* merged_log_level_bitmap_;
         const uint8_t* categories_mask_array_;
         const uint32_t* print_stack_level_bitmap_;
         const uint32_t* category_level_words_;
         uint64_t log_id_;
+        uint64_t buffer_id_; // 0: no fast path (invalid log or sync mode)
         bq::string name_;
 
     protected:
@@ -48,9 +52,18 @@ namespace bq {
             : merged_log_level_bitmap_(nullptr)
             , categories_mask_array_(nullptr)
             , print_stack_level_bitmap_(nullptr)
-            , category_level_words_(nullptr)
+            , category_level_words_(bq::log_zero_level_words<>::value)
             , log_id_(0)
+            , buffer_id_(0)
         {
+        }
+
+        // invalid log only: generated category classes pass a zero array covering all their categories
+        void set_zero_level_words(const uint32_t* zero_words)
+        {
+            if (log_id_ == 0) {
+                category_level_words_ = zero_words;
+            }
         }
 
     public:

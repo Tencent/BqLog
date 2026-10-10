@@ -108,6 +108,27 @@ BQ_API_DEF(void, __api_fast_log_notify_low_space,
     (site));
 
 /// <summary>
+/// buffer id used by the inline fast path, 0 for an invalid log or a sync log
+/// </summary>
+BQ_API_DEF(uint64_t, __api_get_log_buffer_id, (uint64_t log_id), (log_id));
+
+/// <summary>
+/// registers a fast log format in the instance meta registry; returns its address, 0 on failure
+/// </summary>
+BQ_API_DEF(uint64_t, __api_fast_meta_register, (uint8_t level, uint32_t category_idx, uint8_t format_type,
+    const char* format, uint32_t format_size, const uint8_t* arg_types, uint16_t arg_count),
+    (level, category_idx, format_type, format, format_size, arg_types, arg_count));
+
+/// <summary>
+/// same as the site versions, the buffer is found by log id and the meta address is given directly
+/// </summary>
+BQ_API_DEF(bool, __api_fast_log_write_no_args_by_id, (uint64_t log_id, uint64_t meta_addr), (log_id, meta_addr));
+BQ_API_DEF(BQ_LOG_API_TYPE(_api_fast_log_write_handle, bq_api_fast_log_write_handle), __api_fast_log_write_begin_by_id,
+    (uint64_t log_id, uint64_t meta_addr, uint32_t args_size), (log_id, meta_addr, args_size));
+BQ_API_DEF(void, __api_fast_log_write_finish_by_id, (uint64_t log_id, uint8_t* args_addr), (log_id, args_addr));
+BQ_API_DEF(void, __api_fast_log_notify_low_space_by_id, (uint64_t log_id), (log_id));
+
+/// <summary>
 /// toggle of all console appenders,
 /// you can disable it to optimize performance in release version
 /// </summary>

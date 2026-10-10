@@ -45,6 +45,7 @@ namespace bq {
     class log;
     namespace test {
         class test_log;
+        class test_fast_log;
     }
 }
 
@@ -124,6 +125,15 @@ namespace bq {
     static_assert(offsetof(fast_format_meta, format_hash) == 16, "fast format hash alignment");
     static_assert(offsetof(fast_format_meta, category_idx) == 24, "fast format category alignment");
     static_assert(offsetof(fast_format_meta, format_size) == 28, "fast format size alignment");
+
+    // zero level words for an invalid log (all levels disabled); a template static member
+    // so the single array definition in a public header never multiplies across TUs
+    template <typename T = void>
+    struct log_zero_level_words {
+        static const uint32_t value[1];
+    };
+    template <typename T>
+    const uint32_t log_zero_level_words<T>::value[1] = { 0 };
 
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN

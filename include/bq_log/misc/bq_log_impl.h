@@ -62,6 +62,7 @@ namespace bq {
         , print_stack_level_bitmap_(rhs.print_stack_level_bitmap_)
         , category_level_words_(rhs.category_level_words_)
         , log_id_(rhs.log_id_)
+        , buffer_id_(rhs.buffer_id_)
         , name_(rhs.name_)
         , categories_name_array_(rhs.categories_name_array_)
     {
@@ -74,6 +75,7 @@ namespace bq {
         print_stack_level_bitmap_ = rhs.print_stack_level_bitmap_;
         category_level_words_ = rhs.category_level_words_;
         log_id_ = rhs.log_id_;
+        buffer_id_ = rhs.buffer_id_;
         name_ = rhs.name_;
         categories_name_array_ = rhs.categories_name_array_;
         return *this;
@@ -117,7 +119,9 @@ namespace bq {
         log.merged_log_level_bitmap_ = bq::api::__api_get_log_merged_log_level_bitmap_by_log_id(log_id);
         log.categories_mask_array_ = bq::api::__api_get_log_category_masks_array_by_log_id(log_id);
         log.print_stack_level_bitmap_ = bq::api::__api_get_log_print_stack_level_bitmap_by_log_id(log_id);
-        log.category_level_words_ = bq::api::__api_get_log_category_level_words_by_log_id(log_id);
+        const uint32_t* words = bq::api::__api_get_log_category_level_words_by_log_id(log_id);
+        log.category_level_words_ = words ? words : bq::log_zero_level_words<>::value;
+        log.buffer_id_ = bq::api::__api_get_log_buffer_id(log_id);
         uint32_t category_count = bq::api::__api_get_log_categories_count(log_id);
         log.categories_name_array_.set_capacity(category_count);
         for (uint32_t i = 0; i < category_count; ++i) {

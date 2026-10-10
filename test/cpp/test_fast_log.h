@@ -1133,6 +1133,97 @@ namespace bq {
                 }
             };
 
+            // T07 §4: the log handle carries buffer_id_ and never dereferences null level words
+            static void test_log_handle(test_result& result)
+            {
+                // 1. default constructed (invalid) log: zero words, no fast path
+                bq::log invalid = bq::log::get_log_by_name("not_exist_log_handle");
+                result.add_result(!invalid.is_valid(), "handle: invalid log is not valid");
+                result.add_result(invalid.buffer_id_ == 0, "handle: invalid log has no buffer id");
+                result.add_result(invalid.category_level_words_[0] == 0, "handle: invalid log level word is zero");
+
+                // 2. async log: buffer id matches the manager's buffer and copies
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_handle_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                const bq::string config = bq::string("appenders_config.test.type=text_file\n")
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n"
+                    + "log.thread_mode=async\n"
+                    + "log.buffer_size=65536\n";
+                bq::log log = bq::log::create_log(name, config);
+                result.add_result(log.is_valid(), "handle: async log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                bq::log_imp* imp = bq::log_manager::get_log_by_id(log.get_id());
+                result.add_result(imp && log.buffer_id_ == imp->get_buffer().get_id(),
+                    "handle: async log buffer id matches buffer");
+                bq::log copy = log;
+                result.add_result(copy.buffer_id_ == log.buffer_id_, "handle: copied handle keeps buffer id");
+
+                // 3. sync log: no fast path
+                snprintf(name, sizeof(name), "fast_mode_handle_sync_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                bq::log sync_log = bq::log::create_log(name, config + "log.thread_mode=sync\n");
+                result.add_result(sync_log.is_valid() && sync_log.buffer_id_ == 0,
+                    "handle: sync log has no buffer id");
+
+                // 4. generated category class of an invalid log: every category's level word is zero
+                bq::test_category_log cat_invalid = bq::test_category_log::get_log_by_name("not_exist_log_handle");
+                result.add_result(!cat_invalid.is_valid(), "handle: generated invalid log is not valid");
+                bool cat_zero = true;
+                for (uint32_t i = 0; i < 5; ++i) {
+                    if (cat_invalid.category_level_words_[i] != 0) {
+                        cat_zero = false;
+                    }
+                }
+                result.add_result(cat_zero, "handle: generated invalid log zero words cover all categories");
+
+                // 5. __api_fast_meta_register dedupes against the registry
+                const uint8_t arg_types[] = { static_cast<uint8_t>(bq::log_arg_type_enum::int32_type), 0 };
+                const uint64_t addr1 = bq::api::__api_fast_meta_register(static_cast<uint8_t>(bq::log_level::info),
+                    0, static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type), "handle meta {}", 14, arg_types, 1);
+                const uint64_t addr2 = bq::api::__api_fast_meta_register(static_cast<uint8_t>(bq::log_level::info),
+                    0, static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type), "handle meta {}", 14, arg_types, 1);
+                const auto* registry_meta = bq::meta_registry::instance().register_format("handle meta {}", 14,
+                    static_cast<uint8_t>(bq::log_level::info), 0,
+                    static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type), arg_types, 1);
+                result.add_result(addr1 != 0 && addr1 == addr2
+                        && addr1 == static_cast<uint64_t>(reinterpret_cast<uintptr_t>(registry_meta)),
+                    "handle: fast meta register dedupes to registry entry");
+
+                // 6. by-id write path produces a correct record
+                BQ_LOG_FAST_INFO(log, "by id before {}", int32_t(1));
+                bq::_api_fast_log_write_handle handle = bq::api::__api_fast_log_write_begin_by_id(
+                    log.get_id(), addr1, static_cast<uint32_t>(sizeof(int32_t)));
+                result.add_result(handle.result == bq::enum_buffer_result_code::success,
+                    "handle: begin by id succeeds");
+                if (handle.result == bq::enum_buffer_result_code::success) {
+                    int32_t arg = 73;
+                    memcpy(handle.args_addr, &arg, sizeof(arg));
+                    bq::api::__api_fast_log_write_finish_by_id(log.get_id(), handle.args_addr);
+                }
+                BQ_LOG_FAST_INFO(log, "by id after {}", int32_t(2));
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                result.add_result(data.find("by id before 1") != bq::string::npos
+                        && data.find("by id after 2") != bq::string::npos,
+                    "handle: surrounding fast records decode");
+                result.add_result(data.find("handle meta 73") != bq::string::npos,
+                    "handle: by id record decodes with format and argument");
+
+                // 7. invalid log id fails safely
+                result.add_result(!bq::api::__api_fast_log_write_no_args_by_id(0, addr1),
+                    "handle: no args by id fails on invalid log id");
+                bq::_api_fast_log_write_handle bad = bq::api::__api_fast_log_write_begin_by_id(0, addr1, 4);
+                result.add_result(bad.result == bq::enum_buffer_result_code::err_fast_path_failed,
+                    "handle: begin by id fails on invalid log id");
+                bq::api::__api_fast_log_write_finish_by_id(0, nullptr); // must not crash
+                bq::api::__api_fast_log_notify_low_space_by_id(0); // must not crash
+            }
+
             // Every thread's first call of every site happens simultaneously: the publication of a site's
             // fields races with other threads' reads, which must neither drop a record nor register twice.
             static void test_site_init_race(test_result& result)
@@ -1356,6 +1447,7 @@ namespace bq {
                 test_recovery(result);
                 test_recovery_cross(result);
                 test_log_crash_recovery(result);
+                test_log_handle(result);
                 return result;
             }
         };

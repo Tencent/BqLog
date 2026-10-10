@@ -78,6 +78,12 @@ namespace bq {
             static demo_category_log_category_root root_;
         };
 
+        template<typename T>
+        struct demo_category_log_zero_level_words_holder
+        {
+            static const uint32_t value[10];
+        };
+
     public:
         const demo_category_log_category_root& cat = demo_category_log_category_root_holder<void>::root_;
 
@@ -89,8 +95,14 @@ namespace bq {
         };
 
     private:
-        demo_category_log() : category_log(){}
-        demo_category_log(const log& child_inst) : category_log(child_inst){}
+        demo_category_log() : category_log()
+        {
+            set_zero_level_words(demo_category_log_zero_level_words_holder<void>::value);
+        }
+        demo_category_log(const log& child_inst) : category_log(child_inst)
+        {
+            set_zero_level_words(demo_category_log_zero_level_words_holder<void>::value);
+        }
 
     public:
         /// <summary>
@@ -147,6 +159,8 @@ namespace bq {
     demo_category_log::demo_category_log_category_root demo_category_log::demo_category_log_category_root_holder<T>::root_;
     template<typename T>
     demo_category_log::demo_category_log_category_config demo_category_log::demo_category_log_category_root_holder<T>::config_;
+    template<typename T>
+    const uint32_t demo_category_log::demo_category_log_zero_level_words_holder<T>::value[10] = {};
 
     inline demo_category_log demo_category_log::create_log(const bq::string& log_name, const bq::string& config_content)
     {
@@ -154,7 +168,7 @@ namespace bq {
         log result = get_log_by_id(log_id);
         return result;
     }
-
+    
     inline demo_category_log demo_category_log::get_log_by_name(const bq::string& log_name)
     {
         demo_category_log result = log::get_log_by_name(log_name);
@@ -251,3 +265,4 @@ namespace bq {
     }
 }
 // clang-format on
+        

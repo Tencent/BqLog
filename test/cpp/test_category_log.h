@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 // clang-format off
 /*
  * Copyright (C) 2025 Tencent.
@@ -63,6 +63,12 @@ namespace bq {
             static test_category_log_category_root root_;
         };
 
+        template<typename T>
+        struct test_category_log_zero_level_words_holder
+        {
+            static const uint32_t value[5];
+        };
+
     public:
         const test_category_log_category_root& cat = test_category_log_category_root_holder<void>::root_;
 
@@ -74,8 +80,14 @@ namespace bq {
         };
 
     private:
-        test_category_log() : category_log(){}
-        test_category_log(const log& child_inst) : category_log(child_inst){}
+        test_category_log() : category_log()
+        {
+            set_zero_level_words(test_category_log_zero_level_words_holder<void>::value);
+        }
+        test_category_log(const log& child_inst) : category_log(child_inst)
+        {
+            set_zero_level_words(test_category_log_zero_level_words_holder<void>::value);
+        }
 
     public:
         /// <summary>
@@ -132,6 +144,8 @@ namespace bq {
     test_category_log::test_category_log_category_root test_category_log::test_category_log_category_root_holder<T>::root_;
     template<typename T>
     test_category_log::test_category_log_category_config test_category_log::test_category_log_category_root_holder<T>::config_;
+    template<typename T>
+    const uint32_t test_category_log::test_category_log_zero_level_words_holder<T>::value[5] = {};
 
     inline test_category_log test_category_log::create_log(const bq::string& log_name, const bq::string& config_content)
     {
@@ -139,7 +153,7 @@ namespace bq {
         log result = get_log_by_id(log_id);
         return result;
     }
-
+    
     inline test_category_log test_category_log::get_log_by_name(const bq::string& log_name)
     {
         test_category_log result = log::get_log_by_name(log_name);
@@ -236,3 +250,4 @@ namespace bq {
     }
 }
 // clang-format on
+        

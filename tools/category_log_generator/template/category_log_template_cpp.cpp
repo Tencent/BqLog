@@ -143,6 +143,12 @@ namespace bq {
             static ${CLASS_NAME}_category_root root_;
         };
 
+        template<typename T>
+        struct ${CLASS_NAME}_zero_level_words_holder
+        {
+            static const uint32_t value[${CATEGORIES_COUNT}];
+        };
+
     public:
         const ${CLASS_NAME}_category_root& cat = ${CLASS_NAME}_category_root_holder<void>::root_;
 
@@ -154,8 +160,14 @@ namespace bq {
         };
 
     private:
-        ${CLASS_NAME}() : category_log(){}
-        ${CLASS_NAME}(const log& child_inst) : category_log(child_inst){}
+        ${CLASS_NAME}() : category_log()
+        {
+            set_zero_level_words(${CLASS_NAME}_zero_level_words_holder<void>::value);
+        }
+        ${CLASS_NAME}(const log& child_inst) : category_log(child_inst)
+        {
+            set_zero_level_words(${CLASS_NAME}_zero_level_words_holder<void>::value);
+        }
 
     public:
         /// <summary>
@@ -212,6 +224,8 @@ namespace bq {
     ${CLASS_NAME}::${CLASS_NAME}_category_root ${CLASS_NAME}::${CLASS_NAME}_category_root_holder<T>::root_;
     template<typename T>
     ${CLASS_NAME}::${CLASS_NAME}_category_config ${CLASS_NAME}::${CLASS_NAME}_category_root_holder<T>::config_;
+    template<typename T>
+    const uint32_t ${CLASS_NAME}::${CLASS_NAME}_zero_level_words_holder<T>::value[${CATEGORIES_COUNT}] = {};
 
     inline ${CLASS_NAME} ${CLASS_NAME}::create_log(const bq::string& log_name, const bq::string& config_content)
     {
