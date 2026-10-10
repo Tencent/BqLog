@@ -85,11 +85,6 @@ namespace bq {
         return dir_ + "/appenders/" + escape_name(appender_name) + ".mmap";
     }
 
-    bq::string log_storage::legacy_fast_meta_dir() const
-    {
-        return dir_ + "/fast_meta";
-    }
-
     void log_storage::remove(const bq::string& abs_path) const
     {
         auto inst = instance_storage::get();

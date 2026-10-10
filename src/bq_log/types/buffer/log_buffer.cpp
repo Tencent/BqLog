@@ -176,7 +176,6 @@ namespace bq {
         , hp_buffer_max_alloc_size_(UINT32_MAX)
         , version_(config_.need_recovery ? instance_storage::get()->run_version() : 0)
         , destruction_mark_(bq::make_shared<destruction_mark>())
-        , fast_meta_ptr_(nullptr)
         , current_oversize_buffer_index_(0)
     {
         static bq::platform::atomic<uint64_t> id_generator(0);
@@ -345,19 +344,17 @@ namespace bq {
         }
     }
 
-    fast_meta_store* log_buffer::get_fast_meta_store()
+    const fast_format_meta* log_buffer::register_fast_log_format(const char* format, uint32_t format_size,
+        uint8_t level, uint32_t category_idx, uint8_t format_type,
+        const uint8_t* arg_types, uint16_t arg_count)
     {
-        auto* store = fast_meta_ptr_.load_acquire();
-        if (!store) {
-            bq::platform::scoped_spin_lock guard(fast_meta_lock_);
-            store = fast_meta_ptr_.load_acquire();
-            if (!store) {
-                fast_meta_store_ = bq::make_unique<fast_meta_store>(config_, version_);
-                store = fast_meta_store_.operator->();
-                fast_meta_ptr_.store_release(store);
-            }
-        }
-        return store;
+        return meta_registry::instance().register_format(format, format_size, level, category_idx,
+            format_type, arg_types, arg_count);
+    }
+
+    const fast_format_meta* log_buffer::resolve_fast_log_meta(uint16_t version, uint64_t old_addr)
+    {
+        return meta_registry::instance().resolve_recovered(version, old_addr);
     }
 
 #if defined(BQ_UNIT_TEST)
@@ -389,18 +386,6 @@ namespace bq {
         return group.value().get_memory_map_status() != create_memory_map_result::failed;
     }
 #endif
-    const fast_format_meta* log_buffer::register_fast_log_format(const char* format, uint32_t format_size,
-        uint8_t level, uint32_t category_idx, uint8_t format_type,
-        const uint8_t* arg_types, uint16_t arg_count)
-    {
-        return get_fast_meta_store()->register_format(format, format_size, level, category_idx,
-            format_type, arg_types, arg_count);
-    }
-
-    const fast_meta_head* log_buffer::resolve_fast_log_meta(uint16_t version, uint64_t old_addr)
-    {
-        return get_fast_meta_store()->resolve(version, old_addr);
-    }
 
 #if defined(BQ_LOG_BUFFER_DEBUG)
     void log_buffer::debug_check_read_thread()
@@ -922,7 +907,6 @@ namespace bq {
     void log_buffer::rt_try_traverse_to_next_version()
     {
         auto& rt_reading = rt_cache_.current_reading_;
-        const uint16_t completed_version = rt_reading.version_;
         auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)];
         recover_map.clear();
 #ifdef BQ_UNIT_TEST
@@ -930,18 +914,6 @@ namespace bq {
 #endif
         ++rt_reading.version_;
         rt_reading.is_in_recovery_reading_ = (rt_reading.version_ != version_);
-        if (!fast_meta_ptr_.load_acquire() && !rt_reading.is_in_recovery_reading_ && config_.need_recovery && config_.storage) {
-            const bq::string folder = config_.storage->legacy_fast_meta_dir();
-            if (bq::file_manager::is_dir(folder)) {
-                get_fast_meta_store();
-            }
-        }
-        if (auto* store = fast_meta_ptr_.load_acquire()) {
-            store->release_version(completed_version);
-            if (!rt_reading.is_in_recovery_reading_) {
-                store->release_recovered_versions();
-            }
-        }
     }
 
     void log_buffer::refresh_traverse_end_mark()
@@ -1281,12 +1253,13 @@ namespace bq {
             }
             group = hp_buffer_.next(group, group_list::lock_type::no_lock);
         }
-        // OS (oversize) and legacy fast meta files are not mapped yet at this
-        // point, they can simply be removed. lp.mmap / hp files are currently
-        // mapped, they stay (their contents are neutralized above / by the LP re-init).
+        // OS (oversize) files are not mapped yet at this point, they can simply
+        // be removed. lp.mmap / hp files are currently mapped, they stay (their
+        // contents are neutralized above / by the LP re-init). The instance-level
+        // meta journal of a stale run is handled by meta_registry's expired-file
+        // cleanup at the next enable_journal.
         if (config_.storage) {
             bq::file_manager::remove_file_or_dir(config_.storage->os_dir());
-            bq::file_manager::remove_file_or_dir(config_.storage->legacy_fast_meta_dir());
         }
     }
 

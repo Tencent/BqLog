@@ -16,6 +16,7 @@
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/appender/appender_file_text.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
+#include "bq_log/types/meta/meta_registry.h"
 #include "bq_log/utils/log_utils.h"
 
 namespace bq {
@@ -195,6 +196,9 @@ namespace bq {
                 // no instance: same as mmap failure today, buffers fall back to heap
                 buffer_config.need_recovery = false;
                 util::log_device_console(log_level::warning, "log %s recovery disabled: no instance directory available", name_.c_str());
+            }
+            if (buffer_config.need_recovery && !bq::meta_registry::instance().enable_journal()) {
+                util::log_device_console(log_level::warning, "fast log meta journal unavailable, fast records of log %s can not be recovered", name_.c_str());
             }
             buffer_ = bq::util::aligned_new<bq::log_buffer>(alignof(bq::log_buffer), buffer_config);
         }

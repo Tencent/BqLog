@@ -40,6 +40,10 @@ namespace bq {
 
 #define BQ_POD_RUNTIME_OFFSET_OF(Type, Field) static_cast<size_t>((reinterpret_cast<uintptr_t>(&(((Type*)0x10000)->Field))) - static_cast<uintptr_t>(0x10000))
 
+    // how many past runs' data can still be recovered: versions
+    // current - MAX_RECOVERY_VERSION_RANGE + 1 .. current - 1 stay visible
+    constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 16;
+
     struct log_buffer_write_handle {
         uint8_t* data_addr;
         enum_buffer_result_code result = enum_buffer_result_code::err_empty_log_buffer;

@@ -95,7 +95,7 @@ namespace bq {
 
     enum class fast_meta_kind : uint8_t {
         format = 1,
-        oversize = 2
+        oversize = 2 // unused since 2.7.0
     };
 
     BQ_PACK_BEGIN

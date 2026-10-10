@@ -15,6 +15,7 @@
 #include "bq_log/log/log_manager.h"
 #include "bq_log/types/storage/instance_storage.h"
 #include "bq_log/types/storage/log_storage.h"
+#include "bq_log/types/meta/meta_registry.h"
 #include "test_category_log.h"
 #include <atomic>
 #include <thread>
@@ -291,6 +292,9 @@ namespace bq {
 
             static void test_recovery(test_result& result)
             {
+                if (!bq::memory_map::is_platform_support()) {
+                    return;
+                }
                 if (auto* inst0 = bq::instance_storage::get()) {
                     inst0->test_begin_new_run(); // simulate a relaunch
                 }
@@ -306,6 +310,8 @@ namespace bq {
                 config.storage = storage.get();
                 const uint16_t old_version = [&]() {
                     bq::log_buffer buffer(config);
+                    result.add_result(bq::meta_registry::instance().enable_journal(),
+                        "fast recovery meta journal enabled");
                     uint8_t arg_type = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
                     const bq::fast_format_meta* first = nullptr;
                     const bq::fast_format_meta* last = nullptr;
@@ -319,20 +325,74 @@ namespace bq {
                         }
                         last = meta;
                     }
+                    result.add_result(first && last && first == last,
+                        "fast recovery dedupe: 1600 same-format registrations return one pointer");
+                    // distinct formats cross the 1 MiB segment boundary: each journaled
+                    // entry is 16 + align_8(40 + len + 1) bytes, so 20000 of them exceed it
+                    char format_buf[64];
+                    const auto* seg_cross = static_cast<const bq::fast_format_meta*>(nullptr);
+                    for (uint32_t i = 0; i < 20000; ++i) {
+                        int32_t len = snprintf(format_buf, sizeof(format_buf), "recover %u", i);
+                        const auto* meta = buffer.register_fast_log_format(format_buf, static_cast<uint32_t>(len),
+                            static_cast<uint8_t>(bq::log_level::info), 0,
+                            static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type),
+                            &arg_type, 1);
+                        if (i == 0) {
+                            seg_cross = meta;
+                        }
+                    }
                     bq::array<char> large_format;
-                    large_format.fill_uninitialized(100000);
+                    large_format.fill_uninitialized(1100000); // larger than BQ_LOG_META_SEGMENT_SIZE - head
                     memset(&large_format[0], 'z', large_format.size());
                     const auto* large = buffer.register_fast_log_format(&large_format[0],
                         static_cast<uint32_t>(large_format.size()),
                         static_cast<uint8_t>(bq::log_level::info), 0,
                         static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type),
                         &arg_type, 1);
-                    result.add_result(first && last, "fast recovery metadata register");
+                    result.add_result(seg_cross != nullptr, "fast recovery distinct formats register");
                     result.add_result(large != nullptr, "fast recovery oversize metadata register");
+                    auto* inst = bq::instance_storage::get();
+                    const bq::string meta_dir = inst ? inst->meta_dir() : bq::string();
+                    char seg0_name[32];
+                    char seg1_name[32];
+                    snprintf(seg0_name, sizeof(seg0_name), "%" PRIu16 ".mmap", buffer.get_version());
+                    snprintf(seg1_name, sizeof(seg1_name), "%" PRIu16 "_1.mmap", buffer.get_version());
+                    result.add_result(bq::file_manager::is_file(bq::file_manager::combine_path(meta_dir, seg0_name)),
+                        "fast recovery first segment persisted");
+                    result.add_result(bq::file_manager::is_file(bq::file_manager::combine_path(meta_dir, seg1_name)),
+                        "fast recovery multiple segments persisted");
+                    // the 1.1 MB format cannot fit in a fresh 1 MiB segment: it gets an
+                    // own exact-capacity segment; find it by its oversized committed size
+                    bool found_large_segment = false;
+                    char version_prefix[16];
+                    snprintf(version_prefix, sizeof(version_prefix), "%" PRIu16 "_", buffer.get_version());
+                    for (const auto& file_name : bq::file_manager::get_sub_dirs_and_files_name(meta_dir)) {
+                        if (file_name.find(version_prefix) != 0) {
+                            continue;
+                        }
+                        auto file = bq::file_manager::instance().open_file(bq::file_manager::combine_path(meta_dir, file_name), bq::file_open_mode_enum::read);
+                        if (!file.is_valid()) {
+                            continue;
+                        }
+                        struct head_layout {
+                            uint64_t magic;
+                            uint32_t format_version;
+                            uint16_t run_version;
+                            uint16_t segment_index;
+                            uint64_t run_serial;
+                            uint32_t committed_size;
+                        } head;
+                        bq::file_manager::instance().read_file(file, &head, sizeof(head), bq::file_manager::seek_option::begin, 0);
+                        bq::file_manager::instance().close_file(file);
+                        if (head.committed_size > 1024 * 1024) {
+                            found_large_segment = true;
+                        }
+                    }
+                    result.add_result(found_large_segment, "fast recovery oversize metadata gets own segment");
                     auto& tls = bq::log_tls_info__get_direct().get_buffer_info(&buffer);
                     tls.fast_mode_ = true;
                     tls.cur_block_ = buffer.alloc_new_hp_block();
-                    const bq::fast_format_meta* formats[] = { first, last, large };
+                    const bq::fast_format_meta* formats[] = { first, seg_cross, large };
                     for (int32_t i = 0; i < 3; ++i) {
                         auto seq = bq::tools::make_size_seq<false>(int32_t(73 + i));
                         auto handle = buffer.alloc_write_chunk(
@@ -361,22 +421,11 @@ namespace bq {
                     buffer.commit_write_chunk(damaged);
                     return buffer.get_version();
                 }();
-                char first_name[32];
-                char second_name[32];
-                char large_name[40];
-                snprintf(first_name, sizeof(first_name), "%" PRIu16 "_0.mmap", old_version);
-                snprintf(second_name, sizeof(second_name), "%" PRIu16 "_1.mmap", old_version);
-                snprintf(large_name, sizeof(large_name), "%" PRIu16 "_0.large.mmap", old_version);
                 auto* inst = bq::instance_storage::get();
-                const bq::string fast_meta_folder = inst
-                    ? bq::file_manager::combine_path(inst->logs_dir(), bq::log_storage::escape_name(name) + "/fast_meta")
-                    : bq::string();
-                const bq::string first_path = bq::file_manager::combine_path(fast_meta_folder, first_name);
-                const bq::string second_path = bq::file_manager::combine_path(fast_meta_folder, second_name);
-                const bq::string large_path = bq::file_manager::combine_path(fast_meta_folder, large_name);
-                result.add_result(bq::file_manager::is_file(first_path), "fast recovery first segment persisted");
-                result.add_result(bq::file_manager::is_file(second_path), "fast recovery multiple segments persisted");
-                result.add_result(bq::file_manager::is_file(large_path), "fast recovery oversize metadata persisted");
+                const bq::string meta_dir = inst ? inst->meta_dir() : bq::string();
+                char seg0_name[32];
+                snprintf(seg0_name, sizeof(seg0_name), "%" PRIu16 ".mmap", old_version);
+                const bq::string seg0_path = bq::file_manager::combine_path(meta_dir, seg0_name);
                 if (auto* inst1 = bq::instance_storage::get()) {
                     inst1->test_begin_new_run(); // the second buffer construction is the relaunch
                 }
@@ -404,7 +453,7 @@ namespace bq {
                             const uint8_t first_arg = entry.is_fast_layout() ? entry.get_fast_args_data()[0] : entry.get_log_args_data()[4];
                             found_first |= valid && first_arg == 73;
                             found_second |= valid && first_arg == 74;
-                            found_large |= valid && entry.get_log_head().log_format_data_len == 100000
+                            found_large |= valid && entry.get_log_head().log_format_data_len == 1100000
                                 && first_arg == 75;
                         } else if (bq::log_record_reader::make_recovery_error(buffer,
                                        chunk.data_addr, chunk.data_size, converted, entry)) {
@@ -422,10 +471,11 @@ namespace bq {
                     result.add_result(found_recovery_error,
                         "fast recovery corrupt metadata warning record");
                 }
-                result.add_result(!bq::file_manager::is_file(first_path)
-                        && !bq::file_manager::is_file(second_path)
-                        && !bq::file_manager::is_file(large_path),
-                    "fast recovery multiple segments retired");
+                // T06: the previous run's segments stay within the recovery window
+                // (cur - old_version <= 16); only enable_journal of a run further
+                // than MAX_RECOVERY_VERSION_RANGE ahead retires them
+                result.add_result(bq::file_manager::is_file(seg0_path),
+                    "fast recovery segments kept within recovery window");
             }
 
             // normal records add a byte: 1 when oversize
@@ -1104,6 +1154,9 @@ namespace bq {
                 if (!log.is_valid()) {
                     return;
                 }
+                // register_format calls are counted process-wide (the meta registry is
+                // instance-level), so measure the delta around this test's sites
+                const uint32_t registers_before = bq::meta_registry::instance().test_register_count();
 #if defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE)
                 constexpr int32_t thread_count = 16;
                 typedef race_table<3, 25> sites;
@@ -1135,9 +1188,10 @@ namespace bq {
                 bq::log_imp* imp = bq::log_manager::get_log_by_id(log.get_id());
                 result.add_result(imp != nullptr, "site race log imp");
                 if (imp) {
-                    result.add_result(imp->get_buffer().test_fast_meta_register_count() == static_cast<uint32_t>(sites::count),
+                    const uint32_t registers = bq::meta_registry::instance().test_register_count() - registers_before;
+                    result.add_result(registers == static_cast<uint32_t>(sites::count),
                         "site race: each site registers exactly once (%u of %d)",
-                        imp->get_buffer().test_fast_meta_register_count(), sites::count);
+                        registers, sites::count);
                 }
                 const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
                 bq::array<uint32_t> seen;

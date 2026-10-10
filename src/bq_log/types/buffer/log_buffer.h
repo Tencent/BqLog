@@ -28,7 +28,7 @@
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 #include "bq_log/types/buffer/group_list.h"
 #include "bq_log/types/buffer/oversize_buffer.h"
-#include "bq_log/types/buffer/fast_meta_store.h"
+#include "bq_log/types/meta/meta_registry.h"
 #include "bq_log/types/storage/log_storage.h"
 #include "bq_log/types/storage/instance_storage.h"
 
@@ -52,9 +52,6 @@ namespace bq {
 #else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 #endif
-        // how many past runs' data can still be recovered: versions
-        // version_ - MAX_RECOVERY_VERSION_RANGE + 1 .. version_ - 1 stay visible
-        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 16;
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL = 1000;
         static constexpr uint64_t OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS = 1000;
 
@@ -228,7 +225,7 @@ namespace bq {
             uint8_t level, uint32_t category_idx, uint8_t format_type,
             const uint8_t* arg_types, uint16_t arg_count);
 
-        const fast_meta_head* resolve_fast_log_meta(uint16_t version, uint64_t old_addr);
+        const fast_format_meta* resolve_fast_log_meta(uint16_t version, uint64_t old_addr);
 
         bq_forceinline void commit_write_chunk(const log_buffer_write_handle& handle);
 
@@ -278,11 +275,6 @@ namespace bq {
         const log_tls_buffer_info& get_buffer_info_for_this_thread() const;
         // fast record with its head filled in, args after the head
         log_buffer_write_handle test_alloc_fast_record(const fast_format_meta* format, uint32_t args_size);
-        // every fast_log_format registration, including duplicated ones: 1 per site when a site races to init
-        uint32_t test_fast_meta_register_count()
-        {
-            return get_fast_meta_store()->test_register_count_.load_relaxed();
-        }
 
         int32_t get_groups_count() const { return hp_buffer_.get_groups_count(); }
         void garbage_collect() { hp_buffer_.garbage_collect(); }
@@ -359,11 +351,6 @@ namespace bq {
         uint32_t hp_buffer_max_alloc_size_;
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
-        bq::platform::spin_lock fast_meta_lock_;
-        bq::platform::atomic<fast_meta_store*> fast_meta_ptr_;
-        bq::unique_ptr<fast_meta_store> fast_meta_store_;
-
-        fast_meta_store* get_fast_meta_store();
 
         struct alignas(BQ_CACHE_LINE_SIZE) {
             bq::platform::spin_lock_rw_crazy array_lock_;

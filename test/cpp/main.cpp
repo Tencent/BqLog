@@ -25,6 +25,7 @@
 #include "test_miso_ring_buffer.h"
 #include "test_siso_ring_buffer.h"
 #include "test_instance_storage.h"
+#include "test_meta_registry.h"
 #include "test_log_buffer.h"
 #include "test_fast_log.h"
 #include "test_log_appender.h"
@@ -115,6 +116,7 @@ int32_t main_logic()
     TEST_GROUP(Bq_Log_Test, bq::test, test_compressed_cache);
     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap", 0));
     TEST_GROUP(Bq_Log_Test, bq::test, test_instance_storage);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_meta_registry);
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_fast_log);
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_appender);
@@ -166,6 +168,12 @@ int32_t main(int32_t argc, char** argv)
         bq::test::test_instance_storage instance_test;
         auto result = instance_test.test();
         result.output("test_instance_storage");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--meta-only") == 0) {
+        bq::test::test_meta_registry meta_test;
+        auto result = meta_test.test();
+        result.output("test_meta_registry");
         return result.is_all_pass() ? 0 : -1;
     }
     return main_logic();

@@ -21,6 +21,7 @@
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/types/buffer/miso_ring_buffer.h"
+#include "bq_log/types/meta/meta_registry.h"
 #include "bq_log/types/storage/instance_storage.h"
 
 namespace bq {
@@ -56,9 +57,11 @@ namespace bq {
         appender_console::console_static_misc console_static_misc_;
         appender_decoder_manager appender_decoder_manager_inst_;
         // Members reverse-destruct: log_manager (and all its log_buffers' mmaps) goes first,
+        // then meta_registry (journal files are closed before the instance lock goes),
         // then the instance lock is released.
         bq::unique_ptr<instance_storage> instance_storage_;
         bq::platform::spin_lock instance_storage_lock_;
+        meta_registry meta_registry_inst_;
         log_manager log_manager_inst_;
 
     private:

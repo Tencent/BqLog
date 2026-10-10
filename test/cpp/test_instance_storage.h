@@ -370,7 +370,7 @@ namespace bq {
                     log_buffer buffer(config);
                     write_marker_record(buffer, 0xDEAD0001);
                 }
-                for (uint32_t i = 0; i < log_buffer::MAX_RECOVERY_VERSION_RANGE + 1; ++i) {
+                for (uint32_t i = 0; i < bq::MAX_RECOVERY_VERSION_RANGE + 1; ++i) {
                     inst->test_begin_new_run();
                 }
                 auto storage = bq::log_storage::create(config.log_name, true);
@@ -378,7 +378,7 @@ namespace bq {
                 log_buffer buffer(config);
                 result.add_result(!read_find_marker(buffer, 0xDEAD0001),
                     "version out of window: stale recovery data discarded after %u runs",
-                    static_cast<unsigned>(log_buffer::MAX_RECOVERY_VERSION_RANGE + 1));
+                    static_cast<unsigned>(bq::MAX_RECOVERY_VERSION_RANGE + 1));
             }
 
             // T05: within MAX_RECOVERY_VERSION_RANGE runs, data is still recovered
@@ -401,7 +401,7 @@ namespace bq {
                     log_buffer buffer(config);
                     write_marker_record(buffer, 0xFACE0002);
                 }
-                for (uint32_t i = 0; i < log_buffer::MAX_RECOVERY_VERSION_RANGE - 1; ++i) {
+                for (uint32_t i = 0; i < bq::MAX_RECOVERY_VERSION_RANGE - 1; ++i) {
                     inst->test_begin_new_run();
                 }
                 auto storage = bq::log_storage::create(config.log_name, true);
@@ -409,7 +409,7 @@ namespace bq {
                 log_buffer buffer(config);
                 result.add_result(read_find_marker(buffer, 0xFACE0002),
                     "version in window: data recovered after %u runs",
-                    static_cast<unsigned>(log_buffer::MAX_RECOVERY_VERSION_RANGE - 1));
+                    static_cast<unsigned>(bq::MAX_RECOVERY_VERSION_RANGE - 1));
             }
 
             // T05: mmap data whose run serial is ahead of this run (e.g. copied directory)
