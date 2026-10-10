@@ -65,12 +65,13 @@ jobs:
         run: |
           choco install -y llvm
 
-      - name: Install MSYS2 (Attempt 1)
+      - name: Install MSYS2 UCRT64 (Attempt 1)
+        id: msys2
         if: ${{ matrix.cc == 'mingw_gcc' }}
         continue-on-error: true
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           release: true
           path-type: inherit
           update: true
@@ -80,7 +81,7 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-make
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
@@ -89,7 +90,7 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-make
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
@@ -98,7 +99,7 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-make
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
@@ -112,7 +113,9 @@ jobs:
       - name: Add MSYS2 to PATH
         if: ${{ matrix.cc == 'mingw_gcc' }}
         run: |
-          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
+          $msys = "${{ steps.msys2.outputs.msys2-location }}"
+          if (-not $msys) { $msys = "C:\msys64" }
+          $env:Path = "$msys\ucrt64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -2446,12 +2449,14 @@ jobs:
         if: runner.os == 'Windows'
         uses: lukka/get-cmake@latest
 
-      - name: Install MSYS2 (Attempt 1)
+      # cgo needs a gcc compatible compiler; UCRT64 links the same C runtime as the MSVC built bqlog dll
+      - name: Install MSYS2 UCRT64 (Attempt 1)
+        id: msys2
         if: runner.os == 'Windows'
         continue-on-error: true
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           release: true
           path-type: inherit
           update: true
@@ -2461,15 +2466,27 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc
           which gcc
       - name: Ensure MSYS2 packages (Attempt 3)
         if: runner.os == 'Windows'
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc
           which gcc
+
+      - name: Put UCRT64 gcc first in PATH
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $msys = "${{ steps.msys2.outputs.msys2-location }}"
+          if (-not $msys) { $msys = "C:\msys64" }
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
+          $env:Path = "$msys\ucrt64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+          where.exe gcc
+          gcc -dumpmachine
 
       - name: Run Go Tests
         shell: bash

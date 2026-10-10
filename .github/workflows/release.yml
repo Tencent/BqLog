@@ -265,12 +265,12 @@ jobs:
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
-          install: mingw-w64-x86_64-gcc
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
       - name: Add Windows toolchain to PATH
         if: runner.os == 'Windows'
         shell: bash
-        run: echo 'C:/msys64/mingw64/bin' >> "$GITHUB_PATH"
+        run: echo 'C:/msys64/ucrt64/bin' >> "$GITHUB_PATH"
       - name: Download source module
         uses: actions/download-artifact@v8
         with:
