@@ -13,22 +13,21 @@
 //
 //     import bq.log;
 //
-// Nothing here includes bq_log or bq_common -- that is the point. The file is
-// added to the unit test binary whenever the toolchain can build modules, so
-// every test run compiles the import entry and checks it against the very same
-// library the include entry is tested with.
+// Nothing here includes bq_log or bq_common, and nothing includes the C++ standard
+// library either: GCC 15's module TS crashes with an internal compiler error when a
+// translation unit imports and then includes an STL header. C headers are fine, and
+// bq::string comes from the module itself.
 //
-// It reports one summary line in the same shape as the rest of the suite. The
-// test framework itself is not used, because it is reached through headers that
-// this translation unit must not include; the pass/fail of this file is folded
-// into the overall result by main.cpp.
+// This is a binary of its own, built beside the include entry's test binary, because a
+// translation unit may not import and include the same library. The test runners start
+// it right after BqLogUnitTest, so every test run of every platform compiles the import
+// entry and exercises it against the same library.
+#define _CRT_SECURE_NO_WARNINGS // the fopen/fread below read the log file on purpose
 import bq.log;
 
 #include <stdint.h>
 #include <stdio.h>
-#include <fstream>
-#include <string>
-#include <iterator>
+#include <string.h>
 
 namespace {
     uint32_t checks_total = 0;
@@ -41,34 +40,38 @@ namespace {
             ++checks_passed;
             return;
         }
-        bq::util::set_log_device_console_min_level(bq::log_level::verbose);
-        bq::util::log_device_console(bq::log_level::error, "module entry check failed: %s\n", what);
-        bq::util::set_log_device_console_min_level(bq::log_level::warning);
+        printf("module entry check failed: %s\n", what);
+        fflush(stdout);
     }
 
-    std::string read_file(const char* path)
+    // the whole log file, read with C stdio
+    bool read_file(const char* path, char* buffer, size_t buffer_size)
     {
-        std::ifstream in(path, std::ios::binary);
-        return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+        FILE* file = fopen(path, "rb");
+        if (file == nullptr) {
+            return false;
+        }
+        const size_t read_size = fread(buffer, 1, buffer_size - 1, file);
+        fclose(file);
+        buffer[read_size] = '\0';
+        return read_size > 0;
     }
 
-    size_t count_occurrences(const std::string& text, const std::string& needle)
+    size_t count_occurrences(const char* text, const char* needle)
     {
         size_t count = 0;
-        for (size_t pos = text.find(needle); pos != std::string::npos; pos = text.find(needle, pos + needle.size())) {
+        const size_t needle_size = strlen(needle);
+        for (const char* found = strstr(text, needle); found != nullptr; found = strstr(found + needle_size, needle)) {
             ++count;
         }
         return count;
     }
 }
 
-// Called from main.cpp, which owns the aggregate result.
-bool bq_module_entry_test()
+int main()
 {
-    // bq::string comes from bq_common, so this also checks that importing bq.log
-    // hands out the types the library is built on.
     bq::string sanity("abc");
-    report("types from bq_common are exported", !sanity.is_empty() && sanity.find("b") != bq::string::npos);
+    report("bq::string comes from the module", !sanity.is_empty() && sanity.find("b") != bq::string::npos);
 
     const char* file_name = "module_entry_test";
     char config[512];
@@ -81,40 +84,43 @@ bool bq_module_entry_test()
         "log.high_perform_mode_freq_threshold_per_second=1000000\n",
         file_name);
 
+    // the file of a previous run would be appended to, and then the record counts below
+    // would include records that are not ours
+    remove("module_entry_test_1.log");
+    remove("module_entry_test.log");
+
     bq::log log = bq::log::create_log(bq::string("module_entry"), bq::string(config));
     report("create_log through the module", log.is_valid());
     if (!log.is_valid()) {
-        bq::util::set_log_device_console_min_level(bq::log_level::verbose);
-        bq::util::log_device_console(bq::log_level::info, "test case %s result: %u/%u\n", "test_module", checks_passed, checks_total);
-        bq::util::set_log_device_console_min_level(bq::log_level::warning);
-        return false;
+        printf("test case %s result: %u/%u\n", "test_module", checks_passed, checks_total);
+        fflush(stdout);
+        return -1;
     }
 
-    // The ordinary interface, and the same text through the macro-free fast one:
-    // both must reach the same layout.
+    // The ordinary interface and the same text through the macro-free fast one: both
+    // have to reach the same layout. Then a format with arguments, another level, and
+    // the wider literals of the format string.
     log.info("module same message");
     log.fast_info<"module same message">();
-    // A format with arguments, a member of another level, and the wider literals
-    // of the format string (stored as UTF-8 and UTF-16 respectively).
     log.fast_info<"module fast {} {}">(1, 2);
     log.fast_warning<"module warned">();
     log.fast_info<u"module u16 \u4e2d\u6587 {}">(3);
     log.fast_info<L"module wide \u4e2d\u6587 {}">(4);
     log.force_flush();
 
-    const std::string content = read_file("module_entry_test_1.log");
-    report("the log file was written", !content.empty());
-    report("ordinary interface", content.find("module same message") != std::string::npos);
-    report("fast_info with arguments", content.find("module fast 1 2") != std::string::npos);
-    report("fast_warning is a member of the module API", content.find("module warned") != std::string::npos);
+    char content[4096];
+    const bool file_read = read_file("module_entry_test_1.log", content, sizeof(content));
+    report("the log file was written", file_read);
+    report("ordinary interface", strstr(content, "module same message") != nullptr);
+    report("fast_info with arguments", strstr(content, "module fast 1 2") != nullptr);
+    report("fast_warning is available", strstr(content, "module warned") != nullptr);
     // \u4e2d\u6587 as UTF-8, the encoding the text appender writes
-    report("u16 format string", content.find("module u16 \xe4\xb8\xad\xe6\x96\x87 3") != std::string::npos);
-    report("wide format string", content.find("module wide \xe4\xb8\xad\xe6\x96\x87 4") != std::string::npos);
+    report("u16 format string", strstr(content, "module u16 \xe4\xb8\xad\xe6\x96\x87 3") != nullptr);
+    report("wide format string", strstr(content, "module wide \xe4\xb8\xad\xe6\x96\x87 4") != nullptr);
     // one record from log.info, one from fast_info, and nothing else
     report("one message, two interfaces", count_occurrences(content, "module same message") == 2);
 
-    bq::util::set_log_device_console_min_level(bq::log_level::verbose);
-    bq::util::log_device_console(bq::log_level::info, "test case %s result: %u/%u\n", "test_module", checks_passed, checks_total);
-    bq::util::set_log_device_console_min_level(bq::log_level::warning);
-    return checks_passed == checks_total;
+    printf("test case %s result: %u/%u\n", "test_module", checks_passed, checks_total);
+    fflush(stdout);
+    return checks_passed == checks_total ? 0 : -1;
 }

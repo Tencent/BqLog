@@ -9,6 +9,9 @@ make
 if [ "$BQ_LOW_PERFORMANCE_TESTS" != "true" ]; then
     ./BqLogUnitTest
     exit_code=$?
+    if [ -x ./BqLogModuleUnitTest ]; then
+        ./BqLogModuleUnitTest || exit_code=$?
+    fi
     if [ $exit_code -ne 0 ]; then
         echo "Test failed."
         exit 1
@@ -21,6 +24,9 @@ CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=unix -DCMAKE_BUILD_TYPE=RelWithDeb
 make
 ./BqLogUnitTest
 exit_code=$?
+if [ -x ./BqLogModuleUnitTest ]; then
+    ./BqLogModuleUnitTest || exit_code=$?
+fi
 if [ $exit_code -ne 0 ]; then
     echo "Test failed."
     exit 1

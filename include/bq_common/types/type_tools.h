@@ -215,7 +215,9 @@ namespace bq {
             static inline void destruct(U* _ptr)
             {
                 if (_ptr) {
-                    _ptr->~T();
+                    // the destructor of the pointee, named by U: MSVC cannot resolve the
+                    // outer T inside a module when this is instantiated (error C2300)
+                    _ptr->~U();
                 }
             }
         };
@@ -253,7 +255,9 @@ namespace bq {
             {
                 if (_ptr) {
                     for (size_t i = 0; i < _count; ++i) {
-                        object_destructor<T>::destruct(_ptr + i);
+                        // U, not the T of the enclosing template: MSVC does not resolve the
+                        // outer parameter inside a nested template in a module
+                        object_destructor<U>::destruct(_ptr + i);
                     }
                 }
             }

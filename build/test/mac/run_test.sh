@@ -8,6 +8,9 @@ cmake ../../../../test/cpp -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM
 xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration Debug
 ./Debug/BqLogUnitTest
 exit_code=$?
+if [ -x ./Debug/BqLogModuleUnitTest ]; then
+    ./Debug/BqLogModuleUnitTest || exit_code=$?
+fi
 if [ $exit_code -eq 0 ]; then
     echo "Test succeeded."
 else
@@ -19,6 +22,9 @@ cmake ../../../../test/cpp -DTARGET_PLATFORM:STRING=mac -DCPP_VER=$CPP_VER_PARAM
 xcodebuild -project BqLogUnitTest.xcodeproj -scheme BqLogUnitTest -configuration RelWithDebInfo OTHER_LDFLAGS="-ld_classic"
 ./RelWithDebInfo/BqLogUnitTest
 exit_code=$?
+if [ -x ./RelWithDebInfo/BqLogModuleUnitTest ]; then
+    ./RelWithDebInfo/BqLogModuleUnitTest || exit_code=$?
+fi
 if [ $exit_code -eq 0 ]; then
     echo "Test succeeded."
 else

@@ -23,6 +23,7 @@
 #include "bq_log/misc/bq_log_def.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     namespace tools {
         // the character type a u8"..." literal is made of: char8_t under C++20, char before that
         using bq_char8_t = bq::decay_t<decltype(u8""[0])>;
@@ -1024,4 +1025,5 @@ _type_copy(const T& value, uint8_t* data_addr, size_t data_size)
 }
 //================================================type copy end========================================
 }
+    BQ_MODULE_EXPORT_END
 }

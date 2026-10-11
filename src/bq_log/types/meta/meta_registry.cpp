@@ -130,7 +130,7 @@ namespace bq {
             }
         }
         // 64-byte alignment: the fast_info site packs its level mask into the address's low bits
-        auto* data = static_cast<uint8_t*>(bq::platform::aligned_alloc(bq::fast_meta_addr_align, block_size));
+        auto* data = static_cast<uint8_t*>(bq::platform::aligned_alloc(bq::fast_meta_addr_align(), block_size));
         if (!data) {
             return nullptr;
         }
@@ -464,7 +464,7 @@ namespace bq {
 
     const fast_format_meta* meta_registry::resolve_live(uint64_t meta_addr)
     {
-        const uint64_t addr = meta_addr & ~bq::fast_meta_addr_mask;
+        const uint64_t addr = meta_addr & ~bq::fast_meta_addr_mask();
         if (addr == 0) {
             return nullptr;
         }

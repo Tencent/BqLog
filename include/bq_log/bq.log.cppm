@@ -37,7 +37,6 @@ module;
 
 // Every system header the public headers pull in, so that the includes inside the
 // marked regions are no-ops and the C library is not attached to this module.
-#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -57,7 +56,16 @@ module;
 #include <dlfcn.h>
 #endif
 
+// <assert.h> has no include guard: it redefines assert from the NDEBUG of the point of
+// inclusion. Pre-including the system header does not help, because the purview would
+// still include it again; pre-include the wrapper below instead, whose own #pragma once
+// makes that second inclusion empty.
+#include "bq_common/misc/assert.h"
+
 export module bq.log;
+
+// Headers that behave differently while a module is being built look at this.
+#define BQ_MODULE_BUILD 1
 
 #define BQ_MODULE_EXPORT_BEGIN export {
 #define BQ_MODULE_EXPORT_END }

@@ -59,7 +59,7 @@ namespace bq {
         const uint16_t version = buffer.get_current_reading_version();
         const fast_format_meta* format = nullptr;
         // the low bits of the address carry the fast_info enabled-level mask
-        const uint64_t meta_addr = head.format_meta_addr & ~bq::fast_meta_addr_mask;
+        const uint64_t meta_addr = head.format_meta_addr & ~bq::fast_meta_addr_mask();
         if (version == buffer.get_version()) {
             // live record: synchronize with the registering thread once, then read its entry
             format = bq::meta_registry::instance().resolve_live(meta_addr);

@@ -169,7 +169,7 @@ namespace bq {
                     store_site_v(site, meta | (UINT64_C(1) << static_cast<uint32_t>(LEVEL)));
                 }
             }
-            const uint64_t meta_addr = load_site_v(site) & ~bq::fast_meta_addr_mask;
+            const uint64_t meta_addr = load_site_v(site) & ~bq::fast_meta_addr_mask();
             // same shape as the macro slow path, but the buffer is found by log id
             if constexpr (sizeof...(Args) == 0) {
                 if (!bq::api::__api_fast_log_write_no_args_by_id(log_access::log_id(l), meta_addr)) {

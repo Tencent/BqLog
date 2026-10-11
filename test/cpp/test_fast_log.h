@@ -1302,10 +1302,16 @@ namespace bq {
                     if (race_pos == bq::string::npos) {
                         continue;
                     }
-                    int32_t site = -1;
-                    int32_t tid = -1;
-                    if (sscanf(line.c_str() + race_pos, "race %d %d", &site, &tid) != 2
-                        || site < 0 || site >= sites::count || tid < 0 || tid >= thread_count) {
+                    // strtol instead of sscanf: the MSVC test build is /W4 /WX, where the
+                    // 4996 deprecation of the scanf family is an error
+                    const char* const numbers = line.c_str() + race_pos + 5;
+                    char* after_site = nullptr;
+                    char* after_tid = nullptr;
+                    const long site = strtol(numbers, &after_site, 10);
+                    const long tid = strtol(after_site, &after_tid, 10);
+                    if (after_site == numbers || after_tid == after_site
+                        || site < 0 || site >= static_cast<long>(sites::count)
+                        || tid < 0 || tid >= static_cast<long>(thread_count)) {
                         ++bad_lines;
                         continue;
                     }

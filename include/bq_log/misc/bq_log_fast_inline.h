@@ -9,7 +9,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "bq_common/platform/fast_clock.h"
+#include "bq_common/bq_common_public_include.h"
 
 namespace bq {
     BQ_MODULE_EXPORT_BEGIN
@@ -158,7 +158,7 @@ namespace bq {
 
         // fast_info: the site publishes meta_addr | (enabled level mask) in one field, and the
         // record head stores that raw value (the level bits survive; every consumer masks them off
-        // with fast_meta_addr_mask). The field is read again here, at head store time, rather than
+        // with fast_meta_addr_mask()). The field is read again here, at head store time, rather than
         // reusing the load that gated the branch: the two reads of one atomic object must agree
         // (read-read coherence), so the second load cannot observe an address different from the
         // one the branch accepted.

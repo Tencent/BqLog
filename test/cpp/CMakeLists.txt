@@ -165,13 +165,13 @@ else()
             endif()
         endforeach()
 	endif()
+    # The library itself, compiled once: both test entries link it, the include entry's
+    # binary and the module entry's. Everything that is not test code belongs to it.
+    add_library(bqlog_lib OBJECT ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+
     # build executable
-    add_executable(BqLogUnitTest
-            ${SRC_LIST}
-            ${TEST_LIST}
-            ${THIRD_PARTY_LIST}
-            ${INC_LIST}
-            )
+    add_executable(BqLogUnitTest ${TEST_LIST})
+    target_link_libraries(BqLogUnitTest PRIVATE bqlog_lib)
 endif()
 
 
@@ -189,17 +189,17 @@ elseif(TARGET_PLATFORM STREQUAL "ohos")
             dl
     )
 elseif(TARGET_PLATFORM STREQUAL "linux")
-    target_link_libraries(BqLogUnitTest PRIVATE pthread dl)
+    target_link_libraries(bqlog_lib PRIVATE pthread dl)
 elseif(TARGET_PLATFORM STREQUAL "unix")
-    target_link_libraries(BqLogUnitTest PRIVATE pthread)
+    target_link_libraries(bqlog_lib PRIVATE pthread)
     find_library(EXECINFO_LIBRARY execinfo)
     if(EXECINFO_LIBRARY)
-        target_link_libraries(BqLogUnitTest PRIVATE ${EXECINFO_LIBRARY})
+        target_link_libraries(bqlog_lib PRIVATE ${EXECINFO_LIBRARY})
     endif()
 elseif(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(BqLogUnitTest PRIVATE -ldbghelp)
+        target_link_libraries(bqlog_lib PRIVATE -ldbghelp)
     endif()
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogUnitTest)
 endif()
@@ -207,11 +207,12 @@ endif()
 ############################################################
 # C++20 module entry
 ############################################################
-# `import bq.log;` gets a test binary of its own, built from the same test sources
-# as the include entry, so the module is never a special case that gets forgotten.
-# A toolchain that cannot build modules just skips it and says so.
-# Off until module/bq.log.cppm can be finished: see design/impl_guide/tasks/T09_module.md
-OPTION(BQ_MODULE_TEST "Build and run the C++20 module entry test" OFF)
+# `import bq.log;` is exercised by a binary of its own: a translation unit may not import
+# and include the same library, so it cannot live in BqLogUnitTest next to the include
+# entry. The test runners start it right after BqLogUnitTest, which is what keeps the
+# module entry compiled and run on every platform that can build modules; a toolchain or
+# a generator that cannot just skips it and says so.
+OPTION(BQ_MODULE_TEST "Build and run the C++20 module entry test" ON)
 
 set(BQ_MODULE_TOOLCHAIN_OK FALSE)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
@@ -224,46 +225,35 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     endif()
 endif()
 
-# iOS is left out on purpose: its test target is a static library, not something
-# that can be run from here. Android builds an executable and runs it on an
-# emulator in CI, so the module gets the same treatment as the desktop platforms.
+# Only where the test binary is an executable that can be run: iOS builds a static
+# library, and whether the module is shipped to the mobile platforms is a packaging
+# question of its own.
 if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE_TOOLCHAIN_OK
         AND CMAKE_GENERATOR MATCHES "Ninja|Visual Studio"
-        AND NOT TARGET_PLATFORM MATCHES "^(ohos|ios)$")
+        AND TARGET bqlog_lib)
     message(STATUS "Module entry test: enabled (import bq.log)")
-    target_sources(BqLogUnitTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../module/module_test.cpp)
-    target_compile_definitions(BqLogUnitTest PRIVATE BQ_MODULE_TEST=1)
+
+    # The interface unit is a target of its own, the way a consumer of the library would
+    # have it: linking it tells the importing translation unit where the compiled module
+    # is. Its file set has to be PUBLIC, otherwise CMake refuses the import from outside.
+    add_library(bqlog_module STATIC)
+    target_include_directories(bqlog_module PRIVATE ${ALL_INC_DIRS})
+    target_sources(bqlog_module PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../include/bq_log/bq.log.cppm)
+    # the module has to see the headers exactly as the test sources do
+    target_compile_definitions(bqlog_module PRIVATE BQ_UNIT_TEST)
+
+    add_executable(BqLogModuleUnitTest ${CMAKE_CURRENT_SOURCE_DIR}/../module/module_test.cpp)
+    target_link_libraries(BqLogModuleUnitTest PRIVATE bqlog_lib bqlog_module)
+    # A source file that only imports has to be scanned for module dependencies. The
+    # property says so for this target alone; the CMP0155 policy would do it for every
+    # source of the project, which is not wanted here.
+    set_property(TARGET BqLogModuleUnitTest PROPERTY CXX_SCAN_FOR_MODULES ON)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        # GCC's modules are a TS (-fmodules-ts) and it looks for the compiled module
-        # in gcm.cache below the working directory, which is not where CMake keeps
-        # it. Building the interface unit the way GCC expects is the whole fix: the
-        # importer then finds it without being told anything else.
-        foreach(INC_DIR ${ALL_INC_DIRS})
-            list(APPEND BQ_MODULE_INC_FLAGS -I${INC_DIR})
-        endforeach()
-        add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/gcm.cache/bq.log.gcm ${CMAKE_BINARY_DIR}/bq.log.module.obj
-                COMMAND ${CMAKE_CXX_COMPILER} -std=gnu++${CPP_VER} -fmodules-ts -fno-exceptions -fno-rtti
-                        -DBQ_UNIT_TEST ${BQ_MODULE_INC_FLAGS}
-                        -c ${CMAKE_CURRENT_SOURCE_DIR}/../../include/bq_log/bq.log.cppm
-                        -o ${CMAKE_BINARY_DIR}/bq.log.module.obj
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../include/bq_log/bq.log.cppm
-                COMMENT "Building the C++20 module interface unit with GCC")
-        add_custom_target(bqlog_module DEPENDS ${CMAKE_BINARY_DIR}/gcm.cache/bq.log.gcm)
-        add_dependencies(BqLogUnitTest bqlog_module)
-        target_compile_options(BqLogUnitTest PRIVATE -fmodules-ts)
-        target_sources(BqLogUnitTest PRIVATE ${CMAKE_BINARY_DIR}/bq.log.module.obj)
-    else()
-        # MSVC and Clang get the interface unit as a target of its own, the way a
-        # consumer of the library would have it: whoever links it, and so every
-        # translation unit of the test binary, learns where its module is.
-        add_library(bqlog_module STATIC)
-        target_include_directories(bqlog_module PRIVATE ${ALL_INC_DIRS})
-        target_sources(bqlog_module PRIVATE FILE_SET CXX_MODULES BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-                FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../include/bq_log/bq.log.cppm)
-        # the module has to see the headers exactly as the test sources do
-        target_compile_definitions(bqlog_module PRIVATE BQ_UNIT_TEST)
-        target_link_libraries(BqLogUnitTest PRIVATE bqlog_module)
+        # GCC's modules are still a TS, and the flag is needed on both sides.
+        target_compile_options(bqlog_module PRIVATE -fmodules-ts)
+        target_compile_options(BqLogModuleUnitTest PRIVATE -fmodules-ts)
     endif()
 else()
     message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, a toolchain with modules, and a Ninja or VS generator; -DBQ_MODULE_TEST=ON enables it once include/bq_log/bq.log.cppm is finished)")

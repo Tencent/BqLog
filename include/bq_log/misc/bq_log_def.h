@@ -134,8 +134,8 @@ namespace bq {
     // consumer must mask the low bits off before using the address stored in a record head as a
     // pointer. The macro path stores a clean address, for which the mask is a no-op.
     BQ_MODULE_EXPORT_END
-    static constexpr uint64_t fast_meta_addr_align = 64;
-    static constexpr uint64_t fast_meta_addr_mask = fast_meta_addr_align - 1;
+    constexpr uint64_t fast_meta_addr_align() { return 64; }
+    constexpr uint64_t fast_meta_addr_mask() { return fast_meta_addr_align() - 1; }
     BQ_MODULE_EXPORT_BEGIN
 
     // zero level words for an invalid log (all levels disabled); a template static member

@@ -9,6 +9,8 @@ cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -
 cmake --build .
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
+if exist .\BqLogModuleUnitTest.exe .\BqLogModuleUnitTest.exe
+if exist .\BqLogModuleUnitTest.exe if %ERRORLEVEL% NEQ 0 set exitcode=%ERRORLEVEL%
 
 echo "If your did not see output with color, and there are some strange characters like \033, please run Terminal Windows With Administrative Privileges, then type command below, and run script again"
 echo "reg add HKEY_CURRENT_USER\Console /v VirtualTerminalLevel /t REG_DWORD /d 0x00000001 /f"
@@ -22,6 +24,8 @@ cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -
 cmake --build .
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
+if exist .\BqLogModuleUnitTest.exe .\BqLogModuleUnitTest.exe
+if exist .\BqLogModuleUnitTest.exe if %ERRORLEVEL% NEQ 0 set exitcode=%ERRORLEVEL%
 
 echo "If your did not see output with color, and there are some strange characters like \033, please run Terminal Windows With Administrative Privileges, then type command below, and run script again"
 echo "reg add HKEY_CURRENT_USER\Console /v VirtualTerminalLevel /t REG_DWORD /d 0x00000001 /f"

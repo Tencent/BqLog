@@ -16,6 +16,9 @@ make -j"$(nproc)"
 set +e
 ./BqLogUnitTest
 exit_code=$?
+if [ -x ./BqLogModuleUnitTest ]; then
+    ./BqLogModuleUnitTest || exit_code=$?
+fi
 set -e
 
 if [ $exit_code -eq 0 ]; then
@@ -50,6 +53,9 @@ make -j"$(nproc)"
 set +e
 ./BqLogUnitTest
 exit_code=$?
+if [ -x ./BqLogModuleUnitTest ]; then
+    ./BqLogModuleUnitTest || exit_code=$?
+fi
 set -e
 
 if [ $exit_code -eq 0 ]; then

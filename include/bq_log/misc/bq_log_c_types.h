@@ -1,6 +1,8 @@
 /* Copyright (C) 2026 Tencent. Licensed under the Apache License, Version 2.0. */
 #pragma once
 #include <stdint.h>
+// The two exceptions to "bq_log only includes the bq_common entry": this header is
+// also compiled as C, and these are the only two bq_common headers that are.
 #include "bq_common/platform/macros.h"
 #include "bq_common/types/basic_types.h"
 
