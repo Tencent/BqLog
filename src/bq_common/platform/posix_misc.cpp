@@ -23,6 +23,11 @@
 #if defined(BQ_LINUX) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
 #endif
+// Same reason, for illumos (Solaris): <sys/file.h> declares flock() and LOCK_EX only when
+// __EXTENSIONS__ is set, and without them try_lock_instance_file cannot lock at all.
+#if defined(__sun) && !defined(__EXTENSIONS__)
+#define __EXTENSIONS__
+#endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
 #include <pthread.h>
