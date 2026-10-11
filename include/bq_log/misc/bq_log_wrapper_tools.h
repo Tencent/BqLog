@@ -24,9 +24,19 @@
 
 namespace bq {
     namespace tools {
+        // the character type a u8"..." literal is made of: char8_t under C++20, char before that
+        using bq_char8_t = bq::decay_t<decltype(u8""[0])>;
+
+        template <typename T>
+        struct _is_utf8_char_type : public bq::bool_type<bq::is_same<T, char>::value
+                                         || bq::is_same<T, bq_char8_t>::value> {
+        };
+
         template <typename T>
         struct _is_utf8_c_style_string : public bq::bool_type<bq::is_same<char*, bq::decay_t<T>>::value
-                                             || bq::is_same<const char*, bq::decay_t<T>>::value> {
+                                             || bq::is_same<const char*, bq::decay_t<T>>::value
+                                             || bq::is_same<bq_char8_t*, bq::decay_t<T>>::value
+                                             || bq::is_same<const bq_char8_t*, bq::decay_t<T>>::value> {
         };
 
         template <typename T>
@@ -83,8 +93,8 @@ namespace bq {
                 typedef void char_type;
             };
             template <typename U>
-            struct format_c_str_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_format_str_chars())>, const char*>::value>> : public bq::true_type {
-                typedef char char_type;
+            struct format_c_str_member_func_sfinae<U, bq::enable_if_t<_is_utf8_c_style_string<decltype(bq::declval<const U>().bq_log_format_str_chars())>::value>> : public bq::true_type {
+                typedef bq::decay_t<decltype(bq::declval<const U>().bq_log_format_str_chars()[0])> char_type;
             };
             template <typename U>
             struct format_c_str_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_format_str_chars())>, const char16_t*>::value>> : public bq::true_type {
@@ -102,9 +112,15 @@ namespace bq {
             struct format_custom_member_func_sfinae : public bq::false_type {
                 typedef void char_type;
             };
+            template <typename U, typename PTR, typename V = void>
+            struct format_custom_member_ptr_sfinae : public bq::false_type {
+            };
+            template <typename U, typename PTR>
+            struct format_custom_member_ptr_sfinae<U, PTR, bq::void_t<decltype(bq::declval<const U>().bq_log_custom_format(bq::declval<PTR>(), bq::declval<size_t>()))>> : public bq::true_type {
+            };
             template <typename U>
-            struct format_custom_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_custom_format(bq::declval<char*>(), bq::declval<size_t>()))>, void>::value>> : public bq::true_type {
-                typedef char char_type;
+            struct format_custom_member_func_sfinae<U, bq::enable_if_t<format_custom_member_ptr_sfinae<U, char*>::value || format_custom_member_ptr_sfinae<U, bq_char8_t*>::value>> : public bq::true_type {
+                typedef bq::condition_type_t<format_custom_member_ptr_sfinae<U, bq_char8_t*>::value, bq_char8_t, char> char_type;
             };
             template <typename U>
             struct format_custom_member_func_sfinae<U, bq::enable_if_t<bq::is_same<bq::decay_t<decltype(bq::declval<const U>().bq_log_custom_format(bq::declval<char16_t*>(), bq::declval<size_t>()))>, void>::value>> : public bq::true_type {
@@ -133,8 +149,8 @@ namespace bq {
                 static constexpr size_t char_size = 0;
             };
             template <typename U>
-            struct format_c_str_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_format_str_chars(bq::declval<const U&>())), const char*>::value>> : public bq::true_type {
-                typedef char char_type;
+            struct format_c_str_global_func_sfinae<U, bq::enable_if_t<_is_utf8_c_style_string<decltype(bq_log_format_str_chars(bq::declval<const U&>()))>::value>> : public bq::true_type {
+                typedef bq::decay_t<decltype(bq_log_format_str_chars(bq::declval<const U&>())[0])> char_type;
             };
             template <typename U>
             struct format_c_str_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_format_str_chars(bq::declval<const U&>())), const char16_t*>::value>> : public bq::true_type {
@@ -152,9 +168,15 @@ namespace bq {
             struct format_custom_global_func_sfinae : public bq::false_type {
                 typedef void char_type;
             };
+            template <typename U, typename PTR, typename V = void>
+            struct format_custom_global_ptr_sfinae : public bq::false_type {
+            };
+            template <typename U, typename PTR>
+            struct format_custom_global_ptr_sfinae<U, PTR, bq::void_t<decltype(bq_log_custom_format(bq::declval<const U&>(), bq::declval<PTR>(), bq::declval<size_t>()))>> : public bq::true_type {
+            };
             template <typename U>
-            struct format_custom_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_custom_format(bq::declval<const U&>(), bq::declval<char*>(), bq::declval<size_t>())), void>::value>> : public bq::true_type {
-                typedef char char_type;
+            struct format_custom_global_func_sfinae<U, bq::enable_if_t<format_custom_global_ptr_sfinae<U, char*>::value || format_custom_global_ptr_sfinae<U, bq_char8_t*>::value>> : public bq::true_type {
+                typedef bq::condition_type_t<format_custom_global_ptr_sfinae<U, bq_char8_t*>::value, bq_char8_t, char> char_type;
             };
             template <typename U>
             struct format_custom_global_func_sfinae<U, bq::enable_if_t<bq::is_same<decltype(bq_log_custom_format(bq::declval<const U&>(), bq::declval<char16_t*>(), bq::declval<size_t>())), void>::value>> : public bq::true_type {
@@ -226,7 +248,7 @@ namespace bq {
         struct _is_bq_log_format_type {
             static constexpr bool value = _is_bq_log_supported_string_type<STR>::value
                 || _custom_type_helper<STR>::is_valid;
-            static constexpr log_arg_type_enum arg_type = bq::condition_value < (_get_serialize_func_type<STR>() == _serialize_func_type::custom_type) && bq::is_same<typename _custom_type_helper<STR>::char_type, char>::value, log_arg_type_enum, log_arg_type_enum::string_utf8_type,
+            static constexpr log_arg_type_enum arg_type = bq::condition_value < (_get_serialize_func_type<STR>() == _serialize_func_type::custom_type) && _is_utf8_char_type<typename _custom_type_helper<STR>::char_type>::value, log_arg_type_enum, log_arg_type_enum::string_utf8_type,
                                                bq::condition_value<(_get_serialize_func_type<STR>() == _serialize_func_type::custom_type) && bq::is_same<typename _custom_type_helper<STR>::char_type, char16_t>::value, log_arg_type_enum, log_arg_type_enum::string_utf16_type,
                                                    bq::condition_value<(_get_serialize_func_type<STR>() == _serialize_func_type::custom_type) && bq::is_same<typename _custom_type_helper<STR>::char_type, char32_t>::value, log_arg_type_enum, log_arg_type_enum::string_utf32_type,
                                                        bq::condition_value<_get_serialize_func_type<STR>() == _serialize_func_type::utf8_string, log_arg_type_enum, log_arg_type_enum::string_utf8_type,
@@ -238,14 +260,14 @@ namespace bq {
         template <typename T>
         constexpr log_arg_type_enum _get_log_param_type_enum()
         {
-            return bq::condition_value < (_get_serialize_func_type<T>() == _serialize_func_type::custom_type) && bq::is_same<typename _custom_type_helper<T>::char_type, char>::value, log_arg_type_enum, log_arg_type_enum::string_utf8_type,
-                   bq::condition_value < (_get_serialize_func_type<T>() == _serialize_func_type::custom_type) && !bq::is_same<typename _custom_type_helper<T>::char_type, char>::value, log_arg_type_enum, log_arg_type_enum::string_utf16_type,
+            return bq::condition_value < (_get_serialize_func_type<T>() == _serialize_func_type::custom_type) && _is_utf8_char_type<typename _custom_type_helper<T>::char_type>::value, log_arg_type_enum, log_arg_type_enum::string_utf8_type,
+                   bq::condition_value < (_get_serialize_func_type<T>() == _serialize_func_type::custom_type) && !_is_utf8_char_type<typename _custom_type_helper<T>::char_type>::value, log_arg_type_enum, log_arg_type_enum::string_utf16_type,
                    bq::condition_value<(_get_serialize_func_type<T>() == _serialize_func_type::utf8_string), log_arg_type_enum, log_arg_type_enum::string_utf8_type,
                        bq::condition_value<_get_serialize_func_type<T>() == _serialize_func_type::utf16_string || _get_serialize_func_type<T>() == _serialize_func_type::utf32_string, log_arg_type_enum, log_arg_type_enum::string_utf16_type, // all the string exclude utf8 will be encoded into utf16.
                            bq::condition_value<bq::is_null_pointer<T>::value, log_arg_type_enum, log_arg_type_enum::null_type,
                                bq::condition_value<bq::is_pointer<T>::value, log_arg_type_enum, log_arg_type_enum::pointer_type,
                                    bq::condition_value<bq::is_same<T, bool>::value, log_arg_type_enum, log_arg_type_enum::bool_type,
-                                       bq::condition_value<bq::is_same<T, char>::value, log_arg_type_enum, log_arg_type_enum::char_type,
+                                       bq::condition_value<(bq::is_same<T, char>::value || bq::is_same<T, bq_char8_t>::value), log_arg_type_enum, log_arg_type_enum::char_type,
                                            bq::condition_value<bq::is_same<T, char16_t>::value, log_arg_type_enum, log_arg_type_enum::char16_type,
                                                bq::condition_value<bq::is_same<T, wchar_t>::value && sizeof(wchar_t) == 2, log_arg_type_enum, log_arg_type_enum::char16_type,
                                                    bq::condition_value<bq::is_same<T, wchar_t>::value && sizeof(wchar_t) == 4, log_arg_type_enum, log_arg_type_enum::char32_type,
@@ -491,8 +513,13 @@ namespace bq {
             static bq_forceinline void type_copy(const CHAR_TYPE (&value)[N], uint8_t* data_addr, size_t data_size)
             {
                 static_assert(sizeof(CHAR_TYPE) == 1 || sizeof(CHAR_TYPE) == 2 || sizeof(CHAR_TYPE) == 4, "invalid char type!");
-                // potential risk, data_size may bigger than max uint32_t
-                uint32_t string_size = static_cast<uint32_t>(data_size - sizeof(uint32_t));
+                // data_size is always this array's storage size plus the uint32 length prefix: every
+                // caller derives it from get_storage_data_size on this same array. Taking the length
+                // from the array instead keeps the copy provably in bounds -- from data_size the
+                // source array looks unbounded, and the literal "null" that null_str_copy passes is
+                // exactly as long as its own data, with no slack, which -Warray-bounds flags.
+                (void)data_size;
+                const uint32_t string_size = static_cast<uint32_t>(_serialize_str_helper_by_encode<CHAR_TYPE>::get_array_string_storage_size(value));
                 *reinterpret_cast<uint32_t*>(data_addr) = string_size;
                 data_addr += sizeof(uint32_t);
                 _serialize_str_helper_by_encode<CHAR_TYPE>::c_style_string_copy(data_addr, value, string_size);

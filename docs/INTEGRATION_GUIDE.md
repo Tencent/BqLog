@@ -425,6 +425,14 @@ The module follows the BqLog version. Go Modules downloads the source, and
 search, README and API documentation.
 <!-- go-module:end -->
 
+- **Prebuilt library**: desktop platforms only (Windows / Linux / macOS). When you link against a
+  prebuilt BqLog library instead of letting cgo build the sources, the library must have been built
+  with the Go option enabled: in `build/lib/win64`, `build/lib/linux` and `build/lib/unix_like`,
+  `build_all_and_pack` takes it as the **7th** positional argument (the 8th when calling
+  `dont_execute_this` directly); on macOS, `build/lib/mac/build_all_and_pack.sh` takes it as the
+  **5th**. Only then does the library export `__api_go_log_write`, `__api_go_log_write_1`,
+  `__api_go_log_write_2` and `__api_go_log_write_4`; CI verifies those symbols before publishing.
+
 ---
 
 ## Next Steps

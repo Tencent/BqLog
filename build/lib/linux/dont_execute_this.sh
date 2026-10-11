@@ -162,6 +162,9 @@ ensure_common_params() {
   if [[ -z "$PYTHON_SUPPORT" ]]; then
     PYTHON_SUPPORT="$(ask_yes_no "Enable Python (CPython C Extension) support?")"
   fi
+  if [[ -z "$GO_SUPPORT" ]]; then
+    GO_SUPPORT="$(ask_yes_no "Enable Go (cgo) support?")"
+  fi
   ensure_resolved_toolchain
 }
 ensure_arch_only() {
@@ -182,10 +185,14 @@ JAVA_SUPPORT="$(normalize_onoff "$ARG3")"
 NODE_API_SUPPORT="$(normalize_onoff "$ARG4")"
 PYTHON_SUPPORT="$(normalize_onoff "$ARG5")"
 GO_SUPPORT="$(normalize_onoff "$ARG7")"
-[[ -z "${GO_SUPPORT}" ]] && GO_SUPPORT="OFF"
 BUILD_LIB_TYPE="$(normalize_build_lib_type "$ARG6")"
 
-# Echo parsed params summary so "no output" never happens
+# default OFF, but only after CLI parsing so the interactive prompt can still ask;
+# unrecognized values normalize to "" too, so treat them as OFF for non-tty runs
+if [[ -z "$GO_SUPPORT" && ! -t 0 ]]; then
+  GO_SUPPORT="OFF"
+fi
+
 echo "Parsed params:"
 echo "  ACTION:        ${ACTION:-}"
 echo "  ARCH_PARAM:    ${ARCH_PARAM:-<unset>}"

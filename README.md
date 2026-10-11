@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (BianQue Log) V 2.6.0
+# BqLog (BianQue Log) V 2.7.0
 
 **English** | [简体中文](./README_CHS.md)
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.6.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.6.0-orange.svg?style=flat)](CHANGELOG.md)
+[![Release Version](https://img.shields.io/badge/release-2.7.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.7.0-orange.svg?style=flat)](CHANGELOG.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -40,12 +40,13 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_Download-Release_2.6.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_Download-Release_2.7.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📋 What's New in v2.6.0
+## 📋 What's New in v2.7.0
 
-- **C++ only fast mode**: `BQ_LOG_FAST_INFO(log, ...)` and friends roughly halve the cost on the logging thread, down to a few nanoseconds per call on a busy thread; see [Quick Start](#c) and [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
-- **Faster normal mode**: `log.info` runs about 16% fewer instructions on the logging thread. End to end against 2.5.0 (macOS, same benchmark), text output is 14–30% faster and compressed output up to about 40% faster.
+- **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)` and friends are the same fast path as `BQ_LOG_FAST_INFO`, without the macro: real IDE hints, any log object valid at the same call site, and it is what the C++20 module exports. A category is the optional first template argument — `log.fast_info<log.cat.ModuleA, "...">(args...)`. The hot path costs the same as the macro (identical instruction counts on GCC, Clang/aarch64 and MSVC). See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
+- **C++20 modules**: `import bq.log;` now works alongside `#include "bq_log/bq_log.h"`.
+- **Fast path fixes**: a first-call race between threads is gone, and crash recovery now replays at most the record that was in flight instead of a whole batch.
 
 > Full changelog → [CHANGELOG.md](CHANGELOG.md)
 

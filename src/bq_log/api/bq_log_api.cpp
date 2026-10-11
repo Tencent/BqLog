@@ -20,6 +20,8 @@
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/log/decoder/appender_decoder_helper.h"
 #include "bq_log/types/buffer/log_buffer.h"
+#include "bq_log/types/meta/meta_registry.h"
+#include "bq_log/types/storage/instance_storage.h"
 
 #ifdef BQ_POSIX
 #ifdef BQ_PS
@@ -335,11 +337,11 @@ namespace bq {
             return buffer->ensure_fast_hp_block(tls_info) ? &tls_info : nullptr;
         }
 
-        static bq_forceinline void fill_fast_log_head(uint8_t* data_addr, const bq::_api_fast_log_site_handle* site)
+        static bq_forceinline void fill_fast_log_head(uint8_t* data_addr, uint64_t meta_addr)
         {
             auto& head = *reinterpret_cast<bq::log_head_fast_def*>(data_addr);
             head.timestamp_epoch = log_head_base_def::set_fast(bq::platform::high_performance_epoch_ms());
-            head.format_meta_addr = site->format_meta_addr;
+            head.format_meta_addr = meta_addr;
         }
 
         BQ_API bool __api_fast_log_write_no_args(const bq::_api_fast_log_site_handle* site)
@@ -355,7 +357,7 @@ namespace bq {
             if (write_handle.result != enum_buffer_result_code::success) {
                 return false;
             }
-            fill_fast_log_head(write_handle.data_addr, site);
+            fill_fast_log_head(write_handle.data_addr, site->format_meta_addr);
             block->get_buffer().commit_write_chunk(write_handle);
             if (write_handle.low_space_flag) {
                 __api_fast_log_notify_low_space(site);
@@ -380,7 +382,7 @@ namespace bq {
             if (handle.result != enum_buffer_result_code::success) {
                 return handle;
             }
-            fill_fast_log_head(write_handle.data_addr, site);
+            fill_fast_log_head(write_handle.data_addr, site->format_meta_addr);
             handle.args_addr = write_handle.data_addr + sizeof(log_head_fast_def);
             if (write_handle.low_space_flag) {
                 __api_fast_log_notify_low_space(site);
@@ -397,6 +399,99 @@ namespace bq {
             auto* buffer = static_cast<bq::log_buffer*>(site->buffer_ptr);
             auto* block = log_tls_info__get_direct().get_buffer_info_directly(buffer).cur_block_;
             block->get_buffer().commit_write_chunk(write_handle);
+        }
+
+        BQ_API uint64_t __api_get_log_buffer_id(uint64_t log_id)
+        {
+            auto* log = bq::log_manager::get_log_by_id(log_id);
+            if (!log || log->get_thread_mode() == log_thread_mode::sync) {
+                return 0;
+            }
+            return log->get_buffer().get_id();
+        }
+
+        BQ_API uint64_t __api_fast_meta_register(uint8_t level, uint32_t category_idx, uint8_t format_type,
+            const char* format, uint32_t format_size, const uint8_t* arg_types, uint16_t arg_count)
+        {
+            const auto* meta = bq::meta_registry::instance().register_format(format, format_size, level,
+                category_idx, format_type, arg_types, arg_count);
+            return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(meta));
+        }
+
+        BQ_API bool __api_fast_log_write_no_args_by_id(uint64_t log_id, uint64_t meta_addr)
+        {
+            auto* log = bq::log_manager::get_log_by_id(log_id);
+            if (!log || log->get_thread_mode() == log_thread_mode::sync) {
+                return false;
+            }
+            auto& buffer = log->get_buffer();
+            auto* tls_info = get_fast_log_tls_info(&buffer);
+            if (!tls_info) {
+                return false;
+            }
+            auto* block = tls_info->cur_block_;
+            auto write_handle = block->get_buffer().alloc_write_chunk(
+                static_cast<uint32_t>(sizeof(log_head_fast_def)));
+            if (write_handle.result != enum_buffer_result_code::success) {
+                return false;
+            }
+            fill_fast_log_head(write_handle.data_addr, meta_addr);
+            block->get_buffer().commit_write_chunk(write_handle);
+            if (write_handle.low_space_flag) {
+                __api_fast_log_notify_low_space_by_id(log_id);
+            }
+            return true;
+        }
+
+        BQ_API bq::_api_fast_log_write_handle __api_fast_log_write_begin_by_id(
+            uint64_t log_id, uint64_t meta_addr, uint32_t args_size)
+        {
+            bq::_api_fast_log_write_handle handle = {};
+            handle.result = enum_buffer_result_code::err_fast_path_failed;
+            auto* log = bq::log_manager::get_log_by_id(log_id);
+            if (!log || log->get_thread_mode() == log_thread_mode::sync) {
+                return handle;
+            }
+            auto& buffer = log->get_buffer();
+            auto* tls_info = get_fast_log_tls_info(&buffer);
+            if (!tls_info) {
+                return handle;
+            }
+            auto* block = tls_info->cur_block_;
+            auto write_handle = block->get_buffer().alloc_write_chunk(
+                args_size + static_cast<uint32_t>(sizeof(log_head_fast_def)));
+            handle.result = write_handle.result;
+            if (handle.result != enum_buffer_result_code::success) {
+                return handle;
+            }
+            fill_fast_log_head(write_handle.data_addr, meta_addr);
+            handle.args_addr = write_handle.data_addr + sizeof(log_head_fast_def);
+            if (write_handle.low_space_flag) {
+                __api_fast_log_notify_low_space_by_id(log_id);
+            }
+            return handle;
+        }
+
+        BQ_API void __api_fast_log_write_finish_by_id(uint64_t log_id, uint8_t* args_addr)
+        {
+            auto* log = bq::log_manager::get_log_by_id(log_id);
+            if (!log) {
+                return; // finish never runs on a failed begin
+            }
+            auto& buffer = log->get_buffer();
+            bq::log_buffer_write_handle write_handle;
+            write_handle.data_addr = args_addr - sizeof(bq::log_head_fast_def);
+            write_handle.result = enum_buffer_result_code::success;
+            auto* block = log_tls_info__get_direct().get_buffer_info_directly(&buffer).cur_block_;
+            block->get_buffer().commit_write_chunk(write_handle);
+        }
+
+        BQ_API void __api_fast_log_notify_low_space_by_id(uint64_t log_id)
+        {
+            auto* log = bq::log_manager::get_log_by_id(log_id);
+            if (log) {
+                awake_log_worker(log);
+            }
         }
 
         BQ_API bool __api_fast_log_get_layout(bq::_api_fast_log_layout* out_layout, uint32_t layout_version)
@@ -650,5 +745,20 @@ namespace bq {
             out_name_ptr->str = str;
             out_name_ptr->len = len;
         }
+
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+        BQ_API bool __api_test_get_storage_report(uint64_t log_id, uint32_t* out_instance, bool* out_lp_mapped, bool* out_hp_mapped)
+        {
+            bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
+            if (!log) {
+                return false;
+            }
+            auto* inst = bq::instance_storage::get();
+            *out_instance = inst ? inst->index() : UINT32_MAX;
+            *out_lp_mapped = log->get_buffer().is_lp_memory_mapped();
+            *out_hp_mapped = log->get_buffer().is_first_hp_group_memory_mapped();
+            return true;
+        }
+#endif
     }
 }

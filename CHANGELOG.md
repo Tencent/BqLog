@@ -2,6 +2,15 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.7.0] - 2026-10-11
+- **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)` plus `fast_verbose` … `fast_fatal`. The format string is a template parameter instead of a macro argument, so IDE hints and compiler diagnostics work and any log object can be used at the same call site; the literal may be written `""`, `u8""`, `u""`, `U""` or `L""`. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
+- **Multi-instance**: several processes may log into the same directory, each with its own recovery data (`bqlog_mmap/p<k>/logs/<name>/`). The per-log lock is held by the OS kernel, so a crash releases it, and a log with `need_recovery=false` no longer touches the disk at all.
+- **Recovery window**: up to the last 16 runs of that instance instead of 2, counted per instance rather than per log.
+- **Compatibility**: headers and library must be the same version; the `bq::log` handle layout and the C API changed.
+- **Bug fixes**: a fast call site could be initialized twice when several threads reached it first; a crash in the middle of a batch replayed the whole batch on recovery; fast-log metadata of continuation segments (`<run>_<n>.mmap`) could be dropped on restart; a recovery log without a storage directory still did disk work; the recovery run counter now rejects stale data from an earlier run.
+- **Build/CI**: the prebuilt desktop libraries really contain the Go bridge again; the prebuilt-library export check covers every desktop dynamic library; the multi-instance suite runs under CTest on Windows, Linux and macOS.
+- **Thanks to [@mvanslobbe](https://github.com/mvanslobbe)** for the five fixes above — decoder (#81), layout (#82, #83), time_zone (#84) and property (#86).
+
 ## [v2.6.0] - 2026-10-05
 - **C++ only fast mode**: Added `BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL`. They write the same entries as `log.info` and friends, but the work on the calling thread is inlined at the call site: a level check, the timestamp and the raw arguments. The same macros take a category too: `BQ_LOG_FAST_INFO(log, log.cat.xxx, "...", ...)`; with or without a category is decided at compile time and costs the same. Trade-offs: slightly more memory, weaker IDE hints (macros), and a fixed log object and format string per call site. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
 - **Performance — normal mode, logging thread**: `log.info` and the other level functions run about 16% fewer instructions on the calling thread; a disabled level now costs a single memory load and bit test.

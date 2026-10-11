@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.6.0
+# BqLog (扁鹊日志) V 2.7.0
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.6.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.6.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.7.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -40,12 +40,13 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.6.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📋 v2.6.0 更新亮点
+## 📋 v2.7.0 更新亮点
 
-- **C++ 专属的快速模式**：`BQ_LOG_FAST_INFO(log, ...)` 等宏，日志线程上的开销约为普通模式的一半，持续写日志的线程上每条只要几纳秒，见[快速开始](#c)和 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
-- **普通模式更快**：`log.info` 在日志线程上执行的指令减少约 16%。和 2.5.0 比整条流水线（macOS，同一个 benchmark），文本输出快 14%～30%，压缩输出最多快约 40%。
+- **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)` 等接口与 `BQ_LOG_FAST_INFO` 是同一条快速路径，只是不再用宏：IDE 代码提示正常、同一个调用点对任何日志对象都有效、并且是 C++20 模块导出的接口。Category 是第一个可选模板参数 —— `log.fast_info<log.cat.ModuleA, "...">(args...)`。热路径开销与宏持平（GCC、Clang/aarch64、MSVC 三平台指令数一致）。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
+- **C++20 modules**：`import bq.log;` 与 `#include "bq_log/bq_log.h"` 并存。
+- **快速路径修复**：消除了多线程首次调用同一站点的竞争；崩溃恢复现在最多只重放正在处理的那一条记录，而不是整批数据。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 

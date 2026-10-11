@@ -209,6 +209,46 @@ namespace bq {
             return UnlockFile(file_handle, 0, 0, 0xFFFFFFFF, 0xFFFFFFFF);
         }
 
+        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
+        {
+            out_handle = invalid_platform_file_handle;
+            bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(abs_path)));
+            SECURITY_ATTRIBUTES sa = { sizeof(sa), nullptr, FALSE }; // not inherited by child processes
+            HANDLE h = CreateFileW(
+                (LPCWSTR)file_path_w.c_str(),
+                GENERIC_READ | GENERIC_WRITE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                &sa,
+                OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL,
+                nullptr);
+            if (h == INVALID_HANDLE_VALUE) {
+                return instance_lock_result::error;
+            }
+            OVERLAPPED ov = { };
+            if (!LockFileEx(h, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &ov)) {
+                const DWORD err = GetLastError();
+                CloseHandle(h);
+                // only a real contention is retryable; other failures (e.g. a volume without
+                // locking support) must not be retried forever
+                if (err == ERROR_LOCK_VIOLATION) {
+                    return instance_lock_result::held_by_other;
+                }
+                return instance_lock_result::error;
+            }
+            out_handle = h;
+            return instance_lock_result::locked;
+        }
+
+        void unlock_instance_file(platform_file_handle& handle)
+        {
+            // closing the handle releases the LockFileEx lock
+            if (is_platform_handle_valid(handle)) {
+                CloseHandle(handle);
+            }
+            handle = invalid_platform_file_handle;
+        }
+
         bq::string get_lexically_path(const bq::string& original_path)
         {
             bq::string result;

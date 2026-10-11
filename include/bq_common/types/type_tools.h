@@ -103,6 +103,11 @@ namespace bq {
         return n == 0 ? n : (((n - 1) & (~((size_t)8 - 1))) + 8);
     }
 
+    inline constexpr size_t align_64(size_t n)
+    {
+        return n == 0 ? n : (((n - 1) & (~((size_t)64 - 1))) + 64);
+    }
+
     template <typename T>
     struct integer_type_hash_calculator {
         typedef uint64_t hash_value_type;

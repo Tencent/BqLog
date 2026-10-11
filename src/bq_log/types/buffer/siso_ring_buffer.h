@@ -145,8 +145,10 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 last_cursor_ = current_cursor_;
 #endif
+                // advance the handle-local cursor only; rt_reading_cursor_cache_
+                // (the mmap recovery snapshot) must not move before the appender
+                // has persisted the record, otherwise a crash here loses it
                 current_cursor_ += current_block.to_chunk_head().block_num;
-                parent_->head_->rt_reading_cursor_cache_ = current_cursor_;
                 return handle;
             }
 
@@ -241,6 +243,14 @@ namespace bq {
         /// </summary>
         /// <param name="handle"></param>
         void return_batch_read_chunks(const siso_buffer_batch_read_handle& handle);
+
+        /// <summary>
+        /// Marks the record most recently handed out by the handle as persisted, moving the mmap
+        /// recovery snapshot past it. The caller must only call this after that record's persistence
+        /// has finished (the appender's mark_write_finished); the reading_cursor released to the
+        /// writer still only moves when the whole batch is returned.
+        /// </summary>
+        void mark_persisted(const siso_buffer_batch_read_handle& handle);
 
         /// <summary>
         /// Traverses all data written, invoking the provided callback for each chunk from the consumer thread.

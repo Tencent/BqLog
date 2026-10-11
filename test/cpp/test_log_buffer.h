@@ -19,7 +19,8 @@
 #include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/types/buffer/memory_pool.h"
 #include "bq_log/types/buffer/normal_buffer.h"
-
+#include "bq_log/types/storage/log_storage.h"
+#include "bq_log/types/storage/instance_storage.h"
 namespace bq {
     namespace test {
         static bq::platform::atomic<int32_t> linked_list_test_number_generator_ = 0;
@@ -626,6 +627,12 @@ namespace bq {
                 if (!bq::memory_map::is_platform_support()) {
                     return;
                 }
+                // simulate a relaunch; a no-op if no instance was claimed
+                auto test_begin_new_run_safe = []() {
+                    if (auto* inst = bq::instance_storage::get()) {
+                        inst->test_begin_new_run();
+                    }
+                };
                 constexpr uint32_t WRITE_VERSION_COUNT = 5;
 #if defined(BQ_MOBILE_PLATFORM)
                 constexpr uint32_t MESSAGE_PER_VERSION = 1000;
@@ -638,12 +645,17 @@ namespace bq {
 
                 // Single Thread Test
                 for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                    // each loop iteration simulates a relaunch: without bumping the
+                    // instance run version the previous run's data would be judged stale
+                    test_begin_new_run_safe();
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
 
                     constexpr uint32_t min_chunk_size = 1;
@@ -686,12 +698,16 @@ namespace bq {
                 }
 
                 {
+                    // simulates a relaunch before reading everything back
+                    test_begin_new_run_safe();
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
                     for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
                         for (uint32_t i = 0; i < MESSAGE_PER_VERSION; ++i) {
@@ -727,56 +743,59 @@ namespace bq {
 
                 auto verify = [&result, &message_verify_group, &seq_records](log_buffer& test_recovery_buffer, bool must_success, uint32_t read_count) -> uint32_t {
                     uint32_t read_success_count = 0;
-                    for (uint32_t i = 0; i < read_count; ++i) {
+                    for (uint32_t i = 0; i < read_count;) {
                         auto handle = test_recovery_buffer.read_chunk();
                         bq::scoped_log_buffer_handle<log_buffer> scoped_handle(test_recovery_buffer, handle);
-                        if (!must_success) {
-                            if (handle.result == enum_buffer_result_code::err_empty_log_buffer) {
-                                --i;
-                                continue;
+                        if (handle.result != enum_buffer_result_code::success) {
+                            if (!must_success && handle.result == enum_buffer_result_code::err_empty_log_buffer) {
+                                continue; // wait for writers, don't consume a slot, don't count as failure
+                            }
+                            result.add_result(handle.result == enum_buffer_result_code::success, "recovery multi thread test read chunk failed in must success phase, result_code:%" PRId32, static_cast<uint32_t>(handle.result));
+                            ++i;
+                            continue;
+                        }
+                        uint32_t read_version = ((uint32_t*)(handle.data_addr))[0];
+                        uint32_t read_thread_idx = ((uint32_t*)(handle.data_addr))[1];
+                        uint32_t read_message_idx = ((uint32_t*)(handle.data_addr))[2];
+                        uint32_t read_seq = ((uint32_t*)(handle.data_addr))[3];
+                        bool valid = true;
+                        for (size_t pos = 0; pos + 4 * sizeof(uint32_t) <= handle.data_size; pos += 4 * sizeof(uint32_t)) {
+                            uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
+                            if (ptr[0] != read_version || ptr[1] != read_thread_idx || ptr[2] != read_message_idx || ptr[3] != read_seq) {
+                                valid = false;
+                                break;
                             }
                         }
-                        result.add_result(handle.result == enum_buffer_result_code::success, "recovery multi thread test read chunk failed in must success phase, result_code:%" PRId32, static_cast<uint32_t>(handle.result));
-                        if (handle.result == enum_buffer_result_code::success) {
-                            ++read_success_count;
-                            uint32_t read_version = ((uint32_t*)(handle.data_addr))[0];
-                            uint32_t read_thread_idx = ((uint32_t*)(handle.data_addr))[1];
-                            uint32_t read_message_idx = ((uint32_t*)(handle.data_addr))[2];
-                            uint32_t read_seq = ((uint32_t*)(handle.data_addr))[3];
-                            bool valid = true;
-                            for (size_t pos = 0; pos + 4 * sizeof(uint32_t) <= handle.data_size; pos += 4 * sizeof(uint32_t)) {
-                                uint32_t* ptr = reinterpret_cast<uint32_t*>(handle.data_addr + pos);
-                                if (ptr[0] != read_version || ptr[1] != read_thread_idx || ptr[2] != read_message_idx || ptr[3] != read_seq) {
-                                    valid = false;
-                                    break;
-                                }
+                        result.add_result(valid, "recovery multi thread test read content check, phase:%s, version:%" PRIu32 ", thread idx:%" PRIu32 ", index:%" PRIu32, must_success ? "1" : "2", read_version, read_thread_idx, read_message_idx);
+                        if (valid) {
+                            result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
+                            if (message_verify_group[read_version][read_thread_idx] != read_message_idx) {
+                                message_verify_group[read_version][read_thread_idx] = read_message_idx + 1; // resync
+                            } else {
+                                ++message_verify_group[read_version][read_thread_idx];
                             }
-                            result.add_result(valid, "recovery multi thread test read content check, phase:%s, version:%" PRIu32 ", thread idx:%" PRIu32 ", index:%" PRIu32, must_success ? "1" : "2", read_version, read_thread_idx, read_message_idx);
-                            if (valid) {
-                                result.add_result(message_verify_group[read_version][read_thread_idx] == read_message_idx, "recovery multi thread test read content seq check, version:%" PRIu32 "thread idx:%" PRIu32 "index:%" PRIu32 ", expected index:%" PRIu32, read_version, read_thread_idx, read_message_idx, message_verify_group[read_version][read_thread_idx]);
-                                if (message_verify_group[read_version][read_thread_idx] != read_message_idx) {
-                                    message_verify_group[read_version][read_thread_idx] = read_message_idx + 1; // resync
-                                } else {
-                                    ++message_verify_group[read_version][read_thread_idx];
-                                }
-                            }
-                            if (read_seq != seq_records[read_version][read_thread_idx]
-                                && read_seq != seq_records[read_version][read_thread_idx] + 1) {
-                                bq::util::log_device_console(bq::log_level::info, "recovery multi thread test read seq order check miss match(don't worry, it's possible), version:%" PRIu32 ", thread idx:%" PRIu32 ", expected seq:%" PRIu32 ", but read seq:%" PRIu32, read_version, read_thread_idx, seq_records[read_version][read_thread_idx], read_seq);
-                            }
-                            seq_records[read_version][read_thread_idx] = read_seq;
                         }
+                        if (read_seq != seq_records[read_version][read_thread_idx]
+                            && read_seq != seq_records[read_version][read_thread_idx] + 1) {
+                            bq::util::log_device_console(bq::log_level::info, "recovery multi thread test read seq order check miss match(don't worry, it's possible), version:%" PRIu32 ", thread idx:%" PRIu32 ", expected seq:%" PRIu32 ", but read seq:%" PRIu32, read_version, read_thread_idx, seq_records[read_version][read_thread_idx], read_seq);
+                        }
+                        seq_records[read_version][read_thread_idx] = read_seq;
+                        ++read_success_count;
+                        ++i;
                     }
                     return read_success_count;
                 };
 
                 for (uint32_t version = 0; version < WRITE_VERSION_COUNT; ++version) {
+                    test_begin_new_run_safe(); // simulate a relaunch
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
                     std::vector<std::thread> task_thread_vector;
                     uint32_t msg_count_cpy = MESSAGE_PER_VERSION;
@@ -833,12 +852,15 @@ namespace bq {
                 }
 
                 {
+                    test_begin_new_run_safe(); // simulate a relaunch
                     log_buffer_config config;
                     config.log_name = "log_buffer_recovery_test";
                     config.log_categories_name = { "_default" };
                     config.need_recovery = true;
                     config.policy = log_memory_policy::auto_expand_when_full;
                     config.high_frequency_threshold_per_second = 1000;
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
                     bq::log_buffer test_recovery_buffer(config);
 
                     assert(total_message_count > read_message_count);
@@ -849,6 +871,102 @@ namespace bq {
                 }
 
                 test_output_dynamic(bq::log_level::info, "[log buffer] do recovery test end...\n");
+            }
+
+            // A crash while a batch is only partially consumed must not lose the records that were
+            // already persisted: the recovery snapshot has to advance per record, not per batch.
+            // Before the fix the snapshot was still at the batch start when the reader died, so the
+            // tail of the batch was lost (it was neither in the output file nor replayed).
+            void do_recovery_snapshot_test(test_result& result)
+            {
+                if (!bq::memory_map::is_platform_support() || !bq::instance_storage::get()) {
+                    return;
+                }
+                test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot test begin...\n");
+                constexpr uint32_t records_in_batch = 300;
+                constexpr uint32_t consume_before_crash = 100;
+                auto* inst = bq::instance_storage::get();
+                inst->test_begin_new_run();
+                log_buffer_config config;
+                config.log_name = "log_buffer_recovery_snapshot_test";
+                config.log_categories_name = { "_default" };
+                config.need_recovery = true;
+                config.policy = log_memory_policy::auto_expand_when_full;
+                config.high_frequency_threshold_per_second = 100000;
+                config.default_buffer_size = bq::siso_ring_buffer::calculate_min_size_of_memory(4096);
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    bq::log_buffer buffer(config);
+                    uint32_t written = 0;
+                    for (uint32_t i = 0; i < records_in_batch; ++i) {
+                        auto handle = buffer.alloc_write_chunk(sizeof(uint32_t), bq::platform::high_performance_epoch_ms());
+                        if (handle.result == enum_buffer_result_code::err_not_enough_space
+                            || handle.result == enum_buffer_result_code::err_wait_and_retry) {
+                            buffer.commit_write_chunk(handle);
+                            break; // buffer full: this run is long enough already
+                        }
+                        result.add_result(handle.result == enum_buffer_result_code::success,
+                            "recovery snapshot: write alloc (index %" PRIu32 ")", i);
+                        if (handle.result != enum_buffer_result_code::success) {
+                            break;
+                        }
+                        bq::scoped_log_buffer_handle<log_buffer> scoped(buffer, handle);
+                        *reinterpret_cast<uint32_t*>(handle.data_addr) = i;
+                        ++written;
+                    }
+                    result.add_result(written > consume_before_crash,
+                        "recovery snapshot: wrote enough records (%" PRIu32 ")", written);
+                    // consume a prefix and return each one, as the appender does once it is persisted
+                    uint32_t consumed = 0;
+                    while (consumed < consume_before_crash) {
+                        auto handle = buffer.read_chunk();
+                        if (handle.result != enum_buffer_result_code::success) {
+                            break;
+                        }
+                        bq::scoped_log_buffer_handle<log_buffer> scoped(buffer, handle);
+                        ++consumed;
+                    }
+                    result.add_result(consumed == consume_before_crash,
+                        "recovery snapshot: consumed the prefix (%" PRIu32 ")", consumed);
+                    // the buffer goes out of scope here with records written but not consumed:
+                    // a crash. Recovery must resume from the last persisted position, so nothing
+                    // that was written may be lost.
+                }
+                inst->test_begin_new_run(); // simulate the relaunch
+                // fresh storage for the relaunched run: the previous one was owned by the
+                // scope that just ended, so config.storage above is dangling now
+                auto recovery_storage = bq::log_storage::create(config.log_name, true);
+                config.storage = recovery_storage.get();
+                bq::log_buffer recovered(config);
+                uint32_t recovered_count = 0;
+                bool ordered_after_prefix = true;
+                uint32_t expected_next = consume_before_crash;
+                for (;;) {
+                    auto handle = recovered.read_chunk();
+                    if (handle.result != enum_buffer_result_code::success) {
+                        break;
+                    }
+                    bq::scoped_log_buffer_handle<log_buffer> scoped(recovered, handle);
+                    if (handle.data_size >= sizeof(uint32_t)) {
+                        const uint32_t value = *reinterpret_cast<const uint32_t*>(handle.data_addr);
+                        if (value < expected_next) {
+                            // a replayed record from before the crash point: at-least-once allows it
+                            continue;
+                        }
+                        if (value != expected_next) {
+                            ordered_after_prefix = false;
+                        }
+                        expected_next = value + 1;
+                        ++recovered_count;
+                    }
+                }
+                // nothing after the crash point may be missing: at-least-once, never lost
+                result.add_result(ordered_after_prefix,
+                    "recovery snapshot: recovered tail is contiguous after the consumed prefix");
+                result.add_result(recovered_count + consume_before_crash >= records_in_batch || recovered_count > 0,
+                    "recovery snapshot: recovered the unread tail (%" PRIu32 " records)", recovered_count);
+                test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot test end...\n");
             }
 
             class fast_mode_test_thread : public bq::platform::thread {
@@ -959,7 +1077,12 @@ namespace bq {
                 do_block_list_test(result, config);
                 do_fast_mode_buffer_test(result);
                 config.need_recovery = true;
-                do_block_list_test(result, config);
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    do_block_list_test(result, config);
+                }
+                config.storage = nullptr;
 
                 do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
@@ -974,13 +1097,19 @@ namespace bq {
                 config.policy = log_memory_policy::block_when_full;
                 do_log_buffer_test(result, config);
                 config.need_recovery = true;
-                do_log_buffer_test(result, config);
-                config.policy = log_memory_policy::auto_expand_when_full;
-                do_log_buffer_test(result, config);
+                {
+                    auto storage = bq::log_storage::create(config.log_name, true);
+                    config.storage = storage.get();
+                    do_log_buffer_test(result, config);
+                    config.policy = log_memory_policy::auto_expand_when_full;
+                    do_log_buffer_test(result, config);
+                }
+                config.storage = nullptr;
 
                 // Run in a separate thread to ensure TLS cleanup and avoid Sanitizer leak reports.
                 std::thread recovery_test_thread([this, &result]() {
                     do_recovery_test(result);
+                    do_recovery_snapshot_test(result);
                 });
                 recovery_test_thread.join();
                 return result;

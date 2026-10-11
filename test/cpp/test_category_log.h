@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 // clang-format off
 /*
  * Copyright (C) 2025 Tencent.
@@ -33,6 +33,25 @@ namespace bq {
         template<uint32_t CAT_INDEX>
         struct test_category_log_category_base : public bq::log_category_base<CAT_INDEX> {};
 
+#if defined(BQ_CPP_20)
+        // The index of a category that belongs to THIS class; a foreign category resolves to 0.
+        // Same overload trick as bq::log_category_index, but keyed on this class's own base, so
+        // log.fast_info<some_other_log.cat.x, "..."> is rejected instead of silently accepted.
+        template <typename CAT>
+        struct test_category_log_category_index {
+            template <uint32_t N>
+            static char (&pick(const test_category_log_category_base<N>*))[N + 1];
+            static char (&pick(...))[1];
+            static constexpr uint32_t value =
+                static_cast<uint32_t>(sizeof(pick(static_cast<const CAT*>(nullptr)))) - 1;
+        };
+        template <auto CAT>
+        struct fast_category_index {
+            static constexpr uint32_t value = test_category_log_category_index<bq::decay_t<decltype(CAT)>>::value;
+            static_assert(value != 0, "fast_*: this category does not belong to this log class");
+        };
+#endif
+
         struct test_category_log_category_config
         {
             const char* names[5] = {
@@ -63,8 +82,17 @@ namespace bq {
             static test_category_log_category_root root_;
         };
 
+        template<typename T>
+        struct test_category_log_zero_level_words_holder
+        {
+            static const uint32_t value[5];
+        };
+
     public:
-        const test_category_log_category_root& cat = test_category_log_category_root_holder<void>::root_;
+        /// The category objects. static constexpr (it used to be a reference to a static holder)
+        /// so that a sub-object such as cat.ModuleA is a constant expression and can be passed as
+        /// the fast interfaces' category template argument.
+        static constexpr test_category_log_category_root cat {};
 
     protected:
         template<typename STR>
@@ -74,8 +102,14 @@ namespace bq {
         };
 
     private:
-        test_category_log() : category_log(){}
-        test_category_log(const log& child_inst) : category_log(child_inst){}
+        test_category_log() : category_log()
+        {
+            set_zero_level_words(test_category_log_zero_level_words_holder<void>::value);
+        }
+        test_category_log(const log& child_inst) : category_log(child_inst)
+        {
+            set_zero_level_words(test_category_log_zero_level_words_holder<void>::value);
+        }
 
     public:
         /// <summary>
@@ -99,6 +133,58 @@ namespace bq {
         using log::warning;
         using log::error;
         using log::fatal;
+
+#if defined(BQ_CPP_20)
+        using bq::log::fast_verbose;
+        using bq::log::fast_debug;
+        using bq::log::fast_info;
+        using bq::log::fast_warning;
+        using bq::log::fast_error;
+        using bq::log::fast_fatal;
+
+        /// Macro-free fast log. The category is the optional FIRST template argument and the
+        /// format string the second:
+        ///   log.fast_info<log.cat.ModuleA, "...">(...)   a category of this class
+        ///   log.fast_info<"...">(...)                    the default (empty) category
+        /// A site is shared by (format, level, category, wire types).
+        /// A category of another log class is a compile-time error.
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_verbose(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::verbose, fast_category_index<CAT>::value>(*this, args...);
+        }
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_debug(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::debug, fast_category_index<CAT>::value>(*this, args...);
+        }
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_info(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::info, fast_category_index<CAT>::value>(*this, args...);
+        }
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_warning(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::warning, fast_category_index<CAT>::value>(*this, args...);
+        }
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_error(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::error, fast_category_index<CAT>::value>(*this, args...);
+        }
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_fatal(const Args&... args) const
+        {
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::fatal, fast_category_index<CAT>::value>(*this, args...);
+        }
+#endif
 
         ///Core log functions with category param, there are 6 log levels:
         ///verbose, debug, info, warning, error, fatal
@@ -132,6 +218,8 @@ namespace bq {
     test_category_log::test_category_log_category_root test_category_log::test_category_log_category_root_holder<T>::root_;
     template<typename T>
     test_category_log::test_category_log_category_config test_category_log::test_category_log_category_root_holder<T>::config_;
+    template<typename T>
+    const uint32_t test_category_log::test_category_log_zero_level_words_holder<T>::value[5] = {};
 
     inline test_category_log test_category_log::create_log(const bq::string& log_name, const bq::string& config_content)
     {
@@ -139,7 +227,7 @@ namespace bq {
         log result = get_log_by_id(log_id);
         return result;
     }
-
+    
     inline test_category_log test_category_log::get_log_by_name(const bq::string& log_name)
     {
         test_category_log result = log::get_log_by_name(log_name);
@@ -236,3 +324,4 @@ namespace bq {
     }
 }
 // clang-format on
+        

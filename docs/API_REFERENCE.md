@@ -173,6 +173,32 @@ Use it on hot paths. For everything else, the normal mode is the better default,
 - **Weaker IDE hints.** These are macros, so code completion and parameter hints are not as helpful as with the member functions of the normal mode. Argument types are still checked at compile time.
 
 [Categories](./ADVANCED_USAGE.md#2-log-objects-with-category-support) are supported: when the second argument is `log.cat.xxx` the entry goes to that category, when it is the format string the default category is used. Which one is decided at compile time, so a call with a category is as fast as one without. Supported arguments are the same as in the normal mode. When a level is configured to print a stack trace (`log.print_stack_levels`) or the log runs in sync mode, a fast mode call quietly falls back to the normal mode, so the output stays correct; it is just not faster in that case.
+
+<a id="fast-info"></a>
+
+##### Macro-free fast log (C++20)
+
+From C++20 the same fast path is available without a macro: a member function template whose format string is a non-type template parameter.
+
+```cpp
+log_obj.fast_info<"Hello {}, count={}">("world", 42);
+log_obj.fast_error<"Error code: {}">(err_code);
+// fast_verbose, fast_debug, fast_info, fast_warning, fast_error, fast_fatal
+
+// A category is the optional FIRST template argument, the format string the second
+my_category_log.fast_info<my_category_log.cat.Shop.Seller, "order {} paid">(order_id);
+```
+
+It writes exactly the same entry as `BQ_LOG_FAST_*`, at the same cost on the calling thread (the two are within one instruction of each other on x86-64, aarch64 and MSVC, and a write-thread-cost benchmark reports equal or lower latency per call). Compared with the macros it differs in two ways:
+
+- **Not bound to the log object of the first call.** The level and the buffer are read from the log object passed to that call, so one call site serves several logs, including through a helper function that receives the log as a parameter.
+- **Real IDE support.** It is a member function template, so code completion, go-to-definition and compiler diagnostics work.
+
+The price is the same as for the macros: the format string of a call site is fixed and is registered once, and the same fallbacks apply (a stack-trace level or a sync-mode log goes through the normal mode). The category is optional; a category of a different log class is a compile-time error.
+
+**Format string encoding.** The character type of the literal decides the encoding, exactly as it does for the macros: `""` and `u8""` are UTF-8, `u""` is UTF-16, `U""` is UTF-32, and `L""` is whichever of the two `wchar_t` is on the platform (UTF-16 on Windows, UTF-32 elsewhere). Everything but UTF-8 is converted to UTF-16 for storage, and text appenders always write UTF-8. A narrow literal is taken from the execution character set, so that character set must be UTF-8 (`/utf-8` with MSVC); `u8`, `u16`, `u32` and `L` literals carry their own encoding and are unaffected.
+
+**Binary size.** Every distinct format string is a template argument, so it also appears in the mangled names of the site holder and of the slow-path function: 200 call sites cost about 400 KB of symbol names (the same call sites written with the macros cost 10 KB). Stripping the binary (or splitting its debug info, or using a separate PDB on MSVC) brings it back within a couple of percent of the macro version, so release builds should be stripped as usual.
 </details>
 
 <details>

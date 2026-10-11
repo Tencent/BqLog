@@ -13,7 +13,14 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_record_reader.h"
 #include "bq_log/log/log_manager.h"
+#include "bq_log/types/storage/instance_storage.h"
+#include "bq_log/types/storage/log_storage.h"
+#include "bq_log/types/meta/meta_registry.h"
 #include "test_category_log.h"
+#include <atomic>
+#include <thread>
+#include <vector>
+#include <initializer_list>
 
 namespace bq {
     namespace test {
@@ -71,8 +78,8 @@ namespace bq {
 
             public:
                 bool hp_without_ext_ = false;
-                char thread_tag_[64] = {}; // "[tid-<id> <name>]" as layout prints it
-                char thread_id_tag_[32] = {}; // "[tid-<id> "
+                char thread_tag_[64] = { }; // "[tid-<id> <name>]" as layout prints it
+                char thread_id_tag_[32] = { }; // "[tid-<id> "
                 explicit named_writer_thread(const bq::log& log)
                     : log_(log)
                 {
@@ -285,6 +292,12 @@ namespace bq {
 
             static void test_recovery(test_result& result)
             {
+                if (!bq::memory_map::is_platform_support()) {
+                    return;
+                }
+                if (auto* inst0 = bq::instance_storage::get()) {
+                    inst0->test_begin_new_run(); // simulate a relaunch
+                }
                 char name[96];
                 snprintf(name, sizeof(name), "fast_mode_recovery_%" PRIu64,
                     bq::platform::high_performance_epoch_ms());
@@ -293,8 +306,12 @@ namespace bq {
                 config.log_categories_name = { "" };
                 config.need_recovery = true;
                 config.policy = bq::log_memory_policy::auto_expand_when_full;
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
                 const uint16_t old_version = [&]() {
                     bq::log_buffer buffer(config);
+                    result.add_result(bq::meta_registry::instance().enable_journal(),
+                        "fast recovery meta journal enabled");
                     uint8_t arg_type = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
                     const bq::fast_format_meta* first = nullptr;
                     const bq::fast_format_meta* last = nullptr;
@@ -308,20 +325,74 @@ namespace bq {
                         }
                         last = meta;
                     }
+                    result.add_result(first && last && first == last,
+                        "fast recovery dedupe: 1600 same-format registrations return one pointer");
+                    // distinct formats cross the 1 MiB segment boundary: each journaled
+                    // entry is 16 + align_8(40 + len + 1) bytes, so 20000 of them exceed it
+                    char format_buf[64];
+                    const auto* seg_cross = static_cast<const bq::fast_format_meta*>(nullptr);
+                    for (uint32_t i = 0; i < 20000; ++i) {
+                        int32_t len = snprintf(format_buf, sizeof(format_buf), "recover %u", i);
+                        const auto* meta = buffer.register_fast_log_format(format_buf, static_cast<uint32_t>(len),
+                            static_cast<uint8_t>(bq::log_level::info), 0,
+                            static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type),
+                            &arg_type, 1);
+                        if (i == 0) {
+                            seg_cross = meta;
+                        }
+                    }
                     bq::array<char> large_format;
-                    large_format.fill_uninitialized(100000);
+                    large_format.fill_uninitialized(1100000); // larger than BQ_LOG_META_SEGMENT_SIZE - head
                     memset(&large_format[0], 'z', large_format.size());
                     const auto* large = buffer.register_fast_log_format(&large_format[0],
                         static_cast<uint32_t>(large_format.size()),
                         static_cast<uint8_t>(bq::log_level::info), 0,
                         static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type),
                         &arg_type, 1);
-                    result.add_result(first && last, "fast recovery metadata register");
+                    result.add_result(seg_cross != nullptr, "fast recovery distinct formats register");
                     result.add_result(large != nullptr, "fast recovery oversize metadata register");
+                    auto* inst = bq::instance_storage::get();
+                    const bq::string meta_dir = inst ? inst->meta_dir() : bq::string();
+                    char seg0_name[32];
+                    char seg1_name[32];
+                    snprintf(seg0_name, sizeof(seg0_name), "%" PRIu16 ".mmap", buffer.get_version());
+                    snprintf(seg1_name, sizeof(seg1_name), "%" PRIu16 "_1.mmap", buffer.get_version());
+                    result.add_result(bq::file_manager::is_file(bq::file_manager::combine_path(meta_dir, seg0_name)),
+                        "fast recovery first segment persisted");
+                    result.add_result(bq::file_manager::is_file(bq::file_manager::combine_path(meta_dir, seg1_name)),
+                        "fast recovery multiple segments persisted");
+                    // the 1.1 MB format cannot fit in a fresh 1 MiB segment: it gets an
+                    // own exact-capacity segment; find it by its oversized committed size
+                    bool found_large_segment = false;
+                    char version_prefix[16];
+                    snprintf(version_prefix, sizeof(version_prefix), "%" PRIu16 "_", buffer.get_version());
+                    for (const auto& file_name : bq::file_manager::get_sub_dirs_and_files_name(meta_dir)) {
+                        if (file_name.find(version_prefix) != 0) {
+                            continue;
+                        }
+                        auto file = bq::file_manager::instance().open_file(bq::file_manager::combine_path(meta_dir, file_name), bq::file_open_mode_enum::read);
+                        if (!file.is_valid()) {
+                            continue;
+                        }
+                        struct head_layout {
+                            uint64_t magic;
+                            uint32_t format_version;
+                            uint16_t run_version;
+                            uint16_t segment_index;
+                            uint64_t run_serial;
+                            uint32_t committed_size;
+                        } head;
+                        bq::file_manager::instance().read_file(file, &head, sizeof(head), bq::file_manager::seek_option::begin, 0);
+                        bq::file_manager::instance().close_file(file);
+                        if (head.committed_size > 1024 * 1024) {
+                            found_large_segment = true;
+                        }
+                    }
+                    result.add_result(found_large_segment, "fast recovery oversize metadata gets own segment");
                     auto& tls = bq::log_tls_info__get_direct().get_buffer_info(&buffer);
                     tls.fast_mode_ = true;
                     tls.cur_block_ = buffer.alloc_new_hp_block();
-                    const bq::fast_format_meta* formats[] = { first, last, large };
+                    const bq::fast_format_meta* formats[] = { first, seg_cross, large };
                     for (int32_t i = 0; i < 3; ++i) {
                         auto seq = bq::tools::make_size_seq<false>(int32_t(73 + i));
                         auto handle = buffer.alloc_write_chunk(
@@ -350,20 +421,14 @@ namespace bq {
                     buffer.commit_write_chunk(damaged);
                     return buffer.get_version();
                 }();
-                char first_name[32];
-                char second_name[32];
-                char large_name[40];
-                snprintf(first_name, sizeof(first_name), "%" PRIu16 "_0.mmap", old_version);
-                snprintf(second_name, sizeof(second_name), "%" PRIu16 "_1.mmap", old_version);
-                snprintf(large_name, sizeof(large_name), "%" PRIu16 "_0.large.mmap", old_version);
-                const bq::string folder = TO_ABSOLUTE_PATH(
-                    bq::string("bqlog_mmap/mmap_") + name + "/fast_meta", 0);
-                const bq::string first_path = bq::file_manager::combine_path(folder, first_name);
-                const bq::string second_path = bq::file_manager::combine_path(folder, second_name);
-                const bq::string large_path = bq::file_manager::combine_path(folder, large_name);
-                result.add_result(bq::file_manager::is_file(first_path), "fast recovery first segment persisted");
-                result.add_result(bq::file_manager::is_file(second_path), "fast recovery multiple segments persisted");
-                result.add_result(bq::file_manager::is_file(large_path), "fast recovery oversize metadata persisted");
+                auto* inst = bq::instance_storage::get();
+                const bq::string meta_dir = inst ? inst->meta_dir() : bq::string();
+                char seg0_name[32];
+                snprintf(seg0_name, sizeof(seg0_name), "%" PRIu16 ".mmap", old_version);
+                const bq::string seg0_path = bq::file_manager::combine_path(meta_dir, seg0_name);
+                if (auto* inst1 = bq::instance_storage::get()) {
+                    inst1->test_begin_new_run(); // the second buffer construction is the relaunch
+                }
                 {
                     bq::log_buffer buffer(config);
                     const auto& thread_info = bq::get_log_thread_info();
@@ -388,7 +453,7 @@ namespace bq {
                             const uint8_t first_arg = entry.is_fast_layout() ? entry.get_fast_args_data()[0] : entry.get_log_args_data()[4];
                             found_first |= valid && first_arg == 73;
                             found_second |= valid && first_arg == 74;
-                            found_large |= valid && entry.get_log_head().log_format_data_len == 100000
+                            found_large |= valid && entry.get_log_head().log_format_data_len == 1100000
                                 && first_arg == 75;
                         } else if (bq::log_record_reader::make_recovery_error(buffer,
                                        chunk.data_addr, chunk.data_size, converted, entry)) {
@@ -406,10 +471,11 @@ namespace bq {
                     result.add_result(found_recovery_error,
                         "fast recovery corrupt metadata warning record");
                 }
-                result.add_result(!bq::file_manager::is_file(first_path)
-                        && !bq::file_manager::is_file(second_path)
-                        && !bq::file_manager::is_file(large_path),
-                    "fast recovery multiple segments retired");
+                // T06: the previous run's segments stay within the recovery window
+                // (cur - old_version <= 16); only enable_journal of a run further
+                // than MAX_RECOVERY_VERSION_RANGE ahead retires them
+                result.add_result(bq::file_manager::is_file(seg0_path),
+                    "fast recovery segments kept within recovery window");
             }
 
             // normal records add a byte: 1 when oversize
@@ -431,6 +497,10 @@ namespace bq {
                 config.need_recovery = true;
                 config.policy = bq::log_memory_policy::auto_expand_when_full;
                 config.high_frequency_threshold_per_second = 1000;
+                static bq::array<bq::unique_ptr<bq::log_storage>> storages;
+                auto storage = bq::log_storage::create(config.log_name, true);
+                config.storage = storage.get();
+                storages.push_back(bq::move(storage));
                 return config;
             }
 
@@ -497,8 +567,11 @@ namespace bq {
                 }
                 char name[96];
                 snprintf(name, sizeof(name), "fast_mode_recovery_cross_%" PRIu64, bq::platform::high_performance_epoch_ms());
-                uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = {};
+                uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = { };
                 for (uint32_t lifetime = 0; lifetime < recovery_cross_lifetimes; ++lifetime) {
+                    if (auto* inst = bq::instance_storage::get()) {
+                        inst->test_begin_new_run(); // simulate a relaunch
+                    }
                     auto config = recovery_cross_config(name);
                     bq::log_buffer buffer(config);
                     const uint8_t u32 = static_cast<uint8_t>(bq::log_arg_type_enum::uint32_type);
@@ -521,9 +594,12 @@ namespace bq {
                     }
                 }
 
+                if (auto* inst = bq::instance_storage::get()) {
+                    inst->test_begin_new_run(); // the recovery buffer below is the relaunch
+                }
                 auto config = recovery_cross_config(name);
                 bq::log_buffer buffer(config);
-                uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = {};
+                uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = { };
                 uint32_t out_of_order = 0;
                 uint32_t bad_record = 0;
                 uint32_t bad_owner = 0;
@@ -538,7 +614,7 @@ namespace bq {
                         continue;
                     }
                     ++read_count;
-                    recovery_cross_record value = {};
+                    recovery_cross_record value = { };
                     uint64_t owner_thread_id = 0;
                     if (bq::log_record_reader::is_fast_record(chunk.data_addr, chunk.data_size)) {
                         bq::log_entry_handle entry(chunk.data_addr, chunk.data_size);
@@ -623,7 +699,7 @@ namespace bq {
                 const char* log_name_ = nullptr;
                 uint32_t round_ = 0;
                 uint32_t thread_ = 0;
-                char thread_tag_[64] = {};
+                char thread_tag_[64] = { };
                 void run() override
                 {
                     const bq::log log = bq::log::get_log_by_name(log_name_);
@@ -698,8 +774,11 @@ namespace bq {
                     + "log.buffer_policy_when_full=expand\n"
                     + "log.high_perform_mode_freq_threshold_per_second=1000\n";
                 const char* categories[] = { "ModuleA", "ModuleB" };
-                char thread_tags[log_crash_rounds][log_crash_threads][64] = {};
+                char thread_tags[log_crash_rounds][log_crash_threads][64] = { };
                 for (uint32_t round = 0; round <= log_crash_rounds; ++round) {
+                    if (auto* inst = bq::instance_storage::get()) {
+                        inst->test_begin_new_run(); // each round simulates a relaunch
+                    }
                     const uint64_t log_id = bq::api::__api_create_log(name, config.c_str(), 2, categories);
                     bq::log log = bq::log::get_log_by_name(name);
                     result.add_result(log.is_valid() && log.get_id() == log_id, "log crash: create round %" PRIu32, round);
@@ -921,7 +1000,7 @@ namespace bq {
                     "second log uses its own hp block");
 
                 // low space notification on a real site, and on a site whose log no longer resolves
-                bq::_api_fast_log_site_handle site = {};
+                bq::_api_fast_log_site_handle site = { };
                 result.add_result(bq::init_fast_log_site<bq::tuple<int32_t>>(site, log, 0, bq::log_level::info, "notify {}"), "site init");
                 result.add_result(site.log_id == log.get_id() && site.buffer_id == buffer.get_id(), "site carries log id and buffer id");
                 bq::api::__api_fast_log_notify_low_space(&site);
@@ -981,6 +1060,270 @@ namespace bq {
                 result.add_result(stack_pos != bq::string::npos && fast_pos != bq::string::npos
                         && fast_pos - stack_pos > bq::string("level bitmap stack 2\n").size(),
                     "standard stack level still prints stack trace");
+            }
+
+            // one distinct call site per N: each expansion has its own function scope static site
+            template <int32_t N>
+            static void race_site(const bq::log& log, int32_t tid)
+            {
+                BQ_LOG_FAST_INFO(log, "race {} {}", N, tid);
+            }
+
+            template <int32_t... N>
+            struct race_seq {
+                static void build(void (**out)(const bq::log&, int32_t))
+                {
+                    int32_t i = 0;
+                    (void)std::initializer_list<int> { (out[i++] = &race_site<N>, 0)... };
+                }
+            };
+
+            // COLS indices starting at OFFSET, one recursion level per column (keeps template depth low)
+            template <int32_t I, int32_t OFFSET, int32_t... N>
+            struct race_gen : race_gen<I - 1, OFFSET, OFFSET + I - 1, N...> { };
+            template <int32_t OFFSET, int32_t... N>
+            struct race_gen<0, OFFSET, N...> {
+                typedef race_seq<N...> type;
+            };
+
+            template <int32_t ROW, int32_t COLS>
+            struct race_table {
+                static constexpr int32_t count = (ROW + 1) * COLS;
+                typedef void (*site_func)(const bq::log&, int32_t);
+                static void build(site_func* out)
+                {
+                    typedef typename race_gen<COLS, ROW * COLS>::type row;
+                    row::build(out);
+                    race_table<ROW - 1, COLS>::build(out + COLS);
+                }
+            };
+            template <int32_t COLS>
+            struct race_table<-1, COLS> {
+                static constexpr int32_t count = 0;
+                typedef void (*site_func)(const bq::log&, int32_t);
+                static void build(site_func*)
+                {
+                }
+            };
+
+            class race_barrier {
+                std::atomic<int32_t> arrived_;
+                std::atomic<int32_t> phase_;
+                const int32_t total_;
+
+            public:
+                explicit race_barrier(int32_t total)
+                    : arrived_(0)
+                    , phase_(0)
+                    , total_(total)
+                {
+                }
+
+                void wait()
+                {
+                    const int32_t phase = phase_.load(std::memory_order_acquire);
+                    if (arrived_.fetch_add(1) + 1 == total_) {
+                        arrived_.store(0, std::memory_order_relaxed);
+                        phase_.store(phase + 1, std::memory_order_release);
+                    } else {
+                        while (phase_.load(std::memory_order_acquire) == phase) {
+                            std::this_thread::yield();
+                        }
+                    }
+                }
+            };
+
+            // T07 §4: the log handle carries buffer_id_ and never dereferences null level words
+            static void test_log_handle(test_result& result)
+            {
+                // 1. default constructed (invalid) log: zero words, no fast path
+                bq::log invalid = bq::log::get_log_by_name("not_exist_log_handle");
+                result.add_result(!invalid.is_valid(), "handle: invalid log is not valid");
+                result.add_result(invalid.buffer_id_ == 0, "handle: invalid log has no buffer id");
+                result.add_result(invalid.category_level_words_[0] == 0, "handle: invalid log level word is zero");
+
+                // 2. async log: buffer id matches the manager's buffer and copies
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_handle_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                const bq::string config = bq::string("appenders_config.test.type=text_file\n")
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n"
+                    + "log.thread_mode=async\n"
+                    + "log.buffer_size=65536\n";
+                bq::log log = bq::log::create_log(name, config);
+                result.add_result(log.is_valid(), "handle: async log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                bq::log_imp* imp = bq::log_manager::get_log_by_id(log.get_id());
+                result.add_result(imp && log.buffer_id_ == imp->get_buffer().get_id(),
+                    "handle: async log buffer id matches buffer");
+                bq::log copy = log;
+                result.add_result(copy.buffer_id_ == log.buffer_id_, "handle: copied handle keeps buffer id");
+
+                // 3. sync log: no fast path
+                snprintf(name, sizeof(name), "fast_mode_handle_sync_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                bq::log sync_log = bq::log::create_log(name, config + "log.thread_mode=sync\n");
+                result.add_result(sync_log.is_valid() && sync_log.buffer_id_ == 0,
+                    "handle: sync log has no buffer id");
+
+                // 4. generated category class of an invalid log: every category's level word is zero
+                bq::test_category_log cat_invalid = bq::test_category_log::get_log_by_name("not_exist_log_handle");
+                result.add_result(!cat_invalid.is_valid(), "handle: generated invalid log is not valid");
+                bool cat_zero = true;
+                for (uint32_t i = 0; i < 5; ++i) {
+                    if (cat_invalid.category_level_words_[i] != 0) {
+                        cat_zero = false;
+                    }
+                }
+                result.add_result(cat_zero, "handle: generated invalid log zero words cover all categories");
+
+                // 5. __api_fast_meta_register dedupes against the registry
+                const uint8_t arg_types[] = { static_cast<uint8_t>(bq::log_arg_type_enum::int32_type), 0 };
+                const uint64_t addr1 = bq::api::__api_fast_meta_register(static_cast<uint8_t>(bq::log_level::info),
+                    0, static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type), "handle meta {}", 14, arg_types, 1);
+                const uint64_t addr2 = bq::api::__api_fast_meta_register(static_cast<uint8_t>(bq::log_level::info),
+                    0, static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type), "handle meta {}", 14, arg_types, 1);
+                const auto* registry_meta = bq::meta_registry::instance().register_format("handle meta {}", 14,
+                    static_cast<uint8_t>(bq::log_level::info), 0,
+                    static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type), arg_types, 1);
+                result.add_result(addr1 != 0 && addr1 == addr2
+                        && addr1 == static_cast<uint64_t>(reinterpret_cast<uintptr_t>(registry_meta)),
+                    "handle: fast meta register dedupes to registry entry");
+
+                // 6. by-id write path produces a correct record
+                BQ_LOG_FAST_INFO(log, "by id before {}", int32_t(1));
+                bq::_api_fast_log_write_handle handle = bq::api::__api_fast_log_write_begin_by_id(
+                    log.get_id(), addr1, static_cast<uint32_t>(sizeof(int32_t)));
+                result.add_result(handle.result == bq::enum_buffer_result_code::success,
+                    "handle: begin by id succeeds");
+                if (handle.result == bq::enum_buffer_result_code::success) {
+                    int32_t arg = 73;
+                    memcpy(handle.args_addr, &arg, sizeof(arg));
+                    bq::api::__api_fast_log_write_finish_by_id(log.get_id(), handle.args_addr);
+                }
+                BQ_LOG_FAST_INFO(log, "by id after {}", int32_t(2));
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                result.add_result(data.find("by id before 1") != bq::string::npos
+                        && data.find("by id after 2") != bq::string::npos,
+                    "handle: surrounding fast records decode");
+                result.add_result(data.find("handle meta 73") != bq::string::npos,
+                    "handle: by id record decodes with format and argument");
+
+                // 7. invalid log id fails safely
+                result.add_result(!bq::api::__api_fast_log_write_no_args_by_id(0, addr1),
+                    "handle: no args by id fails on invalid log id");
+                bq::_api_fast_log_write_handle bad = bq::api::__api_fast_log_write_begin_by_id(0, addr1, 4);
+                result.add_result(bad.result == bq::enum_buffer_result_code::err_fast_path_failed,
+                    "handle: begin by id fails on invalid log id");
+                bq::api::__api_fast_log_write_finish_by_id(0, nullptr); // must not crash
+                bq::api::__api_fast_log_notify_low_space_by_id(0); // must not crash
+            }
+
+            // Every thread's first call of every site happens simultaneously: the publication of a site's
+            // fields races with other threads' reads, which must neither drop a record nor register twice.
+            static void test_site_init_race(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_site_race_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                const bq::string config = bq::string("appenders_config.test.type=text_file\n")
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n"
+                    + "log.thread_mode=async\n"
+                    + "log.buffer_size=65536\n"
+                    + "log.buffer_policy_when_full=expand\n"
+                    + "log.high_perform_mode_freq_threshold_per_second=1000000\n";
+                bq::log log = bq::log::create_log(name, config);
+                result.add_result(log.is_valid(), "site race log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                // register_format calls are counted process-wide (the meta registry is
+                // instance-level), so measure the delta around this test's sites
+                const uint32_t registers_before = bq::meta_registry::instance().test_register_count();
+#if defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE)
+                constexpr int32_t thread_count = 16;
+                typedef race_table<3, 25> sites;
+#else
+                constexpr int32_t thread_count = 64;
+                typedef race_table<24, 40> sites;
+#endif
+                constexpr int32_t rounds = 3;
+                typedef typename sites::site_func site_func;
+                site_func table[sites::count];
+                sites::build(table);
+
+                for (int32_t round = 0; round < rounds; ++round) {
+                    race_barrier barrier(thread_count);
+                    std::vector<std::thread> threads;
+                    for (int32_t t = 0; t < thread_count; ++t) {
+                        threads.emplace_back([&barrier, &log, &table, t]() {
+                            for (int32_t i = 0; i < sites::count; ++i) {
+                                barrier.wait();
+                                table[i](log, t);
+                            }
+                        });
+                    }
+                    for (auto& thread : threads) {
+                        thread.join();
+                    }
+                }
+                log.force_flush();
+                bq::log_imp* imp = bq::log_manager::get_log_by_id(log.get_id());
+                result.add_result(imp != nullptr, "site race log imp");
+                if (imp) {
+                    const uint32_t registers = bq::meta_registry::instance().test_register_count() - registers_before;
+                    result.add_result(registers == static_cast<uint32_t>(sites::count),
+                        "site race: each site registers exactly once (%u of %d)",
+                        registers, sites::count);
+                }
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                bq::array<uint32_t> seen;
+                seen.fill_uninitialized(static_cast<size_t>(sites::count) * thread_count);
+                memset(&seen[0], 0, seen.size() * sizeof(uint32_t));
+                uint32_t total_lines = 0;
+                uint32_t bad_lines = 0;
+                size_t begin = 0;
+                while (begin < data.size()) {
+                    size_t end = data.find("\n", begin);
+                    if (end == bq::string::npos) {
+                        end = data.size();
+                    }
+                    const bq::string line = data.substr(begin, end - begin);
+                    begin = end + 1;
+                    const size_t race_pos = line.find("race ");
+                    if (race_pos == bq::string::npos) {
+                        continue;
+                    }
+                    int32_t site = -1;
+                    int32_t tid = -1;
+                    if (sscanf(line.c_str() + race_pos, "race %d %d", &site, &tid) != 2
+                        || site < 0 || site >= sites::count || tid < 0 || tid >= thread_count) {
+                        ++bad_lines;
+                        continue;
+                    }
+                    ++total_lines;
+                    ++seen[static_cast<size_t>(static_cast<uint32_t>(site) * static_cast<uint32_t>(thread_count) + static_cast<uint32_t>(tid))];
+                }
+                result.add_result(bad_lines == 0, "site race: no unexpected lines (%u)", bad_lines);
+                result.add_result(total_lines == static_cast<uint32_t>(sites::count) * thread_count * rounds,
+                    "site race: every record written (%u of %u)", total_lines,
+                    static_cast<uint32_t>(sites::count) * thread_count * rounds);
+                uint32_t missing = 0;
+                uint32_t duplicated = 0;
+                for (size_t i = 0; i < seen.size(); ++i) {
+                    missing += seen[i] < rounds ? 1U : 0U;
+                    duplicated += seen[i] > rounds ? 1U : 0U;
+                }
+                result.add_result(missing == 0, "site race: no dropped records (%u combos short)", missing);
+                result.add_result(duplicated == 0, "site race: no duplicated records (%u combos over)", duplicated);
             }
 
             test_result test() override
@@ -1094,6 +1437,7 @@ namespace bq {
                     "removed raw_file appender is ignored");
                 result.add_result(decode_has_both(TO_ABSOLUTE_PATH(file_name + "_compressed_1.logcompr", 0)),
                     "fast and standard compressed file");
+                test_site_init_race(result);
                 test_inline_support(result, log);
                 test_inline_wrap(result);
                 test_generated_category(result);
@@ -1103,6 +1447,7 @@ namespace bq {
                 test_recovery(result);
                 test_recovery_cross(result);
                 test_log_crash_recovery(result);
+                test_log_handle(result);
                 return result;
             }
         };

@@ -215,6 +215,56 @@ jobs:
         run: exit 1
 
 
+  #Multi-instance regression (T04)
+  multi_instance:
+    name: multi_instance (${{ matrix.os.label }})
+    runs-on: ${{ matrix.os.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - label: "windows"
+            runs_on: windows-latest
+          - label: "ubuntu"
+            runs_on: ubuntu-latest
+          - label: "macos"
+            runs_on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Prepare legacy 2.6.0 checkout (ubuntu)
+        if: ${{ matrix.os.label == 'ubuntu' }}
+        run: |
+          git fetch origin develop
+          git worktree add /tmp/bq260 948d0507
+
+      - name: Configure and build (windows)
+        if: ${{ matrix.os.label == 'windows' }}
+        shell: pwsh
+        run: |
+          cmake -S test/multi_instance -B build_mi
+          cmake --build build_mi --config Release -j
+
+      - name: Configure and build (linux/macos)
+        if: ${{ matrix.os.label != 'windows' }}
+        run: |
+          cmake -S test/multi_instance -B build_mi \
+            ${{ matrix.os.label == 'ubuntu' && '-DBQ_LEGACY_SRC=/tmp/bq260' || '' }}
+          cmake --build build_mi -j
+
+      # ctest on every platform: it resolves the worker path and the per-case output
+      # directory itself, so no shell-specific find/$(...) is needed (the previous
+      # bash-ism did not run under the default pwsh on Windows)
+      - name: Run multi-instance cases
+        run: |
+          ctest --test-dir build_mi --output-on-failure -R multi_instance -C Release
+
   #Linux-ubuntu
   ubuntu:
     name: ubuntu (${{ matrix.runner.label }} ${{ matrix.cc }} ${{ matrix.cpp_ver }} ${{ matrix.asan.label }})
@@ -261,7 +311,7 @@ jobs:
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
-          cd build/test/linux  
+          cd build/test/linux
           chmod +x *.sh
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 

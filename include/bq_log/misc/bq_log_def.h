@@ -45,6 +45,7 @@ namespace bq {
     class log;
     namespace test {
         class test_log;
+        class test_fast_log;
     }
 }
 
@@ -95,7 +96,7 @@ namespace bq {
 
     enum class fast_meta_kind : uint8_t {
         format = 1,
-        oversize = 2
+        oversize = 2 // unused since 2.7.0
     };
 
     BQ_PACK_BEGIN
@@ -125,6 +126,22 @@ namespace bq {
     static_assert(offsetof(fast_format_meta, category_idx) == 24, "fast format category alignment");
     static_assert(offsetof(fast_format_meta, format_size) == 28, "fast format size alignment");
 
+    // Meta arena entries are aligned to this boundary. The fast_info site packs the enabled level
+    // mask into the low bits of the meta address it publishes (see fast_info_site), so every
+    // consumer must mask the low bits off before using the address stored in a record head as a
+    // pointer. The macro path stores a clean address, for which the mask is a no-op.
+    static constexpr uint64_t fast_meta_addr_align = 64;
+    static constexpr uint64_t fast_meta_addr_mask = fast_meta_addr_align - 1;
+
+    // zero level words for an invalid log (all levels disabled); a template static member
+    // so the single array definition in a public header never multiplies across TUs
+    template <typename T = void>
+    struct log_zero_level_words {
+        static const uint32_t value[1];
+    };
+    template <typename T>
+    const uint32_t log_zero_level_words<T>::value[1] = { 0 };
+
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN
     struct _api_log_buffer_chunk_read_handle {
@@ -142,6 +159,16 @@ namespace bq {
 
     template <uint32_t CAT_INDEX>
     struct log_category_base {
+    };
+
+    // A generated category type (log.cat.xxx) derives from log_category_base<CAT_INDEX>.
+    // 0: not a category, otherwise category index + 1.
+    template <typename T>
+    struct log_category_index {
+        template <uint32_t CAT_INDEX>
+        static char (&pick(const bq::log_category_base<CAT_INDEX>*))[CAT_INDEX + 2];
+        static char (&pick(...))[1];
+        static constexpr uint32_t value = static_cast<uint32_t>(sizeof(pick(static_cast<const bq::decay_t<T>*>(nullptr)))) - 1;
     };
 
     enum class log_arg_type_enum : uint8_t {

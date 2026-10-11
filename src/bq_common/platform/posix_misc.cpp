@@ -19,11 +19,16 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+// Must come before every include: it controls whether <fcntl.h> exposes F_OFD_SETLK on Linux.
+#if defined(BQ_LINUX) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/file.h>
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
@@ -216,6 +221,64 @@ namespace bq {
                 return false;
             }
             return true;
+        }
+
+        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
+        {
+            out_handle = invalid_platform_file_handle;
+#ifdef BQ_PS
+            // PlayStation has no inheritable file locks: report the instance as locked so callers
+            // do not fall into the retry loop. Multi-instance isolation is not supported there.
+            (void)abs_path;
+            return instance_lock_result::locked;
+#else
+            int32_t fd = ::open(abs_path, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+            if (fd < 0) {
+                return instance_lock_result::error;
+            }
+            bool locked = false;
+#if defined(F_OFD_SETLK)
+            struct flock fl;
+            memset(&fl, 0, sizeof(fl));
+            fl.l_type = F_WRLCK;
+            fl.l_whence = SEEK_SET;
+            if (::fcntl(fd, F_OFD_SETLK, &fl) == 0) {
+                locked = true;
+            } else if (errno != EINVAL) {
+                // EINVAL means this kernel cannot do OFD locks; fall through to flock. Anything
+                // else has an errno that says whether another description holds the lock.
+                const int err = errno;
+                if (err != EAGAIN && err != EACCES && err != EWOULDBLOCK) {
+                    ::close(fd);
+                    return instance_lock_result::error;
+                }
+                ::close(fd);
+                return instance_lock_result::held_by_other;
+            }
+#endif
+            if (!locked && ::flock(fd, LOCK_EX | LOCK_NB) != 0) {
+                // only a genuine "someone else holds it" is retryable; a filesystem that does not
+                // support locks at all (NFS returns ENOLCK, some FUSE returns EOPNOTSUPP) must be
+                // reported as an error, otherwise the caller retries forever
+                const int err = errno;
+                ::close(fd);
+                if (err == EAGAIN || err == EACCES || err == EWOULDBLOCK) {
+                    return instance_lock_result::held_by_other;
+                }
+                return instance_lock_result::error;
+            }
+            out_handle = fd;
+            return instance_lock_result::locked;
+#endif
+        }
+
+        void unlock_instance_file(platform_file_handle& handle)
+        {
+            // closing the fd releases both OFD and flock locks
+            if (is_platform_handle_valid(handle)) {
+                ::close(handle);
+            }
+            handle = invalid_platform_file_handle;
         }
 
         bq::string get_lexically_path(const bq::string& original_path)

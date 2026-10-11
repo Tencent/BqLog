@@ -108,6 +108,27 @@ BQ_API_DEF(void, __api_fast_log_notify_low_space,
     (site));
 
 /// <summary>
+/// buffer id used by the inline fast path, 0 for an invalid log or a sync log
+/// </summary>
+BQ_API_DEF(uint64_t, __api_get_log_buffer_id, (uint64_t log_id), (log_id));
+
+/// <summary>
+/// registers a fast log format in the instance meta registry; returns its address, 0 on failure
+/// </summary>
+BQ_API_DEF(uint64_t, __api_fast_meta_register, (uint8_t level, uint32_t category_idx, uint8_t format_type,
+    const char* format, uint32_t format_size, const uint8_t* arg_types, uint16_t arg_count),
+    (level, category_idx, format_type, format, format_size, arg_types, arg_count));
+
+/// <summary>
+/// same as the site versions, the buffer is found by log id and the meta address is given directly
+/// </summary>
+BQ_API_DEF(bool, __api_fast_log_write_no_args_by_id, (uint64_t log_id, uint64_t meta_addr), (log_id, meta_addr));
+BQ_API_DEF(BQ_LOG_API_TYPE(_api_fast_log_write_handle, bq_api_fast_log_write_handle), __api_fast_log_write_begin_by_id,
+    (uint64_t log_id, uint64_t meta_addr, uint32_t args_size), (log_id, meta_addr, args_size));
+BQ_API_DEF(void, __api_fast_log_write_finish_by_id, (uint64_t log_id, uint8_t* args_addr), (log_id, args_addr));
+BQ_API_DEF(void, __api_fast_log_notify_low_space_by_id, (uint64_t log_id), (log_id));
+
+/// <summary>
 /// toggle of all console appenders,
 /// you can disable it to optimize performance in release version
 /// </summary>
@@ -319,4 +340,10 @@ BQ_API_DEF(uint32_t, __api_go_log_write, (uint64_t log_id, uint8_t level, uint32
 BQ_API_DEF(uint32_t, __api_go_log_write_1, (uint64_t log_id, uint8_t level, uint32_t category_index, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_types, uint64_t value0, const char* string0), (log_id, level, category_index, format_str_bytes_len, format_str_data, args_types, value0, string0));
 BQ_API_DEF(uint32_t, __api_go_log_write_2, (uint64_t log_id, uint8_t level, uint32_t category_index, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_types, uint64_t value0, const char* string0, uint64_t value1, const char* string1), (log_id, level, category_index, format_str_bytes_len, format_str_data, args_types, value0, string0, value1, string1));
 BQ_API_DEF(uint32_t, __api_go_log_write_4, (uint64_t log_id, uint8_t level, uint32_t category_index, uint32_t format_str_bytes_len, const void* format_str_data, uint32_t args_count, uint32_t args_types, uint64_t value0, const char* string0, uint64_t value1, const char* string1, uint64_t value2, const char* string2, uint64_t value3, const char* string3), (log_id, level, category_index, format_str_bytes_len, format_str_data, args_count, args_types, value0, string0, value1, string1, value2, string2, value3, string3));
+#endif
+
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+// test only: fills instance index (UINT32_MAX if none), and whether the log's lp/hp
+// buffers are backed by memory maps (hp is false before the first hp block exists)
+BQ_API_DEF(bool, __api_test_get_storage_report, (uint64_t log_id, uint32_t* out_instance, bool* out_lp_mapped, bool* out_hp_mapped), (log_id, out_instance, out_lp_mapped, out_hp_mapped));
 #endif

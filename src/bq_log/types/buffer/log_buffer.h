@@ -28,7 +28,9 @@
 #include "bq_log/types/buffer/miso_ring_buffer.h"
 #include "bq_log/types/buffer/group_list.h"
 #include "bq_log/types/buffer/oversize_buffer.h"
-#include "bq_log/types/buffer/fast_meta_store.h"
+#include "bq_log/types/meta/meta_registry.h"
+#include "bq_log/types/storage/log_storage.h"
+#include "bq_log/types/storage/instance_storage.h"
 
 namespace bq {
     // Owner thread of an HP block. From thread_name_len_ on, same layout as _log_entry_ext_head_def plus name.
@@ -50,19 +52,18 @@ namespace bq {
 #else
         static constexpr uint16_t BLOCKS_PER_GROUP_NODE = 16;
 #endif
-#if defined(BQ_UNIT_TEST)
-        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 5;
-#else
-        static constexpr uint16_t MAX_RECOVERY_VERSION_RANGE = 2;
-#endif
         static constexpr uint64_t HP_BUFFER_CALL_FREQUENCY_CHECK_INTERVAL = 1000;
         static constexpr uint64_t OVERSIZE_BUFFER_RECYCLE_INTERVAL_MS = 1000;
 
     public:
         BQ_PACK_BEGIN
         struct lp_buffer_head_misc {
-            uint16_t saved_version_;
+            uint16_t saved_version_; // run_version of the last run that wrote this LP
+            uint16_t padding_;
+            uint32_t reserved_;
+            uint64_t saved_run_serial_; // run_serial of the last run that wrote this LP
         } BQ_PACK_END
+        static_assert(sizeof(lp_buffer_head_misc) == 16, "lp_buffer_head_misc size");
 
             struct destruction_mark {
             bq::platform::spin_lock lock_;
@@ -128,7 +129,7 @@ namespace bq {
             log_tls_buffer_info* cur_buffer_info_ = nullptr;
             _api_fast_log_thread_state* fast_state_ = nullptr; // header-side thread local fast path state, see bind_fast_state
             uint64_t fast_state_buffer_id_ = 0; // id of the buffer fast_state_ describes (ids are never reused)
-            log_thread_info thread_info_ {};
+            log_thread_info thread_info_ { };
 
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
@@ -224,7 +225,7 @@ namespace bq {
             uint8_t level, uint32_t category_idx, uint8_t format_type,
             const uint8_t* arg_types, uint16_t arg_count);
 
-        const fast_meta_head* resolve_fast_log_meta(uint16_t version, uint64_t old_addr);
+        const fast_format_meta* resolve_fast_log_meta(uint16_t version, uint64_t old_addr);
 
         bq_forceinline void commit_write_chunk(const log_buffer_write_handle& handle);
 
@@ -279,6 +280,12 @@ namespace bq {
         void garbage_collect() { hp_buffer_.garbage_collect(); }
         size_t get_garbage_count() { return hp_buffer_.get_garbage_count(); }
 #endif
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+        // test-only: whether the low performance buffer is backed by a memory map
+        bool is_lp_memory_mapped() const { return lp_buffer_.is_memory_mapped(); }
+        // test-only: whether the first hp group is backed by a memory map (false before the first hp block)
+        bool is_first_hp_group_memory_mapped();
+#endif
     private:
         enum class context_verify_result {
             valid,
@@ -307,8 +314,31 @@ namespace bq {
         context_verify_result verify_context(const context_head& context);
         context_verify_result verify_oversize_context(const context_head& parent_context, const context_head& oversize_context);
         void deregister_seq(const context_head& context);
+        // makes leftover data from an out-of-window (stale) run invisible:
+        // LP is re-initialized, HP block contexts are marked invalid, OS and
+        // fast meta files are deleted from storage
+        void discard_recovery_data();
         void prepare_and_fix_recovery_data();
-        void clear_recovery_data();
+
+        // this run's recovery version; 0 when instance_storage is unavailable (no mmap support, or
+        // no instance claimed), in which case nothing is recovered
+        static uint16_t recovery_run_version();
+
+        // The version stamped on data that must never be recovered. It has to sit OUTSIDE the
+        // recovery window: a stale run's data is only unreachable when (version_ - marked) is
+        // greater than MAX_RECOVERY_VERSION_RANGE. Marking with version_ + 1 (just ahead of the
+        // current run) would fall back inside the window a few runs later and the data would be
+        // recovered as if it were valid. The static form is for callers that cannot use `this`
+        // (the lp_buffer traverse callback).
+        static uint16_t invalid_recovery_version_for(uint16_t version)
+        {
+            return static_cast<uint16_t>(version - MAX_RECOVERY_VERSION_RANGE - 1);
+        }
+
+        bq_forceinline uint16_t invalid_recovery_version() const
+        {
+            return invalid_recovery_version_for(version_);
+        }
 
         // For reading thread.
         bool rt_read_from_lp_buffer(log_buffer_read_handle& out_handle);
@@ -341,11 +371,6 @@ namespace bq {
         uint32_t hp_buffer_max_alloc_size_;
         const uint16_t version_ = 0;
         bq::shared_ptr<destruction_mark> destruction_mark_;
-        bq::platform::spin_lock fast_meta_lock_;
-        bq::platform::atomic<fast_meta_store*> fast_meta_ptr_;
-        bq::unique_ptr<fast_meta_store> fast_meta_store_;
-
-        fast_meta_store* get_fast_meta_store();
 
         struct alignas(BQ_CACHE_LINE_SIZE) {
             bq::platform::spin_lock_rw_crazy array_lock_;
@@ -417,6 +442,9 @@ namespace bq {
 #if defined(BQ_LOG_BUFFER_DEBUG)
             assert(rt_reading.hp_handle_cache_.verify_chunk(handle) && "log_buffer::return_read_chunk hp chunk return verify failed");
 #endif
+            // this record has now been persisted (return_read_chunk only runs after the appender's
+            // mark_write_finished), so the recovery snapshot may move past it
+            rt_reading.cur_block_->get_buffer().mark_persisted(rt_reading.hp_handle_cache_);
             if (!rt_reading.hp_handle_cache_.has_next()) {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_block_);

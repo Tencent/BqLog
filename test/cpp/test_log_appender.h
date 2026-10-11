@@ -16,6 +16,7 @@
 #include <vector>
 #include "test_base.h"
 #include "bq_log/log/log_imp.h"
+#include "bq_log/types/storage/instance_storage.h"
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/appender/appender_file_base.h"
 #include "bq_log/log/appender/appender_file_binary.h"
@@ -956,6 +957,11 @@ namespace bq {
 
                 bool target_log_ok = false;
                 {
+                    // the target log_imp init is the relaunch; it must see a new run
+                    // or its buffer stale-discards the source's data
+                    if (auto* inst = bq::instance_storage::get()) {
+                        inst->test_begin_new_run();
+                    }
                     log_imp target_log;
                     target_log_ok = target_log.init(log_name, make_recovery_log_config(file_name, target_pub_key), categories);
                     if (target_log_ok) {

@@ -84,7 +84,7 @@ namespace bq {
         {
             return head_ptr_->used_.is_range_include(block);
         }
-#if defined(BQ_UNIT_TEST)
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
         bq_forceinline create_memory_map_result get_memory_map_status() const
         {
             return buffer_entity_->get_mmap_result();

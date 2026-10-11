@@ -194,6 +194,15 @@ namespace bq {
         void data_traverse(void (*in_callback)(uint8_t* data, uint32_t size, void* user_data), void* in_user_data);
 
         /// <summary>
+        /// Re-initializes a recovered memory mapped buffer to an empty state,
+        /// keeping the backing file. Used when recovered data is judged stale.
+        /// </summary>
+        void discard_recovered_data()
+        {
+            init_with_memory_map();
+        }
+
+        /// <summary>
         /// Warning:ring buffer can only be read from one thread at same time.
         /// This option is only work in Debug build and will be ignored in Release build.
         /// </summary>

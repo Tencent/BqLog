@@ -377,6 +377,8 @@ log.info("Hello Java! value: {}", 3.14);
 
 ## Go
 
+- **预编译库**：仅桌面平台（Windows / Linux / macOS）。直接链接预编译库（而不是用 cgo 自编译）时，构建库必须开启 Go 选项：在 `build/lib/win64`、`build/lib/linux`、`build/lib/unix_like` 下调用 `build_all_and_pack` 时，Go 是**第 7 个**位置参数（直接调用 `dont_execute_this` 时是第 8 个）；macOS 用 `build/lib/mac/build_all_and_pack.sh` 时是**第 5 个**。开启后库才导出 `__api_go_log_write`、`__api_go_log_write_1`、`__api_go_log_write_2`、`__api_go_log_write_4`，CI 在发布前会校验这些符号确实存在。
+
 通过 Go Modules 安装：
 
 ```sh

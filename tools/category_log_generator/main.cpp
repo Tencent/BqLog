@@ -65,8 +65,8 @@ int32_t main(int32_t argc, char* argv[])
     bq::array<bq::string> utf8_args;
     bq::array<char*> utf8_argv_ptrs;
     if (wargv) {
-        utf8_args.set_capacity(wargc);
-        utf8_argv_ptrs.set_capacity(wargc);
+        utf8_args.set_capacity(static_cast<size_t>(wargc));
+        utf8_argv_ptrs.set_capacity(static_cast<size_t>(wargc));
         for (int32_t i = 0; i < wargc; ++i) {
             utf8_args.push_back(wchar_to_utf8(wargv[i]));
         }

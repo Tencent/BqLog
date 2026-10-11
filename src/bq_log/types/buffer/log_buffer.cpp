@@ -169,26 +169,48 @@ namespace bq {
         fast_state_->buffer_key = ~fast_state_buffer_id_;
     }
 
+    uint16_t log_buffer::recovery_run_version()
+    {
+        auto* inst = instance_storage::get();
+        return inst ? inst->run_version() : 0;
+    }
+
     log_buffer::log_buffer(log_buffer_config& config)
         : config_(config)
         , hp_buffer_(config_, BLOCKS_PER_GROUP_NODE)
         , lp_buffer_(config_)
         , hp_buffer_max_alloc_size_(UINT32_MAX)
-        , version_(config_.need_recovery ? ++lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ : 0)
+        // instance_storage::get() is null when the platform does not support mmap (or the instance
+        // could not be claimed); there is nothing to recover then, same as before T05
+        , version_(config_.need_recovery ? recovery_run_version() : 0)
         , destruction_mark_(bq::make_shared<destruction_mark>())
-        , fast_meta_ptr_(nullptr)
         , current_oversize_buffer_index_(0)
     {
         static bq::platform::atomic<uint64_t> id_generator(0);
         id_ = id_generator.add_fetch_relaxed(1);
         const_cast<log_buffer_config&>(config_).default_buffer_size = bq::max_value((uint32_t)(16 * BQ_CACHE_LINE_SIZE), bq::roundup_pow_of_two(config_.default_buffer_size));
-        if (config.need_recovery) {
+        if (config_.need_recovery) {
+            auto* inst = instance_storage::get();
+            auto& misc = lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>();
+            const uint64_t serial = inst ? inst->run_serial() : 0;
+            if (inst) {
+                // data from another instance (copied directory) or older than the
+                // recovery window is unreachable via version numbers anyway; the
+                // serial check also covers wrap-around collisions of run_version
+                const bool stale = misc.saved_run_serial_ == 0
+                    || serial <= misc.saved_run_serial_
+                    || serial - misc.saved_run_serial_ > MAX_RECOVERY_VERSION_RANGE;
+                if (stale) {
+                    discard_recovery_data();
+                }
+                misc.saved_version_ = static_cast<uint16_t>(version_);
+                misc.saved_run_serial_ = serial;
+            }
             rt_cache_.current_reading_.version_ = static_cast<uint16_t>(version_ - MAX_RECOVERY_VERSION_RANGE);
             prepare_and_fix_recovery_data();
         } else {
             assert(lp_buffer_.get_mmap_misc_data<lp_buffer_head_misc>().saved_version_ == 0 && "invalid lp_buffer_head_misc init value");
             rt_cache_.current_reading_.version_ = 0;
-            clear_recovery_data();
         }
         rt_cache_.current_reading_.is_in_recovery_reading_
             = (rt_cache_.current_reading_.version_ != version_);
@@ -327,19 +349,17 @@ namespace bq {
         }
     }
 
-    fast_meta_store* log_buffer::get_fast_meta_store()
+    const fast_format_meta* log_buffer::register_fast_log_format(const char* format, uint32_t format_size,
+        uint8_t level, uint32_t category_idx, uint8_t format_type,
+        const uint8_t* arg_types, uint16_t arg_count)
     {
-        auto* store = fast_meta_ptr_.load_acquire();
-        if (!store) {
-            bq::platform::scoped_spin_lock guard(fast_meta_lock_);
-            store = fast_meta_ptr_.load_acquire();
-            if (!store) {
-                fast_meta_store_ = bq::make_unique<fast_meta_store>(config_, version_);
-                store = fast_meta_store_.operator->();
-                fast_meta_ptr_.store_release(store);
-            }
-        }
-        return store;
+        return meta_registry::instance().register_format(format, format_size, level, category_idx,
+            format_type, arg_types, arg_count);
+    }
+
+    const fast_format_meta* log_buffer::resolve_fast_log_meta(uint16_t version, uint64_t old_addr)
+    {
+        return meta_registry::instance().resolve_recovered(version, old_addr);
     }
 
 #if defined(BQ_UNIT_TEST)
@@ -361,18 +381,16 @@ namespace bq {
     }
 
 #endif
-    const fast_format_meta* log_buffer::register_fast_log_format(const char* format, uint32_t format_size,
-        uint8_t level, uint32_t category_idx, uint8_t format_type,
-        const uint8_t* arg_types, uint16_t arg_count)
+#if defined(BQ_UNIT_TEST) || defined(BQ_MULTI_INSTANCE_TEST)
+    bool log_buffer::is_first_hp_group_memory_mapped()
     {
-        return get_fast_meta_store()->register_format(format, format_size, level, category_idx,
-            format_type, arg_types, arg_count);
+        auto group = hp_buffer_.first(group_list::lock_type::no_lock);
+        if (!group) {
+            return false;
+        }
+        return group.value().get_memory_map_status() != create_memory_map_result::failed;
     }
-
-    const fast_meta_head* log_buffer::resolve_fast_log_meta(uint16_t version, uint64_t old_addr)
-    {
-        return get_fast_meta_store()->resolve(version, old_addr);
-    }
+#endif
 
 #if defined(BQ_LOG_BUFFER_DEBUG)
     void log_buffer::debug_check_read_thread()
@@ -654,7 +672,7 @@ namespace bq {
                 return context_verify_result::seq_invalid;
             }
         }
-        else if (parent_context.version_ < oversize_context.version_)
+        else if (static_cast<int16_t>(static_cast<uint16_t>(oversize_context.version_ - parent_context.version_)) > 0)
         {
             BQ_UNLIKELY_IF(!is_version_valid(oversize_context.version_))
             {
@@ -894,7 +912,6 @@ namespace bq {
     void log_buffer::rt_try_traverse_to_next_version()
     {
         auto& rt_reading = rt_cache_.current_reading_;
-        const uint16_t completed_version = rt_reading.version_;
         auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)];
         recover_map.clear();
 #ifdef BQ_UNIT_TEST
@@ -902,18 +919,6 @@ namespace bq {
 #endif
         ++rt_reading.version_;
         rt_reading.is_in_recovery_reading_ = (rt_reading.version_ != version_);
-        if (!fast_meta_ptr_.load_acquire() && !rt_reading.is_in_recovery_reading_ && config_.need_recovery) {
-            const bq::string folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/fast_meta", 0);
-            if (bq::file_manager::is_dir(folder)) {
-                get_fast_meta_store();
-            }
-        }
-        if (auto* store = fast_meta_ptr_.load_acquire()) {
-            store->release_version(completed_version);
-            if (!rt_reading.is_in_recovery_reading_) {
-                store->release_recovered_versions();
-            }
-        }
     }
 
     void log_buffer::refresh_traverse_end_mark()
@@ -986,11 +991,9 @@ namespace bq {
         if (enum_buffer_result_code::success != over_size_handle.result) {
             uint32_t default_buffer_size = (size < (UINT32_MAX >> 1)) ? (size << 1) : UINT32_MAX;
             bq::string abs_recovery_file_path;
-            if (config_.need_recovery) {
+            if (config_.need_recovery && config_.storage) {
                 auto new_index = current_oversize_buffer_index_.add_fetch(1, bq::platform::memory_order::relaxed);
-                char tmp[32];
-                snprintf(tmp, sizeof(tmp), "_%" PRIu64, new_index);
-                abs_recovery_file_path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os/" + config_.log_name + tmp + ".mmap", 0);
+                abs_recovery_file_path = config_.storage->os_path(new_index);
             }
             bq::platform::scoped_spin_lock_write_crazy w_lock(temprorary_oversize_buffer_.array_lock_);
             temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::make_unique<oversize_buffer_obj_def>(default_buffer_size, abs_recovery_file_path, true));
@@ -1055,7 +1058,7 @@ namespace bq {
             // never enters the wait_and_retry spin loop. Disk-full is not a
             // back-pressure scenario - waiting is futile.
             --tls_buffer.wt_data_.current_write_seq_;
-            parent_context->version_ = static_cast<uint16_t>(version_ + 1);
+            parent_context->version_ = invalid_recovery_version();
             lp_buffer_.commit_write_chunk(parent_result);
             log_buffer_write_handle fail;
             fail.result = enum_buffer_result_code::err_io_failure_drop;
@@ -1216,8 +1219,8 @@ namespace bq {
                     if (is_empty) {
                         bq::string abs_mmap_file_path = temprorary_oversize_buffer_.buffers_array_[index]->buffer_.get_mmap_file_path();
                         temprorary_oversize_buffer_.buffers_array_.erase_replace(temprorary_oversize_buffer_.buffers_array_.begin() + static_cast<ptrdiff_t>(index));
-                        if (bq::file_manager::is_file(abs_mmap_file_path)) {
-                            bq::file_manager::remove_file_or_dir(abs_mmap_file_path);
+                        if (config_.storage && !abs_mmap_file_path.is_empty() && bq::file_manager::is_file(abs_mmap_file_path)) {
+                            config_.storage->remove(abs_mmap_file_path);
                         }
                     }
                 }
@@ -1231,6 +1234,39 @@ namespace bq {
         return log_tls_info__get_direct().get_buffer_info(this);
     }
 #endif
+
+    void log_buffer::discard_recovery_data()
+    {
+        // LP: re-init in place, the backing file stays but all cursors and the
+        // misc area (saved_version_ / saved_run_serial_) are reset
+        lp_buffer_.discard_recovered_data();
+        // HP: groups were already recovered from their mmap files, so the files
+        // cannot be deleted; invalidating every used/stage block's context
+        // makes the reader recycle them through the regular version_invalid path
+        const uint16_t invalid_version = invalid_recovery_version();
+        auto group = hp_buffer_.first(group_list::lock_type::no_lock);
+        while (group) {
+            block_node_head* block = group.value().get_data_head().used_.first();
+            while (block) {
+                block->get_misc_data<block_misc_data>().context_.version_ = invalid_version;
+                block = group.value().get_data_head().used_.next(block);
+            }
+            block = group.value().get_data_head().stage_.first();
+            while (block) {
+                block->get_misc_data<block_misc_data>().context_.version_ = invalid_version;
+                block = group.value().get_data_head().stage_.next(block);
+            }
+            group = hp_buffer_.next(group, group_list::lock_type::no_lock);
+        }
+        // OS (oversize) files are not mapped yet at this point, they can simply
+        // be removed. lp.mmap / hp files are currently mapped, they stay (their
+        // contents are neutralized above / by the LP re-init). The instance-level
+        // meta journal of a stale run is handled by meta_registry's expired-file
+        // cleanup at the next enable_journal.
+        if (config_.storage) {
+            config_.storage->remove(config_.storage->os_dir());
+        }
+    }
 
     /**
      * @brief Fixes mmap data errors by invalidating data with the same version as the current run.
@@ -1257,7 +1293,7 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
                 bq::util::log_device_console(bq::log_level::error, "fix invalid log data in lp_buffer when recovering, version:%" PRIu16 ", seq:%" PRIu32, context.version_, context.seq_);
 #endif
-                context.version_++; // mark invalid
+                context.version_ = invalid_recovery_version_for(buffer.get_version()); // mark unrecoverable
             } else if (static_cast<uint16_t>(buffer.version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                 auto& recovery_map = buffer.rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(buffer.version_ - 1 - context.version_)];
                 auto iter = recovery_map.find(context.get_tls_info());
@@ -1288,7 +1324,7 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
                     bq::util::log_device_console(bq::log_level::error, "fix invalid log data in hp_buffer used list when recovering, version:%" PRIu16 ", seq:%" PRIu32, context.version_, context.seq_);
 #endif
-                    context.version_++; // mark invalid
+                    context.version_ = invalid_recovery_version(); // mark unrecoverable
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
                     auto iter = recovery_map.find(context.get_tls_info());
@@ -1315,7 +1351,7 @@ namespace bq {
 #ifdef BQ_UNIT_TEST
                     bq::util::log_device_console(bq::log_level::error, "fix invalid log data in hp_buffer stage list when recovering, version:%" PRIu16 ", seq:%" PRIu32, context.version_, context.seq_);
 #endif
-                    context.version_++; // mark invalid
+                    context.version_ = invalid_recovery_version(); // mark unrecoverable
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
                     auto iter = recovery_map.find(context.get_tls_info());
@@ -1339,24 +1375,28 @@ namespace bq {
         }
 
         // Recover oversize buffers
-        bq::string over_size_memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/os", 0);
+        if (!config_.storage) {
+            return;
+        }
+        bq::string over_size_memory_map_folder = config_.storage->os_dir();
         if (bq::file_manager::is_dir(over_size_memory_map_folder)) {
             bq::array<bq::string> sub_names = bq::file_manager::get_sub_dirs_and_files_name(over_size_memory_map_folder);
             for (const bq::string& file_name : sub_names) {
                 bq::string full_path = bq::file_manager::combine_path(over_size_memory_map_folder, file_name);
-                if (!file_name.end_with(".mmap") || !file_name.begin_with(config_.log_name + "_")) {
+                if (!file_name.end_with(".mmap")) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                     continue;
                 }
                 char* end_ptr = nullptr;
                 errno = 0;
-                bq::string file_name_cpy = file_name.substr(config_.log_name.size() + 1);
+                bq::string file_name_cpy = file_name.substr(0, file_name.size() - strlen(".mmap"));
                 uint64_t u64_value = strtoull(file_name_cpy.c_str(), &end_ptr, 10);
                 if (errno == ERANGE
-                    || end_ptr != file_name_cpy.c_str() + (file_name_cpy.size() - strlen(".mmap"))) {
+                    || file_name_cpy.is_empty()
+                    || end_ptr != file_name_cpy.c_str() + file_name_cpy.size()) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                     continue;
                 }
                 size_t file_size = bq::file_manager::get_file_size(full_path);
@@ -1371,7 +1411,7 @@ namespace bq {
                 }
                 if (default_buffer_size == UINT32_MAX) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s, invalid size:%" PRIu64, full_path.c_str(), static_cast<uint64_t>(file_size));
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                     continue;
                 }
                 if (u64_value > current_oversize_buffer_index_.load(bq::platform::memory_order::relaxed)) {
@@ -1384,7 +1424,7 @@ namespace bq {
                     || !is_version_valid(oversize_buffer_context.version_)) {
                     bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file when recovery:%s, invalid context", full_path.c_str());
                     recovery_buffer.reset();
-                    bq::file_manager::remove_file_or_dir(full_path);
+                    config_.storage->remove(full_path);
                 } else {
                     temprorary_oversize_buffer_.buffers_array_.emplace_back(bq::move(recovery_buffer));
                 }
@@ -1417,11 +1457,4 @@ namespace bq {
 #endif
     }
 
-    void log_buffer::clear_recovery_data()
-    {
-        bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name, 0);
-        if (bq::file_manager::is_dir(memory_map_folder)) {
-            bq::file_manager::remove_file_or_dir(memory_map_folder);
-        }
-    }
 }
