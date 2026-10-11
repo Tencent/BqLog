@@ -1232,12 +1232,13 @@ namespace bq {
             base = 8;
         }
         // uint64_t max = 18,446,744,073,709,551,615
+        // digits plus 1 byte for the sign and 2 for the "0x"/"0b" prefix
         if (base >= 16) {
-            expand_format_content_buff_size(format_content_cursor + 16);
+            expand_format_content_buff_size(format_content_cursor + 16 + 3);
         } else if (base >= 10) {
-            expand_format_content_buff_size(format_content_cursor + 20);
+            expand_format_content_buff_size(format_content_cursor + 20 + 3);
         } else {
-            expand_format_content_buff_size(format_content_cursor + 64);
+            expand_format_content_buff_size(format_content_cursor + 64 + 3);
         }
         if (value > 0) {
             if (format_info_.sign == '+') {
@@ -1304,12 +1305,13 @@ namespace bq {
 
         // Length expansion
         // uint64_t max = 18,446,744,073,709,551,615
+        // digits plus 1 byte for the sign and 2 for the "0x"/"0b" prefix
         if (base >= 16) {
-            expand_format_content_buff_size(format_content_cursor + 16);
+            expand_format_content_buff_size(format_content_cursor + 16 + 3);
         } else if (base >= 10) {
-            expand_format_content_buff_size(format_content_cursor + 20);
+            expand_format_content_buff_size(format_content_cursor + 20 + 3);
         } else {
-            expand_format_content_buff_size(format_content_cursor + 64);
+            expand_format_content_buff_size(format_content_cursor + 64 + 3);
         }
         //+-
         if (value < 0) {
