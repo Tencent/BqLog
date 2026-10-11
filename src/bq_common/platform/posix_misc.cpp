@@ -23,9 +23,6 @@
 #if defined(BQ_LINUX) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
 #endif
-#if (defined(__sun) || defined(__sun__)) && !defined(__EXTENSIONS__)
-#define __EXTENSIONS__
-#endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
 #include <pthread.h>

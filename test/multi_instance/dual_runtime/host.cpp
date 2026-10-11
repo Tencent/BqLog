@@ -5,8 +5,9 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include "bq_common/platform/macros.h"
 
-#if defined(_WIN32)
+#if defined(BQ_WIN)
 #include <windows.h>
 typedef HMODULE lib_handle;
 #define BQ_HOST_LIB_EXT ".dll"
@@ -25,7 +26,7 @@ static const char* last_lib_error()
 #else
 #include <dlfcn.h>
 typedef void* lib_handle;
-#if defined(__APPLE__)
+#if defined(BQ_APPLE)
 #define BQ_HOST_LIB_EXT ".dylib"
 #else
 #define BQ_HOST_LIB_EXT ".so"
