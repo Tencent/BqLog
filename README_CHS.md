@@ -289,6 +289,7 @@ bq.log.force_flush_all_logs();
 
 | 文档 | 说明 |
 |------|------|
+| [开发规范](DEVELOPMENT_GUIDELINES_CHS.md) | 贡献代码必须遵守的约定：命名、ABI 与内存布局、宏、无 STL 构建、测试、提交与性能 |
 | [常见问题（FAQ）](docs/FAQ_CHS.md) | 常见问题：对比、平台与语言、发布渠道、崩溃恢复 |
 | [集成指南](docs/INTEGRATION_GUIDE_CHS.md) | 所有平台完整集成步骤 + 各语言 Demo |
 | [游戏引擎集成](docs/ENGINE_INTEGRATION_CHS.md) | Unity、团结引擎、Unreal Engine 插件与蓝图使用 |
@@ -301,6 +302,8 @@ bq.log.force_flush_all_logs();
 ---
 
 ## 🤝 如何贡献代码
+
+请先阅读[开发规范](DEVELOPMENT_GUIDELINES_CHS.md)：其中包含命名、ABI 与内存布局、宏、无 STL 构建、测试以及性能方面的约定。
 
 若您希望贡献代码，请确保您的改动能通过仓库中 GitHub Actions 下的以下工作流：
 

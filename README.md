@@ -278,6 +278,7 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 
 | Document | Description |
 |----------|-------------|
+| [Development Guidelines](DEVELOPMENT_GUIDELINES.md) | Rules for contributing code: naming, ABI and memory layout, macros, no-STL build, tests, commits and performance |
 | [FAQ](docs/FAQ.md) | Common questions: comparisons, platforms, distribution channels, crash recovery |
 | [Integration Guide](docs/INTEGRATION_GUIDE.md) | Full integration steps for all platforms + all language demos |
 | [Game Engine Integration](docs/ENGINE_INTEGRATION.md) | Unity, Tuanjie Engine, Unreal Engine plugins and Blueprint usage |
@@ -290,6 +291,8 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 ---
 
 ## 🤝 How to contribute
+
+Please read the [Development Guidelines](DEVELOPMENT_GUIDELINES.md) first: it covers naming, ABI and memory layout, macros, the no-STL build, tests and the performance expectations.
 
 If you want to contribute code, please make sure your changes can pass the following workflows under GitHub Actions in the repository:
 
