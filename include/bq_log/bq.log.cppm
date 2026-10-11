@@ -9,31 +9,17 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-// The C++20 module entry of BqLog:
-//
-//     import bq.log;
-//
-// is the same library as
-//
-//     #include "bq_log/bq_log.h"
-//
-// The headers are compiled inside this module, so their contents have to say which
-// declarations are part of the module interface: BQ_MODULE_EXPORT_BEGIN/END mark
-// them, and are empty unless a module is being built. Everything the headers do not
-// mark -- file local helpers, the system headers they pull in -- stays out of the
-// interface, which is what makes a header set like ours compilable at all: a
-// declaration with internal linkage cannot be exported, and neither the C library
-// nor the platform SDK headers are free of them.
-//
-// System headers come first, in the global module fragment, so that the includes
-// inside the marked regions are no-ops and their declarations are not attached to
-// this module.
-//
-// What the module cannot hand out is macros: BQ_LOG_FAST_* belongs to the
-// preprocessor and macros are not exported. Importers use the macro-free fast mode
-// instead, log.fast_info<"...">(args...), which needs C++20 and is therefore always
-// available here.
+// The same library as #include "bq_log/bq_log.h", reached through `import bq.log;`. The
+// headers say with BQ_MODULE_EXPORT_BEGIN/END which declarations make up the interface,
+// and the system headers come first so that the includes inside those regions are no-ops
+// and the C library is not attached to the module. Macros are never exported, so the
+// fast log here is the macro-free log.fast_info.
 module;
+
+// macros.h supplies BQ_WIN below. assert.h has no include guard, so it has to be
+// pre-included here, otherwise the purview includes it again (MSVC reports C5244).
+#include "bq_common/platform/macros.h"
+#include "bq_common/misc/assert.h"
 
 // Every system header the public headers pull in, so that the includes inside the
 // marked regions are no-ops and the C library is not attached to this module.
@@ -50,7 +36,7 @@ module;
 #include <string.h>
 #include <time.h>
 #include <wchar.h>
-#if defined(_WIN32)
+#if defined(BQ_WIN)
 #include <intrin.h>
 #else
 #include <dlfcn.h>
@@ -63,9 +49,6 @@ module;
 #include "bq_common/misc/assert.h"
 
 export module bq.log;
-
-// Headers that behave differently while a module is being built look at this.
-#define BQ_MODULE_BUILD 1
 
 #define BQ_MODULE_EXPORT_BEGIN export {
 #define BQ_MODULE_EXPORT_END }

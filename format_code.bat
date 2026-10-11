@@ -10,7 +10,7 @@ set "dirs=src include demo benchmark test tools"
 for %%d in (%dirs%) do (
     echo "%~dp0%%d"
     pushd "%~dp0%%d"
-    for /r  %%f in (*.cpp *.h) do (
+    for /r  %%f in (*.cpp *.h *.cppm) do (
         echo Formatting %%f
         clang-format -i "%%f"
     )

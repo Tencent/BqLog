@@ -208,10 +208,9 @@ endif()
 # C++20 module entry
 ############################################################
 # `import bq.log;` is exercised by a binary of its own: a translation unit may not import
-# and include the same library, so it cannot live in BqLogUnitTest next to the include
-# entry. The test runners start it right after BqLogUnitTest, which is what keeps the
-# module entry compiled and run on every platform that can build modules; a toolchain or
-# a generator that cannot just skips it and says so.
+# and include the same library, so it cannot live in BqLogUnitTest. The test runners start
+# it after BqLogUnitTest and CTest registers it, so it is compiled and run wherever a
+# toolchain can build modules; one that cannot skips it and says so.
 OPTION(BQ_MODULE_TEST "Build and run the C++20 module entry test" ON)
 
 set(BQ_MODULE_TOOLCHAIN_OK FALSE)
@@ -233,9 +232,7 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
         AND TARGET bqlog_lib)
     message(STATUS "Module entry test: enabled (import bq.log)")
 
-    # The interface unit is a target of its own, the way a consumer of the library would
-    # have it: linking it tells the importing translation unit where the compiled module
-    # is. Its file set has to be PUBLIC, otherwise CMake refuses the import from outside.
+    # PUBLIC: an import from another target needs the file set in the interface
     add_library(bqlog_module STATIC)
     target_include_directories(bqlog_module PRIVATE ${ALL_INC_DIRS})
     target_sources(bqlog_module PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../../include
@@ -245,9 +242,8 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
 
     add_executable(BqLogModuleUnitTest ${CMAKE_CURRENT_SOURCE_DIR}/../module/module_test.cpp)
     target_link_libraries(BqLogModuleUnitTest PRIVATE bqlog_lib bqlog_module)
-    # A source file that only imports has to be scanned for module dependencies. The
-    # property says so for this target alone; the CMP0155 policy would do it for every
-    # source of the project, which is not wanted here.
+    # a source file that only imports is not scanned by default; CMP0155 would scan the
+    # whole project, this says so for this target alone
     set_property(TARGET BqLogModuleUnitTest PROPERTY CXX_SCAN_FOR_MODULES ON)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -255,6 +251,9 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
         target_compile_options(bqlog_module PRIVATE -fmodules-ts)
         target_compile_options(BqLogModuleUnitTest PRIVATE -fmodules-ts)
     endif()
+
+    enable_testing()
+    add_test(NAME module_entry COMMAND BqLogModuleUnitTest)
 else()
     message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, a toolchain with modules, and a Ninja or VS generator; -DBQ_MODULE_TEST=ON enables it once include/bq_log/bq.log.cppm is finished)")
 endif()

@@ -31,6 +31,9 @@ jobs:
           echo "VERSION=$VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Check the include layers
+        run: python3 .github/scripts/check_include_layers.py
+
   #########################################################Common Libs Build####################################################
   #Windows
   build_windows_x86_64_lib_MSVC:
@@ -57,7 +60,7 @@ jobs:
           name: windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -79,7 +82,7 @@ jobs:
           cd build\lib\win64  
           .\build_all_and_pack.bat native clang YES NO NO both YES
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -142,7 +145,7 @@ jobs:
           name: windows_mingw_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -194,7 +197,7 @@ jobs:
           name: windows_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -216,7 +219,7 @@ jobs:
           cd build\lib\win64  
           .\build_all_and_pack.bat arm64 clang YES NO NO both YES
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -279,7 +282,7 @@ jobs:
           name: windows_mingw_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -449,7 +452,7 @@ jobs:
           name: linux_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -472,7 +475,7 @@ jobs:
           chmod +x *.sh
           ./build_all_and_pack.sh native gcc YES NO NO both YES
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -551,7 +554,7 @@ jobs:
           name: linux_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -574,7 +577,7 @@ jobs:
           chmod +x *.sh
           ./build_all_and_pack.sh native gcc YES NO NO both YES
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -676,7 +679,7 @@ jobs:
           name: linux_x86_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -723,7 +726,7 @@ jobs:
           chmod +x *.sh
           ./build_all_and_pack.sh native gcc YES NO NO both YES
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -844,7 +847,7 @@ jobs:
           name: macos_universal_binary_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4182,7 +4185,7 @@ jobs:
           name: tmp_node_windows_x86_64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4215,7 +4218,7 @@ jobs:
           cd build\lib\win64
           .\build_all_and_pack.bat native clang YES YES NO dynamic_lib YES
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4254,7 +4257,7 @@ jobs:
           name: tmp_node_windows_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4289,7 +4292,7 @@ jobs:
 
   #Linux-ubuntu-x86_64
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4330,7 +4333,7 @@ jobs:
 
   #Linux-ubuntu-x86_64
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4365,7 +4368,7 @@ jobs:
 
   #Linux-ubuntu-arm64
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4404,7 +4407,7 @@ jobs:
           name: tmp_node_linux_arm64_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4439,7 +4442,7 @@ jobs:
 
   #Linux-debian-x86
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4497,7 +4500,7 @@ jobs:
           name: tmp_node_linux_x86_libs_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4552,7 +4555,7 @@ jobs:
 
   #Mac
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 
@@ -4587,7 +4590,7 @@ jobs:
 
   #freebsd_x86_64
 
-      - name: Check Go bridge exports
+      - name: Check the prebuilt package
         shell: bash
         run: bash .github/scripts/check_go_bridge_exports.sh dist
 

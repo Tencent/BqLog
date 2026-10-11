@@ -67,3 +67,14 @@ if [ "$found" -eq 0 ]; then
 fi
 
 echo "check_go_bridge_exports: all BqLog dynamic libraries export the Go bridge"
+
+# The package also promises the C++20 module entry, which is the headers' only other entry point:
+# a release that ships the headers without it cannot be imported. The interface unit is the same
+# file on every platform, so the platforms that ship the desktop package all assert it here.
+cpm="$(find "$dir" -type f -name 'bq.log.cppm' 2>/dev/null | head -n1)"
+if [ -z "$cpm" ]; then
+    echo "check_go_bridge_exports: no bq.log.cppm in the package under $dir" >&2
+    exit 1
+fi
+
+echo "check_go_bridge_exports: the package ships $cpm"

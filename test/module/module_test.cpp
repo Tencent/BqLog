@@ -9,19 +9,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-// The C++20 module entry, exercised by a translation unit that only imports it:
+// The module entry, exercised by a translation unit that only imports it. It is a binary
+// of its own, because a translation unit may not import and include the same library, and
+// the test runners start it right after BqLogUnitTest.
 //
-//     import bq.log;
-//
-// Nothing here includes bq_log or bq_common, and nothing includes the C++ standard
-// library either: GCC 15's module TS crashes with an internal compiler error when a
-// translation unit imports and then includes an STL header. C headers are fine, and
-// bq::string comes from the module itself.
-//
-// This is a binary of its own, built beside the include entry's test binary, because a
-// translation unit may not import and include the same library. The test runners start
-// it right after BqLogUnitTest, so every test run of every platform compiles the import
-// entry and exercises it against the same library.
+// Nothing here includes bq_log, bq_common or the C++ standard library: bq::string comes
+// from the module, and GCC 15's module TS crashes on an STL header after an import.
 #define _CRT_SECURE_NO_WARNINGS // the fopen/fread below read the log file on purpose
 import bq.log;
 
