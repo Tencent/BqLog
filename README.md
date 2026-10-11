@@ -48,6 +48,9 @@
 - **C++20 modules**: `import bq.log;` now works alongside `#include "bq_log/bq_log.h"`.
 - **Fast path fixes**: a first-call race between threads is gone, and crash recovery now replays at most the record that was in flight instead of a whole batch.
 
+> [!WARNING]
+> **This release changes the ABI.** If you link the dynamic or the static library, replace the wrapper (the C++ headers and the other languages' bindings) and the library together, so that both are the same version.
+
 > Full changelog → [CHANGELOG.md](CHANGELOG.md)
 
 ---

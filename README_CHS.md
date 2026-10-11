@@ -47,6 +47,8 @@
 - **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)` 等接口与 `BQ_LOG_FAST_INFO` 是同一条快速路径，只是不再用宏：IDE 代码提示正常、同一个调用点对任何日志对象都有效、并且是 C++20 模块导出的接口。Category 是第一个可选模板参数 —— `log.fast_info<log.cat.ModuleA, "...">(args...)`。热路径开销与宏持平（GCC、Clang/aarch64、MSVC 三平台指令数一致）。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
 - **C++20 modules**：`import bq.log;` 与 `#include "bq_log/bq_log.h"` 并存。
 - **快速路径修复**：消除了多线程首次调用同一站点的竞争；崩溃恢复现在最多只重放正在处理的那一条记录，而不是整批数据。
+> [!WARNING]
+> **该版本更改了 ABI。** 如果您是用动态库或静态库的方式引入，需要把 wrapper（C++ 头文件、其他语言的部分）和库一起更换，保证两者是同一版本。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 
