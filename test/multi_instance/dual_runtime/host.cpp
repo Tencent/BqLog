@@ -25,7 +25,11 @@ static const char* last_lib_error()
 #else
 #include <dlfcn.h>
 typedef void* lib_handle;
+#if defined(__APPLE__)
+#define BQ_HOST_LIB_EXT ".dylib"
+#else
 #define BQ_HOST_LIB_EXT ".so"
+#endif
 static lib_handle open_lib(const char* path)
 {
     return dlopen(path, RTLD_NOW | RTLD_LOCAL);
@@ -65,9 +69,25 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "usage: bq_dual_runtime_host <log_name>\n");
         return 2;
     }
+    // The plugins are built next to this executable while the working directory is a scratch
+    // directory, so they are resolved against argv[0] instead of against the current directory.
+    std::string lib_dir;
+    {
+        const char* self = argv[0] != nullptr ? argv[0] : "";
+        const char* slash = std::strrchr(self, '/');
+        const char* backslash = std::strrchr(self, '\\');
+        if (backslash != nullptr && (slash == nullptr || backslash > slash)) {
+            slash = backslash;
+        }
+        if (slash != nullptr) {
+            lib_dir.assign(self, static_cast<size_t>(slash - self) + 1);
+        } else {
+            lib_dir = "./";
+        }
+    }
     // two file copies of the same plugin so the OS loader treats them as
     // distinct modules even on systems that cache by content
-    int a = run_plugin("a", "plugin_a" BQ_HOST_LIB_EXT, argv[1]);
-    int b = run_plugin("b", "plugin_b_copy" BQ_HOST_LIB_EXT, argv[1]);
+    int a = run_plugin("a", lib_dir + "plugin_a" BQ_HOST_LIB_EXT, argv[1]);
+    int b = run_plugin("b", lib_dir + "plugin_b_copy" BQ_HOST_LIB_EXT, argv[1]);
     return (a == 0 && b == 1) ? 0 : 1;
 }
