@@ -173,6 +173,32 @@ BQ_LOG_FAST_INFO(my_category_log, my_category_log.cat.Shop.Seller, "order {} pai
 - **IDE 代码提示体验差一些。** 这是宏，代码补全和参数提示不如普通模式的成员函数好用。参数类型仍然会在编译期检查。
 
 支持 [Category](./ADVANCED_USAGE_CHS.md#2-支持分类category的-log-对象)：第二个参数是 `log.cat.xxx` 时按该 Category 输出，是格式串时用默认 Category。是哪一种在编译期决定，带 Category 的调用和不带的一样快。支持的参数类型和普通模式相同。如果某个级别配置了打印调用栈（`log.print_stack_levels`），或者日志对象是同步模式，快速模式的调用会自动退回普通模式，输出依然正确，只是这种情况下不会更快。
+
+<a id="fast-info"></a>
+
+##### 无宏的快速模式（C++20）
+
+从 C++20 起，同一条快速路径也可以不用宏：它是一个成员函数模板，格式串是非类型模板参数。
+
+```cpp
+log_obj.fast_info<"Hello {}, count={}">("world", 42);
+log_obj.fast_error<"Error code: {}">(err_code);
+// fast_verbose、fast_debug、fast_info、fast_warning、fast_error、fast_fatal
+
+// Category 是第一个可选模板参数，格式串是第二个
+my_category_log.fast_info<my_category_log.cat.Shop.Seller, "order {} paid">(order_id);
+```
+
+它写出的日志和 `BQ_LOG_FAST_*` 完全一样，调用线程的开销也相同（在 x86-64、aarch64、MSVC 上两者相差不超过一条指令；写线程延迟 benchmark 显示每次调用耗时持平或更低）。与宏相比有两点不同：
+
+- **不绑定第一次调用的日志对象。** 级别和 buffer 从本次调用传入的日志对象上读，因此同一个调用点可以服务多个日志，也可以放在"把日志对象作为参数传进来"的辅助函数里。
+- **IDE 支持。** 它是成员函数模板，代码补全、跳转定义、编译器诊断都正常。
+
+代价和宏一样：调用点的格式串是固定的，只在第一次调用时注册一次；退回规则也相同（配置了调用栈的级别、或同步模式的日志会走普通模式）。Category 可选；传入别的日志类的 Category 是编译期错误。
+
+**格式串编码。** 由字面量自身的字符类型决定，与宏一致：`""`、`u8""` 是 UTF-8，`u""` 是 UTF-16，`U""` 是 UTF-32，`L""` 则取决于平台上 `wchar_t` 的宽度（Windows 是 UTF-16，其它平台是 UTF-32）。除 UTF-8 之外一律转成 UTF-16 存储，文本 appender 始终输出 UTF-8。窄字面量按执行字符集编码，因此该字符集必须是 UTF-8（MSVC 需 `/utf-8`）；`u8`、`u16`、`u32`、`L` 字面量自带编码，不受影响。
+
+**二进制体积。** 每个不同的格式串都是模板实参，因此也会出现在 site holder 和慢路径函数的 mangled name 里：200 个调用点约占 400 KB 的符号名（同样的调用点用宏写只占 10 KB）。发布时 strip（MSVC 分离 PDB、或 `-gsplit-dwarf`）之后，与宏版本的差距回到几个百分点以内，所以 Release 照常 strip 即可。
 </details>
 
 <details>
