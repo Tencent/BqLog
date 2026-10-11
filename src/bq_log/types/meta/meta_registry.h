@@ -22,7 +22,7 @@ namespace bq {
     struct log_global_vars;
 
     // Instance-level registry of fast log format metadata. All logs of a process share
-    // one arena; recovered fast records resolve their format through the journal files
+    // one arena; recovered fast records resolve their format through the meta record files
     // written under <instance_root>/meta/<run_version>.mmap (T06).
     // The registry lives in log_global_vars and is never destructed (its arena entries
     // are referenced by live records at any time; a small leak is accepted there).
@@ -36,8 +36,8 @@ namespace bq {
             const uint8_t* arg_types, uint16_t arg_count);
 
         // called by log_imp::init for the first recovery log, after instance_storage::acquire()
-        bool enable_journal();
-        bool is_journal_enabled() const;
+        bool enable_meta_records();
+        bool is_meta_records_enabled() const;
 
         // resolved records of a previous run
         const fast_format_meta* resolve_recovered(uint16_t version, uint64_t arena_addr);
@@ -65,9 +65,9 @@ namespace bq {
         uint32_t test_register_count() const { return test_register_count_.load_relaxed(); }
         // deduped entries in registration order
         size_t test_entry_count() const;
-        // deletes expired journal files under meta_dir() (normally done by enable_journal)
+        // deletes expired meta record files under meta_dir() (normally done by enable_meta_records)
         void test_cleanup_expired();
-        void test_flush_journal();
+        void test_flush_meta_records();
 #endif
 
     private:
@@ -78,7 +78,7 @@ namespace bq {
         };
 
         BQ_PACK_BEGIN
-        struct alignas(8) meta_journal_head {
+        struct alignas(8) meta_record_head {
             uint64_t magic; // 0x42514C4F474D4554 ("BQLOGMET")
             uint32_t format_version; // 1
             uint16_t run_version;
@@ -86,15 +86,15 @@ namespace bq {
             uint64_t run_serial;
             uint32_t committed_size; // bytes of entries after the head
             uint8_t reserved[36];
-        } BQ_PACK_END static_assert(sizeof(meta_journal_head) == 64, "meta journal head size");
-        static_assert(offsetof(meta_journal_head, committed_size) == 24, "meta journal head layout");
+        } BQ_PACK_END static_assert(sizeof(meta_record_head) == 64, "meta record head size");
+        static_assert(offsetof(meta_record_head, committed_size) == 24, "meta record head layout");
 
         BQ_PACK_BEGIN
-        struct alignas(8) meta_journal_entry_head {
+        struct alignas(8) meta_record_entry_head {
             uint64_t arena_addr;
             uint32_t entry_size; // 16 + meta record_size
             uint32_t reserved;
-        } BQ_PACK_END static_assert(sizeof(meta_journal_entry_head) == 16, "meta journal entry head size");
+        } BQ_PACK_END static_assert(sizeof(meta_record_entry_head) == 16, "meta record entry head size");
 
         struct recovered_version {
             uint16_t version;
@@ -109,25 +109,25 @@ namespace bq {
 
         uint8_t* arena_alloc(uint32_t size);
         const fast_format_meta* append_locked(const uint8_t* entry, uint32_t entry_size, uint64_t checksum);
-        // writes one entry into the current journal segments
+        // writes one entry into the current meta record segments
         bool segment_append_locked(const fast_format_meta* entry);
         // on a run version change (only possible within one process in tests), closes
         // the current segment set and replays every registered entry into fresh
         // segments named for the new run, so records of that run can recover
-        bool journal_sync_run_locked();
-        bool journal_open_segment_locked(uint32_t min_capacity);
+        bool meta_records_sync_run_locked();
+        bool meta_records_open_segment_locked(uint32_t min_capacity);
         void cleanup_expired_locked();
         recovered_version* load_version_locked(uint16_t version);
 
         bq::platform::spin_lock lock_;
         bq::array<arena_block> blocks_;
-        bq::array<const fast_format_meta*> entries_; // registration order, for journal replay
+        bq::array<const fast_format_meta*> entries_; // registration order, for meta record replay
         bq::hash_map<uint64_t, bq::array<const fast_format_meta*>> index_; // checksum -> candidates
-        // journal
-        bool journal_enabled_ = false;
-        uint16_t journal_run_version_ = 0; // run version the open segments belong to (0 = none)
-        bq::array<bq::unique_ptr<normal_buffer>> journal_segments_;
-        uint16_t journal_next_segment_index_ = 0;
+        // meta records
+        bool meta_records_enabled_ = false;
+        uint16_t meta_records_run_version_ = 0; // run version the open segments belong to (0 = none)
+        bq::array<bq::unique_ptr<normal_buffer>> meta_records_segments_;
+        uint16_t meta_records_next_segment_index_ = 0;
         // recovered versions
         bq::array<bq::unique_ptr<recovered_version>> recovered_;
 

@@ -197,8 +197,8 @@ namespace bq {
                 buffer_config.need_recovery = false;
                 util::log_device_console(log_level::warning, "log %s recovery disabled: no instance directory available", name_.c_str());
             }
-            if (buffer_config.need_recovery && !bq::meta_registry::instance().enable_journal()) {
-                util::log_device_console(log_level::warning, "fast log meta journal unavailable, fast records of log %s can not be recovered", name_.c_str());
+            if (buffer_config.need_recovery && !bq::meta_registry::instance().enable_meta_records()) {
+                util::log_device_console(log_level::warning, "fast log meta records unavailable, fast records of log %s can not be recovered", name_.c_str());
             }
             buffer_ = bq::util::aligned_new<bq::log_buffer>(alignof(bq::log_buffer), buffer_config);
         }

@@ -100,45 +100,45 @@ namespace bq {
                     "verify_entry: short available_size fails");
             }
 
-            // T06 §3.3: entries registered before enable_journal are replayed into the
-            // segment file at enable_journal time
-            static void test_journal_content(test_result& result)
+            // T06 §3.3: entries registered before enable_meta_records are replayed into the
+            // segment file at enable_meta_records time
+            static void test_meta_record_content(test_result& result)
             {
                 if (!instance_available()) {
-                    result.add_result(true, "journal content (no instance claimed, mmap unsupported)");
+                    result.add_result(true, "meta record content (no instance claimed, mmap unsupported)");
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
                 char name[96];
-                snprintf(name, sizeof(name), "meta_journal_content_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                snprintf(name, sizeof(name), "meta_record_content_%" PRIu64, bq::platform::high_performance_epoch_ms());
                 const bq::string config = "appenders_config.console.type=console\n"
                                           "appenders_config.console.levels=[all]\n"
                                           "log.recovery=true\n"
                                           "log.thread_mode=sync\n";
                 const uint8_t u64 = static_cast<uint8_t>(bq::log_arg_type_enum::uint64_type);
                 const uint8_t types[] = { u64 };
-                // register before any recovery log of this run enables the journal:
-                // use a fresh run so enable_journal() below is its first call
+                // register before any recovery log of this run enables the meta records:
+                // use a fresh run so enable_meta_records() below is its first call
                 inst->test_begin_new_run();
                 const auto* e1 = reg("entry one {}", 11, static_cast<uint8_t>(bq::log_level::info), 0, types, 1);
                 const auto* e2 = reg("entry two {}", 11, static_cast<uint8_t>(bq::log_level::info), 0, types, 1);
                 const auto* e3 = reg("entry three {}", 13, static_cast<uint8_t>(bq::log_level::info), 0, types, 1);
-                result.add_result(e1 && e2 && e3, "journal content: 3 entries registered");
-                result.add_result(!bq::meta_registry::instance().is_journal_enabled() || true,
-                    "journal content: pre-check");
-                bq::log log = bq::log::create_log(name, config); // log_imp::init calls enable_journal
-                result.add_result(log.is_valid(), "journal content: recovery log created");
-                result.add_result(bq::meta_registry::instance().is_journal_enabled(), "journal content: journal enabled");
+                result.add_result(e1 && e2 && e3, "meta record content: 3 entries registered");
+                result.add_result(!bq::meta_registry::instance().is_meta_records_enabled() || true,
+                    "meta record content: pre-check");
+                bq::log log = bq::log::create_log(name, config); // log_imp::init calls enable_meta_records
+                result.add_result(log.is_valid(), "meta record content: recovery log created");
+                result.add_result(bq::meta_registry::instance().is_meta_records_enabled(), "meta record content: meta records enabled");
                 if (!e1 || !e2 || !e3) {
                     return;
                 }
                 char file_name[32];
                 snprintf(file_name, sizeof(file_name), "%" PRIu16 ".mmap", inst->run_version());
                 const bq::string seg_path = bq::file_manager::combine_path(meta_dir(), file_name);
-                result.add_result(bq::file_manager::is_file(seg_path), "journal content: segment file exists");
-                bq::meta_registry::instance().test_flush_journal();
+                result.add_result(bq::file_manager::is_file(seg_path), "meta record content: segment file exists");
+                bq::meta_registry::instance().test_flush_meta_records();
                 auto file = bq::file_manager::instance().open_file(seg_path, bq::file_open_mode_enum::read);
-                result.add_result(file.is_valid(), "journal content: segment file readable");
+                result.add_result(file.is_valid(), "meta record content: segment file readable");
                 if (!file.is_valid()) {
                     return;
                 }
@@ -148,11 +148,11 @@ namespace bq {
                 const size_t got = bq::file_manager::instance().read_file(file, &bytes[0], static_cast<size_t>(fsize),
                     bq::file_manager::seek_option::begin, 0);
                 bq::file_manager::instance().close_file(file);
-                result.add_result(got == static_cast<size_t>(fsize) && fsize >= 64, "journal content: file readable");
+                result.add_result(got == static_cast<size_t>(fsize) && fsize >= 64, "meta record content: file readable");
                 if (got != static_cast<size_t>(fsize) || fsize < 64) {
                     return;
                 }
-                struct journal_head_layout {
+                struct meta_record_head_layout {
                     uint64_t magic;
                     uint32_t format_version;
                     uint16_t run_version;
@@ -161,13 +161,13 @@ namespace bq {
                     uint32_t committed_size;
                 } head;
                 memcpy(&head, &bytes[0], sizeof(head));
-                result.add_result(head.magic == UINT64_C(0x42514C4F474D4554), "journal content: head magic");
-                result.add_result(head.format_version == 1, "journal content: head format version");
-                result.add_result(head.run_version == inst->run_version(), "journal content: head run version is current");
-                result.add_result(head.segment_index == 0, "journal content: head segment index");
+                result.add_result(head.magic == UINT64_C(0x42514C4F474D4554), "meta record content: head magic");
+                result.add_result(head.format_version == 1, "meta record content: head format version");
+                result.add_result(head.run_version == inst->run_version(), "meta record content: head run version is current");
+                result.add_result(head.segment_index == 0, "meta record content: head segment index");
                 result.add_result(head.committed_size <= static_cast<uint32_t>(fsize) - 64,
-                    "journal content: committed_size within file");
-                // the arena addresses of the 3 registered entries must be journaled,
+                    "meta record content: committed_size within file");
+                // the arena addresses of the 3 registered entries must be recorded,
                 // each followed by a valid record
                 const uint64_t addrs[3] = { reinterpret_cast<uintptr_t>(e1), reinterpret_cast<uintptr_t>(e2), reinterpret_cast<uintptr_t>(e3) };
                 bool all_found = true;
@@ -183,7 +183,7 @@ namespace bq {
                     }
                     all_found = all_found && found;
                 }
-                result.add_result(all_found, "journal content: all 3 arena addresses journaled");
+                result.add_result(all_found, "meta record content: all 3 arena addresses recorded");
             }
 
             // T06 §3.4: expired cleanup removes out-of-window versions and garbage names
@@ -215,7 +215,7 @@ namespace bq {
                 // continuation segments of the same versions: an in-window one must survive
                 snprintf(name_ok_seg, sizeof(name_ok_seg), "%" PRIu16 "_1.mmap", static_cast<uint16_t>(cur - 16));
                 snprintf(name_old_seg, sizeof(name_old_seg), "%" PRIu16 "_1.mmap", static_cast<uint16_t>(cur - 17));
-                // drop the registry's journal segments first: they hold <cur>.mmap
+                // drop the registry's meta record segments first: they hold <cur>.mmap
                 // open exclusively and this test must be able to re-create that file
                 // (as if left behind by a wrapped earlier run); the next registration
                 // re-opens and replays the segments
@@ -389,7 +389,7 @@ namespace bq {
                 test_dedupe(result);
                 test_verify_entry(result);
                 test_register_race(result);
-                test_journal_content(result);
+                test_meta_record_content(result);
                 test_cleanup_expired(result);
                 test_cleanup_wraparound(result);
                 test_segment_head_validation(result);

@@ -57,7 +57,7 @@ namespace bq {
         appender_console::console_static_misc console_static_misc_;
         appender_decoder_manager appender_decoder_manager_inst_;
         // Members reverse-destruct: log_manager (and all its log_buffers' mmaps) goes first,
-        // then meta_registry (journal files are closed before the instance lock goes), and the
+        // then meta_registry (meta record files are closed before the instance lock goes), and the
         // instance_storage below last, whose destructor releases the lock file handle. These
         // globals are never destroyed in practice (the process exits first), so the lock is
         // normally released by the OS; the ordering matters for unit tests that do tear down.

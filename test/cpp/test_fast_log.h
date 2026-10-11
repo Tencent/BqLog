@@ -310,8 +310,8 @@ namespace bq {
                 config.storage = storage.get();
                 const uint16_t old_version = [&]() {
                     bq::log_buffer buffer(config);
-                    result.add_result(bq::meta_registry::instance().enable_journal(),
-                        "fast recovery meta journal enabled");
+                    result.add_result(bq::meta_registry::instance().enable_meta_records(),
+                        "fast recovery meta records enabled");
                     uint8_t arg_type = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
                     const bq::fast_format_meta* first = nullptr;
                     const bq::fast_format_meta* last = nullptr;
@@ -327,7 +327,7 @@ namespace bq {
                     }
                     result.add_result(first && last && first == last,
                         "fast recovery dedupe: 1600 same-format registrations return one pointer");
-                    // distinct formats cross the 1 MiB segment boundary: each journaled
+                    // distinct formats cross the 1 MiB segment boundary: each recorded
                     // entry is 16 + align_8(40 + len + 1) bytes, so 20000 of them exceed it
                     char format_buf[64];
                     const auto* seg_cross = static_cast<const bq::fast_format_meta*>(nullptr);
@@ -366,7 +366,7 @@ namespace bq {
                     bool found_large_segment = false;
                     char version_prefix[16];
                     snprintf(version_prefix, sizeof(version_prefix), "%" PRIu16 "_", buffer.get_version());
-                    bq::meta_registry::instance().test_flush_journal();
+                    bq::meta_registry::instance().test_flush_meta_records();
                     for (const auto& file_name : bq::file_manager::get_sub_dirs_and_files_name(meta_dir)) {
                         if (file_name.find(version_prefix) != 0) {
                             continue;
@@ -473,7 +473,7 @@ namespace bq {
                         "fast recovery corrupt metadata warning record");
                 }
                 // T06: the previous run's segments stay within the recovery window
-                // (cur - old_version <= 16); only enable_journal of a run further
+                // (cur - old_version <= 16); only enable_meta_records of a run further
                 // than MAX_RECOVERY_VERSION_RANGE ahead retires them
                 result.add_result(bq::file_manager::is_file(seg0_path),
                     "fast recovery segments kept within recovery window");

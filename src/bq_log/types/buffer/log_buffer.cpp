@@ -1261,8 +1261,8 @@ namespace bq {
         // OS (oversize) files are not mapped yet at this point, they can simply
         // be removed. lp.mmap / hp files are currently mapped, they stay (their
         // contents are neutralized above / by the LP re-init). The instance-level
-        // meta journal of a stale run is handled by meta_registry's expired-file
-        // cleanup at the next enable_journal.
+        // meta records of a stale run are handled by meta_registry's expired-file
+        // cleanup at the next enable_meta_records.
         if (config_.storage) {
             config_.storage->remove(config_.storage->os_dir());
         }
