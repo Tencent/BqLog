@@ -67,6 +67,10 @@ namespace bq {
         size_t test_entry_count() const;
         // deletes expired journal files under meta_dir() (normally done by enable_journal)
         void test_cleanup_expired();
+        // pushes the open journal segments out of the page cache. The tests read the segment
+        // files back with plain reads, and a platform is free to keep serving them from the
+        // file itself instead of from the mapping until the pages are written back.
+        void test_flush_journal();
 #endif
 
     private:

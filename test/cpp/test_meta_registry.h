@@ -136,6 +136,9 @@ namespace bq {
                 snprintf(file_name, sizeof(file_name), "%" PRIu16 ".mmap", inst->run_version());
                 const bq::string seg_path = bq::file_manager::combine_path(meta_dir(), file_name);
                 result.add_result(bq::file_manager::is_file(seg_path), "journal content: segment file exists");
+                // the segment is read back with plain reads below, so let the journal write its
+                // pages out first: some platforms serve a read from the file, not from the mapping
+                bq::meta_registry::instance().test_flush_journal();
                 auto file = bq::file_manager::instance().open_file(seg_path, bq::file_open_mode_enum::read);
                 result.add_result(file.is_valid(), "journal content: segment file readable");
                 if (!file.is_valid()) {
@@ -338,24 +341,27 @@ namespace bq {
                 }
             }
 
+            // The lambda below uses these constants: a function-local constexpr is not implicitly
+            // captured by a lambda (MSVC rejects it), while a static data member needs no capture.
+            static constexpr int32_t register_race_thread_count = 64;
+            static constexpr int32_t register_race_format_count = 100;
+
             // T06 §3.7: concurrent registration of the same format strings dedupes to one entry each
             static void test_register_race(test_result& result)
             {
-                constexpr int32_t thread_count = 64;
-                constexpr int32_t format_count = 100;
                 const uint8_t i32 = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
                 const uint8_t types[] = { i32 };
-                char formats[format_count][32];
-                for (int32_t i = 0; i < format_count; ++i) {
+                char formats[register_race_format_count][32];
+                for (int32_t i = 0; i < register_race_format_count; ++i) {
                     snprintf(formats[i], sizeof(formats[i]), "race format %d", i);
                 }
                 const size_t before = bq::meta_registry::instance().test_entry_count();
                 std::atomic<bool> all_same { true };
                 std::vector<std::thread> threads;
-                for (int32_t t = 0; t < thread_count; ++t) {
+                for (int32_t t = 0; t < register_race_thread_count; ++t) {
                     threads.emplace_back([&formats, &types, &all_same]() {
-                        const void* seen[format_count] = { };
-                        for (int32_t i = 0; i < format_count; ++i) {
+                        const void* seen[register_race_format_count] = { };
+                        for (int32_t i = 0; i < register_race_format_count; ++i) {
                             const auto* meta = reg(formats[i], static_cast<uint32_t>(strlen(formats[i])),
                                 static_cast<uint8_t>(bq::log_level::info), 0, types, 1);
                             if (!meta) {
@@ -373,8 +379,8 @@ namespace bq {
                     thread.join();
                 }
                 result.add_result(all_same.load(), "register race: every thread got the same pointer per format");
-                result.add_result(bq::meta_registry::instance().test_entry_count() == before + format_count,
-                    "register race: exactly %d new entries", format_count);
+                result.add_result(bq::meta_registry::instance().test_entry_count() == before + register_race_format_count,
+                    "register race: exactly %d new entries", register_race_format_count);
             }
 
         public:

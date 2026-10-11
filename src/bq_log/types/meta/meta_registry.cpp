@@ -490,5 +490,13 @@ namespace bq {
         bq::platform::scoped_spin_lock guard(lock_);
         cleanup_expired_locked();
     }
+
+    void meta_registry::test_flush_journal()
+    {
+        bq::platform::scoped_spin_lock guard(lock_);
+        for (auto& segment : journal_segments_) {
+            segment->flush();
+        }
+    }
 #endif
 }

@@ -419,6 +419,11 @@ namespace bq {
                 }
             }
 
+            // Used by the lambda below: a static data member needs no capture, while a
+            // function-local constexpr is not implicitly captured (MSVC rejects that).
+            static constexpr int32_t concurrent_thread_count = 64;
+            static constexpr int32_t concurrent_site_count = 16;
+
             // 6. concurrent first calls: no lost record, no duplicate registration
             static void test_concurrent_first_call(test_result& result)
             {
@@ -429,13 +434,11 @@ namespace bq {
                 if (!log.is_valid()) {
                     return;
                 }
-                constexpr int32_t thread_count = 64;
-                constexpr int32_t sites = 16;
                 const size_t before = bq::meta_registry::instance().test_entry_count();
                 std::vector<std::thread> threads;
-                for (int32_t t = 0; t < thread_count; ++t) {
+                for (int32_t t = 0; t < concurrent_thread_count; ++t) {
                     threads.emplace_back([&log, t]() {
-                        for (int32_t s = 0; s < sites; ++s) {
+                        for (int32_t s = 0; s < concurrent_site_count; ++s) {
                             hit_site(log, s, t * 100);
                         }
                     });
@@ -445,18 +448,18 @@ namespace bq {
                 }
                 log.force_flush();
                 const size_t after = bq::meta_registry::instance().test_entry_count();
-                result.add_result(after == before + static_cast<size_t>(sites),
+                result.add_result(after == before + static_cast<size_t>(concurrent_site_count),
                     "fast_info: concurrent first calls register each site once (%zu -> %zu, want +%d)",
-                    before, after, sites);
+                    before, after, concurrent_site_count);
                 const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
                 uint32_t found = 0;
-                for (int32_t s = 0; s < sites; ++s) {
+                for (int32_t s = 0; s < concurrent_site_count; ++s) {
                     char needle[48];
                     snprintf(needle, sizeof(needle), "race site %d value", s);
                     found += data.find(needle) != bq::string::npos ? 1U : 0U;
                 }
-                result.add_result(found == static_cast<uint32_t>(sites),
-                    "fast_info: concurrent first calls lose no record (%u of %d)", found, sites);
+                result.add_result(found == static_cast<uint32_t>(concurrent_site_count),
+                    "fast_info: concurrent first calls lose no record (%u of %d)", found, concurrent_site_count);
             }
 
             // 7. crash recovery: records written by fast_info come back with their format
