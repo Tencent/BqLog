@@ -23,6 +23,11 @@
 #if defined(BQ_LINUX) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
 #endif
+// Solaris and illumos only declare the BSD file-lock constants (flock, LOCK_EX) when the
+// extension feature macro is on; in C++11/14 modes it is off by default.
+#if (defined(__sun) || defined(__sun__)) && !defined(__EXTENSIONS__)
+#define __EXTENSIONS__
+#endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
 #include <pthread.h>
@@ -256,6 +261,10 @@ namespace bq {
                 return instance_lock_result::held_by_other;
             }
 #endif
+#if defined(LOCK_EX) && defined(LOCK_NB)
+            // a platform whose kernel rejects OFD locks (EINVAL above) falls back to BSD flock;
+            // Solaris declares neither flock nor LOCK_EX, so this is compiled out there and the
+            // OFD result above is the only answer
             if (!locked && ::flock(fd, LOCK_EX | LOCK_NB) != 0) {
                 // only a genuine "someone else holds it" is retryable; a filesystem that does not
                 // support locks at all (NFS returns ENOLCK, some FUSE returns EOPNOTSUPP) must be
@@ -267,6 +276,14 @@ namespace bq {
                 }
                 return instance_lock_result::error;
             }
+#else
+            if (!locked) {
+                // no usable lock primitive on this platform: report an error instead of claiming a
+                // lock that the other processes would not see
+                ::close(fd);
+                return instance_lock_result::error;
+            }
+#endif
             out_handle = fd;
             return instance_lock_result::locked;
 #endif
