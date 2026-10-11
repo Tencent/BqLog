@@ -17,10 +17,10 @@
 
 namespace bq {
     namespace {
-        constexpr uint64_t meta_journal_magic = UINT64_C(0x42514C4F474D4554);
-        constexpr uint32_t meta_journal_format_version = 1;
-        constexpr uint32_t meta_journal_head_size = 64;
-        constexpr uint32_t meta_journal_entry_head_size = 16;
+        constexpr uint64_t meta_record_magic = UINT64_C(0x42514C4F474D4554);
+        constexpr uint32_t meta_record_format_version = 1;
+        constexpr uint32_t meta_record_head_size = 64;
+        constexpr uint32_t meta_record_entry_head_size = 16;
         constexpr uint32_t meta_arena_block_size = 64 * 1024;
 
         // Direct-mapped TLS cache of live meta addresses this thread already synchronized with.
@@ -146,13 +146,13 @@ namespace bq {
     {
 #if defined(BQ_UNIT_TEST)
         // An in-process relaunch (test_begin_new_run) bumps the run version without going through
-        // enable_journal, so the journal must be re-synced here for the dedupe path below. In
+        // enable_meta_records, so the meta records are re-synced here for the dedupe path below. In
         // production the run version only changes across process restarts, where this registry is
-        // rebuilt from scratch; enable_journal already opened the run's segment, so skipping the
+        // rebuilt from scratch; enable_meta_records already opened the run's segment, so skipping the
         // sync keeps every registration from taking the instance lock.
-        const bool journal_ok = !journal_enabled_ || journal_sync_run_locked();
+        const bool meta_records_ok = !meta_records_enabled_ || meta_records_sync_run_locked();
 #else
-        const bool journal_ok = true;
+        const bool meta_records_ok = true;
 #endif
         // dedupe: same checksum and same bytes
         auto list_iter = index_.find(checksum);
@@ -169,34 +169,34 @@ namespace bq {
         }
         memcpy(p, entry, entry_size);
         auto* e = reinterpret_cast<const fast_format_meta*>(p);
-        if (journal_enabled_ && journal_ok && !segment_append_locked(e)) {
-            // journal failure must not lose live logging: keep the entry, recovery of this meta is lost
-            util::log_device_console(log_level::warning, "fast log meta journal append failed, fast logs of entry %p can not be recovered", static_cast<const void*>(e));
+        if (meta_records_enabled_ && meta_records_ok && !segment_append_locked(e)) {
+            // meta record failure must not lose live logging: keep the entry, recovery of this meta is lost
+            util::log_device_console(log_level::warning, "fast log meta record append failed, fast logs of entry %p can not be recovered", static_cast<const void*>(e));
         }
         entries_.push_back(e);
         index_[checksum].push_back(e);
         return e;
     }
 
-    bool meta_registry::journal_open_segment_locked(uint32_t min_capacity)
+    bool meta_registry::meta_records_open_segment_locked(uint32_t min_capacity)
     {
         auto* inst = instance_storage::get();
-        if (!inst || journal_next_segment_index_ == UINT16_MAX) {
+        if (!inst || meta_records_next_segment_index_ == UINT16_MAX) {
             return false;
         }
         uint32_t size = BQ_LOG_META_SEGMENT_SIZE;
         // An entry that does not fit a fresh segment gets a dedicated segment sized exactly to it,
         // so the oversized segment holds that one entry and nothing else (see segment_append_locked,
         // which never appends to a dedicated segment again).
-        const uint32_t need = meta_journal_head_size + min_capacity;
+        const uint32_t need = meta_record_head_size + min_capacity;
         if (need > size) {
             size = need;
         }
         char file_name[32];
-        if (journal_next_segment_index_ == 0) {
-            snprintf(file_name, sizeof(file_name), "%" PRIu16 ".mmap", journal_run_version_);
+        if (meta_records_next_segment_index_ == 0) {
+            snprintf(file_name, sizeof(file_name), "%" PRIu16 ".mmap", meta_records_run_version_);
         } else {
-            snprintf(file_name, sizeof(file_name), "%" PRIu16 "_%" PRIu16 ".mmap", journal_run_version_, journal_next_segment_index_);
+            snprintf(file_name, sizeof(file_name), "%" PRIu16 "_%" PRIu16 ".mmap", meta_records_run_version_, meta_records_next_segment_index_);
         }
         const bq::string path = bq::file_manager::combine_path(inst->meta_dir(), file_name);
         auto segment = bq::make_unique<normal_buffer>(size, path, true);
@@ -205,33 +205,33 @@ namespace bq {
             return false;
         }
         BQ_SUPPRESS_NULL_DEREF_END();
-        auto& head = *reinterpret_cast<meta_journal_head*>(segment->data());
+        auto& head = *reinterpret_cast<meta_record_head*>(segment->data());
         memset(&head, 0, sizeof(head));
-        head.magic = meta_journal_magic;
-        head.format_version = meta_journal_format_version;
-        head.run_version = journal_run_version_;
-        head.segment_index = journal_next_segment_index_;
+        head.magic = meta_record_magic;
+        head.format_version = meta_record_format_version;
+        head.run_version = meta_records_run_version_;
+        head.segment_index = meta_records_next_segment_index_;
         head.run_serial = inst->run_serial();
-        journal_segments_.push_back(bq::move(segment));
-        ++journal_next_segment_index_;
+        meta_records_segments_.push_back(bq::move(segment));
+        ++meta_records_next_segment_index_;
         return true;
     }
 
-    bool meta_registry::journal_sync_run_locked()
+    bool meta_registry::meta_records_sync_run_locked()
     {
         auto* inst = instance_storage::get();
         const uint16_t cur = inst ? inst->run_version() : 0;
-        if (journal_run_version_ == cur && !journal_segments_.is_empty()) {
+        if (meta_records_run_version_ == cur && !meta_records_segments_.is_empty()) {
             return true;
         }
-        journal_segments_.clear(); // closes the old run's segment files
-        journal_next_segment_index_ = 0;
-        journal_run_version_ = cur;
-        if (journal_segments_.is_empty() && !journal_open_segment_locked(0)) {
-            journal_run_version_ = 0;
+        meta_records_segments_.clear(); // closes the old run's segment files
+        meta_records_next_segment_index_ = 0;
+        meta_records_run_version_ = cur;
+        if (meta_records_segments_.is_empty() && !meta_records_open_segment_locked(0)) {
+            meta_records_run_version_ = 0;
             return false;
         }
-        // replay every registered entry so the new run's journal is complete
+        // replay every registered entry so the new run's meta records are complete
         for (const auto* e : entries_) {
             if (!segment_append_locked(e)) {
                 return false;
@@ -242,47 +242,47 @@ namespace bq {
 
     bool meta_registry::segment_append_locked(const fast_format_meta* entry)
     {
-        const uint32_t entry_size = static_cast<uint32_t>(meta_journal_entry_head_size + entry->head.record_size);
-        BQ_LIKELY_IF(!journal_segments_.is_empty())
+        const uint32_t entry_size = static_cast<uint32_t>(meta_record_entry_head_size + entry->head.record_size);
+        BQ_LIKELY_IF(!meta_records_segments_.is_empty())
         {
-            auto& last = journal_segments_[journal_segments_.size() - 1];
-            auto& head = *reinterpret_cast<meta_journal_head*>(last->data());
+            auto& last = meta_records_segments_[meta_records_segments_.size() - 1];
+            auto& head = *reinterpret_cast<meta_record_head*>(last->data());
             // a dedicated oversized segment (sized exactly for one big entry) must not take
             // ordinary entries: only a fresh, exactly-fitting segment holds its single entry
             const bool dedicated = last->size() > BQ_LOG_META_SEGMENT_SIZE;
-            const uint32_t max_committed = static_cast<uint32_t>(last->size() - meta_journal_head_size);
+            const uint32_t max_committed = static_cast<uint32_t>(last->size() - meta_record_head_size);
             if (dedicated || head.committed_size + entry_size > max_committed) {
-                if (!journal_open_segment_locked(entry_size)) {
+                if (!meta_records_open_segment_locked(entry_size)) {
                     return false;
                 }
             }
         }
-        else if (!journal_open_segment_locked(entry_size))
+        else if (!meta_records_open_segment_locked(entry_size))
         {
             return false;
         }
-        auto& last = journal_segments_[journal_segments_.size() - 1];
-        auto& head = *reinterpret_cast<meta_journal_head*>(last->data());
-        if (head.committed_size + entry_size > last->size() - meta_journal_head_size) {
+        auto& last = meta_records_segments_[meta_records_segments_.size() - 1];
+        auto& head = *reinterpret_cast<meta_record_head*>(last->data());
+        if (head.committed_size + entry_size > last->size() - meta_record_head_size) {
             // own oversized segment should have been opened; refuse rather than overflow
             return false;
         }
-        auto& entry_head = *reinterpret_cast<meta_journal_entry_head*>(
-            static_cast<uint8_t*>(last->data()) + meta_journal_head_size + head.committed_size);
+        auto& entry_head = *reinterpret_cast<meta_record_entry_head*>(
+            static_cast<uint8_t*>(last->data()) + meta_record_head_size + head.committed_size);
         entry_head.arena_addr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(entry));
         entry_head.entry_size = entry_size;
         entry_head.reserved = 0;
-        memcpy(static_cast<uint8_t*>(last->data()) + meta_journal_head_size + head.committed_size
-                + meta_journal_entry_head_size,
+        memcpy(static_cast<uint8_t*>(last->data()) + meta_record_head_size + head.committed_size
+                + meta_record_entry_head_size,
             entry, entry->head.record_size);
         head.committed_size += entry_size;
         return true;
     }
 
-    bool meta_registry::enable_journal()
+    bool meta_registry::enable_meta_records()
     {
         bq::platform::scoped_spin_lock guard(lock_);
-        if (journal_enabled_) {
+        if (meta_records_enabled_) {
             return true;
         }
         auto* inst = instance_storage::get();
@@ -291,16 +291,16 @@ namespace bq {
         }
         cleanup_expired_locked();
         // sync opens the run's first segment and replays every registered entry
-        if (!journal_sync_run_locked()) {
+        if (!meta_records_sync_run_locked()) {
             return false;
         }
-        journal_enabled_ = true;
+        meta_records_enabled_ = true;
         return true;
     }
 
-    bool meta_registry::is_journal_enabled() const
+    bool meta_registry::is_meta_records_enabled() const
     {
-        return journal_enabled_;
+        return meta_records_enabled_;
     }
 
     void meta_registry::cleanup_expired_locked()
@@ -316,10 +316,10 @@ namespace bq {
         const uint16_t cur = inst->run_version();
         // the current version's segments are owned by this registry: drop them first
         // so the files below can actually be deleted (on Windows a mapped file cannot)
-        if (journal_run_version_ == cur) {
-            journal_segments_.clear();
-            journal_next_segment_index_ = 0;
-            journal_run_version_ = 0;
+        if (meta_records_run_version_ == cur) {
+            meta_records_segments_.clear();
+            meta_records_next_segment_index_ = 0;
+            meta_records_run_version_ = 0;
         }
         for (const auto& name : bq::file_manager::get_sub_dirs_and_files_name(meta_dir)) {
             bool parsed = false;
@@ -365,12 +365,12 @@ namespace bq {
                 return rv->loaded ? rv.operator->() : nullptr;
             }
         }
-        // normal_buffer opens its mmap file exclusively: release this run's own journal
+        // normal_buffer opens its mmap file exclusively: release this run's own meta records
         // segments before reading the files back (next registration re-opens + replays)
-        if (journal_run_version_ == version) {
-            journal_segments_.clear();
-            journal_next_segment_index_ = 0;
-            journal_run_version_ = 0;
+        if (meta_records_run_version_ == version) {
+            meta_records_segments_.clear();
+            meta_records_next_segment_index_ = 0;
+            meta_records_run_version_ = 0;
         }
         auto item = bq::make_unique<recovered_version>();
         item->version = version;
@@ -397,17 +397,17 @@ namespace bq {
                 const uint64_t file_size = bq::file_manager::get_file_size(path);
                 auto segment = bq::make_unique<normal_buffer>(
                     static_cast<size_t>(file_size), path, false);
-                if (!segment->is_memory_mapped() || file_size < meta_journal_head_size) {
+                if (!segment->is_memory_mapped() || file_size < meta_record_head_size) {
                     failed_at_segment_0 = (n == 0);
                     stop = true;
                     break;
                 }
-                const auto& head = *reinterpret_cast<const meta_journal_head*>(segment->data());
-                if (head.magic != meta_journal_magic
-                    || head.format_version != meta_journal_format_version
+                const auto& head = *reinterpret_cast<const meta_record_head*>(segment->data());
+                if (head.magic != meta_record_magic
+                    || head.format_version != meta_record_format_version
                     || head.run_version != version
                     || head.segment_index != n
-                    || head.committed_size > file_size - meta_journal_head_size
+                    || head.committed_size > file_size - meta_record_head_size
                     // a segment from a run outside the recovery window is stale. run_serial is a
                     // uint64 that never wraps, so compare it as such (matching log_buffer), rather
                     // than truncating the difference to uint16.
@@ -418,17 +418,17 @@ namespace bq {
                 }
                 item->segments.push_back(bq::move(segment));
                 const auto& loaded_seg = *item->segments[item->segments.size() - 1];
-                const auto* cursor = static_cast<const uint8_t*>(loaded_seg.data()) + meta_journal_head_size;
+                const auto* cursor = static_cast<const uint8_t*>(loaded_seg.data()) + meta_record_head_size;
                 const auto* end = cursor + head.committed_size;
-                while (cursor + meta_journal_entry_head_size <= end) {
-                    const auto& entry_head = *reinterpret_cast<const meta_journal_entry_head*>(cursor);
-                    if (entry_head.entry_size < meta_journal_entry_head_size + sizeof(fast_format_meta)
+                while (cursor + meta_record_entry_head_size <= end) {
+                    const auto& entry_head = *reinterpret_cast<const meta_record_entry_head*>(cursor);
+                    if (entry_head.entry_size < meta_record_entry_head_size + sizeof(fast_format_meta)
                         || (entry_head.entry_size & 7) != 0
                         || cursor + entry_head.entry_size > end) {
                         break;
                     }
-                    const auto* meta = reinterpret_cast<const fast_format_meta*>(cursor + meta_journal_entry_head_size);
-                    if (verify_entry(&meta->head, entry_head.entry_size - meta_journal_entry_head_size)) {
+                    const auto* meta = reinterpret_cast<const fast_format_meta*>(cursor + meta_record_entry_head_size);
+                    if (verify_entry(&meta->head, entry_head.entry_size - meta_record_entry_head_size)) {
                         item->map[entry_head.arena_addr] = meta;
                     }
                     // an entry failing verify_entry (e.g. a corrupted meta byte) is
@@ -489,6 +489,14 @@ namespace bq {
     {
         bq::platform::scoped_spin_lock guard(lock_);
         cleanup_expired_locked();
+    }
+
+    void meta_registry::test_flush_meta_records()
+    {
+        bq::platform::scoped_spin_lock guard(lock_);
+        for (auto& segment : meta_records_segments_) {
+            segment->flush();
+        }
     }
 #endif
 }

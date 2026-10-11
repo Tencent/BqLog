@@ -310,8 +310,8 @@ namespace bq {
                 config.storage = storage.get();
                 const uint16_t old_version = [&]() {
                     bq::log_buffer buffer(config);
-                    result.add_result(bq::meta_registry::instance().enable_journal(),
-                        "fast recovery meta journal enabled");
+                    result.add_result(bq::meta_registry::instance().enable_meta_records(),
+                        "fast recovery meta records enabled");
                     uint8_t arg_type = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
                     const bq::fast_format_meta* first = nullptr;
                     const bq::fast_format_meta* last = nullptr;
@@ -327,7 +327,7 @@ namespace bq {
                     }
                     result.add_result(first && last && first == last,
                         "fast recovery dedupe: 1600 same-format registrations return one pointer");
-                    // distinct formats cross the 1 MiB segment boundary: each journaled
+                    // distinct formats cross the 1 MiB segment boundary: each recorded
                     // entry is 16 + align_8(40 + len + 1) bytes, so 20000 of them exceed it
                     char format_buf[64];
                     const auto* seg_cross = static_cast<const bq::fast_format_meta*>(nullptr);
@@ -366,6 +366,7 @@ namespace bq {
                     bool found_large_segment = false;
                     char version_prefix[16];
                     snprintf(version_prefix, sizeof(version_prefix), "%" PRIu16 "_", buffer.get_version());
+                    bq::meta_registry::instance().test_flush_meta_records();
                     for (const auto& file_name : bq::file_manager::get_sub_dirs_and_files_name(meta_dir)) {
                         if (file_name.find(version_prefix) != 0) {
                             continue;
@@ -472,7 +473,7 @@ namespace bq {
                         "fast recovery corrupt metadata warning record");
                 }
                 // T06: the previous run's segments stay within the recovery window
-                // (cur - old_version <= 16); only enable_journal of a run further
+                // (cur - old_version <= 16); only enable_meta_records of a run further
                 // than MAX_RECOVERY_VERSION_RANGE ahead retires them
                 result.add_result(bq::file_manager::is_file(seg0_path),
                     "fast recovery segments kept within recovery window");
@@ -1224,6 +1225,29 @@ namespace bq {
                 bq::api::__api_fast_log_notify_low_space_by_id(0); // must not crash
             }
 
+            static bool parse_two_indices(const char* text, int32_t& first, int32_t& second)
+            {
+                int32_t* out[2] = { &first, &second };
+                for (int32_t k = 0; k < 2; ++k) {
+                    while (*text == ' ') {
+                        ++text;
+                    }
+                    if (*text < '0' || *text > '9') {
+                        return false;
+                    }
+                    uint32_t value = 0;
+                    while (*text >= '0' && *text <= '9') {
+                        value = value * 10U + static_cast<uint32_t>(*text - '0');
+                        if (value > static_cast<uint32_t>(INT32_MAX)) {
+                            return false;
+                        }
+                        ++text;
+                    }
+                    *out[k] = static_cast<int32_t>(value);
+                }
+                return true;
+            }
+
             // Every thread's first call of every site happens simultaneously: the publication of a site's
             // fields races with other threads' reads, which must neither drop a record nor register twice.
             static void test_site_init_race(test_result& result)
@@ -1302,16 +1326,10 @@ namespace bq {
                     if (race_pos == bq::string::npos) {
                         continue;
                     }
-                    // strtol instead of sscanf: the MSVC test build is /W4 /WX, where the
-                    // 4996 deprecation of the scanf family is an error
-                    const char* const numbers = line.c_str() + race_pos + 5;
-                    char* after_site = nullptr;
-                    char* after_tid = nullptr;
-                    const long site = strtol(numbers, &after_site, 10);
-                    const long tid = strtol(after_site, &after_tid, 10);
-                    if (after_site == numbers || after_tid == after_site
-                        || site < 0 || site >= static_cast<long>(sites::count)
-                        || tid < 0 || tid >= static_cast<long>(thread_count)) {
+                    int32_t site = -1;
+                    int32_t tid = -1;
+                    if (!parse_two_indices(line.c_str() + race_pos + 5, site, tid)
+                        || site < 0 || site >= sites::count || tid < 0 || tid >= thread_count) {
                         ++bad_lines;
                         continue;
                     }

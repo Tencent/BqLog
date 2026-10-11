@@ -256,6 +256,7 @@ namespace bq {
                 return instance_lock_result::held_by_other;
             }
 #endif
+#if defined(LOCK_EX) && defined(LOCK_NB)
             if (!locked && ::flock(fd, LOCK_EX | LOCK_NB) != 0) {
                 // only a genuine "someone else holds it" is retryable; a filesystem that does not
                 // support locks at all (NFS returns ENOLCK, some FUSE returns EOPNOTSUPP) must be
@@ -267,6 +268,12 @@ namespace bq {
                 }
                 return instance_lock_result::error;
             }
+#else
+            if (!locked) {
+                ::close(fd);
+                return instance_lock_result::error;
+            }
+#endif
             out_handle = fd;
             return instance_lock_result::locked;
 #endif

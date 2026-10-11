@@ -133,16 +133,16 @@ ask_format() {
 
 ensure_common_params() {
   if [[ -z "${JAVA_SUPPORT:-}" ]]; then
-    JAVA_SUPPORT="$(ask_yes_no "Enable Java/JNI support?")"
+    JAVA_SUPPORT="$(ask_yes_no_or_off "Enable Java/JNI support?")"
   fi
   if [[ -z "${NODE_API_SUPPORT:-}" ]]; then
-    NODE_API_SUPPORT="$(ask_yes_no "Enable Node-API (Node.js) support?")"
+    NODE_API_SUPPORT="$(ask_yes_no_or_off "Enable Node-API (Node.js) support?")"
   fi
   if [[ -z "${PYTHON_SUPPORT:-}" ]]; then
-    PYTHON_SUPPORT="$(ask_yes_no "Enable Python (CPython C Extension) support?")"
+    PYTHON_SUPPORT="$(ask_yes_no_or_off "Enable Python (CPython C Extension) support?")"
   fi
   if [[ -z "${GO_SUPPORT:-}" ]]; then
-    GO_SUPPORT="$(ask_yes_no "Enable Go (cgo) support?")"
+    GO_SUPPORT="$(ask_yes_no_or_off "Enable Go (cgo) support?")"
   fi
 }
 

@@ -89,10 +89,11 @@ namespace bq {
         };
 
     public:
-        /// The category objects. static constexpr (it used to be a reference to a static holder)
-        /// so that a sub-object such as cat.ModuleA is a constant expression and can be passed as
-        /// the fast interfaces' category template argument.
+#if defined(BQ_CPP_17)
         static constexpr test_category_log_category_root cat {};
+#else
+        const test_category_log_category_root& cat = test_category_log_category_root_holder<void>::root_;
+#endif
 
     protected:
         template<typename STR>

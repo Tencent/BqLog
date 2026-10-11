@@ -241,8 +241,8 @@ jobs:
       - name: Prepare legacy 2.6.0 checkout (ubuntu)
         if: ${{ matrix.os.label == 'ubuntu' }}
         run: |
-          git fetch origin develop
-          git worktree add /tmp/bq260 948d0507
+          git fetch --no-tags --depth=1 origin 948d05079b73d12c7f980372a28b82fd1bba5c6c
+          git worktree add /tmp/bq260 948d05079b73d12c7f980372a28b82fd1bba5c6c
 
       - name: Configure and build (windows)
         if: ${{ matrix.os.label == 'windows' }}
