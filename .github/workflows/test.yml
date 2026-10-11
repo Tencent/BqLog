@@ -241,8 +241,6 @@ jobs:
       - name: Prepare legacy 2.6.0 checkout (ubuntu)
         if: ${{ matrix.os.label == 'ubuntu' }}
         run: |
-          # the checkout above is shallow, so the 2.6.0 commit the legacy worker is built from
-          # has to be fetched by hash before it can be checked out into its own worktree
           git fetch --no-tags --depth=1 origin 948d05079b73d12c7f980372a28b82fd1bba5c6c
           git worktree add /tmp/bq260 948d05079b73d12c7f980372a28b82fd1bba5c6c
 

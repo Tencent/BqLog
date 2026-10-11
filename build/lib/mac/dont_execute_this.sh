@@ -132,8 +132,6 @@ ask_format() {
 }
 
 ensure_common_params() {
-  # a parameter the caller did not pass is asked for interactively; in a non-interactive run
-  # (CI) an optional feature must default to OFF instead of blocking the build on a prompt
   if [[ -z "${JAVA_SUPPORT:-}" ]]; then
     JAVA_SUPPORT="$(ask_yes_no_or_off "Enable Java/JNI support?")"
   fi

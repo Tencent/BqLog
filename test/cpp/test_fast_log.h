@@ -366,9 +366,6 @@ namespace bq {
                     bool found_large_segment = false;
                     char version_prefix[16];
                     snprintf(version_prefix, sizeof(version_prefix), "%" PRIu16 "_", buffer.get_version());
-                    // the segment heads are read back with plain reads below, so let the journal
-                    // write its pages out first: some platforms serve a read from the file, not
-                    // from the mapping
                     bq::meta_registry::instance().test_flush_journal();
                     for (const auto& file_name : bq::file_manager::get_sub_dirs_and_files_name(meta_dir)) {
                         if (file_name.find(version_prefix) != 0) {
@@ -1228,8 +1225,6 @@ namespace bq {
                 bq::api::__api_fast_log_notify_low_space_by_id(0); // must not crash
             }
 
-            // sscanf() is flagged as deprecated (and an error under /WX and -Werror) by the MSVC
-            // and MinGW CRTs, so the "<site> <thread>" part of a race line is parsed by hand.
             static bool parse_two_indices(const char* text, int32_t& first, int32_t& second)
             {
                 int32_t* out[2] = { &first, &second };
@@ -1333,7 +1328,6 @@ namespace bq {
                     }
                     int32_t site = -1;
                     int32_t tid = -1;
-                    // the record renders as "race <site> <thread>"
                     if (!parse_two_indices(line.c_str() + race_pos + 5, site, tid)
                         || site < 0 || site >= sites::count || tid < 0 || tid >= thread_count) {
                         ++bad_lines;

@@ -419,8 +419,6 @@ namespace bq {
                 }
             }
 
-            // Used by the lambda below: a static data member needs no capture, while a
-            // function-local constexpr is not implicitly captured (MSVC rejects that).
             static constexpr int32_t concurrent_thread_count = 64;
             static constexpr int32_t concurrent_site_count = 16;
 

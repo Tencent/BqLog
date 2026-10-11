@@ -108,9 +108,6 @@ if(NOT WIN32 OR TARGET_PLATFORM STREQUAL "win64")
             target_compile_options(${plugin_name} PRIVATE /EHsc /D_HAS_EXCEPTIONS=0 /GR-)
         else()
             target_compile_options(${plugin_name} PRIVATE -fno-exceptions -fno-rtti)
-            # statically link the C++ runtime into each plugin copy so the two copies share
-            # nothing. Apple's linker does not know these flags, and a plain -static makes it
-            # skip libSystem: the plugin then fails to link against _write/_time/_vsnprintf.
             if(NOT APPLE)
                 target_link_options(${plugin_name} PRIVATE -static-libstdc++ -static-libgcc)
             endif()

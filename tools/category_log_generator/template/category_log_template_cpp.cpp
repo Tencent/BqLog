@@ -170,14 +170,10 @@ namespace bq {
 
     public:
 #if defined(BQ_CPP_17)
-        /// The category objects. static constexpr (it used to be a reference to a static holder)
-        /// so that a sub-object such as cat.ModuleA is a constant expression and can be passed as
-        /// the fast interfaces' category template argument.
+        /// static constexpr so that cat.<category> is a compile-time constant: the fast interfaces
+        /// take it as their first template argument and the fast path needs no run-time load for it.
         static constexpr ${CLASS_NAME}_category_root cat {};
 #else
-        /// C++11/14: a reference to the static holder defined below. A static constexpr data
-        /// member is not inline before C++17, so defining it out of line would clash between the
-        /// translation units that include this header.
         const ${CLASS_NAME}_category_root& cat = ${CLASS_NAME}_category_root_holder<void>::root_;
 #endif
 

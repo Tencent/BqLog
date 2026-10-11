@@ -69,8 +69,6 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "usage: bq_dual_runtime_host <log_name>\n");
         return 2;
     }
-    // The plugins are built next to this executable while the working directory is a scratch
-    // directory, so they are resolved against argv[0] instead of against the current directory.
     std::string lib_dir;
     {
         const char* self = argv[0] != nullptr ? argv[0] : "";
