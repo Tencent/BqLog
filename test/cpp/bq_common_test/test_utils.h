@@ -99,6 +99,47 @@ namespace bq {
                 result.add_result(bq::roundup_pow_of_two(1020) == 1024, "roundup_pow_of_tow, 1020");
                 result.add_result(bq::roundup_pow_of_two(0xFFFFFFFF) == 0x00, "roundup_pow_of_tow, max uint32");
 
+                for (uint32_t bit = 0; bit < 64; ++bit) {
+                    result.add_result(bq::bq_ctz64(1ULL << bit) == bit, "bq_ctz64 single bit %" PRIu32, bit);
+                    result.add_result(bq::bq_ctz64(UINT64_MAX << bit) == bit, "bq_ctz64 high bits from %" PRIu32, bit);
+                    result.add_result(bq::bq_ctz64_portable(1ULL << bit) == bit, "bq_ctz64_portable single bit %" PRIu32, bit);
+                    result.add_result(bq::bq_ctz64_portable(UINT64_MAX << bit) == bit, "bq_ctz64_portable high bits from %" PRIu32, bit);
+                }
+                {
+                    // reference: schoolbook on 16 bit limbs, independent of the 32 bit split in the fallback
+                    auto umul128_reference = [](uint64_t a, uint64_t b, uint64_t& high) -> uint64_t {
+                        uint32_t limbs[8] = { };
+                        for (uint32_t i = 0; i < 4; ++i) {
+                            uint64_t carry = 0;
+                            for (uint32_t j = 0; j < 4; ++j) {
+                                const uint64_t cur = static_cast<uint64_t>(limbs[i + j]) + ((a >> (16 * i)) & 0xFFFF) * ((b >> (16 * j)) & 0xFFFF) + carry;
+                                limbs[i + j] = static_cast<uint32_t>(cur & 0xFFFF);
+                                carry = cur >> 16;
+                            }
+                            limbs[i + 4] = static_cast<uint32_t>(carry);
+                        }
+                        uint64_t low = 0;
+                        high = 0;
+                        for (uint32_t i = 0; i < 4; ++i) {
+                            low |= static_cast<uint64_t>(limbs[i]) << (16 * i);
+                            high |= static_cast<uint64_t>(limbs[i + 4]) << (16 * i);
+                        }
+                        return low;
+                    };
+                    const uint64_t edges[] = { 0, 1, 2, 0xFFFFFFFFULL, 0x100000000ULL, 0x8000000000000000ULL, UINT64_MAX, UINT64_MAX - 1, 10000000000000000000ULL, 0x0010000000000000ULL };
+                    std::mt19937_64 rng(128);
+                    for (uint32_t i = 0; i < 20000; ++i) {
+                        const uint64_t a = i < 100 ? edges[i % 10] : rng() >> (rng() % 64);
+                        const uint64_t b = i < 100 ? edges[i / 10] : rng() >> (rng() % 64);
+                        uint64_t high = 0, portable_high = 0, expected_high = 0;
+                        const uint64_t low = bq::bq_umul128(a, b, high);
+                        const uint64_t portable_low = bq::bq_umul128_portable(a, b, portable_high);
+                        const uint64_t expected_low = umul128_reference(a, b, expected_high);
+                        result.add_result(low == expected_low && high == expected_high, "bq_umul128 %" PRIu64 " * %" PRIu64, a, b);
+                        result.add_result(portable_low == expected_low && portable_high == expected_high, "bq_umul128_portable %" PRIu64 " * %" PRIu64, a, b);
+                    }
+                }
+
                 // =================================================================================
                 // Test for bq::util::get_hash and bq::util::get_hash_64
                 // =================================================================================

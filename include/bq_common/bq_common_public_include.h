@@ -30,6 +30,7 @@
 
 #include "bq_common/misc/assert.h"
 #include "bq_common/platform/macros.h"
+#include "bq_common/platform/inline_intrinsics.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas" // some pragma is not valid for all GCC versions

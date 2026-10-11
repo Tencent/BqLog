@@ -123,6 +123,29 @@ namespace bq {
                 time_zone utc1130("UTC-11:30");
                 result.add_result(utc1130.get_time_zone_diff_to_gmt_ms() == static_cast<int64_t>(-11 * 3600 * 1000 - 30 * 60 * 1000), "time zone differ time test UTC-11:30");
                 result.add_result(utc1130.get_time_zone_str() == "UTC-11:30", "time zone str test UTC-11:30");
+
+                // the sign of a zone between -1 and 0 hours must come from the text, not from the hour
+                time_zone utc_minus_0_30("UTC-0:30");
+                result.add_result(!utc_minus_0_30.is_use_local_time(), "time zone UTC-0:30 parsed");
+                result.add_result(utc_minus_0_30.get_time_zone_diff_to_gmt_ms() == -30 * 60 * 1000, "time zone differ time test UTC-0:30");
+                result.add_result(utc_minus_0_30.get_time_zone_str() == "UTC-0:30", "time zone str test UTC-0:30");
+                result.add_result(utc_minus_0_30.get_time_str_by_epoch(86400000) == "1970-01-01 23:30:00", "time zone time string test UTC-0:30");
+                time_zone utc_plus_0_30("UTC+0:30");
+                result.add_result(utc_plus_0_30.get_time_zone_diff_to_gmt_ms() == 30 * 60 * 1000, "time zone differ time test UTC+0:30");
+                result.add_result(utc_plus_0_30.get_time_zone_str() == "UTC+0:30", "time zone str test UTC+0:30");
+                time_zone utc_minus_3_30("-3:30");
+                result.add_result(utc_minus_3_30.get_time_zone_diff_to_gmt_ms() == -(3 * 3600 + 30 * 60) * 1000, "time zone differ time test -3:30");
+                result.add_result(utc_minus_3_30.get_time_zone_str() == "UTC-3:30", "time zone str test -3:30");
+                time_zone utc_minus_5("UTC-5");
+                result.add_result(utc_minus_5.get_time_zone_diff_to_gmt_ms() == -5 * 3600 * 1000, "time zone differ time test UTC-5");
+                result.add_result(utc_minus_5.get_time_zone_str() == "UTC-5", "time zone str test UTC-5");
+
+                // out of range values must be rejected (local time), not wrapped into range
+                const char* invalid_zones[] = { "UTC+4294967298", "UTC-4294967300:00", "UTC+99999999999999999999", "UTC+1:4294967326", "UTC+1:-30", "UTC+1:+30", "UTC+1: 30", "UTC+1:60", "UTC-13", "UTC+15", "UTC--3", "UTC+1:" };
+                for (const char* invalid_zone : invalid_zones) {
+                    time_zone tz(invalid_zone);
+                    result.add_result(tz.is_use_local_time(), "time zone %s rejected", invalid_zone);
+                }
             }
 
             const char* str_type = "utf8_str";

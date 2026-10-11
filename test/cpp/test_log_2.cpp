@@ -13,6 +13,9 @@
 #include <thread>
 #include <atomic>
 #include <cstdio>
+#include <random>
+#include <locale.h>
+#include <math.h>
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -132,17 +135,105 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X000C|"), "layout format");
                 double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.3659098511|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.366|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{}|", -0.5);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0.500000000000000|"), "layout format negative fraction");
+                log_inst.error(log_inst.cat.ModuleB, "|{:+.1f}|", -0.25f);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0.2|"), "layout format negative fraction with sign");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.2f}|", 0.96);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0.96|"), "layout format rounding");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.0f}|", 1.75);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|2|"), "layout format rounding to integer");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.1f}|", 1e20);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|100000000000000000000.0|"), "layout format beyond int64");
+                log_inst.error(log_inst.cat.ModuleB, "|{}|{}|{}|", static_cast<double>(NAN), static_cast<double>(INFINITY), -static_cast<double>(INFINITY));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|nan|inf|-inf|"), "layout format nan and infinity");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", 10000000000000);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+13|"), "layout format integer e-style");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12E}|", (uint64_t)10000000000000);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+11|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+13|"), "layout format integer e-style");
+                log_inst.error(log_inst.cat.ModuleB, "v=[{:e}] end", 100000);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\tv=[1.000000e+05] end"), "layout format integer e-style keeps preceding text");
+                log_inst.error(log_inst.cat.ModuleB, "|{:e}|{:+.2e}|{:.1e}|{:.0e}|", -1500, (uint16_t)1500, 99999, 25);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-1.500000e+03|+1.50e+03|1.0e+05|2e+01|"), "layout format integer e-style sign and rounding");
+                {
+                    // A spec longer than 10 characters is not supported and must not keep its width:
+                    // the output buffer is not grown for it, so padding near the end of the buffer
+                    // used to write past it. Try every line length around the initial 1024 byte buffer.
+                    bool long_spec_ok = true;
+                    bool width_ok = true;
+                    bq::string padding;
+                    bq::string spaces;
+                    for (uint32_t space = 0; space < 98; ++space) {
+                        spaces.push_back(' ');
+                    }
+                    for (uint32_t pad = 0; pad < 1100; ++pad) {
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:<99--------}").c_str(), 1);
+                        long_spec_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "1");
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:<99}").c_str(), 1);
+                        width_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "1" + spaces);
+                        padding.push_back('a');
+                    }
+                    result.add_result(long_spec_ok, "layout format spec longer than 10 characters");
+                    result.add_result(width_ok, "layout format width near the end of the buffer");
+                }
+                {
+                    const char* current_locale = setlocale(LC_NUMERIC, nullptr);
+                    bq::string saved_locale = current_locale ? current_locale : "C";
+                    const char* comma_locales[] = { "de-DE", "de_DE.UTF-8", "de_DE.utf8", "fr_FR.UTF-8", "fr_FR.utf8" };
+                    bool locale_applied = false;
+                    for (const char* name : comma_locales) {
+                        if (setlocale(LC_NUMERIC, name)) {
+                            locale_applied = true;
+                            break;
+                        }
+                    }
+                    if (locale_applied) {
+                        log_inst.error(log_inst.cat.ModuleB, "|{:.2f}|{:.1f}|", 1.25, 1e20);
+                        result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.25|100000000000000000000.0|"), "layout format fixed notation ignores LC_NUMERIC");
+                        log_inst.error(log_inst.cat.ModuleB, "|{:e}|{:12.3E}|{:.25f}|", 1.5, 103.1234, 0.1);
+                        result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.500000e+00|   1.031E+02|0.1000000000000000055511151|"), "layout format snprintf path ignores LC_NUMERIC");
+                        setlocale(LC_NUMERIC, saved_locale.c_str());
+                    }
+                }
+                {
+                    std::mt19937_64 rng(20261009);
+                    char fmt[32];
+                    char expected[512];
+                    for (int32_t precision = 0; precision <= 19; ++precision) {
+                        snprintf(fmt, sizeof(fmt), "|{:.%" PRId32 "f}|", precision);
+                        for (int32_t n = 0; n < 300; ++n) {
+                            double value = 0;
+                            uint64_t bits = rng();
+                            switch (n % 4) {
+                            case 0:
+                                value = std::uniform_real_distribution<double>(-1000.0, 1000.0)(rng);
+                                break;
+                            case 1:
+                                // any magnitude below 2^64, subnormals included
+                                bits = (bits & 0x800FFFFFFFFFFFFFULL) | (((bits >> 52) % (1023 + 64)) << 52);
+                                memcpy(&value, &bits, sizeof(value));
+                                break;
+                            case 2:
+                                // exact binary ties
+                                value = static_cast<double>(static_cast<int64_t>(bits % 2000) - 1000) + static_cast<double>((bits >> 32) % 16) / 16.0;
+                                break;
+                            default:
+                                value = static_cast<double>(static_cast<float>(std::uniform_real_distribution<double>(-100000.0, 100000.0)(rng)));
+                                break;
+                            }
+                            snprintf(expected, sizeof(expected), "|%.*f|", static_cast<int>(precision), value);
+                            log_inst.error(log_inst.cat.ModuleB, fmt, value);
+                            result.add_result(log_str.end_with(expected), "layout format %s of %.17g matches printf %s", fmt, value, expected);
+                        }
+                    }
+                }
 
                 i = 15841548461;
                 log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
@@ -184,13 +275,13 @@ namespace bq {
                 log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X3B03AD8AD|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", 100);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         100|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.366|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 10000000000000.0);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);

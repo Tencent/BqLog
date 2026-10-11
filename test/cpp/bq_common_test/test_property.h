@@ -81,6 +81,25 @@ namespace bq {
                 add_test_result(pv["configs"].is_array());
                 add_test_result(pv["configs"].array_size() == 7);
 
+                // line continuation: a trailing backslash on the last line has no next line to join
+                // and must be kept instead of looping forever, with or without a final newline
+                pv = property_value::create_from_string("level=all\npath=logs\\");
+                add_test_result((string)pv["path"] == "logs\\" && (string)pv["level"] == "all");
+                pv = property_value::create_from_string("level=all\npath=D:\\app\\logs\\\n");
+                add_test_result((string)pv["path"] == "D:\\app\\logs\\" && (string)pv["level"] == "all");
+                pv = property_value::create_from_string("path=logs\\\n\\");
+                add_test_result((string)pv["path"] == "logs\\");
+
+                // continuing onto a whitespace-only line leaves an empty value, which is skipped like "key="
+                pv = property_value::create_from_string("x=\\\n   \ny=ok\n");
+                add_test_result(!pv.has_object_key("x") && (string)pv["y"] == "ok");
+                pv = property_value::create_from_string("y=ok\nx=\\\n   ");
+                add_test_result(!pv.has_object_key("x") && (string)pv["y"] == "ok");
+
+                // continuation onto a following line still works
+                pv = property_value::create_from_string("multi=a\\\n  b\\\n  c\nz=end");
+                add_test_result((string)pv["multi"] == "abc" && (string)pv["z"] == "end");
+
                 return result;
             }
         };

@@ -78,39 +78,43 @@ namespace bq {
             }
             char* end_ptr = nullptr;
             char* start_ptr = (char*)upper_time_zone.begin() + parse_start;
-            int32_t hour = static_cast<int32_t>(strtol(start_ptr, &end_ptr, 10));
+            // Take the sign from the text: for "UTC-0:30" the parsed hour is 0 and carries no sign.
+            const char* sign_ptr = start_ptr;
+            while (isspace(static_cast<unsigned char>(*sign_ptr))) {
+                ++sign_ptr;
+            }
+            const bool negative = (*sign_ptr == '-');
+            // Range check before narrowing, so "UTC+4294967298" is rejected instead of becoming UTC+2.
+            const int64_t hour = static_cast<int64_t>(strtoll(start_ptr, &end_ptr, 10));
             if (end_ptr == start_ptr) {
                 bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, use local time as default.", time_zone_str.c_str());
                 break;
             }
             if (hour < -12 || hour > 14) {
-                bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, hour %" PRId32 " out of range[-12, 14], use local time as default.", time_zone_str.c_str(), hour);
+                bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, hour %" PRId64 " out of range[-12, 14], use local time as default.", time_zone_str.c_str(), hour);
                 break;
             }
-            int32_t minute = 0;
+            int64_t minute = 0;
             if (*end_ptr == ':') {
                 start_ptr = end_ptr + 1;
-                minute = static_cast<int32_t>(strtol(start_ptr, &end_ptr, 10));
-                if (end_ptr == start_ptr) {
+                // minutes are digits only: no sign or spaces of their own
+                if (!isdigit(static_cast<unsigned char>(*start_ptr))) {
                     bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, use local time as default.", time_zone_str.c_str());
                     break;
                 }
-                if (minute < 0 || minute >= 60) {
-                    bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, minute %" PRId32 " out of range[0, 59], use local time as default.", time_zone_str.c_str(), minute);
+                minute = static_cast<int64_t>(strtoll(start_ptr, &end_ptr, 10));
+                if (minute >= 60) {
+                    bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, minute %" PRId64 " out of range[0, 59], use local time as default.", time_zone_str.c_str(), minute);
                     break;
                 }
-                gmt_offset_minutes_ = minute;
             }
             if (*end_ptr != '\0') {
                 bq::util::log_device_console(bq::log_level::warning, "invalid time_zone string %s, use local time as default.", time_zone_str.c_str());
                 break;
             }
             use_local_time_ = false;
-            gmt_offset_hours_ = hour;
-            gmt_offset_minutes_ = minute;
-            if (gmt_offset_hours_ < 0) {
-                gmt_offset_minutes_ = -gmt_offset_minutes_;
-            }
+            gmt_offset_hours_ = static_cast<int32_t>(hour);
+            gmt_offset_minutes_ = negative ? -static_cast<int32_t>(minute) : static_cast<int32_t>(minute);
         } while (0);
 
         // generate time_zone_str_ and time_zone_diff_to_gmt_ms_;
@@ -137,7 +141,7 @@ namespace bq {
                 time_zone_str_ = buffer;
             } else {
                 char buffer[64];
-                snprintf(buffer, sizeof(buffer), "UTC%+" PRId32 ":%02" PRId32, gmt_offset_hours_, abs(gmt_offset_minutes_));
+                snprintf(buffer, sizeof(buffer), "UTC%c%" PRId32 ":%02" PRId32, gmt_offset_minutes_ < 0 ? '-' : '+', abs(gmt_offset_hours_), abs(gmt_offset_minutes_));
                 time_zone_str_ = buffer;
             }
             time_zone_diff_to_gmt_ms_ = static_cast<int32_t>((gmt_offset_hours_ * 3600 + gmt_offset_minutes_ * 60) * 1000);
@@ -193,7 +197,7 @@ namespace bq {
         }
 
         // Fixed UTC offset in seconds (no DST)
-        int64_t delta_sec = (int64_t)gmt_offset_hours_ * static_cast<int64_t>(3600) + (int64_t)gmt_offset_minutes_ * static_cast<int64_t>(60); // minutes are 0 in current parsing
+        int64_t delta_sec = (int64_t)gmt_offset_hours_ * static_cast<int64_t>(3600) + (int64_t)gmt_offset_minutes_ * static_cast<int64_t>(60); // minutes carry the sign of the offset
 
         time_t adjusted = (time_t)((int64_t)base_sec + delta_sec);
 
