@@ -46,6 +46,8 @@ target_link_libraries(your_target PRIVATE <the bqlog library>)
 
 GCC additionally needs `-fmodules-ts` (its modules are a TS that keeps its own `gcm.cache`).
 
+A target that only imports is not scanned by default, so the compiler is never told where the module is: set the `CXX_SCAN_FOR_MODULES` property on it, or `cmake_policy(SET CMP0155 NEW)`.
+
 Two things to watch:
 
 - `BQ_LOG_FAST_*` are macros and cannot be imported; the fast log is written as `log.fast_info<"...">(args...)` (C++20) in module mode.

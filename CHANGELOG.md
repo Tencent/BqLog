@@ -4,6 +4,7 @@
 
 ## [v2.7.0] - 2026-10-11
 - **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)` plus `fast_verbose` … `fast_fatal`. The format string is a template parameter instead of a macro argument, so IDE hints and compiler diagnostics work and any log object can be used at the same call site; the literal may be written `""`, `u8""`, `u""`, `U""` or `L""`. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
+- **C++20 modules**: from C++20 the library can be imported as well as included — `import bq.log;`. The module interface unit ships with the headers and exports what both libraries offer; macros are not exported, so the fast log there is the macro-free `log.fast_info<"...">`. See [Integration Guide](docs/INTEGRATION_GUIDE.md).
 - **Multi-instance**: several processes may log into the same directory, each with its own recovery data (`bqlog_mmap/p<k>/logs/<name>/`). The per-log lock is held by the OS kernel, so a crash releases it, and a log with `need_recovery=false` no longer touches the disk at all.
 - **Recovery window**: up to the last 16 runs of that instance instead of 2, counted per instance rather than per log.
 - **Compatibility**: headers and library must be the same version; the `bq::log` handle layout and the C API changed.

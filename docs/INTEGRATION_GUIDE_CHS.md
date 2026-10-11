@@ -46,6 +46,8 @@ target_link_libraries(your_target PRIVATE <bqlog 库>)
 
 GCC 额外需要 `-fmodules-ts`（它的模块实现是 TS，`gcm.cache` 由编译器自己管理）。
 
+只做导入的目标默认不参与模块扫描，编译器就找不到模块：给它设置 `CXX_SCAN_FOR_MODULES` 属性，或 `cmake_policy(SET CMP0155 NEW)`。
+
 需要注意的两点：
 
 - `BQ_LOG_FAST_*` 是宏，模块里拿不到；模块方式下快速日志用 `log.fast_info<"...">(args...)`（C++20）。
