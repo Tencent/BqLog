@@ -9,7 +9,7 @@
 - **兼容性**：头文件与库必须同版本；`bq::log` 句柄布局与 C API 有变化。
 - **问题修复**：`BQ_LOG_FAST_*` 调用点被多线程同时首次调用时可能初始化两次；崩溃时整批记录会被重放；续写段（`<run>_<n>.mmap`）的快速日志 meta 可能在重启时丢失；配置了恢复但没有 storage 目录的日志仍做磁盘操作；恢复用的 run 计数现在会丢弃窗口之外的陈旧数据。
 - **构建 / CI**：预编译桌面库重新包含 Go bridge；预编译库导出检查覆盖所有桌面动态库；多开测试在 Windows、Linux、macOS 上通过 CTest 运行。
-- **感谢 [@mvanslobbe](https://github.com/mvanslobbe)** 贡献上述五个修复：decoder（#81）、layout（#82、#83）、time_zone（#84）、property（#86）。
+- **感谢 [@mvanslobbe](https://github.com/mvanslobbe)** 在 [#81](https://github.com/Tencent/BqLog/pull/81)、[#82](https://github.com/Tencent/BqLog/pull/82)、[#83](https://github.com/Tencent/BqLog/pull/83)、[#84](https://github.com/Tencent/BqLog/pull/84)、[#86](https://github.com/Tencent/BqLog/pull/86) 中贡献的修复：layout 的浮点符号、舍入与取值范围，以及超过 10 个字符的格式说明符宽度；解码器遇到畸形压缩文件时的过度分配；半小时时区偏移的符号；property 解析器的续行挂起。
 
 ## [v2.6.0] - 2026-10-05
 - **C++ 专属的快速模式**：新增 `BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL`。写出的日志和 `log.info` 等普通模式完全一样，但调用线程上的工作直接内联在调用点：判断级别、写时间戳和原始参数。同一个宏也支持 Category：`BQ_LOG_FAST_INFO(log, log.cat.xxx, "...", ...)`，带不带 Category 由编译期决定，开销相同。代价：内存稍多一点；它是宏，IDE 代码提示体验差一点；每个调用点的日志对象和格式串固定。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
