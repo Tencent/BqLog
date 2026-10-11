@@ -17,6 +17,7 @@
 #endif
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     bq_forceinline uint32_t bq_ctz64_portable(uint64_t value)
     {
         uint32_t index = 0;
@@ -76,4 +77,5 @@ namespace bq {
         return bq_umul128_portable(a, b, high);
 #endif
     }
+    BQ_MODULE_EXPORT_END
 }

@@ -19,6 +19,7 @@
 #include "bq_common/types/type_tools.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <typename CHAR_TYPE, typename Allocator = bq::default_allocator<CHAR_TYPE>>
     class BQ_STRING_CLS_NAME : public array<CHAR_TYPE, Allocator, 1> {
     public:
@@ -199,4 +200,5 @@ namespace bq {
     typedef BQ_STRING_CLS_NAME<char> BQ_STRING_INLINE_MACRO(string);
     typedef BQ_STRING_CLS_NAME<char16_t> BQ_STRING_INLINE_MACRO(u16string);
     typedef BQ_STRING_CLS_NAME<char32_t> BQ_STRING_INLINE_MACRO(u32string);
+    BQ_MODULE_EXPORT_END
 }

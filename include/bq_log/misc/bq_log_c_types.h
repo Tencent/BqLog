@@ -6,6 +6,7 @@
 
 #if defined(__cplusplus)
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     enum class enum_buffer_result_code : int32_t {
         success = 0,
         err_empty_log_buffer, // no valid data to read in log buffer;
@@ -133,6 +134,7 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
     static_assert(sizeof(log_level) == sizeof(int32_t), "32-bit log level ABI");
     static_assert(sizeof(enum_buffer_result_code) == sizeof(int32_t), "32-bit buffer result ABI");
     static_assert(sizeof(appender_decode_result) == sizeof(int32_t), "32-bit decoder result ABI");
+    BQ_MODULE_EXPORT_END
 }
 #else
 typedef struct bq_api_string_def bq_api_string_def;

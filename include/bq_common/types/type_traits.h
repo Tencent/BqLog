@@ -22,6 +22,7 @@
 #include "bq_common/platform/macros.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <bool B>
     struct bool_type {
         static constexpr bool value = false;
@@ -434,4 +435,5 @@ namespace bq {
     constexpr bool is_trivially_move_assignable_v = is_trivially_move_assignable<T>::value;
 #endif
 
+    BQ_MODULE_EXPORT_END
 }

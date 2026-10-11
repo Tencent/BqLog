@@ -28,6 +28,18 @@
 #include <ctype.h>
 #include <time.h>
 
+// Declarations between these two markers make up the interface of the C++20 module
+// (see include/bq_log/bq.log.cppm). They are empty unless a module is being built,
+// which defines them as `export {` and `}` before including any header; the include
+// entry sees exactly the same declarations with the same linkage.
+// A declaration with internal linkage may not be exported, so file local helpers
+// stay outside the markers -- a constexpr value is fine inside, because an importer
+// never needs its symbol.
+#ifndef BQ_MODULE_EXPORT_BEGIN
+#define BQ_MODULE_EXPORT_BEGIN
+#define BQ_MODULE_EXPORT_END
+#endif
+
 #include "bq_common/misc/assert.h"
 #include "bq_common/platform/macros.h"
 #include "bq_common/platform/inline_intrinsics.h"
@@ -45,6 +57,9 @@
 #include "bq_common/types/string.h"
 #include "bq_common/types/hash_map.h"
 #include "bq_common/types/basic_types.h"
+// This one is a public header bq.log uses too, so a module build must reach it the
+// same way the include build does.
+#include "bq_common/platform/fast_clock.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic pop
 #endif

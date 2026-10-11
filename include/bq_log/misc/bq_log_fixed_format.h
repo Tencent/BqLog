@@ -17,6 +17,7 @@
 #include "bq_log/misc/bq_log_def.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     // never defined: reaching it during constant evaluation is a compile error
     void bq_fast_format_requires_utf8_execution_charset();
 
@@ -113,6 +114,7 @@ namespace bq {
         template <fixed_format F, bq::log_level LEVEL, uint32_t CAT, typename... Args>
         bq_forceinline bool fast_impl(const bq::log& l, const Args&... args);
     }
+    BQ_MODULE_EXPORT_END
 }
 
 #endif

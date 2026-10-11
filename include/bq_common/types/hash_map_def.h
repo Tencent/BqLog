@@ -25,6 +25,7 @@
 #include "bq_common/types/allocator.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <typename K, typename V, typename Allocator>
     class BQ_HASH_MAP_CLS_NAME;
     template <typename K, typename V, typename Allocator, bool C>
@@ -290,4 +291,5 @@ namespace bq {
         iterator alloc_node_by_key(const_key_type_ref key);
     };
 
+    BQ_MODULE_EXPORT_END
 }

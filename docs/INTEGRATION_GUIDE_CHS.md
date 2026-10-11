@@ -26,6 +26,31 @@
   - 如需启用 Java / NAPI（Node.js / HarmonyOS ArkTS）支持，以及系统链接库与部分宏定义，请参考 `/src/CMakeLists.txt`（如果觉得难以理解，建议求助AI提炼）。
   - 当存在 NAPI 环境（Node.js 或 HarmonyOS ArkTS）或需要 Java / C# 调用时，不推荐以「纯 C++ 源码」直接集成，因为需要手动处理初始化和库加载流程；更推荐使用预编译包及对应 wrapper。
 
+### C++20 模块（`import`）
+
+C++20 起可以不用头文件，直接导入模块：
+
+```cpp
+import bq.log; 
+```
+
+模块接口单元随头文件一起分发，位于 `include/bq_log/bq.log.cppm`（bq_common 的内容由它一并转出）；**我们不预编译 BMI**（它与编译器版本、标准、宏定义绑定，必须由你的工程编译一次）。
+
+CMake（3.28 起；可能需要 Ninja 或 VS 17.4+ 生成器）：
+
+```cmake
+target_sources(your_target PRIVATE FILE_SET CXX_MODULES FILES
+    ${BQLOG_DIR}/include/bq_log/bq.log.cppm)
+target_link_libraries(your_target PRIVATE <bqlog 库>)
+```
+
+GCC 额外需要 `-fmodules-ts`（它的模块实现是 TS，`gcm.cache` 由编译器自己管理）。
+
+需要注意的两点：
+
+- `BQ_LOG_FAST_*` 是宏，模块里拿不到；模块方式下快速日志用 `log.fast_info<"...">(args...)`（C++20）。
+- 编 `.cppm` 时的编译器、标准与宏定义，要和你工程里其他源文件一致。
+
 ---
 
 ## C#（Unity / 团结引擎 / .NET）

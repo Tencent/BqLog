@@ -24,6 +24,7 @@
 #include "bq_common/types/type_traits.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     namespace string_tools {
         template <typename T, typename = void>
         struct __has_value_type : bq::false_type { };
@@ -57,7 +58,7 @@ namespace bq {
          * when the input is a string literal.
          */
         template <typename T>
-        static BQ_FUNC_RETURN_CONSTEXPR size_t constexpr_len(const T* str)
+        BQ_FUNC_RETURN_CONSTEXPR size_t constexpr_len(const T* str)
         {
             size_t i = 0;
             while (str[i] != 0) {
@@ -85,7 +86,7 @@ namespace bq {
          * Processes 4 characters (8 bytes) per iteration using bit manipulation
          * to detect the null terminator.
          */
-        static bq_forceinline size_t u16_len_rt(const char16_t* s)
+        bq_forceinline size_t u16_len_rt(const char16_t* s)
         {
             const char16_t* p = s;
             // Align to 8-byte boundary
@@ -121,7 +122,7 @@ namespace bq {
          * @brief SWAR implementation for UTF-32.
          * Processes 2 characters (8 bytes) per iteration.
          */
-        static bq_forceinline size_t u32_len_rt(const char32_t* s)
+        bq_forceinline size_t u32_len_rt(const char32_t* s)
         {
             const char32_t* p = s;
             while ((reinterpret_cast<uintptr_t>(p) & 7) != 0) {
@@ -323,4 +324,5 @@ namespace bq {
             static const char32_t* value() { return U""; }
         };
     }
+    BQ_MODULE_EXPORT_END
 }

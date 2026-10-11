@@ -26,6 +26,7 @@ namespace bq {
     // The first word is epoch milliseconds in both heads; its high bit marks fast records.
     static constexpr uint64_t log_head_fast_flag = UINT64_C(1) << 63;
 
+    BQ_MODULE_EXPORT_BEGIN
     struct log_head_base_def {
         static bq_forceinline uint64_t get_epoch(uint64_t value)
         {
@@ -47,9 +48,11 @@ namespace bq {
         class test_log;
         class test_fast_log;
     }
+    BQ_MODULE_EXPORT_END
 }
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     enum class log_memory_policy {
         discard_when_full, // If the log_buffer is full, incoming logs will be discarded.
         block_when_full, // If the log_buffer is full, the logging thread will be blocked until space becomes available.
@@ -130,8 +133,10 @@ namespace bq {
     // mask into the low bits of the meta address it publishes (see fast_info_site), so every
     // consumer must mask the low bits off before using the address stored in a record head as a
     // pointer. The macro path stores a clean address, for which the mask is a no-op.
+    BQ_MODULE_EXPORT_END
     static constexpr uint64_t fast_meta_addr_align = 64;
     static constexpr uint64_t fast_meta_addr_mask = fast_meta_addr_align - 1;
+    BQ_MODULE_EXPORT_BEGIN
 
     // zero level words for an invalid log (all levels disabled); a template static member
     // so the single array definition in a public header never multiplies across TUs
@@ -194,5 +199,5 @@ namespace bq {
         string_utf32_type,
         string_utf_mixed_type
     };
-
+    BQ_MODULE_EXPORT_END
 }

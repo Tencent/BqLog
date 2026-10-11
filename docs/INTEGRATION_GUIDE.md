@@ -26,6 +26,31 @@
   - If you need to enable Java / NAPI (Node.js / HarmonyOS ArkTS) support, as well as system link libraries and some macro definitions, please refer to `/src/CMakeLists.txt`(If the file implies complexity, consider using AI to interpret it.).
   - When NAPI environment (Node.js or HarmonyOS ArkTS) is present, or when Java / C# needs to call, it is not recommended to integrate directly as "pure C++ source", because initialization and library loading processes need to be handled manually; using prebuilt packages and corresponding wrappers is more recommended.
 
+### C++20 modules (`import`)
+
+From C++20 on, headers are optional: import the module instead.
+
+```cpp
+import bq.log;
+```
+
+The module interface unit ships with the headers as `include/bq_log/bq.log.cppm` (it exports what bq_common provides along with bq::log); **no BMI is prebuilt** (it is tied to the compiler version, the standard and the macros, so your project compiles it once).
+
+CMake (3.28 or newer; may need a Ninja or VS 17.4+ generator):
+
+```cmake
+target_sources(your_target PRIVATE FILE_SET CXX_MODULES FILES
+    ${BQLOG_DIR}/include/bq_log/bq.log.cppm)
+target_link_libraries(your_target PRIVATE <the bqlog library>)
+```
+
+GCC additionally needs `-fmodules-ts` (its modules are a TS that keeps its own `gcm.cache`).
+
+Two things to watch:
+
+- `BQ_LOG_FAST_*` are macros and cannot be imported; the fast log is written as `log.fast_info<"...">(args...)` (C++20) in module mode.
+- Compile the `.cppm` files with the same compiler, standard and macros as the rest of your project.
+
 ---
 
 ## C# (Unity / Tuanjie Engine / .NET)

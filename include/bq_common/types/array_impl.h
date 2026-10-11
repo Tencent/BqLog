@@ -24,6 +24,7 @@
 #include "bq_common/types/array_def.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     /*===========================================================BQ_ARRAY_ITER_CLS_NAME==============================================================*/
     template <typename T, typename ARRAY>
     template <typename V>
@@ -741,4 +742,5 @@ namespace bq {
         insert(end(), bq::forward<First>(first));
         inner_args_insert(bq::forward<Rest>(rest)...);
     }
+    BQ_MODULE_EXPORT_END
 }

@@ -46,6 +46,11 @@
 pthread_t main_thread_id = 0;
 #endif
 
+#if defined(BQ_MODULE_TEST)
+// test/module/module_test.cpp: the same library, reached through `import bq.log;`
+extern bool bq_module_entry_test();
+#endif
+
 class time_out_monitor_thread : public bq::platform::thread {
 protected:
     void run() override
@@ -133,7 +138,17 @@ int32_t main_logic()
     TEST_GROUP(Bq_Log_Test, bq::test, test_disk_full);
     TEST_GROUP_END(Bq_Log_Test);
 
-    bool test_result = TEST_GROUP_RESULT(Bq_Common_Test) && TEST_GROUP_RESULT(Bq_Log_Test);
+#if defined(BQ_MODULE_TEST)
+    // The module entry has its own translation unit, which imports bq.log instead
+    // of including it, and reports its own summary line.
+    const bool module_entry_passed = bq_module_entry_test();
+#endif
+
+    bool test_result = TEST_GROUP_RESULT(Bq_Common_Test) && TEST_GROUP_RESULT(Bq_Log_Test)
+#if defined(BQ_MODULE_TEST)
+        && module_entry_passed
+#endif
+        ;
 
     monitor_thread.cancel();
     monitor_thread.join();

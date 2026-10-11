@@ -318,7 +318,7 @@ namespace bq {
         //================================================string helpers begin==========================================
         // we can distinguish c style string ,literal string and char array at compiling time or runtime now.
         template <typename CHAR_TYPE>
-        static bq_forceinline size_t _get_utf32_c_style_string_storage_size_impl(const CHAR_TYPE* str, size_t max_character_count)
+        bq_forceinline size_t _get_utf32_c_style_string_storage_size_impl(const CHAR_TYPE* str, size_t max_character_count)
         {
             static_assert(sizeof(CHAR_TYPE) == 4, "_get_utf32_c_style_string_storage_size_impl only for utf32 characters");
             size_t str_len = 0;

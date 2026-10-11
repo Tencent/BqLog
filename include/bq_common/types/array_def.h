@@ -23,6 +23,7 @@
 #include "bq_common/types/allocator.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <typename T, typename ARRAY> class BQ_ARRAY_ITER_CLS_NAME;
     template <typename T, typename Allocator, size_t TAIL_BUFFER_SIZE> class BQ_ARRAY_CLS_NAME;
 
@@ -205,4 +206,5 @@ namespace bq {
         void inner_args_insert(First&& first, Rest&&... rest);
     };
 
+    BQ_MODULE_EXPORT_END
 }
