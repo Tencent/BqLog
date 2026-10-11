@@ -126,6 +126,13 @@ namespace bq {
     static_assert(offsetof(fast_format_meta, category_idx) == 24, "fast format category alignment");
     static_assert(offsetof(fast_format_meta, format_size) == 28, "fast format size alignment");
 
+    // Meta arena entries are aligned to this boundary. The fast_info site packs the enabled level
+    // mask into the low bits of the meta address it publishes (see fast_info_site), so every
+    // consumer must mask the low bits off before using the address stored in a record head as a
+    // pointer. The macro path stores a clean address, for which the mask is a no-op.
+    static constexpr uint64_t fast_meta_addr_align = 64;
+    static constexpr uint64_t fast_meta_addr_mask = fast_meta_addr_align - 1;
+
     // zero level words for an invalid log (all levels disabled); a template static member
     // so the single array definition in a public header never multiplies across TUs
     template <typename T = void>

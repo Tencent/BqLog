@@ -42,6 +42,15 @@ namespace bq {
         // resolved records of a previous run
         const fast_format_meta* resolve_recovered(uint16_t version, uint64_t arena_addr);
 
+        // A live record's meta entry sits in this process's arena. The registering thread wrote it
+        // without a happens-before edge to the threads that later write records (the site
+        // publication is read relaxed), so on hardware without multi-copy atomicity a consumer
+        // could dereference an entry whose content is not yet visible. This synchronizes with the
+        // registering thread once per distinct address (a TLS cache makes it free afterwards) and
+        // returns the entry. meta_addr carries the fast_info level bits, which are masked off.
+        // Returns nullptr only for a zero address.
+        const fast_format_meta* resolve_live(uint64_t meta_addr);
+
         // builds the entry bytes for a format registration (fast_format_meta head + format string + arg types, align_8)
         static bool build_format_entry(const char* format, uint32_t format_size,
             uint8_t level, uint32_t category_idx, uint8_t format_type,

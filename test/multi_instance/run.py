@@ -198,14 +198,16 @@ def case_M2(exe, out, records):
             capture.close()
     if code != 0:
         fail(f"exit code {code}")
-    # each log's output only holds its own records, count correct
-    texts = "".join(p.read_text(encoding="utf-8", errors="replace")
-        for p in sorted(list(cwd.glob("output/worker_0_*.log"))
-                + list(cwd.glob("output/workerb_*.log"))))
-    a_normal = [(int(w), int(s)) for w, s in re.findall(r"\bnormal worker=(\d+) seq=(\d+)", texts)]
-    b_normal = [(int(w), int(s)) for w, s in re.findall(r"\bnormal_b worker=(\d+) seq=(\d+)", texts)]
-    a_fast = [(int(w), int(s)) for w, s in re.findall(r"\bfast worker=(\d+) seq=(\d+)", texts)]
-    b_fast = [(int(w), int(s)) for w, s in re.findall(r"\bfast_b worker=(\d+) seq=(\d+)", texts)]
+    # Each log's output only holds its own records, count correct. Both logs write the SAME
+    # format strings (T04 spec), so they are told apart by output file, not by a kind tag.
+    def seqs_in(pattern, kind):
+        text = "".join(p.read_text(encoding="utf-8", errors="replace")
+            for p in sorted(cwd.glob(pattern)))
+        return [(int(w), int(s)) for w, s in re.findall(rf"\b{kind} worker=(\d+) seq=(\d+)", text)]
+    a_normal = seqs_in("output/worker_0_*.log", "normal")
+    a_fast = seqs_in("output/worker_0_*.log", "fast")
+    b_normal = seqs_in("output/workerb_*.log", "normal")
+    b_fast = seqs_in("output/workerb_*.log", "fast")
     expect_even = [(0, n) for n in range(0, records, 2)]
     expect_odd = [(0, n) for n in range(1, records, 2)]
     if a_normal != expect_even or a_fast != expect_even:

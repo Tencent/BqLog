@@ -37,27 +37,32 @@ namespace bq {
             bq::platform::fast_clock_thread_cache clock_cache;
         };
 
+        /// Singletons of one compiled module (an executable, DLL, .so or .dylib), not of the process:
+        /// a process can hold several copies of BqLog and they must not share any of this. A template
+        /// keeps it header-only under C++11 (no multiply-defined symbol) and still gives each module
+        /// its own copy, which is what the address comparison against no_level relies on.
         template <typename T = void>
-        struct module_state {
-            static const bool no_reallocate;
+        struct fast_inline_state {
+            /// the constant false that a thread slot's need_reallocate starts out pointing at
+            static const bool allocate_mark;
             static const uint32_t no_level;
             static uint32_t layout_status; // 0 unknown, 1 ready, 2 unavailable
             // cold path only: serializes first-time site initialization; 0 = free
             static bq::platform::atomic_trivially_constructible<uint32_t> site_init_locks[32];
         };
         template <typename T>
-        const bool module_state<T>::no_reallocate = false;
+        const bool fast_inline_state<T>::allocate_mark = false;
         template <typename T>
-        const uint32_t module_state<T>::no_level = 0;
+        const uint32_t fast_inline_state<T>::no_level = 0;
         template <typename T>
-        uint32_t module_state<T>::layout_status = 0;
+        uint32_t fast_inline_state<T>::layout_status = 0;
         template <typename T>
-        bq::platform::atomic_trivially_constructible<uint32_t> module_state<T>::site_init_locks[32];
+        bq::platform::atomic_trivially_constructible<uint32_t> fast_inline_state<T>::site_init_locks[32];
 
         // Function scope: a TLS static member of a class template gets an init guard on MSVC.
         inline thread_slot& get_thread_slot()
         {
-            static BQ_TLS thread_slot slot = { { 0, nullptr, nullptr, &module_state<>::no_reallocate, 0, 0 }, {} };
+            static BQ_TLS thread_slot slot = { { 0, nullptr, nullptr, &fast_inline_state<>::allocate_mark, 0, 0 }, {} };
             return slot;
         }
 
@@ -85,7 +90,7 @@ namespace bq {
 
         public:
             explicit site_init_guard(const void* site)
-                : lock_(module_state<>::site_init_locks[((reinterpret_cast<uintptr_t>(site) >> 3) ^ (reinterpret_cast<uintptr_t>(site) >> 9)) & 31U])
+                : lock_(fast_inline_state<>::site_init_locks[((reinterpret_cast<uintptr_t>(site) >> 3) ^ (reinterpret_cast<uintptr_t>(site) >> 9)) & 31U])
             {
                 while (lock_.exchange_acquire(1U) != 0U) {
                     while (lock_.load_relaxed() != 0U) {
@@ -129,7 +134,7 @@ namespace bq {
 
         inline void refresh_thread_slot()
         {
-            uint32_t& status = module_state<>::layout_status;
+            uint32_t& status = fast_inline_state<>::layout_status;
             if (status == 0) {
                 bq::_api_fast_log_layout layout = {};
                 status = (bq::api::__api_fast_log_get_layout(&layout, BQ_FAST_LOG_LAYOUT_VERSION) && is_expected_layout(layout)) ? 1U : 2U;
@@ -150,13 +155,17 @@ namespace bq {
             bq_forceinline uint64_t get() const { return addr; }
         };
 
-        struct fast_meta_by_ptr {
-            const uint64_t* addr;
-            // the mask is stored with release before any read, and the reader acquired it, so the
-            // meta address observed here is always the registered one
+        // fast_info: the site publishes meta_addr | (enabled level mask) in one field, and the
+        // record head stores that raw value (the level bits survive; every consumer masks them off
+        // with fast_meta_addr_mask). The field is read again here, at head store time, rather than
+        // reusing the load that gated the branch: the two reads of one atomic object must agree
+        // (read-read coherence), so the second load cannot observe an address different from the
+        // one the branch accepted.
+        struct fast_meta_by_site_v {
+            const uint64_t* v;
             bq_forceinline uint64_t get() const
             {
-                return BQ_PACK_ACCESS_BY_TYPE(*addr, bq::platform::atomic<uint64_t>).load_relaxed();
+                return BQ_PACK_ACCESS_BY_TYPE(*v, bq::platform::atomic<uint64_t>).load_relaxed();
             }
         };
 

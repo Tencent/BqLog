@@ -16,6 +16,27 @@
 #include <thread>
 #include <vector>
 
+namespace {
+    struct u8_cstr_format {
+        size_t bq_log_format_str_size() const { return 4; }
+        const char8_t* bq_log_format_str_chars() const { return u8"abcd"; }
+    };
+    struct u8_writer_format {
+        size_t bq_log_format_str_size() const { return 1; }
+        void bq_log_custom_format(char8_t* value, size_t size) const
+        {
+            value[0] = u8'a';
+            (void)size;
+        }
+    };
+    static_assert(bq::tools::_is_bq_log_format_type<u8_cstr_format>::value
+            && bq::tools::_is_bq_log_format_type<u8_cstr_format>::arg_type == bq::log_arg_type_enum::string_utf8_type,
+        "a custom type exposing const char8_t* is a UTF-8 format");
+    static_assert(bq::tools::_is_bq_log_format_type<u8_writer_format>::value
+            && bq::tools::_is_bq_log_format_type<u8_writer_format>::arg_type == bq::log_arg_type_enum::string_utf8_type,
+        "a custom type writing through char8_t* is a UTF-8 format");
+}
+
 namespace bq {
     namespace test {
         class test_fast_info : public test_base {
@@ -153,6 +174,87 @@ namespace bq {
                     "fast_info: fast_warning carries the warning level tag");
             }
 
+            // 1b. every literal encoding the interface accepts agrees with the macro path
+            static void test_char_encodings(test_result& result)
+            {
+                const bq::string name = make_name("encoding");
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                bq::log log = bq::log::create_log(name, make_config(file_name));
+                result.add_result(log.is_valid(), "fast_info: encoding log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                // Each encoding is written twice, once through the macro and once through fast_info.
+                // U+4E2D U+6587 is spelled with \u escapes so this header stays ASCII: the literal's
+                // own character type alone decides the encoding of each case.
+                BQ_LOG_FAST_INFO(log, "encFmt_narrow {}", int32_t(1));
+                log.fast_info<"encFmt_narrow {}">(int32_t(1));
+
+                BQ_LOG_FAST_INFO(log, u8"encFmt_u8 \u4e2d\u6587 {}", int32_t(2));
+                log.fast_info<u8"encFmt_u8 \u4e2d\u6587 {}">(int32_t(2));
+                // a char8_t* is a UTF-8 string on both interfaces, not an address
+                const char8_t* u8_arg = u8"\u4e2d\u6587-arg";
+                BQ_LOG_FAST_INFO(log, "encFmtArg_u8 {}", u8_arg);
+                log.fast_info<"encFmtArg_u8 {}">(u8_arg);
+
+                BQ_LOG_FAST_INFO(log, u"encFmt_u16 \u4e2d\u6587 {}", int32_t(3));
+                log.fast_info<u"encFmt_u16 \u4e2d\u6587 {}">(int32_t(3));
+
+                BQ_LOG_FAST_INFO(log, U"encFmt_u32 \u4e2d\u6587 {}", int32_t(4));
+                log.fast_info<U"encFmt_u32 \u4e2d\u6587 {}">(int32_t(4));
+
+                // wchar_t is UTF-16 where it is 2 bytes wide (Windows) and UTF-32 where it is 4
+                BQ_LOG_FAST_INFO(log, L"encFmt_wide \u4e2d\u6587 {}", int32_t(5));
+                log.fast_info<L"encFmt_wide \u4e2d\u6587 {}">(int32_t(5));
+
+                // a no-argument wide format takes the head-only branch of the hot path
+                BQ_LOG_FAST_INFO(log, u"encFmtHead_u16 \u4e2d\u6587");
+                log.fast_info<u"encFmtHead_u16 \u4e2d\u6587">();
+                BQ_LOG_FAST_INFO(log, L"encFmtHead_wide \u4e2d\u6587");
+                log.fast_info<L"encFmtHead_wide \u4e2d\u6587">();
+
+                log.force_flush();
+                const auto lines = split_lines(bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0)));
+
+                struct encoding_case {
+                    const char* key;
+                    bool expects_cjk; // the key has no prefix relationship with any other key
+                };
+                const encoding_case cases[] = {
+                    { "encFmt_narrow", false },
+                    { "encFmt_u8", true },
+                    { "encFmt_u16", true },
+                    { "encFmt_u32", true },
+                    { "encFmt_wide", true },
+                    { "encFmtHead_u16", true },
+                    { "encFmtHead_wide", true },
+                    { "encFmtArg_u8", true },
+                };
+                // the text appender always writes UTF-8, so the CJK part must come out as E4 B8 AD E6 96 87
+                const char* const cjk_utf8 = "\xe4\xb8\xad\xe6\x96\x87";
+                for (const auto& item : cases) {
+                    bq::string from_macro;
+                    bq::string from_fast_info;
+                    for (const auto& line : lines) {
+                        const bq::string msg = message_of(line);
+                        if (msg.find(item.key) == bq::string::npos) {
+                            continue;
+                        }
+                        if (from_macro.is_empty()) {
+                            from_macro = msg;
+                        } else if (from_fast_info.is_empty()) {
+                            from_fast_info = msg;
+                        }
+                    }
+                    result.add_result(!from_macro.is_empty() && from_macro == from_fast_info,
+                        "fast_info: '%s' is identical through the macro and through fast_info", item.key);
+                    if (item.expects_cjk) {
+                        result.add_result(from_macro.find(cjk_utf8) != bq::string::npos,
+                            "fast_info: '%s' kept its non-ascii characters", item.key);
+                    }
+                }
+            }
+
             // 2. one call site, two logs: level and buffer follow the log passed in
             static void test_cross_log(test_result& result)
             {
@@ -274,8 +376,8 @@ namespace bq {
                     make_config(mask_file, "log.categories_mask=[ModuleB]\n"));
                 result.add_result(mask_log.is_valid(), "fast_info: masked category log create");
                 if (mask_log.is_valid()) {
-                    mask_log.fast_info<"masked out {}">(mask_log.cat.ModuleA.SystemA, int32_t(1));
-                    mask_log.fast_info<"kept {}">(mask_log.cat.ModuleB, int32_t(2));
+                    mask_log.fast_info<mask_log.cat.ModuleA.SystemA, "masked out {}">(int32_t(1));
+                    mask_log.fast_info<mask_log.cat.ModuleB, "kept {}">(int32_t(2));
                     mask_log.force_flush();
                     const bq::string mask_data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(mask_file + "_1.log", 0));
                     result.add_result(mask_data.find("masked out") == bq::string::npos,
@@ -296,8 +398,8 @@ namespace bq {
                 if (!log.is_valid()) {
                     return;
                 }
-                log.fast_info<"cat system {}">(log.cat.ModuleA.SystemA, int32_t(1));
-                log.fast_warning<"cat module b">(log.cat.ModuleB);
+                log.fast_info<log.cat.ModuleA.SystemA, "cat system {}">(int32_t(1));
+                log.fast_warning<log.cat.ModuleB, "cat module b">();
                 log.force_flush();
                 const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
                 result.add_result(data.find("[ModuleA.SystemA]\tcat system 1") != bq::string::npos,
@@ -431,6 +533,7 @@ namespace bq {
             {
                 test_result result;
                 test_output_match(result);
+                test_char_encodings(result);
                 test_cross_log(result);
                 test_site_sharing(result);
                 test_special_logs(result);

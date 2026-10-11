@@ -22,6 +22,7 @@ node_modules/
 /case_f_preview.txt
 /test_siso_*.mmap
 /test/multi_instance/mi_out/
+/test/symbol_size/mi_out/
 /build/build_mi/
 /build/mi_out/
 /build/tools_gen/
@@ -29,3 +30,7 @@ node_modules/
 /build/test/win64/MinGWProj_GCC.*
 /build/test/win64/*.log
 /build/test/win64/*.txt
+
+# Local-only instruction-count probe. The counts depend on the exact compiler build, so this is a
+# tool to run by hand on one's own machine, not a repository fixture and not a CI gate.
+/test/asm/

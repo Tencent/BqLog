@@ -22,6 +22,20 @@ namespace bq {
         constexpr uint32_t meta_journal_head_size = 64;
         constexpr uint32_t meta_journal_entry_head_size = 16;
         constexpr uint32_t meta_arena_block_size = 64 * 1024;
+
+        // Direct-mapped TLS cache of live meta addresses this thread already synchronized with.
+        // Meta entries are 64B aligned, so addr >> 6 is a compact slot index.
+        constexpr uint32_t live_sync_cache_size = 64;
+
+        struct live_sync_cache {
+            uint64_t addrs[live_sync_cache_size];
+        };
+
+        live_sync_cache& get_live_sync_cache()
+        {
+            static BQ_TLS live_sync_cache cache = {};
+            return cache;
+        }
     }
 
     meta_registry& meta_registry::instance()
@@ -104,17 +118,19 @@ namespace bq {
     uint8_t* meta_registry::arena_alloc(uint32_t size)
     {
         // entries larger than a fresh block get their own block
-        const uint32_t block_size = size > meta_arena_block_size ? static_cast<uint32_t>(bq::align_8(size)) : meta_arena_block_size;
+        const uint32_t block_size = size > meta_arena_block_size
+            ? static_cast<uint32_t>(bq::align_64(size)) : meta_arena_block_size;
         BQ_LIKELY_IF(!blocks_.is_empty())
         {
             auto& last = blocks_[blocks_.size() - 1];
-            const uint32_t aligned_used = static_cast<uint32_t>(bq::align_8(last.used));
+            const uint32_t aligned_used = static_cast<uint32_t>(bq::align_64(last.used));
             if (last.size - aligned_used >= size) {
                 last.used = aligned_used + size;
                 return last.data + aligned_used;
             }
         }
-        auto* data = static_cast<uint8_t*>(bq::platform::aligned_alloc(8, block_size));
+        // 64-byte alignment: the fast_info site packs its level mask into the address's low bits
+        auto* data = static_cast<uint8_t*>(bq::platform::aligned_alloc(bq::fast_meta_addr_align, block_size));
         if (!data) {
             return nullptr;
         }
@@ -361,11 +377,10 @@ namespace bq {
         item->loaded = false;
         auto* inst = instance_storage::get();
         const bq::string meta_dir = inst ? inst->meta_dir() : bq::string();
-        // loaded means the version is usable: segment 0 is either absent (empty version, as
-        // before) or parsed cleanly. A failure in segment 0 makes the version unusable; a
-        // failure in a later segment only drops that segment and the ones after it, so entries
-        // already read from earlier segments stay recoverable.
-        bool loaded = true;
+        // A version is usable when segment 0 is absent (an empty version) or parsed cleanly. A
+        // failure at segment 0 makes the whole version unusable; a failure at segment n > 0 only
+        // drops that segment and the ones after it, leaving earlier entries recoverable.
+        bool failed_at_segment_0 = false;
         bool stop = false;
         if (inst && bq::file_manager::is_dir(meta_dir)) {
             for (uint16_t n = 0; !stop; ++n) {
@@ -383,7 +398,7 @@ namespace bq {
                 auto segment = bq::make_unique<normal_buffer>(
                     static_cast<size_t>(file_size), path, false);
                 if (!segment->is_memory_mapped() || file_size < meta_journal_head_size) {
-                    loaded = loaded && n != 0;
+                    failed_at_segment_0 = (n == 0);
                     stop = true;
                     break;
                 }
@@ -397,7 +412,7 @@ namespace bq {
                     // uint64 that never wraps, so compare it as such (matching log_buffer), rather
                     // than truncating the difference to uint16.
                     || (inst && inst->run_serial() - head.run_serial > bq::MAX_RECOVERY_VERSION_RANGE)) {
-                    loaded = loaded && n != 0;
+                    failed_at_segment_0 = (n == 0);
                     stop = true;
                     break;
                 }
@@ -424,15 +439,16 @@ namespace bq {
                 if (cursor != end) {
                     // a torn or structurally invalid entry stops the walk here; entries already
                     // read from this and earlier segments stay in the map
-                    loaded = loaded && n != 0;
+                    failed_at_segment_0 = (n == 0);
                     stop = true;
                     break;
                 }
             }
         }
-        item->loaded = loaded;
+        item->loaded = !failed_at_segment_0;
+        const bool usable = item->loaded;
         recovered_.push_back(bq::move(item));
-        return loaded ? recovered_[recovered_.size() - 1].operator->() : nullptr;
+        return usable ? recovered_[recovered_.size() - 1].operator->() : nullptr;
     }
 
     const fast_format_meta* meta_registry::resolve_recovered(uint16_t version, uint64_t arena_addr)
@@ -444,6 +460,23 @@ namespace bq {
         }
         auto hit = rv->map.find(arena_addr);
         return hit != rv->map.end() ? hit->value() : nullptr;
+    }
+
+    const fast_format_meta* meta_registry::resolve_live(uint64_t meta_addr)
+    {
+        const uint64_t addr = meta_addr & ~bq::fast_meta_addr_mask;
+        if (addr == 0) {
+            return nullptr;
+        }
+        uint64_t& slot = get_live_sync_cache().addrs[(addr >> 6) & (live_sync_cache_size - 1)];
+        if (slot != addr) {
+            // First sighting of this address in this thread: order against the registering thread.
+            // The registry lock is held across arena_alloc + memcpy of the entry, so acquiring it
+            // makes the entry's content visible even on hardware without multi-copy atomicity.
+            bq::platform::scoped_spin_lock guard(lock_);
+            slot = addr;
+        }
+        return reinterpret_cast<const fast_format_meta*>(static_cast<uintptr_t>(addr));
     }
 
 #if defined(BQ_UNIT_TEST)

@@ -33,6 +33,25 @@ namespace bq {
         template<uint32_t CAT_INDEX>
         struct demo_category_log_category_base : public bq::log_category_base<CAT_INDEX> {};
 
+#if defined(BQ_CPP_20)
+        // The index of a category that belongs to THIS class; a foreign category resolves to 0.
+        // Same overload trick as bq::log_category_index, but keyed on this class's own base, so
+        // log.fast_info<some_other_log.cat.x, "..."> is rejected instead of silently accepted.
+        template <typename CAT>
+        struct demo_category_log_category_index {
+            template <uint32_t N>
+            static char (&pick(const demo_category_log_category_base<N>*))[N + 1];
+            static char (&pick(...))[1];
+            static constexpr uint32_t value =
+                static_cast<uint32_t>(sizeof(pick(static_cast<const CAT*>(nullptr)))) - 1;
+        };
+        template <auto CAT>
+        struct fast_category_index {
+            static constexpr uint32_t value = demo_category_log_category_index<bq::decay_t<decltype(CAT)>>::value;
+            static_assert(value != 0, "fast_*: this category does not belong to this log class");
+        };
+#endif
+
         struct demo_category_log_category_config
         {
             const char* names[10] = {
@@ -85,7 +104,10 @@ namespace bq {
         };
 
     public:
-        const demo_category_log_category_root& cat = demo_category_log_category_root_holder<void>::root_;
+        /// The category objects. static constexpr (it used to be a reference to a static holder)
+        /// so that a sub-object such as cat.ModuleA is a constant expression and can be passed as
+        /// the fast interfaces' category template argument.
+        static constexpr demo_category_log_category_root cat {};
 
     protected:
         template<typename STR>
@@ -135,37 +157,47 @@ namespace bq {
         using bq::log::fast_error;
         using bq::log::fast_fatal;
 
-        /// Macro-free fast log with a category of this class; the format string is a
-        /// compile-time template argument, a site is shared by (format, level, category, wire types).
-        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
-        bq_forceinline bool fast_verbose(const demo_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        /// Macro-free fast log. The category is the optional FIRST template argument and the
+        /// format string the second:
+        ///   log.fast_info<log.cat.ModuleA, "...">(...)   a category of this class
+        ///   log.fast_info<"...">(...)                    the default (empty) category
+        /// A site is shared by (format, level, category, wire types).
+        /// A category of another log class is a compile-time error.
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_verbose(const Args&... args) const
         {
-            return bq::fast_info_detail::fast_impl<F, bq::log_level::verbose, CAT_INDEX>(*this, args...);
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::verbose, fast_category_index<CAT>::value>(*this, args...);
         }
-        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
-        bq_forceinline bool fast_debug(const demo_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_debug(const Args&... args) const
         {
-            return bq::fast_info_detail::fast_impl<F, bq::log_level::debug, CAT_INDEX>(*this, args...);
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::debug, fast_category_index<CAT>::value>(*this, args...);
         }
-        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
-        bq_forceinline bool fast_info(const demo_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_info(const Args&... args) const
         {
-            return bq::fast_info_detail::fast_impl<F, bq::log_level::info, CAT_INDEX>(*this, args...);
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::info, fast_category_index<CAT>::value>(*this, args...);
         }
-        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
-        bq_forceinline bool fast_warning(const demo_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_warning(const Args&... args) const
         {
-            return bq::fast_info_detail::fast_impl<F, bq::log_level::warning, CAT_INDEX>(*this, args...);
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::warning, fast_category_index<CAT>::value>(*this, args...);
         }
-        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
-        bq_forceinline bool fast_error(const demo_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_error(const Args&... args) const
         {
-            return bq::fast_info_detail::fast_impl<F, bq::log_level::error, CAT_INDEX>(*this, args...);
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::error, fast_category_index<CAT>::value>(*this, args...);
         }
-        template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
-        bq_forceinline bool fast_fatal(const demo_category_log_category_base<CAT_INDEX>&, const Args&... args) const
+        template <auto CAT, bq::fixed_format F, typename... Args,
+            bq::enable_if_t<bq::fast_info_detail::is_category<bq::decay_t<decltype(CAT)>>::value, bool> = true>
+        bq_forceinline bool fast_fatal(const Args&... args) const
         {
-            return bq::fast_info_detail::fast_impl<F, bq::log_level::fatal, CAT_INDEX>(*this, args...);
+            return bq::fast_info_detail::fast_impl<F, bq::log_level::fatal, fast_category_index<CAT>::value>(*this, args...);
         }
 #endif
 

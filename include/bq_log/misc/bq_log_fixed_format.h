@@ -42,28 +42,66 @@ namespace bq {
         };
     }
 
-    // A string literal as a non-type template parameter. Copying into chars makes the object
-    // usable as a constant expression, and the copy is re-validated (encoding, charset) at
-    // compile time.
-    template <size_t N>
-    struct fixed_format {
-        char chars[N];
+    // A template's static data member is exported through STB_GNU_UNIQUE otherwise, and the format
+    // string is part of its symbol. Undone at the end of bq_log_fast_info.h.
+#if defined(BQ_MSVC) || defined(BQ_VISUAL_STUDIO)
+#define BQ_FAST_INFO_HIDDEN
+#else
+#define BQ_FAST_INFO_HIDDEN __attribute__((visibility("hidden")))
+#endif
 
-        template <typename C>
+    // A string literal as a non-type template parameter: copied in, packed so the mangled names stay
+    // short (see test/symbol_size), and re-validated at compile time. The encoding follows the
+    // literal's character type: char and char8_t are UTF-8, char16_t is UTF-16, char32_t is UTF-32,
+    // and wchar_t is whichever of the two its width makes it.
+    template <size_t N, typename C>
+    struct fixed_format {
+        using storage_type = bq::condition_type_t<sizeof(C) == 1, char, C>;
+        static constexpr size_t length = N;
+        static constexpr size_t units_per_word = sizeof(uint64_t) / sizeof(storage_type);
+        static constexpr uint64_t unit_mask = ~static_cast<uint64_t>(0) >> (64 - 8 * sizeof(storage_type));
+
+        uint64_t words[(N + units_per_word - 1) / units_per_word];
+
         constexpr fixed_format(const C (&s)[N])
-            : chars {}
+            : words {}
         {
-            static_assert(bq::is_same<C, char>::value || bq::is_same<C, char8_t>::value,
-                "fast_*: only narrow or u8 string literals are supported, use BQ_LOG_FAST_* for UTF-16/32 formats");
+            static_assert(sizeof(C) == 1 || sizeof(C) == 2 || sizeof(C) == 4,
+                "fast_*: the format string literal must be char, char8_t, char16_t, char32_t or wchar_t");
             bool non_ascii = false;
             for (size_t i = 0; i < N; ++i) {
-                chars[i] = static_cast<char>(s[i]);
-                non_ascii = non_ascii || static_cast<unsigned char>(s[i]) >= 0x80;
+                const uint64_t unit = static_cast<uint64_t>(static_cast<storage_type>(s[i])) & unit_mask;
+                words[i / units_per_word] |= unit << (8 * sizeof(storage_type) * (i % units_per_word));
+                non_ascii = non_ascii || unit >= 0x80;
             }
+            // a u8/u/U/L literal fixes its own encoding; only a narrow one follows the charset
             if (bq::is_same<C, char>::value && non_ascii && !fast_info_detail::exec_charset_is_utf8()) {
                 bq_fast_format_requires_utf8_execution_charset(); // MSVC: compile with /utf-8
             }
         }
+
+        constexpr storage_type at(size_t i) const
+        {
+            return static_cast<storage_type>((words[i / units_per_word] >> (8 * sizeof(storage_type) * (i % units_per_word))) & unit_mask);
+        }
+    };
+
+    // The packed literal as the array the slow path hands to do_log and to the registry.
+    template <fixed_format F>
+    struct BQ_FAST_INFO_HIDDEN fixed_format_chars {
+        using char_type = typename decltype(F)::storage_type;
+        struct storage {
+            char_type value[decltype(F)::length];
+        };
+        static constexpr storage make()
+        {
+            storage s {};
+            for (size_t i = 0; i < decltype(F)::length; ++i) {
+                s.value[i] = F.at(i);
+            }
+            return s;
+        }
+        static constexpr storage data = make();
     };
 
     namespace fast_info_detail {

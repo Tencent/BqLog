@@ -320,15 +320,16 @@ namespace bq {
         void discard_recovery_data();
         void prepare_and_fix_recovery_data();
 
+        // this run's recovery version; 0 when instance_storage is unavailable (no mmap support, or
+        // no instance claimed), in which case nothing is recovered
+        static uint16_t recovery_run_version();
+
         // The version stamped on data that must never be recovered. It has to sit OUTSIDE the
         // recovery window: a stale run's data is only unreachable when (version_ - marked) is
         // greater than MAX_RECOVERY_VERSION_RANGE. Marking with version_ + 1 (just ahead of the
         // current run) would fall back inside the window a few runs later and the data would be
-        // recovered as if it were valid.
-        // instance_storage::get() may be null (no mmap support, or the instance could not be
-        // claimed); the recovery version is then 0 and nothing is recovered
-        static uint16_t recovery_run_version();
-
+        // recovered as if it were valid. The static form is for callers that cannot use `this`
+        // (the lp_buffer traverse callback).
         static uint16_t invalid_recovery_version_for(uint16_t version)
         {
             return static_cast<uint16_t>(version - MAX_RECOVERY_VERSION_RANGE - 1);
@@ -443,7 +444,7 @@ namespace bq {
 #endif
             // this record has now been persisted (return_read_chunk only runs after the appender's
             // mark_write_finished), so the recovery snapshot may move past it
-            rt_reading.cur_block_->get_buffer().advance_recovery_snapshot(rt_reading.hp_handle_cache_.consumed_cursor());
+            rt_reading.cur_block_->get_buffer().mark_persisted(rt_reading.hp_handle_cache_);
             if (!rt_reading.hp_handle_cache_.has_next()) {
 #if defined(BQ_LOG_BUFFER_DEBUG)
                 assert(rt_reading.cur_block_);

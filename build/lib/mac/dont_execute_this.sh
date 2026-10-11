@@ -171,9 +171,7 @@ else
   APPLE_LIB_FORMAT="$(normalize_format "$ARG5")"
   GO_SUPPORT="$(normalize_onoff "$ARG6")"
 fi
-# GO_SUPPORT is left unset when the arguments did not carry it: the caller prompts for it
-# (or defaults to OFF when non-interactive). Defaulting it to OFF here would make that prompt
-# unreachable.
+# GO_SUPPORT stays unset when the arguments did not carry it: the caller prompts for it below.
 
 echo "Parsed params:"
 echo "  ACTION:            ${ACTION:-}"

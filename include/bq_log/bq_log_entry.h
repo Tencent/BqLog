@@ -335,48 +335,55 @@ namespace bq {
             return bq::fast_info_detail::fast_impl<F, bq::log_level::fatal, 0>(*this, args...);
         }
 
-        // a category that does not belong to this log class (bq::log itself owns none): the
-        // generated classes shadow this with an overload per category they do own
+        // The category, when given, is the FIRST template argument of the fast_* interfaces:
+        //   log.fast_info<log.cat.ModuleA, "...">(args...)
+        // bq::log itself owns no category, so only the overloads above (no category) exist here;
+        // the generated classes add one overload per own category.
+        //
+        // These six keep the OLD shape -- category as the first function argument instead of as a
+        // template argument -- as a diagnostic only. They never write a record; they exist so that
+        // old code, and a category that does not belong to this log class, fails with a clear
+        // message instead of "no matching function".
         template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
         bool fast_verbose(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
         {
             static_assert(bq::fast_info_detail::always_false<Args...>::value,
-                "fast_*: this category does not belong to this log class");
+                "fast_*: pass the category as the first template argument; this category does not belong to this log class");
             return false;
         }
         template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
         bool fast_debug(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
         {
             static_assert(bq::fast_info_detail::always_false<Args...>::value,
-                "fast_*: this category does not belong to this log class");
+                "fast_*: pass the category as the first template argument; this category does not belong to this log class");
             return false;
         }
         template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
         bool fast_info(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
         {
             static_assert(bq::fast_info_detail::always_false<Args...>::value,
-                "fast_*: this category does not belong to this log class");
+                "fast_*: pass the category as the first template argument; this category does not belong to this log class");
             return false;
         }
         template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
         bool fast_warning(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
         {
             static_assert(bq::fast_info_detail::always_false<Args...>::value,
-                "fast_*: this category does not belong to this log class");
+                "fast_*: pass the category as the first template argument; this category does not belong to this log class");
             return false;
         }
         template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
         bool fast_error(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
         {
             static_assert(bq::fast_info_detail::always_false<Args...>::value,
-                "fast_*: this category does not belong to this log class");
+                "fast_*: pass the category as the first template argument; this category does not belong to this log class");
             return false;
         }
         template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
         bool fast_fatal(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
         {
             static_assert(bq::fast_info_detail::always_false<Args...>::value,
-                "fast_*: this category does not belong to this log class");
+                "fast_*: pass the category as the first template argument; this category does not belong to this log class");
             return false;
         }
 #endif

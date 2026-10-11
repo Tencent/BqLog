@@ -387,7 +387,7 @@ namespace bq {
         bq::fast_inline::site_init_guard guard(&site);
         const uint32_t* current_level_word = bq::fast_inline::load_level_word_acquire(site);
         // a zeroed handle (no BQ_FAST_LOG_SITE_INITIALIZER) has a null level_word: also uninitialized
-        if (current_level_word && current_level_word != &bq::fast_inline::module_state<>::no_level) {
+        if (current_level_word && current_level_word != &bq::fast_inline::fast_inline_state<>::no_level) {
             return true;
         }
         bq::array<uint8_t> normalized;
@@ -419,7 +419,7 @@ namespace bq {
         if (!log.is_enabled_for(category_index, level)) {
             return false;
         }
-        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::module_state<>::no_level;
+        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::fast_inline_state<>::no_level;
         if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
             return log.do_log(category_index, level, format);
         }
@@ -444,7 +444,7 @@ namespace bq {
         if (!log.is_enabled_for(category_index, level)) {
             return false;
         }
-        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::module_state<>::no_level;
+        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::fast_inline_state<>::no_level;
         if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
             return log.do_log(category_index, level, format, first, args...);
         }
@@ -623,7 +623,7 @@ namespace bq {
 // BQ_LOG_FAST_*: lower latency log.info() and friends, BQ_LOG_FAST_INFO(log, [log.cat.xxx,] format, args...). A call site
 // binds the log object, category and format string of its first call and must keep using them; reset_config level and
 // category mask changes still apply.
-#define BQ_FAST_LOG_SITE_INITIALIZER { 0, 0, 0, nullptr, &bq::fast_inline::module_state<>::no_level }
+#define BQ_FAST_LOG_SITE_INITIALIZER { 0, 0, 0, nullptr, &bq::fast_inline::fast_inline_state<>::no_level }
 
 #define BQ_LOG_FAST_VERBOSE(log_obj, ...)                                                 \
     do {                                                                                  \

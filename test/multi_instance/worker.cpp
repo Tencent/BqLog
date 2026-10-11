@@ -232,13 +232,15 @@ int main(int argc, char** argv)
     const int committed = die_after >= 0 ? static_cast<int>(die_after < records ? die_after : records) : records;
     for (int i = 0; i < committed; ++i) {
         if (two_logs) {
-            // alternate between the two logs, same format strings
+            // Both logs use the SAME format strings (T04 spec); only the log object alternates.
+            // A macro site binds the log of its first call, so each log still needs its own site
+            // -- but the two sites register the same format and must end up on the same meta.
             if (i % 2 == 0) {
                 log.info("normal worker={} seq={}", worker_id, i);
                 BQ_LOG_FAST_INFO(log, "fast worker={} seq={}", worker_id, i);
             } else {
-                log_b.info("normal_b worker={} seq={}", worker_id, i);
-                BQ_LOG_FAST_INFO(log_b, "fast_b worker={} seq={}", worker_id, i);
+                log_b.info("normal worker={} seq={}", worker_id, i);
+                BQ_LOG_FAST_INFO(log_b, "fast worker={} seq={}", worker_id, i);
             }
         } else {
             log.info("normal worker={} seq={}", worker_id, i);

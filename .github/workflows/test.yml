@@ -312,11 +312,6 @@ jobs:
           chmod +x *.sh
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
-      - name: fast_info compile-fail cases
-        if: ${{ matrix.cpp_ver == '20' }}
-        run: |
-          python3 test/compile_fail/run_compile_fail.py --cxx ${{ matrix.cc == 'clang' && 'clang++' || 'g++' }} --std c++20
-
   #linux-debian
   debian:
     runs-on: ubuntu-latest

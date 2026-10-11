@@ -302,12 +302,12 @@ namespace bq {
         return handle;
     }
 
-    void siso_ring_buffer::advance_recovery_snapshot(uint32_t cursor)
+    void siso_ring_buffer::mark_persisted(const siso_ring_buffer::siso_buffer_batch_read_handle& handle)
     {
         // The recovery snapshot is what a restart resumes from. Advancing it per record, as soon
         // as that record has been persisted, means a crash mid-batch replays at most the current
         // record instead of the whole batch, without moving the reading_cursor the writer sees.
-        head_->rt_reading_cursor_cache_ = cursor;
+        head_->rt_reading_cursor_cache_ = handle.current_cursor_;
     }
 
     void siso_ring_buffer::return_batch_read_chunks(const siso_ring_buffer::siso_buffer_batch_read_handle& handle)
@@ -332,7 +332,7 @@ namespace bq {
         assert(handle.end_cursor_ == head_->rt_writing_cursor_cache_ && "invalid batch handle end cursor");
 #endif
         // The whole batch is consumed now: move the recovery snapshot to the batch end. During the
-        // batch, advance_recovery_snapshot() had already been moving it past each persisted record,
+        // batch, mark_persisted() had already been moving it past each persisted record,
         // so a crash mid-batch resumes from there rather than from the batch start. The writer's
         // reading_cursor is published here, once per batch, and never per record.
         head_->rt_reading_cursor_cache_ = handle.end_cursor_;
