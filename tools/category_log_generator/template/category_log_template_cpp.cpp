@@ -277,7 +277,8 @@ namespace bq {
         bool verbose(const ${CLASS_NAME}_category_base<CAT_INDEX>& category, const STR& log_format_content, const Args&... args) const;
         template<typename STR, uint32_t CAT_INDEX, bq::enable_if_t<bq::${CLASS_NAME}::is_${CLASS_NAME}_format_type<STR>::value, bool> = true>
         bool debug(const ${CLASS_NAME}_category_base<CAT_INDEX>& category, const STR& log_content) const;
-        template<typename STR, uint32_t CAT_INDEX, bq::enable_if_t<bq::${CLASS_NAME}::is_${CLASS_NAME}_format_type<STR>::value, bool> = true, typename...Args>
+)"
+            R"(        template<typename STR, uint32_t CAT_INDEX, bq::enable_if_t<bq::${CLASS_NAME}::is_${CLASS_NAME}_format_type<STR>::value, bool> = true, typename...Args>
         bool debug(const ${CLASS_NAME}_category_base<CAT_INDEX>& category, const STR& log_format_content, const Args&... args) const;
         template<typename STR, uint32_t CAT_INDEX, bq::enable_if_t<bq::${CLASS_NAME}::is_${CLASS_NAME}_format_type<STR>::value, bool> = true>
         bool info(const ${CLASS_NAME}_category_base<CAT_INDEX>& category, const STR& log_content) const;
