@@ -21,6 +21,8 @@
 #include "bq_log/log/appender/appender_file_base.h"
 #include "bq_log/log/appender/appender_file_binary.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
+#include "bq_log/log/appender/appender_file_text.h"
+#include "bq_log/global/log_vars.h"
 #include "bq_log/log/decoder/appender_decoder_base.h"
 #include "bq_log/log/decoder/appender_decoder_compressed.h"
 
@@ -167,6 +169,26 @@ namespace bq {
                     mark_write_finished();
                     flush_write_cache();
                 }
+                return get_pendding_flush_written_size() == 0;
+            }
+        };
+        class appender_file_text_recovery_for_test : public appender_file_text {
+        public:
+            // Same order as appender_file_base::try_recover(): begin marker, cached data, end marker.
+            bool write_recovery_block_for_test(const bq::string& path, const bq::string& cached_line)
+            {
+                if (!open_file_with_write_exclusive(path)) {
+                    return false;
+                }
+                if (!on_appender_file_recovery_begin()) {
+                    return false;
+                }
+                auto handle = alloc_write_cache(cached_line.size());
+                memcpy(handle.data(), cached_line.c_str(), cached_line.size());
+                return_write_cache(handle);
+                mark_write_finished();
+                flush_write_cache();
+                on_appender_file_recovery_end();
                 return get_pendding_flush_written_size() == 0;
             }
         };
@@ -552,6 +574,7 @@ namespace bq {
                     do_binary_segment_encryption_matrix_test(result, pub_key, priv_key);
                     do_binary_segment_key_boundary_test(result, pub_key, priv_key, pub_key_b);
                     do_binary_recovery_segment_test(result, pub_key);
+                    do_text_recovery_marker_test(result);
                     do_binary_recovery_mmap_test(result, pub_key, pub_key_b);
                     recovery_mmap_test_done_ = true;
                 }
@@ -1028,6 +1051,40 @@ namespace bq {
                     source_mode = target_mode;
                 }
                 clear_appender_file_base_test_folder();
+            }
+
+            void do_text_recovery_marker_test(test_result& result)
+            {
+                clear_appender_file_base_test_folder();
+                log_imp log_obj;
+                bq::array<bq::string> categories;
+                categories.push_back("");
+                const auto log_config = bq::property_value::create_from_string(R"(
+                    log.recovery=false
+                    appenders_config.appender_0.type=console
+                )");
+                if (!log_obj.init("text_recovery_marker_test", log_config, categories)) {
+                    result.add_result(false, "init text recovery marker parent log");
+                    return;
+                }
+                const auto appender_config = bq::property_value::create_from_string("type=text_file\n"
+                                                                                    "levels=[all]\n"
+                                                                                    "file_name=appender_test/text_recovery_marker\n"
+                                                                                    "base_dir_type=0\n"
+                                                                                    "enable_rolling_log_file=false\n");
+                const bq::string file_path = TO_ABSOLUTE_PATH("appender_test/text_recovery_marker_1.log", 0);
+                bool written = false;
+                {
+                    appender_file_text_recovery_for_test writer;
+                    written = writer.init("text_recovery_marker", appender_config, &log_obj)
+                        && writer.write_recovery_block_for_test(file_path, "recovered line\n");
+                }
+                result.add_result(written, "write text recovery block");
+                const bq::string expected = bq::string(log_global_vars::get().log_recover_start_str_) + "\n"
+                    + "recovered line\n"
+                    + log_global_vars::get().log_recover_end_str_ + "\n";
+                const bq::string content = bq::file_manager::read_all_text(file_path);
+                result.add_result(content == expected, "text appender recovery block ends with the RECOVER END marker, got:\n%s", content.c_str());
             }
 
             void do_binary_recovery_segment_test(test_result& result, const bq::string& pub_key)
