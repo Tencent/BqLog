@@ -184,6 +184,35 @@ namespace bq {
                     result.add_result(width_ok, "layout format width near the end of the buffer");
                 }
                 {
+                    // The sign and the "0x"/"0b" prefix of an integer need room on top of its digits.
+                    // Try every line length around the 1024 and 2048 byte buffer sizes, so the last
+                    // digit lands on the end of the buffer.
+                    bool hex_ok = true;
+                    bool hex_min_ok = true;
+                    bool bin_ok = true;
+                    bool bin_max_ok = true;
+                    bq::string padding;
+                    bq::string ones_63;
+                    for (uint32_t bit = 0; bit < 63; ++bit) {
+                        ones_63.push_back('1');
+                    }
+                    for (uint32_t pad = 0; pad < 2100; ++pad) {
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), (uint64_t)0xFFFFFFFFFFFFFFFFULL);
+                        hex_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "0xffffffffffffffff");
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), (int64_t)INT64_MIN);
+                        hex_min_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "-0x8000000000000000");
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), (int64_t)INT64_MAX);
+                        bin_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "+0b" + ones_63);
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), (uint64_t)0xFFFFFFFFFFFFFFFFULL);
+                        bin_max_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "+0b1" + ones_63);
+                        padding.push_back('a');
+                    }
+                    result.add_result(hex_ok, "layout format {:#x} of UINT64_MAX near the end of the buffer");
+                    result.add_result(hex_min_ok, "layout format {:#x} of INT64_MIN near the end of the buffer");
+                    result.add_result(bin_ok, "layout format {:+#b} of INT64_MAX near the end of the buffer");
+                    result.add_result(bin_max_ok, "layout format {:+#b} of UINT64_MAX near the end of the buffer");
+                }
+                {
                     const char* current_locale = setlocale(LC_NUMERIC, nullptr);
                     bq::string saved_locale = current_locale ? current_locale : "C";
                     const char* comma_locales[] = { "de-DE", "de_DE.UTF-8", "de_DE.utf8", "fr_FR.UTF-8", "fr_FR.utf8" };
