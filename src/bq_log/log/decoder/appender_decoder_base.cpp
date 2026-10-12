@@ -156,10 +156,14 @@ namespace bq {
     {
         auto left_size = cache_read_.size() - cache_read_cursor_;
         if (left_size < size) {
+            // A zero length read is only the end of the file when the segment chain ended there, so a
+            // broken chain or a failed read is reported to the caller instead of a silent stop.
+            read_of_file_eof_ = false;
             if (left_size == 0) {
                 while (static_cast<uint64_t>(current_file_cursor_) == cur_read_seg_.end_pos) {
                     auto result = read_to_next_segment();
                     if (result != appender_decode_result::success) {
+                        read_of_file_eof_ = (result == appender_decode_result::eof);
                         read_with_cache_handle empty_handle;
                         empty_handle.data_ = nullptr;
                         empty_handle.len_ = 0;

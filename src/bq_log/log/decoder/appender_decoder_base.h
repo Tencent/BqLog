@@ -72,6 +72,12 @@ namespace bq {
         // data() returned by read_with_cache_handle will be invalid after next calling of "read_with_cache"
         read_with_cache_handle read_with_cache(size_t size);
 
+        // A zero length read means the end of the file only when the segment chain ended there.
+        bq_forceinline bool is_read_of_file_eof() const
+        {
+            return read_of_file_eof_;
+        }
+
         void clear_read_cache();
 
         appender_decode_result do_decode_by_log_entry_handle(const bq::log_entry_handle& item);
@@ -99,6 +105,7 @@ namespace bq {
 
         bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;
+        bool read_of_file_eof_ = false;
 
 #if defined(BQ_UNIT_TEST)
         size_t peak_cache_read_size_ = 0;

@@ -76,6 +76,10 @@ bq::tuple<bq::appender_decode_result, bq::appender_file_compressed::item_type, b
     constexpr size_t VLQ_MAX_SIZE = bq::log_utils::vlq::vlq_max_bytes_count<uint32_t>();
     auto read_handle = read_with_cache(VLQ_MAX_SIZE + 1);
     if (read_handle.len() == 0) {
+        if (!is_read_of_file_eof()) {
+            bq::util::log_device_console(log_level::error, "decode compressed log file failed, the segment chain is broken");
+            return bq::make_tuple(bq::appender_decode_result::failed_decode_error, appender_file_compressed::item_type::log_template, read_handle);
+        }
         return bq::make_tuple(bq::appender_decode_result::eof, appender_file_compressed::item_type::log_template, read_handle);
     }
     if (read_handle.len() < 2) {

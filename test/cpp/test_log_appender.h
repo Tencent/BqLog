@@ -1252,6 +1252,19 @@ namespace bq {
                 return out;
             }
 
+            // A valid first segment linked to a corrupt head: the reader used to end the file there, so
+            // everything after the corruption was dropped with no sign of an incomplete decode.
+            static std::vector<uint8_t> malformed_file_with_broken_segment_chain()
+            {
+                std::vector<uint8_t> out = malformed_file_with_entry({ static_cast<uint8_t>(log_arg_type_enum::int32_type), 0x8A });
+                const uint64_t corrupt_head_pos = out.size();
+                for (uint32_t i = 0; i < 8; ++i) {
+                    out[8 + i] = static_cast<uint8_t>(corrupt_head_pos >> (8 * i)); // next_seg_pos of the first segment
+                }
+                out.insert(out.end(), sizeof(appender_file_binary::appender_file_segment_head), static_cast<uint8_t>(0));
+                return out;
+            }
+
             static appender_decode_result malformed_decode(const char* name, const std::vector<uint8_t>& bytes, bq::string& out_text)
             {
                 bq::string path = TO_ABSOLUTE_PATH(bq::string("bq_decoder_malformed_") + name + ".logcompr", 0);
@@ -1266,6 +1279,28 @@ namespace bq {
                     bq::tools::log_decoder decoder(path);
                     result = decoder.decode();
                     out_text = decoder.get_last_decoded_log_entry();
+                }
+                bq::file_manager::remove_file_or_dir(path);
+                return result;
+            }
+
+            // The end of the file reaches the caller as eof, so draining tells a broken segment chain from
+            // a decode that simply ran to the end.
+            static appender_decode_result malformed_decode_all(const char* name, const std::vector<uint8_t>& bytes)
+            {
+                bq::string path = TO_ABSOLUTE_PATH(bq::string("bq_decoder_drain_") + name + ".logcompr", 0);
+                {
+                    auto handle = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    bq::file_manager::instance().truncate_file(handle, 0);
+                    bq::file_manager::instance().write_file(handle, bytes.data(), bytes.size());
+                    bq::file_manager::instance().flush_file(handle);
+                }
+                appender_decode_result result = appender_decode_result::success;
+                {
+                    bq::tools::log_decoder decoder(path);
+                    while (result == appender_decode_result::success) {
+                        result = decoder.decode();
+                    }
                 }
                 bq::file_manager::remove_file_or_dir(path);
                 return result;
@@ -1291,6 +1326,10 @@ namespace bq {
                 huge_item.insert(huge_item.end(), 16, static_cast<uint8_t>(0));
                 result.add_result(malformed_decode("huge_item", huge_item, text) != appender_decode_result::success,
                     "decoder malformed file: item size larger than the file is rejected");
+                result.add_result(malformed_decode_all("valid", malformed_file_with_entry({ int32_type, 0x8A })) == appender_decode_result::eof,
+                    "decoder malformed file: draining a well formed file reaches the end of the file");
+                result.add_result(malformed_decode_all("broken_chain", malformed_file_with_broken_segment_chain()) == appender_decode_result::failed_decode_error,
+                    "decoder malformed file: a corrupt segment head linked from a valid one fails instead of ending the file");
             }
 
             // Writes bytes to a test file under appender_test/.
@@ -1338,6 +1377,27 @@ namespace bq {
                 decode_result = decode_internal_for_test(write_bytes_for_test("decoder_huge_item.logcompr", huge_item.data(), huge_item.size()), peak);
                 result.add_result(decode_result != appender_decode_result::success && peak < max_sane_cache,
                     "decoder: item size from the file does not drive the read cache size (peak %" PRIu64 ")", static_cast<uint64_t>(peak));
+            }
+
+            // An output file that stops in the middle of a record is indistinguishable from a complete one
+            // for the caller, so a failed write must be reported instead of a successful decode.
+            void do_decoder_write_failure_test(test_result& result)
+            {
+                const std::vector<uint8_t> file_bytes = malformed_file_with_entry({ static_cast<uint8_t>(log_arg_type_enum::int32_type), 0x8A });
+                const bq::string in_path = write_bytes_for_test("decoder_write_fail.logcompr", file_bytes.data(), file_bytes.size());
+                const bq::string out_path = TO_ABSOLUTE_PATH("appender_test/decoder_write_fail_out.txt", 0);
+                bq::file_manager::remove_file_or_dir(out_path);
+
+                const bool complete_decode_ok = bq::tools::log_decoder::decode_file(in_path, out_path, "");
+                bq::platform::test_inject::set_fault(bq::platform::test_inject::fault_kind::enospc_on_write);
+                const bool failed_decode_ok = bq::tools::log_decoder::decode_file(in_path, out_path, "");
+                bq::platform::test_inject::set_fault(bq::platform::test_inject::fault_kind::none);
+
+                result.add_result(complete_decode_ok && !failed_decode_ok,
+                    "decoder: a failed write is reported instead of a successful decode (clean:%d, disk_full:%d)",
+                    static_cast<int32_t>(complete_decode_ok), static_cast<int32_t>(failed_decode_ok));
+                bq::file_manager::remove_file_or_dir(out_path);
+                bq::file_manager::remove_file_or_dir(in_path);
             }
 
             // A truncated double must be rejected before any of its bytes are copied, and an entry ending right
@@ -1529,6 +1589,7 @@ namespace bq {
                 do_binary_appender_test_with_enc(result);
                 do_decoder_malformed_file_test(result);
                 do_decoder_untrusted_size_allocation_test(result);
+                do_decoder_write_failure_test(result);
                 do_decoder_fixed_size_arg_test(result);
                 do_decoder_truncated_vlq_arg_test(result);
                 do_compressed_utf8_leading_null_test(result);

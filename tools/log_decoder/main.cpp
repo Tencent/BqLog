@@ -144,6 +144,22 @@ static bq::string wchar_to_utf8(const wchar_t* wstr)
 }
 #endif
 
+// fwrite only fills the stdio buffer, so the tail has to be flushed explicitly and checked: a decode
+// that looks complete must not lose its last block on the way to the file.
+static bool write_stdout(const bq::string& text)
+{
+    if (text.is_empty()) {
+        return true;
+    }
+    const size_t written = fwrite(text.c_str(), 1, text.size(), stdout);
+    if (written != text.size()) {
+        CONSOLE_OUTPUT(bq::log_level::error, "error: write to stdout failed, %" PRIu64 " of %" PRIu64 " bytes written",
+            static_cast<uint64_t>(written), static_cast<uint64_t>(text.size()));
+        return false;
+    }
+    return true;
+}
+
 int32_t main(int32_t argc, char* argv[])
 {
 #if defined(WIN32)
@@ -225,23 +241,32 @@ int32_t main(int32_t argc, char* argv[])
     while (true) {
         auto decode_result = decoder.decode();
         if (decode_result == bq::appender_decode_result::eof) {
-            fwrite(output_cache.c_str(), 1, output_cache.size(), stdout);
+            if (!write_stdout(output_cache)) {
+                return 4;
+            }
             output_cache.clear();
             break;
         } else if (decode_result != bq::appender_decode_result::success) {
             output_cache += decoder.get_last_decoded_log_entry();
             output_cache.push_back('\n');
-            fwrite(output_cache.c_str(), 1, output_cache.size(), stdout);
+            const bool output_ok = write_stdout(output_cache);
             output_cache.clear();
             CONSOLE_OUTPUT(bq::log_level::error, "error: decode failed, reason:%" PRId32 "", static_cast<int32_t>(decoder.get_last_decode_result()));
-            return -1 * static_cast<int32_t>(decode_result);
+            return output_ok ? (-1 * static_cast<int32_t>(decode_result)) : 4;
         }
         output_cache += decoder.get_last_decoded_log_entry();
         output_cache.push_back('\n');
         if (output_cache.size() > 4 * 1024) { // Flush every 4K
-            fwrite(output_cache.c_str(), 1, output_cache.size(), stdout);
+            if (!write_stdout(output_cache)) {
+                return 4;
+            }
             output_cache.clear();
         }
+    }
+
+    if (fflush(stdout) != 0 || ferror(stdout) != 0) {
+        CONSOLE_OUTPUT(bq::log_level::error, "error: flush the decoded log to stdout failed");
+        return 4;
     }
 
     return 0;
