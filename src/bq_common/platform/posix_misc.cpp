@@ -212,9 +212,11 @@ namespace bq {
             return true;
         }
 
-        bool is_instance_lock_supported()
+        bool is_cross_process_file_lock_supported()
         {
 #if defined(BQ_PS) || (defined(BQ_UNIT_TEST) && defined(BQ_TEST_DISABLE_INSTANCE_LOCK))
+            // PlayStation file locks are not inherited across processes; the unit test build can
+            // compile the lock out to exercise a platform that has none.
             return false;
 #elif defined(F_OFD_SETLK) || (defined(LOCK_EX) && defined(LOCK_NB))
             return true;
@@ -232,13 +234,13 @@ namespace bq {
             (void)abs_path;
             return instance_lock_result::locked;
 #else
-            if (!is_instance_lock_supported()) {
-                bq::util::log_device_console(log_level::warning, "instance lock unsupported on this platform: %s", abs_path);
+            if (!is_cross_process_file_lock_supported()) {
+                bq::util::log_device_console(log_level::warning, "cross-process file lock unsupported on this platform: %s", abs_path);
                 return instance_lock_result::error;
             }
             int32_t fd = ::open(abs_path, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
             if (fd < 0) {
-                bq::util::log_device_console(log_level::warning, "instance lock open failed: %s, errno:%d", abs_path, errno);
+                bq::util::log_device_console(log_level::warning, "file lock open failed: %s, errno:%d", abs_path, errno);
                 return instance_lock_result::error;
             }
             bool locked = false;
@@ -254,7 +256,7 @@ namespace bq {
                 // else has an errno that says whether another description holds the lock.
                 const int err = errno;
                 if (err != EAGAIN && err != EACCES && err != EWOULDBLOCK) {
-                    bq::util::log_device_console(log_level::warning, "instance lock fcntl failed: %s, errno:%d", abs_path, err);
+                    bq::util::log_device_console(log_level::warning, "file lock fcntl failed: %s, errno:%d", abs_path, err);
                     ::close(fd);
                     return instance_lock_result::error;
                 }
@@ -272,12 +274,12 @@ namespace bq {
                 if (err == EAGAIN || err == EACCES || err == EWOULDBLOCK) {
                     return instance_lock_result::held_by_other;
                 }
-                bq::util::log_device_console(log_level::warning, "instance lock flock failed: %s, errno:%d", abs_path, err);
+                bq::util::log_device_console(log_level::warning, "file lock flock failed: %s, errno:%d", abs_path, err);
                 return instance_lock_result::error;
             }
 #else
             if (!locked) {
-                bq::util::log_device_console(log_level::warning, "instance locks unsupported by this kernel: OFD locks or native flock required (%s)", abs_path);
+                bq::util::log_device_console(log_level::warning, "no cross-process file lock on this kernel: OFD locks or native flock required (%s)", abs_path);
                 ::close(fd);
                 return instance_lock_result::error;
             }

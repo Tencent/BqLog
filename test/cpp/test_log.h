@@ -41,7 +41,7 @@ namespace bq {
 			            log.thread_mode=sync
 
 			        )"
-                    + bq::string(bq::log::is_recovery_supported() ? "\nlog.recovery=true\n" : "\nlog.recovery=false\n") + snapshot_config);
+                    + bq::string(recovery_available() ? "\nlog.recovery=true\n" : "\nlog.recovery=false\n") + snapshot_config);
         }
 
         static void log_creator_2(bq::string snapshot_config = "")

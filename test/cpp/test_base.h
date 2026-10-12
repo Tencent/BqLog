@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "bq_common/bq_common.h"
+#include "bq_log/bq_log.h"
 
 namespace bq {
     namespace test {
@@ -71,6 +72,18 @@ namespace bq {
         printf(FORMAT, __VA_ARGS__);                                        \
         fflush(stdout);                                                     \
     }
+
+        // Recovery needs a memory map and a cross-process file lock, so the suites that exercise
+        // it ask the library instead of testing the platform themselves.
+        inline bool recovery_available()
+        {
+            return bq::log::get_recovery_capability() == bq::recovery_capability::ready;
+        }
+
+        inline void skip_recovery_tests(const char* subject)
+        {
+            test_output_param(bq::log_level::info, "SKIP %s tests: no platform recovery support\n", subject);
+        }
 
         extern std::string get_test_output();
     }

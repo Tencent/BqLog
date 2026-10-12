@@ -232,7 +232,7 @@ appenders_config.appender_3.file_name=~/bqLog/compress_log
 - `true`：当异步日志遇到程序异常退出时，缓冲区中还未落盘的数据会在下次启动后重新写入日志文件。
 - `false`：进程异常退出且未调用 `force_flush()` 时，缓冲中的日志数据将丢失。
 
-该功能需要一把由操作系统在进程崩溃时释放的实例锁；`bq::log::is_recovery_supported()` 可判断平台是否具备，缺少时配置 `true` 会说明原因并终止。
+该功能需要可写的内存映射，以及一把由操作系统在进程崩溃时释放的锁；`bq::log::get_recovery_capability()` 可判断两者是否具备、缺哪一项。缺少时配置 `true` 仍会照常创建日志，只是不启用恢复并打印一条警告。
 
 具体行为详见 [高级用法 — 程序异常退出的数据保护](./ADVANCED_USAGE_CHS.md#3-程序异常退出的数据保护)。
 

@@ -16,7 +16,13 @@
 /// </summary>
 /// <returns></returns>
 BQ_API_DEF(const char*, __api_get_log_version, (void), ());
-BQ_API_DEF(uint32_t, __api_is_recovery_supported, (void), ());
+
+/// <summary>
+/// What this platform offers for crash recovery, and what is missing when it is not available:
+/// recovery needs a memory map and a lock that keeps the other processes out.
+/// </summary>
+/// <returns></returns>
+BQ_API_DEF(BQ_LOG_API_TYPE(recovery_capability, bq_recovery_capability), __api_get_recovery_capability, (void), ());
 
 /// <summary>
 /// BqLog is asynchronous by default, logs may not be flushed when crash is occurred.

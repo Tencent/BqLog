@@ -15,6 +15,7 @@
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_manager.h"
 #include "bq_log/log/log_imp.h"
+#include "bq_log/utils/log_utils.h"
 #include "bq_log/log/appender/appender_file_base.h"
 #include "bq_log/log/appender/appender_console.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"
@@ -42,9 +43,9 @@ namespace bq {
     namespace api {
         static_assert(sizeof(uintptr_t) == sizeof(log_imp*), "invalid pointer size");
 
-        BQ_API uint32_t __api_is_recovery_supported()
+        BQ_API bq::recovery_capability __api_get_recovery_capability()
         {
-            return bq::memory_map::is_platform_support() && platform::is_instance_lock_supported() ? 1u : 0u;
+            return log_utils::get_recovery_capability();
         }
 
         BQ_API const char* __api_get_log_version()

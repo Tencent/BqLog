@@ -463,7 +463,7 @@ namespace bq {
             // 7. crash recovery: records written by fast_info come back with their format
             static void test_recovery(test_result& result)
             {
-                if (!bq::log::is_recovery_supported()) {
+                if (!recovery_available()) {
                     return;
                 }
                 const bq::string name = make_name("recovery");

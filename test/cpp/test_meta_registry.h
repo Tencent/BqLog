@@ -29,7 +29,7 @@ namespace bq {
             // skip everything, which is how the continuation-segment bug went unnoticed.
             static bool instance_available()
             {
-                if (!bq::log::is_recovery_supported()) {
+                if (!recovery_available()) {
                     return false;
                 }
                 if (bq::instance_storage::get()) {
@@ -392,13 +392,13 @@ namespace bq {
                 test_dedupe(result);
                 test_verify_entry(result);
                 test_register_race(result);
-                if (bq::log::is_recovery_supported()) {
+                if (recovery_available()) {
                     test_meta_record_content(result);
                     test_cleanup_expired(result);
                     test_cleanup_wraparound(result);
                     test_segment_head_validation(result);
                 } else {
-                    test_output(bq::log_level::info, "SKIP meta recovery tests: platform recovery unsupported\n");
+                    skip_recovery_tests("meta recovery");
                 }
                 return result;
             }

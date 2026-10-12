@@ -140,8 +140,9 @@ namespace bq {
             error,
         };
 
-        // Reports whether this build provides an instance lock with description ownership.
-        bool is_instance_lock_supported();
+        // Whether this platform can lock a file for the lifetime of the open description, which is
+        // what keeps a second process out and what the kernel releases when a process dies.
+        bool is_cross_process_file_lock_supported();
 
         // Non-blocking lock, exclusive between runtimes in one process; released with the description.
         // The lock file is never deleted.

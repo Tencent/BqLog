@@ -398,13 +398,13 @@ See also: [Advanced Usage — Data protection on abnormal exit](./ADVANCED_USAGE
 
 ### Recovery capability
 
-`log.recovery=true` needs memory mapping and an instance lock the kernel releases on a crash. Ask before configuring it:
+`log.recovery=true` needs a memory map and a lock that keeps the other processes out. Ask before turning it on:
 
 <details open>
 <summary><b>C++</b></summary>
 
 ```cpp
-bq::log::is_recovery_supported();
+bq::recovery_capability capability = bq::log::get_recovery_capability();
 ```
 </details>
 
@@ -412,11 +412,51 @@ bq::log::is_recovery_supported();
 <summary><b>Native C ABI</b></summary>
 
 ```c
-uint32_t __api_is_recovery_supported(void); // 0 or 1
+bq_recovery_capability __api_get_recovery_capability(void);
 ```
 </details>
 
-The other wrappers do not expose the query yet. Requesting `log.recovery=true` where the platform has no such lock prints the reason and aborts, in debug and release builds alike. The query itself says nothing about disk permissions or free space.
+<details>
+<summary><b>Java / Kotlin</b></summary>
+
+```java
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>C#</b></summary>
+
+```csharp
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>TypeScript</b></summary>
+
+```typescript
+const capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>Python</b></summary>
+
+```python
+capability = log.get_recovery_capability()
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+capability := bq.Get_recovery_capability()
+```
+</details>
+
+`ready` means recovery can be enabled; otherwise the value names what is missing (`no_memory_map`, `no_instance_lock`). Asking for `log.recovery=true` anyway is safe: the log is created without recovery and a warning names the missing piece. The answer says nothing about disk permissions or free space.
 
 ---
 

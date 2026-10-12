@@ -15,6 +15,10 @@
 namespace bq {
     class log_utils {
     public:
+        // The only place that decides what crash recovery needs from the platform: a memory map
+        // back the buffers, and a file lock that keeps the other processes out.
+        static recovery_capability get_recovery_capability();
+
         template <typename T>
         struct is_signed {
         public:

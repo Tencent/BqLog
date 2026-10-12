@@ -398,13 +398,13 @@ bq.Enable_auto_crash_handle()
 
 ### 恢复能力查询
 
-`log.recovery=true` 需要内存映射，以及一把由内核在崩溃时释放的实例锁。配置前先查询：
+`log.recovery=true` 需要内存映射，以及一把能挡住其它进程的锁。配置前先查询：
 
 <details open>
 <summary><b>C++</b></summary>
 
 ```cpp
-bq::log::is_recovery_supported();
+bq::recovery_capability capability = bq::log::get_recovery_capability();
 ```
 </details>
 
@@ -412,11 +412,51 @@ bq::log::is_recovery_supported();
 <summary><b>原生 C ABI</b></summary>
 
 ```c
-uint32_t __api_is_recovery_supported(void); // 返回 0 或 1
+bq_recovery_capability __api_get_recovery_capability(void);
 ```
 </details>
 
-其余包装层暂未暴露该查询。平台没有这种锁时，配置 `log.recovery=true` 会说明原因并终止，Debug 与 Release 构建均如此；该查询本身不涉及磁盘权限与可用空间。
+<details>
+<summary><b>Java / Kotlin</b></summary>
+
+```java
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>C#</b></summary>
+
+```csharp
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>TypeScript</b></summary>
+
+```typescript
+const capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>Python</b></summary>
+
+```python
+capability = log.get_recovery_capability()
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+capability := bq.Get_recovery_capability()
+```
+</details>
+
+返回 `ready` 表示可以开启恢复；否则返回值说明缺什么（`no_memory_map`、`no_instance_lock`）。即使仍然配置 `log.recovery=true` 也是安全的：日志照常创建，只是不启用恢复，并打印一条指出缺失项的警告。该查询不涉及磁盘权限与可用空间。
 
 ---
 

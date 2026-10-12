@@ -173,13 +173,16 @@ namespace bq {
                 }
                 if (log_config["recovery"].is_bool()) {
                     const bool recovery_requested = (bool)log_config["recovery"];
-                    if (recovery_requested && !platform::is_instance_lock_supported()) {
-                        // recovery data is only safe when the instances can see each other; asking for it
-                        // here would silently write data no other process can trust, so refuse loudly.
-                        util::log_device_console(log_level::fatal, "log %s: recovery is not supported on this platform, see bq::log::is_recovery_supported()", name_.c_str());
-                        abort();
+                    const recovery_capability capability = log_utils::get_recovery_capability();
+                    if (recovery_requested && capability != recovery_capability::ready) {
+                        // recovery data is only safe when the instances can see each other, so this
+                        // stays a warning: the caller can query the capability before enabling it.
+                        util::log_device_console(log_level::warning,
+                            "log %s: recovery needs %s and this platform has none, so recovery stays off",
+                            name_.c_str(),
+                            capability == recovery_capability::no_memory_map ? "a writable memory map" : "a cross-process file lock");
                     }
-                    buffer_config.need_recovery = recovery_requested && bq::memory_map::is_platform_support();
+                    buffer_config.need_recovery = recovery_requested && capability == recovery_capability::ready;
                 }
                 if (log_config["buffer_policy_when_full"].is_string()) {
                     if (((bq::string)log_config["buffer_policy_when_full"]).equals_ignore_case("discard")) {

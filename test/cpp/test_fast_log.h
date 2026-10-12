@@ -292,7 +292,7 @@ namespace bq {
 
             static void test_recovery(test_result& result)
             {
-                if (!bq::log::is_recovery_supported()) {
+                if (!recovery_available()) {
                     return;
                 }
                 if (auto* inst0 = bq::instance_storage::get()) {
@@ -563,7 +563,7 @@ namespace bq {
             // destroying a log_buffer with unread records leaves the same memory map as a crash
             static void test_recovery_cross(test_result& result)
             {
-                if (!bq::log::is_recovery_supported()) {
+                if (!recovery_available()) {
                     return;
                 }
                 char name[96];
@@ -758,7 +758,7 @@ namespace bq {
             // writes from several threads and is then destroyed unread; the next create_log of the same name recovers it.
             static void test_log_crash_recovery(test_result& result)
             {
-                if (!bq::log::is_recovery_supported()) {
+                if (!recovery_available()) {
                     return;
                 }
                 char name[96];

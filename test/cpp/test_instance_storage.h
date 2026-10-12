@@ -67,8 +67,8 @@ namespace bq {
 
             static void test_lock_primitive(test_result& result)
             {
-                if (!platform::is_instance_lock_supported()) {
-                    test_output(bq::log_level::info, "SKIP instance lock tests: platform instance locks unsupported\n");
+                if (!platform::is_cross_process_file_lock_supported()) {
+                    test_output(bq::log_level::info, "SKIP file lock tests: no cross-process file lock on this platform\n");
                     return;
                 }
                 const bq::string lock_dir = TO_ABSOLUTE_PATH("bqlog_mmap_test_locks", 0);
@@ -90,8 +90,8 @@ namespace bq {
 
             static void test_instance_identity(test_result& result)
             {
-                if (!bq::log::is_recovery_supported()) {
-                    test_output(bq::log_level::info, "SKIP instance identity test: platform recovery unsupported\n");
+                if (!recovery_available()) {
+                    skip_recovery_tests("instance identity");
                     return;
                 }
                 auto* inst1 = bq::instance_storage::acquire();
@@ -188,9 +188,25 @@ namespace bq {
                 }
             }
 
+            // Asking for recovery where the platform cannot provide it must degrade with a warning
+            // and still hand back a usable log; it must never take the process down.
+            static void test_explicit_recovery_without_support(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "instance_forced_recovery_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string config = "appenders_config.console.type=console\n"
+                                          "appenders_config.console.levels=[all]\n"
+                                          "log.recovery=true\n"
+                                          "log.thread_mode=sync\n";
+                bq::log log = bq::log::create_log(name, config);
+                result.add_result(log.is_valid(), "recovery=true still creates a usable log where unsupported");
+                log.info("forced recovery line");
+                log.force_flush();
+            }
+
             static void test_recovery_lp_mmap(test_result& result)
             {
-                if (!bq::log::is_recovery_supported()) {
+                if (!recovery_available()) {
                     return;
                 }
                 char name[96];
@@ -236,7 +252,7 @@ namespace bq {
             // round must recover both exactly once. Covers the oversize wraparound bug.
             static void test_run_version_wraparound_recovery(test_result& result)
             {
-                if (!bq::log::is_recovery_supported() || !instance_available()) {
+                if (!recovery_available() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -313,7 +329,7 @@ namespace bq {
             // larger than the current run (65535 -> 1).
             static void test_run_version_oversize_wrap_parent(test_result& result)
             {
-                if (!bq::log::is_recovery_supported() || !instance_available()) {
+                if (!recovery_available() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -379,7 +395,7 @@ namespace bq {
             // T05: more than MAX_RECOVERY_VERSION_RANGE runs later, data is stale and discarded
             static void test_run_version_stale_discard(test_result& result)
             {
-                if (!bq::log::is_recovery_supported() || !instance_available()) {
+                if (!recovery_available() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -410,7 +426,7 @@ namespace bq {
             // T05: within MAX_RECOVERY_VERSION_RANGE runs, data is still recovered
             static void test_run_version_window_recovery(test_result& result)
             {
-                if (!bq::log::is_recovery_supported() || !instance_available()) {
+                if (!recovery_available() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -442,7 +458,7 @@ namespace bq {
             // must never be recovered
             static void test_run_version_serial_guard(test_result& result)
             {
-                if (!bq::log::is_recovery_supported() || !instance_available()) {
+                if (!recovery_available() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -473,15 +489,17 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
-                result.add_result(bq::log::is_recovery_supported()
-                        == (bq::memory_map::is_platform_support() && platform::is_instance_lock_supported()),
-                    "recovery capability matches mmap and safe instance locks");
+                const recovery_capability capability = bq::log::get_recovery_capability();
+                result.add_result(capability == recovery_capability::ready
+                        || capability == recovery_capability::no_memory_map
+                        || capability == recovery_capability::no_instance_lock,
+                    "recovery capability reports one of its three states");
                 test_escape_name(result);
                 test_lock_primitive(result);
                 test_instance_identity(result);
                 test_cleanup_legacy_dirs(result);
                 test_no_recovery_no_disk(result);
-                if (bq::log::is_recovery_supported()) {
+                if (recovery_available()) {
                     test_recovery_lp_mmap(result);
                     test_run_version_increment(result);
                     test_run_version_wraparound_recovery(result);
@@ -490,7 +508,8 @@ namespace bq {
                     test_run_version_window_recovery(result);
                     test_run_version_serial_guard(result);
                 } else {
-                    test_output(bq::log_level::info, "SKIP instance recovery tests: platform recovery unsupported\n");
+                    skip_recovery_tests("instance recovery");
+                    test_explicit_recovery_without_support(result);
                 }
                 return result;
             }

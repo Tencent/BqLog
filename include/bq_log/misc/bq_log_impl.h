@@ -45,9 +45,9 @@ namespace bq {
         return api::__api_get_log_version();
     }
 
-    inline bool log::is_recovery_supported()
+    inline recovery_capability log::get_recovery_capability()
     {
-        return api::__api_is_recovery_supported() != 0;
+        return api::__api_get_recovery_capability();
     }
 
     inline void log::enable_auto_crash_handle()

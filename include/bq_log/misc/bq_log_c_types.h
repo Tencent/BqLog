@@ -29,6 +29,12 @@ namespace bq {
         failed_decode_error,
         failed_io_error
     };
+
+    enum class recovery_capability : int32_t {
+        ready = 0, // crash recovery can be enabled on this platform
+        no_memory_map, // the buffers cannot be backed by a memory map, so nothing survives a crash
+        no_instance_lock // no cross-process file lock, so a second process cannot be kept out
+    };
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) cpp_type
 #define BQ_LOG_ABI_CHAR16 char16_t
 #else
@@ -53,6 +59,12 @@ enum bq_appender_decode_result_value {
     bq_appender_decode_result_failed_invalid_handle,
     bq_appender_decode_result_failed_decode_error,
     bq_appender_decode_result_failed_io_error
+};
+typedef int32_t bq_recovery_capability;
+enum bq_recovery_capability_value {
+    bq_recovery_capability_ready = 0,
+    bq_recovery_capability_no_memory_map,
+    bq_recovery_capability_no_instance_lock
 };
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) c_type
 #define BQ_LOG_ABI_CHAR16 uint16_t
@@ -136,6 +148,7 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
     static_assert(sizeof(log_level) == sizeof(int32_t), "32-bit log level ABI");
     static_assert(sizeof(enum_buffer_result_code) == sizeof(int32_t), "32-bit buffer result ABI");
     static_assert(sizeof(appender_decode_result) == sizeof(int32_t), "32-bit decoder result ABI");
+    static_assert(sizeof(recovery_capability) == sizeof(int32_t), "32-bit recovery capability ABI");
     BQ_MODULE_EXPORT_END
 }
 #else

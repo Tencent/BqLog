@@ -269,7 +269,7 @@ namespace bq {
             categories.push_back("CategoryA.ModuleB");
             categories.push_back("CategoryB");
             bq::property_value log_config = bq::property_value::create_from_string(
-                bq::string("log.recovery=") + (bq::log::is_recovery_supported() ? "true" : "false")
+                bq::string("log.recovery=") + (recovery_available() ? "true" : "false")
                 + "\nappenders_config.appender_0.type=console\n");
             log_obj.init(test_name, log_config, categories);
             bq::string appender_config_str = R"(
@@ -1037,8 +1037,8 @@ namespace bq {
 
             void do_binary_recovery_mmap_test(test_result& result, const bq::string& pub_key_a, const bq::string& pub_key_b)
             {
-                if (!bq::log::is_recovery_supported()) {
-                    test_output(bq::log_level::info, "SKIP appender recovery tests: platform recovery unsupported\n");
+                if (!recovery_available()) {
+                    skip_recovery_tests("appender recovery");
                     return;
                 }
                 clear_appender_file_base_test_folder();
@@ -1095,8 +1095,8 @@ namespace bq {
 
             void do_binary_recovery_segment_test(test_result& result, const bq::string& pub_key)
             {
-                if (!bq::log::is_recovery_supported()) {
-                    test_output(bq::log_level::info, "SKIP appender recovery tests: platform recovery unsupported\n");
+                if (!recovery_available()) {
+                    skip_recovery_tests("appender recovery");
                     return;
                 }
                 clear_appender_file_base_test_folder();
