@@ -602,36 +602,30 @@ namespace bq {
             uint32_t fill_count = format_info_.width - dis;
             // alignment right
             if (format_info_.align == '>') {
-                uint32_t ignore = 0;
-                uint32_t ignore_index = 0;
-                // move
-                for (uint32_t i = 1; i <= dis; i++) {
-                    uint32_t opt_index = write_begin_pos + format_info_.width - i;
-                    uint32_t move_index = write_begin_pos + (dis - i);
-
-                    // keep the sign in front
-                    if ((format_content[move_index] == '+' || format_content[move_index] == '-') && format_info_.fill != ' ') {
-                        format_content[opt_index] = format_info_.fill;
-                        ignore = 1;
-                        continue;
+                // zero padding goes after the sign and the 0x/0b prefix, any other fill in front
+                uint32_t lead = 0;
+                if (format_info_.fill == '0' && dis > 0) {
+                    char first = format_content[write_begin_pos];
+                    if (first == '+' || first == '-') {
+                        lead = 1;
                     }
-                    if (format_info_.fill == '0' && format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x')) {
-                        if (format_content[move_index] == 'b' || format_content[move_index] == 'B' || format_content[move_index] == 'x' || format_content[move_index] == 'X') {
-                            format_content[opt_index] = format_info_.fill;
-                            ignore_index = move_index - 1;
-                            ignore = 2;
-                            continue;
+                    if (format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x') && lead + 2 <= dis
+                        && format_content[write_begin_pos + lead] == '0') {
+                        char c = format_content[write_begin_pos + lead + 1];
+                        if (c == 'b' || c == 'B' || c == 'x' || c == 'X') {
+                            lead += 2;
                         }
                     }
-                    if (ignore == 2 && ignore_index == move_index) {
-                        format_content[opt_index] = format_info_.fill;
-                        continue;
-                    }
+                }
+                // move
+                for (uint32_t i = 1; i <= dis - lead; i++) {
+                    uint32_t opt_index = write_begin_pos + format_info_.width - i;
+                    uint32_t move_index = write_begin_pos + (dis - i);
                     format_content[opt_index] = format_content[move_index];
                 }
                 // fill
-                for (uint32_t i = ignore; i < fill_count; i++) {
-                    uint32_t opt_index = write_begin_pos + i;
+                for (uint32_t i = 0; i < fill_count; i++) {
+                    uint32_t opt_index = write_begin_pos + lead + i;
                     format_content[opt_index] = format_info_.fill;
                 }
             }

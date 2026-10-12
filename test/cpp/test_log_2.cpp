@@ -145,6 +145,13 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|010|-052|0|01777777777777777777777|"), "layout format octal alternate form");
                 log_inst.error(log_inst.cat.ModuleB, "|{:#6o}|{:#06o}|", 8, 8);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   010|000010|"), "layout format octal alternate form with width");
+                // Zero padding goes after the sign and the 0x/0b prefix; any other fill goes in front of both.
+                log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|{:+#010x}|{:#010b}|{:#010X}|", -42, 42, -5, static_cast<int64_t>(-255));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0x000002a|+0x000002a|-0b0000101|-0X00000FF|"), "layout format zero padding after sign and prefix");
+                log_inst.error(log_inst.cat.ModuleB, "|{:*>8}|{:*>+8}|{:*>#8x}|", -42, 42, -42);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|*****-42|*****+42|***-0x2a|"), "layout format fill in front of sign and prefix");
+                log_inst.error(log_inst.cat.ModuleB, "|{:015.3e}|", 1500.0);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0000001.500e+03|"), "layout format zero padding with an exponent sign");
                 double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
