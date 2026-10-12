@@ -197,13 +197,13 @@ namespace bq {
                         ones_63.push_back('1');
                     }
                     for (uint32_t pad = 0; pad < 2100; ++pad) {
-                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), (uint64_t)0xFFFFFFFFFFFFFFFFULL);
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), static_cast<uint64_t>(0xFFFFFFFFFFFFFFFFULL));
                         hex_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "0xffffffffffffffff");
-                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), (int64_t)INT64_MIN);
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), static_cast<int64_t>(INT64_MIN));
                         hex_min_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "-0x8000000000000000");
-                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), (int64_t)INT64_MAX);
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), static_cast<int64_t>(INT64_MAX));
                         bin_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "+0b" + ones_63);
-                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), (uint64_t)0xFFFFFFFFFFFFFFFFULL);
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), static_cast<uint64_t>(0xFFFFFFFFFFFFFFFFULL));
                         bin_max_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "+0b1" + ones_63);
                         padding.push_back('a');
                     }
