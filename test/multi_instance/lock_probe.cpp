@@ -51,7 +51,7 @@ public:
 int main()
 {
     using namespace bq::platform;
-    if (!is_instance_lock_supported()) {
+    if (!is_cross_process_file_lock_supported()) {
         printf("SKIP instance lock probe: platform has no supported OFD/native flock backend\n");
         return 77;
     }

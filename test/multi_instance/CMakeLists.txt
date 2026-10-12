@@ -152,5 +152,6 @@ foreach(case M1 M2 M3 M4 M5 M6 M7 M8 M9)
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run.py --case ${case}
                 --worker $<TARGET_FILE:bq_multi_instance_worker>
                 --out ${CMAKE_BINARY_DIR}/mi_out)
-    set_tests_properties(multi_instance_${case} PROPERTIES SKIP_RETURN_CODE 77)
+    # a hang must fail in minutes, not run out the job: the slowest case needs a few seconds
+    set_tests_properties(multi_instance_${case} PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 endforeach()

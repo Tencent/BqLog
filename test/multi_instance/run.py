@@ -53,6 +53,17 @@ def read_lines(path):
         return []
 
 
+def dump_captures(out, name, limit=40):
+    # a case that hangs leaves nothing behind except these files, so print them on failure
+    for path in sorted((out / name).glob("worker_*.stdout.txt")):
+        lines = read_lines(path)
+        if not lines:
+            continue
+        print(f"--- {name}/{path.name} (last {limit} lines) ---")
+        for line in lines[-limit:]:
+            print("   " + line)
+
+
 def check_records(exe_args_done, cwd, worker_ids, records, two_logs=False, allowed_foreign=()):
     """Verify each worker's output file holds exactly its own records in seq order.
 
@@ -448,12 +459,15 @@ def case_M6(exe, out, records):
     cwd.mkdir(parents=True)
     captures, children = [], []
     mmap_dir = cwd / "bqlog_mmap" / "mmap_m6_log"
-    # legacy writes many times the new worker's count so it is still running
-    # when the new worker claims its instance and runs cleanup_legacy_dirs
-    # (keep the count modest: each record embeds a 128 KB oversize string)
-    legacy_records = max(records * 32, 8192)
+    # legacy has to still be running when the new worker claims its instance and runs
+    # cleanup_legacy_dirs. A larger record count does not buy that time: the 2.6.0 runtime keeps
+    # one mmap segment, and one open file, per record for a second, so a big count exhausts its
+    # file descriptors (errno 24) and it never finishes. Keep the volume small and pace it.
+    legacy_records = max(records, 512)
+    legacy_pace_ms = 4
     try:
-        children.append(spawn(legacy, cwd, ["0", "m6_log", str(legacy_records)], captures, "worker_0"))
+        children.append(spawn(legacy, cwd, ["0", "m6_log", str(legacy_records),
+            "--pace-ms", str(legacy_pace_ms)], captures, "worker_0"))
         # wait until the legacy worker is producing output, then race the new
         # worker against it
         deadline = time.monotonic() + RECORD_TIMEOUT
@@ -480,7 +494,7 @@ def case_M6(exe, out, records):
         if not mmap_dir.exists():
             fail("mmap_m6_log was removed while the legacy worker still holds it")
         # after legacy exits and a fresh new worker runs, cleanup removes it
-        code0 = children[0].wait(timeout=RECORD_TIMEOUT * 10)
+        code0 = children[0].wait(timeout=RECORD_TIMEOUT)
         if code0 != 0:
             fail(f"legacy worker exit code {code0}")
         legacy_problems = check_records(None, cwd, [0], legacy_records)
@@ -678,6 +692,7 @@ def main():
         print(f"{name}: {status}")
         if not result["passed"]:
             print(f"  {result.get('error', 'unknown error')}")
+            dump_captures(out, name)
         sys.stdout.flush()
     (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return 1 if failed else 0

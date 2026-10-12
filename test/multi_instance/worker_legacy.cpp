@@ -19,13 +19,20 @@ static void write_text_file(const std::string& path, const std::string& content)
 int main(int argc, char** argv)
 {
     if (argc < 4) {
-        std::fprintf(stderr, "usage: worker <worker-id> <log-name> <records>\n");
+        std::fprintf(stderr, "usage: worker <worker-id> <log-name> <records> [--pace-ms N]\n");
         return 2;
     }
     const int worker_id = std::atoi(argv[1]);
     const int records = std::atoi(argv[3]);
     if (worker_id < 0 || records <= 0) {
         return 2;
+    }
+    // M6 needs this worker to still be writing when the new runtime joins. The 2.6.0 runtime
+    // keeps one mmap segment, and one open file, per record for a second, so a bigger count
+    // costs file descriptors instead of buying time; pacing is what keeps the writer alive.
+    int pace_ms = 0;
+    if (argc >= 6 && std::strcmp(argv[4], "--pace-ms") == 0) {
+        pace_ms = std::atoi(argv[5]);
     }
     const std::string id = std::to_string(worker_id);
     const std::string config = "log.thread_mode=async\n"
@@ -54,6 +61,9 @@ int main(int argc, char** argv)
         BQ_LOG_FAST_INFO(log, "fast worker={} seq={}", worker_id, i);
         if (i % 32 == 0) {
             log.info("oversize worker={} seq={} {}", worker_id, i, large.c_str());
+        }
+        if (pace_ms > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(pace_ms));
         }
     }
     log.force_flush();
