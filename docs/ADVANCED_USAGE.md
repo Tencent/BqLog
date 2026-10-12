@@ -211,7 +211,11 @@ When this item is `true`, BqLog will try to use platform features on some platfo
 
 Specific implementation details depend on operating system capabilities and will be continuously enhanced in future versions.
 
-Recovery needs a writable memory map and a lock the OS releases when the process dies, and not every platform offers both. Ask `bq::log::get_recovery_capability()` — every wrapper exposes it — before enabling `log.recovery=true`. Where recovery cannot work, the log is created without it and a warning names the missing piece, so leaving `log.recovery` alone is always safe.
+Most platforms keep recovery data; a few (Solaris, for one) cannot. Ask [`get_recovery_capability()`](./API_REFERENCE.md#recovery-capability) before enabling it. Where it is unavailable the log is created without recovery and the console prints:
+
+```
+[Bq]log <name>: recovery needs a cross-process file lock and this platform has none, so recovery stays off
+```
 
 ---
 

@@ -229,8 +229,7 @@ public class log {
     }
 
     /**
-     * Whether crash recovery can work here, and what is missing when it cannot: recovery needs a
-     * memory map and a lock that keeps the other processes out.
+     * Whether crash recovery can work here, and what is missing when it cannot.
      * @return One of the recovery_capability values.
      */
     public static recovery_capability get_recovery_capability()

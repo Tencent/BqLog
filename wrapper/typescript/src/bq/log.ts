@@ -63,8 +63,7 @@ export class log {
     }
 
     /**
-     * Whether crash recovery can work here, and what is missing when it cannot: recovery needs a
-     * memory map and a lock that keeps the other processes out.
+     * Whether crash recovery can work here, and what is missing when it cannot.
      */
     public static get_recovery_capability(): recovery_capability {
         return log_invoker.__api_get_recovery_capability() as recovery_capability;

@@ -456,7 +456,7 @@ capability := bq.Get_recovery_capability()
 ```
 </details>
 
-返回 `ready` 表示可以开启恢复；否则返回值说明缺什么（`no_memory_map`、`no_instance_lock`）。即使仍然配置 `log.recovery=true` 也是安全的：日志照常创建，只是不启用恢复，并打印一条指出缺失项的警告。该查询不涉及磁盘权限与可用空间。
+返回 `ready` 表示可以开启恢复，否则返回值说明缺什么。该查询不涉及磁盘权限与可用空间。
 
 ---
 

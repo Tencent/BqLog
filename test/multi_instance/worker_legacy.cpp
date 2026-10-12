@@ -27,9 +27,7 @@ int main(int argc, char** argv)
     if (worker_id < 0 || records <= 0) {
         return 2;
     }
-    // M6 needs this worker to still be writing when the new runtime joins. The 2.6.0 runtime
-    // keeps one mmap segment, and one open file, per record for a second, so a bigger count
-    // costs file descriptors instead of buying time; pacing is what keeps the writer alive.
+    // M6 needs this worker busy when the new runtime joins; a bigger count only costs file descriptors.
     int pace_ms = 0;
     if (argc >= 6 && std::strcmp(argv[4], "--pace-ms") == 0) {
         pace_ms = std::atoi(argv[5]);

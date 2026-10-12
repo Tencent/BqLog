@@ -58,9 +58,8 @@ class log:
     @staticmethod
     def get_recovery_capability():
         """
-        Whether crash recovery can work here, and what is missing when it cannot: recovery needs
-        a memory map and a lock that keeps the other processes out. Compare the result with
-        bq.defs.recovery_capability.
+        Whether crash recovery can work here, and what is missing when it cannot.
+        Compare the result with bq.defs.recovery_capability.
         """
         return log_invoker.get_recovery_capability()
 

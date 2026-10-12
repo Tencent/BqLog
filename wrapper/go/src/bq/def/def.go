@@ -22,8 +22,7 @@ const (
 	Fatal
 )
 
-// Recovery_capability mirrors bq::recovery_capability: what the platform offers for crash
-// recovery, and what is missing when it is not available.
+// Recovery_capability mirrors bq::recovery_capability: what the platform offers, and what is missing.
 type Recovery_capability int32
 
 const (

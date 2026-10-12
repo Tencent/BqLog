@@ -37,9 +37,8 @@ has_symbol() {
             return 0
             ;;
         MINGW*|MSYS*|CYGWIN*)
-            # A MinGW shell has no fixed set of readers: the MSYS2 toolchains ship the LLVM ones
-            # and shadow objdump/nm with them, while Git Bash brings the GNU ones. An exported
-            # symbol is listed as a defined symbol by all of them, so try them all in turn.
+            # MSYS2 shadows objdump/nm with the LLVM tools and Git Bash brings the GNU ones, so try
+            # every reader: an export is a defined symbol in each of them.
             if [ -n "$dumpbin_path" ] && MSYS_NO_PATHCONV=1 "$dumpbin_path" /nologo /exports "$lib" 2>/dev/null | grep -Eq "[[:space:]]${sym}([[:space:]]|$)"; then
                 return 0
             fi

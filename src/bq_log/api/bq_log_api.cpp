@@ -43,14 +43,14 @@ namespace bq {
     namespace api {
         static_assert(sizeof(uintptr_t) == sizeof(log_imp*), "invalid pointer size");
 
-        BQ_API bq::recovery_capability __api_get_recovery_capability()
-        {
-            return log_utils::get_recovery_capability();
-        }
-
         BQ_API const char* __api_get_log_version()
         {
             return get_bq_log_version();
+        }
+
+        BQ_API bq::recovery_capability __api_get_recovery_capability()
+        {
+            return log_utils::get_recovery_capability();
         }
 
 #if defined(BQ_POSIX)

@@ -31,9 +31,9 @@ namespace bq {
     };
 
     enum class recovery_capability : int32_t {
-        ready = 0, // crash recovery can be enabled on this platform
-        no_memory_map, // the buffers cannot be backed by a memory map, so nothing survives a crash
-        no_instance_lock // no cross-process file lock, so a second process cannot be kept out
+        ready = 0, // recovery can be enabled
+        no_memory_map, // nothing survives a crash without a memory map
+        no_instance_lock // no cross-process file lock to keep a second process out
     };
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) cpp_type
 #define BQ_LOG_ABI_CHAR16 char16_t

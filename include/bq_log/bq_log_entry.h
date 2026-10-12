@@ -93,8 +93,7 @@ namespace bq {
         static bq::string get_version();
 
         /// <summary>
-        /// Whether crash recovery can work here, and what is missing when it cannot: recovery
-        /// needs a memory map and a lock that keeps the other processes out.
+        /// Whether crash recovery can work here, and what is missing when it cannot.
         /// </summary>
         /// <returns></returns>
         static recovery_capability get_recovery_capability();

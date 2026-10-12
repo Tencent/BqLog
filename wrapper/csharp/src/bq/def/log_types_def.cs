@@ -44,9 +44,9 @@ namespace bq.def
     /// </summary>
     public enum recovery_capability
     {
-        ready = 0,          // crash recovery can be enabled on this platform
-        no_memory_map,      // the buffers cannot be backed by a memory map
-        no_instance_lock,   // no cross-process file lock, so a second process cannot be kept out
+        ready = 0,          // recovery can be enabled
+        no_memory_map,      // nothing survives a crash without a memory map
+        no_instance_lock,   // no cross-process file lock to keep a second process out
     }
 
     internal enum log_arg_type_enum

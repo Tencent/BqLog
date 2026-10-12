@@ -52,7 +52,7 @@ int main()
 {
     using namespace bq::platform;
     if (!is_cross_process_file_lock_supported()) {
-        printf("SKIP instance lock probe: platform has no supported OFD/native flock backend\n");
+        printf("SKIP instance lock probe: this platform has no cross-process file lock\n");
         return 77;
     }
     const char* path = "instance_lock_probe.lock";

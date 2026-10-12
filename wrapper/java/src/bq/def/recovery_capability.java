@@ -12,8 +12,7 @@ package bq.def;
  */
 
 /**
- * What this platform offers for crash recovery, and what is missing when it is not available:
- * recovery needs a memory map and a lock that keeps the other processes out.
+ * What this platform offers for crash recovery, and what is missing when it is not available.
  */
 public enum recovery_capability {
     ready,

@@ -214,9 +214,8 @@ namespace bq {
 
         bool is_cross_process_file_lock_supported()
         {
-#if defined(BQ_PS) || (defined(BQ_UNIT_TEST) && defined(BQ_TEST_DISABLE_INSTANCE_LOCK))
-            // PlayStation file locks are not inherited across processes; the unit test build can
-            // compile the lock out to exercise a platform that has none.
+#if defined(BQ_PS) || defined(BQ_TEST_DISABLE_FILE_LOCK)
+            // PlayStation locks are not cross-process; test builds compile the lock out on purpose.
             return false;
 #elif defined(F_OFD_SETLK) || (defined(LOCK_EX) && defined(LOCK_NB))
             return true;

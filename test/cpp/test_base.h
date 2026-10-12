@@ -73,8 +73,7 @@ namespace bq {
         fflush(stdout);                                                     \
     }
 
-        // Recovery needs a memory map and a cross-process file lock, so the suites that exercise
-        // it ask the library instead of testing the platform themselves.
+        // The recovery suites ask the library instead of testing the platform themselves.
         inline bool recovery_available()
         {
             return bq::log::get_recovery_capability() == bq::recovery_capability::ready;

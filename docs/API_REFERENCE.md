@@ -456,7 +456,7 @@ capability := bq.Get_recovery_capability()
 ```
 </details>
 
-`ready` means recovery can be enabled; otherwise the value names what is missing (`no_memory_map`, `no_instance_lock`). Asking for `log.recovery=true` anyway is safe: the log is created without recovery and a warning names the missing piece. The answer says nothing about disk permissions or free space.
+`ready` means recovery can be enabled; otherwise the value names what is missing. The answer says nothing about disk permissions or free space.
 
 ---
 

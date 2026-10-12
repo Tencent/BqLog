@@ -140,8 +140,7 @@ namespace bq {
             error,
         };
 
-        // Whether this platform can lock a file for the lifetime of the open description, which is
-        // what keeps a second process out and what the kernel releases when a process dies.
+        // Whether a file can be locked until its open description closes, which keeps a second process out.
         bool is_cross_process_file_lock_supported();
 
         // Non-blocking lock, exclusive between runtimes in one process; released with the description.

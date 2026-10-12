@@ -317,8 +317,8 @@ jobs:
           chmod +x *.sh
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
 
-  # The suite skips the recovery groups when the platform has no instance lock. That path is
-  # unreachable on an ordinary Linux runner, so build the suite once with the lock compiled out.
+  # The suite skips the recovery groups when the platform has no instance lock; that path is
+  # unreachable on an ordinary runner, so build it once with the lock compiled out.
   recovery_capability:
     name: recovery capability
     runs-on: ubuntu-latest
@@ -331,7 +331,7 @@ jobs:
           BQ_LOW_PERFORMANCE_TESTS: "true"
         run: |
           cmake -S test/cpp -B build_recovery_capability -DTARGET_PLATFORM=linux \
-            -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBQ_TEST_DISABLE_INSTANCE_LOCK=ON
+            -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBQ_TEST_DISABLE_FILE_LOCK=ON
           cmake --build build_recovery_capability --target BqLogUnitTest --parallel 2
           cd build_recovery_capability
           ./BqLogUnitTest --instance-only
@@ -339,6 +339,12 @@ jobs:
           ./BqLogUnitTest --fast-only
           ./BqLogUnitTest --meta-only
           ./BqLogUnitTest --fast-info-only
+
+      - name: The multi-instance suite must skip, not fail, without locks
+        run: |
+          cmake -S test/multi_instance -B build_recovery_capability_mi -DBQ_TEST_DISABLE_FILE_LOCK=ON
+          cmake --build build_recovery_capability_mi --parallel 2
+          ctest --test-dir build_recovery_capability_mi -R multi_instance --output-on-failure
 
   #linux-debian
   debian:

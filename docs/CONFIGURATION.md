@@ -232,7 +232,7 @@ Larger buffer can withstand larger burst write peaks, but memory usage will also
 - `true`: When asynchronous log encounters abnormal program exit, data in buffer that has not been flushed to disk will be rewritten to log file after next startup.
 - `false`: Log data in buffer will be lost when process exits abnormally and `force_flush()` is not called.
 
-It needs a writable memory map and a lock the OS releases on a crash; `bq::log::get_recovery_capability()` reports whether both are available and which one is missing. Enabling `true` without them keeps the log running without recovery and prints a warning.
+Most platforms support it; a few (Solaris, for one) cannot, and there `true` only prints a warning and logs without recovery. Ask [`get_recovery_capability()`](./API_REFERENCE.md#recovery-capability) when unsure.
 
 Detailed behavior see [Advanced Usage — Data protection on abnormal exit](./ADVANCED_USAGE.md#3-data-protection-on-abnormal-exit).
 

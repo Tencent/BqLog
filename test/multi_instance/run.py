@@ -459,10 +459,8 @@ def case_M6(exe, out, records):
     cwd.mkdir(parents=True)
     captures, children = [], []
     mmap_dir = cwd / "bqlog_mmap" / "mmap_m6_log"
-    # legacy has to still be running when the new worker claims its instance and runs
-    # cleanup_legacy_dirs. A larger record count does not buy that time: the 2.6.0 runtime keeps
-    # one mmap segment, and one open file, per record for a second, so a big count exhausts its
-    # file descriptors (errno 24) and it never finishes. Keep the volume small and pace it.
+    # the legacy worker must still be running when the new worker runs cleanup_legacy_dirs, but a
+    # bigger count only exhausts its file descriptors (one mmap segment per record, errno 24)
     legacy_records = max(records, 512)
     legacy_pace_ms = 4
     try:
@@ -669,11 +667,11 @@ def main():
     exe, out = args.worker.resolve(), args.out.resolve()
     if not exe.is_file() or args.records < 1:
         parser.error("worker must exist and records >= 1")
-    # every case needs the instance directory, which needs the platform instance lock
+    # every case needs the instance directory, which needs a cross-process file lock
     capability = subprocess.run([str(exe), "--recovery-supported"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=10)
     if capability.returncode == 77:
-        print("SKIP multi-instance cases: runtime reports no platform recovery support")
+        print("SKIP multi-instance cases: this platform has no cross-process file lock")
         return 77
     if capability.returncode != 0:
         print("FAIL runtime capability query:", capability.stdout.decode(errors="replace"))

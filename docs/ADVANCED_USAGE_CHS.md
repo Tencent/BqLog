@@ -199,7 +199,11 @@ static void enable_auto_crash_handle();
 
 具体实现细节依赖操作系统能力，会在未来版本中持续增强。
 
-复盘需要可写的内存映射，以及一把由操作系统在进程退出时释放的锁，而并非所有平台都同时具备。开启 `log.recovery=true` 前请先用 `bq::log::get_recovery_capability()` 查询（各语言包装层都提供）。无法复盘时，日志会照常创建、只是不启用复盘，并打印一条指出缺失项的警告，因此不改动 `log.recovery` 的日志在所有平台都正常工作。
+大多数平台都能保存恢复数据，只有少数平台（例如 Solaris）不行。开启前可先用 [`get_recovery_capability()`](./API_REFERENCE_CHS.md#恢复能力查询) 查询。不支持时日志照常创建、只是不启用恢复，并在控制台打印：
+
+```
+[Bq]log <name>: recovery needs a cross-process file lock and this platform has none, so recovery stays off
+```
 
 ---
 

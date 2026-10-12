@@ -211,7 +211,7 @@ namespace bq {
 
         bool is_cross_process_file_lock_supported()
         {
-#if defined(BQ_UNIT_TEST) && defined(BQ_TEST_DISABLE_INSTANCE_LOCK)
+#if defined(BQ_TEST_DISABLE_FILE_LOCK)
             return false;
 #else
             return true;

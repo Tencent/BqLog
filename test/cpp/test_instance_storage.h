@@ -188,8 +188,7 @@ namespace bq {
                 }
             }
 
-            // Asking for recovery where the platform cannot provide it must degrade with a warning
-            // and still hand back a usable log; it must never take the process down.
+            // Asking for recovery here must only warn: the log stays usable.
             static void test_explicit_recovery_without_support(test_result& result)
             {
                 char name[96];

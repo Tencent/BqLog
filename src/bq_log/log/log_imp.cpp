@@ -175,8 +175,7 @@ namespace bq {
                     const bool recovery_requested = (bool)log_config["recovery"];
                     const recovery_capability capability = log_utils::get_recovery_capability();
                     if (recovery_requested && capability != recovery_capability::ready) {
-                        // recovery data is only safe when the instances can see each other, so this
-                        // stays a warning: the caller can query the capability before enabling it.
+                        // only safe when the instances can see each other, so warn instead of failing
                         util::log_device_console(log_level::warning,
                             "log %s: recovery needs %s and this platform has none, so recovery stays off",
                             name_.c_str(),

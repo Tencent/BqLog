@@ -13,6 +13,13 @@ if(NOT DEFINED CPP_VER)
     set(CPP_VER 17)
 endif()
 
+# Every case needs the instance directory, so this switch is what exercises a platform without a
+# cross-process file lock: the whole suite must skip cleanly (SKIP_RETURN_CODE 77) instead of failing.
+option(BQ_TEST_DISABLE_FILE_LOCK "Test a platform without a cross-process file lock" OFF)
+if(BQ_TEST_DISABLE_FILE_LOCK)
+    add_compile_definitions(BQ_TEST_DISABLE_FILE_LOCK)
+endif()
+
 add_subdirectory(../../src bqlog)
 
 add_executable(bq_multi_instance_worker worker.cpp)

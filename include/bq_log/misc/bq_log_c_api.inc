@@ -18,8 +18,7 @@
 BQ_API_DEF(const char*, __api_get_log_version, (void), ());
 
 /// <summary>
-/// What this platform offers for crash recovery, and what is missing when it is not available:
-/// recovery needs a memory map and a lock that keeps the other processes out.
+/// Whether crash recovery can work here, and what is missing when it cannot.
 /// </summary>
 /// <returns></returns>
 BQ_API_DEF(BQ_LOG_API_TYPE(recovery_capability, bq_recovery_capability), __api_get_recovery_capability, (void), ());
