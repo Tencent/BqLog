@@ -10,6 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 import { log_level } from "./def/log_level";
+import { recovery_capability } from "./def/recovery_capability";
 import { log_invoker } from "./impl/log_invoker";
 // IMPORTANT: this is a build-alias file generated per build.
 // For ESM build it is a copy of lib_loader.esm.txt,
@@ -59,6 +60,14 @@ export class log {
      */
     public static enable_auto_crash_handle(): void {
         log_invoker.__api_enable_auto_crash_handler();
+    }
+
+    /**
+     * Whether crash recovery can work here, and what is missing when it cannot: recovery needs a
+     * memory map and a lock that keeps the other processes out.
+     */
+    public static get_recovery_capability(): recovery_capability {
+        return log_invoker.__api_get_recovery_capability() as recovery_capability;
     }
 
     /**

@@ -270,6 +270,12 @@ static PyObject* py_enable_auto_crash_handler(PyObject* self, PyObject* args) {
     Py_RETURN_NONE;
 }
 
+// get_recovery_capability() -> int
+static PyObject* py_get_recovery_capability(PyObject* self, PyObject* args) {
+    (void)self; (void)args;
+    return PyLong_FromLong(static_cast<long>(bq::api::__api_get_recovery_capability()));
+}
+
 // create_log(name: str, config: str, categories_count: int, categories: list[str] | None) -> int
 static PyObject* py_create_log(PyObject* self, PyObject* args) {
     (void)self;
@@ -868,6 +874,7 @@ static PyObject* py_uninit(PyObject* self, PyObject* args) {
 static PyMethodDef bqlog_methods[] = {
     {"get_log_version", py_get_log_version, METH_NOARGS, "Get BqLog version string"},
     {"enable_auto_crash_handler", py_enable_auto_crash_handler, METH_NOARGS, "Enable auto crash handler"},
+    {"get_recovery_capability", py_get_recovery_capability, METH_NOARGS, "What this platform offers for crash recovery"},
     {"create_log", py_create_log, METH_VARARGS, "Create a log object"},
     {"log_reset_config", py_log_reset_config, METH_VARARGS, "Reset log configuration"},
     {"log_write", py_log_write, METH_VARARGS, "Write a log entry"},

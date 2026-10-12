@@ -44,6 +44,8 @@ def main():
         print("BqLog Version: " + (version or ""))
         if not version:
             raise RuntimeError("Failed to get version")
+        # The recovery capability query must be reachable from this wrapper as well.
+        print("Recovery capability: " + str(log.get_recovery_capability()))
 
         test_manager.add_test(test_log_1("Test Log Basic"))
         test_manager.add_test(test_log_2("Test Log MultiThread"))

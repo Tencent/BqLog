@@ -84,6 +84,10 @@ func Enable_auto_crash_handler() {
 	C.__api_enable_auto_crash_handler()
 }
 
+func Get_recovery_capability() int32 {
+	return int32(C.__api_get_recovery_capability())
+}
+
 func Create_log(name, config string, category_names []string) uint64 {
 	c_name := C.CString(name)
 	defer C.free(unsafe.Pointer(c_name))

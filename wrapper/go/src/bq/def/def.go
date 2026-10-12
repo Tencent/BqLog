@@ -21,3 +21,13 @@ const (
 	Error
 	Fatal
 )
+
+// Recovery_capability mirrors bq::recovery_capability: what the platform offers for crash
+// recovery, and what is missing when it is not available.
+type Recovery_capability int32
+
+const (
+	Recovery_ready Recovery_capability = iota
+	Recovery_no_memory_map
+	Recovery_no_instance_lock
+)

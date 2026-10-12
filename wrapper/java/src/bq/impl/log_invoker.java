@@ -17,6 +17,8 @@ public class log_invoker {
 	
 	public static native void __api_enable_auto_crash_handler();
 	
+	public static native int __api_get_recovery_capability();
+	
 	public static native long __api_create_log(String log_name, String config_content, long category_count, String[] category_names_array);
 
 	public static native void __api_log_reset_config(String log_name,String config_content);

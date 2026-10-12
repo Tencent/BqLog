@@ -39,6 +39,16 @@ namespace bq.def
         log_level_max = 32,        //上限
     }
 
+    /// <summary>
+    /// What this platform offers for crash recovery, and what is missing when it is not available.
+    /// </summary>
+    public enum recovery_capability
+    {
+        ready = 0,          // crash recovery can be enabled on this platform
+        no_memory_map,      // the buffers cannot be backed by a memory map
+        no_instance_lock,   // no cross-process file lock, so a second process cannot be kept out
+    }
+
     internal enum log_arg_type_enum
     {
         unsupported_type,

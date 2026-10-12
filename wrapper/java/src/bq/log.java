@@ -229,6 +229,16 @@ public class log {
     }
 
     /**
+     * Whether crash recovery can work here, and what is missing when it cannot: recovery needs a
+     * memory map and a lock that keeps the other processes out.
+     * @return One of the recovery_capability values.
+     */
+    public static recovery_capability get_recovery_capability()
+    {
+        return recovery_capability.values()[log_invoker.__api_get_recovery_capability()];
+    }
+
+    /**
      * If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
      * This will return the absolute paths corresponding to both scenarios.
      * @param base_dir_type The base directory type.

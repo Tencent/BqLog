@@ -60,6 +60,12 @@ func Enable_auto_crash_handle() {
 	impl.Enable_auto_crash_handler()
 }
 
+// Get_recovery_capability reports whether crash recovery can work here and what is missing when
+// it cannot: recovery needs a memory map and a lock that keeps the other processes out.
+func Get_recovery_capability() def.Recovery_capability {
+	return def.Recovery_capability(impl.Get_recovery_capability())
+}
+
 // Get_file_base_dir returns the absolute base dir for relative-path logs.
 func Get_file_base_dir(base_dir_type int32) string {
 	return impl.Get_file_base_dir(base_dir_type)

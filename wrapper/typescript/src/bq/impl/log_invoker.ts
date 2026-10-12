@@ -36,6 +36,10 @@ export class log_invoker {
         native_export("enable_auto_crash_handler")();
     }
 
+    public static __api_get_recovery_capability(): number {
+        return native_export("get_recovery_capability")();
+    }
+
     public static __api_create_log(log_name: string, config_content: string, category_count: number, category_names_array: string[] | null): bigint {
         const id = native_export("create_log")(log_name, config_content, category_count, category_names_array);
         return as_bigint(id);

@@ -106,6 +106,13 @@ BQ_NAPI_DEF(enable_auto_crash_handler, napi_env, env, napi_callback_info, info)
     return bq::make_napi_undefined(env);
 }
 
+// get_recovery_capability(): number
+BQ_NAPI_DEF(get_recovery_capability, napi_env, env, napi_callback_info, info)
+{
+    (void)info;
+    return bq::make_napi_u32(env, static_cast<uint32_t>(bq::api::__api_get_recovery_capability()));
+}
+
 // create_log(name: string, config: string, categories_count: number, categories: string[]): bigint
 BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
 {
