@@ -624,7 +624,7 @@ namespace bq {
 
             void do_recovery_test(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support()) {
+                if (!bq::log::is_recovery_supported()) {
                     return;
                 }
                 // simulate a relaunch; a no-op if no instance was claimed
@@ -879,7 +879,7 @@ namespace bq {
             // tail of the batch was lost (it was neither in the output file nor replayed).
             void do_recovery_snapshot_test(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support() || !bq::instance_storage::get()) {
+                if (!bq::log::is_recovery_supported() || !bq::instance_storage::get()) {
                     return;
                 }
                 test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot test begin...\n");
@@ -1076,8 +1076,8 @@ namespace bq {
 
                 do_block_list_test(result, config);
                 do_fast_mode_buffer_test(result);
-                config.need_recovery = true;
-                {
+                config.need_recovery = bq::log::is_recovery_supported();
+                if (config.need_recovery) {
                     auto storage = bq::log_storage::create(config.log_name, true);
                     config.storage = storage.get();
                     do_block_list_test(result, config);
@@ -1096,8 +1096,8 @@ namespace bq {
                 do_log_buffer_test(result, config);
                 config.policy = log_memory_policy::block_when_full;
                 do_log_buffer_test(result, config);
-                config.need_recovery = true;
-                {
+                config.need_recovery = bq::log::is_recovery_supported();
+                if (config.need_recovery) {
                     auto storage = bq::log_storage::create(config.log_name, true);
                     config.storage = storage.get();
                     do_log_buffer_test(result, config);

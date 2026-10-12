@@ -211,6 +211,8 @@ When this item is `true`, BqLog will try to use platform features on some platfo
 
 Specific implementation details depend on operating system capabilities and will be continuously enhanced in future versions.
 
+Recovery needs a writable memory map and an instance lock that the OS releases when the process dies, and not every platform offers such a lock. Ask `bq::log::is_recovery_supported()` before enabling it. Setting `log.recovery=true` where the lock is missing prints the reason and aborts, instead of silently running without recovery; a log that leaves `log.recovery` alone works everywhere.
+
 ---
 
 <a id="4-custom-parameter-types"></a>

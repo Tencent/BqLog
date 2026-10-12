@@ -655,6 +655,15 @@ def main():
     exe, out = args.worker.resolve(), args.out.resolve()
     if not exe.is_file() or args.records < 1:
         parser.error("worker must exist and records >= 1")
+    # every case needs the instance directory, which needs the platform instance lock
+    capability = subprocess.run([str(exe), "--recovery-supported"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=10)
+    if capability.returncode == 77:
+        print("SKIP multi-instance cases: runtime reports no platform recovery support")
+        return 77
+    if capability.returncode != 0:
+        print("FAIL runtime capability query:", capability.stdout.decode(errors="replace"))
+        return 1
     clear_dir(out)
     out.mkdir(parents=True)
     names = [args.case] if args.case else sorted(CASES)

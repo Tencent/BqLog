@@ -172,7 +172,14 @@ namespace bq {
                     buffer_config.default_buffer_size = (uint32_t)log_config["buffer_size"];
                 }
                 if (log_config["recovery"].is_bool()) {
-                    buffer_config.need_recovery = (bool)log_config["recovery"] && bq::memory_map::is_platform_support();
+                    const bool recovery_requested = (bool)log_config["recovery"];
+                    if (recovery_requested && !platform::is_instance_lock_supported()) {
+                        // recovery data is only safe when the instances can see each other; asking for it
+                        // here would silently write data no other process can trust, so refuse loudly.
+                        util::log_device_console(log_level::fatal, "log %s: recovery is not supported on this platform, see bq::log::is_recovery_supported()", name_.c_str());
+                        abort();
+                    }
+                    buffer_config.need_recovery = recovery_requested && bq::memory_map::is_platform_support();
                 }
                 if (log_config["buffer_policy_when_full"].is_string()) {
                     if (((bq::string)log_config["buffer_policy_when_full"]).equals_ignore_case("discard")) {

@@ -39,6 +39,9 @@ static void self_kill()
 
 int main(int argc, char** argv)
 {
+    if (argc == 2 && std::strcmp(argv[1], "--recovery-supported") == 0) {
+        return bq::log::is_recovery_supported() ? 0 : 77;
+    }
     if (argc < 4) {
         std::fprintf(stderr, "usage: worker <worker-id> <log-name> <records> [options]\n");
         return 2;

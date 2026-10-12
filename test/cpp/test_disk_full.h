@@ -442,6 +442,10 @@ namespace bq {
             // off. All producers must finish; no crash; no file drift.
             void case_e_end_to_end(test_result& result)
             {
+                if (!bq::log::is_recovery_supported()) {
+                    test_output(bq::log_level::info, "SKIP recovery disk-full stress: platform recovery unsupported\n");
+                    return;
+                }
                 test_output_dynamic(bq::log_level::info, "[disk_full] Case E: end-to-end stress with intermittent ENOSPC...\n");
                 wipe_log_state("disk_full_case_e_log");
                 scoped_fault_injection fault_guard;

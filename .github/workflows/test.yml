@@ -251,14 +251,14 @@ jobs:
         shell: pwsh
         run: |
           cmake -S test/multi_instance -B build_mi
-          cmake --build build_mi --config Release -j
+          cmake --build build_mi --config Release --parallel 2
 
       - name: Configure and build (linux/macos)
         if: ${{ matrix.os.label != 'windows' }}
         run: |
           cmake -S test/multi_instance -B build_mi \
             ${{ matrix.os.label == 'ubuntu' && '-DBQ_LEGACY_SRC=/tmp/bq260' || '' }}
-          cmake --build build_mi -j
+          cmake --build build_mi --parallel 2
 
       # ctest on every platform: it resolves the worker path and the per-case output
       # directory itself, so no shell-specific find/$(...) is needed (the previous
@@ -316,6 +316,29 @@ jobs:
           cd build/test/linux
           chmod +x *.sh
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+
+  # The suite skips the recovery groups when the platform has no instance lock. That path is
+  # unreachable on an ordinary Linux runner, so build the suite once with the lock compiled out.
+  recovery_capability:
+    name: recovery capability
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Run the suite without instance locks
+        env:
+          BQ_LOW_PERFORMANCE_TESTS: "true"
+        run: |
+          cmake -S test/cpp -B build_recovery_capability -DTARGET_PLATFORM=linux \
+            -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBQ_TEST_DISABLE_INSTANCE_LOCK=ON
+          cmake --build build_recovery_capability --target BqLogUnitTest --parallel 2
+          cd build_recovery_capability
+          ./BqLogUnitTest --instance-only
+          ./BqLogUnitTest --appender-only
+          ./BqLogUnitTest --fast-only
+          ./BqLogUnitTest --meta-only
+          ./BqLogUnitTest --fast-info-only
 
   #linux-debian
   debian:
@@ -639,7 +662,13 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            
+
+            # this is the platform where the instance lock may be unavailable, so the probe
+            # reports the capability instead of the suite having to guess
+            cmake ../../../test/multi_instance -B instance_lock_build -DTARGET_PLATFORM=unix -DCPP_VER=${{ matrix.cpp_ver }} -DCMAKE_BUILD_TYPE=Release
+            cmake --build instance_lock_build --target bq_instance_lock_probe -j2
+            ctest --test-dir instance_lock_build --output-on-failure -R multi_instance_lock
+
             set +e
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
             EXIT_CODE=$?
@@ -2583,4 +2612,3 @@ jobs:
               echo "Test failed with exit code $EXIT_CODE"
               exit $EXIT_CODE
             fi
-

@@ -209,9 +209,21 @@ namespace bq {
             return UnlockFile(file_handle, 0, 0, 0xFFFFFFFF, 0xFFFFFFFF);
         }
 
+        bool is_instance_lock_supported()
+        {
+#if defined(BQ_UNIT_TEST) && defined(BQ_TEST_DISABLE_INSTANCE_LOCK)
+            return false;
+#else
+            return true;
+#endif
+        }
+
         instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
         {
             out_handle = invalid_platform_file_handle;
+            if (!is_instance_lock_supported()) {
+                return instance_lock_result::error;
+            }
             bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(abs_path)));
             SECURITY_ATTRIBUTES sa = { sizeof(sa), nullptr, FALSE }; // not inherited by child processes
             HANDLE h = CreateFileW(

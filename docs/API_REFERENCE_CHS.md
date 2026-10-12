@@ -396,6 +396,28 @@ bq.Enable_auto_crash_handle()
 
 另见：[高级用法 — 程序异常退出的数据保护](./ADVANCED_USAGE_CHS.md#3-程序异常退出的数据保护) 和 [`log.recovery` 配置](./CONFIGURATION_CHS.md)。
 
+### 恢复能力查询
+
+`log.recovery=true` 需要内存映射，以及一把由内核在崩溃时释放的实例锁。配置前先查询：
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+bq::log::is_recovery_supported();
+```
+</details>
+
+<details>
+<summary><b>原生 C ABI</b></summary>
+
+```c
+uint32_t __api_is_recovery_supported(void); // 返回 0 或 1
+```
+</details>
+
+其余包装层暂未暴露该查询。平台没有这种锁时，配置 `log.recovery=true` 会说明原因并终止，Debug 与 Release 构建均如此；该查询本身不涉及磁盘权限与可用空间。
+
 ---
 
 ## 6. 拦截 / 获取 Console 输出

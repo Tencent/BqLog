@@ -199,6 +199,8 @@ static void enable_auto_crash_handle();
 
 具体实现细节依赖操作系统能力，会在未来版本中持续增强。
 
+复盘需要可写的内存映射，以及一把由操作系统在进程退出时释放的实例锁，而并非所有平台都有这样的锁。开启前请先用 `bq::log::is_recovery_supported()` 查询。缺少该锁时配置 `log.recovery=true` 会说明原因并终止，而不是静默地不启用复盘；不改动 `log.recovery` 的日志在所有平台都正常工作。
+
 ---
 
 <a id="4-自定义参数类型"></a>

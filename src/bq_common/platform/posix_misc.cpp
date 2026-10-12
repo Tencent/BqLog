@@ -8,25 +8,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-/*
- * Copyright (C) 2025 Tencent.
- * BQLOG is licensed under the Apache License, Version 2.0.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
 // Must come before every include: it controls whether <fcntl.h> exposes F_OFD_SETLK on Linux.
 #if defined(BQ_LINUX) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
-#endif
-// Same reason, for illumos (Solaris): <sys/file.h> declares flock() and LOCK_EX only when
-// __EXTENSIONS__ is set, and without them try_lock_instance_file cannot lock at all.
-#if defined(__sun) && !defined(__EXTENSIONS__)
-#define __EXTENSIONS__
 #endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
@@ -228,6 +212,17 @@ namespace bq {
             return true;
         }
 
+        bool is_instance_lock_supported()
+        {
+#if defined(BQ_PS) || (defined(BQ_UNIT_TEST) && defined(BQ_TEST_DISABLE_INSTANCE_LOCK))
+            return false;
+#elif defined(F_OFD_SETLK) || (defined(LOCK_EX) && defined(LOCK_NB))
+            return true;
+#else
+            return false;
+#endif
+        }
+
         instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
         {
             out_handle = invalid_platform_file_handle;
@@ -237,8 +232,13 @@ namespace bq {
             (void)abs_path;
             return instance_lock_result::locked;
 #else
+            if (!is_instance_lock_supported()) {
+                bq::util::log_device_console(log_level::warning, "instance lock unsupported on this platform: %s", abs_path);
+                return instance_lock_result::error;
+            }
             int32_t fd = ::open(abs_path, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
             if (fd < 0) {
+                bq::util::log_device_console(log_level::warning, "instance lock open failed: %s, errno:%d", abs_path, errno);
                 return instance_lock_result::error;
             }
             bool locked = false;
@@ -254,6 +254,7 @@ namespace bq {
                 // else has an errno that says whether another description holds the lock.
                 const int err = errno;
                 if (err != EAGAIN && err != EACCES && err != EWOULDBLOCK) {
+                    bq::util::log_device_console(log_level::warning, "instance lock fcntl failed: %s, errno:%d", abs_path, err);
                     ::close(fd);
                     return instance_lock_result::error;
                 }
@@ -271,10 +272,12 @@ namespace bq {
                 if (err == EAGAIN || err == EACCES || err == EWOULDBLOCK) {
                     return instance_lock_result::held_by_other;
                 }
+                bq::util::log_device_console(log_level::warning, "instance lock flock failed: %s, errno:%d", abs_path, err);
                 return instance_lock_result::error;
             }
 #else
             if (!locked) {
+                bq::util::log_device_console(log_level::warning, "instance locks unsupported by this kernel: OFD locks or native flock required (%s)", abs_path);
                 ::close(fd);
                 return instance_lock_result::error;
             }

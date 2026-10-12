@@ -93,6 +93,13 @@ namespace bq {
         static bq::string get_version();
 
         /// <summary>
+        /// Whether recovery is possible here: memory mapping and a safe instance lock are available.
+        /// It says nothing about disk permissions or free space.
+        /// </summary>
+        /// <returns></returns>
+        static bool is_recovery_supported();
+
+        /// <summary>
         /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk.
         /// If this feature is enabled, bqLog will attempt to perform a forced flush of the logs in the buffer in the event of a crash. However,
         /// this functionality does not guarantee success, and only support POSIX systems.

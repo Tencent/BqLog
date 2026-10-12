@@ -67,6 +67,10 @@ namespace bq {
 
             static void test_lock_primitive(test_result& result)
             {
+                if (!platform::is_instance_lock_supported()) {
+                    test_output(bq::log_level::info, "SKIP instance lock tests: platform instance locks unsupported\n");
+                    return;
+                }
                 const bq::string lock_dir = TO_ABSOLUTE_PATH("bqlog_mmap_test_locks", 0);
                 bq::file_manager::create_directory(lock_dir);
                 const bq::string lock_path = lock_dir + "/t.lock";
@@ -86,6 +90,10 @@ namespace bq {
 
             static void test_instance_identity(test_result& result)
             {
+                if (!bq::log::is_recovery_supported()) {
+                    test_output(bq::log_level::info, "SKIP instance identity test: platform recovery unsupported\n");
+                    return;
+                }
                 auto* inst1 = bq::instance_storage::acquire();
                 auto* inst2 = bq::instance_storage::acquire();
                 result.add_result(inst1 != nullptr && inst1 == inst2, "instance acquire returns the same pointer");
@@ -182,7 +190,7 @@ namespace bq {
 
             static void test_recovery_lp_mmap(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support()) {
+                if (!bq::log::is_recovery_supported()) {
                     return;
                 }
                 char name[96];
@@ -228,7 +236,7 @@ namespace bq {
             // round must recover both exactly once. Covers the oversize wraparound bug.
             static void test_run_version_wraparound_recovery(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                if (!bq::log::is_recovery_supported() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -305,7 +313,7 @@ namespace bq {
             // larger than the current run (65535 -> 1).
             static void test_run_version_oversize_wrap_parent(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                if (!bq::log::is_recovery_supported() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -371,7 +379,7 @@ namespace bq {
             // T05: more than MAX_RECOVERY_VERSION_RANGE runs later, data is stale and discarded
             static void test_run_version_stale_discard(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                if (!bq::log::is_recovery_supported() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -402,7 +410,7 @@ namespace bq {
             // T05: within MAX_RECOVERY_VERSION_RANGE runs, data is still recovered
             static void test_run_version_window_recovery(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                if (!bq::log::is_recovery_supported() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -434,7 +442,7 @@ namespace bq {
             // must never be recovered
             static void test_run_version_serial_guard(test_result& result)
             {
-                if (!bq::memory_map::is_platform_support() || !instance_available()) {
+                if (!bq::log::is_recovery_supported() || !instance_available()) {
                     return;
                 }
                 auto* inst = bq::instance_storage::get();
@@ -465,18 +473,25 @@ namespace bq {
             virtual test_result test() override
             {
                 test_result result;
+                result.add_result(bq::log::is_recovery_supported()
+                        == (bq::memory_map::is_platform_support() && platform::is_instance_lock_supported()),
+                    "recovery capability matches mmap and safe instance locks");
                 test_escape_name(result);
                 test_lock_primitive(result);
                 test_instance_identity(result);
                 test_cleanup_legacy_dirs(result);
                 test_no_recovery_no_disk(result);
-                test_recovery_lp_mmap(result);
-                test_run_version_increment(result);
-                test_run_version_wraparound_recovery(result);
-                test_run_version_oversize_wrap_parent(result);
-                test_run_version_stale_discard(result);
-                test_run_version_window_recovery(result);
-                test_run_version_serial_guard(result);
+                if (bq::log::is_recovery_supported()) {
+                    test_recovery_lp_mmap(result);
+                    test_run_version_increment(result);
+                    test_run_version_wraparound_recovery(result);
+                    test_run_version_oversize_wrap_parent(result);
+                    test_run_version_stale_discard(result);
+                    test_run_version_window_recovery(result);
+                    test_run_version_serial_guard(result);
+                } else {
+                    test_output(bq::log_level::info, "SKIP instance recovery tests: platform recovery unsupported\n");
+                }
                 return result;
             }
         };

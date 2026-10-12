@@ -16,6 +16,7 @@
 /// </summary>
 /// <returns></returns>
 BQ_API_DEF(const char*, __api_get_log_version, (void), ());
+BQ_API_DEF(uint32_t, __api_is_recovery_supported, (void), ());
 
 /// <summary>
 /// BqLog is asynchronous by default, logs may not be flushed when crash is occurred.

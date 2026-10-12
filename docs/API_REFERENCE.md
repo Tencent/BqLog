@@ -396,6 +396,28 @@ bq.Enable_auto_crash_handle()
 
 See also: [Advanced Usage — Data protection on abnormal exit](./ADVANCED_USAGE.md#3-data-protection-on-abnormal-exit) and [`log.recovery` config](./CONFIGURATION.md).
 
+### Recovery capability
+
+`log.recovery=true` needs memory mapping and an instance lock the kernel releases on a crash. Ask before configuring it:
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+bq::log::is_recovery_supported();
+```
+</details>
+
+<details>
+<summary><b>Native C ABI</b></summary>
+
+```c
+uint32_t __api_is_recovery_supported(void); // 0 or 1
+```
+</details>
+
+The other wrappers do not expose the query yet. Requesting `log.recovery=true` where the platform has no such lock prints the reason and aborts, in debug and release builds alike. The query itself says nothing about disk permissions or free space.
+
 ---
 
 ## 6. Intercept / fetch Console Output
