@@ -319,7 +319,7 @@ namespace bq {
                 const uint32_t registers_before = registry.test_register_count();
                 result.add_result(bq::fast_log_call(site, log, bq::log_level::info, format, int32_t(11)),
                     "capacity refusal: the first call writes through the ordinary path");
-                result.add_result(site.level_word == &bq::fast_inline::fast_inline_state<>::refused_level_word,
+                result.add_result(site.format_meta_addr == bq::fast_log_refused_meta,
                     "capacity refusal: the site is marked refused");
                 const uint32_t registers_after_first = registry.test_register_count();
                 result.add_result(registers_after_first == registers_before + 1,
@@ -333,7 +333,8 @@ namespace bq {
                 result.add_result(data.find("capacity refused 11") != bq::string::npos
                         && data.find("capacity refused 12") != bq::string::npos,
                     "capacity refusal: both calls are in the log file");
-                registry.test_set_max_entries(saved_max_entries);
+                registry.test_set_max_entries(bq::max_value(saved_max_entries,
+                    static_cast<uint32_t>(registry.test_entry_count())));
             }
 
             static void test_recovery(test_result& result)
@@ -399,7 +400,8 @@ namespace bq {
                         static_cast<uint8_t>(bq::log_level::info), 0,
                         static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type),
                         &arg_type, 1);
-                    bq::meta_registry::instance().test_set_max_entries(saved_max_entries);
+                    bq::meta_registry::instance().test_set_max_entries(bq::max_value(saved_max_entries,
+                        static_cast<uint32_t>(bq::meta_registry::instance().test_entry_count())));
                     result.add_result(seg_cross != nullptr, "fast recovery distinct formats register");
                     result.add_result(large != nullptr, "fast recovery oversize metadata register");
                     auto* inst = bq::instance_storage::get();

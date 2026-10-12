@@ -362,7 +362,8 @@ namespace bq {
                 result.add_result(data.find("fast_info capacity 11") != bq::string::npos
                         && data.find("fast_info capacity 12") != bq::string::npos,
                     "fast_info capacity: both calls are written through the ordinary path");
-                registry.test_set_max_entries(saved_max_entries);
+                registry.test_set_max_entries(bq::max_value(saved_max_entries,
+                    static_cast<uint32_t>(registry.test_entry_count())));
             }
 
             // 6. special logs: invalid, sync mode, stack trace level, masked category

@@ -108,8 +108,8 @@ namespace bq {
             static void test_capacity(test_result& result)
             {
                 auto& registry = bq::meta_registry::instance();
-                result.add_result(registry.max_entries() == static_cast<uint32_t>(BQ_LOG_META_MAX_ENTRIES),
-                    "capacity: the default cap is BQ_LOG_META_MAX_ENTRIES");
+                result.add_result(registry.max_entries() >= static_cast<uint32_t>(BQ_LOG_META_MAX_ENTRIES),
+                    "capacity: the cap is at least BQ_LOG_META_MAX_ENTRIES");
                 const uint32_t saved_max_entries = registry.max_entries();
                 const uint32_t entry_count = static_cast<uint32_t>(registry.test_entry_count());
                 const uint8_t i32 = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
@@ -126,7 +126,8 @@ namespace bq {
                     "capacity: a registered format still dedupes at the cap");
                 result.add_result(a && bq::meta_registry::verify_entry(&a->head, a->head.record_size),
                     "capacity: a refused registration leaves the earlier entries intact");
-                registry.test_set_max_entries(saved_max_entries);
+                registry.test_set_max_entries(bq::max_value(saved_max_entries,
+                    static_cast<uint32_t>(registry.test_entry_count())));
             }
 
             // T06 §3.3: entries registered before enable_meta_records are replayed into the

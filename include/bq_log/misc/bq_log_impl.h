@@ -382,6 +382,8 @@ namespace bq {
         }
     };
 
+    constexpr uint64_t fast_log_refused_meta = ~UINT64_C(0);
+
     template <typename ARGS, typename STR>
     bq_noinline bool init_fast_log_site(bq::_api_fast_log_site_handle& site, const bq::log& log,
         uint32_t category_index, bq::log_level level, const STR& format)
@@ -406,7 +408,7 @@ namespace bq {
                 reinterpret_cast<const char*>(&normalized[sizeof(uint32_t)]),
                 static_cast<uint32_t>(format_size), fast_log_arg_types<ARGS>::data(arg_types),
                 fast_log_arg_types<ARGS>::count)) {
-            bq::fast_inline::store_level_word_release(site, &bq::fast_inline::fast_inline_state<>::refused_level_word);
+            site.format_meta_addr = fast_log_refused_meta;
             return false;
         }
         // publish level_word last with release order: the inline path reads it with acquire and
@@ -427,7 +429,7 @@ namespace bq {
             return false;
         }
         const uint32_t* level_word = bq::fast_inline::load_level_word_acquire(site);
-        if (level_word == &bq::fast_inline::fast_inline_state<>::refused_level_word) {
+        if (site.format_meta_addr == fast_log_refused_meta) {
             return log.do_log(category_index, level, format);
         }
         const bool inited = level_word != &bq::fast_inline::fast_inline_state<>::no_level;
@@ -456,7 +458,7 @@ namespace bq {
             return false;
         }
         const uint32_t* level_word = bq::fast_inline::load_level_word_acquire(site);
-        if (level_word == &bq::fast_inline::fast_inline_state<>::refused_level_word) {
+        if (site.format_meta_addr == fast_log_refused_meta) {
             return log.do_log(category_index, level, format, first, args...);
         }
         const bool inited = level_word != &bq::fast_inline::fast_inline_state<>::no_level;
