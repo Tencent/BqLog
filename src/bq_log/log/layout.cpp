@@ -1260,6 +1260,8 @@ namespace bq {
                     format_content[format_content_cursor++] = 'X';
                 else
                     format_content[format_content_cursor++] = 'x';
+            } else if (format_info_.type == 'o' && value != 0) {
+                format_content[format_content_cursor++] = '0';
             }
         }
 
@@ -1337,6 +1339,8 @@ namespace bq {
                     format_content[format_content_cursor++] = 'X';
                 else
                     format_content[format_content_cursor++] = 'x';
+            } else if (format_info_.type == 'o' && value != 0) {
+                format_content[format_content_cursor++] = '0';
             }
         }
 

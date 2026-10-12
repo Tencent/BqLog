@@ -140,6 +140,11 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|**-1***|"), "layout format centre alignment with fill");
                 log_inst.error(log_inst.cat.ModuleB, "|{:^8}|", "hello");
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t| hello  |"), "layout format centre alignment of a string");
+                // The alternate form of octal starts with a 0, unless the value is 0.
+                log_inst.error(log_inst.cat.ModuleB, "|{:#o}|{:#o}|{:#o}|{:#o}|", 8, -42, 0, static_cast<uint64_t>(UINT64_MAX));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|010|-052|0|01777777777777777777777|"), "layout format octal alternate form");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#6o}|{:#06o}|", 8, 8);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   010|000010|"), "layout format octal alternate form with width");
                 double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
