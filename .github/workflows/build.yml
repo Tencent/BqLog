@@ -34,6 +34,9 @@ jobs:
       - name: Check the include layers
         run: python3 .github/scripts/check_include_layers.py
 
+      - name: Test the package export check
+        run: python3 .github/scripts/test_go_bridge_exports.py
+
   #########################################################Common Libs Build####################################################
   #Windows
   build_windows_x86_64_lib_MSVC:
