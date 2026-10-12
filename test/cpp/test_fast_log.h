@@ -328,11 +328,43 @@ namespace bq {
                     "capacity refusal: the second call writes through the ordinary path");
                 result.add_result(registry.test_register_count() == registers_after_first,
                     "capacity refusal: a refused site does not register again");
+                // several rounds, each with a fresh site and threads released together: the threads that
+                // lose the site lock must find the refusal and take the ordinary path, never write
+                // through a site that has no buffer
+                const bq::string race_format = "capacity refused race {}";
+                std::atomic<int32_t> race_written { 0 };
+                for (int32_t round = 0; round < 8; ++round) {
+                    bq::_api_fast_log_site_handle race_site = BQ_FAST_LOG_SITE_INITIALIZER;
+                    std::atomic<int32_t> race_go { 0 };
+                    std::vector<std::thread> race_threads;
+                    for (int32_t t = 0; t < 8; ++t) {
+                        race_threads.emplace_back(
+                            [&race_site, &log, &race_format, &race_written, &race_go, t, round]() {
+                                while (race_go.load() == 0) {
+                                }
+                                for (int32_t i = 0; i < 50; ++i) {
+                                    const int32_t value = round * 100000 + t * 1000 + i;
+                                    if (bq::fast_log_call(race_site, log, bq::log_level::info, race_format, value)) {
+                                        race_written.fetch_add(1);
+                                    }
+                                }
+                            });
+                    }
+                    race_go.store(1);
+                    for (auto& race_thread : race_threads) {
+                        race_thread.join();
+                    }
+                }
+                result.add_result(race_written.load() == 8 * 8 * 50,
+                    "capacity refusal: every racing call wrote through the ordinary path");
                 log.force_flush();
                 const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
                 result.add_result(data.find("capacity refused 11") != bq::string::npos
                         && data.find("capacity refused 12") != bq::string::npos,
                     "capacity refusal: both calls are in the log file");
+                result.add_result(data.find("capacity refused race 0") != bq::string::npos
+                        && data.find("capacity refused race 707049") != bq::string::npos,
+                    "capacity refusal: the first and last racing records are in the log file");
                 registry.test_set_max_entries(bq::max_value(saved_max_entries,
                     static_cast<uint32_t>(registry.test_entry_count())));
             }

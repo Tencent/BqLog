@@ -362,6 +362,34 @@ namespace bq {
                 result.add_result(data.find("fast_info capacity 11") != bq::string::npos
                         && data.find("fast_info capacity 12") != bq::string::npos,
                     "fast_info capacity: both calls are written through the ordinary path");
+                // one shared fast_info site, threads released together: the threads that lose the site
+                // lock must find the refusal and take the ordinary path, never write a record with a
+                // meta address that was never registered
+                std::atomic<int32_t> race_written { 0 };
+                std::atomic<int32_t> race_go { 0 };
+                std::vector<std::thread> race_threads;
+                for (int32_t t = 0; t < 16; ++t) {
+                    race_threads.emplace_back([&log, &race_written, &race_go, t]() {
+                        while (race_go.load() == 0) {
+                        }
+                        for (int32_t i = 0; i < 100; ++i) {
+                            if (log.fast_info<"fast_info capacity race {}">(t * 1000 + i)) {
+                                race_written.fetch_add(1);
+                            }
+                        }
+                    });
+                }
+                race_go.store(1);
+                for (auto& race_thread : race_threads) {
+                    race_thread.join();
+                }
+                result.add_result(race_written.load() == 16 * 100,
+                    "fast_info capacity: every racing call wrote through the ordinary path");
+                log.force_flush();
+                const bq::string race_data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                result.add_result(race_data.find("fast_info capacity race 0") != bq::string::npos
+                        && race_data.find("fast_info capacity race 15099") != bq::string::npos,
+                    "fast_info capacity: the first and last racing records are in the log file");
                 registry.test_set_max_entries(bq::max_value(saved_max_entries,
                     static_cast<uint32_t>(registry.test_entry_count())));
             }
