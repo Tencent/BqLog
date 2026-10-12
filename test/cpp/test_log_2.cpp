@@ -152,6 +152,16 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|*****-42|*****+42|***-0x2a|"), "layout format fill in front of sign and prefix");
                 log_inst.error(log_inst.cat.ModuleB, "|{:015.3e}|", 1500.0);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0000001.500e+03|"), "layout format zero padding with an exponent sign");
+                // A space sign puts a space in front of non-negative values; a space followed by an alignment is a fill.
+                log_inst.error(log_inst.cat.ModuleB, "|{: d}|{: d}|{: d}|{: d}|", 12, -12, 0, static_cast<uint32_t>(7));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t| 12|-12| 0| 7|"), "layout format space sign");
+                log_inst.error(log_inst.cat.ModuleB, "|{: 6d}|{: 06d}|{: x}|{: #x}|", 12, 12, 255, 255);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    12| 00012| ff| 0xff|"), "layout format space sign with width and prefix");
+                log_inst.error(log_inst.cat.ModuleB, "|{: >6}|{: <6}|", 12, 12);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    12|12    |"), "layout format space fill");
+                // + on an unsigned 0 is still written.
+                log_inst.error(log_inst.cat.ModuleB, "|{:+d}|{:+d}|", static_cast<uint32_t>(0), static_cast<uint64_t>(0));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+0|+0|"), "layout format plus sign of unsigned zero");
                 double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");

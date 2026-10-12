@@ -564,7 +564,10 @@ namespace bq {
                 width[1] = 0;
                 break;
             default:
-                if (!fill && (c < '1' || c > '9')) {
+                if (c == ' ' && !fill && !(index + 1 < len && (style[index + 1] == '<' || style[index + 1] == '>' || style[index + 1] == '^'))) {
+                    // a space that is not the fill of an alignment is the space sign
+                    fi.sign = ' ';
+                } else if (!fill && (c < '1' || c > '9')) {
                     fi.fill = c;
                     if (fi.align == '^' || fi.align == '<')
                         fi.fill = ' ';
@@ -606,7 +609,7 @@ namespace bq {
                 uint32_t lead = 0;
                 if (format_info_.fill == '0' && dis > 0) {
                     char first = format_content[write_begin_pos];
-                    if (first == '+' || first == '-') {
+                    if (first == '+' || first == '-' || (first == ' ' && format_info_.sign == ' ')) {
                         lead = 1;
                     }
                     if (format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x') && lead + 2 <= dis
@@ -1235,10 +1238,8 @@ namespace bq {
         } else {
             expand_format_content_buff_size(format_content_cursor + 64 + 3);
         }
-        if (value > 0) {
-            if (format_info_.sign == '+') {
-                format_content[format_content_cursor++] = '+';
-            }
+        if (format_info_.sign == '+' || format_info_.sign == ' ') {
+            format_content[format_content_cursor++] = format_info_.sign;
         }
 
         if (format_info_.prefix == '#') {
@@ -1313,10 +1314,8 @@ namespace bq {
         //+-
         if (value < 0) {
             format_content[format_content_cursor++] = '-';
-        } else {
-            if (format_info_.sign == '+') {
-                format_content[format_content_cursor++] = '+';
-            }
+        } else if (format_info_.sign == '+' || format_info_.sign == ' ') {
+            format_content[format_content_cursor++] = format_info_.sign;
         }
 
         // Default character padding
