@@ -65,6 +65,8 @@ namespace bq {
             uint64_t v;
         };
 
+        constexpr uint64_t fast_site_refused = UINT64_C(1) << 63;
+
         template <fixed_format F, uint8_t LEVEL, uint32_t CAT, uint8_t... WIRE>
         struct BQ_FAST_INFO_HIDDEN fast_info_site_holder {
             static fast_info_site site;
@@ -145,6 +147,9 @@ namespace bq {
             }
             using traits = fast_format_traits<F>;
             const typename traits::char_type (&format)[traits::char_count] = fixed_format_chars<F>::data.value;
+            if (load_site_v(site) == fast_site_refused) {
+                return l.do_log(CAT, LEVEL, format, args...);
+            }
             if (log_access::buffer_id(l) == 0 || l.is_stack_trace_enabled_for(LEVEL)) {
                 return l.do_log(CAT, LEVEL, format, args...);
             }
@@ -163,6 +168,7 @@ namespace bq {
                         reinterpret_cast<const char*>(format_bytes + sizeof(uint32_t)),
                         static_cast<uint32_t>(format_size), wire::count ? wire::values : nullptr, wire::count);
                     if (meta == 0) {
+                        store_site_v(site, fast_site_refused);
                         return l.do_log(CAT, LEVEL, format, args...);
                     }
                     // one store publishes both the arena address and the enabled-level bit

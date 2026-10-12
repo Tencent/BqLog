@@ -47,6 +47,7 @@ namespace bq {
             /// the constant false that a thread slot's need_reallocate starts out pointing at
             static const bool allocate_mark;
             static const uint32_t no_level;
+            static const uint32_t refused_level_word;
             static uint32_t layout_status; // 0 unknown, 1 ready, 2 unavailable
             // cold path only: serializes first-time site initialization; 0 = free
             static bq::platform::atomic_trivially_constructible<uint32_t> site_init_locks[32];
@@ -55,6 +56,8 @@ namespace bq {
         const bool fast_inline_state<T>::allocate_mark = false;
         template <typename T>
         const uint32_t fast_inline_state<T>::no_level = 0;
+        template <typename T>
+        const uint32_t fast_inline_state<T>::refused_level_word = 0;
         template <typename T>
         uint32_t fast_inline_state<T>::layout_status = 0;
         template <typename T>

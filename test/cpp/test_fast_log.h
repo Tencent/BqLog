@@ -290,6 +290,52 @@ namespace bq {
                 result.add_result(data.find("category 1 6") != bq::string::npos, "site level word: re-enabled by reset_config");
             }
 
+            // A site whose registration the registry refuses must write through the ordinary log path
+            // and must not repeat the registration: otherwise every call would add the format
+            // normalization, the allocation and the registry lock on top of the ordinary path.
+            static void test_meta_capacity_refusal(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_capacity_%" PRIu64,
+                    bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                const bq::string config = bq::string("appenders_config.test.type=text_file\n")
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n"
+                    + "log.thread_mode=async\n";
+                bq::log log = bq::log::create_log(name, config);
+                result.add_result(log.is_valid(), "capacity refusal: log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                auto& registry = bq::meta_registry::instance();
+                const uint32_t saved_max_entries = registry.max_entries();
+                // a full registry: every format this test registers is refused
+                registry.test_set_max_entries(static_cast<uint32_t>(registry.test_entry_count()));
+                bq::_api_fast_log_site_handle site = BQ_FAST_LOG_SITE_INITIALIZER;
+                const bq::string format = "capacity refused {}";
+                const uint32_t registers_before = registry.test_register_count();
+                result.add_result(bq::fast_log_call(site, log, bq::log_level::info, format, int32_t(11)),
+                    "capacity refusal: the first call writes through the ordinary path");
+                result.add_result(site.level_word == &bq::fast_inline::fast_inline_state<>::refused_level_word,
+                    "capacity refusal: the site is marked refused");
+                const uint32_t registers_after_first = registry.test_register_count();
+                result.add_result(registers_after_first == registers_before + 1,
+                    "capacity refusal: one registration attempt for the refused site");
+                result.add_result(bq::fast_log_call(site, log, bq::log_level::info, format, int32_t(12)),
+                    "capacity refusal: the second call writes through the ordinary path");
+                result.add_result(registry.test_register_count() == registers_after_first,
+                    "capacity refusal: a refused site does not register again");
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                result.add_result(data.find("capacity refused 11") != bq::string::npos
+                        && data.find("capacity refused 12") != bq::string::npos,
+                    "capacity refusal: both calls are in the log file");
+                registry.test_set_max_entries(saved_max_entries);
+            }
+
             static void test_recovery(test_result& result)
             {
                 if (!recovery_available()) {
@@ -329,6 +375,10 @@ namespace bq {
                         "fast recovery dedupe: 1600 same-format registrations return one pointer");
                     // distinct formats cross the 1 MiB segment boundary: each recorded
                     // entry is 16 + align_8(40 + len + 1) bytes, so 20000 of them exceed it
+                    // (the platform cap can be lower than that: raise it for this test)
+                    const uint32_t saved_max_entries = bq::meta_registry::instance().max_entries();
+                    bq::meta_registry::instance().test_set_max_entries(
+                        static_cast<uint32_t>(bq::meta_registry::instance().test_entry_count()) + 20000 + 8);
                     char format_buf[64];
                     const auto* seg_cross = static_cast<const bq::fast_format_meta*>(nullptr);
                     for (uint32_t i = 0; i < 20000; ++i) {
@@ -349,6 +399,7 @@ namespace bq {
                         static_cast<uint8_t>(bq::log_level::info), 0,
                         static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type),
                         &arg_type, 1);
+                    bq::meta_registry::instance().test_set_max_entries(saved_max_entries);
                     result.add_result(seg_cross != nullptr, "fast recovery distinct formats register");
                     result.add_result(large != nullptr, "fast recovery oversize metadata register");
                     auto* inst = bq::instance_storage::get();
@@ -1467,6 +1518,7 @@ namespace bq {
                 test_generated_category(result);
                 test_level_bitmaps(result);
                 test_site_level_word(result);
+                test_meta_capacity_refusal(result);
                 test_hp_thread_info(result);
                 test_recovery(result);
                 test_recovery_cross(result);

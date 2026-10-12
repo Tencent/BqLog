@@ -163,6 +163,14 @@ namespace bq {
                 }
             }
         }
+        if (entries_.size() >= max_entries_) {
+            if (!capacity_warning_printed_) {
+                capacity_warning_printed_ = true;
+                util::log_device_console(log_level::warning,
+                    "fast log format registry is full (%" PRIu32 " entries), further fast log sites use the normal log path", max_entries_);
+            }
+            return nullptr;
+        }
         uint8_t* p = arena_alloc(entry_size);
         if (!p) {
             return nullptr;
@@ -480,6 +488,12 @@ namespace bq {
     }
 
 #if defined(BQ_UNIT_TEST)
+    void meta_registry::test_set_max_entries(uint32_t max_entries)
+    {
+        bq::platform::scoped_spin_lock guard(lock_);
+        max_entries_ = max_entries;
+    }
+
     size_t meta_registry::test_entry_count() const
     {
         return entries_.size();

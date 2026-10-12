@@ -103,6 +103,32 @@ namespace bq {
                     "verify_entry: short available_size fails");
             }
 
+            // Entries past BQ_LOG_META_MAX_ENTRIES are refused; the entries registered before keep
+            // resolving, including through the dedupe path, which stays open at the cap
+            static void test_capacity(test_result& result)
+            {
+                auto& registry = bq::meta_registry::instance();
+                result.add_result(registry.max_entries() == static_cast<uint32_t>(BQ_LOG_META_MAX_ENTRIES),
+                    "capacity: the default cap is BQ_LOG_META_MAX_ENTRIES");
+                const uint32_t saved_max_entries = registry.max_entries();
+                const uint32_t entry_count = static_cast<uint32_t>(registry.test_entry_count());
+                const uint8_t i32 = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);
+                const uint8_t types[] = { i32 };
+                registry.test_set_max_entries(entry_count + 2);
+                const auto* a = reg("capacity one {}", 15, static_cast<uint8_t>(bq::log_level::info), 0, types, 1);
+                const auto* b = reg("capacity two {}", 15, static_cast<uint8_t>(bq::log_level::info), 0, types, 1);
+                result.add_result(a && b, "capacity: registrations below the cap succeed");
+                result.add_result(reg("capacity three {}", 17, static_cast<uint8_t>(bq::log_level::info), 0, types, 1) == nullptr,
+                    "capacity: a registration at the cap is refused");
+                result.add_result(registry.test_entry_count() == entry_count + 2,
+                    "capacity: a refused entry is not kept");
+                result.add_result(reg("capacity one {}", 15, static_cast<uint8_t>(bq::log_level::info), 0, types, 1) == a,
+                    "capacity: a registered format still dedupes at the cap");
+                result.add_result(a && bq::meta_registry::verify_entry(&a->head, a->head.record_size),
+                    "capacity: a refused registration leaves the earlier entries intact");
+                registry.test_set_max_entries(saved_max_entries);
+            }
+
             // T06 §3.3: entries registered before enable_meta_records are replayed into the
             // segment file at enable_meta_records time
             static void test_meta_record_content(test_result& result)
@@ -391,6 +417,7 @@ namespace bq {
                 }
                 test_dedupe(result);
                 test_verify_entry(result);
+                test_capacity(result);
                 test_register_race(result);
                 if (recovery_available()) {
                     test_meta_record_content(result);

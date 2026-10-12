@@ -17,6 +17,17 @@
 #define BQ_LOG_META_SEGMENT_SIZE (1024 * 1024)
 #endif
 
+#ifndef BQ_LOG_META_MAX_ENTRIES
+#if defined(BQ_OHOS) || defined(BQ_ANDROID) || defined(BQ_IOS)
+#define BQ_LOG_META_MAX_ENTRIES (4 * 1024)
+#else
+#define BQ_LOG_META_MAX_ENTRIES (64 * 1024)
+#endif
+#endif
+#if BQ_LOG_META_MAX_ENTRIES < 1
+#error "BQ_LOG_META_MAX_ENTRIES must be at least 1"
+#endif
+
 namespace bq {
     class instance_storage;
     struct log_global_vars;
@@ -34,6 +45,8 @@ namespace bq {
         const fast_format_meta* register_format(const char* format, uint32_t format_size,
             uint8_t level, uint32_t category_idx, uint8_t format_type,
             const uint8_t* arg_types, uint16_t arg_count);
+
+        uint32_t max_entries() const { return max_entries_; }
 
         // called by log_imp::init for the first recovery log, after instance_storage::acquire()
         bool enable_meta_records();
@@ -65,6 +78,7 @@ namespace bq {
         uint32_t test_register_count() const { return test_register_count_.load_relaxed(); }
         // deduped entries in registration order
         size_t test_entry_count() const;
+        void test_set_max_entries(uint32_t max_entries);
         // deletes expired meta record files under meta_dir() (normally done by enable_meta_records)
         void test_cleanup_expired();
         void test_flush_meta_records();
@@ -123,6 +137,8 @@ namespace bq {
         bq::array<arena_block> blocks_;
         bq::array<const fast_format_meta*> entries_; // registration order, for meta record replay
         bq::hash_map<uint64_t, bq::array<const fast_format_meta*>> index_; // checksum -> candidates
+        uint32_t max_entries_ = BQ_LOG_META_MAX_ENTRIES;
+        bool capacity_warning_printed_ = false;
         // meta records
         bool meta_records_enabled_ = false;
         uint16_t meta_records_run_version_ = 0; // run version the open segments belong to (0 = none)

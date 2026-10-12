@@ -334,7 +334,38 @@ namespace bq {
                     "fast_info: int and int32_t share the same wire type");
             }
 
-            // 4. special logs: invalid, sync mode, stack trace level, masked category
+            // 4. a site whose registration the registry refuses: the calls take the ordinary path
+            // and the registration is not attempted again
+            static void test_capacity_refusal(test_result& result)
+            {
+                const bq::string name = make_name("capacity");
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                bq::log log = bq::log::create_log(name, make_config(file_name, "log.thread_mode=async\n"));
+                result.add_result(log.is_valid(), "fast_info capacity: log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                auto& registry = bq::meta_registry::instance();
+                const uint32_t saved_max_entries = registry.max_entries();
+                // a full registry: the format this test registers is refused
+                registry.test_set_max_entries(static_cast<uint32_t>(registry.test_entry_count()));
+                const uint32_t registers_before = registry.test_register_count();
+                log.fast_info<"fast_info capacity {}">(int32_t(11));
+                const uint32_t registers_after_first = registry.test_register_count();
+                result.add_result(registers_after_first == registers_before + 1,
+                    "fast_info capacity: one registration attempt for the refused site");
+                log.fast_info<"fast_info capacity {}">(int32_t(12));
+                result.add_result(registry.test_register_count() == registers_after_first,
+                    "fast_info capacity: a refused site does not register again");
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                result.add_result(data.find("fast_info capacity 11") != bq::string::npos
+                        && data.find("fast_info capacity 12") != bq::string::npos,
+                    "fast_info capacity: both calls are written through the ordinary path");
+                registry.test_set_max_entries(saved_max_entries);
+            }
+
+            // 6. special logs: invalid, sync mode, stack trace level, masked category
             static void test_special_logs(test_result& result)
             {
                 bq::log invalid = bq::log::get_log_by_name("fast_info_not_exist");
@@ -387,7 +418,7 @@ namespace bq {
                 }
             }
 
-            // 5. generated category classes: the category name appears, and no category means index 0
+            // 7. generated category classes: the category name appears, and no category means index 0
             static void test_category(test_result& result)
             {
                 const bq::string name = make_name("cat");
@@ -422,7 +453,7 @@ namespace bq {
             static constexpr int32_t concurrent_thread_count = 64;
             static constexpr int32_t concurrent_site_count = 16;
 
-            // 6. concurrent first calls: no lost record, no duplicate registration
+            // 8. concurrent first calls: no lost record, no duplicate registration
             static void test_concurrent_first_call(test_result& result)
             {
                 const bq::string name = make_name("race");
@@ -460,7 +491,7 @@ namespace bq {
                     "fast_info: concurrent first calls lose no record (%u of %d)", found, concurrent_site_count);
             }
 
-            // 7. crash recovery: records written by fast_info come back with their format
+            // 9. crash recovery: records written by fast_info come back with their format
             static void test_recovery(test_result& result)
             {
                 if (!recovery_available()) {
@@ -537,6 +568,7 @@ namespace bq {
                 test_char_encodings(result);
                 test_cross_log(result);
                 test_site_sharing(result);
+                test_capacity_refusal(result);
                 test_special_logs(result);
                 test_category(result);
                 test_concurrent_first_call(result);

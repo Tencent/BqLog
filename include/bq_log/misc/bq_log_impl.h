@@ -406,6 +406,7 @@ namespace bq {
                 reinterpret_cast<const char*>(&normalized[sizeof(uint32_t)]),
                 static_cast<uint32_t>(format_size), fast_log_arg_types<ARGS>::data(arg_types),
                 fast_log_arg_types<ARGS>::count)) {
+            bq::fast_inline::store_level_word_release(site, &bq::fast_inline::fast_inline_state<>::refused_level_word);
             return false;
         }
         // publish level_word last with release order: the inline path reads it with acquire and
@@ -425,7 +426,11 @@ namespace bq {
         if (!log.is_enabled_for(category_index, level)) {
             return false;
         }
-        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::fast_inline_state<>::no_level;
+        const uint32_t* level_word = bq::fast_inline::load_level_word_acquire(site);
+        if (level_word == &bq::fast_inline::fast_inline_state<>::refused_level_word) {
+            return log.do_log(category_index, level, format);
+        }
+        const bool inited = level_word != &bq::fast_inline::fast_inline_state<>::no_level;
         if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
             return log.do_log(category_index, level, format);
         }
@@ -450,7 +455,11 @@ namespace bq {
         if (!log.is_enabled_for(category_index, level)) {
             return false;
         }
-        const bool inited = bq::fast_inline::load_level_word_acquire(site) != &bq::fast_inline::fast_inline_state<>::no_level;
+        const uint32_t* level_word = bq::fast_inline::load_level_word_acquire(site);
+        if (level_word == &bq::fast_inline::fast_inline_state<>::refused_level_word) {
+            return log.do_log(category_index, level, format, first, args...);
+        }
+        const bool inited = level_word != &bq::fast_inline::fast_inline_state<>::no_level;
         if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
             return log.do_log(category_index, level, format, first, args...);
         }
