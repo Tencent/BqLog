@@ -37,15 +37,18 @@ has_symbol() {
             return 0
             ;;
         MINGW*|MSYS*|CYGWIN*)
-            if [ -n "$dumpbin_path" ]; then
-                MSYS_NO_PATHCONV=1 "$dumpbin_path" /nologo /exports "$lib" 2>/dev/null | grep -Eq "[[:space:]]${sym}([[:space:]]|$)" && return 0
+            # A MinGW shell has no fixed set of readers: the MSYS2 toolchains ship the LLVM ones
+            # and shadow objdump/nm with them, while Git Bash brings the GNU ones. An exported
+            # symbol is listed as a defined symbol by all of them, so try them all in turn.
+            if [ -n "$dumpbin_path" ] && MSYS_NO_PATHCONV=1 "$dumpbin_path" /nologo /exports "$lib" 2>/dev/null | grep -Eq "[[:space:]]${sym}([[:space:]]|$)"; then
+                return 0
             fi
-            if command -v llvm-readobj >/dev/null 2>&1; then
-                llvm-readobj --coff-exports "$lib" 2>/dev/null | grep -Eq "[[:space:]]Name: ${sym}$" && return 0
-            fi
-            if command -v objdump >/dev/null 2>&1; then
-                objdump -p "$lib" 2>/dev/null | sed -n '/\[Ordinal\/Name Pointer\] Table/,/^$/p' | grep -qw "$sym" && return 0
-            fi
+            for reader in "llvm-readobj --coff-exports" "llvm-objdump --coff-exports" "objdump --coff-exports" "llvm-nm -g" "nm -g" "objdump -p"; do
+                # shellcheck disable=SC2086
+                if $reader "$lib" 2>/dev/null | grep -v "[[:space:]]U[[:space:]]" | grep -Eq "[[:space:]]${sym}([[:space:]]|$)"; then
+                    return 0
+                fi
+            done
             ;;
         *)
             if command -v nm >/dev/null 2>&1; then
@@ -59,13 +62,22 @@ has_symbol() {
     return 1
 }
 
+# The readers a runner has, so a failure says which environment it happened in.
+readers_available() {
+    found_readers=""
+    for tool in dumpbin llvm-readobj llvm-objdump objdump llvm-nm nm; do
+        command -v "$tool" >/dev/null 2>&1 && found_readers="${found_readers}${found_readers:+,}${tool}"
+    done
+    echo "${found_readers:-none}"
+}
+
 found=0
 while IFS= read -r lib; do
     [ -n "$lib" ] || continue
     found=1
     for sym in $symbols; do
         if ! has_symbol "$lib" "$sym"; then
-            echo "check_go_bridge_exports: missing $sym in $lib" >&2
+            echo "check_go_bridge_exports: missing $sym in $lib (readers: $(readers_available))" >&2
             exit 1
         fi
     done
