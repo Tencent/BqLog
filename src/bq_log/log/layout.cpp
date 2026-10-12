@@ -645,8 +645,9 @@ namespace bq {
             }
             // alignment middle
             else if (format_info_.align == '^') {
-                uint32_t end = fill_count / 2;
-                uint32_t front = fill_count - end;
+                // an odd fill character goes after the value, as in std::format
+                uint32_t front = fill_count / 2;
+                uint32_t end = fill_count - front;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
                     uint32_t opt_index = write_begin_pos + format_info_.width - i - end;

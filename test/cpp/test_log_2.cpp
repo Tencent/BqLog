@@ -133,6 +133,13 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|00000C|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X000C|"), "layout format");
+                // Centre alignment puts the odd fill character after the value, like std::format.
+                log_inst.error(log_inst.cat.ModuleB, "|{:^7d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|  12   |"), "layout format centre alignment");
+                log_inst.error(log_inst.cat.ModuleB, "|{:*^7}|", -1);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|**-1***|"), "layout format centre alignment with fill");
+                log_inst.error(log_inst.cat.ModuleB, "|{:^8}|", "hello");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t| hello  |"), "layout format centre alignment of a string");
                 double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
