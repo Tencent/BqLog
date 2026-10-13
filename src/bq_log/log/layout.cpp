@@ -564,7 +564,10 @@ namespace bq {
                 width[1] = 0;
                 break;
             default:
-                if (!fill && (c < '1' || c > '9')) {
+                if (c == ' ' && !fill && !(index + 1 < len && (style[index + 1] == '<' || style[index + 1] == '>' || style[index + 1] == '^'))) {
+                    // a space that is not the fill of an alignment is the space sign
+                    fi.sign = ' ';
+                } else if (!fill && (c < '1' || c > '9')) {
                     fi.fill = c;
                     if (fi.align == '^' || fi.align == '<')
                         fi.fill = ' ';
@@ -602,36 +605,30 @@ namespace bq {
             uint32_t fill_count = format_info_.width - dis;
             // alignment right
             if (format_info_.align == '>') {
-                uint32_t ignore = 0;
-                uint32_t ignore_index = 0;
-                // move
-                for (uint32_t i = 1; i <= dis; i++) {
-                    uint32_t opt_index = write_begin_pos + format_info_.width - i;
-                    uint32_t move_index = write_begin_pos + (dis - i);
-
-                    // keep the sign in front
-                    if ((format_content[move_index] == '+' || format_content[move_index] == '-') && format_info_.fill != ' ') {
-                        format_content[opt_index] = format_info_.fill;
-                        ignore = 1;
-                        continue;
+                // zero padding goes after the sign and the 0x/0b prefix, any other fill in front
+                uint32_t lead = 0;
+                if (format_info_.fill == '0' && dis > 0) {
+                    char first = format_content[write_begin_pos];
+                    if (first == '+' || first == '-' || (first == ' ' && format_info_.sign == ' ')) {
+                        lead = 1;
                     }
-                    if (format_info_.fill == '0' && format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x')) {
-                        if (format_content[move_index] == 'b' || format_content[move_index] == 'B' || format_content[move_index] == 'x' || format_content[move_index] == 'X') {
-                            format_content[opt_index] = format_info_.fill;
-                            ignore_index = move_index - 1;
-                            ignore = 2;
-                            continue;
+                    if (format_info_.prefix == '#' && (format_info_.type == 'b' || format_info_.type == 'x') && lead + 2 <= dis
+                        && format_content[write_begin_pos + lead] == '0') {
+                        char c = format_content[write_begin_pos + lead + 1];
+                        if (c == 'b' || c == 'B' || c == 'x' || c == 'X') {
+                            lead += 2;
                         }
                     }
-                    if (ignore == 2 && ignore_index == move_index) {
-                        format_content[opt_index] = format_info_.fill;
-                        continue;
-                    }
+                }
+                // move
+                for (uint32_t i = 1; i <= dis - lead; i++) {
+                    uint32_t opt_index = write_begin_pos + format_info_.width - i;
+                    uint32_t move_index = write_begin_pos + (dis - i);
                     format_content[opt_index] = format_content[move_index];
                 }
                 // fill
-                for (uint32_t i = ignore; i < fill_count; i++) {
-                    uint32_t opt_index = write_begin_pos + i;
+                for (uint32_t i = 0; i < fill_count; i++) {
+                    uint32_t opt_index = write_begin_pos + lead + i;
                     format_content[opt_index] = format_info_.fill;
                 }
             }
@@ -645,8 +642,9 @@ namespace bq {
             }
             // alignment middle
             else if (format_info_.align == '^') {
-                uint32_t end = fill_count / 2;
-                uint32_t front = fill_count - end;
+                // an odd fill character goes after the value, as in std::format
+                uint32_t front = fill_count / 2;
+                uint32_t end = fill_count - front;
                 // move
                 for (uint32_t i = 1; i <= dis; i++) {
                     uint32_t opt_index = write_begin_pos + format_info_.width - i - end;
@@ -1240,10 +1238,8 @@ namespace bq {
         } else {
             expand_format_content_buff_size(format_content_cursor + 64 + 3);
         }
-        if (value > 0) {
-            if (format_info_.sign == '+') {
-                format_content[format_content_cursor++] = '+';
-            }
+        if (format_info_.sign == '+' || format_info_.sign == ' ') {
+            format_content[format_content_cursor++] = format_info_.sign;
         }
 
         if (format_info_.prefix == '#') {
@@ -1259,6 +1255,8 @@ namespace bq {
                     format_content[format_content_cursor++] = 'X';
                 else
                     format_content[format_content_cursor++] = 'x';
+            } else if (format_info_.type == 'o' && value != 0) {
+                format_content[format_content_cursor++] = '0';
             }
         }
 
@@ -1316,10 +1314,8 @@ namespace bq {
         //+-
         if (value < 0) {
             format_content[format_content_cursor++] = '-';
-        } else {
-            if (format_info_.sign == '+') {
-                format_content[format_content_cursor++] = '+';
-            }
+        } else if (format_info_.sign == '+' || format_info_.sign == ' ') {
+            format_content[format_content_cursor++] = format_info_.sign;
         }
 
         // Default character padding
@@ -1336,6 +1332,8 @@ namespace bq {
                     format_content[format_content_cursor++] = 'X';
                 else
                     format_content[format_content_cursor++] = 'x';
+            } else if (format_info_.type == 'o' && value != 0) {
+                format_content[format_content_cursor++] = '0';
             }
         }
 
