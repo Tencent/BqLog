@@ -150,8 +150,15 @@ int32_t main_logic()
     }
 }
 
+// the suite registers more formats than the mobile cap; the refusal path is covered by test_set_max_entries tests
+static void prepare_test_meta_registry()
+{
+    bq::meta_registry::instance().test_set_max_entries(1u << 20);
+}
+
 int32_t main(int32_t argc, char** argv)
 {
+    prepare_test_meta_registry();
     if (argc > 1 && strcmp(argv[1], "--fast-clock-only") == 0) {
         bq::test::test_fast_clock clock_test;
         auto result = clock_test.test();
@@ -202,6 +209,7 @@ int32_t main(int32_t argc, char** argv)
 #if defined(BQ_ANDROID)
 int32_t test_main()
 {
+    prepare_test_meta_registry();
     return main_logic();
 }
 #endif
