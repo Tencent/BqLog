@@ -70,8 +70,10 @@ namespace bq {
         }
 
 #ifdef BQ_ASAN_ENABLED
+        // Not static: the module entry exports this header, and clang refuses to export a
+        // declaration with internal linkage. BQ_NO_ASAN is what keeps the instrumentation out.
         template <typename T>
-        BQ_NO_ASAN static T get_value_by_address_safe(const T* addr)
+        BQ_NO_ASAN T get_value_by_address_safe(const T* addr)
         {
             return *addr;
         }

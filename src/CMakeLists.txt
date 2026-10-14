@@ -499,6 +499,17 @@ endif()
 
 include(CMakePackageConfigHelpers)
 
+# The platform drivers set CMAKE_INSTALL_LIBDIR to lib/$<CONFIG>, so that a prebuilt package keeps
+# one library directory per configuration. install(EXPORT) evaluates no generator expression in
+# DESTINATION -- it would create a literal "$<CONFIG>" directory, a name Windows cannot even use --
+# and find_package searches <prefix>/lib/cmake/<name> either way, so the package files land in a
+# plain directory instead of following the library one.
+if(CMAKE_INSTALL_LIBDIR MATCHES "\\$<")
+    set(_bq_package_cmake_dir "lib/cmake/BqLog")
+else()
+    set(_bq_package_cmake_dir "${CMAKE_INSTALL_LIBDIR}/cmake/BqLog")
+endif()
+
 if(BUILD_LIB_TYPE STREQUAL "both")
     set(_bq_lib_targets BqLog BqLogStatic)
 else()
@@ -543,13 +554,13 @@ install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/include/"
 install(EXPORT BqLogTargets
     FILE BqLogTargets.cmake
     NAMESPACE bqlog::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/BqLog"
+    DESTINATION "${_bq_package_cmake_dir}"
 )
 
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/../pack/BqLogConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/BqLogConfig.cmake"
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/BqLog"
+    INSTALL_DESTINATION "${_bq_package_cmake_dir}"
     PATH_VARS CMAKE_INSTALL_INCLUDEDIR
 )
 
@@ -562,7 +573,7 @@ write_basic_package_version_file(
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/BqLogConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/BqLogConfigVersion.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/BqLog"
+    DESTINATION "${_bq_package_cmake_dir}"
 )
 
 configure_file(
