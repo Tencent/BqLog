@@ -3,3 +3,11 @@ NamespaceIndentation:       All
 SortIncludes:               false
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
+# Pinned explicitly so that a newer clang-format cannot drift the whole tree: each of these
+# already matches the WebKit default or the existing style, so they change nothing by themselves.
+IndentWidth:                4
+UseTab:                     Never
+ColumnLimit:                0
+ReflowComments:             false
+PointerAlignment:           Left
+BreakBeforeBraces:          WebKit

@@ -8,6 +8,52 @@
 
 ## C++（动态库 / 静态库 / 源码）
 
+- **Homebrew（macOS / Linux）**
+
+  ```bash
+  brew tap pippocao/bqlog
+  brew install bqlog
+  ```
+
+  之后即可通过 CMake 或 pkg-config 找到该包：
+
+  ```cmake
+  find_package(BqLog REQUIRED)
+  target_link_libraries(your_target PRIVATE bqlog::BqLogShared)   # 或 bqlog::BqLogStatic
+  ```
+
+  ```bash
+  pkg-config --cflags --libs bqlog
+  ```
+
+- **vcpkg（Windows / Linux / macOS）**
+
+  在并入 `microsoft/vcpkg` 之前，可以先从本仓库以 overlay port 的方式使用：
+
+  ```bash
+  vcpkg install bqlog --overlay-ports=<仓库路径>/pack/vcpkg/ports
+  ```
+
+  triplet 如何决定库形态、以及提交上游的说明见 [pack/vcpkg/README_CHS.md](../pack/vcpkg/README_CHS.md)。
+
+- **CMake FetchContent**
+
+  本仓库是一个带顶层入口的 CMake 工程，因此无需任何包管理器即可直接引入：
+
+  ```cmake
+  include(FetchContent)
+  FetchContent_Declare(BqLog
+      GIT_REPOSITORY https://github.com/Tencent/BqLog.git
+      GIT_TAG Release_2.7.0)
+  FetchContent_MakeAvailable(BqLog)
+
+  target_link_libraries(your_target PRIVATE BqLog)
+  ```
+
+  `BUILD_LIB_TYPE` 决定库形态：`static_lib`（默认）、`dynamic_lib`，或 `both`（会产出
+  `BqLog` 与 `BqLogStatic` 两个目标）。不显式指定 `TARGET_PLATFORM` 时，目标平台由编译器
+  自动推断。
+
 - **动态库**
   下载 `dynamic_lib_{version}` 压缩包：
   - 将 `dynamic_lib/include` 目录添加到头文件搜索路径；
@@ -36,17 +82,35 @@ import bq.log;
 
 模块接口单元随头文件一起分发，位于 `include/bq_log/bq.log.cppm`（bq_common 的内容由它一并转出）；**我们不预编译 BMI**（它与编译器版本、标准、宏定义绑定，必须由你的工程编译一次）。
 
-CMake（3.28 起；可能需要 Ninja 或 VS 17.4+ 生成器）：
+**编译器必须真正实现 C++20 模块。**如果它接受 `-std=c++20` 却解析不了 `export module`，会在接口单元上直接报错，而不是跳过，所以选这条入口前先确认工具链。头文件入口没有这个要求。
+
+CMake（3.28 起；可能需要 Ninja 或 VS 17.4+ 生成器）。`find_package(BqLog)` 会报出文件位置，不需要硬编码路径：
 
 ```cmake
-target_sources(your_target PRIVATE FILE_SET CXX_MODULES FILES
-    ${BQLOG_DIR}/include/bq_log/bq.log.cppm)
-target_link_libraries(your_target PRIVATE <bqlog 库>)
+find_package(BqLog REQUIRED)
+
+target_sources(your_target PRIVATE FILE_SET CXX_MODULES
+    BASE_DIRS "${BQLOG_INCLUDE_DIR}"
+    FILES "${BQLOG_MODULE_FILE}")
+target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
 GCC 额外需要 `-fmodules-ts`（它的模块实现是 TS，`gcm.cache` 由编译器自己管理）。
 
 只做导入的目标默认不参与模块扫描，编译器就找不到模块：给它设置 `CXX_SCAN_FOR_MODULES` 属性，或 `cmake_policy(SET CMP0155 NEW)`。
+
+不用 CMake 时，可以手工预编译接口单元。这条路径不依赖 `clang-scan-deps`，因此在缺少该工具的环境里也能用：
+
+```bash
+CXX=clang++
+$CXX -std=c++20 -x c++-module --precompile -I$PREFIX/include \
+    $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
+$CXX -std=c++20 -c bq.log.pcm -o bq.log.o      # 模块初始化器在这个目标文件里
+$CXX -std=c++20 -fmodule-file=bq.log=bq.log.pcm -I$PREFIX/include -c app.cpp
+$CXX bq.log.o app.o -lBqLog -o app
+```
+
+`build/pack_test/module_verify.sh` 会对安装好的目录完整跑一遍上述流程。
 
 需要注意的两点：
 
@@ -60,7 +124,17 @@ GCC 额外需要 `-fmodules-ts`（它的模块实现是 TS，`gcm.cache` 由编�
 - **Unity / 团结引擎**
   完整引擎集成步骤请见 [游戏引擎集成指南](./ENGINE_INTEGRATION_CHS.md)。
 
-- **.NET**
+- **.NET —— NuGet**
+
+  ```bash
+  dotnet add package BqLog
+  ```
+
+  包内含 C# 绑定，以及各支持平台的原生库（`win-x64`、`win-arm64`、`linux-x64`、`linux-arm64`、
+  `osx-x64`、`osx-arm64`），无需手工拷贝。包内容与发布步骤见
+  [pack/nuget/README_CHS.md](../pack/nuget/README_CHS.md)。
+
+- **.NET —— 手工集成**
   - 下载对应平台的动态库包 `{os}_{arch}_libs_{version}`，引入其中动态库；
   - 将 C# wrapper 源码加入工程 —— 可以直接使用仓库下 `/wrapper/csharp/src`，也可以从 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 `c#_wrapper_{version}` 预打包的源码包。
 

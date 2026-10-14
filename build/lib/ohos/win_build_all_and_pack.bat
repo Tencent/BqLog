@@ -28,7 +28,8 @@ for %%T in (armeabi-v7a arm64-v8a x86_64) do (
       REM Convert NDK path to POSIX style for CMake
       set "NDK_POSIX=%NDK_PATH:\=/%"
 
-      cmake ../../../../src -G "Unix Makefiles" -DOHOS_ARCH=%%T -DCMAKE_BUILD_TYPE=%%C -DBUILD_LIB_TYPE=%%L -DCMAKE_TOOLCHAIN_FILE="!NDK_POSIX!/build/cmake/ohos.toolchain.cmake" -DTARGET_PLATFORM:STRING=ohos -DOHOS_STL=c++_static || goto :error
+      REM CMAKE_INSTALL_* reproduces the prebuilt tarball shape, install/<libtype>/lib/<config>/<abi>.
+      cmake ../../../../src -G "Unix Makefiles" -DOHOS_ARCH=%%T -DCMAKE_BUILD_TYPE=%%C -DBUILD_LIB_TYPE=%%L -DCMAKE_TOOLCHAIN_FILE="!NDK_POSIX!/build/cmake/ohos.toolchain.cmake" -DTARGET_PLATFORM:STRING=ohos -DOHOS_STL=c++_static -DCMAKE_INSTALL_PREFIX=../../../../install/%%L -DCMAKE_INSTALL_LIBDIR=lib/%%C/%%T -DCMAKE_INSTALL_DOCDIR=.. || goto :error
 
       REM Build and install
       cmake --build . -- -j%PARALLEL_JOBS% || goto :error

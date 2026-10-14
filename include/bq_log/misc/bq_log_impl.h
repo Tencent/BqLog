@@ -13,14 +13,15 @@
  * \author pippocao
  * \date 2022.08.03
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#endif
 #include "bq_log/bq_log.h"
 #include "bq_log/misc/bq_log_fast_inline.h"
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace impl {
         template <bool INCLUDE_TYPE_INFO, typename First>
         inline void _do_log_args_fill(uint8_t* data_addr, const bq::tools::size_seq<INCLUDE_TYPE_INFO, First>& seq, const First& first)
@@ -635,7 +636,6 @@ namespace bq {
         }
     }
 
-    BQ_MODULE_EXPORT_END
 }
 
 // BQ_LOG_FAST_*: lower latency log.info() and friends, BQ_LOG_FAST_INFO(log, [log.cat.xxx,] format, args...). A call site

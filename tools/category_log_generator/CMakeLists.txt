@@ -11,6 +11,17 @@ bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/v
 
 project(BqLog_CategoryLogGenerator VERSION ${BQ_VERSION} LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
+# A driver script or a package manager passes TARGET_PLATFORM; detect it otherwise.
+bq_default_target_platform()
+
+# Packagers turn this off so a new compiler warning cannot fail a package build.
+OPTION(BQ_WERROR "Treat compiler warnings as errors" ON)
+
+# The tools ship next to the library, so their code has to be position independent too.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 if(NOT DEFINED CPP_VER)
     set(CMAKE_CXX_STANDARD 17)
     message("Use default C++ 17")
@@ -24,25 +35,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 #make __cplusplus correct in Visual Studio
 if (MSVC)
     string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /utf-8 /bigobj")
-    add_compile_options(/W4 /WX)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        list(APPEND EXTRA_FLAGS -Wshorten-64-to-32)
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        list(APPEND EXTRA_FLAGS -Wlogical-op)
-        list(APPEND EXTRA_FLAGS -Wduplicated-branches)
-        list(APPEND EXTRA_FLAGS -Warray-bounds)
-    endif()
-
-    add_compile_options(
-            -Wall -Wextra -pedantic -Werror
-            -Wundef -Wshadow -Wstrict-aliasing
-            -Wcast-qual -Wconversion -Wsign-conversion
-            -Wnull-dereference -Wformat=2 -Wuninitialized
-            ${EXTRA_FLAGS}
-    )
 endif()
+
+bq_set_warning_flags()
 
 ############################################################
 # Config Source Dirs
@@ -82,17 +79,15 @@ include_directories(
 )
 
 set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/tools")
-set(INSTALL_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/tools")
-
-message("Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
-message("Dist Directory:${INSTALL_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}")
 
 set(ARTIFACTS_SUB_DIR "bin/$<CONFIG>")
-set(INSTALL_SUB_DIR "bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 
-#universal binary for mac os, support both Intel cpu and Apple cpu
-if(TARGET_PLATFORM STREQUAL "mac")
+message("Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
+
+# Universal binary for mac os, both Intel and Apple cpu, unless the caller chose the
+# architectures (a package manager does, and must not receive a universal binary).
+if(TARGET_PLATFORM STREQUAL "mac" AND NOT DEFINED CMAKE_OSX_ARCHITECTURES)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif()
 
@@ -131,18 +126,15 @@ set_target_properties(BqLog_CategoryLogGenerator PROPERTIES
         SOVERSION ${BQ_SOVERSION}
 )
 
-set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
-
-
 install(TARGETS BqLog_CategoryLogGenerator
-        ARCHIVE DESTINATION "${INSTALL_SUB_DIR}"
-        LIBRARY DESTINATION "${INSTALL_SUB_DIR}"
-        RUNTIME DESTINATION "${INSTALL_SUB_DIR}"
-        FRAMEWORK DESTINATION "${INSTALL_SUB_DIR}"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        FRAMEWORK DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 
 install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/BqLog_CategoryLogGenerator.pdb"
-        DESTINATION "${INSTALL_SUB_DIR}"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
         OPTIONAL
 )
 
@@ -151,11 +143,11 @@ file(GLOB README_FILES
 )
 
 install(FILES ${README_FILES}
-        DESTINATION "."
+        DESTINATION "${CMAKE_INSTALL_DOCDIR}"
 )
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../docs"
-        DESTINATION "."
+        DESTINATION "${CMAKE_INSTALL_DOCDIR}"
 )
 
 

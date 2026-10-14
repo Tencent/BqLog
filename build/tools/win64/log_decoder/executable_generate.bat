@@ -19,7 +19,7 @@ rd /s/q VSProj
 md VSProj
 cd VSProj
 
-cmake ..\..\..\..\..\tools\log_decoder\ -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG%
+cmake ..\..\..\..\..\tools\log_decoder\ -DTARGET_PLATFORM:STRING=win64 %GEN_PLATFORM_ARG% -DCMAKE_INSTALL_PREFIX=..\..\..\..\..\install\tools -DCMAKE_INSTALL_DOCDIR=.
 
 cmake --build . --config RelWithDebInfo --parallel %BUILD_JOBS% || exit /b 1
 cmake --install . --config RelWithDebInfo || exit /b 1

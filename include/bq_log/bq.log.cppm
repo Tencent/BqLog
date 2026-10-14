@@ -27,6 +27,10 @@ module;
 #include <time.h>
 #include <wchar.h>
 
+// Completing the list above is what lets the headers skip their own system includes, which is
+// the only way to keep those directives out of the purview (clang -Winclude-angled-in-module-purview).
+#define BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED
+
 // macros.h supplies BQ_WIN below; assert.h brings in <assert.h>, which has no include
 // guard, so it would otherwise be included inside the purview (MSVC C5244).
 #include "bq_common/platform/macros.h"

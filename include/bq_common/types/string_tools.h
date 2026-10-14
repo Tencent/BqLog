@@ -17,9 +17,11 @@
  *
  */
 
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <string.h>
 #include <ctype.h>
 #include <wchar.h>
+#endif
 #include "bq_common/types/type_tools.h"
 #include "bq_common/types/type_traits.h"
 

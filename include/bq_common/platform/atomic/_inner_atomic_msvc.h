@@ -22,7 +22,6 @@
 #ifdef BQ_MSVC
 #include <intrin.h>
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace platform {
         bq_forceinline void atomic_thread_fence_acquire() noexcept
         {
@@ -724,6 +723,5 @@ namespace bq {
         SPECIALIZED_ATOMIC_BASE(8);
 #pragma warning(pop)
     }
-    BQ_MODULE_EXPORT_END
 }
 #endif // BQ_WIN

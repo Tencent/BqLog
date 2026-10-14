@@ -34,3 +34,8 @@ node_modules/
 # Local-only instruction-count probe. The counts depend on the exact compiler build, so this is a
 # tool to run by hand on one's own machine, not a repository fixture and not a CI gate.
 /test/asm/
+
+# NuGet package build outputs
+pack/nuget/bin/
+pack/nuget/obj/
+pack/nuget/runtimes/

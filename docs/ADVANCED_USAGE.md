@@ -150,13 +150,18 @@ Generation steps are as follows:
    ./BqLog_CategoryLogGenerator business_log /path/to/BussinessCategories.txt ./
    ```
 
-   Will generate 5 files in current directory:
+   Will generate several files in current directory:
 
-  - `business_log.h` (C++ header wrapper)
-  - `business_log.java` (Java wrapper)
-  - `business_log.cs` (C# wrapper)
-  - `business_log.ts` (TypeScript wrapper)
-  - `business_log_for_UE.h` (Coordinate with UE project, Category can be referenced in Blueprint)
+   - `business_log.h` (C++ header wrapper)
+   - `business_log.cppm` (C++20 module unit: `import bq.business_log;` instead of the header)
+   - `business_log.java` (Java wrapper)
+   - `business_log.cs` (C# wrapper)
+   - `business_log.ts` (TypeScript wrapper)
+   - `business_log_for_UE.h` (Coordinate with UE project, Category can be referenced in Blueprint)
+
+   No extra argument is needed: the module is the class name behind a `bq.` prefix, so
+   `bq::business_log` corresponds to `import bq.business_log;`. Two generated category log
+   classes simply become two modules, `bq.business_log` and `bq.other_log`, with no interaction.
 
 4. Import these files in project to use Log class with Category.
    For example C++:
@@ -174,7 +179,29 @@ Generation steps are as follows:
    Use `.` completion on `my_log.cat` to get pre-defined Category list.
    If Category parameter is not passed, `*default` is used by default.
 
----
+   ### C++20 module entry
+
+   The generated `.h` and `.cppm` carry the **same class**; only the way it is brought in differs.
+   From C++20 on, the header can be replaced by an import:
+
+   ```cpp
+   import bq.log;                      // the library itself
+   import bq.business_log;             // the generated category log class
+
+   bq::business_log my_log = bq::business_log::create_log("MyLog", config);
+   my_log.info(my_log.cat.Shop.Seller, "Log2");
+   my_log.fast_info<my_log.cat.Shop, "fast {}">(1);
+   ```
+
+   Hand `business_log.cppm` to the build system (CMake 3.28 and newer use `FILE_SET CXX_MODULES`,
+   exactly as for `bq.log.cppm`).
+
+   > **The `.h` and the `.cppm` are mutually exclusive.** A translation unit may not import and
+   > include the same library, so a project picks one: either every source file includes
+   > `business_log.h`, or every one imports `bq.cat.business_log`. The compiler also has to
+   > implement C++20 modules for real -- see the [integration guide](./INTEGRATION_GUIDE.md).
+
+   ---
 
 <a id="3-data-protection-on-abnormal-exit"></a>
 

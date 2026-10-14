@@ -16,8 +16,10 @@
  * \date 2022/08/10
  *
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
 #include <stddef.h>
+#endif
 #include "bq_common/platform/macros.h"
 #include "bq_common/types/type_traits.h"
 #include "bq_common/types/allocator.h"

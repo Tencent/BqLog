@@ -212,6 +212,8 @@ build_one_pair() {
   echo
 
   if [[ "$gen" == "Xcode" ]]; then
+    # CMAKE_INSTALL_* reproduces the prebuilt tarball shape, install/<libtype>/lib/<config>;
+    # the CMakeLists itself only supplies the standard GNUInstallDirs defaults.
     cmake "${SRC_DIR}" -G "Xcode" \
       -DTARGET_PLATFORM:STRING=mac \
       -DBUILD_LIB_TYPE="${build_lib_type}" \
@@ -219,7 +221,9 @@ build_one_pair() {
       -DNODE_API_SUPPORT:BOOL="${NODE_API_SUPPORT}" \
       -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
       -DAPPLE_LIB_FORMAT:STRING="${apple_format}" \
-      -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install" \
+      -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install/${build_lib_type}" \
+      -DCMAKE_INSTALL_LIBDIR='lib/$<CONFIG>' \
+      -DCMAKE_INSTALL_DOCDIR=.. \
       "${ARCH_ARGS[@]}"
 
     for cfg in "${BuildConfigs[@]}"; do
@@ -240,7 +244,9 @@ build_one_pair() {
       -DPYTHON_SUPPORT:BOOL="${PYTHON_SUPPORT}" -DGO_SUPPORT:BOOL="${GO_SUPPORT}" \
         -DCMAKE_BUILD_TYPE="${cfg}" \
         -DAPPLE_LIB_FORMAT:STRING="${apple_format}" \
-        -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install" \
+        -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install/${build_lib_type}" \
+        -DCMAKE_INSTALL_LIBDIR="lib/${cfg}" \
+        -DCMAKE_INSTALL_DOCDIR=.. \
         "${ARCH_ARGS[@]}"
       cmake --build . -- -j "${BUILD_JOBS}"
       cmake --install .

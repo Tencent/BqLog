@@ -143,13 +143,16 @@ const bq::array<bq::string>& get_categories_name_array() const;
    ./BqLog_CategoryLogGenerator business_log /path/to/BussinessCategories.txt ./
    ```
 
-   将在当前目录下生成 5 个文件：
+   将在当前目录下生成多个文件：
 
   - `business_log.h`（C++ header wrapper）
+  - `business_log.cppm`（C++20 模块单元，用 `import bq.business_log;` 代替 include 头文件）
   - `business_log.java`（Java wrapper）
   - `business_log.cs`（C# wrapper）
   - `business_log.ts`（TypeScript wrapper）
   - `business_log_for_UE.h`（配合 UE 工程，可在蓝图中引用 Category）
+
+  不需要额外参数：模块名就是类名加 `bq.` 前缀，因此 `bq::business_log` 对应 `import bq.business_log;`。生成两个类别日志类就会有 `bq.business_log` 与 `bq.other_log` 两个模块，互不影响。
 
 4. 在工程中引入这些文件，即可使用带 Category 的日志类。
    例如 C++：
@@ -166,6 +169,23 @@ const bq::array<bq::string>& get_categories_name_array() const;
 
    对 `my_log.cat` 使用 `.` 补全，即可获得事先定义好的 Category 列表。
    如不传递 Category 参数，则默认使用 `*default`。
+
+### C++20 模块方式
+
+生成的 `.h` 与 `.cppm` 是**同一个类**，区别只是引入方式。C++20 起可以不 include 头文件，改为导入模块：
+
+```cpp
+import bq.log;                      // 库本身
+import bq.business_log;             // 生成的类别日志类
+
+bq::business_log my_log = bq::business_log::create_log("MyLog", config);
+my_log.info(my_log.cat.Shop.Seller, "Log2");
+my_log.fast_info<my_log.cat.Shop, "fast {}">(1);
+```
+
+把 `business_log.cppm` 交给构建系统（CMake 3.28 起用 `FILE_SET CXX_MODULES`，与 `bq.log.cppm` 一样）。
+
+> **`.h` 与 `.cppm` 只能二选一。** 同一个工程（更准确地说，同一个翻译单元）不能既 include 头文件又 import 同一个库，因此按工程统一选择：要么所有源文件都 include `business_log.h`，要么都 import `bq.cat.business_log`。编译器还必须真正支持 C++20 模块，详见[集成指南](./INTEGRATION_GUIDE_CHS.md)。
 
 ---
 

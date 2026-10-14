@@ -21,7 +21,6 @@
 #if defined(BQ_GCC) || defined(BQ_CLANG)
 #include "bq_common/types/type_traits.h"
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace platform {
         template <size_t N>
         struct _atomic_gnu_c_standard_type {
@@ -792,6 +791,5 @@ namespace bq {
             }
         };
     }
-    BQ_MODULE_EXPORT_END
 }
 #endif

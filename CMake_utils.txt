@@ -148,6 +148,40 @@ function(BQ_DETECT_ARCH OUT_VAR)
     set(${OUT_VAR} "${INNER_DETECTED_ARCH}" PARENT_SCOPE)
 endfunction()
 
+# Picks TARGET_PLATFORM from the CMake built-ins, but only when the caller did not pass one:
+# the platform drivers, a cross-compiling build and every package manager pass it explicitly.
+# A function, not a macro: an explicit value returns early, and a macro would return from the
+# caller by the same token, aborting the rest of the top level CMakeLists.
+function(bq_default_target_platform)
+    if(DEFINED TARGET_PLATFORM AND NOT "${TARGET_PLATFORM}" STREQUAL "")
+        return()
+    endif()
+
+    if(ANDROID)
+        set(_bq_detected_platform "android")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        set(_bq_detected_platform "ios")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+        set(_bq_detected_platform "ohos")
+    elseif(WIN32)
+        set(_bq_detected_platform "win64")
+    elseif(APPLE)
+        set(_bq_detected_platform "mac")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(_bq_detected_platform "linux")
+    elseif(UNIX)
+        set(_bq_detected_platform "unix")
+    else()
+        set(_bq_detected_platform "win64")
+        message(WARNING "bq_default_target_platform: unrecognized platform, using win64")
+    endif()
+
+    set(TARGET_PLATFORM "${_bq_detected_platform}" CACHE STRING "Choose the target platform")
+    set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS
+        "win64" "mac" "ios" "android" "linux" "unix" "ohos")
+    message(STATUS "TARGET_PLATFORM:${TARGET_PLATFORM} (from the CMake built-ins)")
+endfunction()
+
 function(set_xcode_property TARGET_NAME ATTRIBUTE_NAME VALUE)
     # if a fourth argument is given, it is the build configuration
     if (ARGC GREATER 3)
@@ -162,4 +196,32 @@ function(set_xcode_property TARGET_NAME ATTRIBUTE_NAME VALUE)
     endif()
 
     set_property(TARGET ${TARGET_NAME} PROPERTY XCODE_ATTRIBUTE_${ATTRIBUTE_NAME}${CONFIG} "${VALUE}")
+endfunction()
+
+# The warning set shared by the library and the tools. -Werror stays optional so that a
+# new warning from a newer compiler cannot fail a package build of released code.
+function(bq_set_warning_flags)
+    if(MSVC)
+        add_compile_options(/W4)
+        if(BQ_WERROR)
+            add_compile_options(/WX)
+        endif()
+        return()
+    endif()
+
+    set(_bq_warning_flags
+        -Wall -Wextra -pedantic
+        -Wundef -Wshadow -Wstrict-aliasing
+        -Wcast-qual -Wconversion -Wsign-conversion
+        -Wnull-dereference -Wformat=2 -Wuninitialized
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        list(APPEND _bq_warning_flags -Wshorten-64-to-32 -Wno-error=unused-command-line-argument)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        list(APPEND _bq_warning_flags -Wlogical-op -Wduplicated-branches -Warray-bounds)
+    endif()
+    if(BQ_WERROR)
+        list(APPEND _bq_warning_flags -Werror)
+    endif()
+    add_compile_options(${_bq_warning_flags})
 endfunction()

@@ -17,8 +17,10 @@
  * \author pippocao
  * \date 2022.08.03
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
 #include <stddef.h>
+#endif
 #include "bq_common/bq_common_public_include.h"
 #include "bq_log/misc/bq_log_c_types.h"
 
@@ -78,10 +80,15 @@ namespace bq {
         uint32_t log_format_data_len;
 
         static constexpr uint32_t get_head_size_without_format_str();
-    } BQ_PACK_END constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
+    } BQ_PACK_END
+        BQ_MODULE_EXPORT_END
+
+        // A member definition may not appear in an export block, so it sits between the markers.
+        constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
     {
         return offsetof(_log_entry_head_def, log_format_str_type);
     }
+    BQ_MODULE_EXPORT_BEGIN
 
     static_assert(_log_entry_head_def::get_head_size_without_format_str() == 32,
         "_log_entry_head_def::get_head_size_without_format_str() must equal 32");
@@ -144,8 +151,12 @@ namespace bq {
     struct log_zero_level_words {
         static const uint32_t value[1];
     };
+    BQ_MODULE_EXPORT_END
+
+    // A static data member definition may not appear in an export block.
     template <typename T>
     const uint32_t log_zero_level_words<T>::value[1] = { 0 };
+    BQ_MODULE_EXPORT_BEGIN
 
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN

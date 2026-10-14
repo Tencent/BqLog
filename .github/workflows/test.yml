@@ -10,6 +10,58 @@ on:
         default: false
   workflow_call:
 jobs:
+  #The layout a package manager installs, verified through find_package and pkg-config.
+  install_verify:
+    name: install verify (${{ matrix.label }})
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: "ubuntu-22.04"
+            runs_on: ubuntu-22.04
+          - label: "macos-latest"
+            runs_on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Verify the standard install
+        run: bash build/pack_test/install_verify.sh
+
+  #The C++20 module interface unit: precompiled into a BMI, imported and run.
+  module_verify:
+    name: module verify (${{ matrix.label }})
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: "ubuntu-24.04"
+            runs_on: ubuntu-24.04
+          - label: "macos-latest"
+            runs_on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Apple clang does not implement the C++20 module syntax at all -- even `export module foo;`
+      # fails to parse -- so macOS needs upstream LLVM. See pack/homebrew/README.md.
+      - name: Install upstream LLVM (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm
+
+      - name: Verify the module interface unit
+        run: |
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            LLVM="$(brew --prefix llvm)"
+            export CC="${LLVM}/bin/clang"
+            export CXX="${LLVM}/bin/clang++"
+          else
+            export CXX=clang++
+          fi
+          bash build/pack_test/module_verify.sh
+
   #Windows
   win64:
     name: win64 (${{ matrix.cc }} cpp${{ matrix.cpp_ver }} ${{ matrix.runner.label }})
@@ -299,15 +351,15 @@ jobs:
       - name: Install GDB(Attempt 1)
         continue-on-error: true
         run: |
-          sudo apt-get update && sudo apt-get install -y gdb
+          sudo apt-get update && sudo apt-get install -y gdb ninja-build
       - name: Install GDB(Attempt 2)
         continue-on-error: true
         run: |
-          sudo apt-get update && sudo apt-get install -y gdb
+          sudo apt-get update && sudo apt-get install -y gdb ninja-build
       - name: Install GDB(Attempt 3)
         continue-on-error: true
         run: |
-          sudo apt-get update && sudo apt-get install -y gdb       
+          sudo apt-get update && sudo apt-get install -y gdb ninja-build       
 
       - name: Build for Linux
         env:
@@ -326,11 +378,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+      - name: Install ninja
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+
       - name: Run the suite without instance locks
         env:
           BQ_LOW_PERFORMANCE_TESTS: "true"
         run: |
-          cmake -S test/cpp -B build_recovery_capability -DTARGET_PLATFORM=linux \
+          cmake -S test/cpp -B build_recovery_capability -G Ninja -DTARGET_PLATFORM=linux \
             -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBQ_TEST_DISABLE_FILE_LOCK=ON
           cmake --build build_recovery_capability --target BqLogUnitTest --parallel 2
           cd build_recovery_capability
@@ -369,7 +425,7 @@ jobs:
         continue-on-error: true
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y gcc clang g++ make cmake gdb ninja-build
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
@@ -378,7 +434,7 @@ jobs:
         continue-on-error: true
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y gcc clang g++ make cmake gdb ninja-build
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
@@ -387,7 +443,7 @@ jobs:
         continue-on-error: true
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y gcc clang g++ make cmake gdb ninja-build
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
@@ -430,6 +486,16 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
+
+      # The module entry test runs under Ninja; the Xcode generator used for the rest of the
+      # suite cannot produce that target.
+      - name: Install Ninja
+        run: brew install ninja
+
+      # A toolchain that implements C++20 modules; run_test.sh picks this clang++ up.
+      - name: Install LLVM for the module test
+        if: matrix.cpp_ver >= 20
+        run: brew install llvm
 
       - name: Build for macOS
         env:

@@ -2,6 +2,13 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [Unreleased]
+- **Homebrew**: on macOS and Linux the library, the headers (including the C++20 module interface unit) and the command line tools install with one command. The install layout follows `GNUInstallDirs` and documents itself through `find_package(BqLog)` and pkg-config. See [Integration Guide](docs/INTEGRATION_GUIDE.md).
+- **vcpkg**: the port builds the library form the triplet asks for and exposes the same `find_package` and pkg-config files. See [pack/vcpkg](pack/vcpkg/README.md).
+- **NuGet**: the `BqLog` package carries the C# bindings together with the native library for six platforms, so .NET projects no longer copy binaries by hand. The managed assembly is `BqLog.Managed.dll`, kept apart from the Windows native `BqLog.dll`: otherwise `dotnet publish -r win-x64` fails outright with `NETSDK1152` because both land on one path. See [pack/nuget](pack/nuget/README.md).
+- **C++20 modules**: the module interface unit now precompiles and imports under clang as well, not only GCC. Member definitions no longer sit in an export block, which C++20 forbids; `build/pack_test/module_verify.sh` covers the whole sequence.
+- **Category log module entry**: `BqLog_CategoryLogGenerator` now writes `xxx.cppm` beside `xxx.h`, so a category log class can be imported as well as included (pick one). The module is the class name behind a `bq.` prefix (`bq::business_log` -> `import bq.business_log;`), with no extra argument; several generated classes are several modules. The generated `.h` is unchanged for include users, and both entries compile to the same instructions.
+
 ## [v2.7.0] - 2026-10-11
 - **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)` plus `fast_verbose` … `fast_fatal`. The format string is a template parameter instead of a macro argument, so IDE hints and compiler diagnostics work and any log object can be used at the same call site; the literal may be written `""`, `u8""`, `u""`, `U""` or `L""`. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
 - **C++20 modules**: from C++20 the library can be imported as well as included — `import bq.log;`. The module interface unit ships with the headers and exports what both libraries offer; macros are not exported, so the fast log there is the macro-free `log.fast_info<"...">`. See [Integration Guide](docs/INTEGRATION_GUIDE.md).

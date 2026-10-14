@@ -2,6 +2,13 @@
 
 [English](CHANGELOG.md)
 
+## [Unreleased]
+- **Homebrew**：macOS 与 Linux 上，库、头文件（含 C++20 模块接口单元）与命令行工具可以用一条命令安装。安装布局遵循 `GNUInstallDirs`，并通过 `find_package(BqLog)` 与 pkg-config 对外描述自身。详见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
+- **vcpkg**：port 按 triplet 要求构建对应库形态，并对外提供同一套 `find_package` 与 pkg-config 文件。详见 [pack/vcpkg](pack/vcpkg/README_CHS.md)。
+- **NuGet**：`BqLog` 包内含 C# 绑定与六个平台的原生库，.NET 工程无需再手工拷贝二进制。托管程序集为 `BqLog.Managed.dll`，与 Windows 原生库 `BqLog.dll` 区分开——否则 `dotnet publish -r win-x64` 会因为两者输出到同一路径而直接报 `NETSDK1152`。详见 [pack/nuget](pack/nuget/README_CHS.md)。
+- **C++20 模块**：模块接口单元现在在 clang 下也能预编译并导入，不再只有 GCC 可用。类外成员定义不再位于导出块内（C++20 禁止这种写法）；`build/pack_test/module_verify.sh` 覆盖了完整流程。
+- **Category 日志的模块入口**：`BqLog_CategoryLogGenerator` 在生成 `xxx.h` 的同时生成 `xxx.cppm`，类别日志类既可以 include 也可以 import（两者二选一）。模块名就是类名加 `bq.` 前缀（`bq::business_log` → `import bq.business_log;`），不需要额外参数；生成多个类就是多个模块。生成的 `.h` 对 include 使用者零变化，两种入口编译出的指令数相同。
+
 ## [v2.7.0] - 2026-10-11
 - **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)` 与 `fast_verbose` … `fast_fatal`。格式串是模板参数（不再是宏参数），因此 IDE 提示与编译器诊断正常，同一个调用点也可用于任何 log 对象；格式串可写成 `""`、`u8""`、`u""`、`U""`、`L""`。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
 - **C++20 模块**：C++20 起除了包含头文件，也可以直接导入 —— `import bq.log;`。模块接口单元随头文件一起分发，把两个库对外的东西一并转出；宏无法导出，所以模块方式下的快速日志是 `log.fast_info<"...">`。详见 [集成指南](docs/INTEGRATION_GUIDE_CHS.md)。

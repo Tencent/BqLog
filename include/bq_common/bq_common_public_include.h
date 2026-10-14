@@ -17,6 +17,7 @@
 //
 
 // Basic includes
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -27,14 +28,14 @@
 #include <inttypes.h>
 #include <ctype.h>
 #include <time.h>
+#endif
 
 // Declarations between these two markers make up the interface of the C++20 module
 // (see include/bq_log/bq.log.cppm). They are empty unless a module is being built,
 // which defines them as `export {` and `}` before including any header; the include
 // entry sees exactly the same declarations with the same linkage.
-// A declaration with internal linkage may not be exported, so file local helpers
-// stay outside the markers -- a constexpr value is fine inside, because an importer
-// never needs its symbol.
+// An export block takes namespace scoped declarations only, so internal linkage helpers and
+// the bodies in *_impl.h stay outside it: a class carries its own members when it is exported.
 #ifndef BQ_MODULE_EXPORT_BEGIN
 #define BQ_MODULE_EXPORT_BEGIN
 #define BQ_MODULE_EXPORT_END

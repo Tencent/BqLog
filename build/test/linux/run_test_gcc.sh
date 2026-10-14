@@ -10,8 +10,10 @@ sudo sysctl -w kernel.core_pattern=core.%p || echo "Failed to set core pattern (
 echo "Running BqLogUnitTest directly..."
 
 # 1) Debug
-CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
-make -j"$(nproc)"
+# Ninja, not the default generator: cmake builds C++20 modules with Ninja and Visual Studio
+# only, and the module entry test is skipped under anything else.
+CC=gcc CXX=g++ cmake -G Ninja -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
+cmake --build . --parallel
 
 set +e
 ./BqLogUnitTest
@@ -47,8 +49,8 @@ else
 fi
 
 # 2) RelWithDebInfo
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
-make -j"$(nproc)"
+CC=gcc CXX=g++ cmake -G Ninja -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
+cmake --build . --parallel
 
 set +e
 ./BqLogUnitTest

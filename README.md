@@ -69,6 +69,7 @@
 - Depends only on the standard C library and platform APIs; can be compiled with Android `ANDROID_STL = none`.
 - Supports `C++11` and later standards and works under very strict compiler options.
 - Build system is based on `CMake` and provides multi-platform scripts, easy to integrate.
+- One command to install on macOS and Linux (`brew install bqlog`), with the headers, both library forms, and `find_package` / pkg-config support.
 - Supports custom parameter types.
 - Very friendly for code completion and IDE hints.
 

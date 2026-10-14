@@ -16,9 +16,11 @@
  * \author pippocao
  * \date 2022.08.03
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
+#endif
 #include "bq_common/bq_common_public_include.h"
 #include "bq_log/misc/bq_log_def.h"
 

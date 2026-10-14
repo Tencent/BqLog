@@ -391,6 +391,61 @@ jobs:
         with:
           packages-dir: dist/
 
+  # Publish the .NET package to nuget.org, carrying the prebuilt native libraries.
+  publish_nuget:
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      id-token: write  # Required for OIDC Trusted Publishing
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the Windows libraries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: windows_*_libs_*
+          path: artifacts_in/
+
+      - name: Download the Linux libraries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: linux_*_libs_*
+          path: artifacts_in/
+
+      - name: Download the macOS libraries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: macos_universal_binary_libs_*
+          path: artifacts_in/
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Assemble the native libraries
+        run: bash pack/nuget/collect_runtimes.sh artifacts_in pack/nuget
+
+      - name: Pack
+        run: dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=${{ needs.build.outputs.version }} -o nuget_out
+
+      # The temporary key lives one hour and one OIDC token yields exactly one key, so the login
+      # sits immediately before the push. No long-lived NUGET_API_KEY is involved.
+      - name: Log in to nuget.org (OIDC -> temporary API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish to nuget.org
+        run: |
+          dotnet nuget push "nuget_out/*.nupkg" \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
   # Publish Node.js package to npm (via Trusted Publishing / OIDC)
   publish_npm:
     runs-on: ubuntu-latest

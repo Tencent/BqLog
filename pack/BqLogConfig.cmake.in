@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/BqLogTargets.cmake")
+
+# The C++20 module interface unit ships with the headers and carries no prebuilt BMI:
+# it is tied to the compiler, the standard and the macros, so the consumer compiles it.
+set_and_check(BQLOG_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set(BQLOG_MODULE_FILE "${BQLOG_INCLUDE_DIR}/bq_log/bq.log.cppm")
+
+check_required_components(BqLog)

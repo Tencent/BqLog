@@ -207,6 +207,7 @@ build_one() {
   [ "$COMPILER_TYPE" = "clang" ] && CC="clang" CXX="clang++"
   SHARED="OFF"; [ "$BUILD_LIB_TYPE_ARG" = "dynamic_lib" ] && SHARED="ON"
   SRC_DIR="$(cd "$(dirname "$0")/../../../src" && pwd)"
+  INSTALL_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)/install"
   OUT_DIR="build_${ARCH_PARAM}_${COMPILER_TYPE}_${BUILD_LIB_TYPE_ARG}"
   rm -rf "$OUT_DIR"; mkdir "$OUT_DIR"; cd "$OUT_DIR" || exit 1
   echo
@@ -223,6 +224,8 @@ build_one() {
     echo "  BUILD FOR CONFIG $BUILD_LIB_TYPE_ARG : $cfg"
     CFG_DIR="build_${cfg}"
     rm -rf "$CFG_DIR"; mkdir "$CFG_DIR"; cd "$CFG_DIR" || exit 1
+    # CMAKE_INSTALL_* reproduces the prebuilt tarball shape, install/<libtype>/lib/<config>;
+    # the CMakeLists itself only supplies the standard GNUInstallDirs defaults.
     cmake "$SRC_DIR" -G "Unix Makefiles" \
       -DTARGET_PLATFORM:STRING=unix \
       -DBUILD_LIB_TYPE="$BUILD_LIB_TYPE_ARG" \
@@ -233,7 +236,10 @@ build_one() {
       -DCMAKE_BUILD_TYPE="$cfg" \
       -DBUILD_SHARED_LIBS="$SHARED" \
       -DCMAKE_C_COMPILER="$CC" \
-      -DCMAKE_CXX_COMPILER="$CXX"
+      -DCMAKE_CXX_COMPILER="$CXX" \
+      -DCMAKE_INSTALL_PREFIX="$INSTALL_ROOT/$BUILD_LIB_TYPE_ARG" \
+      -DCMAKE_INSTALL_LIBDIR="lib/$cfg" \
+      -DCMAKE_INSTALL_DOCDIR=..
     cmake --build . -- -j 4 || exit 1
     cmake --install . || exit 1
     cd ..
@@ -246,6 +252,7 @@ gen_vsproj() {
   [ "$COMPILER_TYPE" = "clang" ] && CC="clang" CXX="clang++"
   SHARED="OFF"; [ "$BUILD_LIB_TYPE" = "dynamic_lib" ] && SHARED="ON"
   SRC_DIR="$(cd "$(dirname "$0")/../../../src" && pwd)"
+  INSTALL_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)/install"
   OUT_DIR="vsproj_${ARCH_PARAM}_${COMPILER_TYPE}_${BUILD_LIB_TYPE}"
   rm -rf "$OUT_DIR"; mkdir "$OUT_DIR"; cd "$OUT_DIR" || exit 1
   echo
@@ -267,7 +274,10 @@ gen_vsproj() {
     -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_SHARED_LIBS="$SHARED" \
     -DCMAKE_C_COMPILER="$CC" \
-    -DCMAKE_CXX_COMPILER="$CXX"
+    -DCMAKE_CXX_COMPILER="$CXX" \
+    -DCMAKE_INSTALL_PREFIX="$INSTALL_ROOT/$BUILD_LIB_TYPE" \
+    -DCMAKE_INSTALL_LIBDIR="lib/Debug" \
+    -DCMAKE_INSTALL_DOCDIR=..
   cd ..
 }
 

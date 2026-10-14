@@ -24,6 +24,8 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
         VISIONOS|SIMULATOR_VISIONOS) DEPLOYMENT_TARGET_ARG=() ;;
         *) DEPLOYMENT_TARGET_ARG=(-DDEPLOYMENT_TARGET=9.0) ;;
       esac
+      # CMAKE_INSTALL_* reproduces the prebuilt tarball shape, install/<libtype>/lib/<config>;
+      # the CMakeLists itself only supplies the standard GNUInstallDirs defaults.
       cmake ../../../../src \
             -G Xcode \
             -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake \
@@ -32,7 +34,10 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
             -DCPP_VER=14 \
             -DBUILD_LIB_TYPE=$BUILD_LIB_TYPE \
             -DAPPLE_LIB_FORMAT=$APPLE_LIB_FORMAT \
-            -DTARGET_PLATFORM:STRING=ios
+            -DTARGET_PLATFORM:STRING=ios \
+            -DCMAKE_INSTALL_PREFIX=../../../../install/$BUILD_LIB_TYPE \
+            -DCMAKE_INSTALL_LIBDIR='lib/$<CONFIG>' \
+            -DCMAKE_INSTALL_DOCDIR=..
 
       for build_config in ${BUILD_CONFIGS[@]}; do
             cmake --build . --config $build_config

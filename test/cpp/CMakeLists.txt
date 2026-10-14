@@ -244,8 +244,23 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
     # the module has to see the headers exactly as the test sources do
     target_compile_definitions(bqlog_module PRIVATE BQ_UNIT_TEST)
 
+    # The generated category log is exercised through its own module entry as well: the category
+    # log generator writes test_category_log.cppm beside test_category_log.h, and both carry the
+    # same class. It has to be built before the test binary, hence the dyndep dependency.
+    set(BQ_MODULE_TEST_LIBS "")
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+        add_library(bqlog_test_category_module STATIC)
+        target_include_directories(bqlog_test_category_module PRIVATE ${ALL_INC_DIRS})
+        target_sources(bqlog_test_category_module PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+                FILES ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+        # the module has to see the headers exactly as the test sources do, and it imports bq.log
+        target_compile_definitions(bqlog_test_category_module PRIVATE BQ_UNIT_TEST)
+        target_link_libraries(bqlog_test_category_module PRIVATE bqlog_module)
+        list(APPEND BQ_MODULE_TEST_LIBS bqlog_test_category_module)
+    endif()
+
     add_executable(BqLogModuleUnitTest ${CMAKE_CURRENT_SOURCE_DIR}/../module/module_test.cpp)
-    target_link_libraries(BqLogModuleUnitTest PRIVATE bqlog_lib bqlog_module)
+    target_link_libraries(BqLogModuleUnitTest PRIVATE bqlog_lib bqlog_module ${BQ_MODULE_TEST_LIBS})
     # a source file that only imports is not scanned by default; CMP0155 would scan the
     # whole project, this says so for this target alone
     set_property(TARGET BqLogModuleUnitTest PROPERTY CXX_SCAN_FOR_MODULES ON)
@@ -254,6 +269,9 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
         # GCC's modules are still a TS, and the flag is needed on both sides.
         target_compile_options(bqlog_module PRIVATE -fmodules-ts)
         target_compile_options(BqLogModuleUnitTest PRIVATE -fmodules-ts)
+        foreach(_bq_module_test_lib IN LISTS BQ_MODULE_TEST_LIBS)
+            target_compile_options(${_bq_module_test_lib} PRIVATE -fmodules-ts)
+        endforeach()
     endif()
 
     enable_testing()

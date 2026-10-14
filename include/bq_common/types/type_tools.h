@@ -37,11 +37,9 @@ inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept { }
 inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept { }
 BQ_MODULE_EXPORT_END
 
-#ifdef BQ_VISUAL_STUDIO
-#define EBCO __declspec(empty_bases) // in some MSVC compilers, EBCO(empty base class optimization) is not enabled by default
-#else
-#define EBCO
-#endif
+// EBCO is defined in bq_common/platform/macros.h, next to the other language-level macros, so
+// that the macro-only header a generated category module includes in its global module fragment
+// is the one that carries it.
 
 namespace bq {
     BQ_MODULE_EXPORT_BEGIN

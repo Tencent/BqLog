@@ -22,7 +22,6 @@
 #include "bq_common/types/hash_map_def.h"
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     /*===========================================================BQ_HASH_MAP_ITER_CLS_NAME==============================================================*/
     template <typename K, typename V, typename Allocator, bool C>
     template <bool C_>
@@ -659,5 +658,4 @@ namespace bq {
         construct_key(alloc_iter, key);
         return alloc_iter;
     }
-    BQ_MODULE_EXPORT_END
 }

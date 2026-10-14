@@ -22,7 +22,6 @@
 #include "bq_common/types/string_def.h"
 #include "bq_common/types/string_tools.h"
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     template <typename CHAR_TYPE, typename Allocator>
     BQ_STRING_INLINE BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::BQ_STRING_CLS_NAME()
         : array<typename BQ_STRING_CLS_NAME<CHAR_TYPE, Allocator>::char_type, Allocator, 1>()
@@ -471,5 +470,4 @@ namespace bq {
     {
         return str2 != str1;
     }
-    BQ_MODULE_EXPORT_END
 }

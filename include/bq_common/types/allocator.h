@@ -21,7 +21,9 @@
  */
 
 #include "bq_common/types/type_tools.h"
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdlib.h>
+#endif
 
 namespace bq {
     BQ_MODULE_EXPORT_BEGIN

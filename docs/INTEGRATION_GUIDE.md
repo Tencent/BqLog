@@ -8,6 +8,54 @@
 
 ## C++ (dynamic / static / source)
 
+- **Homebrew (macOS / Linux)**
+
+  ```bash
+  brew tap pippocao/bqlog
+  brew install bqlog
+  ```
+
+  The package is then found through CMake or pkg-config:
+
+  ```cmake
+  find_package(BqLog REQUIRED)
+  target_link_libraries(your_target PRIVATE bqlog::BqLogShared)   # or bqlog::BqLogStatic
+  ```
+
+  ```bash
+  pkg-config --cflags --libs bqlog
+  ```
+
+- **vcpkg (Windows / Linux / macOS)**
+
+  Available from this repository as an overlay port until it lands in `microsoft/vcpkg`:
+
+  ```bash
+  vcpkg install bqlog --overlay-ports=<repo>/pack/vcpkg/ports
+  ```
+
+  See [pack/vcpkg/README.md](../pack/vcpkg/README.md) for the triplet behaviour, the library
+  form it picks and the submission notes.
+
+- **CMake FetchContent**
+
+  The repository is a CMake project with a top level entry point, so it can be consumed
+  directly, without a package manager:
+
+  ```cmake
+  include(FetchContent)
+  FetchContent_Declare(BqLog
+      GIT_REPOSITORY https://github.com/Tencent/BqLog.git
+      GIT_TAG Release_2.7.0)
+  FetchContent_MakeAvailable(BqLog)
+
+  target_link_libraries(your_target PRIVATE BqLog)
+  ```
+
+  `BUILD_LIB_TYPE` chooses the library form: `static_lib` (the default), `dynamic_lib`, or
+  `both` (which produces the targets `BqLog` and `BqLogStatic`). The target platform is
+  detected from the compiler unless `TARGET_PLATFORM` is set explicitly.
+
 - **Dynamic library**
   Download `dynamic_lib_{version}` archive:
   - Add `dynamic_lib/include` directory to your header search path;
@@ -36,17 +84,36 @@ import bq.log;
 
 The module interface unit ships with the headers as `include/bq_log/bq.log.cppm` (it exports what bq_common provides along with bq::log); **no BMI is prebuilt** (it is tied to the compiler version, the standard and the macros, so your project compiles it once).
 
-CMake (3.28 or newer; may need a Ninja or VS 17.4+ generator):
+**The compiler has to implement C++20 modules.** A toolchain that accepts `-std=c++20` but cannot parse `export module` fails on the interface unit rather than skipping it, so check your toolchain before choosing this entry. Headers have no such requirement.
+
+With CMake (3.28 or newer; a Ninja or VS 17.4+ generator). `find_package(BqLog)` reports the
+files, so nothing has to be hard coded:
 
 ```cmake
-target_sources(your_target PRIVATE FILE_SET CXX_MODULES FILES
-    ${BQLOG_DIR}/include/bq_log/bq.log.cppm)
-target_link_libraries(your_target PRIVATE <the bqlog library>)
+find_package(BqLog REQUIRED)
+
+target_sources(your_target PRIVATE FILE_SET CXX_MODULES
+    BASE_DIRS "${BQLOG_INCLUDE_DIR}"
+    FILES "${BQLOG_MODULE_FILE}")
+target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
 GCC additionally needs `-fmodules-ts` (its modules are a TS that keeps its own `gcm.cache`).
 
 A target that only imports is not scanned by default, so the compiler is never told where the module is: set the `CXX_SCAN_FOR_MODULES` property on it, or `cmake_policy(SET CMP0155 NEW)`.
+
+Without CMake the interface unit is precompiled by hand. This route needs no `clang-scan-deps`, which is what makes it usable where that tool is missing:
+
+```bash
+CXX=clang++
+$CXX -std=c++20 -x c++-module --precompile -I$PREFIX/include \
+    $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
+$CXX -std=c++20 -c bq.log.pcm -o bq.log.o      # carries the module initializer
+$CXX -std=c++20 -fmodule-file=bq.log=bq.log.pcm -I$PREFIX/include -c app.cpp
+$CXX bq.log.o app.o -lBqLog -o app
+```
+
+`build/pack_test/module_verify.sh` runs that sequence end to end against an installed tree.
 
 Two things to watch:
 
@@ -60,7 +127,18 @@ Two things to watch:
 - **Unity / Tuanjie Engine**
   For full engine integration steps, see [Game Engine Integration Guide](./ENGINE_INTEGRATION.md).
 
-- **.NET**
+- **.NET — NuGet**
+
+  ```bash
+  dotnet add package BqLog
+  ```
+
+  The package carries the C# bindings plus the native library for every supported platform
+  (`win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`), so nothing has
+  to be copied by hand. See [pack/nuget/README.md](../pack/nuget/README.md) for its contents
+  and the publishing steps.
+
+- **.NET — manual**
   - Download the dynamic library package `{os}_{arch}_libs_{version}` for the corresponding platform, and import the dynamic libraries within;
   - Add the C# wrapper source to your project — either clone the repository and include `/wrapper/csharp/src`, or download `c#_wrapper_{version}` from the [Releases page](https://github.com/Tencent/BqLog/releases) which contains the same source files pre-packaged.
 

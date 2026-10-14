@@ -80,6 +80,7 @@
 - 仅依赖标准 C 语言库与平台 API，可在 Android 的 `ANDROID_STL = none` 模式下编译通过。
 - 支持 `C++11` 及之后的标准，可在极其严格的编译选项下工作。
 - 编译系统基于 `CMake`，并提供多平台编译脚本，集成简单。
+- 在 macOS 与 Linux 上一条命令即可安装（`brew install bqlog`），含头文件、两种库形态，并支持 `find_package` 与 pkg-config。
 - 支持自定义参数类型。
 - 对代码提示非常友好。
 

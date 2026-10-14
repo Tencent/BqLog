@@ -342,6 +342,8 @@ build_one() {
     echo "  BUILD FOR CONFIG ${BUILD_LIB_TYPE_ARG} : ${cfg}"
     local CFG_DIR="build_${cfg}"
     rm -rf "${CFG_DIR}"; mkdir "${CFG_DIR}"; cd "${CFG_DIR}" || exit 1
+    # CMAKE_INSTALL_* reproduces the prebuilt tarball shape, install/<libtype>/lib/<config>;
+    # the CMakeLists itself only supplies the standard GNUInstallDirs defaults.
     cmake "${SRC_DIR}" -G "${GEN}" \
       -DTARGET_PLATFORM:STRING=linux \
       -DBUILD_LIB_TYPE="${BUILD_LIB_TYPE_ARG}" \
@@ -352,7 +354,9 @@ build_one() {
       -DCMAKE_BUILD_TYPE="${cfg}" \
       -DBUILD_SHARED_LIBS="${SHARED}" \
       -DCMAKE_CXX_COMPILER="${RESOLVED_CXX_BIN}" \
-      -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install" \
+      -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install/${BUILD_LIB_TYPE_ARG}" \
+      -DCMAKE_INSTALL_LIBDIR="lib/${cfg}" \
+      -DCMAKE_INSTALL_DOCDIR=.. \
       "${ARCH_ARGS[@]}"
 
     cmake --build . -- -j "${BUILD_JOBS}"
@@ -400,7 +404,9 @@ gen_vsproj() {
     -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_SHARED_LIBS="${SHARED}" \
     -DCMAKE_CXX_COMPILER="${RESOLVED_CXX_BIN}" \
-    -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install" \
+    -DCMAKE_INSTALL_PREFIX="${REPO_ROOT}/install/${BUILD_LIB_TYPE}" \
+    -DCMAKE_INSTALL_LIBDIR="lib/Debug" \
+    -DCMAKE_INSTALL_DOCDIR=.. \
     "${ARCH_ARGS[@]}"
 
   popd >/dev/null
