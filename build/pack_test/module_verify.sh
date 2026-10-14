@@ -20,8 +20,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 case "$(uname -s)" in
-    Darwin) DEFAULT_PLATFORM="mac"; SYSTEM_LIBS="" ;;
-    *)      DEFAULT_PLATFORM="linux"; SYSTEM_LIBS="-lpthread -ldl" ;;
+    # A single-form build on Apple produces BqLog.framework unless the format is pinned, and the
+    # import below links plain libBqLog.a.
+    Darwin) DEFAULT_PLATFORM="mac"; SYSTEM_LIBS=""; APPLE_FORMAT="-DAPPLE_LIB_FORMAT=a" ;;
+    *)      DEFAULT_PLATFORM="linux"; SYSTEM_LIBS="-lpthread -ldl"; APPLE_FORMAT="" ;;
 esac
 PLATFORM="${1:-$DEFAULT_PLATFORM}"
 CXX="${CXX:-clang++}"
@@ -44,6 +46,7 @@ cmake -S "$REPO_ROOT" -B "$WORK/build" \
     -DBUILD_LIB_TYPE=static_lib \
     -DBQ_WERROR=OFF \
     -DBQ_BUILD_TOOLS=OFF \
+    $APPLE_FORMAT \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" > "$WORK/configure.log" 2>&1
 cmake --build "$WORK/build" --parallel >> "$WORK/configure.log" 2>&1
 cmake --install "$WORK/build" >> "$WORK/configure.log" 2>&1
