@@ -244,9 +244,8 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
     # the module has to see the headers exactly as the test sources do
     target_compile_definitions(bqlog_module PRIVATE BQ_UNIT_TEST)
 
-    # The generated category log is exercised through its own module entry as well: the category
-    # log generator writes test_category_log.cppm beside test_category_log.h, and both carry the
-    # same class. It has to be built before the test binary, hence the dyndep dependency.
+    # The generator also writes test_category_log.cppm, so the category log is exercised through a
+    # module entry too. It has to be built before the test binary, hence the dependency.
     set(BQ_MODULE_TEST_LIBS "")
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
         add_library(bqlog_test_category_module STATIC)

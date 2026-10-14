@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
-# The distribution entry point: one configure/build/install covers the library and the
-# tools. Every sub-project still builds on its own, which is what the platform drivers use.
+# The distribution entry: one configure/build/install covers everything. The platform drivers
+# keep building sub-projects directly.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/submodules/BqCommon/CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/submodules/BqCommon/CMake_utils.txt)
 else()

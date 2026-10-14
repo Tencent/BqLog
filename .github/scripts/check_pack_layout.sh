@@ -31,8 +31,7 @@ while IFS= read -r libtype_dir; do
         || fail "missing include/bq_log/bq.log.cppm under ${libtype_dir}"
 
     # The library keeps its configuration level below lib/ (plus an ABI level on ohos). The node
-    # addon package carries its shared library under that extension instead of .so, like
-    # check_go_bridge_exports.sh already accepts.
+    # addon ships its shared library as .node instead of .so.
     if ! find "${libtype_dir}/lib" -mindepth 2 -maxdepth 3 \
         \( -name '*.a' -o -name '*.so' -o -name '*.so.*' -o -name '*.dylib' \
            -o -name '*.node' -o -name '*.lib' -o -name '*.dll' \

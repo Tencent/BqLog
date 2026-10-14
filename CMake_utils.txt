@@ -148,10 +148,7 @@ function(BQ_DETECT_ARCH OUT_VAR)
     set(${OUT_VAR} "${INNER_DETECTED_ARCH}" PARENT_SCOPE)
 endfunction()
 
-# Picks TARGET_PLATFORM from the CMake built-ins, but only when the caller did not pass one:
-# the platform drivers, a cross-compiling build and every package manager pass it explicitly.
-# A function, not a macro: an explicit value returns early, and a macro would return from the
-# caller by the same token, aborting the rest of the top level CMakeLists.
+# A function, not a macro: a macro's return would leave the caller as well.
 function(bq_default_target_platform)
     if(DEFINED TARGET_PLATFORM AND NOT "${TARGET_PLATFORM}" STREQUAL "")
         return()
@@ -198,8 +195,7 @@ function(set_xcode_property TARGET_NAME ATTRIBUTE_NAME VALUE)
     set_property(TARGET ${TARGET_NAME} PROPERTY XCODE_ATTRIBUTE_${ATTRIBUTE_NAME}${CONFIG} "${VALUE}")
 endfunction()
 
-# The warning set shared by the library and the tools. -Werror stays optional so that a
-# new warning from a newer compiler cannot fail a package build of released code.
+# -Werror stays optional: a newer compiler's warning must not fail a package build of released code.
 function(bq_set_warning_flags)
     if(MSVC)
         add_compile_options(/W4)

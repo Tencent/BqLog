@@ -246,9 +246,8 @@ endif()
 
 
 
-# The install layout is GNUInstallDirs and the caller owns its shape: a platform driver
-# passes CMAKE_INSTALL_LIBDIR (for example "lib/Release") to reproduce the prebuilt
-# tarball, a package manager passes nothing and gets the standard layout.
+# The caller owns the install shape: a platform driver passes CMAKE_INSTALL_LIBDIR, a package
+# manager passes nothing.
 include(GNUInstallDirs)
 
 message(STATUS "Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
@@ -258,8 +257,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 
-# Universal binary for mac os, both Intel and Apple cpu, unless the caller chose the
-# architectures (a package manager does, and must not receive a universal binary).
+# Universal on Apple unless the caller chose the architectures; a package manager must not get one.
 if(TARGET_PLATFORM STREQUAL "mac" AND NOT DEFINED CMAKE_OSX_ARCHITECTURES)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif()
@@ -499,11 +497,8 @@ endif()
 
 include(CMakePackageConfigHelpers)
 
-# The platform drivers set CMAKE_INSTALL_LIBDIR to lib/$<CONFIG>, so that a prebuilt package keeps
-# one library directory per configuration. install(EXPORT) evaluates no generator expression in
-# DESTINATION -- it would create a literal "$<CONFIG>" directory, a name Windows cannot even use --
-# and find_package searches <prefix>/lib/cmake/<name> either way, so the package files land in a
-# plain directory instead of following the library one.
+# install(EXPORT) does not evaluate $<CONFIG> in DESTINATION, while the drivers set
+# CMAKE_INSTALL_LIBDIR to lib/$<CONFIG>; find_package looks in lib/cmake/<name> either way.
 if(CMAKE_INSTALL_LIBDIR MATCHES "\\$<")
     set(_bq_package_cmake_dir "lib/cmake/BqLog")
 else()

@@ -20,8 +20,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 case "$(uname -s)" in
-    # A single-form build on Apple produces BqLog.framework unless the format is pinned, and the
-    # import below links plain libBqLog.a.
+    # The import below links libBqLog.a; a single-form Apple build yields BqLog.framework instead.
     Darwin) DEFAULT_PLATFORM="mac"; SYSTEM_LIBS=""; APPLE_FORMAT="-DAPPLE_LIB_FORMAT=a" ;;
     *)      DEFAULT_PLATFORM="linux"; SYSTEM_LIBS="-lpthread -ldl"; APPLE_FORMAT="" ;;
 esac
