@@ -106,7 +106,7 @@ namespace bq {
                     uint32_t ui = bq::log_utils::zigzag::encode(i);
                     auto len = bq::log_utils::vlq::vlq_encode(ui, target_data, 16);
                     result.add_result(len == 1, "zigzag + vlq test 1");
-                    decltype(ui) ui_decode;
+                    decltype(ui) ui_decode = 0;
                     auto len_decode = bq::log_utils::vlq::vlq_decode(ui_decode, target_data);
                     result.add_result(len == len_decode, "zigzag + vlq test 2");
                     decltype(i) i_decoded = bq::log_utils::zigzag::decode(ui_decode);
