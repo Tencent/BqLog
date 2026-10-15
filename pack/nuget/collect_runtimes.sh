@@ -14,11 +14,28 @@
 # artifacts. The C# bindings ask the runtime for "BqLog" (wrapper/csharp/src/bq/lib_def.cs),
 # so each platform needs its own file name in its own directory.
 #
-# Usage: bash collect_runtimes.sh <artifacts_dir> <output_dir>
+# Usage: bash collect_runtimes.sh <artifacts_dir> <output_dir> [artifact_name...]
+#   bash collect_runtimes.sh artifacts_in pack/nuget                          expects every platform
+#   bash collect_runtimes.sh artifacts_in pack/nuget windows_x86_64_libs      assembles only that one
 set -euo pipefail
 
-ARTIFACTS="${1:?usage: collect_runtimes.sh <artifacts_dir> <output_dir>}"
-OUTPUT="${2:?usage: collect_runtimes.sh <artifacts_dir> <output_dir>}"
+ARTIFACTS="${1:?usage: collect_runtimes.sh <artifacts_dir> <output_dir> [artifact_name...]}"
+OUTPUT="${2:?usage: collect_runtimes.sh <artifacts_dir> <output_dir> [artifact_name...]}"
+shift 2
+WANTED=("$@")
+
+# no names: every platform
+wanted() {
+    if [ "${#WANTED[@]}" -eq 0 ]; then
+        return 0
+    fi
+    for w in ${WANTED[@]+"${WANTED[@]}"}; do
+        if [ "$w" = "$1" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
 
 artifact_dir() {
     local dir
@@ -47,13 +64,13 @@ place() {
 }
 
 # The MSVC build, not the MinGW one: a .NET process on Windows already has the MSVC runtime.
-place windows_x86_64_libs          win-x64     BqLog.dll      'BqLog.dll'
-place windows_arm64_libs           win-arm64   BqLog.dll      'BqLog.dll'
-place linux_x86_64_libs            linux-x64   libBqLog.so    'libBqLog.so.*'
-place linux_arm64_libs             linux-arm64 libBqLog.so    'libBqLog.so.*'
+wanted windows_x86_64_libs         && place windows_x86_64_libs         win-x64     BqLog.dll      'BqLog.dll'
+wanted windows_arm64_libs          && place windows_arm64_libs          win-arm64   BqLog.dll      'BqLog.dll'
+wanted linux_x86_64_libs           && place linux_x86_64_libs           linux-x64   libBqLog.so    'libBqLog.so.*'
+wanted linux_arm64_libs            && place linux_arm64_libs            linux-arm64 libBqLog.so    'libBqLog.so.*'
 
 # The macOS library is universal, so the same file serves both architectures.
-place macos_universal_binary_libs  osx-x64     libBqLog.dylib 'libBqLog.*.dylib'
-place macos_universal_binary_libs  osx-arm64   libBqLog.dylib 'libBqLog.*.dylib'
+wanted macos_universal_binary_libs && place macos_universal_binary_libs osx-x64     libBqLog.dylib 'libBqLog.*.dylib'
+wanted macos_universal_binary_libs && place macos_universal_binary_libs osx-arm64   libBqLog.dylib 'libBqLog.*.dylib'
 
 echo "collect_runtimes: done"

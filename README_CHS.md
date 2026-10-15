@@ -44,11 +44,12 @@
 
 ## 📋 v2.7.0 更新亮点
 
-- **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)` 等接口与 `BQ_LOG_FAST_INFO` 是同一条快速路径，只是不再用宏：IDE 代码提示正常、同一个调用点对任何日志对象都有效、并且是 C++20 模块导出的接口。Category 是第一个可选模板参数 —— `log.fast_info<log.cat.ModuleA, "...">(args...)`。热路径开销与宏持平（GCC、Clang/aarch64、MSVC 三平台指令数一致）。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
-- **C++20 modules**：`import bq.log;` 与 `#include "bq_log/bq_log.h"` 并存。
-- **快速路径修复**：消除了多线程首次调用同一站点的竞争；崩溃恢复现在最多只重放正在处理的那一条记录，而不是整批数据。
+- **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)`，性能与 `BQ_LOG_FAST_INFO` 相同，IDE 提示完整，任何日志对象都能用。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
+- **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`。
+- **包管理器**：支持 Homebrew、vcpkg、NuGet，见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
+- **多进程**：多个进程可以共用同一个日志目录，各自拥有独立的崩溃恢复数据。
 > [!WARNING]
-> **该版本更改了 ABI。** 如果您是用动态库或静态库的方式引入，需要把 wrapper（C++ 头文件、其他语言的部分）和库一起更换，保证两者是同一版本。
+> **该版本更改了 ABI。** 头文件（或各语言 wrapper）和库需要一起升级。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 
@@ -80,7 +81,7 @@
 - 仅依赖标准 C 语言库与平台 API，可在 Android 的 `ANDROID_STL = none` 模式下编译通过。
 - 支持 `C++11` 及之后的标准，可在极其严格的编译选项下工作。
 - 编译系统基于 `CMake`，并提供多平台编译脚本，集成简单。
-- 在 macOS 与 Linux 上一条命令即可安装（`brew install bqlog`），含头文件、两种库形态，并支持 `find_package` 与 pkg-config。
+- 可通过 Homebrew、vcpkg、NuGet 安装，支持 `find_package` 与 pkg-config。
 - 支持自定义参数类型。
 - 对代码提示非常友好。
 
@@ -290,7 +291,7 @@ bq.log.force_flush_all_logs();
 
 | 文档 | 说明 |
 |------|------|
-| [开发规范](DEVELOPMENT_GUIDELINES_CHS.md) | 贡献代码必须遵守的约定：命名、ABI 与内存布局、宏、无 STL 构建、测试、提交与性能 |
+| [开发规范](DEVELOPMENT_GUIDELINES_CHS.md) | 贡献代码的编码规范 |
 | [常见问题（FAQ）](docs/FAQ_CHS.md) | 常见问题：对比、平台与语言、发布渠道、崩溃恢复 |
 | [集成指南](docs/INTEGRATION_GUIDE_CHS.md) | 所有平台完整集成步骤 + 各语言 Demo |
 | [游戏引擎集成](docs/ENGINE_INTEGRATION_CHS.md) | Unity、团结引擎、Unreal Engine 插件与蓝图使用 |
@@ -304,7 +305,7 @@ bq.log.force_flush_all_logs();
 
 ## 🤝 如何贡献代码
 
-请先阅读[开发规范](DEVELOPMENT_GUIDELINES_CHS.md)：其中包含命名、ABI 与内存布局、宏、无 STL 构建、测试以及性能方面的约定。
+请先阅读[开发规范](DEVELOPMENT_GUIDELINES_CHS.md)。
 
 若您希望贡献代码，请确保您的改动能通过仓库中 GitHub Actions 下的以下工作流：
 

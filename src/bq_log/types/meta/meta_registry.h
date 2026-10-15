@@ -34,7 +34,7 @@ namespace bq {
 
     // Instance-level registry of fast log format metadata. All logs of a process share
     // one arena; recovered fast records resolve their format through the meta record files
-    // written under <instance_root>/meta/<run_version>.mmap (T06).
+    // written under <instance_root>/meta/<run_version>.mmap.
     // The registry lives in log_global_vars and is never destructed (its arena entries
     // are referenced by live records at any time; a small leak is accepted there).
     class meta_registry {

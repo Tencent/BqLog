@@ -104,9 +104,8 @@ namespace bq {
         };
 
     public:
-        /// The category objects. static constexpr (it used to be a reference to a static holder)
-        /// so that a sub-object such as cat.ModuleA is a constant expression and can be passed as
-        /// the fast interfaces' category template argument.
+        /// The category objects. static constexpr, so that a sub-object such as cat.ModuleA is a
+        /// constant expression and can be passed as the fast interfaces' category template argument.
         static constexpr demo_category_log_category_root cat {};
 
     protected:

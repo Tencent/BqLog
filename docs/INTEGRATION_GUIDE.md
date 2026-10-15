@@ -11,7 +11,6 @@
 - **Homebrew (macOS / Linux)**
 
   ```bash
-  brew tap pippocao/bqlog
   brew install bqlog
   ```
 
@@ -28,19 +27,16 @@
 
 - **vcpkg (Windows / Linux / macOS)**
 
-  Available from this repository as an overlay port until it lands in `microsoft/vcpkg`:
-
   ```bash
-  vcpkg install bqlog --overlay-ports=<repo>/pack/vcpkg/ports
+  vcpkg install bqlog
+  vcpkg install bqlog[tools]   # with the command line tools
   ```
 
-  See [pack/vcpkg/README.md](../pack/vcpkg/README.md) for the triplet behaviour, the library
-  form it picks and the submission notes.
+  The triplet decides static or shared; the target is `bqlog::BqLog`.
 
 - **CMake FetchContent**
 
-  The repository is a CMake project with a top level entry point, so it can be consumed
-  directly, without a package manager:
+  Without a package manager:
 
   ```cmake
   include(FetchContent)
@@ -52,9 +48,7 @@
   target_link_libraries(your_target PRIVATE BqLog)
   ```
 
-  `BUILD_LIB_TYPE` chooses the library form: `static_lib` (the default), `dynamic_lib`, or
-  `both` (which produces the targets `BqLog` and `BqLogStatic`). The target platform is
-  detected from the compiler unless `TARGET_PLATFORM` is set explicitly.
+  `BUILD_LIB_TYPE` selects `static_lib` (default), `dynamic_lib` or `both`.
 
 - **Dynamic library**
   Download `dynamic_lib_{version}` archive:
@@ -76,18 +70,11 @@
 
 ### C++20 modules (`import`)
 
-From C++20 on, headers are optional: import the module instead.
-
 ```cpp
 import bq.log;
 ```
 
-The module interface unit ships with the headers as `include/bq_log/bq.log.cppm` (it exports what bq_common provides along with bq::log); **no BMI is prebuilt** (it is tied to the compiler version, the standard and the macros, so your project compiles it once).
-
-**The compiler has to implement C++20 modules.** A toolchain that accepts `-std=c++20` but cannot parse `export module` fails on the interface unit rather than skipping it, so check your toolchain before choosing this entry. Headers have no such requirement.
-
-With CMake (3.28 or newer; a Ninja or VS 17.4+ generator). `find_package(BqLog)` reports the
-files, so nothing has to be hard coded:
+The module interface unit `bq_log/bq.log.cppm` ships with the headers and is compiled by your project. With CMake 3.28+ (Ninja or Visual Studio generator):
 
 ```cmake
 find_package(BqLog REQUIRED)
@@ -98,27 +85,16 @@ target_sources(your_target PRIVATE FILE_SET CXX_MODULES
 target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
-GCC additionally needs `-fmodules-ts` (its modules are a TS that keeps its own `gcm.cache`).
-
-A target that only imports is not scanned by default, so the compiler is never told where the module is: set the `CXX_SCAN_FOR_MODULES` property on it, or `cmake_policy(SET CMP0155 NEW)`.
-
-Without CMake the interface unit is precompiled by hand. This route needs no `clang-scan-deps`, which is what makes it usable where that tool is missing:
+GCC also needs `-fmodules-ts`. Without CMake, with clang:
 
 ```bash
-CXX=clang++
-$CXX -std=c++20 -x c++-module --precompile -I$PREFIX/include \
-    $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
-$CXX -std=c++20 -c bq.log.pcm -o bq.log.o      # carries the module initializer
-$CXX -std=c++20 -fmodule-file=bq.log=bq.log.pcm -I$PREFIX/include -c app.cpp
-$CXX bq.log.o app.o -lBqLog -o app
+clang++ -std=c++20 -x c++-module --precompile -I$PREFIX/include $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
+clang++ -std=c++20 -c bq.log.pcm -o bq.log.o
+clang++ -std=c++20 -fmodule-file=bq.log=bq.log.pcm -c app.cpp
+clang++ bq.log.o app.o -lBqLog -o app
 ```
 
-`build/pack_test/module_verify.sh` runs that sequence end to end against an installed tree.
-
-Two things to watch:
-
-- `BQ_LOG_FAST_*` are macros and cannot be imported; the fast log is written as `log.fast_info<"...">(args...)` (C++20) in module mode.
-- Compile the `.cppm` files with the same compiler, standard and macros as the rest of your project.
+Macros are not exported, so with `import` the fast log is written as `log.fast_info<"...">(args...)`.
 
 ---
 
@@ -133,10 +109,8 @@ Two things to watch:
   dotnet add package BqLog
   ```
 
-  The package carries the C# bindings plus the native library for every supported platform
-  (`win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`), so nothing has
-  to be copied by hand. See [pack/nuget/README.md](../pack/nuget/README.md) for its contents
-  and the publishing steps.
+  Includes the C# bindings and the native libraries for `win-x64`, `win-arm64`, `linux-x64`,
+  `linux-arm64`, `osx-x64` and `osx-arm64`.
 
 - **.NET — manual**
   - Download the dynamic library package `{os}_{arch}_libs_{version}` for the corresponding platform, and import the dynamic libraries within;
@@ -530,13 +504,9 @@ The module follows the BqLog version. Go Modules downloads the source, and
 search, README and API documentation.
 <!-- go-module:end -->
 
-- **Prebuilt library**: desktop platforms only (Windows / Linux / macOS). When you link against a
-  prebuilt BqLog library instead of letting cgo build the sources, the library must have been built
-  with the Go option enabled: in `build/lib/win64`, `build/lib/linux` and `build/lib/unix_like`,
-  `build_all_and_pack` takes it as the **7th** positional argument (the 8th when calling
-  `dont_execute_this` directly); on macOS, `build/lib/mac/build_all_and_pack.sh` takes it as the
-  **5th**. Only then does the library export `__api_go_log_write`, `__api_go_log_write_1`,
-  `__api_go_log_write_2` and `__api_go_log_write_4`; CI verifies those symbols before publishing.
+- **Prebuilt library**: when linking a prebuilt BqLog library instead of letting cgo build the
+  sources, use a desktop (Windows / Linux / macOS) package from the release page; it includes the
+  Go bridge.
 
 ---
 

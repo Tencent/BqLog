@@ -11,7 +11,6 @@
 - **Homebrew（macOS / Linux）**
 
   ```bash
-  brew tap pippocao/bqlog
   brew install bqlog
   ```
 
@@ -28,17 +27,16 @@
 
 - **vcpkg（Windows / Linux / macOS）**
 
-  在并入 `microsoft/vcpkg` 之前，可以先从本仓库以 overlay port 的方式使用：
-
   ```bash
-  vcpkg install bqlog --overlay-ports=<仓库路径>/pack/vcpkg/ports
+  vcpkg install bqlog
+  vcpkg install bqlog[tools]   # 同时安装命令行工具
   ```
 
-  triplet 如何决定库形态、以及提交上游的说明见 [pack/vcpkg/README_CHS.md](../pack/vcpkg/README_CHS.md)。
+  静态库还是动态库由 triplet 决定，目标名为 `bqlog::BqLog`。
 
 - **CMake FetchContent**
 
-  本仓库是一个带顶层入口的 CMake 工程，因此无需任何包管理器即可直接引入：
+  不使用包管理器时：
 
   ```cmake
   include(FetchContent)
@@ -50,9 +48,7 @@
   target_link_libraries(your_target PRIVATE BqLog)
   ```
 
-  `BUILD_LIB_TYPE` 决定库形态：`static_lib`（默认）、`dynamic_lib`，或 `both`（会产出
-  `BqLog` 与 `BqLogStatic` 两个目标）。不显式指定 `TARGET_PLATFORM` 时，目标平台由编译器
-  自动推断。
+  `BUILD_LIB_TYPE` 可选 `static_lib`（默认）、`dynamic_lib` 或 `both`。
 
 - **动态库**
   下载 `dynamic_lib_{version}` 压缩包：
@@ -74,17 +70,11 @@
 
 ### C++20 模块（`import`）
 
-C++20 起可以不用头文件，直接导入模块：
-
 ```cpp
-import bq.log; 
+import bq.log;
 ```
 
-模块接口单元随头文件一起分发，位于 `include/bq_log/bq.log.cppm`（bq_common 的内容由它一并转出）；**我们不预编译 BMI**（它与编译器版本、标准、宏定义绑定，必须由你的工程编译一次）。
-
-**编译器必须真正实现 C++20 模块。**如果它接受 `-std=c++20` 却解析不了 `export module`，会在接口单元上直接报错，而不是跳过，所以选这条入口前先确认工具链。头文件入口没有这个要求。
-
-CMake（3.28 起；可能需要 Ninja 或 VS 17.4+ 生成器）。`find_package(BqLog)` 会报出文件位置，不需要硬编码路径：
+模块接口单元 `bq_log/bq.log.cppm` 随头文件分发，由你的工程编译。CMake 3.28 及以上（Ninja 或 Visual Studio 生成器）：
 
 ```cmake
 find_package(BqLog REQUIRED)
@@ -95,27 +85,16 @@ target_sources(your_target PRIVATE FILE_SET CXX_MODULES
 target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
-GCC 额外需要 `-fmodules-ts`（它的模块实现是 TS，`gcm.cache` 由编译器自己管理）。
-
-只做导入的目标默认不参与模块扫描，编译器就找不到模块：给它设置 `CXX_SCAN_FOR_MODULES` 属性，或 `cmake_policy(SET CMP0155 NEW)`。
-
-不用 CMake 时，可以手工预编译接口单元。这条路径不依赖 `clang-scan-deps`，因此在缺少该工具的环境里也能用：
+GCC 还需要 `-fmodules-ts`。不用 CMake 时（以 clang 为例）：
 
 ```bash
-CXX=clang++
-$CXX -std=c++20 -x c++-module --precompile -I$PREFIX/include \
-    $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
-$CXX -std=c++20 -c bq.log.pcm -o bq.log.o      # 模块初始化器在这个目标文件里
-$CXX -std=c++20 -fmodule-file=bq.log=bq.log.pcm -I$PREFIX/include -c app.cpp
-$CXX bq.log.o app.o -lBqLog -o app
+clang++ -std=c++20 -x c++-module --precompile -I$PREFIX/include $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
+clang++ -std=c++20 -c bq.log.pcm -o bq.log.o
+clang++ -std=c++20 -fmodule-file=bq.log=bq.log.pcm -c app.cpp
+clang++ bq.log.o app.o -lBqLog -o app
 ```
 
-`build/pack_test/module_verify.sh` 会对安装好的目录完整跑一遍上述流程。
-
-需要注意的两点：
-
-- `BQ_LOG_FAST_*` 是宏，模块里拿不到；模块方式下快速日志用 `log.fast_info<"...">(args...)`（C++20）。
-- 编 `.cppm` 时的编译器、标准与宏定义，要和你工程里其他源文件一致。
+模块不导出宏，所以 `import` 时快速模式写成 `log.fast_info<"...">(args...)`。
 
 ---
 
@@ -130,9 +109,8 @@ $CXX bq.log.o app.o -lBqLog -o app
   dotnet add package BqLog
   ```
 
-  包内含 C# 绑定，以及各支持平台的原生库（`win-x64`、`win-arm64`、`linux-x64`、`linux-arm64`、
-  `osx-x64`、`osx-arm64`），无需手工拷贝。包内容与发布步骤见
-  [pack/nuget/README_CHS.md](../pack/nuget/README_CHS.md)。
+  包内含 C# 绑定以及 `win-x64`、`win-arm64`、`linux-x64`、`linux-arm64`、`osx-x64`、`osx-arm64`
+  的原生库。
 
 - **.NET —— 手工集成**
   - 下载对应平台的动态库包 `{os}_{arch}_libs_{version}`，引入其中动态库；
@@ -478,7 +456,7 @@ log.info("Hello Java! value: {}", 3.14);
 
 ## Go
 
-- **预编译库**：仅桌面平台（Windows / Linux / macOS）。直接链接预编译库（而不是用 cgo 自编译）时，构建库必须开启 Go 选项：在 `build/lib/win64`、`build/lib/linux`、`build/lib/unix_like` 下调用 `build_all_and_pack` 时，Go 是**第 7 个**位置参数（直接调用 `dont_execute_this` 时是第 8 个）；macOS 用 `build/lib/mac/build_all_and_pack.sh` 时是**第 5 个**。开启后库才导出 `__api_go_log_write`、`__api_go_log_write_1`、`__api_go_log_write_2`、`__api_go_log_write_4`，CI 在发布前会校验这些符号确实存在。
+- **预编译库**：不用 cgo 编译源码、而是链接预编译库时，请使用发布页上的桌面平台（Windows / Linux / macOS）包，其中已包含 Go bridge。
 
 通过 Go Modules 安装：
 

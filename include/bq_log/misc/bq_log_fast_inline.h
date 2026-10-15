@@ -67,10 +67,10 @@ namespace bq {
             return slot;
         }
 
-        // A minimal spin lock for the public header: spin_lock lives in src/ and user code cannot reach it.
-        // Hashed by site address so concurrent initializations of different sites rarely share a lock.
-        // A minimal spin lock for the public header: spin_lock and its cpu_relax live in src/ and user
-        // code cannot reach them. The pause is a copy of bq::platform::thread::cpu_relax().
+        // A minimal spin lock for the public header: spin_lock and its cpu_relax live in src/, which
+        // user code cannot reach, so the pause below is a copy of bq::platform::thread::cpu_relax().
+        // The lock is hashed by site address, so concurrent initializations of different sites
+        // rarely share one.
         bq_forceinline void site_init_pause()
         {
 #if defined(BQ_MSVC) && defined(BQ_X86)

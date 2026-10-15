@@ -181,7 +181,7 @@ namespace bq {
         , lp_buffer_(config_)
         , hp_buffer_max_alloc_size_(UINT32_MAX)
         // instance_storage::get() is null when the platform does not support mmap (or the instance
-        // could not be claimed); there is nothing to recover then, same as before T05
+        // could not be claimed); there is nothing to recover then
         , version_(config_.need_recovery ? recovery_run_version() : 0)
         , destruction_mark_(bq::make_shared<destruction_mark>())
         , current_oversize_buffer_index_(0)

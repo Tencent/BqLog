@@ -347,10 +347,10 @@ namespace bq {
         // bq::log itself owns no category, so only the overloads above (no category) exist here;
         // the generated classes add one overload per own category.
         //
-        // These six keep the OLD shape -- category as the first function argument instead of as a
-        // template argument -- as a diagnostic only. They never write a record; they exist so that
-        // old code, and a category that does not belong to this log class, fails with a clear
-        // message instead of "no matching function".
+        // These six take the category as the first function argument instead of as a template
+        // argument, as a diagnostic only. They never write a record; they exist so that a category
+        // passed that way, or one that does not belong to this log class, fails with a clear message
+        // instead of "no matching function".
         template <bq::fixed_format F, uint32_t CAT_INDEX, typename... Args>
         bool fast_verbose(const bq::log_category_base<CAT_INDEX>&, const Args&...) const
         {

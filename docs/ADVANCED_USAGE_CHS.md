@@ -152,7 +152,7 @@ const bq::array<bq::string>& get_categories_name_array() const;
   - `business_log.ts`（TypeScript wrapper）
   - `business_log_for_UE.h`（配合 UE 工程，可在蓝图中引用 Category）
 
-  不需要额外参数：模块名就是类名加 `bq.` 前缀，因此 `bq::business_log` 对应 `import bq.business_log;`。生成两个类别日志类就会有 `bq.business_log` 与 `bq.other_log` 两个模块，互不影响。
+  模块名就是类名加 `bq.` 前缀：`bq::business_log` 对应 `import bq.business_log;`。
 
 4. 在工程中引入这些文件，即可使用带 Category 的日志类。
    例如 C++：
@@ -172,20 +172,18 @@ const bq::array<bq::string>& get_categories_name_array() const;
 
 ### C++20 模块方式
 
-生成的 `.h` 与 `.cppm` 是**同一个类**，区别只是引入方式。C++20 起可以不 include 头文件，改为导入模块：
+`.cppm` 与 `.h` 是同一个类，只是改为 import：
 
 ```cpp
-import bq.log;                      // 库本身
-import bq.business_log;             // 生成的类别日志类
+import bq.log;
+import bq.business_log;
 
 bq::business_log my_log = bq::business_log::create_log("MyLog", config);
 my_log.info(my_log.cat.Shop.Seller, "Log2");
 my_log.fast_info<my_log.cat.Shop, "fast {}">(1);
 ```
 
-把 `business_log.cppm` 交给构建系统（CMake 3.28 起用 `FILE_SET CXX_MODULES`，与 `bq.log.cppm` 一样）。
-
-> **`.h` 与 `.cppm` 只能二选一。** 同一个工程（更准确地说，同一个翻译单元）不能既 include 头文件又 import 同一个库，因此按工程统一选择：要么所有源文件都 include `business_log.h`，要么都 import `bq.cat.business_log`。编译器还必须真正支持 C++20 模块，详见[集成指南](./INTEGRATION_GUIDE_CHS.md)。
+把 `business_log.cppm` 按 `bq.log.cppm` 的方式加入构建即可。同一个工程里头文件和模块二选一。
 
 ---
 
@@ -219,7 +217,7 @@ static void enable_auto_crash_handle();
 
 具体实现细节依赖操作系统能力，会在未来版本中持续增强。
 
-大多数平台都能保存恢复数据，只有少数平台（例如 Solaris）不行。开启前可先用 [`get_recovery_capability()`](./API_REFERENCE_CHS.md#恢复能力查询) 查询。不支持时日志照常创建、只是不启用恢复，并在控制台打印：
+少数平台（例如 Solaris）不支持恢复（可用 [`get_recovery_capability()`](./API_REFERENCE_CHS.md#恢复能力查询) 查询），此时日志照常工作、不启用恢复，并打印：
 
 ```
 [Bq]log <name>: recovery needs a cross-process file lock and this platform has none, so recovery stays off

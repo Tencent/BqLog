@@ -159,9 +159,7 @@ Generation steps are as follows:
    - `business_log.ts` (TypeScript wrapper)
    - `business_log_for_UE.h` (Coordinate with UE project, Category can be referenced in Blueprint)
 
-   No extra argument is needed: the module is the class name behind a `bq.` prefix, so
-   `bq::business_log` corresponds to `import bq.business_log;`. Two generated category log
-   classes simply become two modules, `bq.business_log` and `bq.other_log`, with no interaction.
+   The module name is the class name with a `bq.` prefix: `bq::business_log` is `import bq.business_log;`.
 
 4. Import these files in project to use Log class with Category.
    For example C++:
@@ -181,25 +179,18 @@ Generation steps are as follows:
 
    ### C++20 module entry
 
-   The generated `.h` and `.cppm` carry the **same class**; only the way it is brought in differs.
-   From C++20 on, the header can be replaced by an import:
+   The `.cppm` is the same class as the `.h`, imported instead of included:
 
    ```cpp
-   import bq.log;                      // the library itself
-   import bq.business_log;             // the generated category log class
+   import bq.log;
+   import bq.business_log;
 
    bq::business_log my_log = bq::business_log::create_log("MyLog", config);
    my_log.info(my_log.cat.Shop.Seller, "Log2");
    my_log.fast_info<my_log.cat.Shop, "fast {}">(1);
    ```
 
-   Hand `business_log.cppm` to the build system (CMake 3.28 and newer use `FILE_SET CXX_MODULES`,
-   exactly as for `bq.log.cppm`).
-
-   > **The `.h` and the `.cppm` are mutually exclusive.** A translation unit may not import and
-   > include the same library, so a project picks one: either every source file includes
-   > `business_log.h`, or every one imports `bq.cat.business_log`. The compiler also has to
-   > implement C++20 modules for real -- see the [integration guide](./INTEGRATION_GUIDE.md).
+   Add `business_log.cppm` to your build the same way as `bq.log.cppm`. Use either the header or the module in a project, not both.
 
    ---
 
@@ -238,7 +229,7 @@ When this item is `true`, BqLog will try to use platform features on some platfo
 
 Specific implementation details depend on operating system capabilities and will be continuously enhanced in future versions.
 
-Most platforms keep recovery data; a few (Solaris, for one) cannot. Ask [`get_recovery_capability()`](./API_REFERENCE.md#recovery-capability) before enabling it. Where it is unavailable the log is created without recovery and the console prints:
+On the few platforms without support (Solaris, for example), see [`get_recovery_capability()`](./API_REFERENCE.md#recovery-capability), the log runs without recovery and prints:
 
 ```
 [Bq]log <name>: recovery needs a cross-process file lock and this platform has none, so recovery stays off

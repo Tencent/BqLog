@@ -44,12 +44,13 @@
 
 ## 📋 What's New in v2.7.0
 
-- **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)` and friends are the same fast path as `BQ_LOG_FAST_INFO`, without the macro: real IDE hints, any log object valid at the same call site, and it is what the C++20 module exports. A category is the optional first template argument — `log.fast_info<log.cat.ModuleA, "...">(args...)`. The hot path costs the same as the macro (identical instruction counts on GCC, Clang/aarch64 and MSVC). See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
-- **C++20 modules**: `import bq.log;` now works alongside `#include "bq_log/bq_log.h"`.
-- **Fast path fixes**: a first-call race between threads is gone, and crash recovery now replays at most the record that was in flight instead of a whole batch.
+- **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)`, the same speed as `BQ_LOG_FAST_INFO` with full IDE support, and usable with any log object. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
+- **C++20 modules**: `import bq.log;`, as an alternative to `#include "bq_log/bq_log.h"`.
+- **Package managers**: Homebrew, vcpkg and NuGet. See [Integration Guide](docs/INTEGRATION_GUIDE.md).
+- **Multi-process**: several processes can share one log directory, each with its own crash recovery data.
 
 > [!WARNING]
-> **This release changes the ABI.** If you link the dynamic or the static library, replace the wrapper (the C++ headers and the other languages' bindings) and the library together, so that both are the same version.
+> **This release changes the ABI.** Upgrade the headers (or language wrapper) and the library together.
 
 > Full changelog → [CHANGELOG.md](CHANGELOG.md)
 
@@ -69,7 +70,7 @@
 - Depends only on the standard C library and platform APIs; can be compiled with Android `ANDROID_STL = none`.
 - Supports `C++11` and later standards and works under very strict compiler options.
 - Build system is based on `CMake` and provides multi-platform scripts, easy to integrate.
-- One command to install on macOS and Linux (`brew install bqlog`), with the headers, both library forms, and `find_package` / pkg-config support.
+- Available through Homebrew, vcpkg and NuGet, with `find_package` / pkg-config support.
 - Supports custom parameter types.
 - Very friendly for code completion and IDE hints.
 
@@ -279,7 +280,7 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 
 | Document | Description |
 |----------|-------------|
-| [Development Guidelines](DEVELOPMENT_GUIDELINES.md) | Rules for contributing code: naming, ABI and memory layout, macros, no-STL build, tests, commits and performance |
+| [Development Guidelines](DEVELOPMENT_GUIDELINES.md) | Coding rules for contributors |
 | [FAQ](docs/FAQ.md) | Common questions: comparisons, platforms, distribution channels, crash recovery |
 | [Integration Guide](docs/INTEGRATION_GUIDE.md) | Full integration steps for all platforms + all language demos |
 | [Game Engine Integration](docs/ENGINE_INTEGRATION.md) | Unity, Tuanjie Engine, Unreal Engine plugins and Blueprint usage |
@@ -293,7 +294,7 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 
 ## 🤝 How to contribute
 
-Please read the [Development Guidelines](DEVELOPMENT_GUIDELINES.md) first: it covers naming, ABI and memory layout, macros, the no-STL build, tests and the performance expectations.
+Please read the [Development Guidelines](DEVELOPMENT_GUIDELINES.md) first.
 
 If you want to contribute code, please make sure your changes can pass the following workflows under GitHub Actions in the repository:
 
