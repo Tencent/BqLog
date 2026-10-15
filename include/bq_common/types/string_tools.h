@@ -69,17 +69,9 @@ namespace bq {
             return i;
         }
 
-// clang cannot export an internal-linkage declaration; the static is what keeps GCC's
-// instrumentation off the word-wide read below, so only the module entry drops it.
-#if defined(BQ_ASAN_ENABLED) && !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
+#ifdef BQ_ASAN_ENABLED
         template <typename T>
         BQ_NO_ASAN static T get_value_by_address_safe(const T* addr)
-        {
-            return *addr;
-        }
-#elif defined(BQ_ASAN_ENABLED)
-        template <typename T>
-        BQ_NO_ASAN T get_value_by_address_safe(const T* addr)
         {
             return *addr;
         }
