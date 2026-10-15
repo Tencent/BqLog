@@ -516,11 +516,13 @@ else()
     set(_bq_lib_targets BqLog)
 endif()
 
+# A Windows DLL is a RUNTIME artifact and installs to bin/, as package managers expect; the
+# prebuilt drivers pass CMAKE_INSTALL_BINDIR=lib/<config> to keep the release archive layout.
 install(TARGETS ${_bq_lib_targets}
     EXPORT BqLogTargets
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     FRAMEWORK DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 
@@ -530,7 +532,7 @@ install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/"
 )
 
 install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/BqLog.pdb"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
         OPTIONAL
 )
 
