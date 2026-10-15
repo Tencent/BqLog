@@ -56,6 +56,18 @@ static bq::log compressed_log_mixed_utf16 = bq::log::create_log("test_mixed_u16"
 		appenders_config.appender_3.file_name= benchmark_output/test_mixed_u16
 		appenders_config.appender_3.capacity_limit=1
 	)");
+static bq::log compressed_log_cstr_utf16 = bq::log::create_log("test_cstr_u16", R"(
+		appenders_config.appender_3.type=compressed_file
+		appenders_config.appender_3.levels=[all]
+		appenders_config.appender_3.file_name= benchmark_output/test_cstr_u16
+		appenders_config.appender_3.capacity_limit=1
+	)");
+static bq::log compressed_log_cstr_utf32 = bq::log::create_log("test_cstr_u32", R"(
+		appenders_config.appender_3.type=compressed_file
+		appenders_config.appender_3.levels=[all]
+		appenders_config.appender_3.file_name= benchmark_output/test_cstr_u32
+		appenders_config.appender_3.capacity_limit=1
+	)");
 static bq::log compressed_log_multi_format = bq::log::create_log("test_multi_format", R"(
 		appenders_config.appender_3.type=compressed_file
 		appenders_config.appender_3.levels=[all]
@@ -76,6 +88,13 @@ static bq::u16string mixed_charset_u16;
 static bq::array<bq::tuple<size_t, size_t>> positions;
 static constexpr size_t character_pool_size = 1024 * 1024 * 8;
 static constexpr size_t logs_count = 2000000;
+
+// Terminated strings laid end to end, so their start alignment varies with the lengths before them.
+static constexpr size_t cstr_count = 50000;
+static constexpr size_t cstr_max_length = 128;
+static std::vector<char16_t> cstr_pool_u16;
+static std::vector<char32_t> cstr_pool_u32;
+static std::vector<size_t> cstr_starts;
 
 template <typename CHAR>
 struct benchmark_string_view {
@@ -138,6 +157,45 @@ static void prepare_datas()
         data_size = bq::min_value(data_size, max_size);
         positions.push_back(bq::make_tuple(start, data_size));
     }
+    for (size_t string_index = 0; string_index < cstr_count; ++string_index) {
+        const size_t length = (string_index * 37) % cstr_max_length;
+        cstr_starts.push_back(cstr_pool_u32.size());
+        for (size_t character_index = 0; character_index < length; ++character_index) {
+            const char32_t c = (char32_t)(0x4E00 + ((string_index + character_index) % 20902));
+            cstr_pool_u16.push_back((char16_t)c);
+            cstr_pool_u32.push_back(c);
+        }
+        cstr_pool_u16.push_back(0);
+        cstr_pool_u32.push_back(0);
+    }
+}
+
+template <typename CHAR>
+static void test_compress_c_string(int32_t thread_count, const char* log_name, const char* title, const std::vector<CHAR>& pool)
+{
+    std::cout << "============================================================" << std::endl;
+    std::cout << "=========Begin Test Compressed File Log " << title << "=========" << std::endl;
+    bq::log log_obj = bq::log::get_log_by_name(log_name);
+    std::vector<std::thread> threads;
+    threads.resize(thread_count);
+    uint64_t start_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
+    std::cout << "Now Begin, each thread will write 2000000 log entries, please wait the result..." << std::endl;
+    for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
+        threads[thread_index] = std::thread([&log_obj, &pool]() {
+            for (size_t log_index = 0; log_index < logs_count; ++log_index) {
+                const CHAR* text = pool.data() + cstr_starts[log_index % cstr_count];
+                log_obj.info("{}", text);
+            }
+        });
+    }
+    for (int32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
+        threads[thread_index].join();
+    }
+    bq::log::force_flush_all_logs();
+    uint64_t flush_time = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
+    std::cout << "Time Cost:" << (uint64_t)(flush_time - start_time) << std::endl;
+    std::cout << "============================================================" << std::endl
+              << std::endl;
 }
 
 void test_compress_ascii_utf8(int32_t thread_count)
@@ -554,6 +612,8 @@ int main()
     test_compress_ascii_utf16(thread_count);
     test_compress_chinese_utf16(thread_count);
     test_compress_mixed_utf16(thread_count);
+    test_compress_c_string(thread_count, "test_cstr_u16", "C-STRING UTF16", cstr_pool_u16);
+    test_compress_c_string(thread_count, "test_cstr_u32", "C-STRING UTF32", cstr_pool_u32);
 
     // Fixed format tests run twice: once through log.info() and once through BQ_LOG_FAST_INFO().
     const write_thread_cost::write_mode modes[] = { write_thread_cost::write_mode::normal, write_thread_cost::write_mode::fast };

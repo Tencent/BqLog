@@ -69,12 +69,6 @@ namespace bq {
             return i;
         }
 
-        template <typename T>
-        bq_forceinline T get_value_by_address_safe(const T* addr)
-        {
-            return *addr;
-        }
-
         /**
          * @brief SWAR (SIMD Within A Register) implementation for UTF-16.
          * Processes 4 characters (8 bytes) per iteration using bit manipulation
@@ -90,15 +84,15 @@ namespace bq {
                 p++;
             }
 
-            const uint64_t* chunk = reinterpret_cast<const uint64_t*>(p);
             const uint64_t mask = 0x8000800080008000ULL;
             const uint64_t low_bit = 0x0001000100010001ULL;
 
+            // memcpy instead of a uint64_t pointer: the string is not a uint64_t object
             while (true) {
-                uint64_t v = *chunk;
+                uint64_t v;
+                memcpy(&v, p, sizeof(v));
                 // Zero detection logic: (v - 0x0001) & ~v & 0x8000
                 if ((v - low_bit) & ~v & mask) {
-                    p = reinterpret_cast<const char16_t*>(chunk);
                     if (p[0] == 0)
                         return static_cast<size_t>(p - s);
                     if (p[1] == 0)
@@ -108,7 +102,7 @@ namespace bq {
                     if (p[3] == 0)
                         return static_cast<size_t>(p + 3 - s);
                 }
-                chunk++;
+                p += 4;
             }
         }
 
@@ -125,20 +119,19 @@ namespace bq {
                 p++;
             }
 
-            const uint64_t* chunk = reinterpret_cast<const uint64_t*>(p);
             const uint64_t mask = 0x8000000080000000ULL;
             const uint64_t low_bit = 0x0000000100000001ULL;
 
             while (true) {
-                uint64_t v = *chunk;
+                uint64_t v;
+                memcpy(&v, p, sizeof(v));
                 if ((v - low_bit) & ~v & mask) {
-                    p = reinterpret_cast<const char32_t*>(chunk);
                     if (p[0] == 0)
                         return static_cast<size_t>(p - s);
                     if (p[1] == 0)
                         return static_cast<size_t>(p + 1 - s);
                 }
-                chunk++;
+                p += 2;
             }
         }
 

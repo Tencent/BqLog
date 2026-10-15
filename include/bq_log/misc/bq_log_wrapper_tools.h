@@ -319,26 +319,19 @@ namespace bq {
         }
         //================================================string helpers begin==========================================
         // we can distinguish c style string ,literal string and char array at compiling time or runtime now.
+        // The caller vouches for max_character_count readable characters (an array, a view, a string
+        // object), so the block never leaves the object and needs no alignment.
         template <typename CHAR_TYPE>
-        bq_forceinline size_t _get_utf32_c_style_string_storage_size_impl(const CHAR_TYPE* str, size_t max_character_count)
+        bq_forceinline size_t _get_utf32_string_storage_size_impl(const CHAR_TYPE* str, size_t max_character_count)
         {
-            static_assert(sizeof(CHAR_TYPE) == 4, "_get_utf32_c_style_string_storage_size_impl only for utf32 characters");
+            static_assert(sizeof(CHAR_TYPE) == 4, "_get_utf32_string_storage_size_impl only for utf32 characters");
             size_t str_len = 0;
             const CHAR_TYPE* p = str;
             size_t remaining = max_character_count;
-
-            // A c-style string has no slack behind its terminator, and the four-character block
-            // below reads up to three characters past it. The sanitizer build walks instead.
-#ifndef BQ_ASAN_ENABLED
-            // Fast Path for 4 characters at a time
             while (remaining >= 4) {
-                uint32_t c0 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p));
-                uint32_t c1 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p + 1));
-                uint32_t c2 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p + 2));
-                uint32_t c3 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p + 3));
-
-                uint32_t check = (c0 - 1) | (c1 - 1) | (c2 - 1) | (c3 - 1);
-
+                uint32_t block[4];
+                memcpy(block, p, sizeof(block));
+                uint32_t check = (block[0] - 1) | (block[1] - 1) | (block[2] - 1) | (block[3] - 1);
                 if (check <= 0xFFFE) {
                     str_len += 4;
                     p += 4;
@@ -347,8 +340,6 @@ namespace bq {
                     break;
                 }
             }
-#endif
-            // Slow Path for remaining characters
             while (remaining > 0) {
                 uint32_t c = static_cast<uint32_t>(*p);
                 if (c == 0) {
@@ -357,6 +348,40 @@ namespace bq {
                 str_len += (c <= 0xFFFF ? 1 : 2);
                 p++;
                 remaining--;
+            }
+            return str_len * sizeof(char16_t);
+        }
+
+        // No length: the block may read past the terminator, but aligned to its width it never leaves
+        // the page, so it cannot fault. The sanitizer build walks, the read is outside the object.
+        template <typename CHAR_TYPE>
+        bq_forceinline size_t _get_utf32_c_style_string_storage_size_impl(const CHAR_TYPE* str)
+        {
+            static_assert(sizeof(CHAR_TYPE) == 4, "_get_utf32_c_style_string_storage_size_impl only for utf32 characters");
+            size_t str_len = 0;
+            const CHAR_TYPE* p = str;
+#ifndef BQ_ASAN_ENABLED
+            for (; (reinterpret_cast<uintptr_t>(p) & 15) != 0; ++p) {
+                uint32_t c = static_cast<uint32_t>(*p);
+                if (c == 0) {
+                    return str_len * sizeof(char16_t);
+                }
+                str_len += (c <= 0xFFFF ? 1 : 2);
+            }
+            for (;; p += 4, str_len += 4) {
+                uint32_t block[4];
+                memcpy(block, p, sizeof(block));
+                if (((block[0] - 1) | (block[1] - 1) | (block[2] - 1) | (block[3] - 1)) > 0xFFFE) {
+                    break;
+                }
+            }
+#endif
+            for (;; ++p) {
+                uint32_t c = static_cast<uint32_t>(*p);
+                if (c == 0) {
+                    break;
+                }
+                str_len += (c <= 0xFFFF ? 1 : 2);
             }
             return str_len * sizeof(char16_t);
         }
@@ -411,7 +436,7 @@ namespace bq {
             template <size_t N>
             static bq_forceinline size_t get_array_string_storage_size(const CHAR_TYPE (&str)[N])
             {
-                return _get_utf32_c_style_string_storage_size_impl(str, N);
+                return _get_utf32_string_storage_size_impl(str, N);
             }
 
             template <typename T>
@@ -421,7 +446,7 @@ namespace bq {
                 if (size == 0) {
                     return 0;
                 }
-                return _get_utf32_c_style_string_storage_size_impl(str.c_str(), size);
+                return _get_utf32_string_storage_size_impl(str.c_str(), size);
             }
 
             template <typename T>
@@ -431,17 +456,17 @@ namespace bq {
                 if (size == 0) {
                     return 0;
                 }
-                return _get_utf32_c_style_string_storage_size_impl(str.data(), size);
+                return _get_utf32_string_storage_size_impl(str.data(), size);
             }
 
             static bq_forceinline size_t get_c_style_string_storage_size(const CHAR_TYPE* str)
             {
-                return _get_utf32_c_style_string_storage_size_impl(str, SIZE_MAX);
+                return _get_utf32_c_style_string_storage_size_impl(str);
             }
 
             static bq_forceinline size_t get_c_style_string_storage_size(const CHAR_TYPE* str, size_t char_count)
             {
-                return _get_utf32_c_style_string_storage_size_impl(str, char_count);
+                return _get_utf32_string_storage_size_impl(str, char_count);
             }
 
             static bq_forceinline void c_style_string_copy(void* tar, const CHAR_TYPE* src, size_t target_buffer_size)
@@ -449,7 +474,9 @@ namespace bq {
                 char16_t* target_buffer = (char16_t*)tar;
                 char16_t* target_end = target_buffer + (target_buffer_size >> 1);
 
-                while (target_buffer + 4 <= target_end) {
+                // A source character takes one or two units, so eight units left means at least four
+                // source characters left: the block never reads past the end of the source.
+                while (target_buffer + 8 <= target_end) {
                     CHAR_TYPE c0 = src[0];
                     CHAR_TYPE c1 = src[1];
                     CHAR_TYPE c2 = src[2];
