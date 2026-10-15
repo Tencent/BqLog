@@ -82,12 +82,6 @@ namespace bq {
          */
         bq_forceinline size_t u16_len_rt(const char16_t* s)
         {
-#ifdef BQ_ASAN_ENABLED
-            // The loop below reads a whole word and can step past the terminator. The sanitizer
-            // cannot look at that read anyway -- and it reports the step past a global literal --
-            // so the sanitizer build walks character by character instead.
-            return constexpr_len(s);
-#else
             const char16_t* p = s;
             // Align to 8-byte boundary
             while ((reinterpret_cast<uintptr_t>(p) & 7) != 0) {
@@ -116,7 +110,6 @@ namespace bq {
                 }
                 chunk++;
             }
-#endif
         }
 
         /**
@@ -125,9 +118,6 @@ namespace bq {
          */
         bq_forceinline size_t u32_len_rt(const char32_t* s)
         {
-#ifdef BQ_ASAN_ENABLED
-            return constexpr_len(s);
-#else
             const char32_t* p = s;
             while ((reinterpret_cast<uintptr_t>(p) & 7) != 0) {
                 if (*p == 0)
@@ -150,7 +140,6 @@ namespace bq {
                 }
                 chunk++;
             }
-#endif
         }
 
         /* --- Dispatcher Templates --- */
@@ -230,6 +219,12 @@ namespace bq {
             if (!str) {
                 return 0;
             }
+#ifdef BQ_ASAN_ENABLED
+            // Every dispatcher below reads more than one character at a time -- SWAR for u16/u32,
+            // and the compiler's own expansion of the builtins for char/wchar_t -- and can step
+            // past the terminator. The sanitizer build walks character by character instead.
+            return constexpr_len(str);
+#else
 #if BQ_GCC_CLANG_BUILTIN(__builtin_constant_p)
             BQ_CONSTEXPR_IF(__builtin_constant_p(*str))
             {
@@ -241,6 +236,7 @@ namespace bq {
                 return string_len_dispatch < CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t) > ::exec(str);
 #if BQ_GCC_CLANG_BUILTIN(__builtin_constant_p)
             }
+#endif
 #endif
         }
         template <typename CHAR_TYPE, size_t N>
