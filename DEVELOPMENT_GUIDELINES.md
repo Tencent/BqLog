@@ -69,12 +69,10 @@ Anything that crosses a binary/library boundary — the C API, the language wrap
 
 ## 9. New features need tests
 
-- A feature and a bug fix come with coverage in the same commit:
-  - `test/cpp/` for the C++ library, registered in `test/cpp/main.cpp` with `TEST_GROUP_BEGIN`/`TEST_GROUP`/`TEST_GROUP_END` (the class itself lives in a `test_*.h`); `test/cpp/bq_common_test/` for `bq_common`;
-  - `test/multi_instance/` (CTest cases `multi_instance_*`, one per `CASES` entry in `run.py`: `instance_assignment`, `two_logs`, `recovery_off`, `crash_recovery`, `two_instances`, `legacy_coexistence`, `dual_runtime_plugins`, `child_lock`, `flushed_recovery`) for anything multi-process, multi-instance or crash recovery;
-  - the wrapper test suite (`test/python`, `test/java`, `test/go`, `test/typescript`, `test/csharp`) for a wrapper change.
-- The tests must pass in every C++ standard the CI builds (11, 14, 17, 20, 23) and on every platform it builds; code behind `BQ_CPP_20` (the `fast_*` interfaces) needs a test that runs in C++20 as well.
-- Tests are deterministic, clean up after themselves, and do not depend on the order they run in or on the machine being fast.
+- A new feature comes with tests that cover it, and the `AutoTest` workflow must pass.
+- A bug fix starts with a test: add a test that reproduces the failure, fix the bug, then confirm
+  that test passes before committing.
+- Test code follows the existing patterns and the existing test framework.
 
 ## 10. Multi-language wrappers stay consistent
 
