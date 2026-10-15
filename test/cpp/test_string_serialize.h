@@ -28,6 +28,9 @@ namespace bq {
         // characters at the tail, and strings that end right before an inaccessible page.
         class test_string_serialize : public test_base {
         private:
+            // The longest string is 40 characters, at most two UTF-16 units each, plus the length and a guard.
+            static constexpr size_t out_capacity = 40 * 2 * sizeof(char16_t) + sizeof(uint32_t) + 8;
+
             template <typename CHAR>
             static std::vector<char16_t> expected_utf16(const CHAR* str, size_t count)
             {
@@ -80,18 +83,19 @@ namespace bq {
                 const std::vector<char16_t> units = expected_utf16(str, count);
                 const size_t expected_size = (sizeof(CHAR) == 1 ? count : units.size() * sizeof(char16_t));
                 const size_t size = helper::get_storage_data_size(str);
-                if (size != expected_size) {
+                if (size != expected_size || size + sizeof(uint32_t) >= out_capacity) {
                     return false;
                 }
-                std::vector<uint8_t> out(size + sizeof(uint32_t) + 8, 0xCD);
-                helper::type_copy(str, out.data(), size + sizeof(uint32_t));
+                uint8_t out[out_capacity];
+                memset(out, 0xCD, sizeof(out));
+                helper::type_copy(str, out, size + sizeof(uint32_t));
                 uint32_t written = 0;
-                memcpy(&written, out.data(), sizeof(written));
+                memcpy(&written, out, sizeof(written));
                 if (written != size || out[size + sizeof(uint32_t)] != 0xCD) {
                     return false;
                 }
-                return sizeof(CHAR) == 1 ? memcmp(out.data() + sizeof(uint32_t), str, size) == 0
-                                         : memcmp(out.data() + sizeof(uint32_t), units.data(), size) == 0;
+                return sizeof(CHAR) == 1 ? memcmp(out + sizeof(uint32_t), str, size) == 0
+                                         : memcmp(out + sizeof(uint32_t), units.data(), size) == 0;
             }
 
             // A sized string: no terminator to stop at, so only `count` characters may be read.
@@ -102,12 +106,13 @@ namespace bq {
                 value.insert_batch(value.end(), str, count);
                 const std::vector<char16_t> units = expected_utf16(str, count);
                 const size_t size = helper::get_storage_data_size(value);
-                if (size != units.size() * sizeof(char16_t)) {
+                if (size != units.size() * sizeof(char16_t) || size + sizeof(uint32_t) >= out_capacity) {
                     return false;
                 }
-                std::vector<uint8_t> out(size + sizeof(uint32_t) + 8, 0xCD);
-                helper::type_copy(value, out.data(), size + sizeof(uint32_t));
-                return out[size + sizeof(uint32_t)] == 0xCD && memcmp(out.data() + sizeof(uint32_t), units.data(), size) == 0;
+                uint8_t out[out_capacity];
+                memset(out, 0xCD, sizeof(out));
+                helper::type_copy(value, out, size + sizeof(uint32_t));
+                return out[size + sizeof(uint32_t)] == 0xCD && memcmp(out + sizeof(uint32_t), units.data(), size) == 0;
             }
 
             // Heap copies of exactly the right size, so a sanitizer build reports any read past the end.
@@ -222,9 +227,9 @@ namespace bq {
                         using helper = bq::tools::_serialize_str_helper_by_type<const char32_t*>;
                         const std::vector<char16_t> units = expected_utf16(str, count);
                         const size_t size = units.size() * sizeof(char16_t);
-                        std::vector<uint8_t> out(size + sizeof(uint32_t), 0);
-                        helper::type_copy(str, out.data(), size + sizeof(uint32_t));
-                        all_pass &= memcmp(out.data() + sizeof(uint32_t), units.data(), size) == 0;
+                        uint8_t out[out_capacity] = {};
+                        helper::type_copy(str, out, size + sizeof(uint32_t));
+                        all_pass &= memcmp(out + sizeof(uint32_t), units.data(), size) == 0;
                     }
                 }
                 result.add_result(all_pass, "utf32 copy of a sized string ending at a guard page");

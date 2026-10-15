@@ -32,7 +32,7 @@ if(MINGW)
     target_link_options(bq_multi_instance_worker PRIVATE -static-libstdc++ -static-libgcc)
 endif()
 
-# test-only C API in the library, see T04: __api_test_get_storage_report
+# test-only C API in the library, see __api_test_get_storage_report
 target_compile_definitions(BqLog PUBLIC BQ_MULTI_INSTANCE_TEST)
 
 add_executable(bq_instance_lock_probe lock_probe.cpp)
@@ -48,7 +48,7 @@ if(MINGW)
     target_link_options(bq_instance_lock_probe PRIVATE -static-libstdc++ -static-libgcc)
 endif()
 
-# M6: a worker built from the 2.6.0 sources to prove the new runtime coexists
+# legacy_coexistence: a worker built from the 2.6.0 sources to prove the new runtime coexists
 # with (and cleans up around) the legacy mmap_<log> directory layout.
 set(BQ_LEGACY_SRC "" CACHE PATH "path to a 2.6.0 checkout (must contain src/ and include/)")
 if(BQ_LEGACY_SRC)
@@ -104,7 +104,7 @@ if(BQ_LEGACY_SRC)
     target_sources(bq_multi_instance_worker_legacy PRIVATE ${BQ_LEGACY_LOG_SRCS})
 endif()
 
-# M7: two plugins, each statically linking its own BqLog runtime, loaded into
+# dual_runtime_plugins: two plugins, each statically linking its own BqLog runtime, loaded into
 # one host process. The BqLog sources are compiled directly into each plugin
 # with hidden visibility so the two copies never share symbols.
 if(NOT WIN32 OR TARGET_PLATFORM STREQUAL "win64")
@@ -154,11 +154,17 @@ enable_testing()
 add_test(NAME multi_instance_lock COMMAND bq_instance_lock_probe)
 set_tests_properties(multi_instance_lock PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 30)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-foreach(case M1 M2 M3 M4 M5 M6 M7 M8 M9)
+# With a 2.6.0 tree the legacy case has to run rather than skip.
+set(BQ_MI_EXTRA_ARGS "")
+if(BQ_LEGACY_SRC)
+    set(BQ_MI_EXTRA_ARGS --require-legacy)
+endif()
+foreach(case instance_assignment two_logs recovery_off crash_recovery two_instances legacy_coexistence dual_runtime_plugins child_lock flushed_recovery)
     add_test(NAME multi_instance_${case}
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/run.py --case ${case}
                 --worker $<TARGET_FILE:bq_multi_instance_worker>
-                --out ${CMAKE_BINARY_DIR}/mi_out)
+                --out ${CMAKE_BINARY_DIR}/mi_out
+                ${BQ_MI_EXTRA_ARGS})
     # a hang must fail in minutes, not run out the job: the slowest case needs a few seconds
     set_tests_properties(multi_instance_${case} PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 endforeach()
