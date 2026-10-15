@@ -107,8 +107,8 @@ namespace bq {
                                                    && is_compatible_helper<bq::decay_t<T>>::char_size == sizeof(char_type)> {
         };
 
-        struct std_string_dummy_tag_type { };
-        struct std_string_view_dummy_tag_type { };
+        struct std_string_dummy_tag_type {};
+        struct std_string_view_dummy_tag_type {};
 
     public:
         BQ_STRING_CLS_NAME();

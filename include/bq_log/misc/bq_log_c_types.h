@@ -70,6 +70,10 @@ enum bq_recovery_capability_value {
 #define BQ_LOG_ABI_CHAR16 uint16_t
 #endif
 
+    // The structs below are compiled as both C and C++, so they stay at column 0, outside the
+    // C++ namespace, which the formatter cannot express.
+    // clang-format off
+
 BQ_PACK_BEGIN
 struct BQ_LOG_ABI_TYPE(_api_string_def, bq_api_string_def) {
     const char* str;
@@ -137,6 +141,7 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
 
 #undef BQ_LOG_ABI_TYPE
 #undef BQ_LOG_ABI_CHAR16
+// clang-format on
 #if defined(__cplusplus)
     static_assert(sizeof(_api_string_def) == sizeof(void*) + sizeof(uint32_t), "packed string ABI");
     static_assert(sizeof(_api_u16string_def) == sizeof(void*) + sizeof(uint32_t), "packed UTF-16 string ABI");

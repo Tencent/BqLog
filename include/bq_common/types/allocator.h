@@ -51,7 +51,7 @@ namespace bq {
         default_allocator() = default;
 
         template <typename U>
-        default_allocator(const default_allocator<U>&) { }
+        default_allocator(const default_allocator<U>&) {}
 
         value_type* allocate(size_t n)
         {

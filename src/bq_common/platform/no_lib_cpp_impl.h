@@ -29,7 +29,7 @@
 #if defined(BQ_NO_LIBCPP)
 
 namespace std {
-    enum class align_val_t : size_t { };
+    enum class align_val_t : size_t {};
     struct nothrow_t {
     };
     extern const nothrow_t nothrow;
@@ -38,8 +38,8 @@ namespace std {
 
 inline void* operator new(size_t, void* p) noexcept { return p; }
 inline void* operator new[](size_t, void* p) noexcept { return p; }
-inline void operator delete(void*, void*) noexcept { }
-inline void operator delete[](void*, void*) noexcept { }
+inline void operator delete(void*, void*) noexcept {}
+inline void operator delete[](void*, void*) noexcept {}
 
 void* operator new(size_t size);
 void* operator new[](size_t size);

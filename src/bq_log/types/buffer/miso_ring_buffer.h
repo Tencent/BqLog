@@ -84,7 +84,9 @@ namespace bq {
                 {
                     *(uint32_t*)block_num_ = num;
                 }
-        } BQ_PACK_END public : static constexpr uint32_t MAX_BLOCK_NUM_PER_CHUNK = 0xFFFFFF;
+            } BQ_PACK_END
+        public:
+            static constexpr uint32_t MAX_BLOCK_NUM_PER_CHUNK = 0xFFFFFF;
             chunk_head_def chunk_head;
 
         private:
@@ -99,7 +101,8 @@ namespace bq {
             uint32_t read_cursor_start_cache_;
             uint64_t log_checksum_;
             char mmap_misc_data_[BQ_CACHE_LINE_SIZE - sizeof(read_cursor_cache_) - sizeof(log_checksum_) - sizeof(read_cursor_start_cache_)];
-        } BQ_PACK_END static_assert(sizeof(head) == BQ_CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
+        } BQ_PACK_END
+        static_assert(sizeof(head) == BQ_CACHE_LINE_SIZE, "the size of head should be equal to cache line size");
 
         static_assert(sizeof(block) == BQ_CACHE_LINE_SIZE, "the size of block should be equal to cache line size");
         const ptrdiff_t data_block_offset = reinterpret_cast<ptrdiff_t>(((block*)0)->chunk_head.data);

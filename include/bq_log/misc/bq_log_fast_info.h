@@ -33,8 +33,7 @@ namespace bq {
             // the literal as do_log() wants it on the fallback path
             using literal_type = char_type[char_count];
             // the log_arg_type_enum the format is registered with; same mapping as the macro path
-            static constexpr bq::log_arg_type_enum arg_type =
-                bq::tools::_is_bq_log_format_type<literal_type>::arg_type;
+            static constexpr bq::log_arg_type_enum arg_type = bq::tools::_is_bq_log_format_type<literal_type>::arg_type;
             // type_copy writes a 4-byte length and then the normalized bytes: one byte per code
             // unit for UTF-8, and never more than the literal's own byte size for the wider forms
             // (a 4-byte code point becomes at most two 2-byte units), so this always has room
@@ -103,7 +102,7 @@ namespace bq {
                 BQ_LIKELY_IF(static_cast<uint8_t>(word & v) != 0)
                 {
                     const int32_t r = bq::fast_inline::write(log_access::buffer_id(l),
-                        bq::fast_inline::fast_meta_by_site_v { &site.v }, 0, [](uint8_t*) { });
+                        bq::fast_inline::fast_meta_by_site_v { &site.v }, 0, [](uint8_t*) {});
                     BQ_UNLIKELY_IF(r > 0)
                     {
                         bq::api::__api_fast_log_notify_low_space_by_id(log_access::log_id(l));
@@ -146,7 +145,7 @@ namespace bq {
                 return false;
             }
             using traits = fast_format_traits<F>;
-            const typename traits::char_type (&format)[traits::char_count] = fixed_format_chars<F>::data.value;
+            const typename traits::char_type(&format)[traits::char_count] = fixed_format_chars<F>::data.value;
             if (load_site_v(site) == fast_site_refused) {
                 return l.do_log(CAT, LEVEL, format, args...);
             }

@@ -50,7 +50,7 @@ namespace bq {
 
         // Larger parameter (eg. 3) will result in an exponential increase in test time overhead.
         template <size_t BITS>
-        struct param_count_helper { };
+        struct param_count_helper {};
         template <>
         struct param_count_helper<32> {
             constexpr static int32_t MAX_PARAM = 2;

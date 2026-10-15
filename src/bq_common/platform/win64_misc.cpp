@@ -237,7 +237,7 @@ namespace bq {
             if (h == INVALID_HANDLE_VALUE) {
                 return instance_lock_result::error;
             }
-            OVERLAPPED ov = { };
+            OVERLAPPED ov = {};
             if (!LockFileEx(h, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &ov)) {
                 const DWORD err = GetLastError();
                 CloseHandle(h);

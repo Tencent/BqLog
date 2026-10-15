@@ -52,7 +52,7 @@ namespace bq {
             uint8_t padding[3];
         } BQ_PACK_END
 
-            static_assert(sizeof(chunk_head_def) == 12, "the size of chunk_head_def should be equal to 12 bytes");
+        static_assert(sizeof(chunk_head_def) == 12, "the size of chunk_head_def should be equal to 12 bytes");
 
         struct block {
             uint8_t padding[BLOCK_SIZE];
@@ -92,7 +92,8 @@ namespace bq {
             {
                 return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<uint32_t>*>(writing_cursor_place_holder_));
             }
-        } BQ_PACK_END static_assert(sizeof(head) == 4 * BQ_CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
+        } BQ_PACK_END
+        static_assert(sizeof(head) == 4 * BQ_CACHE_LINE_SIZE, "the size of head should be equal to 2 X cache line size");
 
         head* head_;
         block* aligned_blocks_;

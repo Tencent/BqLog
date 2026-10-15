@@ -520,7 +520,7 @@ namespace bq {
     bq_forceinline bool fast_log(bq::_api_fast_log_site_handle& site, const bq::log& log,
         uint32_t category_index, bq::log_level level, const STR& format)
     {
-        BQ_LIKELY_IF(fast_log_inline(site, level, 0, [](uint8_t*) { }))
+        BQ_LIKELY_IF(fast_log_inline(site, level, 0, [](uint8_t*) {}))
         {
             return true;
         }
@@ -643,40 +643,40 @@ namespace bq {
 // category mask changes still apply.
 #define BQ_FAST_LOG_SITE_INITIALIZER { 0, 0, 0, nullptr, &bq::fast_inline::fast_inline_state<>::no_level }
 
-#define BQ_LOG_FAST_VERBOSE(log_obj, ...)                                                 \
-    do {                                                                                  \
+#define BQ_LOG_FAST_VERBOSE(log_obj, ...)                                                            \
+    do {                                                                                             \
         alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
-        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::verbose, __VA_ARGS__);  \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::verbose, __VA_ARGS__);             \
     } while (false)
 
-#define BQ_LOG_FAST_DEBUG(log_obj, ...)                                                   \
-    do {                                                                                  \
+#define BQ_LOG_FAST_DEBUG(log_obj, ...)                                                              \
+    do {                                                                                             \
         alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
-        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::debug, __VA_ARGS__);    \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::debug, __VA_ARGS__);               \
     } while (false)
 
-#define BQ_LOG_FAST_INFO(log_obj, ...)                                                    \
-    do {                                                                                  \
+#define BQ_LOG_FAST_INFO(log_obj, ...)                                                               \
+    do {                                                                                             \
         alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
-        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::info, __VA_ARGS__);     \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::info, __VA_ARGS__);                \
     } while (false)
 
-#define BQ_LOG_FAST_WARNING(log_obj, ...)                                                 \
-    do {                                                                                  \
+#define BQ_LOG_FAST_WARNING(log_obj, ...)                                                            \
+    do {                                                                                             \
         alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
-        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::warning, __VA_ARGS__);  \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::warning, __VA_ARGS__);             \
     } while (false)
 
-#define BQ_LOG_FAST_ERROR(log_obj, ...)                                                   \
-    do {                                                                                  \
+#define BQ_LOG_FAST_ERROR(log_obj, ...)                                                              \
+    do {                                                                                             \
         alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
-        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::error, __VA_ARGS__);    \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::error, __VA_ARGS__);               \
     } while (false)
 
-#define BQ_LOG_FAST_FATAL(log_obj, ...)                                                   \
-    do {                                                                                  \
+#define BQ_LOG_FAST_FATAL(log_obj, ...)                                                              \
+    do {                                                                                             \
         alignas(8) static bq::_api_fast_log_site_handle bq_fast_site = BQ_FAST_LOG_SITE_INITIALIZER; \
-        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::fatal, __VA_ARGS__);    \
+        bq::fast_log_call(bq_fast_site, (log_obj), bq::log_level::fatal, __VA_ARGS__);               \
     } while (false)
 
 #if defined(BQ_CPP_20)

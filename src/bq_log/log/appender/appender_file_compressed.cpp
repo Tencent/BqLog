@@ -148,24 +148,20 @@ namespace bq {
         if (new_format_template_cache_max_entries != format_template_cache_max_entries_) {
             if (!format_l2_.set_max_size(new_format_template_cache_max_entries)) {
                 format_l2_.clear();
-                const bool configured =
-                    format_l2_.set_max_size(new_format_template_cache_max_entries);
+                const bool configured = format_l2_.set_max_size(new_format_template_cache_max_entries);
                 assert(configured);
                 (void)configured;
             }
-            format_template_cache_max_entries_ =
-                new_format_template_cache_max_entries;
+            format_template_cache_max_entries_ = new_format_template_cache_max_entries;
         }
         if (new_thread_info_cache_max_entries != thread_info_cache_max_entries_) {
             if (!thread_l2_.set_max_size(new_thread_info_cache_max_entries)) {
                 thread_l2_.clear();
-                const bool configured =
-                    thread_l2_.set_max_size(new_thread_info_cache_max_entries);
+                const bool configured = thread_l2_.set_max_size(new_thread_info_cache_max_entries);
                 assert(configured);
                 (void)configured;
             }
-            thread_info_cache_max_entries_ =
-                new_thread_info_cache_max_entries;
+            thread_info_cache_max_entries_ = new_thread_info_cache_max_entries;
         }
         return true;
     }

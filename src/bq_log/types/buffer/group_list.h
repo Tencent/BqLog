@@ -37,7 +37,8 @@ namespace bq {
         block_list free_;
         block_list stage_;
         group_data_head(uint16_t max_blocks_count, uint8_t* group_data_addr, size_t group_data_size, bool is_memory_recovery);
-    } BQ_PACK_END static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
+    } BQ_PACK_END
+    static_assert(sizeof(group_data_head) == sizeof(block_list) * 3, "invalid bq::group_data_head size");
 
     class group_node : public bq::memory_pool_obj_base<group_node, true> {
     public:

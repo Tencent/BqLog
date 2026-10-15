@@ -84,7 +84,7 @@ void sig_handler(int)
 int32_t main_logic()
 {
 #ifdef BQ_POSIX
-    struct sigaction sa = { };
+    struct sigaction sa = {};
     sa.sa_handler = sig_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;

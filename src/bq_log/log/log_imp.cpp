@@ -60,7 +60,7 @@ namespace bq {
         java_buffer_info get_sync_buffer_info(JNIEnv* env, const log_buffer_write_handle& handle)
         {
             (void)handle;
-            java_buffer_info result { };
+            java_buffer_info result {};
             result.buffer_array_obj_ = nullptr;
             result.offset_store_ = &java_buffer_offset_;
             java_buffer_offset_ = 0;

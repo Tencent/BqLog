@@ -327,7 +327,8 @@ namespace bq {
         // the snapshot advanced record by record and lies between the batch start and its end.
         // Difference comparison: the cursors are uint32 and wrap.
         assert(static_cast<uint32_t>(head_->rt_reading_cursor_cache_ - handle.start_cursor_)
-            <= static_cast<uint32_t>(handle.end_cursor_ - handle.start_cursor_) && "invalid batch recovery snapshot");
+                <= static_cast<uint32_t>(handle.end_cursor_ - handle.start_cursor_)
+            && "invalid batch recovery snapshot");
         assert(handle.start_cursor_ == head_->reading_cursor().load_relaxed() && "invalid batch handle start cursor");
         assert(handle.end_cursor_ == head_->rt_writing_cursor_cache_ && "invalid batch handle end cursor");
 #endif

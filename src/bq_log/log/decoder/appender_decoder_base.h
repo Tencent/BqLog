@@ -45,7 +45,7 @@ namespace bq {
         };
 
     public:
-        virtual ~appender_decoder_base() { }
+        virtual ~appender_decoder_base() {}
 
         appender_decode_result init(const bq::file_handle& file, const bq::string& private_key_str);
 

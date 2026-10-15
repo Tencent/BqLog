@@ -222,13 +222,13 @@ namespace bq {
 
     template <typename FirstFacade>
     struct proxy_facade_tree<FirstFacade>
-        : public FirstFacade::generated_facade_type ::template facade_impl<proxy_facade_tree<FirstFacade>, typename FirstFacade::function_type>, public proxy_facade_tree<> {
+        : public FirstFacade::generated_facade_type::template facade_impl<proxy_facade_tree<FirstFacade>, typename FirstFacade::function_type>, public proxy_facade_tree<> {
         // ...
     };
 
     template <typename FirstFacade, typename... Rest>
     struct proxy_facade_tree<FirstFacade, Rest...>
-        : public FirstFacade::generated_facade_type ::template facade_impl<proxy_facade_tree<FirstFacade, Rest...>, typename FirstFacade::function_type>, public proxy_facade_tree<Rest...> {
+        : public FirstFacade::generated_facade_type::template facade_impl<proxy_facade_tree<FirstFacade, Rest...>, typename FirstFacade::function_type>, public proxy_facade_tree<Rest...> {
         // ...
     };
 

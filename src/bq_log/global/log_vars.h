@@ -51,7 +51,7 @@ namespace bq {
 #endif
         // Global variables are initialized using placement new; therefore, do not construct objects here, as alignment (alignas) cannot be guaranteed.
 #if defined(BQ_NAPI)
-        bq::miso_ring_buffer console_msg_buffer_ { bq::log_buffer_config { "napi_console_cb_msg", bq::array<bq::string> { }, 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 } };
+        bq::miso_ring_buffer console_msg_buffer_ { bq::log_buffer_config { "napi_console_cb_msg", bq::array<bq::string> {}, 1024 * 8, false, bq::log_memory_policy::block_when_full, 0 } };
         bq::platform::napi_callback_dispatcher console_callback_dispatcher_;
 #endif
         appender_console::console_static_misc console_static_misc_;

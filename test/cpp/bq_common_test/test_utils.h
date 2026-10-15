@@ -108,7 +108,7 @@ namespace bq {
                 {
                     // reference: schoolbook on 16 bit limbs, independent of the 32 bit split in the fallback
                     auto umul128_reference = [](uint64_t a, uint64_t b, uint64_t& high) -> uint64_t {
-                        uint32_t limbs[8] = { };
+                        uint32_t limbs[8] = {};
                         for (uint32_t i = 0; i < 4; ++i) {
                             uint64_t carry = 0;
                             for (uint32_t j = 0; j < 4; ++j) {

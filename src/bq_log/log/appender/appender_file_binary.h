@@ -105,7 +105,8 @@ namespace bq {
             uint32_t version;
             appender_format_type format;
             char padding[3];
-        } BQ_PACK_END static_assert(sizeof(appender_file_header) == 8, "appender_file_header size error");
+        } BQ_PACK_END
+        static_assert(sizeof(appender_file_header) == 8, "appender_file_header size error");
 
         BQ_PACK_BEGIN
         struct appender_file_segment_head {
@@ -113,7 +114,8 @@ namespace bq {
             appender_segment_type seg_type;
             appender_encryption_type enc_type;
             char padding[2];
-        } BQ_PACK_END static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_segment_head size error");
+        } BQ_PACK_END
+        static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_segment_head size error");
 
         // Only exist in first segment
         BQ_PACK_BEGIN
@@ -127,7 +129,7 @@ namespace bq {
             uint32_t category_count;
         } BQ_PACK_END
 
-            struct seg_info {
+        struct seg_info {
             uint64_t start_pos;
             uint64_t end_pos;
             appender_encryption_type enc_type_;

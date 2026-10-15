@@ -43,4 +43,3 @@ import bq.log;
 #undef BQ_MODULE_EXPORT_BEGIN
 #undef BQ_MODULE_EXPORT_END
 // clang-format on
-        

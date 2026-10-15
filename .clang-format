@@ -11,3 +11,20 @@ ColumnLimit:                0
 ReflowComments:             false
 PointerAlignment:           Left
 BreakBeforeBraces:          WebKit
+# The tree writes an empty body as '{}' far more often than as '{ }'.
+SpaceInEmptyBraces:         Never
+# Macros clang-format cannot see through. BQ_PACK_END already carries the ';', so never write one
+# after it, and put a BQ_PACK_BEGIN that opens a class in a namespace on its own line.
+StatementMacros:
+  - BQ_PACK_BEGIN
+  - BQ_PACK_END
+  - BQ_MODULE_EXPORT_BEGIN
+  - BQ_MODULE_EXPORT_END
+AttributeMacros:
+  - EBCO
+TypenameMacros:
+  - BQ_LOG_ABI_TYPE
+MacroBlockBegin:            "^Py_BEGIN_ALLOW_THREADS$"
+MacroBlockEnd:              "^Py_END_ALLOW_THREADS$"
+# BQ_LIKELY_IF / BQ_UNLIKELY_IF are deliberately not listed in IfMacros: an if body sits on the
+# next line all over the tree, and listing them would move every brace up a line.

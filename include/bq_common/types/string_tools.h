@@ -29,10 +29,10 @@ namespace bq {
     BQ_MODULE_EXPORT_BEGIN
     namespace string_tools {
         template <typename T, typename = void>
-        struct __has_value_type : bq::false_type { };
+        struct __has_value_type : bq::false_type {};
 
         template <typename T>
-        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type { };
+        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type {};
 
         template <typename T>
         struct is_c_str_compatible : bq::bool_type<bq::string::template is_std_string_compatible<T>::value || bq::u16string::template is_std_string_compatible<T>::value || bq::u32string::template is_std_string_compatible<T>::value> {
@@ -233,7 +233,7 @@ namespace bq {
             else
             {
 #endif
-                return string_len_dispatch < CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t) > ::exec(str);
+                return string_len_dispatch<CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t)>::exec(str);
 #if BQ_GCC_CLANG_BUILTIN(__builtin_constant_p)
             }
 #endif
@@ -307,7 +307,7 @@ namespace bq {
         }
 
         template <typename CHAR_TYPE>
-        struct inner_empty_str_def { };
+        struct inner_empty_str_def {};
         template <>
         struct inner_empty_str_def<char> {
             static const char* value() { return ""; }

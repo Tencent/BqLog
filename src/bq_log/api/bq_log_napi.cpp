@@ -31,8 +31,7 @@ struct console_msg_head {
     uint32_t length;
 } BQ_PACK_END
 
-    void
-    console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
+void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
 {
     console_msg_head* msg = nullptr;
     bool from_buffer = (param == static_cast<void*>(&bq::log_global_vars::get().console_msg_buffer_));

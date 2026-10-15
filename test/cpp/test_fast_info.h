@@ -129,8 +129,13 @@ namespace bq {
                 // each expected message must appear at least twice: once from the macro, once from fast_info
                 const char* expected[] = {
                     "no args here",
-                    "level verbose 1", "level debug 2", "level warning 3", "level error 4", "level fatal 5",
-                    "types 7", "many 1",
+                    "level verbose 1",
+                    "level debug 2",
+                    "level warning 3",
+                    "level error 4",
+                    "level fatal 5",
+                    "types 7",
+                    "many 1",
                 };
                 for (const char* want : expected) {
                     uint32_t hits = 0;
@@ -569,22 +574,54 @@ namespace bq {
             static void hit_site(const bq::log& log, int32_t site, int32_t value)
             {
                 switch (site) {
-                case 0: FAST_INFO_RACE_SITE(0, log, value); break;
-                case 1: FAST_INFO_RACE_SITE(1, log, value); break;
-                case 2: FAST_INFO_RACE_SITE(2, log, value); break;
-                case 3: FAST_INFO_RACE_SITE(3, log, value); break;
-                case 4: FAST_INFO_RACE_SITE(4, log, value); break;
-                case 5: FAST_INFO_RACE_SITE(5, log, value); break;
-                case 6: FAST_INFO_RACE_SITE(6, log, value); break;
-                case 7: FAST_INFO_RACE_SITE(7, log, value); break;
-                case 8: FAST_INFO_RACE_SITE(8, log, value); break;
-                case 9: FAST_INFO_RACE_SITE(9, log, value); break;
-                case 10: FAST_INFO_RACE_SITE(10, log, value); break;
-                case 11: FAST_INFO_RACE_SITE(11, log, value); break;
-                case 12: FAST_INFO_RACE_SITE(12, log, value); break;
-                case 13: FAST_INFO_RACE_SITE(13, log, value); break;
-                case 14: FAST_INFO_RACE_SITE(14, log, value); break;
-                default: FAST_INFO_RACE_SITE(15, log, value); break;
+                case 0:
+                    FAST_INFO_RACE_SITE(0, log, value);
+                    break;
+                case 1:
+                    FAST_INFO_RACE_SITE(1, log, value);
+                    break;
+                case 2:
+                    FAST_INFO_RACE_SITE(2, log, value);
+                    break;
+                case 3:
+                    FAST_INFO_RACE_SITE(3, log, value);
+                    break;
+                case 4:
+                    FAST_INFO_RACE_SITE(4, log, value);
+                    break;
+                case 5:
+                    FAST_INFO_RACE_SITE(5, log, value);
+                    break;
+                case 6:
+                    FAST_INFO_RACE_SITE(6, log, value);
+                    break;
+                case 7:
+                    FAST_INFO_RACE_SITE(7, log, value);
+                    break;
+                case 8:
+                    FAST_INFO_RACE_SITE(8, log, value);
+                    break;
+                case 9:
+                    FAST_INFO_RACE_SITE(9, log, value);
+                    break;
+                case 10:
+                    FAST_INFO_RACE_SITE(10, log, value);
+                    break;
+                case 11:
+                    FAST_INFO_RACE_SITE(11, log, value);
+                    break;
+                case 12:
+                    FAST_INFO_RACE_SITE(12, log, value);
+                    break;
+                case 13:
+                    FAST_INFO_RACE_SITE(13, log, value);
+                    break;
+                case 14:
+                    FAST_INFO_RACE_SITE(14, log, value);
+                    break;
+                default:
+                    FAST_INFO_RACE_SITE(15, log, value);
+                    break;
                 }
             }
 #undef FAST_INFO_RACE_SITE

@@ -110,7 +110,7 @@ namespace write_thread_cost {
             return samples[std::min(rank, samples.size() - 1)];
         };
         const char* mode_label = mode == write_mode::normal ? "log.info()         "
-            : (mode == write_mode::fast ? "BQ_LOG_FAST_INFO() " : "log.fast_info<>()  ");
+                                                            : (mode == write_mode::fast ? "BQ_LOG_FAST_INFO() " : "log.fast_info<>()  ");
         std::cout << std::fixed << std::setprecision(1);
         std::cout << mode_label
                   << "| threads " << thread_count << " | ns per log | 50th " << percentile(50) << " | 75th " << percentile(75)

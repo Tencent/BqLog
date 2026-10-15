@@ -209,14 +209,12 @@ namespace bq {
                 const bq::string& prefix)
             {
                 bq::array<bq::string> result;
-                const bq::array<bq::string> names =
-                    bq::file_manager::get_sub_dirs_and_files_name(directory);
+                const bq::array<bq::string> names = bq::file_manager::get_sub_dirs_and_files_name(directory);
                 for (const auto& name : names) {
                     if (!name.begin_with(prefix) || !name.end_with(".logcompr")) {
                         continue;
                     }
-                    const bq::string full_path =
-                        bq::file_manager::combine_path(directory, name);
+                    const bq::string full_path = bq::file_manager::combine_path(directory, name);
                     if (bq::file_manager::is_file(full_path)) {
                         result.push_back(full_path);
                     }
@@ -283,8 +281,7 @@ namespace bq {
             {
                 const bq::string directory = TO_ABSOLUTE_PATH("compressed_cache_test", 0);
                 const bq::string file_prefix = case_name;
-                const bq::string file_name =
-                    bq::file_manager::combine_path("compressed_cache_test", file_prefix);
+                const bq::string file_name = bq::file_manager::combine_path("compressed_cache_test", file_prefix);
                 const auto formats = make_diverse_formats(512);
 
                 char config_buffer[2048];
@@ -305,14 +302,12 @@ namespace bq {
                     format_cache_max_entries);
 
                 {
-                    bq::log first_log =
-                        bq::log::create_log(case_name + "_first", config_buffer);
+                    bq::log first_log = bq::log::create_log(case_name + "_first", config_buffer);
                     write_format_passes(first_log, formats, 0, 2);
                     close_file_appender(first_log);
                 }
                 {
-                    bq::log second_log =
-                        bq::log::create_log(case_name + "_second", config_buffer);
+                    bq::log second_log = bq::log::create_log(case_name + "_second", config_buffer);
                     write_format_passes(second_log, formats, 2, 2);
                     close_file_appender(second_log);
                 }

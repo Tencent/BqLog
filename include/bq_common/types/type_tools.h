@@ -33,8 +33,8 @@ namespace bq {
 BQ_MODULE_EXPORT_BEGIN
 inline void* operator new(size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
 inline void* operator new[](size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
-inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept { }
-inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept { }
+inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept {}
+inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept {}
 BQ_MODULE_EXPORT_END
 
 // EBCO is defined in bq_common/platform/macros.h, next to the other language-level macros, so
@@ -195,8 +195,8 @@ namespace bq {
     template <typename T>
     struct object_destructor {
     private:
-        struct trivial_destructor_type { };
-        struct non_trivial_destructor_type { };
+        struct trivial_destructor_type {};
+        struct non_trivial_destructor_type {};
 
         template <typename U, typename destructor_type>
         struct destructor_impl;
@@ -234,8 +234,8 @@ namespace bq {
     template <typename T>
     struct object_array_destructor {
     private:
-        struct trivial_destructor_type { };
-        struct non_trivial_destructor_type { };
+        struct trivial_destructor_type {};
+        struct non_trivial_destructor_type {};
 
         template <typename U, typename destructor_type>
         struct destructor_impl;
@@ -319,7 +319,7 @@ namespace bq {
         Ele value_;
 
     public:
-        inline __tuple_element_value_impl() { }
+        inline __tuple_element_value_impl() {}
         template <typename Ele_Input>
         inline __tuple_element_value_impl(Ele_Input&& input_value)
             : value_(bq::forward<Ele_Input>(input_value))
@@ -331,7 +331,7 @@ namespace bq {
 
     template <size_t Index, typename Ele>
     struct EBCO __tuple_element_value_impl<Index, Ele, true> : private Ele {
-        inline __tuple_element_value_impl() { }
+        inline __tuple_element_value_impl() {}
         template <typename Ele_Input>
         inline __tuple_element_value_impl(Ele_Input&& input_value) { (void)input_value; }
         inline Ele& get() { return static_cast<Ele&>(*this); }
@@ -341,7 +341,7 @@ namespace bq {
     template <size_t Index, typename Ele>
     struct EBCO __tuple_element_value : public __tuple_element_value_impl<Index, Ele, __is_empty(Ele)> {
         using Super_Type = __tuple_element_value_impl<Index, Ele, __is_empty(Ele)>;
-        inline __tuple_element_value() { }
+        inline __tuple_element_value() {}
         template <typename Ele_Input>
         inline __tuple_element_value(Ele_Input&& input_value)
             : Super_Type(bq::forward<Ele_Input>(input_value))
@@ -356,7 +356,7 @@ namespace bq {
     template <typename ThisType, typename... Rest>
     class EBCO tuple<ThisType, Rest...> : private __tuple_element_value<sizeof...(Rest), ThisType>, private tuple<Rest...> {
     public:
-        inline tuple() noexcept { }
+        inline tuple() noexcept {}
 
         template <typename ThisType_Input, typename... Rest_Input>
         inline tuple(ThisType_Input&& this_input, Rest_Input&&... rest_input) noexcept

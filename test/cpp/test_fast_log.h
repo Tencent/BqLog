@@ -78,8 +78,8 @@ namespace bq {
 
             public:
                 bool hp_without_ext_ = false;
-                char thread_tag_[64] = { }; // "[tid-<id> <name>]" as layout prints it
-                char thread_id_tag_[32] = { }; // "[tid-<id> "
+                char thread_tag_[64] = {}; // "[tid-<id> <name>]" as layout prints it
+                char thread_id_tag_[32] = {}; // "[tid-<id> "
                 explicit named_writer_thread(const bq::log& log)
                     : log_(log)
                 {
@@ -653,7 +653,7 @@ namespace bq {
                 }
                 char name[96];
                 snprintf(name, sizeof(name), "fast_mode_recovery_cross_%" PRIu64, bq::platform::high_performance_epoch_ms());
-                uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = { };
+                uint64_t thread_ids[recovery_cross_lifetimes][recovery_cross_threads] = {};
                 for (uint32_t lifetime = 0; lifetime < recovery_cross_lifetimes; ++lifetime) {
                     if (auto* inst = bq::instance_storage::get()) {
                         inst->test_begin_new_run(); // simulate a relaunch
@@ -685,7 +685,7 @@ namespace bq {
                 }
                 auto config = recovery_cross_config(name);
                 bq::log_buffer buffer(config);
-                uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = { };
+                uint32_t next_seq[recovery_cross_lifetimes][recovery_cross_threads] = {};
                 uint32_t out_of_order = 0;
                 uint32_t bad_record = 0;
                 uint32_t bad_owner = 0;
@@ -700,7 +700,7 @@ namespace bq {
                         continue;
                     }
                     ++read_count;
-                    recovery_cross_record value = { };
+                    recovery_cross_record value = {};
                     uint64_t owner_thread_id = 0;
                     if (bq::log_record_reader::is_fast_record(chunk.data_addr, chunk.data_size)) {
                         bq::log_entry_handle entry(chunk.data_addr, chunk.data_size);
@@ -785,7 +785,7 @@ namespace bq {
                 const char* log_name_ = nullptr;
                 uint32_t round_ = 0;
                 uint32_t thread_ = 0;
-                char thread_tag_[64] = { };
+                char thread_tag_[64] = {};
                 void run() override
                 {
                     const bq::log log = bq::log::get_log_by_name(log_name_);
@@ -860,7 +860,7 @@ namespace bq {
                     + "log.buffer_policy_when_full=expand\n"
                     + "log.high_perform_mode_freq_threshold_per_second=1000\n";
                 const char* categories[] = { "ModuleA", "ModuleB" };
-                char thread_tags[log_crash_rounds][log_crash_threads][64] = { };
+                char thread_tags[log_crash_rounds][log_crash_threads][64] = {};
                 for (uint32_t round = 0; round <= log_crash_rounds; ++round) {
                     if (auto* inst = bq::instance_storage::get()) {
                         inst->test_begin_new_run(); // each round simulates a relaunch
@@ -1086,7 +1086,7 @@ namespace bq {
                     "second log uses its own hp block");
 
                 // low space notification on a real site, and on a site whose log no longer resolves
-                bq::_api_fast_log_site_handle site = { };
+                bq::_api_fast_log_site_handle site = {};
                 result.add_result(bq::init_fast_log_site<bq::tuple<int32_t>>(site, log, 0, bq::log_level::info, "notify {}"), "site init");
                 result.add_result(site.log_id == log.get_id() && site.buffer_id == buffer.get_id(), "site carries log id and buffer id");
                 bq::api::__api_fast_log_notify_low_space(&site);
@@ -1166,7 +1166,7 @@ namespace bq {
 
             // COLS indices starting at OFFSET, one recursion level per column (keeps template depth low)
             template <int32_t I, int32_t OFFSET, int32_t... N>
-            struct race_gen : race_gen<I - 1, OFFSET, OFFSET + I - 1, N...> { };
+            struct race_gen : race_gen<I - 1, OFFSET, OFFSET + I - 1, N...> {};
             template <int32_t OFFSET, int32_t... N>
             struct race_gen<0, OFFSET, N...> {
                 typedef race_seq<N...> type;

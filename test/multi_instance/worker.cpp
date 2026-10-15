@@ -159,9 +159,9 @@ int main(int argc, char** argv)
 #endif
         std::string cmd = "\"" + self_path + "\" 0 " + log_name + " 1 --sleep 10";
 #if defined(_WIN32)
-        STARTUPINFOA startup_info = { };
+        STARTUPINFOA startup_info = {};
         startup_info.cb = sizeof(startup_info);
-        PROCESS_INFORMATION process_info = { };
+        PROCESS_INFORMATION process_info = {};
         // bInheritHandles=TRUE: the point of the test is that the instance lock handle itself is
         // created non-inheritable, so it must not reach the child even when handles are inherited
         if (!CreateProcessA(nullptr, &cmd[0], nullptr, nullptr, TRUE,

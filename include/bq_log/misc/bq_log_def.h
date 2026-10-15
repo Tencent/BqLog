@@ -81,10 +81,10 @@ namespace bq {
 
         static constexpr uint32_t get_head_size_without_format_str();
     } BQ_PACK_END
-        BQ_MODULE_EXPORT_END
+    BQ_MODULE_EXPORT_END
 
-        // A member definition may not appear in an export block, so it sits between the markers.
-        constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
+    // A member definition may not appear in an export block, so it sits between the markers.
+    constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
     {
         return offsetof(_log_entry_head_def, log_format_str_type);
     }
@@ -101,7 +101,7 @@ namespace bq {
         uint64_t format_meta_addr;
     } BQ_PACK_END
 
-        static_assert(sizeof(log_head_fast_def) == 16, "log_head_fast_def size");
+    static_assert(sizeof(log_head_fast_def) == 16, "log_head_fast_def size");
     static_assert(offsetof(log_head_fast_def, format_meta_addr) == 8, "log_head_fast_def alignment");
 
     enum class fast_meta_kind : uint8_t {
@@ -116,7 +116,8 @@ namespace bq {
         fast_meta_kind kind;
         uint8_t ready;
         uint16_t reserved;
-    } BQ_PACK_END static_assert(sizeof(fast_meta_head) == 16, "fast meta head size");
+    } BQ_PACK_END
+    static_assert(sizeof(fast_meta_head) == 16, "fast meta head size");
 
     BQ_PACK_BEGIN
     struct alignas(8) fast_format_meta {
@@ -131,7 +132,8 @@ namespace bq {
 
         const uint8_t* format_data() const { return reinterpret_cast<const uint8_t*>(this) + sizeof(*this); }
         const uint8_t* arg_types() const { return format_data() + format_size; }
-    } BQ_PACK_END static_assert(sizeof(fast_format_meta) == 40, "fast format meta size");
+    } BQ_PACK_END
+    static_assert(sizeof(fast_format_meta) == 40, "fast format meta size");
     static_assert(offsetof(fast_format_meta, format_hash) == 16, "fast format hash alignment");
     static_assert(offsetof(fast_format_meta, category_idx) == 24, "fast format category alignment");
     static_assert(offsetof(fast_format_meta, format_size) == 28, "fast format size alignment");
@@ -163,7 +165,8 @@ namespace bq {
     struct _api_log_buffer_chunk_read_handle {
         uint8_t* format_data_addr;
         enum_buffer_result_code result;
-    } BQ_PACK_END static_assert(sizeof(_api_log_buffer_chunk_read_handle) == sizeof(decltype(_api_log_buffer_chunk_read_handle::format_data_addr)) + sizeof(decltype(_api_log_buffer_chunk_read_handle::result)), "_api_log_buffer_chunk_read_handle's memory layout must be packed!");
+    } BQ_PACK_END
+    static_assert(sizeof(_api_log_buffer_chunk_read_handle) == sizeof(decltype(_api_log_buffer_chunk_read_handle::format_data_addr)) + sizeof(decltype(_api_log_buffer_chunk_read_handle::result)), "_api_log_buffer_chunk_read_handle's memory layout must be packed!");
 
     struct _log_level_bitmap_def {
         uint32_t bitmap = 0;

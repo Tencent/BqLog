@@ -100,7 +100,8 @@ namespace bq {
             uint64_t run_serial;
             uint32_t committed_size; // bytes of entries after the head
             uint8_t reserved[36];
-        } BQ_PACK_END static_assert(sizeof(meta_record_head) == 64, "meta record head size");
+        } BQ_PACK_END
+        static_assert(sizeof(meta_record_head) == 64, "meta record head size");
         static_assert(offsetof(meta_record_head, committed_size) == 24, "meta record head layout");
 
         BQ_PACK_BEGIN
@@ -108,7 +109,8 @@ namespace bq {
             uint64_t arena_addr;
             uint32_t entry_size; // 16 + meta record_size
             uint32_t reserved;
-        } BQ_PACK_END static_assert(sizeof(meta_record_entry_head) == 16, "meta record entry head size");
+        } BQ_PACK_END
+        static_assert(sizeof(meta_record_entry_head) == 16, "meta record entry head size");
 
         struct recovered_version {
             uint16_t version;

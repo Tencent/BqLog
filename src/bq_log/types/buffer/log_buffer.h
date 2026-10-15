@@ -65,7 +65,7 @@ namespace bq {
         } BQ_PACK_END
         static_assert(sizeof(lp_buffer_head_misc) == 16, "lp_buffer_head_misc size");
 
-            struct destruction_mark {
+        struct destruction_mark {
             bq::platform::spin_lock lock_;
             bool is_destructed_ = false;
         };
@@ -129,7 +129,7 @@ namespace bq {
             log_tls_buffer_info* cur_buffer_info_ = nullptr;
             _api_fast_log_thread_state* fast_state_ = nullptr; // header-side thread local fast path state, see bind_fast_state
             uint64_t fast_state_buffer_id_ = 0; // id of the buffer fast_state_ describes (ids are never reused)
-            log_thread_info thread_info_ { };
+            log_thread_info thread_info_ {};
 
         public:
             bq_forceinline log_tls_buffer_info& get_buffer_info(const log_buffer* buffer);
@@ -165,11 +165,13 @@ namespace bq {
             uintptr_t dummy;
         } BQ_PACK_END
 
-            BQ_PACK_BEGIN struct alignas(8) pointer_8_bytes_for_64_bits_system {
+        BQ_PACK_BEGIN
+        struct alignas(8) pointer_8_bytes_for_64_bits_system {
             log_tls_buffer_info* ptr;
         } BQ_PACK_END
 
-            BQ_PACK_BEGIN struct alignas(8) context_head {
+        BQ_PACK_BEGIN
+        struct alignas(8) context_head {
         public:
             uint16_t version_;
             bool is_thread_finished_;
@@ -185,7 +187,8 @@ namespace bq {
             {
                 tls_info_.ptr = tls_info;
             }
-        } BQ_PACK_END static_assert(sizeof(context_head) == 16, "context_head size must be 16");
+        } BQ_PACK_END
+        static_assert(sizeof(context_head) == 16, "context_head size must be 16");
         static_assert(sizeof(context_head) % 8 == 0, "context_head size must be a multiple of 8");
 
         BQ_PACK_BEGIN
@@ -202,7 +205,8 @@ namespace bq {
             {
                 return *bq::launder(reinterpret_cast<bq::platform::atomic_trivially_constructible<bool>*>(is_removed_place_holder_));
             }
-        } BQ_PACK_END static_assert(sizeof(block_misc_data) == 16 + sizeof(context_head) + sizeof(log_thread_info), "invalid block_misc_data size");
+        } BQ_PACK_END
+        static_assert(sizeof(block_misc_data) == 16 + sizeof(context_head) + sizeof(log_thread_info), "invalid block_misc_data size");
 
     public:
         log_buffer(log_buffer_config& config);

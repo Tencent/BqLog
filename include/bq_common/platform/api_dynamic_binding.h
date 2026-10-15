@@ -192,7 +192,8 @@ namespace bq {
         {
             void*& storage = pointer_slot<library_handle_tag, void*>::storage();
             void* handle = atomic_load_acquire(&storage);
-            BQ_UNLIKELY_IF(handle == nullptr) {
+            BQ_UNLIKELY_IF(handle == nullptr)
+            {
                 void* candidate = open_library();
                 if (candidate != nullptr) {
                     void* expected = nullptr;
@@ -240,10 +241,10 @@ namespace bq {
         {
             function_type& storage = pointer_slot<tag_type, function_type>::storage();
             function_type function = atomic_load_acquire(&storage);
-            BQ_UNLIKELY_IF(function == nullptr) {
+            BQ_UNLIKELY_IF(function == nullptr)
+            {
                 void* library_handle = get_library_handle();
-                void* symbol =
-                    library_handle == nullptr ? nullptr : find_symbol(library_handle, symbol_name);
+                void* symbol = library_handle == nullptr ? nullptr : find_symbol(library_handle, symbol_name);
                 function_type candidate = symbol_to_function<function_type>(symbol);
                 if (candidate != nullptr) {
                     function_type expected = nullptr;
@@ -284,13 +285,12 @@ namespace bq {
 #define BQ_API_DYNAMIC_BINDING_VISIBILITY
 #endif
 
-#define BQ_API_DEF(return_type, name, parameters, arguments)                                      \
-    struct bq_api_binding_tag_##name;                                                              \
-    BQ_API_DYNAMIC_BINDING_VISIBILITY bq_forceinline return_type name parameters                   \
-    {                                                                                              \
-        typedef decltype(&name) bq_api_function_type_##name;                                       \
-        bq_api_function_type_##name function =                                                     \
-            ::bq::api_dynamic_binding::get_function<bq_api_binding_tag_##name,                     \
-                bq_api_function_type_##name>(#name);                                               \
-        return function arguments;                                                                 \
+#define BQ_API_DEF(return_type, name, parameters, arguments)                                                      \
+    struct bq_api_binding_tag_##name;                                                                             \
+    BQ_API_DYNAMIC_BINDING_VISIBILITY bq_forceinline return_type name parameters                                  \
+    {                                                                                                             \
+        typedef decltype(&name) bq_api_function_type_##name;                                                      \
+        bq_api_function_type_##name function = ::bq::api_dynamic_binding::get_function<bq_api_binding_tag_##name, \
+            bq_api_function_type_##name>(#name);                                                                  \
+        return function arguments;                                                                                \
     }

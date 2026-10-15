@@ -45,7 +45,7 @@ namespace bq {
             bq_forceinline bool is_empty() const { return is_empty_index(index()); }
         } BQ_PACK_END
 
-            static_assert(sizeof(pointer_type) == sizeof(uint32_t), "invalid size of pointer_type");
+        static_assert(sizeof(pointer_type) == sizeof(uint32_t), "invalid size of pointer_type");
 
     private:
         // These members are modified in different threads which will leads to "False Share".
@@ -99,7 +99,8 @@ namespace bq {
         bq_forceinline void set_type(block_list_type type) { type_ = type; }
     } BQ_PACK_END
 
-        BQ_PACK_BEGIN class alignas(BQ_CACHE_LINE_SIZE) block_list {
+    BQ_PACK_BEGIN
+    class alignas(BQ_CACHE_LINE_SIZE) block_list {
         friend struct group_data_head;
 
     private:
@@ -330,6 +331,7 @@ namespace bq {
             }
             return true;
         }
-    } BQ_PACK_END static_assert(sizeof(block_list) == BQ_CACHE_LINE_SIZE, "invalid block_list size");
+    } BQ_PACK_END
+    static_assert(sizeof(block_list) == BQ_CACHE_LINE_SIZE, "invalid block_list size");
     BQ_SUPPRESS_MAYBE_UNINITIALIZED_END()
 }

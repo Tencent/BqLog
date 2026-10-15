@@ -386,7 +386,7 @@ namespace bq {
                 std::vector<std::thread> threads;
                 for (int32_t t = 0; t < register_race_thread_count; ++t) {
                     threads.emplace_back([&formats, &types, &all_same]() {
-                        const void* seen[register_race_format_count] = { };
+                        const void* seen[register_race_format_count] = {};
                         for (int32_t i = 0; i < register_race_format_count; ++i) {
                             const auto* meta = reg(formats[i], static_cast<uint32_t>(strlen(formats[i])),
                                 static_cast<uint8_t>(bq::log_level::info), 0, types, 1);

@@ -119,7 +119,8 @@ namespace bq {
     {
         // entries larger than a fresh block get their own block
         const uint32_t block_size = size > meta_arena_block_size
-            ? static_cast<uint32_t>(bq::align_64(size)) : meta_arena_block_size;
+            ? static_cast<uint32_t>(bq::align_64(size))
+            : meta_arena_block_size;
         BQ_LIKELY_IF(!blocks_.is_empty())
         {
             auto& last = blocks_[blocks_.size() - 1];
