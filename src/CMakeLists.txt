@@ -501,8 +501,13 @@ include(CMakePackageConfigHelpers)
 # CMAKE_INSTALL_LIBDIR to lib/$<CONFIG>; find_package looks in lib/cmake/<name> either way.
 if(CMAKE_INSTALL_LIBDIR MATCHES "\\$<")
     set(_bq_package_cmake_dir "lib/cmake/BqLog")
+    # bqlog.pc is written at configure time, before any configuration is known, so it names the
+    # library directory relative to itself instead of carrying $<CONFIG>: the file installs into
+    # <libdir>/pkgconfig, whichever <libdir> the caller asked for.
+    set(BQ_PC_LIBDIR "\${pcfiledir}/..")
 else()
     set(_bq_package_cmake_dir "${CMAKE_INSTALL_LIBDIR}/cmake/BqLog")
+    set(BQ_PC_LIBDIR "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
 endif()
 
 if(BUILD_LIB_TYPE STREQUAL "both")

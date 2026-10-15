@@ -10,9 +10,12 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #
-# Verifies that a standard install is consumable, which is the layout a package manager
-# produces: find_package(BqLog) and pkg-config must each locate the headers and the library,
-# and a program built either way must run.
+# Verifies that an install is consumable, in both layouts the project produces:
+#
+#   the standard one a package manager installs -- find_package(BqLog) and pkg-config must each
+#   locate the headers and the library, and a program built either way must run;
+#   the one the platform drivers install, which passes CMAKE_INSTALL_LIBDIR=lib/$<CONFIG> so that a
+#   prebuilt package keeps one library directory per configuration.
 #
 # Usage: bash install_verify.sh [platform]     (default: mac on macOS, linux elsewhere)
 set -euo pipefail
@@ -68,9 +71,9 @@ CPP
 
 run_consumer() {
     if [ "$(uname -s)" = "Darwin" ]; then
-        DYLD_LIBRARY_PATH="$PREFIX/lib" "$1"
+        DYLD_LIBRARY_PATH="$2" "$1"
     else
-        LD_LIBRARY_PATH="$PREFIX/lib" "$1"
+        LD_LIBRARY_PATH="$2" "$1"
     fi
 }
 
@@ -94,8 +97,8 @@ cmake -S "$WORK/cmake_consumer" -B "$WORK/cmake_consumer/build" -G "$GENERATOR" 
     -DCMAKE_PREFIX_PATH="$PREFIX"
 cmake --build "$WORK/cmake_consumer/build" --parallel
 
-run_consumer "$WORK/cmake_consumer/build/consumer_shared"
-run_consumer "$WORK/cmake_consumer/build/consumer_static"
+run_consumer "$WORK/cmake_consumer/build/consumer_shared" "$PREFIX/lib"
+run_consumer "$WORK/cmake_consumer/build/consumer_static" "$PREFIX/lib"
 echo "install_verify: find_package ok (bqlog::BqLogShared, bqlog::BqLogStatic)"
 
 # 3. pkg-config: the consumers that are not CMake.
@@ -105,7 +108,49 @@ pkg-config --exists bqlog \
 # shellcheck disable=SC2046
 "$CXX" -std=c++17 $(pkg-config --cflags bqlog) "$WORK/consumer.cpp" \
     $(pkg-config --libs bqlog) -o "$WORK/consumer_pc"
-run_consumer "$WORK/consumer_pc"
+run_consumer "$WORK/consumer_pc" "$PREFIX/lib"
 echo "install_verify: pkg-config ok (bqlog $(pkg-config --modversion bqlog))"
+
+# 4. The layout the platform drivers install. CMAKE_INSTALL_LIBDIR carries a generator expression
+# there, and install(EXPORT) evaluates none in DESTINATION, so an unevaluated $<CONFIG> is what a
+# Windows build cannot even name and what the artifact upload refuses on macOS. The same build tree
+# is reconfigured, so nothing is compiled twice.
+DRIVER_PREFIX="$WORK/driver_prefix"
+DRIVER_LIBDIR="$DRIVER_PREFIX/lib/Release"
+cmake -S "$REPO_ROOT" -B "$WORK/build" -G "$GENERATOR" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DTARGET_PLATFORM="$PLATFORM" \
+    -DBUILD_LIB_TYPE=both \
+    -DBQ_WERROR=OFF \
+    -DBQ_BUILD_TOOLS=OFF \
+    -DCMAKE_INSTALL_PREFIX="$DRIVER_PREFIX" \
+    -DCMAKE_INSTALL_LIBDIR='lib/$<CONFIG>'
+cmake --install "$WORK/build"
+
+if find "$DRIVER_PREFIX" -name '*$<*' -print -quit | grep -q .; then
+    echo "install_verify: an unevaluated generator expression reached the install tree:" >&2
+    find "$DRIVER_PREFIX" -name '*$<*' >&2
+    exit 1
+fi
+
+find "$DRIVER_LIBDIR" -maxdepth 1 -name 'libBqLog*' -print -quit | grep -q . \
+    || { echo "install_verify: no library under ${DRIVER_LIBDIR}" >&2; exit 1; }
+
+cmake -S "$WORK/cmake_consumer" -B "$WORK/cmake_consumer/build_driver" -G "$GENERATOR" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_PREFIX_PATH="$DRIVER_PREFIX"
+cmake --build "$WORK/cmake_consumer/build_driver" --parallel
+run_consumer "$WORK/cmake_consumer/build_driver/consumer_shared" "$DRIVER_LIBDIR"
+echo "install_verify: find_package ok in the driver layout (lib/cmake/BqLog beside lib/Release)"
+
+export PKG_CONFIG_PATH="$DRIVER_LIBDIR/pkgconfig"
+driver_libdir="$(pkg-config --variable=libdir bqlog)"
+[ -d "$driver_libdir" ] \
+    || { echo "install_verify: bqlog.pc names ${driver_libdir}, which is not a directory" >&2; exit 1; }
+# shellcheck disable=SC2046
+"$CXX" -std=c++17 $(pkg-config --cflags bqlog) "$WORK/consumer.cpp" \
+    $(pkg-config --libs bqlog) -o "$WORK/consumer_pc_driver"
+run_consumer "$WORK/consumer_pc_driver" "$DRIVER_LIBDIR"
+echo "install_verify: pkg-config ok in the driver layout (${driver_libdir})"
 
 echo "install_verify: all checks passed"
