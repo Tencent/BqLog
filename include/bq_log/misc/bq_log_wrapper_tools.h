@@ -328,6 +328,9 @@ namespace bq {
             const CHAR_TYPE* p = str;
             size_t remaining = max_character_count;
 
+            // A c-style string has no slack behind its terminator, and the four-character block
+            // below reads up to three characters past it. The sanitizer build walks instead.
+#ifndef BQ_ASAN_ENABLED
             // Fast Path for 4 characters at a time
             while (remaining >= 4) {
                 uint32_t c0 = static_cast<uint32_t>(string_tools::get_value_by_address_safe(p));
@@ -345,6 +348,7 @@ namespace bq {
                     break;
                 }
             }
+#endif
             // Slow Path for remaining characters
             while (remaining > 0) {
                 uint32_t c = static_cast<uint32_t>(*p);
