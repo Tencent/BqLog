@@ -148,7 +148,9 @@ jobs:
           fi
 
       - name: Create GitHub Release (main repo — Tencent/BqLog)
-        uses: softprops/action-gh-release@v3
+        # Pinned to a commit, not a tag: a moved tag would hand this job's release permissions to
+        # whatever it pointed at. Dependabot keeps the pin current.
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.release_name }}
@@ -168,7 +170,9 @@ jobs:
       # pippocao/BqLogFabRelease. GITHUB_TOKEN cannot write across repositories.
       - name: Create GitHub Release (Fab repo — pippocao/BqLogFabRelease)
         if: ${{ hashFiles('release_assets_fab/*') != '' }}
-        uses: softprops/action-gh-release@v3
+        # Pinned to a commit, not a tag: a moved tag would hand this job's release permissions to
+        # whatever it pointed at. Dependabot keeps the pin current.
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           token: ${{ secrets.FAB_RELEASE_TOKEN }}
           repository: pippocao/BqLogFabRelease
@@ -466,7 +470,8 @@ jobs:
       # The temporary key lives one hour and one OIDC token yields exactly one key, so the login
       # sits immediately before the push. No long-lived NUGET_API_KEY is involved.
       - name: Log in to nuget.org (OIDC -> temporary API key)
-        uses: NuGet/login@v1
+        # Pinned to a commit, not a tag: this job holds id-token:write for nuget.org OIDC.
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         id: login
         with:
           user: ${{ secrets.NUGET_USER }}

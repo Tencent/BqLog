@@ -18,6 +18,6 @@ target_link_libraries(main PRIVATE bqlog::BqLog)
 
 ## Releasing
 
-The release workflow attaches `vcpkg_port_bqlog.tar.gz`, with the version and SHA512 of the new tag filled in, to the GitHub release. Copy it to `ports/bqlog/` in a fork of microsoft/vcpkg, run `vcpkg x-add-version bqlog` and open a pull request.
+The `version` and `SHA512` in `ports/bqlog/` are placeholders in the repository: they belong to a tag that does not exist yet, so an unfilled port fails to fetch instead of installing the wrong source. The release workflow attaches a `vcpkg_port_bqlog.tar.gz`, filled in with the version and SHA512 of the new tag, to the GitHub release. Copy that one to `ports/bqlog/` in a fork of microsoft/vcpkg, run `vcpkg x-add-version bqlog` and open a pull request.
 
 `bump.sh <version> [tarball]` fills in the same values locally.

@@ -26,7 +26,7 @@ module;
 #include <stdint.h>
 
 // A macro is not exported by a module, so the language-level macros the header uses
-// (BQ_CPP_17, BQ_CPP_20, bq_forceinline, EBCO) come from this macro-only header.
+// (BQ_CPP_17, BQ_CPP_20, bq_forceinline, BQ_EBCO) come from this macro-only header.
 #include "bq_common/platform/macros.h"
 
 export module bq.test_category_log;

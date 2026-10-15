@@ -17,7 +17,7 @@ target_link_libraries(app PRIVATE bqlog::BqLogShared)   # or bqlog::BqLogStatic
 
 ## Releasing
 
-The release workflow attaches `bqlog.rb`, filled in with the url and sha256 of the new tag, to the GitHub release. Submit it to homebrew-core as `Formula/b/bqlog.rb`:
+The `url` and `sha256` in `Formula/bqlog.rb` are placeholders in the repository: they belong to a tag that does not exist yet, so an unfilled formula fails to fetch instead of installing the wrong source. The release workflow attaches a `bqlog.rb` filled in with the url and sha256 of the new tag to the GitHub release. Submit that one to homebrew-core as `Formula/b/bqlog.rb`:
 
 ```bash
 brew install --build-from-source ./bqlog.rb

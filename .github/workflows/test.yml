@@ -196,12 +196,17 @@ jobs:
           bash pack/nuget/collect_runtimes.sh artifacts_in pack/nuget windows_x86_64_libs
 
       - name: Pack
-        run: dotnet pack pack/nuget/BqLog.csproj -c Release -o nuget_out
+        shell: pwsh
+        run: |
+          # The version lives in src/bq_log/global/version.cpp, never in the csproj.
+          $version = (Select-String -Path src/bq_log/global/version.cpp -Pattern 'BQ_LOG_VERSION = "(.*?)"').Matches[0].Groups[1].Value
+          dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=$version -o nuget_out
+          if ($LASTEXITCODE -ne 0) { throw "dotnet pack failed" }
 
       - name: Publish a consumer against the packed nupkg
         shell: pwsh
         run: |
-          $version = (Select-String -Path pack/nuget/BqLog.csproj -Pattern '<Version>(.*?)</Version>').Matches[0].Groups[1].Value
+          $version = (Select-String -Path src/bq_log/global/version.cpp -Pattern 'BQ_LOG_VERSION = "(.*?)"').Matches[0].Groups[1].Value
           New-Item -ItemType Directory -Force -Path consumer | Out-Null
 
           @"
@@ -249,7 +254,45 @@ jobs:
           dotnet publish consumer/consumer.csproj -c Release -r win-x64 -o consumer_out
           ./consumer_out/consumer.exe
           if ($LASTEXITCODE -ne 0) {
-            throw "the consumer failed to run"
+            throw "the consumer failed to run with a RID"
+          }
+
+          # Without a RID the SDK still copies runtimes/<rid>/native and the host finds it through
+          # deps.json, so the plain .NET path gets its own check.
+          dotnet run --project consumer/consumer.csproj -c Release
+          if ($LASTEXITCODE -ne 0) {
+            throw "the consumer failed to run without a RID"
+          }
+
+          # .NET Framework ignores runtimes/, so the package's buildTransitive targets must copy the
+          # native library. This is the only check of that path.
+          New-Item -ItemType Directory -Force -Path consumer_framework | Out-Null
+          @"
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net48</TargetFramework>
+              <AssemblyName>consumer_framework</AssemblyName>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="BqLog" Version="$version" />
+              <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+            </ItemGroup>
+          </Project>
+          "@ | Set-Content -Encoding utf8 consumer_framework/consumer_framework.csproj
+          Copy-Item consumer/Program.cs consumer_framework/Program.cs
+          Copy-Item consumer/nuget.config consumer_framework/nuget.config
+
+          dotnet build consumer_framework/consumer_framework.csproj -c Release -o consumer_framework_out
+          if ($LASTEXITCODE -ne 0) {
+            throw "the .NET Framework consumer failed to build"
+          }
+          if (-not (Test-Path consumer_framework_out/BqLog.dll)) {
+            throw "the buildTransitive targets did not copy BqLog.dll for .NET Framework"
+          }
+          ./consumer_framework_out/consumer_framework.exe
+          if ($LASTEXITCODE -ne 0) {
+            throw "the .NET Framework consumer failed to run"
           }
 
   #Windows

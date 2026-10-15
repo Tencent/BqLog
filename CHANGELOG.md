@@ -8,7 +8,7 @@
 - **Package managers**: Homebrew (`brew install bqlog`, library and tools), vcpkg (tools via the `tools` feature) and NuGet (C# bindings with native libraries for six platforms). The CMake install provides `find_package(BqLog)` and pkg-config.
 - **Multi-process**: several processes may log into the same directory, each with its own recovery data. A log with `log.recovery=false` no longer touches the disk.
 - **Recovery**: the window grows from the last 2 runs to the last 16; `bq::log::get_recovery_capability()` (in every wrapper) reports whether the platform supports recovery.
-- **Compatibility**: the ABI changed; headers, wrappers and library must be upgraded together. On Windows, `cmake --install` now puts `BqLog.dll` under `bin/`; the release archives keep their layout.
+- **Compatibility**: the ABI changed; headers, wrappers and library must be upgraded together. A category log written by an older `BqLog_CategoryLogGenerator` no longer compiles (its empty-base macro is now `BQ_EBCO`), so regenerate it. On Windows, `cmake --install` now puts `BqLog.dll` under `bin/`; the release archives keep their layout.
 - **Bug fixes**:
   - fast mode: a call site could be initialized twice by concurrent first calls; the format registry had no size limit.
   - recovery: a crash mid-batch replayed the whole batch; fast-log metadata in continuation segments could be lost on restart; text-file recovery wrote no `RECOVER END` marker ([#90](https://github.com/Tencent/BqLog/pull/90)).

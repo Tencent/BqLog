@@ -296,21 +296,21 @@ namespace bq {
 
 #define __BQ_FACADE_CPP17_PART(FUNCTION_NAME)                                                                                     \
     template <typename Class, typename Ret, typename... Args>                                                                     \
-    struct EBCO dispatcher<Ret (Class::*)(Args...) noexcept> {                                                                    \
+    struct BQ_EBCO dispatcher<Ret (Class::*)(Args...) noexcept> {                                                                 \
         static Ret dispatch(void* obj, Args... args)                                                                              \
         {                                                                                                                         \
             return ((Class*)obj)->FUNCTION_NAME(args...);                                                                         \
         }                                                                                                                         \
     };                                                                                                                            \
     template <typename Class, typename Ret, typename... Args>                                                                     \
-    struct EBCO dispatcher<Ret (Class::*)(Args...) const noexcept> {                                                              \
+    struct BQ_EBCO dispatcher<Ret (Class::*)(Args...) const noexcept> {                                                           \
         static Ret dispatch(const void* obj, Args... args)                                                                        \
         {                                                                                                                         \
             return ((const Class*)obj)->FUNCTION_NAME(args...);                                                                   \
         }                                                                                                                         \
     };                                                                                                                            \
     template <typename Proxy, typename Ret, typename... Args>                                                                     \
-    struct EBCO facade_impl<Proxy, Ret(Args...) noexcept> {                                                                       \
+    struct BQ_EBCO facade_impl<Proxy, Ret(Args...) noexcept> {                                                                    \
         template <typename... Facades>                                                                                            \
         friend struct bq::proxy;                                                                                                  \
                                                                                                                                   \
@@ -331,7 +331,7 @@ namespace bq {
         }                                                                                                                         \
     };                                                                                                                            \
     template <typename Proxy, typename Ret, typename... Args>                                                                     \
-    struct EBCO facade_impl<Proxy, Ret(Args...) const noexcept> {                                                                 \
+    struct BQ_EBCO facade_impl<Proxy, Ret(Args...) const noexcept> {                                                              \
         template <typename... Facades>                                                                                            \
         friend struct bq::proxy;                                                                                                  \
                                                                                                                                   \
@@ -354,25 +354,25 @@ namespace bq {
 
 #define __BQ_FACADE_CPP11_PART(FUNCTION_NAME)                                                                                     \
     template <typename FunctionType>                                                                                              \
-    struct EBCO dispatcher {};                                                                                                    \
+    struct BQ_EBCO dispatcher {};                                                                                                 \
     template <typename Class, typename Ret, typename... Args>                                                                     \
-    struct EBCO dispatcher<Ret (Class::*)(Args...)> {                                                                             \
+    struct BQ_EBCO dispatcher<Ret (Class::*)(Args...)> {                                                                          \
         static Ret dispatch(void* obj, Args... args)                                                                              \
         {                                                                                                                         \
             return ((Class*)obj)->FUNCTION_NAME(args...);                                                                         \
         }                                                                                                                         \
     };                                                                                                                            \
     template <typename Class, typename Ret, typename... Args>                                                                     \
-    struct EBCO dispatcher<Ret (Class::*)(Args...) const> {                                                                       \
+    struct BQ_EBCO dispatcher<Ret (Class::*)(Args...) const> {                                                                    \
         static Ret dispatch(const void* obj, Args... args)                                                                        \
         {                                                                                                                         \
             return ((const Class*)obj)->FUNCTION_NAME(args...);                                                                   \
         }                                                                                                                         \
     };                                                                                                                            \
     template <typename Proxy, typename FunctionType>                                                                              \
-    struct EBCO facade_impl {};                                                                                                   \
+    struct BQ_EBCO facade_impl {};                                                                                                \
     template <typename Proxy, typename Ret, typename... Args>                                                                     \
-    struct EBCO facade_impl<Proxy, Ret(Args...)> {                                                                                \
+    struct BQ_EBCO facade_impl<Proxy, Ret(Args...)> {                                                                             \
         template <typename... Facades>                                                                                            \
         friend struct bq::proxy;                                                                                                  \
                                                                                                                                   \
@@ -393,7 +393,7 @@ namespace bq {
         }                                                                                                                         \
     };                                                                                                                            \
     template <typename Proxy, typename Ret, typename... Args>                                                                     \
-    struct EBCO facade_impl<Proxy, Ret(Args...) const> {                                                                          \
+    struct BQ_EBCO facade_impl<Proxy, Ret(Args...) const> {                                                                       \
         template <typename... Facades>                                                                                            \
         friend struct bq::proxy;                                                                                                  \
                                                                                                                                   \

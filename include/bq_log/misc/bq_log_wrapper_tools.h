@@ -839,7 +839,7 @@ namespace bq {
         };
 
         template <size_t H, size_t V>
-        struct EBCO size_seq_element<H, V, false> {
+        struct BQ_EBCO size_seq_element<H, V, false> {
             static constexpr bool is_constexpr = false;
             size_t value;
             size_t get_value() const
@@ -853,7 +853,7 @@ namespace bq {
         };
 
         template <bool INCLUDE_TYPE_INFO, typename... TYPES>
-        struct EBCO size_seq {
+        struct BQ_EBCO size_seq {
             size_t get_total() const
             {
                 return 0;
@@ -861,12 +861,12 @@ namespace bq {
         };
 
         template <bool INCLUDE_TYPE_INFO, size_t H, size_t V, bool C, typename... TYPES>
-        struct EBCO size_seq_impl : public size_seq_element<H, V, C>, public size_seq<INCLUDE_TYPE_INFO, TYPES...> {
+        struct BQ_EBCO size_seq_impl : public size_seq_element<H, V, C>, public size_seq<INCLUDE_TYPE_INFO, TYPES...> {
             using element_type = size_seq_element<H, V, C>;
         };
 
         template <bool INCLUDE_TYPE_INFO, typename FIRST, typename... REST>
-        struct EBCO size_seq<INCLUDE_TYPE_INFO, FIRST, REST...> : public size_seq_impl<INCLUDE_TYPE_INFO, sizeof...(REST) + 1,
+        struct BQ_EBCO size_seq<INCLUDE_TYPE_INFO, FIRST, REST...> : public size_seq_impl<INCLUDE_TYPE_INFO, sizeof...(REST) + 1,
                                                                       is_type_constexpr_size<FIRST>::value ? _get_storage_data_size_constexpr<INCLUDE_TYPE_INFO, FIRST>() : 0,
                                                                       is_type_constexpr_size<FIRST>::value ? true : false,
                                                                       REST...> {

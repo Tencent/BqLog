@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    .NET (Core) resolves runtimes/<rid>/native by itself; .NET Framework does not, so the native
+    library is copied next to the assembly here. Every target below is scoped to .NETFramework.
+  -->
+  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <BqLogNativeRid Condition="'$(BqLogNativeRid)' == '' and '$(PlatformTarget)' == 'arm64'">win-arm64</BqLogNativeRid>
+    <BqLogNativeRid Condition="'$(BqLogNativeRid)' == '' and '$(PlatformTarget)' != 'x86'">win-x64</BqLogNativeRid>
+  </PropertyGroup>
+
+  <Target Name="BqLogCheckPlatform"
+          Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(PlatformTarget)' == 'x86'"
+          BeforeTargets="Build">
+    <Error Code="BQLOG0001"
+           Text="BqLog ships no 32-bit Windows native library; build the project for x64 or AnyCPU." />
+  </Target>
+
+  <Target Name="BqLogCopyNativeLibrary"
+          Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(BqLogNativeRid)' != ''"
+          AfterTargets="Build">
+    <ItemGroup>
+      <BqLogNativeLibrary Include="$(MSBuildThisFileDirectory)..\runtimes\$(BqLogNativeRid)\native\BqLog.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(BqLogNativeLibrary)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

@@ -37,5 +37,10 @@ fi
 
 sed -i.bak -E "s#^(  url )\".*\"#\1\"${URL}\"#; s#^(  sha256 )\".*\"#\1\"${SHA256}\"#" "$FORMULA"
 rm -f "${FORMULA}.bak"
+
+# sed exits 0 even when nothing matched, which would leave the placeholder and ship a broken formula.
+grep -qF "url \"${URL}\"" "$FORMULA" || { echo "bump: the url was not written into ${FORMULA}" >&2; exit 1; }
+grep -qF "sha256 \"${SHA256}\"" "$FORMULA" || { echo "bump: the sha256 was not written into ${FORMULA}" >&2; exit 1; }
+
 echo "bump: ${URL}"
 echo "bump: sha256 ${SHA256}"

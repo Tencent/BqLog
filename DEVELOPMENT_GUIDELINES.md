@@ -71,11 +71,10 @@ Anything that crosses a binary/library boundary — the C API, the language wrap
 
 - A feature and a bug fix come with coverage in the same commit:
   - `test/cpp/` for the C++ library, registered in `test/cpp/main.cpp` with `TEST_GROUP_BEGIN`/`TEST_GROUP`/`TEST_GROUP_END` (the class itself lives in a `test_*.h`); `test/cpp/bq_common_test/` for `bq_common`;
-  - `test/multi_instance/` (CTest cases `M1`…`M9` in `run.py`) for anything multi-process, multi-instance or crash recovery;
+  - `test/multi_instance/` (CTest cases `multi_instance_*`, one per `CASES` entry in `run.py`: `instance_assignment`, `two_logs`, `recovery_off`, `crash_recovery`, `two_instances`, `legacy_coexistence`, `dual_runtime_plugins`, `child_lock`, `flushed_recovery`) for anything multi-process, multi-instance or crash recovery;
   - the wrapper test suite (`test/python`, `test/java`, `test/go`, `test/typescript`, `test/csharp`) for a wrapper change.
 - The tests must pass in every C++ standard the CI builds (11, 14, 17, 20, 23) and on every platform it builds; code behind `BQ_CPP_20` (the `fast_*` interfaces) needs a test that runs in C++20 as well.
 - Tests are deterministic, clean up after themselves, and do not depend on the order they run in or on the machine being fast.
-- Size is part of the contract too: `test/symbol_size/` measures the shipped libraries.
 
 ## 10. Multi-language wrappers stay consistent
 

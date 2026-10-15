@@ -283,9 +283,9 @@
 // with the other language-level macros, because a macro is not exported by a module: a generated
 // category module needs it and can only reach it by including this macro-only header.
 #ifdef BQ_VISUAL_STUDIO
-#define EBCO __declspec(empty_bases)
+#define BQ_EBCO __declspec(empty_bases)
 #else
-#define EBCO
+#define BQ_EBCO
 #endif
 
 #if defined(BQ_GCC) || defined(BQ_CLANG)

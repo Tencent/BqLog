@@ -52,9 +52,9 @@ namespace bq {
 #endif
 
     // A string literal as a non-type template parameter: copied in, packed so the mangled names stay
-    // short (see test/symbol_size), and re-validated at compile time. The encoding follows the
-    // literal's character type: char and char8_t are UTF-8, char16_t is UTF-16, char32_t is UTF-32,
-    // and wchar_t is whichever of the two its width makes it.
+    // short, and re-validated at compile time. The encoding follows the literal's character type:
+    // char and char8_t are UTF-8, char16_t is UTF-16, char32_t is UTF-32, and wchar_t is whichever
+    // of the two its width makes it.
     template <size_t N, typename C>
     struct fixed_format {
         using storage_type = bq::condition_type_t<sizeof(C) == 1, char, C>;

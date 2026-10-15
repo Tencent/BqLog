@@ -68,15 +68,15 @@ namespace bq {
             };
         };
 
-        struct EBCO test_category_log_category_root
+        struct BQ_EBCO test_category_log_category_root
         {
-            struct EBCO : public test_category_log_category_base<1> {
-                struct EBCO : public test_category_log_category_base<2> {
-                    struct EBCO : public test_category_log_category_base<3> {
+            struct BQ_EBCO : public test_category_log_category_base<1> {
+                struct BQ_EBCO : public test_category_log_category_base<2> {
+                    struct BQ_EBCO : public test_category_log_category_base<3> {
                     } ClassA;    //ModuleA.SystemA.ClassA
                 } SystemA;    //ModuleA.SystemA
             } ModuleA;    //ModuleA
-            struct EBCO : public test_category_log_category_base<4> {
+            struct BQ_EBCO : public test_category_log_category_base<4> {
             } ModuleB;    //ModuleB
         };
 

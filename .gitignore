@@ -22,7 +22,6 @@ node_modules/
 /case_f_preview.txt
 /test_siso_*.mmap
 /test/multi_instance/mi_out/
-/test/symbol_size/mi_out/
 /build/build_mi/
 /build/mi_out/
 /build/tools_gen/

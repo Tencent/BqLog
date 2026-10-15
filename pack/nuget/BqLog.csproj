@@ -12,7 +12,9 @@
          NETSDK1152 ("multiple publish output files with the same relative path"). The native
          name cannot change: DllImport("BqLog") and the engine plugins all expect it. -->
     <AssemblyName>BqLog.Managed</AssemblyName>
-    <Version>2.7.0</Version>
+    <!-- Placeholder only: releases pass -p:Version= from src/bq_log/global/version.cpp, so the
+         version number is not written down twice. -->
+    <Version>0.0.0</Version>
     <Authors>Tencent</Authors>
     <Description>Lightweight, high-performance, cross-language logging library.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -33,6 +35,12 @@
     <None Include="runtimes/**/*" Pack="true"
           PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
     <None Include="PACKAGE_README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+
+  <!-- Imported by every consumer; the file itself only acts on .NET Framework targets. -->
+  <ItemGroup>
+    <None Include="buildTransitive/BqLog.targets" Pack="true"
+          PackagePath="buildTransitive/BqLog.targets" />
   </ItemGroup>
 
 </Project>

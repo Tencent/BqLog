@@ -68,23 +68,23 @@ namespace bq {
             };
         };
 
-        struct EBCO demo_category_log_category_root
+        struct BQ_EBCO demo_category_log_category_root
         {
-            struct EBCO : public demo_category_log_category_base<1> {
-                struct EBCO : public demo_category_log_category_base<2> {
+            struct BQ_EBCO : public demo_category_log_category_base<1> {
+                struct BQ_EBCO : public demo_category_log_category_base<2> {
                 } node_5;    //node_2.node_5
             } node_2;    //node_2
-            struct EBCO : public demo_category_log_category_base<3> {
-                struct EBCO : public demo_category_log_category_base<4> {
+            struct BQ_EBCO : public demo_category_log_category_base<3> {
+                struct BQ_EBCO : public demo_category_log_category_base<4> {
                 } node_6;    //node_3.node_6    //comment Test
-                struct EBCO : public demo_category_log_category_base<5> {
+                struct BQ_EBCO : public demo_category_log_category_base<5> {
                 } node_10;    //node_3.node_10
             } node_3;    //node_3
-            struct EBCO : public demo_category_log_category_base<6> {
-                struct EBCO : public demo_category_log_category_base<7> {
-                    struct EBCO : public demo_category_log_category_base<8> {
+            struct BQ_EBCO : public demo_category_log_category_base<6> {
+                struct BQ_EBCO : public demo_category_log_category_base<7> {
+                    struct BQ_EBCO : public demo_category_log_category_base<8> {
                     } node_8;    //node_4.node_7.node_8
-                    struct EBCO : public demo_category_log_category_base<9> {
+                    struct BQ_EBCO : public demo_category_log_category_base<9> {
                     } node_9;    //node_4.node_7.node_9
                 } node_7;    //node_4.node_7
             } node_4;    //node_4

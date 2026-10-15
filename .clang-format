@@ -21,7 +21,7 @@ StatementMacros:
   - BQ_MODULE_EXPORT_BEGIN
   - BQ_MODULE_EXPORT_END
 AttributeMacros:
-  - EBCO
+  - BQ_EBCO
 TypenameMacros:
   - BQ_LOG_ABI_TYPE
 MacroBlockBegin:            "^Py_BEGIN_ALLOW_THREADS$"

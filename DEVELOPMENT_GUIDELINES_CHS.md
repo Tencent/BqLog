@@ -71,11 +71,10 @@
 
 - 功能和问题修复必须在同一个提交里带上覆盖：
   - C++ 库的测试放 `test/cpp/`，在 `test/cpp/main.cpp` 里用 `TEST_GROUP_BEGIN`/`TEST_GROUP`/`TEST_GROUP_END` 注册（测试类本身写在 `test_*.h`）；`bq_common` 的测试放 `test/cpp/bq_common_test/`；
-  - 多进程、多实例、崩溃恢复相关的测试放 `test/multi_instance/`（`run.py` 里的 CTest 用例 `M1`…`M9`）；
+  - 多进程、多实例、崩溃恢复相关的测试放 `test/multi_instance/`（CTest 用例 `multi_instance_*`，与 `run.py` 里 `CASES` 的每一项一一对应：`instance_assignment`、`two_logs`、`recovery_off`、`crash_recovery`、`two_instances`、`legacy_coexistence`、`dual_runtime_plugins`、`child_lock`、`flushed_recovery`）；
   - wrapper 改动要在对应的 wrapper 测试里覆盖（`test/python`、`test/java`、`test/go`、`test/typescript`、`test/csharp`）。
 - 测试必须能在 CI 构建的所有 C++ 标准（11、14、17、20、23）和所有平台上通过；`BQ_CPP_20` 才有的代码（`fast_*` 系列接口）要有 C++20 下会执行的测试。
 - 测试要确定性、自己清理现场，不依赖执行顺序，也不依赖机器足够快。
-- 体积也是契约的一部分：`test/symbol_size/` 用于度量发布出去的库。
 
 ## 10. 多语言 wrapper 保持一致
 

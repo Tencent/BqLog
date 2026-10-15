@@ -49,7 +49,7 @@ namespace bq {
         // empty means it is root node, default category, needn't generate category.
         if (!node.name().is_empty()) {
             code += tab;
-            code += "struct EBCO : public ";
+            code += "struct BQ_EBCO : public ";
             code += class_name_;
             code += "_category_base<";
             code += uint64_to_string(index);
@@ -84,7 +84,7 @@ namespace bq {
 
     bq::string category_log_template_cpp::get_category_class_root_define_code(const category_node& root_node) const
     {
-        bq::string code = "struct EBCO ";
+        bq::string code = "struct BQ_EBCO ";
         code += class_name_;
         code += "_category_root\n";
         code += "{\n";
@@ -453,7 +453,7 @@ module;
 #include <stdint.h>
 
 // A macro is not exported by a module, so the language-level macros the header uses
-// (BQ_CPP_17, BQ_CPP_20, bq_forceinline, EBCO) come from this macro-only header.
+// (BQ_CPP_17, BQ_CPP_20, bq_forceinline, BQ_EBCO) come from this macro-only header.
 #include "bq_common/platform/macros.h"
 
 export module ${MODULE_NAME};

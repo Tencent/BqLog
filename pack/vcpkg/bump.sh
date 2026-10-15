@@ -36,5 +36,12 @@ fi
 sed -i.bak -E "s#^(    SHA512 ).*#\1${SHA512}#" "${PORT_DIR}/portfile.cmake"
 sed -i.bak -E "s#^(  \"version\": )\".*\"#\1\"${VERSION}\"#" "${PORT_DIR}/vcpkg.json"
 rm -f "${PORT_DIR}/portfile.cmake.bak" "${PORT_DIR}/vcpkg.json.bak"
+
+# sed exits 0 even when nothing matched, which would leave the placeholder and ship a broken port.
+grep -qF "SHA512 ${SHA512}" "${PORT_DIR}/portfile.cmake" \
+    || { echo "bump: the SHA512 was not written into ${PORT_DIR}/portfile.cmake" >&2; exit 1; }
+grep -qF "\"version\": \"${VERSION}\"" "${PORT_DIR}/vcpkg.json" \
+    || { echo "bump: the version was not written into ${PORT_DIR}/vcpkg.json" >&2; exit 1; }
+
 echo "bump: bqlog ${VERSION}"
 echo "bump: sha512 ${SHA512}"

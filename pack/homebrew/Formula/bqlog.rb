@@ -1,8 +1,10 @@
 class Bqlog < Formula
   desc "Lightweight, high-performance, cross-language logging library"
   homepage "https://github.com/Tencent/BqLog"
-  url "https://github.com/Tencent/BqLog/archive/refs/tags/Release_2.7.0.tar.gz"
-  sha256 "aed63a3e5b38b35bdb10d6f1eef134e727af4b5e63ead165c5817f4271dd3517"
+  # Placeholders: the release workflow and bump.sh write the url and sha256 of the new tag here.
+  # An unfilled formula fails to fetch on purpose.
+  url "https://github.com/Tencent/BqLog/archive/refs/tags/Release_0.0.0.tar.gz"
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "Apache-2.0"
 
   head "https://github.com/Tencent/BqLog.git", branch: "main"

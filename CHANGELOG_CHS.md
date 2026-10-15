@@ -8,7 +8,7 @@
 - **包管理器**：Homebrew（`brew install bqlog`，含库和工具）、vcpkg（`tools` feature 提供工具）、NuGet（C# 绑定加六个平台的原生库）。CMake 安装提供 `find_package(BqLog)` 与 pkg-config。
 - **多进程**：多个进程可以写同一个目录，各自拥有独立的恢复数据。`log.recovery=false` 的日志不再访问磁盘。
 - **恢复**：恢复窗口从最近 2 次运行扩大到 16 次；新增 `bq::log::get_recovery_capability()`（所有 wrapper 都有），查询平台是否支持恢复。
-- **兼容性**：ABI 有变化，头文件、wrapper 与库需要一起升级。Windows 上 `cmake --install` 现在把 `BqLog.dll` 装到 `bin/`；发布包的目录结构不变。
+- **兼容性**：ABI 有变化，头文件、wrapper 与库需要一起升级。旧版 `BqLog_CategoryLogGenerator` 生成的类别日志不再能编译（它用的空基类宏现在是 `BQ_EBCO`），需要重新生成。Windows 上 `cmake --install` 现在把 `BqLog.dll` 装到 `bin/`；发布包的目录结构不变。
 - **问题修复**：
   - 快速模式：多线程同时首次调用时调用点可能初始化两次；格式注册表没有上限。
   - 恢复：批处理中途崩溃会重放整批；续写段里的快速日志 meta 重启后可能丢失；文本文件恢复后没有写 `RECOVER END` 标记（[#90](https://github.com/Tencent/BqLog/pull/90)）。

@@ -37,7 +37,7 @@ inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept {}
 inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept {}
 BQ_MODULE_EXPORT_END
 
-// EBCO is defined in bq_common/platform/macros.h, next to the other language-level macros, so
+// BQ_EBCO is defined in bq_common/platform/macros.h, next to the other language-level macros, so
 // that the macro-only header a generated category module includes in its global module fragment
 // is the one that carries it.
 
@@ -287,7 +287,7 @@ namespace bq {
     }
 
     /***************************tuple begin***********************/
-    // bq::tuple support EBCO
+    // bq::tuple applies BQ_EBCO to its elements
     template <typename... Types>
     class tuple;
 
@@ -314,7 +314,7 @@ namespace bq {
     using tuple_element_t = typename tuple_element<Index, Tuple>::type;
 
     template <size_t Index, typename Ele, bool IsEmpty>
-    struct EBCO __tuple_element_value_impl {
+    struct BQ_EBCO __tuple_element_value_impl {
     private:
         Ele value_;
 
@@ -330,7 +330,7 @@ namespace bq {
     };
 
     template <size_t Index, typename Ele>
-    struct EBCO __tuple_element_value_impl<Index, Ele, true> : private Ele {
+    struct BQ_EBCO __tuple_element_value_impl<Index, Ele, true> : private Ele {
         inline __tuple_element_value_impl() {}
         template <typename Ele_Input>
         inline __tuple_element_value_impl(Ele_Input&& input_value) { (void)input_value; }
@@ -339,7 +339,7 @@ namespace bq {
     };
 
     template <size_t Index, typename Ele>
-    struct EBCO __tuple_element_value : public __tuple_element_value_impl<Index, Ele, __is_empty(Ele)> {
+    struct BQ_EBCO __tuple_element_value : public __tuple_element_value_impl<Index, Ele, __is_empty(Ele)> {
         using Super_Type = __tuple_element_value_impl<Index, Ele, __is_empty(Ele)>;
         inline __tuple_element_value() {}
         template <typename Ele_Input>
@@ -354,7 +354,7 @@ namespace bq {
     };
 
     template <typename ThisType, typename... Rest>
-    class EBCO tuple<ThisType, Rest...> : private __tuple_element_value<sizeof...(Rest), ThisType>, private tuple<Rest...> {
+    class BQ_EBCO tuple<ThisType, Rest...> : private __tuple_element_value<sizeof...(Rest), ThisType>, private tuple<Rest...> {
     public:
         inline tuple() noexcept {}
 
