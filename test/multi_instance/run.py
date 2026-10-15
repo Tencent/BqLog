@@ -1,9 +1,18 @@
+# Copyright (C) 2026 Tencent.
+# BQLOG is licensed under the Apache License, Version 2.0.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 """Multi-instance regression suite. Uses only the Python standard library.
 
 Each case runs in its own directory under --out/<case>/; every child gets that
 directory as cwd, so the bqlog_mmap/ tree of one case never sees another's.
-run.py --case M4 runs one case; without --case all cases M1..M8 run.
-Failure messages name the worker and the missing or duplicated seq.
+run.py --case <name> runs one case; without --case every case runs (the names are the CASES
+table below). Failure messages name the worker and the missing or duplicated seq.
 """
 import argparse
 import json
@@ -15,6 +24,9 @@ import time
 from pathlib import Path
 
 RECORD_TIMEOUT = 120
+
+# --require-legacy: fail instead of skip when the 2.6.0 legacy worker is missing.
+REQUIRE_LEGACY = False
 
 
 class CaseError(Exception):
@@ -146,8 +158,8 @@ def assert_no_diagnostics(cwd, worker_ids, tag):
 
 # ---------------------------------------------------------------- cases
 
-def case_M1(exe, out, records):
-    root = out / "M1"
+def case_instance_assignment(exe, out, records):
+    root = out / "instance_assignment"
     root.mkdir(parents=True)
     for count in (2, 4, 16):
         cwd = root / f"n{count}"
@@ -157,11 +169,11 @@ def case_M1(exe, out, records):
         # count workers are alive at once and none can recycle an instance
         hold = cwd / "hold_instances"
         hold.write_text("hold")
-        m1_records = max(records, 256)
+        max_records = max(records, 256)
         try:
             for i in range(count):
                 children.append(spawn(exe, cwd,
-                    [str(i), "multi_instance", str(m1_records), "--report",
+                    [str(i), "multi_instance", str(max_records), "--report",
                      "--hold-until", str(hold)],
                     captures, f"worker_{i}"))
             wait_files([cwd / f"ready_{i}.json" for i in range(count)], children)
@@ -185,15 +197,15 @@ def case_M1(exe, out, records):
                 fail(f"n={count}: worker {i} lp_mapped={r['lp_mapped']} hp_mapped={r['hp_mapped']}")
         if any(code != 0 for code in codes):
             fail(f"n={count}: exit codes {codes}")
-        problems = check_records(None, cwd, range(count), m1_records)
+        problems = check_records(None, cwd, range(count), max_records)
         for wid, plist in problems.items():
             if plist:
                 fail(f"n={count} worker {wid}: {'; '.join(plist[:8])}")
         assert_no_diagnostics(cwd, range(count), "worker")
 
 
-def case_M2(exe, out, records):
-    cwd = out / "M2"
+def case_two_logs(exe, out, records):
+    cwd = out / "two_logs"
     cwd.mkdir(parents=True)
     captures, children = [], []
     try:
@@ -210,7 +222,7 @@ def case_M2(exe, out, records):
     if code != 0:
         fail(f"exit code {code}")
     # Each log's output only holds its own records, count correct. Both logs write the SAME
-    # format strings (T04 spec), so they are told apart by output file, not by a kind tag.
+    # format strings, so they are told apart by output file, not by a kind tag.
     def seqs_in(pattern, kind):
         text = "".join(p.read_text(encoding="utf-8", errors="replace")
             for p in sorted(cwd.glob(pattern)))
@@ -227,8 +239,8 @@ def case_M2(exe, out, records):
         fail(f"log b normal={len(b_normal)} fast={len(b_fast)}, want odd seqs 1..{records} in order")
 
 
-def case_M3(exe, out, records):
-    cwd = out / "M3"
+def case_recovery_off(exe, out, records):
+    cwd = out / "recovery_off"
     cwd.mkdir(parents=True)
     captures, children = [], []
 
@@ -244,12 +256,12 @@ def case_M3(exe, out, records):
         # A: recovery on; holds (instance claimed, not writing) until B is done
         hold = cwd / "hold_a"
         hold.write_text("hold")
-        a = spawn(exe, cwd, ["0", "m3_log", str(records), "--hold-until", str(hold)], captures, "worker_0")
+        a = spawn(exe, cwd, ["0", "recovery_off_log", str(records), "--hold-until", str(hold)], captures, "worker_0")
         wait_files([cwd / "ready_0.json"], [a])
         before = snapshot_p0()
         if not before:
             fail("p0 not created by recovery worker A")
-        b = spawn(exe, cwd, ["1", "m3_log", str(records), "--recovery", "off"], captures, "worker_1")
+        b = spawn(exe, cwd, ["1", "recovery_off_log", str(records), "--recovery", "off"], captures, "worker_1")
         wait_files([cwd / "done_1"], [b])
         during = snapshot_p0()
         code_b = b.wait(timeout=RECORD_TIMEOUT)
@@ -293,15 +305,15 @@ def find_recovered_records(cwd, worker_ids=(), kinds=("normal", "fast")):
     return records
 
 
-def case_M4(exe, out, records):
-    cwd = out / "M4"
+def case_crash_recovery(exe, out, records):
+    cwd = out / "crash_recovery"
     cwd.mkdir(parents=True)
     captures, children = [], []
     try:
         # A dies after 500 committed records (normal+fast pairs)
-        run_die_worker(exe, cwd, 0, "m4_log", 500, captures, children)
+        run_die_worker(exe, cwd, 0, "crash_recovery_log", 500, captures, children)
         # C: same name, same cwd, claims the freed instance 0
-        c = spawn(exe, cwd, ["2", "m4_log", str(records), "--report"], captures, "worker_2")
+        c = spawn(exe, cwd, ["2", "crash_recovery_log", str(records), "--report"], captures, "worker_2")
         children.append(c)
         wait_files([cwd / "ready_2.json"], [c])
         ready = json.loads((cwd / "ready_2.json").read_text())
@@ -346,8 +358,8 @@ def case_M4(exe, out, records):
             fail(f"worker A wrote beyond committed_seq: {kind} seq={extra[:8]}")
 
 
-def case_M5(exe, out, records):
-    cwd = out / "M5"
+def case_two_instances(exe, out, records):
+    cwd = out / "two_instances"
     cwd.mkdir(parents=True)
     captures, children = [], []
     try:
@@ -358,11 +370,11 @@ def case_M5(exe, out, records):
         hold = cwd / "hold_a0"
         hold.write_text("hold")
         a0 = spawn(exe, cwd,
-            ["0", "m5_log", "300", "--die-after", "300", "--hold-until", str(hold)],
+            ["0", "two_instances_log", "300", "--die-after", "300", "--hold-until", str(hold)],
             captures, "worker_0")
         children.append(a0)
         wait_files([cwd / "ready_0.json"], [a0])
-        run_die_worker(exe, cwd, 1, "m5_log", 300, captures, children)
+        run_die_worker(exe, cwd, 1, "two_instances_log", 300, captures, children)
         hold.unlink()
         # the die path self-kills: exit code 9 on Windows, -9 (SIGKILL) on POSIX
         if a0.wait(timeout=RECORD_TIMEOUT) not in (0, 9, -9):
@@ -373,12 +385,12 @@ def case_M5(exe, out, records):
         if not p1_before:
             fail("bqlog_mmap/p1/ was never created")
         # only C: claims instance 0, must not touch instance 1's storage.
-        # Phase 1 (doc): C alone; while it holds (claimed but not writing),
+        # Phase 1: C alone; while it holds (claimed but not writing),
         # p1 must be exactly as the dead A1 left it.
         hold = cwd / "hold_c"
         hold.write_text("hold")
         c = spawn(exe, cwd,
-            ["2", "m5_log", str(records), "--report", "--hold-until", str(hold)],
+            ["2", "two_instances_log", str(records), "--report", "--hold-until", str(hold)],
             captures, "worker_2")
         children.append(c)
         wait_files([cwd / "ready_2.json"], [c])
@@ -389,7 +401,7 @@ def case_M5(exe, out, records):
             fail("p1 changed when C (instance 0) claimed and held:\nbefore=%s\nafter=%s"
                  % (p1_before, p1_after_c))
         # Phase 2 (doc): C first, D after, both running at once; D takes instance 1
-        d = spawn(exe, cwd, ["3", "m5_log", str(records), "--report"], captures, "worker_3")
+        d = spawn(exe, cwd, ["3", "two_instances_log", str(records), "--report"], captures, "worker_3")
         children.append(d)
         wait_files([cwd / "ready_3.json"], [d])
         ready3 = json.loads((cwd / "ready_3.json").read_text())
@@ -448,23 +460,26 @@ def case_M5(exe, out, records):
             fail(f"worker {wid}: {'; '.join(problems[wid][:8])}")
 
 
-def case_M6(exe, out, records):
+def case_legacy_coexistence(exe, out, records):
     legacy = exe.parent / "bq_multi_instance_worker_legacy"
     if not legacy.exists():
         legacy = exe.parent / "bq_multi_instance_worker_legacy.exe"
     if not legacy.exists():
-        print("SKIP M6: legacy worker not built (use -DBQ_LEGACY_SRC=...)")
+        if REQUIRE_LEGACY:
+            fail("bq_multi_instance_worker_legacy is missing although the build was given a 2.6.0 "
+                 "checkout (-DBQ_LEGACY_SRC); skipping here would hide a lost legacy worker")
+        print("SKIP legacy_coexistence: legacy worker not built (use -DBQ_LEGACY_SRC=...)")
         return
-    cwd = out / "M6"
+    cwd = out / "legacy_coexistence"
     cwd.mkdir(parents=True)
     captures, children = [], []
-    mmap_dir = cwd / "bqlog_mmap" / "mmap_m6_log"
+    mmap_dir = cwd / "bqlog_mmap" / "mmap_legacy_log"
     # the legacy worker must still be running when the new worker runs cleanup_legacy_dirs, but a
     # bigger count only exhausts its file descriptors (one mmap segment per record, errno 24)
     legacy_records = max(records, 512)
     legacy_pace_ms = 4
     try:
-        children.append(spawn(legacy, cwd, ["0", "m6_log", str(legacy_records),
+        children.append(spawn(legacy, cwd, ["0", "legacy_log", str(legacy_records),
             "--pace-ms", str(legacy_pace_ms)], captures, "worker_0"))
         # wait until the legacy worker is producing output, then race the new
         # worker against it
@@ -479,7 +494,7 @@ def case_M6(exe, out, records):
                 fail("legacy worker never produced output")
             time.sleep(0.05)
         # new worker joins while legacy is still writing
-        new = spawn(exe, cwd, ["1", "m6_log", str(records), "--report"], captures, "worker_1")
+        new = spawn(exe, cwd, ["1", "legacy_log", str(records), "--report"], captures, "worker_1")
         children.append(new)
         wait_files([cwd / f"ready_1.json"], [new])
         ready = json.loads((cwd / "ready_1.json").read_text())
@@ -490,7 +505,7 @@ def case_M6(exe, out, records):
             fail("new worker failed")
         # legacy still running: its mmap_<name>/ must survive cleanup_legacy_dirs
         if not mmap_dir.exists():
-            fail("mmap_m6_log was removed while the legacy worker still holds it")
+            fail("mmap_legacy_log was removed while the legacy worker still holds it")
         # after legacy exits and a fresh new worker runs, cleanup removes it
         code0 = children[0].wait(timeout=RECORD_TIMEOUT)
         if code0 != 0:
@@ -498,13 +513,13 @@ def case_M6(exe, out, records):
         legacy_problems = check_records(None, cwd, [0], legacy_records)
         if legacy_problems[0]:
             fail(f"legacy worker: {'; '.join(legacy_problems[0][:8])}")
-        last = spawn(exe, cwd, ["2", "m6_log", str(records), "--report"], captures, "worker_2")
+        last = spawn(exe, cwd, ["2", "legacy_log", str(records), "--report"], captures, "worker_2")
         children.append(last)
         wait_files([cwd / "done_2"], [last])
         if last.wait(timeout=RECORD_TIMEOUT) != 0:
             fail("final worker failed")
         if mmap_dir.exists():
-            fail("mmap_m6_log still exists after all legacy workers exited")
+            fail("mmap_legacy_log still exists after all legacy workers exited")
     finally:
         for p in children:
             if p.poll() is None:
@@ -514,16 +529,16 @@ def case_M6(exe, out, records):
             capture.close()
 
 
-def case_M7(exe, out, records):
+def case_dual_runtime_plugins(exe, out, records):
     host = exe.parent / "bq_dual_runtime_host"
     if not host.exists():
         host = exe.parent / "bq_dual_runtime_host.exe"
     if not host.exists():
-        print("SKIP M7: dual runtime host not built")
+        print("SKIP dual_runtime_plugins: dual runtime host not built")
         return
-    cwd = out / "M7"
+    cwd = out / "dual_runtime_plugins"
     cwd.mkdir(parents=True)
-    proc = subprocess.run([str(host), "m7_log"], cwd=cwd,
+    proc = subprocess.run([str(host), "dual_runtime_log"], cwd=cwd,
         capture_output=True, text=True, timeout=RECORD_TIMEOUT)
     if proc.returncode != 0:
         fail(f"host exit code {proc.returncode}: {proc.stdout} {proc.stderr}")
@@ -532,19 +547,19 @@ def case_M7(exe, out, records):
         fail(f"plugin instances {instances}, want [0, 1] (output: {proc.stdout.strip()})")
 
 
-def case_M8(exe, out, records):
-    cwd = out / "M8"
+def case_child_lock(exe, out, records):
+    cwd = out / "child_lock"
     cwd.mkdir(parents=True)
     captures, children = [], []
     try:
         # parent creates the recovery log (holds p0), spawns --sleep child, exits
-        p = spawn(exe, cwd, ["0", "m8_log", str(records), "--child-lock-test", str(cwd)], captures, "worker_0")
+        p = spawn(exe, cwd, ["0", "child_lock_log", str(records), "--child-lock-test", str(cwd)], captures, "worker_0")
         children.append(p)
         # the parent must exit 0 immediately, leaving its sleeping child behind
         if p.wait(timeout=RECORD_TIMEOUT) != 0:
             fail("worker D (parent) did not exit 0")
         # immediately a new worker: must get instance 0 (child inherited nothing)
-        e = spawn(exe, cwd, ["1", "m8_log", str(records), "--report"], captures, "worker_1")
+        e = spawn(exe, cwd, ["1", "child_lock_log", str(records), "--report"], captures, "worker_1")
         children.append(e)
         wait_files([cwd / "ready_1.json"], [e])
         ready = json.loads((cwd / "ready_1.json").read_text())
@@ -565,16 +580,16 @@ def case_M8(exe, out, records):
         fail(f"worker E lp_mapped={ready['lp_mapped']}, want true")
 
 
-def case_M9(exe, out, records):
+def case_flushed_recovery(exe, out, records):
     """Recovery after a flush-then-die: everything committed was on disk, so the
     successor must deliver each committed record exactly once (no replay)."""
-    cwd = out / "M9"
+    cwd = out / "flushed_recovery"
     cwd.mkdir(parents=True)
     captures, children = [], []
     committed = min(records, 300)
     try:
         d = spawn(exe, cwd,
-            ["0", "m9_log", str(records), "--die-after", str(committed), "--die-flush"],
+            ["0", "flushed_log", str(records), "--die-after", str(committed), "--die-flush"],
             captures, "worker_0")
         children.append(d)
         wait_files([cwd / "committed_0.json"], [d])
@@ -583,7 +598,7 @@ def case_M9(exe, out, records):
             fail("worker D (flush-die) did not self-kill as expected")
         committed0 = json.loads((cwd / "committed_0.json").read_text())["committed_seq"]
         # the successor must recover the deferred records
-        e = spawn(exe, cwd, ["1", "m9_log", str(records), "--report"], captures, "worker_1")
+        e = spawn(exe, cwd, ["1", "flushed_log", str(records), "--report"], captures, "worker_1")
         children.append(e)
         wait_files([cwd / "done_1"], [e])
         if e.wait(timeout=RECORD_TIMEOUT) != 0:
@@ -616,15 +631,15 @@ def case_M9(exe, out, records):
 
 
 CASES = {
-    "M1": case_M1,
-    "M2": case_M2,
-    "M3": case_M3,
-    "M4": case_M4,
-    "M5": case_M5,
-    "M6": case_M6,
-    "M7": case_M7,
-    "M8": case_M8,
-    "M9": case_M9,
+    "instance_assignment": case_instance_assignment,
+    "two_logs": case_two_logs,
+    "recovery_off": case_recovery_off,
+    "crash_recovery": case_crash_recovery,
+    "two_instances": case_two_instances,
+    "legacy_coexistence": case_legacy_coexistence,
+    "dual_runtime_plugins": case_dual_runtime_plugins,
+    "child_lock": case_child_lock,
+    "flushed_recovery": case_flushed_recovery,
 }
 
 
@@ -656,6 +671,7 @@ def clear_dir(path):
 
 
 def main():
+    global REQUIRE_LEGACY
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path,
@@ -663,7 +679,10 @@ def main():
     parser.add_argument("--case", choices=sorted(CASES),
         help="run a single case; default all")
     parser.add_argument("--records", type=int, default=256)
+    parser.add_argument("--require-legacy", action="store_true",
+        help="fail instead of skipping when the legacy 2.6.0 worker is missing")
     args = parser.parse_args()
+    REQUIRE_LEGACY = args.require_legacy
     exe, out = args.worker.resolve(), args.out.resolve()
     if not exe.is_file() or args.records < 1:
         parser.error("worker must exist and records >= 1")

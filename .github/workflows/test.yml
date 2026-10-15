@@ -62,6 +62,196 @@ jobs:
           fi
           bash build/pack_test/module_verify.sh
 
+  #The module entry under GCC (the default GCC 13 cannot build modules).
+  module_verify_gcc:
+    name: module verify (gcc 14)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install GCC 14
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14 g++-14
+
+      - name: Build and run the module entry test
+        run: |
+          cmake -S test/cpp -B build_module_gcc -G Ninja -DTARGET_PLATFORM=linux \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=20 \
+            -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14
+          cmake --build build_module_gcc --target BqLogModuleUnitTest --parallel 2
+          test -f build_module_gcc/bq_module_test_enabled \
+            || { echo "GCC 14 must get the module test; see test/cpp/CMakeLists.txt" >&2; exit 1; }
+          cd build_module_gcc
+          ./BqLogModuleUnitTest
+
+  #The Homebrew formula, built from an archive of this commit.
+  homebrew_formula:
+    name: homebrew formula
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Point the formula at this commit
+        run: |
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION = "\(.*\)".*/\1/p' src/bq_log/global/version.cpp)"
+          TARBALL="$RUNNER_TEMP/Release_${VERSION}.tar.gz"
+          git archive --format=tar.gz --prefix="BqLog-Release_${VERSION}/" -o "$TARBALL" HEAD
+          BQ_FORMULA_URL="file://$TARBALL" bash pack/homebrew/bump.sh "$VERSION" "$TARBALL"
+          brew tap-new --no-git bqlog/ci
+          cp pack/homebrew/Formula/bqlog.rb "$(brew --repository)/Library/Taps/bqlog/homebrew-ci/Formula/"
+
+      - name: Install, test and check the style
+        run: |
+          brew install --build-from-source bqlog/ci/bqlog
+          brew test bqlog/ci/bqlog
+          brew style bqlog/ci/bqlog
+
+  #The vcpkg port, built from an archive of this commit.
+  vcpkg_port:
+    name: vcpkg port (${{ matrix.triplet }})
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - triplet: x64-linux
+            runs_on: ubuntu-24.04
+          - triplet: x64-windows
+            runs_on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Bootstrap vcpkg (linux)
+        if: runner.os != 'Windows'
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg vcpkg_tool
+          ./vcpkg_tool/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Bootstrap vcpkg (windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg vcpkg_tool
+          call vcpkg_tool\bootstrap-vcpkg.bat -disableMetrics
+
+      # vcpkg_from_github takes the archive from its download cache when the file name and SHA512 match.
+      - name: Point the port at this commit
+        shell: bash
+        run: |
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION = "\(.*\)".*/\1/p' src/bq_log/global/version.cpp)"
+          mkdir -p vcpkg_tool/downloads
+          TARBALL="vcpkg_tool/downloads/Tencent-BqLog-Release_${VERSION}.tar.gz"
+          git archive --format=tar.gz --prefix="BqLog-Release_${VERSION}/" -o "$TARBALL" HEAD
+          bash pack/vcpkg/bump.sh "$VERSION" "$TARBALL"
+
+      - name: Install the port with the tools feature
+        shell: bash
+        run: |
+          ./vcpkg_tool/vcpkg install "bqlog[tools]" \
+            --overlay-ports=pack/vcpkg/ports --triplet "${{ matrix.triplet }}"
+
+      - name: Assert the installed layout
+        shell: bash
+        run: |
+          installed="vcpkg_tool/installed/${{ matrix.triplet }}"
+          test -d "$installed/tools/bqlog" || { echo "the tools feature installed no tools" >&2; exit 1; }
+          if find "$installed/lib" -name '*.dll' -print -quit | grep -q .; then
+            echo "a DLL is under lib/" >&2
+            exit 1
+          fi
+
+  #The NuGet package: pack one RID and publish a consumer against it.
+  nuget_package:
+    name: nuget package (win-x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build the native library (win-x64)
+        run: |
+          cmake -S . -B build_nuget -A x64 -DBUILD_LIB_TYPE=dynamic_lib -DBQ_BUILD_TOOLS=OFF -DBQ_WERROR=OFF -DCMAKE_INSTALL_PREFIX=nuget_prefix
+          cmake --build build_nuget --config Release --parallel 2
+          cmake --install build_nuget --config Release
+          if (Test-Path nuget_prefix/lib/BqLog.dll) {
+            throw "the DLL must install under bin/, not lib/"
+          }
+
+      - name: Assemble the native runtimes
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts_in/windows_x86_64_libs_local | Out-Null
+          Copy-Item nuget_prefix/bin/BqLog.dll artifacts_in/windows_x86_64_libs_local/
+          bash pack/nuget/collect_runtimes.sh artifacts_in pack/nuget windows_x86_64_libs
+
+      - name: Pack
+        run: dotnet pack pack/nuget/BqLog.csproj -c Release -o nuget_out
+
+      - name: Publish a consumer against the packed nupkg
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pack/nuget/BqLog.csproj -Pattern '<Version>(.*?)</Version>').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Force -Path consumer | Out-Null
+
+          @"
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net8.0</TargetFramework>
+              <AssemblyName>consumer</AssemblyName>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="BqLog" Version="$version" />
+            </ItemGroup>
+          </Project>
+          "@ | Set-Content -Encoding utf8 consumer/consumer.csproj
+
+          @'
+          class Program
+          {
+              static int Main()
+              {
+                  bq.log log_inst = bq.log.create_log("nuget_consumer", "log.thread_mode=sync");
+                  if (!log_inst.is_valid())
+                  {
+                      System.Console.Error.WriteLine("create_log failed");
+                      return 1;
+                  }
+                  log_inst.info("bqlog installed through NuGet: {}", 1);
+                  log_inst.force_flush();
+                  return 0;
+              }
+          }
+          '@ | Set-Content -Encoding utf8 consumer/Program.cs
+
+          @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local" value="../nuget_out" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+          </configuration>
+          "@ | Set-Content -Encoding utf8 consumer/nuget.config
+
+          dotnet publish consumer/consumer.csproj -c Release -r win-x64 -o consumer_out
+          ./consumer_out/consumer.exe
+          if ($LASTEXITCODE -ne 0) {
+            throw "the consumer failed to run"
+          }
+
   #Windows
   win64:
     name: win64 (${{ matrix.cc }} cpp${{ matrix.cpp_ver }} ${{ matrix.runner.label }})
@@ -267,7 +457,7 @@ jobs:
         run: exit 1
 
 
-  #Multi-instance regression (T04)
+  #Multi-instance regression
   multi_instance:
     name: multi_instance (${{ matrix.os.label }})
     runs-on: ${{ matrix.os.runs_on }}

@@ -557,7 +557,7 @@ namespace bq {
                     result.add_result(found_recovery_error,
                         "fast recovery corrupt metadata warning record");
                 }
-                // T06: the previous run's segments stay within the recovery window
+                // The previous run's segments stay within the recovery window
                 // (cur - old_version <= 16); only enable_meta_records of a run further
                 // than MAX_RECOVERY_VERSION_RANGE ahead retires them
                 result.add_result(bq::file_manager::is_file(seg0_path),
@@ -1219,7 +1219,7 @@ namespace bq {
                 }
             };
 
-            // T07 §4: the log handle carries buffer_id_ and never dereferences null level words
+            // The log handle carries buffer_id_ and never dereferences null level words
             static void test_log_handle(test_result& result)
             {
                 // 1. default constructed (invalid) log: zero words, no fast path

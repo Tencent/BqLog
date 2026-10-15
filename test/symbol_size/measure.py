@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Tencent.
+# BQLOG is licensed under the Apache License, Version 2.0.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 """Measures what <count> fast-log call sites cost in the object file and the shared library.
 
 Usage: python measure.py [--cxx g++] [--nm nm] [--extra "<flags>"] [--counts 200,2000] [--out <json>]
 
 For each count and mode (macro / fast_info) it reports the object file size, the total bytes of the
-mangled symbol names (the number T10 shrinks, because every format string is part of a template
-entity), and how many of the site-holder symbols are still global. With an ELF compiler it also
+mangled symbol names (the number the macro-free form shrinks, because every format string is part
+of a template entity), and how many of the site-holder symbols are still global. With an ELF
+compiler it also
 builds a shared library and counts the site holders that reached the dynamic symbol table -- the
 visibility attribute does nothing on PE, so use the NDK or a Linux toolchain for that check.
 

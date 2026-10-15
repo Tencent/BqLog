@@ -228,7 +228,7 @@ namespace bq {
                 result.add_result(bq::file_manager::is_file(lp_path), "recovery=true log persists lp.mmap at logs/<escaped>/lp.mmap (%s)", lp_path.c_str());
             }
 
-            // T05: run version increments per run and never visits 0
+            // The run version increments per run and never visits 0
             static void test_run_version_increment(test_result& result)
             {
                 auto* inst = bq::instance_storage::get();
@@ -245,7 +245,7 @@ namespace bq {
                 result.add_result(inst->run_serial() == 102, "run serial 101 -> 102");
             }
 
-            // T05: recovery keeps working when the 16-bit version crosses its wrap point.
+            // Recovery keeps working when the 16-bit version crosses its wrap point.
             // Each round writes a normal record and an oversize record (which lands in an
             // OS file and carries its own version context), then dies unread; the next
             // round must recover both exactly once. Covers the oversize wraparound bug.
@@ -322,7 +322,7 @@ namespace bq {
                 result.add_result(recovered_runs == 9, "version wraparound: normal+oversize recovered in every crossed run, got:%" PRIu32 "/9", recovered_runs);
             }
 
-            // T05: oversize (OS) records recovered across a version wrap. The OS
+            // Oversize (OS) records recovered across a version wrap. The OS
             // context always carries the version of the run that wrote it, so this
             // exercises recovery of OS files whose context version is numerically
             // larger than the current run (65535 -> 1).
@@ -391,7 +391,7 @@ namespace bq {
                 result.add_result(oversize_found, "oversize wrap parent: oversize record from run 1 recovered");
             }
 
-            // T05: more than MAX_RECOVERY_VERSION_RANGE runs later, data is stale and discarded
+            // More than MAX_RECOVERY_VERSION_RANGE runs later, data is stale and discarded
             static void test_run_version_stale_discard(test_result& result)
             {
                 if (!recovery_available() || !instance_available()) {
@@ -422,7 +422,7 @@ namespace bq {
                     static_cast<unsigned>(bq::MAX_RECOVERY_VERSION_RANGE + 1));
             }
 
-            // T05: within MAX_RECOVERY_VERSION_RANGE runs, data is still recovered
+            // Within MAX_RECOVERY_VERSION_RANGE runs, data is still recovered
             static void test_run_version_window_recovery(test_result& result)
             {
                 if (!recovery_available() || !instance_available()) {
@@ -453,7 +453,7 @@ namespace bq {
                     static_cast<unsigned>(bq::MAX_RECOVERY_VERSION_RANGE - 1));
             }
 
-            // T05: mmap data whose run serial is ahead of this run (e.g. copied directory)
+            // Mmap data whose run serial is ahead of this run (e.g. copied directory)
             // must never be recovered
             static void test_run_version_serial_guard(test_result& result)
             {

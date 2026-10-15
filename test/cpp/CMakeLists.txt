@@ -275,7 +275,11 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
 
     enable_testing()
     add_test(NAME module_entry COMMAND BqLogModuleUnitTest)
+
+    # the runner scripts require BqLogModuleUnitTest whenever this marker exists
+    file(WRITE "${CMAKE_BINARY_DIR}/bq_module_test_enabled" "BqLogModuleUnitTest\n")
 else()
+    file(REMOVE "${CMAKE_BINARY_DIR}/bq_module_test_enabled")
     message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, a toolchain with modules, and a Ninja or VS generator; -DBQ_MODULE_TEST=ON enables it once include/bq_log/bq.log.cppm is finished)")
 endif()
 

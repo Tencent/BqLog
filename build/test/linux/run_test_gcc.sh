@@ -18,8 +18,14 @@ cmake --build . --parallel
 set +e
 ./BqLogUnitTest
 exit_code=$?
-if [ -x ./BqLogModuleUnitTest ]; then
-    ./BqLogModuleUnitTest || exit_code=$?
+# bq_module_test_enabled: the configuration builds the module test, so its binary must exist.
+if [ -f bq_module_test_enabled ]; then
+    if [ -x ./BqLogModuleUnitTest ]; then
+        ./BqLogModuleUnitTest || exit_code=$?
+    else
+        echo "BqLogModuleUnitTest is missing although the module test is enabled for this build." >&2
+        exit_code=1
+    fi
 fi
 set -e
 
@@ -55,8 +61,14 @@ cmake --build . --parallel
 set +e
 ./BqLogUnitTest
 exit_code=$?
-if [ -x ./BqLogModuleUnitTest ]; then
-    ./BqLogModuleUnitTest || exit_code=$?
+# bq_module_test_enabled: the configuration builds the module test, so its binary must exist.
+if [ -f bq_module_test_enabled ]; then
+    if [ -x ./BqLogModuleUnitTest ]; then
+        ./BqLogModuleUnitTest || exit_code=$?
+    else
+        echo "BqLogModuleUnitTest is missing although the module test is enabled for this build." >&2
+        exit_code=1
+    fi
 fi
 set -e
 

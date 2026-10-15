@@ -9,6 +9,9 @@ cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -
 cmake --build . --config Debug
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
+rem bq_module_test_enabled: the configuration builds the module test, so its binary must exist.
+if exist bq_module_test_enabled if not exist .\BqLogModuleUnitTest.exe echo BqLogModuleUnitTest.exe is missing although the module test is enabled for this build.
+if exist bq_module_test_enabled if not exist .\BqLogModuleUnitTest.exe if %exitcode%==0 set exitcode=1
 if exist .\BqLogModuleUnitTest.exe .\BqLogModuleUnitTest.exe
 if exist .\BqLogModuleUnitTest.exe if %ERRORLEVEL% NEQ 0 set exitcode=%ERRORLEVEL%
 
@@ -24,6 +27,8 @@ cmake ..\..\..\..\test\cpp -G "MinGW Makefiles" -DTARGET_PLATFORM:STRING=win64 -
 cmake --build . --config RelWithDebInfo
 .\BqLogUnitTest.exe
 set exitcode=%ERRORLEVEL%
+if exist bq_module_test_enabled if not exist .\BqLogModuleUnitTest.exe echo BqLogModuleUnitTest.exe is missing although the module test is enabled for this build.
+if exist bq_module_test_enabled if not exist .\BqLogModuleUnitTest.exe if %exitcode%==0 set exitcode=1
 if exist .\BqLogModuleUnitTest.exe .\BqLogModuleUnitTest.exe
 if exist .\BqLogModuleUnitTest.exe if %ERRORLEVEL% NEQ 0 set exitcode=%ERRORLEVEL%
 

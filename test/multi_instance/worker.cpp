@@ -218,7 +218,7 @@ int main(int argc, char** argv)
     }
 
     if (hold_until) {
-        // M1/M5 barrier: run.py creates the sentinel before spawning everyone
+        // instance_assignment/two_instances barrier: run.py creates the sentinel before spawning everyone
         // and deletes it once all workers are ready; instances stay claimed
         // while the file exists
         for (int i = 0; i < 600; ++i) {
@@ -235,7 +235,7 @@ int main(int argc, char** argv)
     const int committed = die_after >= 0 ? static_cast<int>(die_after < records ? die_after : records) : records;
     for (int i = 0; i < committed; ++i) {
         if (two_logs) {
-            // Both logs use the SAME format strings (T04 spec); only the log object alternates.
+            // Both logs use the SAME format strings; only the log object alternates.
             // A macro site binds the log of its first call, so each log still needs its own site
             // -- but the two sites register the same format and must end up on the same meta.
             if (i % 2 == 0) {

@@ -130,7 +130,7 @@ namespace bq {
                     static_cast<uint32_t>(registry.test_entry_count())));
             }
 
-            // T06 §3.3: entries registered before enable_meta_records are replayed into the
+            // Entries registered before enable_meta_records are replayed into the
             // segment file at enable_meta_records time
             static void test_meta_record_content(test_result& result)
             {
@@ -216,7 +216,7 @@ namespace bq {
                 result.add_result(all_found, "meta record content: all 3 arena addresses recorded");
             }
 
-            // T06 §3.4: expired cleanup removes out-of-window versions and garbage names
+            // Expired cleanup removes out-of-window versions and garbage names
             static void test_cleanup_expired(test_result& result)
             {
                 if (!instance_available()) {
@@ -279,7 +279,7 @@ namespace bq {
                     "cleanup: non-numeric segment index removed");
             }
 
-            // T06 §3.5: wraparound distances
+            // Wraparound distances
             static void test_cleanup_wraparound(test_result& result)
             {
                 if (!instance_available()) {
@@ -310,7 +310,7 @@ namespace bq {
                 inst->test_begin_new_run();
             }
 
-            // T06 §3.6: corrupt segment heads make resolve_recovered return nullptr without crashing
+            // Corrupt segment heads make resolve_recovered return nullptr without crashing
             static void test_segment_head_validation(test_result& result)
             {
                 if (!instance_available()) {
@@ -372,7 +372,7 @@ namespace bq {
             static constexpr int32_t register_race_thread_count = 64;
             static constexpr int32_t register_race_format_count = 100;
 
-            // T06 §3.7: concurrent registration of the same format strings dedupes to one entry each
+            // Concurrent registration of the same format strings dedupes to one entry each
             static void test_register_race(test_result& result)
             {
                 const uint8_t i32 = static_cast<uint8_t>(bq::log_arg_type_enum::int32_type);

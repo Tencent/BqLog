@@ -1,6 +1,6 @@
 /* Copyright (C) 2026 Tencent. Licensed under the Apache License, Version 2.0. */
-// M6 helper: the T04 worker minus the test-only storage report API, so it
-// builds against a 2.6.0 checkout (see BQ_LEGACY_SRC in CMakeLists.txt).
+// legacy_coexistence helper: the multi-instance worker minus the test-only storage report API, so
+// it builds against a 2.6.0 checkout (see BQ_LEGACY_SRC in CMakeLists.txt).
 #include "bq_log/bq_log.h"
 #include <chrono>
 #include <cstdio>
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     if (worker_id < 0 || records <= 0) {
         return 2;
     }
-    // M6 needs this worker busy when the new runtime joins; a bigger count only costs file descriptors.
+    // legacy_coexistence needs this worker busy when the new runtime joins; a bigger count only costs file descriptors.
     int pace_ms = 0;
     if (argc >= 6 && std::strcmp(argv[4], "--pace-ms") == 0) {
         pace_ms = std::atoi(argv[5]);
