@@ -5,9 +5,8 @@ class Bqlog < Formula
   sha256 "aed63a3e5b38b35bdb10d6f1eef134e727af4b5e63ead165c5817f4271dd3517"
   license "Apache-2.0"
 
-  head "https://github.com/Tencent/BqLog.git", branch: "develop"
+  head "https://github.com/Tencent/BqLog.git", branch: "main"
 
-  # The release tag is Release_<version>, which is not the v<version> livecheck assumes.
   livecheck do
     url :stable
     regex(/^Release[._-]v?(\d+(?:\.\d+)+)$/i)
@@ -16,9 +15,7 @@ class Bqlog < Formula
   depends_on "cmake" => :build
 
   def install
-    # Both library forms and the command line tools, so a single install covers every use.
     args = ["-DBUILD_LIB_TYPE=both", "-DBQ_BUILD_TOOLS=ON", "-DBQ_WERROR=OFF"]
-    # A package manager installs for the native architecture, not a universal binary.
     args << "-DCMAKE_OSX_ARCHITECTURES=#{Hardware::CPU.arch}" if OS.mac?
 
     system "cmake", "-S", ".", "-B", "build", *std_cmake_args, *args
