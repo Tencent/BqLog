@@ -217,13 +217,20 @@ endif()
 # toolchain can build modules; one that cannot skips it and says so.
 OPTION(BQ_MODULE_TEST "Build and run the C++20 module entry test" ON)
 
+# CMake builds modules with MSVC under the Visual Studio generator, or with Clang / GCC under
+# Ninja. The compiler and the generator are a pair, so both are checked together: clang-cl with
+# the Visual Studio generator configures and compiles the interface unit, but the module never
+# reaches the importing project ("module 'bq.log' not found").
 set(BQ_MODULE_TOOLCHAIN_OK FALSE)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
-    if(MSVC AND MSVC_VERSION GREATER_EQUAL 1934)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION GREATER_EQUAL 1934
+            AND CMAKE_GENERATOR MATCHES "Ninja|Visual Studio")
         set(BQ_MODULE_TOOLCHAIN_OK TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16
+            AND CMAKE_GENERATOR MATCHES "Ninja")
         set(BQ_MODULE_TOOLCHAIN_OK TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14
+            AND CMAKE_GENERATOR MATCHES "Ninja")
         set(BQ_MODULE_TOOLCHAIN_OK TRUE)
     endif()
 endif()
@@ -232,7 +239,6 @@ endif()
 # library, and whether the module is shipped to the mobile platforms is a packaging
 # question of its own.
 if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE_TOOLCHAIN_OK
-        AND CMAKE_GENERATOR MATCHES "Ninja|Visual Studio"
         AND TARGET bqlog_lib)
     message(STATUS "Module entry test: enabled (import bq.log)")
 
@@ -280,7 +286,7 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
     file(WRITE "${CMAKE_BINARY_DIR}/bq_module_test_enabled" "BqLogModuleUnitTest\n")
 else()
     file(REMOVE "${CMAKE_BINARY_DIR}/bq_module_test_enabled")
-    message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, a toolchain with modules, and a Ninja or VS generator; -DBQ_MODULE_TEST=ON enables it once include/bq_log/bq.log.cppm is finished)")
+    message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, and MSVC with the Visual Studio generator or Clang/GCC with Ninja)")
 endif()
 
 

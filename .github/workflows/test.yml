@@ -227,7 +227,11 @@ jobs:
           {
               static int Main()
               {
-                  bq.log log_inst = bq.log.create_log("nuget_consumer", "log.thread_mode=sync");
+                  // create_log rejects a config without an appenders_config object, so name one.
+                  bq.log log_inst = bq.log.create_log("nuget_consumer",
+                      "log.thread_mode=sync\n"
+                      + "appenders_config.console.type=console\n"
+                      + "appenders_config.console.levels=[all]");
                   if (!log_inst.is_valid())
                   {
                       System.Console.Error.WriteLine("create_log failed");
