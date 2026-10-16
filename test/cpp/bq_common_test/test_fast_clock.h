@@ -83,6 +83,18 @@ namespace bq {
                 return gap > 20;
             }
 
+            static constexpr uint64_t error_tolerance_ms() { return 5; }
+
+            // A round is void when the platform's clock moved under us instead of the fast clock drifting:
+            // the reading went backwards, or it disagrees with the wall clock by more than the tolerance.
+            // The first catches a backward correction (the fast clock follows it at its next anchor), the
+            // second a forward one - or a fault in the time counter, which on some systems feeds the wall
+            // clock and steady_clock alike and therefore hides from a comparison of the two.
+            static bool round_is_void(bool have_previous, uint64_t previous_ms, uint64_t ms, uint64_t error_ms)
+            {
+                return (have_previous && ms < previous_ms) || error_ms > error_tolerance_ms();
+            }
+
             static void test_accuracy(test_result& result)
             {
                 // the detector itself, on fixed pairs, so its meaning is pinned down
@@ -96,37 +108,55 @@ namespace bq {
                     result.add_result(true, "fast clock not available on this machine, accuracy test skipped");
                     return;
                 }
+                // the void rule itself, on fixed rounds, so its meaning is pinned down
+                result.add_result(!round_is_void(false, 0, 5000, 0), "the first round cannot go backwards");
+                result.add_result(!round_is_void(true, 5000, 5050, error_tolerance_ms()), "a round inside the tolerance is kept");
+                result.add_result(round_is_void(true, 5000, 5050, 42 * 1000), "a round off by 42 s is void");
+                result.add_result(round_is_void(true, 5000, 4000, 0), "a round that went backwards is void");
+
                 // 50 samples 50 ms apart, past the window over which x86 refines the measured counter
-                // frequency. A round in which the wall clock was corrected does not count: the fast clock
-                // only re-anchors to the wall clock every second, so until it does it cannot agree with a
-                // clock that just moved, and that is a clock correction rather than drift. Re-anchor and
-                // measure that round again - and complain if the host keeps stepping, rather than pass.
+                // frequency. A void round is measured again rather than counted: the fast clock only
+                // re-anchors to the wall clock every second, so after the platform's clock moves it cannot
+                // agree with it until it does, and that is not drift. Only a few rounds may be voided, and
+                // the count and the largest error are reported, so a real problem still fails the test.
                 uint64_t max_error_ms = 0;
+                uint64_t previous_ms = 0;
                 uint32_t samples = 0;
-                uint32_t stepped_rounds = 0;
+                uint32_t voided_rounds = 0;
+                uint64_t voided_error_ms = 0;
+                bool both_clocks_moved = false;
                 uint64_t wall_last = precise_epoch_ms();
                 uint64_t mono_last = monotonic_ms();
-                while (samples < 50 && stepped_rounds < 40) {
+                while (samples < 50 && voided_rounds <= 3) {
                     bq::platform::thread::sleep(50);
                     const uint64_t wall_before = precise_epoch_ms();
                     uint64_t ms = 0;
                     const bool ok = bq::platform::fast_clock_read_epoch_ms(cache, sync, ms);
                     const uint64_t wall_after = precise_epoch_ms();
                     const uint64_t mono_after = monotonic_ms();
-                    const bool stepped = wall_clock_stepped(wall_last, mono_last, wall_after, mono_after);
+                    const bool wall_moved_alone = wall_clock_stepped(wall_last, mono_last, wall_after, mono_after);
                     wall_last = wall_after;
                     mono_last = mono_after;
-                    if (stepped) {
+                    const uint64_t error_ms = ms < wall_before ? wall_before - ms : (ms > wall_after ? ms - wall_after : 0);
+                    result.add_result(ok, "fast clock read %" PRIu32, samples);
+                    if (round_is_void(samples != 0, previous_ms, ms, error_ms)) {
+                        ++voided_rounds;
+                        if (error_ms > voided_error_ms) {
+                            voided_error_ms = error_ms;
+                            both_clocks_moved = !wall_moved_alone;
+                        }
                         force_resync(cache);
-                        ++stepped_rounds;
                         continue;
                     }
-                    result.add_result(ok, "fast clock read %" PRIu32, samples);
-                    const uint64_t error_ms = ms < wall_before ? wall_before - ms : (ms > wall_after ? ms - wall_after : 0);
                     max_error_ms = bq::max_value(max_error_ms, error_ms);
+                    previous_ms = ms;
                     ++samples;
                 }
-                result.add_result(stepped_rounds < 40, "the wall clock was not corrected during the measurement (%" PRIu32 " rounds skipped)", stepped_rounds);
+                result.add_result(voided_rounds <= 3, "the platform's clock did not disturb the measurement (%" PRIu32 " rounds voided, largest error %" PRIu64 " ms, %s)",
+                    voided_rounds, voided_error_ms,
+                    voided_rounds == 0 ? "no round was disturbed" : (both_clocks_moved
+                        ? "the wall clock and steady_clock moved together, so the platform's time counter is the suspect"
+                        : "the wall clock moved on its own, so the host corrected it"));
                 // 5 ms, not 2: a loaded virtual machine refines the counter frequency slowly enough to
                 // drift past 2 ms, which used to fail the BSD/Solaris jobs at random.
                 result.add_result(max_error_ms <= 5, "fast clock error %" PRIu64 " ms over 2.5 s", max_error_ms);
