@@ -2,6 +2,8 @@ import java.io.IOException;
 import java.util.*;
 
 /**
+ * Entry point of the Java benchmark: writes a few million entries, from one or more threads, and
+ * prints how long each case took.
  * @author pippocao
  *
  *	Please copy dynamic native library to your classpath before you run this benchmark.
@@ -9,6 +11,10 @@ import java.util.*;
  *  Otherwise, you may encounter an `UnsatisfiedLinkError`.
  */
 public class benchmark_main {
+
+	/** Not instantiable: this class is a static entry point. */
+	private benchmark_main() {
+	}
 	
 	static abstract class benchmark_thread implements Runnable
 	{
@@ -166,6 +172,11 @@ public class benchmark_main {
 	}
 	
 
+	/**
+	 * Runs every benchmark case in turn.
+	 * @param args The command line arguments, which this benchmark ignores.
+	 * @throws Exception When a benchmark case fails.
+	 */
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		bq.log compressed_log =  bq.log.create_log("compress", """
