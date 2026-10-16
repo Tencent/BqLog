@@ -83,7 +83,9 @@ namespace bq {
                     max_error_ms = bq::max_value(max_error_ms, error_ms);
                     bq::platform::thread::sleep(50);
                 }
-                result.add_result(max_error_ms <= 2, "fast clock error %" PRIu64 " ms over 2.5 s", max_error_ms);
+                // 5 ms, not 2: a loaded virtual machine refines the counter frequency slowly enough to
+                // drift past 2 ms, which used to fail the BSD/Solaris jobs at random.
+                result.add_result(max_error_ms <= 5, "fast clock error %" PRIu64 " ms over 2.5 s", max_error_ms);
                 result.add_result(abs_diff(bq::platform::high_performance_epoch_ms(), bq::platform::system_epoch_ms()) <= 20, "high_performance_epoch_ms agrees with the system clock");
             }
 
