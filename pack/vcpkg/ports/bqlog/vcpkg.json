@@ -4,7 +4,7 @@
   "description": "Lightweight, high-performance, cross-language logging library",
   "homepage": "https://github.com/Tencent/BqLog",
   "license": "Apache-2.0",
-  "supports": "!android",
+  "supports": "!(windows & x86) & !android",
   "dependencies": [
     {
       "name": "vcpkg-cmake",
