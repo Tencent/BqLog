@@ -160,10 +160,18 @@ jobs:
           git archive --format=tar.gz --prefix="BqLog-Release_${VERSION}/" -o "$TARBALL" HEAD
           bash pack/vcpkg/bump.sh "$VERSION" "$TARBALL"
 
+      # The tools-free install is the `bqlog[core]` case upstream CI runs: it is where an empty
+      # bin/ or debug/bin/ left behind by the build system fails the post-build checks.
+      - name: Install the port without features
+        shell: bash
+        run: |
+          ./vcpkg_tool/vcpkg install bqlog \
+            --overlay-ports=pack/vcpkg/ports --triplet "${{ matrix.triplet }}"
+
       - name: Install the port with the tools feature
         shell: bash
         run: |
-          ./vcpkg_tool/vcpkg install "bqlog[tools]" \
+          ./vcpkg_tool/vcpkg install "bqlog[tools]" --recurse \
             --overlay-ports=pack/vcpkg/ports --triplet "${{ matrix.triplet }}"
 
       - name: Assert the installed layout
