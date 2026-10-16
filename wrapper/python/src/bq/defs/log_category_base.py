@@ -21,4 +21,5 @@ class log_category_base:
 
     @property
     def index(self):
+        """The index this category was created with."""
         return self._index

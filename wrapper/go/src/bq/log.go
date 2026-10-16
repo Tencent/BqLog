@@ -121,16 +121,21 @@ func Get_log_by_name(name string) *Log {
 	return &Log{}
 }
 
+// Is_valid reports whether this Log refers to a log object that exists.
 func (l *Log) Is_valid() bool { return l != nil && l.id != 0 }
 
+// Get_id returns the native id of this log object, or 0 when it does not exist.
 func (l *Log) Get_id() uint64 { return l.id }
 
+// Get_name returns the name this log object was created with.
 func (l *Log) Get_name() string { return l.name }
 
+// Get_categories_count returns how many categories this log object has.
 func (l *Log) Get_categories_count() int {
 	return int(impl.Get_log_categories_count(l.id))
 }
 
+// Get_category_name returns the name of the category at index, or an empty string when the index is out of range.
 func (l *Log) Get_category_name(index int) string {
 	name, _ := impl.Get_log_category_name_by_index(l.id, uint32(index))
 	return name
@@ -222,15 +227,26 @@ func (l *Log) write_small(level def.Log_level, category_index uint32, format str
 		a0.pod, a0.str, a1.pod, a1.str, a2.pod, a2.str, a3.pod, a3.str)
 }
 
+// Verbose logs at the verbose level in this log's default category, and reports whether the entry was written.
 func (l *Log) Verbose(format string, args ...any) bool {
 	return l.do_log(def.Verbose, 0, format, args...)
 }
+
+// Debug logs at the debug level in this log's default category, and reports whether the entry was written.
 func (l *Log) Debug(format string, args ...any) bool { return l.do_log(def.Debug, 0, format, args...) }
-func (l *Log) Info(format string, args ...any) bool  { return l.do_log(def.Info, 0, format, args...) }
+
+// Info logs at the info level in this log's default category, and reports whether the entry was written.
+func (l *Log) Info(format string, args ...any) bool { return l.do_log(def.Info, 0, format, args...) }
+
+// Warning logs at the warning level in this log's default category, and reports whether the entry was written.
 func (l *Log) Warning(format string, args ...any) bool {
 	return l.do_log(def.Warning, 0, format, args...)
 }
+
+// Error logs at the error level in this log's default category, and reports whether the entry was written.
 func (l *Log) Error(format string, args ...any) bool { return l.do_log(def.Error, 0, format, args...) }
+
+// Fatal logs at the fatal level in this log's default category, and reports whether the entry was written.
 func (l *Log) Fatal(format string, args ...any) bool { return l.do_log(def.Fatal, 0, format, args...) }
 
 // Reset_config modifies the config of this log object; some fields, such as
@@ -277,6 +293,7 @@ func Decoder_create(log_file_path, priv_key string) *Decoder {
 	return &Decoder{handle: handle, valid: ok}
 }
 
+// Is_valid reports whether this decoder was opened successfully.
 func (d *Decoder) Is_valid() bool { return d.valid }
 
 // Decode returns (text, true) while there is content, ("", false) on eof/error.
@@ -287,6 +304,7 @@ func (d *Decoder) Decode() (string, bool) {
 	return impl.Log_decoder_decode(d.handle)
 }
 
+// Destroy releases the decoder; it is safe to call it more than once.
 func (d *Decoder) Destroy() {
 	if d.valid {
 		impl.Log_decoder_destroy(d.handle)
