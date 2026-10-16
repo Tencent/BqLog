@@ -40,7 +40,8 @@ namespace bq {
     bq::string category_log_template_typescript_base::get_category_class_code_recursive(const category_node& node, const bq::string& tab, uint64_t& index) const
     {
         bq::string node_class_name = class_name_ + "_" + node.name();
-        bq::string code = tab + "public readonly " + node.name() + " = new (class " + node_class_name + " extends " + class_name_ + "_category_base {\n";
+        bq::string code = tab + "/** The " + node.full_name() + " category. */\n";
+        code += tab + "public readonly " + node.name() + " = new (class " + node_class_name + " extends " + class_name_ + "_category_base {\n";
         code += tab + TAB + "constructor() {\n";
         code += tab + TAB + TAB + "super(" + uint64_to_string(++index) + ");\n";
         code += tab + TAB + "}\n";
@@ -61,7 +62,8 @@ namespace bq {
 
     bq::string category_log_template_typescript_base::get_category_class_root_define_code(const category_node& root_node) const
     {
-        bq::string code = "class  " + class_name_ + "_category_root\n";
+        bq::string code = "/** The categories declared by the category configuration. */\n";
+        code += "class " + class_name_ + "_category_root\n";
         code += "{\n";
         uint64_t index = 0;
         for (const auto& child : root_node.get_all_children()) {
@@ -86,7 +88,7 @@ namespace bq {
          * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
          */
 
-        /*!
+        /**
          * Generated Wrapper For ${CLASS_NAME} (TypeScript - Node.js)
          *
          * A category_log that supports attaching a category to each log entry.
@@ -108,6 +110,7 @@ namespace bq {
         // Plain Node CommonJS (no "type":"module"): use this instead
         // const { bq } = require("@pippocao/bqlog");
 
+        /** Base class of the generated category classes. */
         class ${CLASS_NAME}_category_base extends bq.log_category_base {
             protected constructor(index: number) {
                 super(index);
@@ -117,17 +120,21 @@ namespace bq {
 
         ${CATEGORY_ROOT_CLASS}
 
+        /** A category log whose entries may carry one of the generated categories. */
         export class ${CLASS_NAME} extends bq.category_log {
             private static readonly category_names: string[] = ${CATEGORY_NAMES};
             private static readonly categories_count: number = ${CLASS_NAME}.category_names.length;
 
+            /** The categories this log can attach to an entry; pass one to the level methods. */
             public readonly cat = new ${CLASS_NAME}_category_root();
 
             protected constructor(arg: ${CLASS_NAME} | bigint) {
                 super(arg as any);
             }
 
+            /** Returns how many categories this log object has. */
             public declare get_categories_count: () => number;
+            /** Returns the category names the configuration declared. */
             public declare get_categories_name_array: () => string[];
 
             /**
@@ -172,11 +179,17 @@ namespace bq {
             }
 
             // ======== Overloads: each function supports both modes you requested ========
+            /** Logs at the verbose level in the given category. */
             public declare verbose: (typeof bq.log.prototype.verbose) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the debug level in the given category. */
             public declare debug: (typeof bq.log.prototype.debug) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the info level in the given category. */
             public declare info: (typeof bq.log.prototype.info) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the warning level in the given category. */
             public declare warning: (typeof bq.log.prototype.warning) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the error level in the given category. */
             public declare error: (typeof bq.log.prototype.error) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the fatal level in the given category. */
             public declare fatal: (typeof bq.log.prototype.fatal) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
         }
         )";
@@ -197,7 +210,7 @@ namespace bq {
          * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
          */
 
-        /*!
+        /**
          * Generated Wrapper For ${CLASS_NAME} (TypeScript - HarmonyOS ArkTS)
          *
          * A category_log that supports attaching a category to each log entry.
@@ -216,6 +229,7 @@ namespace bq {
         // HarmonyOS ArkTS (ohpm package name: bqlog)
         import { bq } from "bqlog";
 
+        /** Base class of the generated category classes. */
         class ${CLASS_NAME}_category_base extends bq.log_category_base {
             protected constructor(index: number) {
                 super(index);
@@ -225,17 +239,21 @@ namespace bq {
 
         ${CATEGORY_ROOT_CLASS}
 
+        /** A category log whose entries may carry one of the generated categories. */
         export class ${CLASS_NAME} extends bq.category_log {
             private static readonly category_names: string[] = ${CATEGORY_NAMES};
             private static readonly categories_count: number = ${CLASS_NAME}.category_names.length;
 
+            /** The categories this log can attach to an entry; pass one to the level methods. */
             public readonly cat = new ${CLASS_NAME}_category_root();
 
             protected constructor(arg: ${CLASS_NAME} | bigint) {
                 super(arg as any);
             }
 
+            /** Returns how many categories this log object has. */
             public declare get_categories_count: () => number;
+            /** Returns the category names the configuration declared. */
             public declare get_categories_name_array: () => string[];
 
             /**
@@ -280,11 +298,17 @@ namespace bq {
             }
 
             // ======== Overloads: each function supports both modes you requested ========
+            /** Logs at the verbose level in the given category. */
             public declare verbose: (typeof bq.log.prototype.verbose) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the debug level in the given category. */
             public declare debug: (typeof bq.log.prototype.debug) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the info level in the given category. */
             public declare info: (typeof bq.log.prototype.info) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the warning level in the given category. */
             public declare warning: (typeof bq.log.prototype.warning) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the error level in the given category. */
             public declare error: (typeof bq.log.prototype.error) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the fatal level in the given category. */
             public declare fatal: (typeof bq.log.prototype.fatal) & ((cat: ${CLASS_NAME}_category_base, log_format_content: string, ...args: unknown[]) => boolean);
         }
         )";

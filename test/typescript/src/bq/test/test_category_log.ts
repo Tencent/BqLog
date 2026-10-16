@@ -11,7 +11,7 @@
          * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
          */
 
-        /*!
+        /**
          * Generated Wrapper For test_category_log (TypeScript - Node.js)
          *
          * A category_log that supports attaching a category to each log entry.
@@ -33,6 +33,7 @@
         // Plain Node CommonJS (no "type":"module"): use this instead
         // const { bq } = require("@pippocao/bqlog");
 
+        /** Base class of the generated category classes. */
         class test_category_log_category_base extends bq.log_category_base {
             protected constructor(index: number) {
                 super(index);
@@ -40,16 +41,20 @@
         }
 
 
-        class  test_category_log_category_root
+        /** The categories declared by the category configuration. */
+        class test_category_log_category_root
         {
+            /** The ModuleA category. */
             public readonly ModuleA = new (class test_category_log_ModuleA extends test_category_log_category_base {
                 constructor() {
                     super(1);
                 }
+                /** The ModuleA.SystemA category. */
                 public readonly SystemA = new (class test_category_log_SystemA extends test_category_log_category_base {
                     constructor() {
                         super(2);
                     }
+                    /** The ModuleA.SystemA.ClassA category. */
                     public readonly ClassA = new (class test_category_log_ClassA extends test_category_log_category_base {
                         constructor() {
                             super(3);
@@ -57,6 +62,7 @@
                     })();
                 })();
             })();
+            /** The ModuleB category. */
             public readonly ModuleB = new (class test_category_log_ModuleB extends test_category_log_category_base {
                 constructor() {
                     super(4);
@@ -65,6 +71,7 @@
         }
 
 
+        /** A category log whose entries may carry one of the generated categories. */
         export class test_category_log extends bq.category_log {
             private static readonly category_names: string[] = [
                                                                    ""
@@ -75,13 +82,16 @@
                                                                ];
             private static readonly categories_count: number = test_category_log.category_names.length;
 
+            /** The categories this log can attach to an entry; pass one to the level methods. */
             public readonly cat = new test_category_log_category_root();
 
             protected constructor(arg: test_category_log | bigint) {
                 super(arg as any);
             }
 
+            /** Returns how many categories this log object has. */
             public declare get_categories_count: () => number;
+            /** Returns the category names the configuration declared. */
             public declare get_categories_name_array: () => string[];
 
             /**
@@ -126,11 +136,17 @@
             }
 
             // ======== Overloads: each function supports both modes you requested ========
+            /** Logs at the verbose level in the given category. */
             public declare verbose: (typeof bq.log.prototype.verbose) & ((cat: test_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the debug level in the given category. */
             public declare debug: (typeof bq.log.prototype.debug) & ((cat: test_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the info level in the given category. */
             public declare info: (typeof bq.log.prototype.info) & ((cat: test_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the warning level in the given category. */
             public declare warning: (typeof bq.log.prototype.warning) & ((cat: test_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the error level in the given category. */
             public declare error: (typeof bq.log.prototype.error) & ((cat: test_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the fatal level in the given category. */
             public declare fatal: (typeof bq.log.prototype.fatal) & ((cat: test_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
         }
         

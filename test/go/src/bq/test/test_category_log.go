@@ -13,24 +13,29 @@ import (
 	bq "github.com/Tencent/BqLog/wrapper/go/src/bq"
 )
 
+// test_category_log_Category is the index of one generated category.
 type test_category_log_Category uint32
 
 func (c test_category_log_Category) category_index() uint32 { return uint32(c) }
 
+// test_category_log_Category_ref is what the level methods accept as a category.
 type test_category_log_Category_ref interface {
 	category_index() uint32
 }
 
+// test_category_log_category_root holds the categories below the root.
 type test_category_log_category_root struct {
 	ModuleA test_category_log_node_7_ModuleA // ModuleA
 	ModuleB test_category_log_Category       // ModuleB
 }
 
+// test_category_log_node_7_ModuleA holds the categories below ModuleA.
 type test_category_log_node_7_ModuleA struct {
 	test_category_log_Category
 	SystemA test_category_log_node_7_ModuleA_7_SystemA // ModuleA.SystemA
 }
 
+// test_category_log_node_7_ModuleA_7_SystemA holds the categories below ModuleA.SystemA.
 type test_category_log_node_7_ModuleA_7_SystemA struct {
 	test_category_log_Category
 	ClassA test_category_log_Category // ModuleA.SystemA.ClassA
@@ -45,6 +50,7 @@ func new_test_category_log_category_root() test_category_log_category_root {
 	return root
 }
 
+// test_category_log_category_names lists the categories the configuration declared, in index order.
 var test_category_log_category_names = []string{
 	"",
 	"ModuleA",
@@ -53,15 +59,18 @@ var test_category_log_category_names = []string{
 	"ModuleB",
 }
 
+// test_category_log is a category log whose entries may carry one of the generated categories.
 type test_category_log struct {
 	*bq.Category_log
 	Cat test_category_log_category_root
 }
 
+// Create_test_category_log creates a test_category_log log object; name and config are the ones bqLog takes.
 func Create_test_category_log(name, config string) *test_category_log {
 	return &test_category_log{Category_log: bq.Create_category_log(name, config, test_category_log_category_names), Cat: new_test_category_log_category_root()}
 }
 
+// Get_test_category_log_by_name returns the existing test_category_log with that name, or an invalid one.
 func Get_test_category_log_by_name(name string) *test_category_log {
 	invalid := &test_category_log{Category_log: &bq.Category_log{Log: &bq.Log{}}, Cat: new_test_category_log_category_root()}
 	base := bq.Get_log_by_name(name)
@@ -76,21 +85,32 @@ func Get_test_category_log_by_name(name string) *test_category_log {
 	return invalid
 }
 
+// Verbose_c logs at the verbose level in the given category, and reports whether the entry was written.
 func (l *test_category_log) Verbose_c(category test_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Verbose_c(category.category_index(), format, args...)
 }
+
+// Debug_c logs at the debug level in the given category, and reports whether the entry was written.
 func (l *test_category_log) Debug_c(category test_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Debug_c(category.category_index(), format, args...)
 }
+
+// Info_c logs at the info level in the given category, and reports whether the entry was written.
 func (l *test_category_log) Info_c(category test_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Info_c(category.category_index(), format, args...)
 }
+
+// Warning_c logs at the warning level in the given category, and reports whether the entry was written.
 func (l *test_category_log) Warning_c(category test_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Warning_c(category.category_index(), format, args...)
 }
+
+// Error_c logs at the error level in the given category, and reports whether the entry was written.
 func (l *test_category_log) Error_c(category test_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Error_c(category.category_index(), format, args...)
 }
+
+// Fatal_c logs at the fatal level in the given category, and reports whether the entry was written.
 func (l *test_category_log) Fatal_c(category test_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Fatal_c(category.category_index(), format, args...)
 }
