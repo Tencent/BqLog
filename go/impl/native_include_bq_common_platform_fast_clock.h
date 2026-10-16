@@ -31,6 +31,7 @@
 #endif
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     namespace platform {
         // Zero initialized. epoch_ms_ is current until the counter reaches next_ms_counter_.
         struct fast_clock_thread_cache {
@@ -47,14 +48,17 @@ namespace bq {
         };
 
         namespace fast_clock_detail {
-            static constexpr uint64_t ns_per_ms = 1000000ULL;
-            static constexpr uint64_t ns_per_second = 1000000000ULL;
-            static constexpr uint64_t max_backward_hold_ms = 1000;
-            static constexpr uint64_t frequency_measure_window_ns = 20 * ns_per_ms;
-            static constexpr uint64_t frequency_settled_window_ns = 2000 * ns_per_ms;
-            static constexpr uint64_t unsettled_resync_interval_ms = 50;
-            static constexpr uint32_t max_sync_attempts = 4;
-            static constexpr uint32_t max_rate_mismatches = 3;
+            // Constants rather than variables: a namespace scope constant has internal
+            // linkage and may not be part of a module interface, while a constexpr function
+            // is implicitly inline and externally linked on every standard we support.
+            constexpr uint64_t ns_per_ms() { return 1000000ULL; }
+            constexpr uint64_t ns_per_second() { return 1000000000ULL; }
+            constexpr uint64_t max_backward_hold_ms() { return 1000; }
+            constexpr uint64_t frequency_measure_window_ns() { return 20 * ns_per_ms(); }
+            constexpr uint64_t frequency_settled_window_ns() { return 2000 * ns_per_ms(); }
+            constexpr uint64_t unsettled_resync_interval_ms() { return 50; }
+            constexpr uint32_t max_sync_attempts() { return 4; }
+            constexpr uint32_t max_rate_mismatches() { return 3; }
 
             template <typename T = void>
             struct shared_state {
@@ -89,28 +93,6 @@ namespace bq {
 #endif
             }
 
-            bq_forceinline uint64_t mul_high(uint64_t a, uint64_t b, uint64_t& out_low)
-            {
-#if defined(BQ_MSVC) && defined(BQ_X86_64)
-                uint64_t high;
-                out_low = _umul128(a, b, &high);
-                return high;
-#elif defined(BQ_MSVC) && defined(BQ_ARM_64)
-                out_low = a * b;
-                return __umulh(a, b);
-#elif defined(__SIZEOF_INT128__)
-                __extension__ typedef unsigned __int128 uint128_type;
-                const uint128_type r = static_cast<uint128_type>(a) * b;
-                out_low = static_cast<uint64_t>(r);
-                return static_cast<uint64_t>(r >> 64);
-#else
-                (void)a;
-                (void)b;
-                out_low = 0;
-                return 0;
-#endif
-            }
-
             // x86 has no portable TSC frequency: measured from the first anchor, refined until the span reaches 2 s.
             inline uint64_t counter_frequency(uint64_t counter, uint64_t wall_ns, bool& out_settled)
             {
@@ -137,15 +119,15 @@ namespace bq {
                     }
                     return 0;
                 }
-                if (frequency && wall_ns >= measure_wall_ns + frequency_settled_window_ns) {
+                if (frequency && wall_ns >= measure_wall_ns + frequency_settled_window_ns()) {
                     return frequency;
                 }
                 out_settled = false;
                 const uint64_t measure_counter = s::measure_counter_.load_relaxed();
-                if (wall_ns < measure_wall_ns + frequency_measure_window_ns || counter <= measure_counter) {
+                if (wall_ns < measure_wall_ns + frequency_measure_window_ns() || counter <= measure_counter) {
                     return frequency;
                 }
-                frequency = static_cast<uint64_t>(static_cast<double>(counter - measure_counter) * static_cast<double>(ns_per_second) / static_cast<double>(wall_ns - measure_wall_ns));
+                frequency = static_cast<uint64_t>(static_cast<double>(counter - measure_counter) * static_cast<double>(ns_per_second()) / static_cast<double>(wall_ns - measure_wall_ns));
 #endif
                 s::counter_frequency_.store_relaxed(frequency);
                 return frequency;
@@ -170,7 +152,7 @@ namespace bq {
                 uint64_t counter = 0;
                 uint64_t wall_ns = 0;
                 uint64_t best_width = UINT64_MAX;
-                for (uint32_t attempt = 0; attempt < max_sync_attempts && best_width > good_width; ++attempt) {
+                for (uint32_t attempt = 0; attempt < max_sync_attempts() && best_width > good_width; ++attempt) {
                     const uint64_t counter_before = read_counter();
                     uint64_t attempt_wall_ns;
                     if (!sync(attempt_wall_ns)) {
@@ -189,12 +171,12 @@ namespace bq {
                     return resync_failed(cache);
                 }
                 if (cache.last_sync_wall_ns_ && wall_ns > cache.last_sync_wall_ns_ && counter > cache.base_counter_) {
-                    const double expected_ticks = static_cast<double>(wall_ns - cache.last_sync_wall_ns_) * static_cast<double>(frequency) / static_cast<double>(ns_per_second);
+                    const double expected_ticks = static_cast<double>(wall_ns - cache.last_sync_wall_ns_) * static_cast<double>(frequency) / static_cast<double>(ns_per_second());
                     const double ticks = static_cast<double>(counter - cache.base_counter_);
                     const double tolerance = expected_ticks * 0.01 + static_cast<double>(frequency) / 10000.0;
                     if (ticks > expected_ticks + tolerance || ticks < expected_ticks - tolerance) {
                         // once is a wall clock step, repeatedly is a wrong frequency
-                        if (++cache.rate_mismatches_ >= max_rate_mismatches) {
+                        if (++cache.rate_mismatches_ >= max_rate_mismatches()) {
                             shared_state<>::untrusted_.store_relaxed(1);
                             return resync_failed(cache);
                         }
@@ -203,12 +185,12 @@ namespace bq {
                     }
                 }
                 cache.base_counter_ = counter;
-                cache.base_epoch_ms_ = wall_ns / ns_per_ms;
-                cache.base_ms_fraction_ = static_cast<uint64_t>(static_cast<double>(wall_ns % ns_per_ms) * (18446744073709551616.0 / static_cast<double>(ns_per_ms)));
+                cache.base_epoch_ms_ = wall_ns / ns_per_ms();
+                cache.base_ms_fraction_ = static_cast<uint64_t>(static_cast<double>(wall_ns % ns_per_ms()) * (18446744073709551616.0 / static_cast<double>(ns_per_ms())));
                 cache.ms_mul_ = static_cast<uint64_t>(18446744073709551616.0 * 1000.0 / static_cast<double>(frequency));
-                const uint64_t interval_ms = (frequency_settled || BQ_FAST_CLOCK_RESYNC_INTERVAL_MS < unsettled_resync_interval_ms)
+                const uint64_t interval_ms = (frequency_settled || BQ_FAST_CLOCK_RESYNC_INTERVAL_MS < unsettled_resync_interval_ms())
                     ? static_cast<uint64_t>(BQ_FAST_CLOCK_RESYNC_INTERVAL_MS)
-                    : unsettled_resync_interval_ms;
+                    : unsettled_resync_interval_ms();
                 cache.resync_counter_ = counter + frequency * interval_ms / 1000ULL;
                 cache.last_sync_wall_ns_ = wall_ns;
                 return true;
@@ -226,11 +208,11 @@ namespace bq {
                     }
                     counter = cache.base_counter_;
                 }
-                uint64_t fraction;
-                const uint64_t whole_ms = mul_high(counter - cache.base_counter_, cache.ms_mul_, fraction);
+                uint64_t whole_ms;
+                const uint64_t fraction = bq::bq_umul128(counter - cache.base_counter_, cache.ms_mul_, whole_ms);
                 const uint64_t sum = fraction + cache.base_ms_fraction_;
                 uint64_t epoch_ms = cache.base_epoch_ms_ + whole_ms + (sum < fraction ? 1U : 0U);
-                if (epoch_ms < cache.epoch_ms_ && cache.epoch_ms_ - epoch_ms <= max_backward_hold_ms) {
+                if (epoch_ms < cache.epoch_ms_ && cache.epoch_ms_ - epoch_ms <= max_backward_hold_ms()) {
                     epoch_ms = cache.epoch_ms_;
                 }
                 const uint64_t boundary = counter + (~sum) / cache.ms_mul_ + 1;
@@ -257,7 +239,7 @@ namespace bq {
             return false;
 #endif
 #if defined(BQ_WIN) || (defined(BQ_POSIX) && !defined(BQ_PS))
-            out_epoch_ns = static_cast<uint64_t>(ts.tv_sec) * fast_clock_detail::ns_per_second + static_cast<uint64_t>(ts.tv_nsec);
+            out_epoch_ns = static_cast<uint64_t>(ts.tv_sec) * fast_clock_detail::ns_per_second() + static_cast<uint64_t>(ts.tv_nsec);
             return true;
 #endif
         }
@@ -288,4 +270,5 @@ namespace bq {
             return fast_clock_read_epoch_ms(cache, fast_clock_sync_epoch_ns, out_epoch_ms);
         }
     }
+    BQ_MODULE_EXPORT_END
 }

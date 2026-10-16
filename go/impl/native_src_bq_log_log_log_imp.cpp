@@ -16,6 +16,7 @@
 #include "native_src_bq_log_log_appender_appender_console.h"
 #include "native_src_bq_log_log_appender_appender_file_text.h"
 #include "native_src_bq_log_log_appender_appender_file_compressed.h"
+#include "native_src_bq_log_types_meta_meta_registry.h"
 #include "native_src_bq_log_utils_log_utils.h"
 
 namespace bq {
@@ -171,7 +172,16 @@ namespace bq {
                     buffer_config.default_buffer_size = (uint32_t)log_config["buffer_size"];
                 }
                 if (log_config["recovery"].is_bool()) {
-                    buffer_config.need_recovery = (bool)log_config["recovery"] && bq::memory_map::is_platform_support();
+                    const bool recovery_requested = (bool)log_config["recovery"];
+                    const recovery_capability capability = log_utils::get_recovery_capability();
+                    if (recovery_requested && capability != recovery_capability::ready) {
+                        // only safe when the instances can see each other, so warn instead of failing
+                        util::log_device_console(log_level::warning,
+                            "log %s: recovery needs %s and this platform has none, so recovery stays off",
+                            name_.c_str(),
+                            capability == recovery_capability::no_memory_map ? "a writable memory map" : "a cross-process file lock");
+                    }
+                    buffer_config.need_recovery = recovery_requested && capability == recovery_capability::ready;
                 }
                 if (log_config["buffer_policy_when_full"].is_string()) {
                     if (((bq::string)log_config["buffer_policy_when_full"]).equals_ignore_case("discard")) {
@@ -188,6 +198,16 @@ namespace bq {
                         buffer_config.high_frequency_threshold_per_second = UINT64_MAX;
                     }
                 }
+            }
+            storage_ = log_storage::create(name_, buffer_config.need_recovery);
+            buffer_config.storage = storage_.get();
+            if (buffer_config.need_recovery && !storage_) {
+                // no instance: same as mmap failure today, buffers fall back to heap
+                buffer_config.need_recovery = false;
+                util::log_device_console(log_level::warning, "log %s recovery disabled: no instance directory available", name_.c_str());
+            }
+            if (buffer_config.need_recovery && !bq::meta_registry::instance().enable_meta_records()) {
+                util::log_device_console(log_level::warning, "fast log meta records unavailable, fast records of log %s can not be recovered", name_.c_str());
             }
             buffer_ = bq::util::aligned_new<bq::log_buffer>(alignof(bq::log_buffer), buffer_config);
         }
@@ -358,6 +378,7 @@ namespace bq {
         if (buffer_) {
             bq::util::aligned_delete(buffer_);
         }
+        storage_.reset();
         delete snapshot_;
         snapshot_ = nullptr;
         id_ = 0;

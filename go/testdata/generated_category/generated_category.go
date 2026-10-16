@@ -13,14 +13,17 @@ import (
 	bq "github.com/Tencent/BqLog/go/v2"
 )
 
+// Generated_category_Category is the index of one generated category.
 type Generated_category_Category uint32
 
 func (c Generated_category_Category) category_index() uint32 { return uint32(c) }
 
+// Generated_category_Category_ref is what the level methods accept as a category.
 type Generated_category_Category_ref interface {
 	category_index() uint32
 }
 
+// Generated_category_category_root holds the categories below the root.
 type Generated_category_category_root struct {
 	ModuleA Generated_category_node_7_ModuleA // ModuleA
 	ModuleB Generated_category_Category       // ModuleB
@@ -28,16 +31,19 @@ type Generated_category_category_root struct {
 	A       Generated_category_node_1_A       // A
 }
 
+// Generated_category_node_7_ModuleA holds the categories below ModuleA.
 type Generated_category_node_7_ModuleA struct {
 	Generated_category_Category
 	SystemA Generated_category_node_7_ModuleA_7_SystemA // ModuleA.SystemA
 }
 
+// Generated_category_node_7_ModuleA_7_SystemA holds the categories below ModuleA.SystemA.
 type Generated_category_node_7_ModuleA_7_SystemA struct {
 	Generated_category_Category
 	ClassA Generated_category_Category // ModuleA.SystemA.ClassA
 }
 
+// Generated_category_node_1_A holds the categories below A.
 type Generated_category_node_1_A struct {
 	Generated_category_Category
 	B Generated_category_Category // A.B
@@ -55,6 +61,7 @@ func new_Generated_category_category_root() Generated_category_category_root {
 	return root
 }
 
+// Generated_category_category_names lists the categories the configuration declared, in index order.
 var Generated_category_category_names = []string{
 	"",
 	"ModuleA",
@@ -66,15 +73,18 @@ var Generated_category_category_names = []string{
 	"A.B",
 }
 
+// Generated_category is a category log whose entries may carry one of the generated categories.
 type Generated_category struct {
 	*bq.Category_log
 	Cat Generated_category_category_root
 }
 
+// Create_Generated_category creates a Generated_category log object; name and config are the ones bqLog takes.
 func Create_Generated_category(name, config string) *Generated_category {
 	return &Generated_category{Category_log: bq.Create_category_log(name, config, Generated_category_category_names), Cat: new_Generated_category_category_root()}
 }
 
+// Get_Generated_category_by_name returns the existing Generated_category with that name, or an invalid one.
 func Get_Generated_category_by_name(name string) *Generated_category {
 	invalid := &Generated_category{Category_log: &bq.Category_log{Log: &bq.Log{}}, Cat: new_Generated_category_category_root()}
 	base := bq.Get_log_by_name(name)
@@ -89,21 +99,32 @@ func Get_Generated_category_by_name(name string) *Generated_category {
 	return invalid
 }
 
+// Verbose_c logs at the verbose level in the given category, and reports whether the entry was written.
 func (l *Generated_category) Verbose_c(category Generated_category_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Verbose_c(category.category_index(), format, args...)
 }
+
+// Debug_c logs at the debug level in the given category, and reports whether the entry was written.
 func (l *Generated_category) Debug_c(category Generated_category_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Debug_c(category.category_index(), format, args...)
 }
+
+// Info_c logs at the info level in the given category, and reports whether the entry was written.
 func (l *Generated_category) Info_c(category Generated_category_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Info_c(category.category_index(), format, args...)
 }
+
+// Warning_c logs at the warning level in the given category, and reports whether the entry was written.
 func (l *Generated_category) Warning_c(category Generated_category_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Warning_c(category.category_index(), format, args...)
 }
+
+// Error_c logs at the error level in the given category, and reports whether the entry was written.
 func (l *Generated_category) Error_c(category Generated_category_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Error_c(category.category_index(), format, args...)
 }
+
+// Fatal_c logs at the fatal level in the given category, and reports whether the entry was written.
 func (l *Generated_category) Fatal_c(category Generated_category_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Fatal_c(category.category_index(), format, args...)
 }

@@ -89,26 +89,6 @@ namespace bq {
         false;
 #endif
 
-    // index of the lowest set bit, value must not be 0
-    bq_forceinline uint32_t bq_ctz64(uint64_t value)
-    {
-#if defined(BQ_MSVC)
-        unsigned long index;
-#if defined(BQ_X86) && !defined(BQ_X86_64)
-        if (_BitScanForward(&index, static_cast<unsigned long>(value))) {
-            return static_cast<uint32_t>(index);
-        }
-        _BitScanForward(&index, static_cast<unsigned long>(value >> 32));
-        return static_cast<uint32_t>(index) + 32;
-#else
-        _BitScanForward64(&index, value);
-        return static_cast<uint32_t>(index);
-#endif
-#else
-        return static_cast<uint32_t>(__builtin_ctzll(value));
-#endif
-    }
-
     // Helpers for NEON
 #if defined(BQ_ARM_NEON)
     bq_forceinline uint16_t bq_vmaxvq_u16(uint16x8_t v)

@@ -24,22 +24,25 @@
 // but in order to avoid pollute users code,
 // we don't include <new> or overload default operator new.
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     enum class enum_new_dummy {
         dummy
     };
+    BQ_MODULE_EXPORT_END
 }
+BQ_MODULE_EXPORT_BEGIN
 inline void* operator new(size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
 inline void* operator new[](size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
-inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept { }
-inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept { }
+inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept {}
+inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept {}
+BQ_MODULE_EXPORT_END
 
-#ifdef BQ_VISUAL_STUDIO
-#define EBCO __declspec(empty_bases) // in some MSVC compilers, EBCO(empty base class optimization) is not enabled by default
-#else
-#define EBCO
-#endif
+// BQ_EBCO is defined in bq_common/platform/macros.h, next to the other language-level macros, so
+// that the macro-only header a generated category module includes in its global module fragment
+// is the one that carries it.
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <typename T>
     inline T& min_ref(T& left, T& right)
     {
@@ -101,6 +104,11 @@ namespace bq {
     inline constexpr size_t align_8(size_t n)
     {
         return n == 0 ? n : (((n - 1) & (~((size_t)8 - 1))) + 8);
+    }
+
+    inline constexpr size_t align_64(size_t n)
+    {
+        return n == 0 ? n : (((n - 1) & (~((size_t)64 - 1))) + 64);
     }
 
     template <typename T>
@@ -187,8 +195,8 @@ namespace bq {
     template <typename T>
     struct object_destructor {
     private:
-        struct trivial_destructor_type { };
-        struct non_trivial_destructor_type { };
+        struct trivial_destructor_type {};
+        struct non_trivial_destructor_type {};
 
         template <typename U, typename destructor_type>
         struct destructor_impl;
@@ -205,7 +213,9 @@ namespace bq {
             static inline void destruct(U* _ptr)
             {
                 if (_ptr) {
-                    _ptr->~T();
+                    // the destructor of the pointee, named by U: MSVC cannot resolve the
+                    // outer T inside a module when this is instantiated (error C2300)
+                    _ptr->~U();
                 }
             }
         };
@@ -224,8 +234,8 @@ namespace bq {
     template <typename T>
     struct object_array_destructor {
     private:
-        struct trivial_destructor_type { };
-        struct non_trivial_destructor_type { };
+        struct trivial_destructor_type {};
+        struct non_trivial_destructor_type {};
 
         template <typename U, typename destructor_type>
         struct destructor_impl;
@@ -243,7 +253,9 @@ namespace bq {
             {
                 if (_ptr) {
                     for (size_t i = 0; i < _count; ++i) {
-                        object_destructor<T>::destruct(_ptr + i);
+                        // U, not the T of the enclosing template: MSVC does not resolve the
+                        // outer parameter inside a nested template in a module
+                        object_destructor<U>::destruct(_ptr + i);
                     }
                 }
             }
@@ -275,7 +287,7 @@ namespace bq {
     }
 
     /***************************tuple begin***********************/
-    // bq::tuple support EBCO
+    // bq::tuple applies BQ_EBCO to its elements
     template <typename... Types>
     class tuple;
 
@@ -302,12 +314,12 @@ namespace bq {
     using tuple_element_t = typename tuple_element<Index, Tuple>::type;
 
     template <size_t Index, typename Ele, bool IsEmpty>
-    struct EBCO __tuple_element_value_impl {
+    struct BQ_EBCO __tuple_element_value_impl {
     private:
         Ele value_;
 
     public:
-        inline __tuple_element_value_impl() { }
+        inline __tuple_element_value_impl() {}
         template <typename Ele_Input>
         inline __tuple_element_value_impl(Ele_Input&& input_value)
             : value_(bq::forward<Ele_Input>(input_value))
@@ -318,8 +330,8 @@ namespace bq {
     };
 
     template <size_t Index, typename Ele>
-    struct EBCO __tuple_element_value_impl<Index, Ele, true> : private Ele {
-        inline __tuple_element_value_impl() { }
+    struct BQ_EBCO __tuple_element_value_impl<Index, Ele, true> : private Ele {
+        inline __tuple_element_value_impl() {}
         template <typename Ele_Input>
         inline __tuple_element_value_impl(Ele_Input&& input_value) { (void)input_value; }
         inline Ele& get() { return static_cast<Ele&>(*this); }
@@ -327,9 +339,9 @@ namespace bq {
     };
 
     template <size_t Index, typename Ele>
-    struct EBCO __tuple_element_value : public __tuple_element_value_impl<Index, Ele, __is_empty(Ele)> {
+    struct BQ_EBCO __tuple_element_value : public __tuple_element_value_impl<Index, Ele, __is_empty(Ele)> {
         using Super_Type = __tuple_element_value_impl<Index, Ele, __is_empty(Ele)>;
-        inline __tuple_element_value() { }
+        inline __tuple_element_value() {}
         template <typename Ele_Input>
         inline __tuple_element_value(Ele_Input&& input_value)
             : Super_Type(bq::forward<Ele_Input>(input_value))
@@ -342,9 +354,9 @@ namespace bq {
     };
 
     template <typename ThisType, typename... Rest>
-    class EBCO tuple<ThisType, Rest...> : private __tuple_element_value<sizeof...(Rest), ThisType>, private tuple<Rest...> {
+    class BQ_EBCO tuple<ThisType, Rest...> : private __tuple_element_value<sizeof...(Rest), ThisType>, private tuple<Rest...> {
     public:
-        inline tuple() noexcept { }
+        inline tuple() noexcept {}
 
         template <typename ThisType_Input, typename... Rest_Input>
         inline tuple(ThisType_Input&& this_input, Rest_Input&&... rest_input) noexcept
@@ -518,6 +530,7 @@ namespace bq {
     {
         return *reinterpret_cast<TO*>(const_cast<char*>(from));
     }
+    BQ_MODULE_EXPORT_END
 }
 
 // Macro designed to generate high-performance code by accessing a variable Var through a forced cast.

@@ -23,7 +23,6 @@ namespace bq {
         static jclass cls_byte_buffer_ = nullptr;
         static jmethodID method_byte_buffer_byte_order_ = nullptr;
         static jobject jobj_little_endian_value_ = nullptr;
-        static jobject jobj_big_endian_value_ = nullptr;
 
         static bq::array<void (*)()>& get_jni_onload_callbacks()
         {
@@ -121,15 +120,10 @@ namespace bq {
 
             jclass cls_byte_order = env->FindClass("java/nio/ByteOrder");
             jfieldID little_endian_field = env->GetStaticFieldID(cls_byte_order, "LITTLE_ENDIAN", "Ljava/nio/ByteOrder;");
-            jfieldID big_endian_field = env->GetStaticFieldID(cls_byte_order, "BIG_ENDIAN", "Ljava/nio/ByteOrder;");
 
             jobject jobj_little_endian_local = env->GetStaticObjectField(cls_byte_order, little_endian_field);
             jobj_little_endian_value_ = env->NewGlobalRef(jobj_little_endian_local);
             env->DeleteLocalRef(jobj_little_endian_local);
-
-            jobject jobj_big_endian_local = env->GetStaticObjectField(cls_byte_order, big_endian_field);
-            jobj_big_endian_value_ = env->NewGlobalRef(jobj_big_endian_local);
-            env->DeleteLocalRef(jobj_big_endian_local);
 
             env->DeleteLocalRef(cls_byte_order);
         }

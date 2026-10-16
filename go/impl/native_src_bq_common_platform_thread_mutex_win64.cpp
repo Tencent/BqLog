@@ -18,8 +18,8 @@ namespace bq {
         struct mutex_platform_def {
             CRITICAL_SECTION cs_;
             bq::platform::atomic<thread::thread_id> owner_thread_id_; // windows platform mutex is always Reentrant lock, we have to simulate the non-recursive mutex by ourself.
-                                                                      // it's working because no thread id is 0 on windows.
-                                                                      // refer to:https://docs.microsoft.com/en-us/windows/win32/procthread/thread-handles-and-identifiers
+            // it's working because no thread id is 0 on windows.
+            // refer to:https://docs.microsoft.com/en-us/windows/win32/procthread/thread-handles-and-identifiers
             mutex_platform_def()
                 : cs_(CRITICAL_SECTION())
                 , owner_thread_id_(0)

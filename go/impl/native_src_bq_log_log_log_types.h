@@ -208,6 +208,7 @@ namespace bq {
     BQ_PACK_BEGIN
     struct _log_entry_ext_head_def {
         uint8_t thread_name_len_;
-    } BQ_PACK_END static_assert(sizeof(_log_entry_ext_head_def) == sizeof(decltype(_log_entry_ext_head_def::thread_name_len_)), "_log_entry_ext_head_def's memory layout must be packed!");
+    } BQ_PACK_END
+    static_assert(sizeof(_log_entry_ext_head_def) == sizeof(decltype(_log_entry_ext_head_def::thread_name_len_)), "_log_entry_ext_head_def's memory layout must be packed!");
 
 }

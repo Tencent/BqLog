@@ -88,7 +88,7 @@ namespace bq {
             return true;
         }
 
-        virtual void on_log_item_recovery_end() { }
+        virtual void on_log_item_recovery_end() {}
 
         virtual bool on_log_item_new_begin(bq::log_entry_handle& read_handle)
         {

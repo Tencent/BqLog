@@ -16,15 +16,18 @@
  * \date 2022/09/10
  *
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
 #include <stddef.h>
 #include <stdint.h>
+#endif
 #include "native_include_bq_common_misc_assert.h"
 #include "native_include_bq_common_types_type_traits.h"
 #include "native_include_bq_common_types_type_tools.h"
 #include "native_include_bq_common_types_allocator.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <typename K, typename V, typename Allocator>
     class BQ_HASH_MAP_CLS_NAME;
     template <typename K, typename V, typename Allocator, bool C>
@@ -290,4 +293,5 @@ namespace bq {
         iterator alloc_node_by_key(const_key_type_ref key);
     };
 
+    BQ_MODULE_EXPORT_END
 }

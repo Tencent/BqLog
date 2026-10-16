@@ -32,7 +32,7 @@ namespace bq {
         aligned_allocator() = default;
 
         template <typename T1, size_t Alignment1>
-        aligned_allocator(const aligned_allocator<T1, Alignment1>&) { }
+        aligned_allocator(const aligned_allocator<T1, Alignment1>&) {}
 
         value_type* allocate(size_t n)
         {

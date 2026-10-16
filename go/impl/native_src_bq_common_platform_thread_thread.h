@@ -111,7 +111,7 @@ namespace bq {
             virtual void run() = 0;
 
             // called when you thread finished;
-            virtual void on_finished() { }
+            virtual void on_finished() {}
 
         private:
             void internal_run();

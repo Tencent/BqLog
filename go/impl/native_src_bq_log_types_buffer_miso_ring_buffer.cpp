@@ -10,6 +10,7 @@
  */
 
 #include "native_src_bq_log_types_buffer_miso_ring_buffer.h"
+#include "native_src_bq_log_types_storage_log_storage.h"
 #include "native_src_bq_log_global_log_vars.h"
 
 namespace bq {
@@ -413,7 +414,7 @@ namespace bq {
     create_memory_map_result miso_ring_buffer::create_memory_map()
     {
         bq::string path = mmap_path_override_.is_empty()
-            ? TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/lp/" + config_.log_name + ".mmap", 0)
+            ? (config_.storage ? config_.storage->lp_path() : "")
             : mmap_path_override_;
         size_t head_size = sizeof(head);
         size_t map_size = (uint32_t)(config_.default_buffer_size + head_size);

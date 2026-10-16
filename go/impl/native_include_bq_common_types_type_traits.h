@@ -17,11 +17,14 @@
  *
  *
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
 #include <stddef.h>
+#endif
 #include "native_include_bq_common_platform_macros.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <bool B>
     struct bool_type {
         static constexpr bool value = false;
@@ -434,4 +437,5 @@ namespace bq {
     constexpr bool is_trivially_move_assignable_v = is_trivially_move_assignable<T>::value;
 #endif
 
+    BQ_MODULE_EXPORT_END
 }

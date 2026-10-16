@@ -21,6 +21,8 @@
 #include "native_src_bq_log_log_appender_appender_console.h"
 #include "native_src_bq_log_log_decoder_appender_decoder_manager.h"
 #include "native_src_bq_log_types_buffer_miso_ring_buffer.h"
+#include "native_src_bq_log_types_meta_meta_registry.h"
+#include "native_src_bq_log_types_storage_instance_storage.h"
 
 namespace bq {
 
@@ -54,6 +56,14 @@ namespace bq {
 #endif
         appender_console::console_static_misc console_static_misc_;
         appender_decoder_manager appender_decoder_manager_inst_;
+        // Members reverse-destruct: log_manager (and all its log_buffers' mmaps) goes first,
+        // then meta_registry (meta record files are closed before the instance lock goes), and the
+        // instance_storage below last, whose destructor releases the lock file handle. These
+        // globals are never destroyed in practice (the process exits first), so the lock is
+        // normally released by the OS; the ordering matters for unit tests that do tear down.
+        bq::unique_ptr<instance_storage> instance_storage_;
+        bq::platform::spin_lock instance_storage_lock_;
+        meta_registry meta_registry_inst_;
         log_manager log_manager_inst_;
 
     private:

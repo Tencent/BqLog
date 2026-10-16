@@ -1,11 +1,14 @@
 /* Copyright (C) 2026 Tencent. Licensed under the Apache License, Version 2.0. */
 #pragma once
 #include <stdint.h>
+// The two exceptions to "bq_log only includes the bq_common entry": this header is
+// also compiled as C, and these are the only two bq_common headers that are.
 #include "native_include_bq_common_platform_macros.h"
 #include "native_include_bq_common_types_basic_types.h"
 
 #if defined(__cplusplus)
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     enum class enum_buffer_result_code : int32_t {
         success = 0,
         err_empty_log_buffer, // no valid data to read in log buffer;
@@ -25,6 +28,12 @@ namespace bq {
         failed_invalid_handle,
         failed_decode_error,
         failed_io_error
+    };
+
+    enum class recovery_capability : int32_t {
+        ready = 0, // recovery can be enabled
+        no_memory_map, // nothing survives a crash without a memory map
+        no_instance_lock // no cross-process file lock to keep a second process out
     };
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) cpp_type
 #define BQ_LOG_ABI_CHAR16 char16_t
@@ -51,9 +60,19 @@ enum bq_appender_decode_result_value {
     bq_appender_decode_result_failed_decode_error,
     bq_appender_decode_result_failed_io_error
 };
+typedef int32_t bq_recovery_capability;
+enum bq_recovery_capability_value {
+    bq_recovery_capability_ready = 0,
+    bq_recovery_capability_no_memory_map,
+    bq_recovery_capability_no_instance_lock
+};
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) c_type
 #define BQ_LOG_ABI_CHAR16 uint16_t
 #endif
+
+    // The structs below are compiled as both C and C++, so they stay at column 0, outside the
+    // C++ namespace, which the formatter cannot express.
+    // clang-format off
 
 BQ_PACK_BEGIN
 struct BQ_LOG_ABI_TYPE(_api_string_def, bq_api_string_def) {
@@ -86,7 +105,7 @@ struct BQ_LOG_ABI_TYPE(_api_fast_log_site_handle, bq_api_fast_log_site_handle) {
 } BQ_PACK_END
 
 // Bump when any field, the thread state below or the record format changes. Append-only.
-#define BQ_FAST_LOG_LAYOUT_VERSION 3
+#define BQ_FAST_LOG_LAYOUT_VERSION 4
 BQ_PACK_BEGIN
 struct BQ_LOG_ABI_TYPE(_api_fast_log_layout, bq_api_fast_log_layout) {
     uint32_t struct_size;
@@ -122,6 +141,7 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
 
 #undef BQ_LOG_ABI_TYPE
 #undef BQ_LOG_ABI_CHAR16
+// clang-format on
 #if defined(__cplusplus)
     static_assert(sizeof(_api_string_def) == sizeof(void*) + sizeof(uint32_t), "packed string ABI");
     static_assert(sizeof(_api_u16string_def) == sizeof(void*) + sizeof(uint32_t), "packed UTF-16 string ABI");
@@ -133,6 +153,8 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
     static_assert(sizeof(log_level) == sizeof(int32_t), "32-bit log level ABI");
     static_assert(sizeof(enum_buffer_result_code) == sizeof(int32_t), "32-bit buffer result ABI");
     static_assert(sizeof(appender_decode_result) == sizeof(int32_t), "32-bit decoder result ABI");
+    static_assert(sizeof(recovery_capability) == sizeof(int32_t), "32-bit recovery capability ABI");
+    BQ_MODULE_EXPORT_END
 }
 #else
 typedef struct bq_api_string_def bq_api_string_def;

@@ -50,7 +50,7 @@ namespace bq {
                     if (arg.value > UINT32_MAX - 11 || (arg.value != 0 && !arg.string)) {
                         return 0;
                     }
-                    return 8 + static_cast<uint32_t>(bq::align_4(arg.value));
+                    return 8 + static_cast<uint32_t>(bq::align_4(static_cast<size_t>(arg.value)));
                 default:
                     return 0;
                 }

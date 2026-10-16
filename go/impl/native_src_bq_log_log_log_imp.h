@@ -15,6 +15,7 @@
 #include "native_src_bq_log_log_log_level_bitmap.h"
 #include "native_src_bq_log_log_log_worker.h"
 #include "native_src_bq_log_types_buffer_log_buffer.h"
+#include "native_src_bq_log_types_storage_log_storage.h"
 
 namespace bq {
     constexpr uint64_t log_id_magic_number = 0x24FE284C23EA5821;
@@ -91,6 +92,8 @@ namespace bq {
 
         const layout& get_layout() const;
 
+        const log_storage* get_storage() const { return storage_.get(); }
+
         bq_forceinline bool is_enable_for(uint32_t category_index, bq::log_level level) const
         {
             return merged_log_level_bitmap_.have_level(level) && categories_mask_array_[category_index];
@@ -157,6 +160,7 @@ namespace bq {
         log_level_bitmap print_stack_level_bitmap_;
         log_level_bitmap no_stack_level_bitmap_;
         log_buffer* buffer_;
+        bq::unique_ptr<log_storage> storage_;
         class log_snapshot* snapshot_;
         uint64_t last_log_entry_epoch_ms_;
         uint64_t last_flush_io_epoch_ms_;

@@ -15,8 +15,10 @@
  * \date 2022/08/10
  *
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <string.h>
 #include <ctype.h>
+#endif
 #include "native_include_bq_common_misc_assert.h"
 #include "native_include_bq_common_types_type_tools.h"
 #include "native_include_bq_common_types_string_def.h"

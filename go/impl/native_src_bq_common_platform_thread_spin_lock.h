@@ -206,7 +206,7 @@ namespace bq {
         class alignas(BQ_CACHE_LINE_SIZE) spin_lock_rw_crazy {
         public:
             typedef bq::condition_type_t<sizeof(void*) == 4, int32_t, int64_t> counter_type;
-            static constexpr counter_type write_lock_mark_value = bq::condition_value < sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN > ::value;
+            static constexpr counter_type write_lock_mark_value = bq::condition_value<sizeof(void*) == 4, counter_type, (counter_type)INT32_MIN, (counter_type)INT64_MIN>::value;
             bq::platform::atomic<counter_type> counter_;
             char padding_[BQ_CACHE_LINE_SIZE - sizeof(counter_)];
 

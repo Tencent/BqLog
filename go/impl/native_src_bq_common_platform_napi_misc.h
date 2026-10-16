@@ -121,30 +121,30 @@ namespace bq {
 
     namespace platform {
         // guarded call helpers
-#define BQ_NAPI_CALL(env, return_value, expr)                                                                                                                                         \
-    do {                                                                                                                                                                              \
-        napi_status _status = (expr);                                                                                                                                                 \
-        if (_status != napi_ok) {                                                                                                                                                     \
-            const napi_extended_error_info* _info = nullptr;                                                                                                                          \
-            napi_get_last_error_info((env), &_info);                                                                                                                                  \
-            char msg_[256];                                                                                                                                                           \
+#define BQ_NAPI_CALL(env, return_value, expr)                                                                                                                                                  \
+    do {                                                                                                                                                                                       \
+        napi_status _status = (expr);                                                                                                                                                          \
+        if (_status != napi_ok) {                                                                                                                                                              \
+            const napi_extended_error_info* _info = nullptr;                                                                                                                                   \
+            napi_get_last_error_info((env), &_info);                                                                                                                                           \
+            char msg_[256];                                                                                                                                                                    \
             snprintf(msg_, sizeof(msg_), "%s:%" PRId32 ":%s : NAPI call failed: %s", __FILE__, __LINE__, __FUNCTION__, (_info && _info->error_message) ? _info->error_message : "napi error"); \
-            napi_throw_error((env), nullptr, msg_);                                                                                                                                   \
-            return return_value;                                                                                                                                                      \
-        }                                                                                                                                                                             \
+            napi_throw_error((env), nullptr, msg_);                                                                                                                                            \
+            return return_value;                                                                                                                                                               \
+        }                                                                                                                                                                                      \
     } while (0)
 
-#define BQ_NAPI_CALL_VOID(env, expr)                                                                                                                                                  \
-    do {                                                                                                                                                                              \
-        napi_status _status = (expr);                                                                                                                                                 \
-        if (_status != napi_ok) {                                                                                                                                                     \
-            const napi_extended_error_info* _info = nullptr;                                                                                                                          \
-            napi_get_last_error_info((env), &_info);                                                                                                                                  \
-            char msg_[256];                                                                                                                                                           \
+#define BQ_NAPI_CALL_VOID(env, expr)                                                                                                                                                           \
+    do {                                                                                                                                                                                       \
+        napi_status _status = (expr);                                                                                                                                                          \
+        if (_status != napi_ok) {                                                                                                                                                              \
+            const napi_extended_error_info* _info = nullptr;                                                                                                                                   \
+            napi_get_last_error_info((env), &_info);                                                                                                                                           \
+            char msg_[256];                                                                                                                                                                    \
             snprintf(msg_, sizeof(msg_), "%s:%" PRId32 ":%s : NAPI call failed: %s", __FILE__, __LINE__, __FUNCTION__, (_info && _info->error_message) ? _info->error_message : "napi error"); \
-            napi_throw_error((env), nullptr, msg_);                                                                                                                                   \
-            return;                                                                                                                                                                   \
-        }                                                                                                                                                                             \
+            napi_throw_error((env), nullptr, msg_);                                                                                                                                            \
+            return;                                                                                                                                                                            \
+        }                                                                                                                                                                                      \
     } while (0)
 
         bool napi_call_native_func_in_js_thread(void (*fn)(napi_env, void*), void* param);

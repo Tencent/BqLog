@@ -85,10 +85,10 @@ namespace bq {
                 "BqLog CPython C Extension bindings",
                 -1,
                 merged.begin(),
-                nullptr,    // m_slots
-                nullptr,    // m_traverse
-                nullptr,    // m_clear
-                nullptr     // m_free
+                nullptr, // m_slots
+                nullptr, // m_traverse
+                nullptr, // m_clear
+                nullptr // m_free
             };
             // Update m_methods pointer in case the array was reallocated
             module_def.m_methods = merged.begin();

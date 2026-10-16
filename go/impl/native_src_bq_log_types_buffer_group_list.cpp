@@ -20,6 +20,7 @@
  */
 
 #include "native_src_bq_log_types_buffer_group_list.h"
+#include "native_src_bq_log_types_storage_log_storage.h"
 
 namespace bq {
 
@@ -91,7 +92,7 @@ namespace bq {
     {
         char tmp[32];
         snprintf(tmp, sizeof(tmp), "_%" PRIu64, index);
-        bq::string path = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config.log_name + "/hp/" + config.log_name + tmp + ".mmap", 0);
+        bq::string path = config.storage ? config.storage->hp_path(index) : "";
         size_t meta_size = get_group_meta_size(config);
         size_t data_size = get_group_data_size(config, max_block_count_per_group);
         size_t desired_size = meta_size + data_size;
@@ -163,12 +164,13 @@ namespace bq {
         , max_block_count_per_group_(max_block_count_per_group)
         , current_group_index_(0)
     {
-        bq::string memory_map_folder = TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + config_.log_name + "/hp", 0);
-        if (!config_.need_recovery) {
-            if (bq::file_manager::is_dir(memory_map_folder) || bq::file_manager::is_file(memory_map_folder))
-                bq::file_manager::remove_file_or_dir(memory_map_folder);
+        // a recovery log without storage has no mmap directory to work in: without this, the
+        // folder would normalize to "./" and the code below would walk the working directory and
+        // dereference a null storage. Non-recovery logs must not touch the disk either.
+        if (!config_.need_recovery || !config_.storage) {
             return;
         }
+        const bq::string memory_map_folder = config_.storage->hp_dir();
         if (bq::file_manager::is_file(memory_map_folder)) {
             bq::file_manager::remove_file_or_dir(memory_map_folder);
         }
@@ -178,19 +180,20 @@ namespace bq {
         bq::array<bq::string> sub_names = bq::file_manager::get_sub_dirs_and_files_name(memory_map_folder);
         for (const bq::string& file_name : sub_names) {
             bq::string full_path = bq::file_manager::combine_path(memory_map_folder, file_name);
-            if (!file_name.end_with(".mmap") || !file_name.begin_with(config_.log_name + "_")) {
+            if (!file_name.end_with(".mmap")) {
                 bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
-                bq::file_manager::remove_file_or_dir(full_path);
+                config_.storage->remove(full_path);
                 continue;
             }
             char* end_ptr = nullptr;
             errno = 0;
-            bq::string file_name_cpy = file_name.substr(config_.log_name.size() + 1);
+            bq::string file_name_cpy = file_name.substr(0, file_name.size() - strlen(".mmap"));
             uint64_t u64_value = strtoull(file_name_cpy.c_str(), &end_ptr, 10);
             if (errno == ERANGE
-                || end_ptr != file_name_cpy.c_str() + (file_name_cpy.size() - strlen(".mmap"))) {
+                || file_name_cpy.is_empty()
+                || end_ptr != file_name_cpy.c_str() + file_name_cpy.size()) {
                 bq::util::log_device_console(bq::log_level::warning, "remove invalid mmap file:%s", full_path.c_str());
-                bq::file_manager::remove_file_or_dir(full_path);
+                config_.storage->remove(full_path);
                 continue;
             }
             if (u64_value > current_group_index_.load(bq::platform::memory_order::relaxed)) {

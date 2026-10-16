@@ -239,7 +239,8 @@ namespace bq {
             uint32_t file_path_size_;
             char file_path_[1];
             char padding1_[DEFAULT_BUFFER_ALIGNMENT - sizeof(uint64_t) * 3 - sizeof(file_path_)];
-        } BQ_PACK_END static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
+        } BQ_PACK_END
+        static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
         bq::unique_ptr<bq::normal_buffer> cache_write_entity_;
         mmap_head* cache_write_head_ = nullptr;
         size_t cache_write_head_size_ = sizeof(mmap_head);

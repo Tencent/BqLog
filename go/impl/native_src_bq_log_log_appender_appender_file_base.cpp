@@ -14,6 +14,7 @@
 #endif
 #include "native_src_bq_common_bq_common.h"
 #include "native_src_bq_log_log_log_imp.h"
+#include "native_src_bq_log_types_storage_log_storage.h"
 #include "native_src_bq_log_utils_log_utils.h"
 
 namespace bq {
@@ -57,9 +58,10 @@ namespace bq {
         }
         const bool is_disk_full_error = (error_code ==
 #if defined(BQ_WIN)
-                                                       ERROR_DISK_FULL || error_code == ERROR_HANDLE_DISK_FULL
+                ERROR_DISK_FULL
+            || error_code == ERROR_HANDLE_DISK_FULL
 #else
-                                                       ENOSPC
+            ENOSPC
 #endif
         );
         // disk_full_drop_ state machine.
@@ -348,7 +350,8 @@ namespace bq {
 
     bq::string appender_file_base::get_mmap_file_path() const
     {
-        return TO_ABSOLUTE_PATH("bqlog_mmap/mmap_" + parent_log_->get_name() + "/appenders/" + get_name() + ".mmap", 0);
+        assert(is_recovery_enabled() && "appender mmap path is only requested when recovery is enabled");
+        return parent_log_->get_storage()->appender_path(get_name());
     }
 
     void appender_file_base::clean_cache_write()
@@ -410,14 +413,12 @@ namespace bq {
 
         write_cache_target_size_ = CACHE_WRITE_DEFAULT_SIZE;
         if (config_obj["write_cache_size"].is_integral()) {
-            int64_t configured_size =
-                static_cast<int64_t>(config_obj["write_cache_size"]);
+            int64_t configured_size = static_cast<int64_t>(config_obj["write_cache_size"]);
             if (configured_size > 0) {
                 size_t clamped_size = static_cast<size_t>(configured_size);
                 clamped_size = bq::max_value(CACHE_WRITE_MIN_SIZE, clamped_size);
                 clamped_size = bq::min_value(CACHE_WRITE_MAX_SIZE, clamped_size);
-                write_cache_target_size_ =
-                    static_cast<size_t>(bq::roundup_pow_of_two(clamped_size));
+                write_cache_target_size_ = static_cast<size_t>(bq::roundup_pow_of_two(clamped_size));
             }
         }
 
