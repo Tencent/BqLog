@@ -13,6 +13,8 @@
 #include "bq_common/bq_common.h"
 #include "bq_common/platform/fast_clock.h"
 
+#include <chrono>
+
 namespace bq {
     namespace test {
         class test_fast_clock : public test_base {
@@ -63,26 +65,68 @@ namespace bq {
                 return false;
             }
 
+            // Monotonic milliseconds. steady_clock cannot be moved by the host or by NTP, so it is the
+            // reference that tells a wall clock correction apart from fast clock drift.
+            static uint64_t monotonic_ms()
+            {
+                return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count());
+            }
+
+            // Did the wall clock move by something other than the time that really passed? 20 ms is far
+            // above the wall clock's resolution and a sleep's overshoot, and far below a correction.
+            static bool wall_clock_stepped(uint64_t wall_from, uint64_t mono_from, uint64_t wall_to, uint64_t mono_to)
+            {
+                const int64_t really_passed = static_cast<int64_t>(mono_to - mono_from);
+                const int64_t wall_moved = static_cast<int64_t>(wall_to) - static_cast<int64_t>(wall_from);
+                const int64_t gap = wall_moved > really_passed ? wall_moved - really_passed : really_passed - wall_moved;
+                return gap > 20;
+            }
+
             static void test_accuracy(test_result& result)
             {
+                // the detector itself, on fixed pairs, so its meaning is pinned down
+                result.add_result(!wall_clock_stepped(1000, 1000, 1050, 1050), "a plain 50 ms sleep is not a wall clock step");
+                result.add_result(!wall_clock_stepped(1000, 1000, 1300, 1300), "a sleep that overshoots is not a wall clock step");
+                result.add_result(wall_clock_stepped(1000, 1000, 1000 + 42674, 1050), "a 42 s wall clock step is seen as one");
+
                 bq::platform::fast_clock_thread_cache cache = {};
                 offset_sync sync;
                 if (!warm_up(cache, sync)) {
                     result.add_result(true, "fast clock not available on this machine, accuracy test skipped");
                     return;
                 }
-                // past the window over which x86 refines the measured counter frequency
+                // 50 samples 50 ms apart, past the window over which x86 refines the measured counter
+                // frequency. A round in which the wall clock was corrected does not count: the fast clock
+                // only re-anchors to the wall clock every second, so until it does it cannot agree with a
+                // clock that just moved, and that is a clock correction rather than drift. Re-anchor and
+                // measure that round again - and complain if the host keeps stepping, rather than pass.
                 uint64_t max_error_ms = 0;
-                for (int32_t i = 0; i < 50; ++i) {
-                    const uint64_t before_ms = precise_epoch_ms();
+                uint32_t samples = 0;
+                uint32_t stepped_rounds = 0;
+                uint64_t wall_last = precise_epoch_ms();
+                uint64_t mono_last = monotonic_ms();
+                while (samples < 50 && stepped_rounds < 40) {
+                    bq::platform::thread::sleep(50);
+                    const uint64_t wall_before = precise_epoch_ms();
                     uint64_t ms = 0;
                     const bool ok = bq::platform::fast_clock_read_epoch_ms(cache, sync, ms);
-                    const uint64_t after_ms = precise_epoch_ms();
-                    result.add_result(ok, "fast clock read %" PRId32, i);
-                    const uint64_t error_ms = ms < before_ms ? before_ms - ms : (ms > after_ms ? ms - after_ms : 0);
+                    const uint64_t wall_after = precise_epoch_ms();
+                    const uint64_t mono_after = monotonic_ms();
+                    const bool stepped = wall_clock_stepped(wall_last, mono_last, wall_after, mono_after);
+                    wall_last = wall_after;
+                    mono_last = mono_after;
+                    if (stepped) {
+                        force_resync(cache);
+                        ++stepped_rounds;
+                        continue;
+                    }
+                    result.add_result(ok, "fast clock read %" PRIu32, samples);
+                    const uint64_t error_ms = ms < wall_before ? wall_before - ms : (ms > wall_after ? ms - wall_after : 0);
                     max_error_ms = bq::max_value(max_error_ms, error_ms);
-                    bq::platform::thread::sleep(50);
+                    ++samples;
                 }
+                result.add_result(stepped_rounds < 40, "the wall clock was not corrected during the measurement (%" PRIu32 " rounds skipped)", stepped_rounds);
                 // 5 ms, not 2: a loaded virtual machine refines the counter frequency slowly enough to
                 // drift past 2 ms, which used to fail the BSD/Solaris jobs at random.
                 result.add_result(max_error_ms <= 5, "fast clock error %" PRIu64 " ms over 2.5 s", max_error_ms);
