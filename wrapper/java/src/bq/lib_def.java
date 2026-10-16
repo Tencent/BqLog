@@ -14,4 +14,9 @@ package bq;
 public class lib_def {
     /** Native library name. */
     public static final String lib_name = "BqLog";
+
+    private lib_def()
+    {
+        // Only carries the native library name, so it is never instantiated.
+    }
 }

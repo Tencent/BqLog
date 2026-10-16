@@ -13,6 +13,8 @@ package bq;
 import java.util.List;
 
 /**
+ * A log whose entries carry a category, so that appenders can filter on it; the classes the
+ * category log generator writes for an application extend this one.
  * @author pippocao
  *
  */

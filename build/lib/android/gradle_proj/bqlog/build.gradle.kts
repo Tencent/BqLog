@@ -93,9 +93,6 @@ val androidJavadoc by tasks.registering(Javadoc::class) {
     options {
         encoding = "UTF-8"
         (this as StandardJavadocDocletOptions).charSet("UTF-8")
-        // The level overloads forward to do_log and carry no comment of their own, so turn the
-        // missing-comment group off and keep the rest of doclint.
-        addBooleanOption("Xdoclint:all,-missing", true)
     }
     isFailOnError = false
 }
