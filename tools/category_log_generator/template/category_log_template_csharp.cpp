@@ -332,7 +332,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 2
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -488,7 +489,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 4
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -575,7 +577,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3, ref p4);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 5
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -769,7 +772,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3, ref p4, ref p5, ref p6);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 7
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -874,7 +878,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3, ref p4, ref p5, ref p6, ref p7);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 8
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -985,7 +990,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3, ref p4, ref p5, ref p6, ref p7, ref p8);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 9
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -1102,7 +1108,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3, ref p4, ref p5, ref p6, ref p7, ref p8, ref p9);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 10
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -1356,7 +1363,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3, ref p4, ref p5, ref p6, ref p7, ref p8, ref p9, ref p10, ref p11);
     }
     #endregion
-
+)"
+R"(
     #region log methods for param count 12
     /// <summary>
     /// Logs at the verbose level in the given category.
@@ -1491,7 +1499,8 @@ public class ${CLASS_NAME} : category_log{
         return do_log(category, log_level.fatal, log_format_content, ref p1, ref p2, ref p3, ref p4, ref p5, ref p6, ref p7, ref p8, ref p9, ref p10, ref p11, ref p12);
     }
     #endregion
-
+)"
+R"(
     #region log methods for more params. but call this method will cause GC(Heap) alloc
     /// <summary>
     /// Logs at the verbose level in the given category.

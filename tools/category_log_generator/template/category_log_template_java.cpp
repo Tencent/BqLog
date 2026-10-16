@@ -347,7 +347,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1);
     }
-
+)"
+R"(
     //log methods for param count 2
     /**
      * Logs at the verbose level in the given category.
@@ -696,7 +697,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4);
     }
-
+)"
+R"(
     //log methods for param count 5
     /**
      * Logs at the verbose level in the given category.
@@ -836,7 +838,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5);
     }
-
+)"
+R"(
     //log methods for param count 6
     /**
      * Logs at the verbose level in the given category.
@@ -988,7 +991,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6);
     }
-
+)"
+R"(
     //log methods for param count 7
     /**
      * Logs at the verbose level in the given category.
@@ -1329,7 +1333,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
-
+)"
+R"(
     //log methods for param count 9
     /**
      * Logs at the verbose level in the given category.
@@ -1517,7 +1522,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
-
+)"
+R"(
     //log methods for param count 10
     /**
      * Logs at the verbose level in the given category.
@@ -1717,7 +1723,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
-
+)"
+R"(
     //log methods for param count 11
     /**
      * Logs at the verbose level in the given category.
@@ -2154,7 +2161,8 @@ public class ${CLASS_NAME} extends category_log{
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
-
+)"
+R"(
     /**
      * Logs at the verbose level in the given category.
      * @param category
