@@ -26,12 +26,19 @@ class Bqlog < Formula
   end
 
   test do
-    (testpath/"test.cpp").write <<~CPP
+    (testpath/"test.cpp").write <<~'CPP'
       #include <bq_log/bq_log.h>
 
       int main() {
-          bq::log log = bq::log::create_log("homebrew_test", "");
+          // create_log rejects a config without an appenders_config object, so name one.
+          bq::log log = bq::log::create_log("homebrew_test",
+              "appenders_config.console.type=console\n"
+              "appenders_config.console.levels=[all]");
+          if (!log.is_valid()) {
+              return 1;
+          }
           log.info("bqlog installed and linked");
+          log.force_flush();
           return 0;
       }
     CPP
