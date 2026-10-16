@@ -47,7 +47,7 @@
 - **C++20 modules**: `import bq.log;`, as an alternative to `#include "bq_log/bq_log.h"`, with no change to the logging code.
 - **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)`, the same speed as `BQ_LOG_FAST_INFO` with full IDE support, and usable with any log object. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
 - **Package managers**: Homebrew, vcpkg and NuGet. See [Integration Guide](docs/INTEGRATION_GUIDE.md).
-- **Multi-process**: the same app may run several processes without conflicts, each with its own crash recovery data.
+- **Multi-process**: several processes can share one log directory, each with its own crash recovery data.
 - **Bug fixes**: fast mode, recovery, formatting, config parsing and the decoder, among others.
 
 > [!WARNING]
@@ -142,11 +142,11 @@ int main() {
 **C++ only fast mode.** On the hottest C++ paths, the `BQ_LOG_FAST_*` macros write the same log entry for a fraction of the cost on the calling thread. Details in [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
 
 ```cpp
-BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);  // macro form: for #include users
-log.fast_info<"Hello BqLog 2.0! int:{}, float:{}">(123, 3.14f);                // NTTP form: used with import bq.log;
+BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);
+log.fast_info<"Hello BqLog fast mode! int:{}, float:{}">(123, 3.14f);  // C++20, the only form with import bq.log;
 ```
 
-The output is identical to `log.info`. The price: a little more memory, and each call site binds the log object and format string of its first call.
+The output is identical to `log.info`. The price: a little more memory. A macro call site also binds the log object and format string of its first call, so keep one log object per macro call site; `fast_info<...>` has no such limit.
 
 ### Java
 

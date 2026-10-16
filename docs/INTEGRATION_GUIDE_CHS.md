@@ -29,10 +29,10 @@
 
   ```bash
   vcpkg install bqlog
-  vcpkg install bqlog[tools]   # 同时安装命令行工具（tools 不是默认 feature）
+  vcpkg install "bqlog[tools]"   # 同时安装命令行工具（默认不装），位于 installed/<triplet>/tools/bqlog/
   ```
 
-  静态库还是动态库由 triplet 决定，目标名为 `bqlog::BqLog`。
+  manifest 模式在 `vcpkg.json` 中写 `{ "name": "bqlog", "features": ["tools"] }`。静态库还是动态库由 triplet 决定，目标名为 `bqlog::BqLog`。
 
 - **CMake FetchContent**
 

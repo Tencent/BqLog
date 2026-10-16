@@ -745,7 +745,7 @@ bq.Decode_file("input.logcompr", "output.txt", "optional_key")
 
 ### Offline command-line decoder
 
-Download `{os}_{arch}_tools_{version}` from Releases; the package managers ship the tools as well: Homebrew's `brew install bqlog` includes `BqLog_LogDecoder` and `BqLog_CategoryLogGenerator` by default, while vcpkg needs the `tools` feature enabled explicitly (`vcpkg install bqlog[tools]`).
+Download `{os}_{arch}_tools_{version}` from Releases, or install it with a package manager: `brew install bqlog` puts it on the `PATH`; vcpkg needs `vcpkg install "bqlog[tools]"` and installs it under `installed/<triplet>/tools/bqlog/`.
 
 ```bash
 ./BqLog_LogDecoder FileToDecode [-o OutputFile] [-k PrivateKeyFile]

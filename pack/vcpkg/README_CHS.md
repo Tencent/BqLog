@@ -6,7 +6,7 @@ microsoft/vcpkg 中 `bqlog` port 的源文件。
 
 ```bash
 vcpkg install bqlog
-vcpkg install bqlog[tools]   # 同时安装命令行工具
+vcpkg install "bqlog[tools]"   # 同时安装命令行工具
 ```
 
 静态库还是动态库由 triplet 决定。会安装头文件（含 C++20 模块 `bq_log/bq.log.cppm`）、库以及 `find_package` / pkg-config 文件；`tools` feature 会把 `BqLog_CategoryLogGenerator` 和 `BqLog_LogDecoder` 装到 `tools/bqlog/`。

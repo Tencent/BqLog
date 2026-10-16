@@ -29,10 +29,10 @@
 
   ```bash
   vcpkg install bqlog
-  vcpkg install bqlog[tools]   # with the command line tools (the tools feature is off by default)
+  vcpkg install "bqlog[tools]"   # also the command line tools (off by default), into installed/<triplet>/tools/bqlog/
   ```
 
-  The triplet decides static or shared; the target is `bqlog::BqLog`.
+  In manifest mode, list `{ "name": "bqlog", "features": ["tools"] }` in `vcpkg.json`. The triplet decides static or shared; the target is `bqlog::BqLog`.
 
 - **CMake FetchContent**
 

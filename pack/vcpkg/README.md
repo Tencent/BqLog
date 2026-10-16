@@ -6,7 +6,7 @@ The source of the `bqlog` port in microsoft/vcpkg.
 
 ```bash
 vcpkg install bqlog
-vcpkg install bqlog[tools]   # with the command line tools
+vcpkg install "bqlog[tools]"   # with the command line tools
 ```
 
 The triplet decides static or shared. Installs the headers (including the C++20 module `bq_log/bq.log.cppm`), the library and `find_package` / pkg-config files; the `tools` feature adds `BqLog_CategoryLogGenerator` and `BqLog_LogDecoder` under `tools/bqlog/`.

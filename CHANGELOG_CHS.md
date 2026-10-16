@@ -6,7 +6,7 @@
 - **C++20 模块**：`import bq.log;` 可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。`BqLog_CategoryLogGenerator` 也会为每个类别日志类生成 `.cppm`（`import bq.business_log;`）。见[集成指南](docs/INTEGRATION_GUIDE_CHS.md#c20-模块import)。
 - **无宏的快速模式（C++20）**：模块不导出宏，`import bq.log;` 时快速模式写作 `log.fast_info<"...">(args...)`（以及 `fast_verbose` … `fast_fatal`），Category 可作为第一个模板参数。开销与 `BQ_LOG_FAST_*` 相同，IDE 支持完整，调用点不绑定日志对象。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
 - **包管理器**：Homebrew（`brew install bqlog`，含库和工具）、vcpkg（`tools` feature 提供工具）、NuGet（C# 绑定加六个平台的原生库）。CMake 安装提供 `find_package(BqLog)` 与 pkg-config。
-- **多进程**：同一个 App 多进程多开不会冲突，各进程拥有独立的恢复数据；`log.recovery=false` 的日志不再访问磁盘。
+- **多进程**：多个进程可以写同一个目录，各自拥有独立的恢复数据；`log.recovery=false` 的日志不再访问磁盘。
 - **恢复**：恢复窗口从最近 2 次运行扩大到 16 次；新增 `bq::log::get_recovery_capability()`（所有 wrapper 都有），查询平台是否支持恢复。
 - **兼容性**：ABI 有变化，头文件、wrapper 与库需要一起升级。旧版 `BqLog_CategoryLogGenerator` 生成的类别日志不再能编译（它用的空基类宏现在是 `BQ_EBCO`），需要重新生成。Windows 上 `cmake --install` 现在把 `BqLog.dll` 装到 `bin/`；发布包的目录结构不变。
 - **问题修复**：
