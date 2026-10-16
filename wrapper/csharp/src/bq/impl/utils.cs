@@ -14,6 +14,9 @@ using System.Runtime.InteropServices;
 
 namespace bq.impl
 {
+    /// <summary>
+    /// Encodes strings into the null-terminated UTF-8 buffers the native API expects.
+    /// </summary>
     public class utf8_encoder
     {
         public unsafe static byte[] get_utf8_array(string s)
@@ -66,16 +69,32 @@ namespace bq.impl
 
 internal class @utils
 {
+    /// <summary>
+    /// Rounds a size up to the next multiple of 4.
+    /// </summary>
+    /// <param name="n">The size to round up.</param>
+    /// <returns>The rounded size.</returns>
     public static uint align4(uint n)
     {
         return n == 0 ? n : (((n - 1) & (~((uint)4 - 1))) + 4);
     }
+    /// <summary>
+    /// Rounds a size up to the next multiple of 4.
+    /// </summary>
+    /// <param name="n">The size to round up.</param>
+    /// <returns>The rounded size.</returns>
     public static ulong align4(ulong n)
     {
         return n == 0 ? n : (((n - 1) & (~((ulong)4 - 1))) + 4);
     }
 
 
+    /// <summary>
+    /// Copies len bytes; the fast path expects both buffers to be 4-byte aligned.
+    /// </summary>
+    /// <param name="dest">Destination buffer.</param>
+    /// <param name="src">Source buffer.</param>
+    /// <param name="len">Bytes to copy.</param>
     public static unsafe void memcpy(byte* dest, byte* src, uint len)
     {
         //inspired from .Net Framework System.Buffer.memcpyimpl
@@ -155,6 +174,12 @@ internal class @utils
         }
     }
 
+    /// <summary>
+    /// Copies len bytes of a string into dest.
+    /// </summary>
+    /// <param name="dest">Destination buffer.</param>
+    /// <param name="src_str">Source string.</param>
+    /// <param name="len">Bytes to copy.</param>
     public static unsafe void str_memcpy(byte* dest, string src_str, uint len)
     {
 #if ENABLE_IL2CPP

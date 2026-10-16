@@ -15,15 +15,18 @@ using System;
 
 namespace bq.tools
 {
+    /// <summary>
+    /// Decodes an encrypted or compressed bqLog file, one entry at a time.
+    /// </summary>
     public class log_decoder
     {
         public enum appender_decode_result
         {
             success,                //decoding successful, you can call the corresponding function to obtain the decoded log text.
             eof,                    //all the content is decoded
-            failed_invalid_handle,
-            failed_decode_error,
-            failed_io_error
+            failed_invalid_handle,  //the decoder handle is not valid
+            failed_decode_error,    //the file is not a readable bqLog file
+            failed_io_error         //the file could not be read
         }
         private string decode_text_ = "";
         private appender_decode_result result_ = appender_decode_result.success;

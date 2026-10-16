@@ -17,6 +17,9 @@ using bq.impl;
 
 namespace bq
 {
+    /// <summary>
+    /// A log object: create one with <c>log.create_log</c>, then log through it.
+    /// </summary>
     public class @log
     {
         private static log_category_base default_category_ = new log_category_base();

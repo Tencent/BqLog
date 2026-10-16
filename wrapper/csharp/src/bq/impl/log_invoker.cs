@@ -15,6 +15,9 @@ using bq.def;
 
 namespace bq.impl
 {
+    /// <summary>
+    /// Thin 1:1 bindings to the native entry points; the public API goes through this class.
+    /// </summary>
     public class log_invoker
     {
 #if UNITY_IOS && !UNITY_EDITOR

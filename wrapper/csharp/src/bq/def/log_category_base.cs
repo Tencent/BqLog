@@ -11,6 +11,9 @@
  */
  namespace bq.def
 {
+    /// <summary>
+    /// Base class of the generated category items; each one carries its index.
+    /// </summary>
     public class log_category_base
     {
         protected uint index = 0;

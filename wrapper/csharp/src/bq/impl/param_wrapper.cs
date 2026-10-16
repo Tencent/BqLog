@@ -25,6 +25,9 @@ using System;
 using bq.def;
 namespace bq.impl
 {
+    /// <summary>
+    /// One log argument without boxing: a value, a pointer or a string, plus its serialized size.
+    /// </summary>
     public struct param_wrapper
     {
 		private log_arg_type_enum type_;
