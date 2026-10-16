@@ -18,18 +18,22 @@
 // the snapshot, the console callbacks and the binary log decoder -- so that everything the
 // module is supposed to hand out is known to compile and to work through `import bq.log;`.
 //
-// Nothing here includes bq_log or the C++ standard library: bq::string comes from the module,
-// and GCC 15's module TS crashes on an STL header after an import. macros.h is the one project
-// header it takes, for the calling convention of the console callback below.
+// The system headers and macros.h come before the imports: bq.log.cppm pre-includes the same
+// system headers in its global module fragment, and GCC 16 reports them as a redefinition when
+// it parses them again after the import. Nothing here includes bq_log or the C++ standard
+// library: bq::string comes from the module, and GCC's module TS crashes on an STL header after
+// an import. macros.h is the one project header it takes, for the calling convention of the
+// console callback below.
 #define _CRT_SECURE_NO_WARNINGS // the fopen/fread below read the log file on purpose
-import bq.log;
-import bq.test_category_log;
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "bq_common/platform/macros.h"
+
+import bq.log;
+import bq.test_category_log;
 
 namespace {
     uint32_t checks_total = 0;
