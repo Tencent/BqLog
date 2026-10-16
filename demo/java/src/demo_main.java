@@ -1,4 +1,4 @@
-﻿import bq.*;
+import bq.*;
 import static bq.utils.param.no_boxing;;
 /**
  * @author pippocao
