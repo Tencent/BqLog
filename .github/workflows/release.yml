@@ -2,11 +2,6 @@ name: Build And Release
 
 on:
   workflow_dispatch:
-    inputs:
-      nuget_from_run:
-        description: "Temporary: only publish NuGet 2.7.0, from the libraries of this run id"
-        required: false
-        default: ""
 
 permissions:
   id-token: write  # Required for OIDC
@@ -14,7 +9,6 @@ permissions:
 
 jobs:
   build:
-    if: ${{ inputs.nuget_from_run == '' }}
     uses: ./.github/workflows/build.yml
 
   release:
@@ -476,53 +470,6 @@ jobs:
 
       # The temporary key lives one hour and one OIDC token yields exactly one key, so the login
       # sits immediately before the push. No long-lived NUGET_API_KEY is involved.
-      - name: Log in to nuget.org (OIDC -> temporary API key)
-        # Pinned to a commit, not a tag: this job holds id-token:write for nuget.org OIDC.
-        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
-        id: login
-        with:
-          user: ${{ secrets.NUGET_USER }}
-
-      - name: Publish to nuget.org
-        run: |
-          dotnet nuget push "nuget_out/*.nupkg" \
-            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
-
-  # Temporary: republish NuGet 2.7.0 from the libraries an earlier run built. Remove once done.
-  publish_nuget_only:
-    if: ${{ inputs.nuget_from_run != '' }}
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write  # Required for OIDC Trusted Publishing
-      contents: read
-      actions: read    # artifacts of another run
-    steps:
-      - name: Checkout the release tag
-        uses: actions/checkout@v5
-        with:
-          ref: Release_2.7.0
-
-      - name: Download the libraries
-        uses: actions/download-artifact@v8
-        with:
-          run-id: ${{ inputs.nuget_from_run }}
-          github-token: ${{ github.token }}
-          pattern: '{windows_x86_64,windows_arm64,linux_x86_64,linux_arm64,macos_universal_binary}_libs_2.7.0'
-          path: artifacts_in/
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Assemble the native libraries
-        run: bash pack/nuget/collect_runtimes.sh artifacts_in pack/nuget
-
-      - name: Pack
-        run: dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=2.7.0 -o nuget_out
-
       - name: Log in to nuget.org (OIDC -> temporary API key)
         # Pinned to a commit, not a tag: this job holds id-token:write for nuget.org OIDC.
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
