@@ -17,6 +17,7 @@ import { log_invoker } from "./impl/log_invoker";
 // for CJS and OHOS build it is lib_loader.ts.
 import { native_export } from "./utils/lib_loader"
 
+/** Signature of the console callback. */
 export type console_callback = (
     log_id: bigint,
     category_idx: number,
@@ -24,6 +25,7 @@ export type console_callback = (
     text: string
 ) => void;
 
+/** A log object: create one with log.create_log, then log through it. */
 export class log {
     private log_id_: bigint = BigInt(0);
     private name_: string = "";
@@ -287,6 +289,7 @@ export class log {
     public declare fatal: (log_format_content: string, ...args: unknown[]) => boolean;
 }
 
+/** Defines one log method on the prototype from its native export. */
 function defineNativeMethod(proto: any, name: string) {
     const fn = native_export(name);
     if (typeof fn !== 'function') {

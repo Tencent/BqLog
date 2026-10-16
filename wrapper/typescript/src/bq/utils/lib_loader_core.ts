@@ -18,16 +18,19 @@
 import { lib_def } from "../lib_def";
 import * as tools from "../utils/tools";
 
+/** Shape of the native binding object the loader hands back. */
 export interface native_binding {
   [key: string]: any;
 }
 const proc: any = (globalThis as any)?.process;
 
+/** Requires id with req and returns the binding, or null when it is not there. */
 function try_require_with(req: any, id: string): native_binding | null {
   if (!req) return null;
   try { return req(id); } catch { return null; }
 }
 
+/** Lists the file names to try for one platform and architecture. */
 function build_candidates(base_dir: string, plat: string, arch: string, napi_ver?: string) {
   const file_names = Array.from(new Set([
     `${lib_def.lib_name}.node`,
@@ -44,6 +47,7 @@ function build_candidates(base_dir: string, plat: string, arch: string, napi_ver
   return { dir_candidates, file_names };
 }
 
+/** Names to try, from the BQ_NAPI_NAME environment variable and the defaults. */
 function name_candidates_from_env(): string[] {
   const env_name = (typeof proc !== "undefined" && proc?.env?.BQ_NAPI_NAME) || "";
   return Array.from(new Set([

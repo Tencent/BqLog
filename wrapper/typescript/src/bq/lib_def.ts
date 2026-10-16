@@ -10,6 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+/** Names the native library files are built from. */
 export const lib_def = {
   // native module name; keep as runtime string, not an identifier
   lib_name: "BqLog",

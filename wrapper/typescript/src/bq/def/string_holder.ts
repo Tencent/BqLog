@@ -10,6 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+/** Out-parameter the native calls write a string into. */
 export class string_holder {
     value: string | undefined;
 }

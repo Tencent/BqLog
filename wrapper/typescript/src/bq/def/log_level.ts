@@ -10,6 +10,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+/** Log levels, in the order the library defines them. */
 export enum log_level {
     verbose,
     debug,

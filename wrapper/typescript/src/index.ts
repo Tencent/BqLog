@@ -16,6 +16,7 @@ import { log_category_base } from "./bq/def/log_category_base"
 import { log_decoder, appender_decode_result } from "./bq/tools/log_decoder"
 import { recovery_capability } from "./bq/def/recovery_capability"
 
+/** Entry point of the package; the same names the native library exposes. */
 export const bq = {
     log: log,
     category_log: category_log,

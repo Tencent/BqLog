@@ -12,6 +12,7 @@
 import { log } from "./log"
 import { log_invoker } from "./impl/log_invoker";
 
+/** A log whose entries carry a category, so appenders can filter on it. */
 export class category_log extends log {
     protected constructor(arg: category_log | bigint) {
         super(arg);
