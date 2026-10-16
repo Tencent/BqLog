@@ -88,13 +88,13 @@ public class log_decoder implements AutoCloseable {
         }
     }
     
-    public static boolean decode_file(String log_file_path, String output_filey)
+    public static boolean decode_file(String log_file_path, String output_file)
     {
-    	return log_invoker.__api_log_decode(log_file_path, log_file_path, "");
+    	return log_invoker.__api_log_decode(log_file_path, output_file, "");
     }
     
     public static boolean decode_file(String log_file_path, String output_file, String priv_key)
     {
-    	return log_invoker.__api_log_decode(log_file_path, log_file_path, priv_key);
+    	return log_invoker.__api_log_decode(log_file_path, output_file, priv_key);
     }
 }

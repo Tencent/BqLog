@@ -28,6 +28,7 @@ public class test_main {
             test_manager.add_test(new test_log_1("Test Log Basic"));
             test_manager.add_test(new test_log_2("Test Log MultiThread"));
             test_manager.add_test(new test_log_category("Test Log Category"));
+            test_manager.add_test(new test_log_decoder("Test Log Decoder"));
             boolean result = test_manager.test();
             if(result) {
             	bq.log.console(bq.def.log_level.info, "--------------------------------");

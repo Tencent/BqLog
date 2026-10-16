@@ -66,6 +66,6 @@ export class log_decoder {
 
     /** Decodes a whole log file into output_file, and reports whether it succeeded. */
     public static decode_file(log_file_path: string, output_file: string, priv_key?: string): boolean {
-        return log_invoker.__api_log_decode(log_file_path, log_file_path, priv_key);
+        return log_invoker.__api_log_decode(log_file_path, output_file, priv_key);
     }
 }

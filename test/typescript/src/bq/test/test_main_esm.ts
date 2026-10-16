@@ -13,6 +13,7 @@ import { test_manager } from "./test_manager.ts";
 import { test_log_1 } from "./test_log_1.ts";
 import { test_log_2 } from "./test_log_2.ts";
 import { test_log_category } from "./test_log_category.ts";
+import { test_log_decoder } from "./test_log_decoder.ts";
 import { bq } from "@pippocao/bqlog";
 import { createRequire } from 'module';
 
@@ -32,6 +33,7 @@ async function run_tests() {
         test_manager.add_test(new test_log_1("Test Log Basic"));
         test_manager.add_test(new test_log_2("Test Log MultiThread"));
         test_manager.add_test(new test_log_category("Test Log Category"));
+        test_manager.add_test(new test_log_decoder("Test Log Decoder"));
 
         const result = await test_manager.test();
         if (result) {
