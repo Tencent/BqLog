@@ -44,10 +44,11 @@
 
 ## 📋 What's New in v2.7.0
 
+- **C++20 modules**: `import bq.log;`, as an alternative to `#include "bq_log/bq_log.h"`, with no change to the logging code.
 - **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)`, the same speed as `BQ_LOG_FAST_INFO` with full IDE support, and usable with any log object. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
-- **C++20 modules**: `import bq.log;`, as an alternative to `#include "bq_log/bq_log.h"`.
 - **Package managers**: Homebrew, vcpkg and NuGet. See [Integration Guide](docs/INTEGRATION_GUIDE.md).
-- **Multi-process**: several processes can share one log directory, each with its own crash recovery data.
+- **Multi-process**: the same app may run several processes without conflicts, each with its own crash recovery data.
+- **Bug fixes**: fast mode, recovery, formatting, config parsing and the decoder, among others.
 
 > [!WARNING]
 > **This release changes the ABI.** Upgrade the headers (or language wrapper) and the library together.
@@ -138,13 +139,14 @@ int main() {
 }
 ```
 
-**C++ only fast mode.** On the hottest C++ paths, the `BQ_LOG_FAST_*` macros write the same log entry for a fraction of the cost on the calling thread:
+**C++ only fast mode.** On the hottest C++ paths, the `BQ_LOG_FAST_*` macros write the same log entry for a fraction of the cost on the calling thread. Details in [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
 
 ```cpp
-BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);
+BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);  // macro form: for #include users
+log.fast_info<"Hello BqLog 2.0! int:{}, float:{}">(123, 3.14f);                // NTTP form: used with import bq.log;
 ```
 
-The output is identical to `log.info`. The price: a little more memory, weaker IDE hints than a plain member function (it is a macro), and each call site binds the log object and format string of its first call — use one log object and a fixed format string per call site. Details in [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
+The output is identical to `log.info`. The price: a little more memory, and each call site binds the log object and format string of its first call.
 
 ### Java
 

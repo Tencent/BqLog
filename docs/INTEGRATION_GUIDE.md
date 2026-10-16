@@ -14,7 +14,7 @@
   brew install bqlog
   ```
 
-  The package is then found through CMake or pkg-config:
+  The formula includes the `BqLog_CategoryLogGenerator` and `BqLog_LogDecoder` command line tools by default. The package is then found through CMake or pkg-config:
 
   ```cmake
   find_package(BqLog REQUIRED)
@@ -29,7 +29,7 @@
 
   ```bash
   vcpkg install bqlog
-  vcpkg install bqlog[tools]   # with the command line tools
+  vcpkg install bqlog[tools]   # with the command line tools (the tools feature is off by default)
   ```
 
   The triplet decides static or shared; the target is `bqlog::BqLog`.

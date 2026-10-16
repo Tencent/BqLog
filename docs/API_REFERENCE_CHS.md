@@ -745,7 +745,7 @@ bq.Decode_file("input.logcompr", "output.txt", "optional_key")
 
 ### 离线命令行解码器
 
-从 Releases 下载 `{os}_{arch}_tools_{version}`：
+从 Releases 下载 `{os}_{arch}_tools_{version}`；包管理器也会带上该工具：Homebrew 的 `brew install bqlog` 默认包含 `BqLog_LogDecoder` 与 `BqLog_CategoryLogGenerator`，vcpkg 需显式启用 `tools` feature（`vcpkg install bqlog[tools]`）。
 
 ```bash
 ./BqLog_LogDecoder 要解码的文件 [-o 输出文件] [-k 私钥文件]

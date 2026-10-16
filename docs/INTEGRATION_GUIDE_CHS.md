@@ -14,7 +14,7 @@
   brew install bqlog
   ```
 
-  之后即可通过 CMake 或 pkg-config 找到该包：
+  该包默认包含 `BqLog_CategoryLogGenerator` 与 `BqLog_LogDecoder` 两个命令行工具。之后即可通过 CMake 或 pkg-config 找到该包：
 
   ```cmake
   find_package(BqLog REQUIRED)
@@ -29,7 +29,7 @@
 
   ```bash
   vcpkg install bqlog
-  vcpkg install bqlog[tools]   # 同时安装命令行工具
+  vcpkg install bqlog[tools]   # 同时安装命令行工具（tools 不是默认 feature）
   ```
 
   静态库还是动态库由 triplet 决定，目标名为 `bqlog::BqLog`。

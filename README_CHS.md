@@ -44,10 +44,11 @@
 
 ## 📋 v2.7.0 更新亮点
 
+- **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。
 - **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)`，性能与 `BQ_LOG_FAST_INFO` 相同，IDE 提示完整，任何日志对象都能用。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
-- **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`。
 - **包管理器**：支持 Homebrew、vcpkg、NuGet，见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
-- **多进程**：多个进程可以共用同一个日志目录，各自拥有独立的崩溃恢复数据。
+- **多进程**：同一个 App 多进程多开不会冲突，各进程拥有独立的崩溃恢复数据。
+- **问题修复**：修复了快速模式、恢复、格式化、配置解析与解码器等多处问题。
 > [!WARNING]
 > **该版本更改了 ABI。** 头文件（或各语言 wrapper）和库需要一起升级。
 
@@ -149,13 +150,14 @@ int main() {
 }
 ```
 
-**C++ 专属的快速模式。** 在 C++ 最热的代码路径上，可以用 `BQ_LOG_FAST_*` 宏写同样的日志，调用线程的开销只有普通模式的一小部分：
+**C++ 专属的快速模式。** 在 C++ 最热的代码路径上，可以用 `BQ_LOG_FAST_*` 宏写同样的日志，调用线程的开销只有普通模式的一小部分。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
 
 ```cpp
-BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);
+BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);  // 宏模式：仍然 #include 头文件时使用
+log.fast_info<"Hello BqLog 2.0! int:{}, float:{}">(123, 3.14f);                // NTTP 形式：import bq.log; 时使用
 ```
 
-输出和 `log.info` 完全一样。代价是：内存使用稍高一点；它是宏，IDE 代码提示体验比普通成员函数差一点；每个调用点会绑定第一次调用时的日志对象和格式串，所以同一个调用点必须固定使用同一个日志对象和同一个格式串。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
+输出和 `log.info` 完全一样。代价是：内存使用稍高一点，且每个调用点绑定的日志对象和格式串在第一次调用后固定。
 
 ### Java
 
