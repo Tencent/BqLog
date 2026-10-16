@@ -2,13 +2,12 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!--
     .NET (Core) resolves runtimes/<rid>/native by itself; .NET Framework does not, so the native
-    library is copied next to the assembly here. Every target below is scoped to .NETFramework.
-  -->
-  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
-    <BqLogNativeRid Condition="'$(BqLogNativeRid)' == '' and '$(PlatformTarget)' == 'arm64'">win-arm64</BqLogNativeRid>
-    <BqLogNativeRid Condition="'$(BqLogNativeRid)' == '' and '$(PlatformTarget)' != 'x86'">win-x64</BqLogNativeRid>
-  </PropertyGroup>
+    library is copied next to the assembly here.
 
+    Every condition below is evaluated when its target runs, never while the file is evaluated: a
+    package .targets file is imported before the SDK deduces TargetFrameworkIdentifier, so an
+    evaluated condition would see an empty value and drop the whole thing silently.
+  -->
   <Target Name="BqLogCheckPlatform"
           Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(PlatformTarget)' == 'x86'"
           BeforeTargets="Build">
@@ -17,11 +16,16 @@
   </Target>
 
   <Target Name="BqLogCopyNativeLibrary"
-          Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(BqLogNativeRid)' != ''"
+          Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'"
           AfterTargets="Build">
-    <ItemGroup>
-      <BqLogNativeLibrary Include="$(MSBuildThisFileDirectory)..\runtimes\$(BqLogNativeRid)\native\BqLog.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(BqLogNativeLibrary)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <PropertyGroup>
+      <BqLogNativeRid Condition="'$(BqLogNativeRid)' == '' and '$(PlatformTarget)' == 'arm64'">win-arm64</BqLogNativeRid>
+      <BqLogNativeRid Condition="'$(BqLogNativeRid)' == '' and '$(PlatformTarget)' != 'x86'">win-x64</BqLogNativeRid>
+      <BqLogNativeSource>$(MSBuildThisFileDirectory)..\runtimes\$(BqLogNativeRid)\native\BqLog.dll</BqLogNativeSource>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(BqLogNativeSource)')"
+           Code="BQLOG0002"
+           Text="BqLog: the package carries no native library for $(BqLogNativeRid)." />
+    <Copy SourceFiles="$(BqLogNativeSource)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
 </Project>
