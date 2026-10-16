@@ -15,7 +15,10 @@ package bq.def;
  * What this platform offers for crash recovery, and what is missing when it is not available.
  */
 public enum recovery_capability {
+    /** Recovery can be enabled here. */
     ready,
+    /** Nothing survives a crash without a memory map. */
     no_memory_map,
+    /** No cross-process file lock to keep a second process out. */
     no_instance_lock,
 }
