@@ -85,9 +85,14 @@ target_sources(your_target PRIVATE FILE_SET CXX_MODULES
 target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
-需要编译器支持 modules：Clang 16+、MSVC 19.34+ 或 GCC 15+（GCC 14 在编译 import `bq.log` 的模块时会触发内部编译器错误）。GCC 还需要 `-fmodules-ts`。
+支持的编译器：Clang 16+、MSVC 19.34+、GCC 15+（GCC 14 编译该模块时会触发内部编译器错误）。GCC 还需要 `-fmodules-ts`。
 
-用 GCC 时，把你用到的系统头文件写在 `import bq.log;` **之前**：模块接口单元已在 global module fragment 里预包含了它们，这些声明属于 global module，import 之后再包含同一个头是合法的；GCC 16 会把它判成重定义，因为它的模块实现还没做 global module 实体合并。
+**GCC 16 已知问题：** 在 `import bq.log;` 之后 include C 头文件（`<string.h>` 就会踩），可能被判成 `redefinition of 'strstr'`（或 `memcpy`）。这是 GCC 16 的回归：同样代码在 GCC 15、Clang、MSVC 上都正常。规避方法：把系统头文件写在 import 之前。
+
+```cpp
+#include <string.h> // 系统头文件放前面
+import bq.log;
+```
 
 不用 CMake 时（以 clang 为例）：
 

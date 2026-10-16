@@ -85,9 +85,14 @@ target_sources(your_target PRIVATE FILE_SET CXX_MODULES
 target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
-The compiler needs to support modules: Clang 16+, MSVC 19.34+, or GCC 15+ (GCC 14 crashes with an internal compiler error on a module that imports `bq.log`). GCC also needs `-fmodules-ts`.
+Supported compilers: Clang 16+, MSVC 19.34+, GCC 15+ (GCC 14 crashes with an internal compiler error on the module). GCC also needs `-fmodules-ts`.
 
-With GCC, put the system headers you use **before** `import bq.log;`. The module interface unit pre-includes them in its global module fragment, so the declarations belong to the global module and including the same header again after the import is legal; GCC 16 reports it as a redefinition because its module implementation does not merge global module entities yet.
+**Known GCC 16 issue:** a C header included after `import bq.log;` — `<string.h>` among them — may be reported as `redefinition of 'strstr'` (or `memcpy`). It is a GCC 16 regression: GCC 15, Clang and MSVC accept the same code. Workaround: include your system headers before the import.
+
+```cpp
+#include <string.h> // system headers first
+import bq.log;
+```
 
 Without CMake, with clang:
 
